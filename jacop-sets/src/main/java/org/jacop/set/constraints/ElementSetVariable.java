@@ -34,8 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.api.Stateful;
-import org.jacop.constraints.Constraint;
+import org.jacop.constraints.AbstractElement;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,12 +55,9 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementSetVariable extends Constraint implements Stateful {
+public class ElementSetVariable extends AbstractElement {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   private final SetVar value;
@@ -71,12 +67,6 @@ public class ElementSetVariable extends Constraint implements Stateful {
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
   private final SetVar[] list;
-
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  private final int indexOffset;
-
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
 
   /**
    * It constructs an element constraint.
@@ -88,14 +78,13 @@ public class ElementSetVariable extends Constraint implements Stateful {
    */
   public ElementSetVariable(IntVar index, SetVar[] list, SetVar value, int indexOffset) {
 
+    super(index, indexOffset);
     checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
     checkInputForNullness("list", list);
 
     queueIndex = 2;
 
-    this.indexOffset = indexOffset;
     this.numberId = idNumber.incrementAndGet();
-    this.index = index;
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
 
@@ -141,33 +130,20 @@ public class ElementSetVariable extends Constraint implements Stateful {
   }
 
   @Override
-  public boolean isStateful() {
-    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
+  protected int listLength() {
+    return list.length;
   }
 
-  /**
-   * It imposes the constraint in a given store.
-   *
-   * @param store the constraint store to which the constraint is imposed to.
-   */
   @Override
   public void impose(Store store) {
-
-    super.impose(store);
-
-    if (!isStateful()) {
-      firstConsistencyCheck = false;
-    }
+    imposeInit(store);
   }
 
   @Override
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      index.domain.in(store.level, index, 1 + this.indexOffset, list.length + this.indexOffset);
-      firstConsistencyLevel = store.level;
-      firstConsistencyCheck = false;
+      initFirstConsistencyCheck(store);
     }
 
     if (value.singleton() && index.singleton()) {
@@ -221,29 +197,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : elementSetVariable").append("( ").append(index).append(", [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
-    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
-
-    return result.toString();
+    return buildToString("elementSetVariable", list, value, true);
   }
 }

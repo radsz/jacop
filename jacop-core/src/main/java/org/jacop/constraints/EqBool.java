@@ -118,6 +118,16 @@ public class EqBool extends PrimitiveConstraint {
    * @param store the constraint store in which the constraint is imposed.
    */
   public void consistency(Store store) {
+    propagateEqBool(store, false);
+  }
+
+  /**
+   * Unified propagation logic for consistency and notConsistency.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   * @param negated if true, handles the negated constraint logic.
+   */
+  private void propagateEqBool(Store store, boolean negated) {
 
     int x1 = 0;
     int x0 = 0;
@@ -133,71 +143,38 @@ public class EqBool extends PrimitiveConstraint {
       }
     }
 
-    if (result.min() == 1) {
+    boolean resultIsPositive = negated ? result.max() == 0 : result.min() == 1;
 
-      if (x0 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 0);
+    if (resultIsPositive) {
+
+      if (negated) {
+        // notConsistency: result.max() == 0 path
+        if (x0 == 0 && x1 == list.length - 1) {
+          list[index_01].domain.inValue(store.level, list[index_01], 0);
         }
-      }
-      if (x1 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 1);
+        if (x1 == 0 && x0 == list.length - 1) {
+          list[index_01].domain.inValue(store.level, list[index_01], 1);
+        }
+      } else {
+        // consistency: result.min() == 1 path
+        if (x0 > 0) {
+          for (IntVar intVar : list) {
+            intVar.domain.inValue(store.level, intVar, 0);
+          }
+        }
+        if (x1 > 0) {
+          for (IntVar intVar : list) {
+            intVar.domain.inValue(store.level, intVar, 1);
+          }
         }
       }
 
     } else {
-      if (result.max() == 0) {
-        if (x0 == 0 && x1 == list.length - 1) {
-          list[index_01].domain.inValue(store.level, list[index_01], 0);
-        }
-        if (x1 == 0 && x0 == list.length - 1) {
-          list[index_01].domain.inValue(store.level, list[index_01], 1);
-        }
-      }
-    }
+      boolean resultIsNegative = negated ? result.min() == 1 : result.max() == 0;
 
-    if (x0 > 0 && x1 > 0) {
-      result.domain.inValue(store.level, result, 0);
-    }
-
-    if (x0 == list.length || x1 == list.length) {
-      result.domain.inValue(store.level, result, 1);
-    }
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-
-    do {
-
-      store.propagationHasOccurred = false;
-
-      int x1 = 0;
-      int x0 = 0;
-      int index_01 = 0;
-
-      for (int i = 0; i < list.length; i++) {
-        if (list[i].min() == 1) {
-          x1++;
-        } else if (list[i].max() == 0) {
-          x0++;
-        } else {
-          index_01 = i;
-        }
-      }
-
-      if (result.min() == 1) {
-
-        if (x0 == 0 && x1 == list.length - 1) {
-          list[index_01].domain.inValue(store.level, list[index_01], 0);
-        }
-        if (x1 == 0 && x0 == list.length - 1) {
-          list[index_01].domain.inValue(store.level, list[index_01], 1);
-        }
-
-      } else {
-        if (result.max() == 0) {
+      if (resultIsNegative) {
+        if (negated) {
+          // notConsistency: result.min() == 1 path
           if (x0 > 0) {
             for (IntVar intVar : list) {
               intVar.domain.inValue(store.level, intVar, 0);
@@ -208,22 +185,50 @@ public class EqBool extends PrimitiveConstraint {
               intVar.domain.inValue(store.level, intVar, 1);
             }
           }
+        } else {
+          // consistency: result.max() == 0 path
+          if (x0 == 0 && x1 == list.length - 1) {
+            list[index_01].domain.inValue(store.level, list[index_01], 0);
+          }
+          if (x1 == 0 && x0 == list.length - 1) {
+            list[index_01].domain.inValue(store.level, list[index_01], 1);
+          }
         }
       }
+    }
 
-      if (x0 > 0 && x1 > 0) {
-        result.domain.inValue(store.level, result, 1);
-      }
+    if (x0 > 0 && x1 > 0) {
+      result.domain.inValue(store.level, result, negated ? 1 : 0);
+    }
 
-      if (x0 == list.length || x1 == list.length) {
-        result.domain.inValue(store.level, result, 0);
-      }
+    if (x0 == list.length || x1 == list.length) {
+      result.domain.inValue(store.level, result, negated ? 0 : 1);
+    }
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+      propagateEqBool(store, true);
 
     } while (store.propagationHasOccurred);
   }
 
   @Override
   public boolean satisfied() {
+    return checkEqBoolSatisfaction(false);
+  }
+
+  /**
+   * Unified satisfaction check for satisfied and notSatisfied.
+   *
+   * @param negated if true, handles the negated constraint logic.
+   * @return true if the constraint is satisfied (or not satisfied if negated).
+   */
+  private boolean checkEqBoolSatisfaction(boolean negated) {
 
     if (!result.singleton()) {
       return false;
@@ -243,27 +248,53 @@ public class EqBool extends PrimitiveConstraint {
         }
 
         if (x0 > 0 && x1 > 0) {
-          return true;
+          return negated ? false : true;
         }
       }
 
-      return false;
+      if (negated) {
+        return x0 == list.length || x1 == list.length;
+      } else {
+        return false;
+      }
 
     } else {
 
       if (result.min() == 1) {
 
-        if (!grounded()) {
-          return false;
-        }
+        if (negated) {
+          // notSatisfied: result.min() == 1 path
+          int x1 = 0;
+          int x0 = 0;
 
-        for (int i = 0; i < list.length - 1; i++) {
-          if (list[i].value() != list[i + 1].value()) {
+          for (IntVar intVar : list) {
+
+            if (intVar.min() == 1) {
+              x1++;
+            } else if (intVar.max() == 0) {
+              x0++;
+            }
+
+            if (x0 > 0 && x1 > 0) {
+              return true;
+            }
+          }
+
+          return false;
+        } else {
+          // satisfied: result.min() == 1 path
+          if (!grounded()) {
             return false;
           }
-        }
 
-        return true;
+          for (int i = 0; i < list.length - 1; i++) {
+            if (list[i].value() != list[i + 1].value()) {
+              return false;
+            }
+          }
+
+          return true;
+        }
       } else {
         return false;
       }
@@ -272,56 +303,7 @@ public class EqBool extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-
-    if (!result.singleton()) {
-      return false;
-    }
-
-    if (result.max() == 0) {
-
-      int x1 = 0;
-      int x0 = 0;
-
-      for (IntVar intVar : list) {
-
-        if (intVar.min() == 1) {
-          x1++;
-        } else if (intVar.max() == 0) {
-          x0++;
-        }
-
-        if (x0 > 0 && x1 > 0) {
-          return false;
-        }
-      }
-
-      return x0 == list.length || x1 == list.length;
-
-    } else {
-
-      if (result.min() == 1) {
-
-        int x1 = 0;
-        int x0 = 0;
-
-        for (IntVar intVar : list) {
-
-          if (intVar.min() == 1) {
-            x1++;
-          } else if (intVar.max() == 0) {
-            x0++;
-          }
-
-          if (x0 > 0 && x1 > 0) {
-            return true;
-          }
-        }
-
-        return false;
-      }
-    }
-
-    return false;
+    return checkEqBoolSatisfaction(true);
   }
 
   @Override

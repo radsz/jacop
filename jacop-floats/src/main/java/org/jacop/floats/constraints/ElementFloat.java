@@ -36,9 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.constraints.Constraint;
+import org.jacop.constraints.AbstractElement;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -61,16 +60,9 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementFloat extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class ElementFloat extends AbstractElement implements UsesQueueVariable, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  private final int indexOffset;
-
-  /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
   private final FloatVar value;
@@ -87,8 +79,6 @@ public class ElementFloat extends Constraint
    */
   final Map<Double, IntDomain> mappingValuesToIndex = new HashMap<>();
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;
 
@@ -110,14 +100,13 @@ public class ElementFloat extends Constraint
    */
   public ElementFloat(IntVar index, double[] list, FloatVar value, int indexOffset) {
 
+    super(index, indexOffset);
     checkInputForNullness(
         new String[] {"index", "list", "value"}, new Object[][] {{index}, {list}, {value}});
 
-    this.indexOffset = indexOffset;
     queueIndex = 1;
 
     this.numberId = idNumber.incrementAndGet();
-    this.index = index;
     this.value = value;
     this.list = new double[list.length];
     this.queueIndex = 1;
@@ -175,20 +164,10 @@ public class ElementFloat extends Constraint
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
+      initFirstConsistencyCheck(store);
     }
 
     boolean copyOfValueHasChanged = valueHasChanged;
@@ -255,18 +234,14 @@ public class ElementFloat extends Constraint
   }
 
   @Override
-  public boolean isStateful() {
-    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
+  protected int listLength() {
+    return list.length;
   }
 
   @Override
   public void impose(Store store) {
 
-    super.impose(store);
-
-    if (!isStateful()) {
-      firstConsistencyCheck = false;
-    }
+    imposeInit(store);
 
     duplicates = new ArrayList<>();
 
@@ -342,21 +317,6 @@ public class ElementFloat extends Constraint
 
   @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : elementFloat").append("( ").append(index).append(", [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
-    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
-
-    return result.toString();
+    return buildToString("elementFloat", list, value, true);
   }
 }

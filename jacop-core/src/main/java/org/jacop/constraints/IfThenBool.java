@@ -97,29 +97,7 @@ public class IfThenBool extends PrimitiveConstraint {
 
   @Override
   public void consistency(Store store) {
-
-    if (z.max() == 0) {
-      x.domain.inValue(store.level, x, 1);
-      y.domain.inValue(store.level, y, 0);
-    }
-
-    if (x.max() == 0) {
-      z.domain.inValue(store.level, z, 1);
-    } else if (x.min() == 1) {
-      z.domain.in(store.level, z, y.domain);
-      y.domain.in(store.level, y, z.domain);
-    }
-
-    if (y.max() == 0) {
-      if (x.singleton()) {
-        z.domain.inComplement(store.level, z, x.value());
-      }
-      if (z.singleton()) {
-        x.domain.inComplement(store.level, x, z.value());
-      }
-    } else if (y.min() == 1) {
-      z.domain.inValue(store.level, z, 1);
-    }
+    propagateIfThenBool(store, false);
   }
 
   @Override
@@ -137,93 +115,127 @@ public class IfThenBool extends PrimitiveConstraint {
     return IntDomain.BOUND;
   }
 
-  @Override
-  public void notConsistency(Store store) {
+  /**
+   * Unified propagation logic for both consistency and notConsistency.
+   *
+   * @param store the store.
+   * @param negated if true, propagates the negation of the constraint.
+   */
+  private void propagateIfThenBool(Store store, boolean negated) {
 
-    do {
+    if (negated) {
+      do {
+        store.propagationHasOccurred = false;
 
-      store.propagationHasOccurred = false;
+        if (x.singleton()) {
 
-      if (x.singleton()) {
-
-        if (x.max() == 0) {
-          z.domain.inValue(store.level, z, 0);
-        }
-
-        if (x.min() == 1) {
-          if (y.singleton()) {
-            z.domain.inComplement(store.level, z, y.value());
+          if (x.max() == 0) {
+            z.domain.inValue(store.level, z, 0);
           }
-          if (z.singleton()) {
-            y.domain.inComplement(store.level, y, z.value());
+
+          if (x.min() == 1) {
+            if (y.singleton()) {
+              z.domain.inComplement(store.level, z, y.value());
+            }
+            if (z.singleton()) {
+              y.domain.inComplement(store.level, y, z.value());
+            }
           }
         }
-      }
 
-      if (y.singleton()) {
+        if (y.singleton()) {
 
-        if (y.max() == 0) {
-          z.domain.in(store.level, z, x.domain);
-          x.domain.in(store.level, x, z.domain);
+          if (y.max() == 0) {
+            z.domain.in(store.level, z, x.domain);
+            x.domain.in(store.level, x, z.domain);
+          }
+
+          if (y.min() == 1) {
+            z.domain.inValue(store.level, z, 0);
+          }
         }
 
-        if (y.min() == 1) {
-          z.domain.inValue(store.level, z, 0);
+        if (z.min() == 1) {
+          x.domain.inValue(store.level, x, 1);
+          y.domain.inValue(store.level, y, 0);
         }
-      }
 
-      if (z.min() == 1) {
+      } while (store.propagationHasOccurred);
+    } else {
+      if (z.max() == 0) {
         x.domain.inValue(store.level, x, 1);
         y.domain.inValue(store.level, y, 0);
       }
 
-    } while (store.propagationHasOccurred);
+      if (x.max() == 0) {
+        z.domain.inValue(store.level, z, 1);
+      } else if (x.min() == 1) {
+        z.domain.in(store.level, z, y.domain);
+        y.domain.in(store.level, y, z.domain);
+      }
+
+      if (y.max() == 0) {
+        if (x.singleton()) {
+          z.domain.inComplement(store.level, z, x.value());
+        }
+        if (z.singleton()) {
+          x.domain.inComplement(store.level, x, z.value());
+        }
+      } else if (y.min() == 1) {
+        z.domain.inValue(store.level, z, 1);
+      }
+    }
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+    propagateIfThenBool(store, true);
+  }
+
+  /**
+   * Unified satisfaction check for both satisfied and notSatisfied.
+   *
+   * @param negated if true, checks the negation of the constraint.
+   * @return true if the constraint (or its negation) is satisfied.
+   */
+  private boolean checkIfThenBoolSatisfaction(boolean negated) {
+
+    if (!x.singleton()) {
+      return false;
+    }
+    if (!z.singleton()) {
+      return false;
+    }
+
+    if (negated) {
+      if (x.singleton(0) && z.singleton(0)) {
+        return true;
+      }
+    } else {
+      if (x.singleton(0) && z.singleton(1)) {
+        return true;
+      }
+    }
+
+    if (!y.singleton()) {
+      return false;
+    }
+
+    if (negated) {
+      return x.singleton(1) && y.singleton(1) && z.singleton(0);
+    } else {
+      return x.singleton(1) && y.singleton(1) && z.singleton(1);
+    }
   }
 
   @Override
   public boolean notSatisfied() {
-
-    if (!x.singleton()) {
-      return false;
-    }
-    if (!z.singleton()) {
-      return false;
-    }
-
-    if (x.singleton(0) && z.singleton(0)) {
-      return true;
-    }
-
-    if (!y.singleton()) {
-      return false;
-    }
-
-    return x.singleton(1) && y.singleton(1) && z.singleton(0);
-
-    // 1 0 1
+    return checkIfThenBoolSatisfaction(true);
   }
 
   @Override
   public boolean satisfied() {
-
-    if (!x.singleton()) {
-      return false;
-    }
-    if (!z.singleton()) {
-      return false;
-    }
-
-    if (x.singleton(0) && z.singleton(1)) {
-      return true;
-    }
-
-    if (!y.singleton()) {
-      return false;
-    }
-
-    return x.singleton(1) && y.singleton(1) && z.singleton(1);
-
-    // 1 0 0
+    return checkIfThenBoolSatisfaction(false);
   }
 
   @Override

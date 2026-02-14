@@ -269,4 +269,43 @@ public abstract class PrimitiveConstraint extends Constraint
     }
     return null;
   }
+
+  /**
+   * Computes the pruning event for a variable in a reified constraint context. This method checks
+   * the events map first, then checks if the variable is the boolean variable (returning GROUND),
+   * and finally computes the maximum pruning event across nested constraints.
+   *
+   * <p>This helper eliminates duplicated pruning-event computation in reified constraints such as
+   * Reified and Implies.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @param eventsMap the map of custom pruning events, or null if none.
+   * @param b the boolean variable of the reified constraint.
+   * @param c the nested constraint.
+   * @return the pruning event for the variable.
+   */
+  protected static int getPruningEventFor(
+      Var v, Map<Var, Integer> eventsMap, IntVar b, PrimitiveConstraint c) {
+    if (eventsMap != null) {
+      Integer possibleEvent = eventsMap.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    if (v == b) {
+      return IntDomain.GROUND;
+    }
+    return computeMaxPruningEvent(v, c);
+  }
+
+  /**
+   * Throws an IllegalStateException indicating that a more precise method exists and should be used
+   * instead. This helper method eliminates duplication in subclasses that override default pruning
+   * event methods to throw this exception.
+   *
+   * @throws IllegalStateException always, with a message indicating a more precise method exists.
+   */
+  protected static int throwMorePreciseMethodExists() {
+    throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
 }

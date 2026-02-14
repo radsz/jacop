@@ -245,6 +245,10 @@ class ThetaTree extends Tree {
     return tree[i];
   }
 
+  protected String treeName() {
+    return "ThetaTree";
+  }
+
   public void printTree(String name) {
 
     try (PrintStream out =
@@ -260,7 +264,7 @@ class ThetaTree extends Tree {
 
     StringBuilder result = new StringBuilder();
 
-    result.append("digraph ThetaTree").append(name);
+    result.append("digraph ").append(treeName()).append(name);
     result.append(" {");
     result.append("graph [  fontsize = 12,");
     result.append("size = \"5,5\" ];\n");
@@ -276,7 +280,7 @@ class ThetaTree extends Tree {
 
     result.append(treeToGraph(root()));
 
-    result.append("label =\"\n\nThetaTree").append(name).append("\n\"");
+    result.append("label =\"\n\n").append(treeName()).append(name).append("\n\"");
 
     result.append("}");
 
@@ -308,7 +312,7 @@ class ThetaTree extends Tree {
 
     StringBuilder result = new StringBuilder();
 
-    result.append("ThetaTree\n");
+    result.append(treeName()).append("\n");
     for (int i = 0; i < treeSize; i++) {
       result
           .append("Node ")

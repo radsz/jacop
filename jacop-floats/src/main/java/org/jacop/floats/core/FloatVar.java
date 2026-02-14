@@ -287,55 +287,6 @@ public class FloatVar extends Var {
   }
 
   /**
-   * It registers constraint with current variable, so anytime this variable is changed the
-   * constraint is reevaluated. Pruning events constants from 0 to n, where n is the strongest
-   * pruning event.
-   *
-   * @param c the constraint which is being attached to the variable.
-   * @param pruningEvent type of the event which must occur to trigger the execution of the
-   *     consistency function.
-   */
-  public void putModelConstraint(Constraint c, int pruningEvent) {
-
-    // If variable is a singleton then it will not be put in the model.
-    // It will be put in the queue and evaluated only once in the queue.
-    // If constraint is consistent for a singleton then it will remain
-    // consistent from the point of view of this variable.
-    if (singleton()) {
-      return;
-    }
-
-    // if Event is NONE then constraint is not being attached, it will
-    // be only evaluated once, as after imposition it is being put in the constraint
-    // queue.
-
-    if (pruningEvent == IntDomain.NONE) {
-      return;
-    }
-
-    domain.putModelConstraint(store.level, this, c, pruningEvent);
-
-    store.recordChange(this);
-  }
-
-  /**
-   * It registers constraint with current variable, so always when this variable is changed the
-   * constraint is reevaluated.
-   *
-   * @param c the constraint which is added as a search constraint.
-   */
-  public void putSearchConstraint(Constraint c) {
-
-    if (singleton()) {
-      return;
-    }
-
-    domain.putSearchConstraint(store.level, this, c);
-
-    store.recordChange(this);
-  }
-
-  /**
    * It returns the values which have been removed at current store level. It does _not_ return the
    * recent pruning in between the calls to that function.
    *
@@ -347,63 +298,6 @@ public class FloatVar extends Var {
   }
 
   /**
-   * It detaches constraint from the current variable, so change in variable will not cause
-   * constraint reevaluation. It is only removed from the current level onwards. Removing current
-   * level at later stage will automatically re-attached the constraint to the variable.
-   *
-   * @param c the constraint being detached from the variable.
-   */
-  public void removeConstraint(Constraint c) {
-
-    if (singleton()) {
-      return;
-    }
-
-    int i = domain.searchConstraintsToEvaluate - 1;
-    for (; i >= 0; i--) {
-      if (domain.searchConstraints.get(i) == c) {
-        domain.removeSearchConstraint(store.level, this, i, c);
-      }
-    }
-
-    if (i == -1) {
-      domain.removeModelConstraint(store.level, this, c);
-    }
-
-    store.recordChange(this);
-  }
-
-  /**
-   * It returns current number of constraints which are associated with variable and are not yet
-   * satisfied.
-   *
-   * @return number of constraints attached to the variable.
-   */
-  public int sizeConstraints() {
-    return domain.sizeConstraints();
-  }
-
-  /**
-   * It returns all constraints which are associated with variable, even the ones which are already
-   * satisfied.
-   *
-   * @return number of constraints attached at the earliest level of the variable.
-   */
-  public int sizeConstraintsOriginal() {
-    return domain.sizeConstraintsOriginal();
-  }
-
-  /**
-   * It returns current number of constraints which are associated with variable and are not yet
-   * satisfied.
-   *
-   * @return number of attached search constraints.
-   */
-  public int sizeSearchConstraints() {
-    return domain.searchConstraintsToEvaluate;
-  }
-
-  /**
    * This function returns stamp of the current domain of variable. It is equal or smaller to the
    * stamp of store. Larger difference indicates that variable has been changed for a longer time.
    *
@@ -411,32 +305,6 @@ public class FloatVar extends Var {
    */
   public int level() {
     return domain.stamp;
-  }
-
-  @Override
-  public String toString() {
-
-    StringBuilder result = new StringBuilder(id);
-
-    if (domain.singleton()) {
-      result.append(" = ");
-    } else {
-      result.append("::");
-    }
-
-    result.append(domain);
-    return result.toString();
-  }
-
-  /**
-   * It returns the string representation of the variable using the full representation of the
-   * domain.
-   *
-   * @return string representation.
-   */
-  public String toStringFull() {
-
-    return id + domain.toStringFull();
   }
 
   /**

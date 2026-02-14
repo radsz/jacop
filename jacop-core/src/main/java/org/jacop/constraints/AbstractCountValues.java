@@ -121,4 +121,213 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       list[j] = tmp;
     }
   }
+
+  /**
+   * Updates the counterRest domain to be within [restEq, restEq + restMayBe].
+   *
+   * @param store the store for propagation.
+   * @param restEq the number of variables definitely not matching any counted value.
+   * @param restMayBe the number of variables that may not match any counted value.
+   */
+  protected abstract void updateCounterRest(Store store, int restEq, int restMayBe);
+
+  /**
+   * Updates the counter[i] domain to be within [numberEq, numberEq + numberMayBe].
+   *
+   * @param store the store for propagation.
+   * @param i the index of the counter to update.
+   * @param numberEq the number of variables definitely equal to values[i].
+   * @param numberMayBe the number of variables that may be equal to values[i].
+   */
+  protected abstract void updateCounter(Store store, int i, int numberEq, int numberMayBe);
+
+  /**
+   * Gets the minimum value of counter[i].
+   *
+   * @param i the index of the counter.
+   * @return the minimum value.
+   */
+  protected abstract int getCounterMin(int i);
+
+  /**
+   * Gets the maximum value of counter[i].
+   *
+   * @param i the index of the counter.
+   * @return the maximum value.
+   */
+  protected abstract int getCounterMax(int i);
+
+  /**
+   * Gets the minimum value of counterRest.
+   *
+   * @return the minimum value.
+   */
+  protected abstract int getCounterRestMin();
+
+  /**
+   * Gets the maximum value of counterRest.
+   *
+   * @return the maximum value.
+   */
+  protected abstract int getCounterRestMax();
+
+  /**
+   * Gets the length of the extendedCounter array.
+   *
+   * @return the length of extendedCounter.
+   */
+  protected abstract int getExtendedCounterLength();
+
+  /**
+   * Gets the minimum value of extendedCounter[i].
+   *
+   * @param i the index.
+   * @return the minimum value.
+   */
+  protected abstract int getExtendedCounterMin(int i);
+
+  /**
+   * Gets the maximum value of extendedCounter[i].
+   *
+   * @param i the index.
+   * @return the maximum value.
+   */
+  protected abstract int getExtendedCounterMax(int i);
+
+  /**
+   * Updates extendedCounter[i] domain to be within [newMin, newMax].
+   *
+   * @param store the store for propagation.
+   * @param i the index to update.
+   * @param newMin the new minimum value.
+   * @param newMax the new maximum value.
+   */
+  protected abstract void updateExtendedCounter(Store store, int i, int newMin, int newMax);
+
+  /**
+   * Assigns a specific value to a variable.
+   *
+   * @param store the store for propagation.
+   * @param v the variable to assign.
+   * @param value the value to assign.
+   */
+  protected abstract void assignValue(Store store, IntVar v, int value);
+
+  /**
+   * Shared consistency propagation logic for CountValues and CountValuesBounds.
+   *
+   * @param store the store for propagation.
+   */
+  @Override
+  public void consistency(final Store store) {
+
+    int start = position.value();
+    int[] numberMayBe = new int[values.length];
+    int[] numberEq = new int[values.length];
+    int restEq;
+    int restMayBe;
+
+    restEq = rest.value();
+    for (int i = 0; i < values.length; i++) {
+      numberEq[i] = equal[i].value();
+    }
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      restMayBe = 0;
+      Arrays.fill(numberMayBe, 0);
+
+      for (int i = start; i < n; i++) {
+        IntVar v = list[i];
+        int noValuesInDomain = 0;
+
+        for (int j = 0; j < values.length; j++) {
+          if (v.domain.contains(values[j])) {
+            if (v.singleton()) {
+              numberEq[j]++;
+              swap(start, i);
+              start++;
+            } else {
+              numberMayBe[j]++;
+            }
+          } else { // does not have the values in its domain
+            noValuesInDomain++;
+          }
+        }
+
+        if (!v.domain.subtract(valuesDomain).isEmpty()) {
+          restMayBe++;
+        }
+
+        if (noValuesInDomain == values.length) {
+          swap(start, i);
+          start++;
+          restEq++;
+        }
+      }
+
+      updateCounterRest(store, restEq, restMayBe);
+
+      for (int i = 0; i < values.length; i++) {
+        updateCounter(store, i, numberEq[i], numberMayBe[i]);
+      }
+
+      int min = 0;
+      int max = 0;
+      int extendedCounterLength = getExtendedCounterLength();
+      for (int i = 0; i < extendedCounterLength; i++) {
+        min += getExtendedCounterMin(i);
+        max += getExtendedCounterMax(i);
+      }
+      for (int i = 0; i < extendedCounterLength; i++) { // sum(extendedCounter) == n (list length)
+        updateExtendedCounter(
+            store, i, n - max + getExtendedCounterMax(i), n - min + getExtendedCounterMin(i));
+      }
+
+      for (int i = 0; i < values.length; i++) {
+
+        if (numberMayBe[i] == getCounterMin(i) - numberEq[i]) {
+
+          for (int j = start; j < n; j++) {
+            IntVar v = list[j];
+            if (v.domain.contains(values[i])) {
+              assignValue(store, v, values[i]);
+            }
+          }
+        } else if (numberEq[i] == getCounterMax(i)) {
+
+          for (int j = start; j < n; j++) {
+            IntVar v = list[j];
+            v.domain.inComplement(store.level, v, values[i]);
+          }
+        }
+      }
+
+      if (restMayBe == getCounterRestMin() - restEq) {
+
+        for (int j = start; j < n; j++) {
+          IntVar v = list[j];
+          if (!v.domain.subtract(valuesDomain).isEmpty()) {
+            v.domain.in(store.level, v, valuesDomainComplement);
+          }
+        }
+      } else if (restEq == getCounterRestMax()) {
+
+        for (int j = start; j < n; j++) {
+          IntVar v = list[j];
+          v.domain.in(store.level, v, valuesDomain);
+        }
+      }
+
+    } while (store.propagationHasOccurred);
+
+    for (int i = 0; i < values.length; i++) {
+      equal[i].update(numberEq[i]);
+    }
+    rest.update(restEq);
+
+    position.update(start);
+  }
 }

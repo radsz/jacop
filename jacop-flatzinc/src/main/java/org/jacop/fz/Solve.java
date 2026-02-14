@@ -856,12 +856,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getStatistics()) {
 
-      int nodes = 0; // label.getNodes();
-      int decisions = 0; // label.getDecisions();
-      int wrong = 0; // label.getWrongDecisions();
-      int backtracks = 0; // label.getBacktracks();
-      int depth = 0; // label.getMaximumDepth();
-      int solutions = 0; // label.getSolutionListener().solutionsNo();
+      int nodes = 0;
+      int decisions = 0;
+      int wrong = 0;
+      int backtracks = 0;
+      int depth = 0;
+      int solutions = 0;
 
       if (!defaultSearch) {
         nodes = label.getNodes();
@@ -884,44 +884,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
 
-      int restarts = rs != null ? rs.restarts() : 0;
-
-      IO.println(
-          "%%%mzn-stat: variables="
-              + nf.format(
-                  (long) store.size()
-                      + dictionary.getNumberBoolVariables()
-                      - dictionary.constantTable.size())
-              // + "\n%%%mzn-stat: boolVariables="+
-              // (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-              // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-              // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-              + "\n%%%mzn-stat: propagators="
-              + nf.format((long) initNumberConstraints - 1)
-              + "\n\n%%%mzn-stat: initTime="
-              + nf.format(getInitTime_ms() / 1000.0)
-              + "\n%%%mzn-stat: solveTime="
-              + nf.format(getSearchTime_ms() / 1000.0)
-              + "\n%%%mzn-stat: nodes="
-              + nf.format(nodes)
-              + "\n%%%mzn-stat: restarts="
-              + nf.format(restarts)
-              + "\n%%%mzn-stat: propagations="
-              + nf.format(store.numberConsistencyCalls)
-              // + "\n%% Search decisions : "+ nf.format(decisions)
-              + "\n%%%mzn-stat: failures="
-              + nf.format(wrong) // Wrong search decisions :
-              // + "\n%%%mzn-stat: backtracks=" + nf.format(backtracks)
-              + "\n%%%mzn-stat: peakDepth="
-              + nf.format(depth)
-              + "\n%%%mzn-stat: solutions="
-              + nf.format(solutions)
-              + "\n%%%mzn-stat-end");
-
-      if (options.debug()) {
-        String s = "% " + failStatistics.toString();
-        IO.println(s.replaceAll("\n", "\n% "));
-      }
+      printStatisticsOutput(nodes, wrong, depth, solutions);
     }
   }
 
@@ -1556,40 +1519,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solutions = label.getSolutionListener().solutionsNo();
       }
 
-      int restarts = rs != null ? rs.restarts() : 0;
-
-      IO.println(
-          "%%%mzn-stat: variables="
-              + nf.format(
-                  (long) store.size()
-                      + dictionary.getNumberBoolVariables()
-                      - dictionary.constantTable.size())
-              // + "\n%%%mzn-stat: boolVariables="+
-              // (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-              // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-              // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-              + "\n%%%mzn-stat: propagators="
-              + nf.format((long) initNumberConstraints - 1)
-              + "\n\n%%%mzn-stat: initTime="
-              + nf.format(getInitTime_ms() / 1000.0)
-              + "\n%%%mzn-stat: solveTime="
-              + nf.format(getSearchTime_ms() / 1000.0)
-              + "\n%%%mzn-stat: nodes="
-              + nf.format(nodes)
-              + "\n%%%mzn-stat: restarts="
-              + nf.format(restarts)
-              + "\n%%%mzn-stat: propagations="
-              + nf.format(store.numberConsistencyCalls)
-              // + "\n%% Search decisions : " + nf.format(decisions)
-              + "\n%%%mzn-stat: failures="
-              + nf.format(wrong) // Wrong search decisions :
-              // + "\n%%%mzn-stat: backtracks=" + nf.format(backtracks)
-              + "\n%%%mzn-stat: peakDepth="
-              + nf.format(depth)
-              + "\n%%%mzn-stat: solutions="
-              + nf.format(solutions)
-              + "\n%%%mzn-stat-end");
+      printStatisticsOutput(nodes, wrong, depth, solutions);
     }
+  }
+
+  /**
+   * Prints the common statistics output block shared by single and sequence search.
+   *
+   * @param nodes total nodes explored.
+   * @param wrong total wrong decisions (failures).
+   * @param depth peak search depth.
+   * @param solutions total solutions found.
+   */
+  private void printStatisticsOutput(int nodes, int wrong, int depth, int solutions) {
+    int restarts = rs != null ? rs.restarts() : 0;
+
+    IO.println(
+        "%%%mzn-stat: variables="
+            + nf.format(
+                (long) store.size()
+                    + dictionary.getNumberBoolVariables()
+                    - dictionary.constantTable.size())
+            + "\n%%%mzn-stat: propagators="
+            + nf.format((long) initNumberConstraints - 1)
+            + "\n\n%%%mzn-stat: initTime="
+            + nf.format(getInitTime_ms() / 1000.0)
+            + "\n%%%mzn-stat: solveTime="
+            + nf.format(getSearchTime_ms() / 1000.0)
+            + "\n%%%mzn-stat: nodes="
+            + nf.format(nodes)
+            + "\n%%%mzn-stat: restarts="
+            + nf.format(restarts)
+            + "\n%%%mzn-stat: propagations="
+            + nf.format(store.numberConsistencyCalls)
+            + "\n%%%mzn-stat: failures="
+            + nf.format(wrong)
+            + "\n%%%mzn-stat: peakDepth="
+            + nf.format(depth)
+            + "\n%%%mzn-stat: solutions="
+            + nf.format(solutions)
+            + "\n%%%mzn-stat-end");
 
     if (options.debug()) {
       String s = "% " + failStatistics.toString();

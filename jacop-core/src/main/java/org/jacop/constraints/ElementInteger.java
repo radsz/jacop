@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -57,8 +56,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class ElementInteger extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class ElementInteger extends AbstractElement implements UsesQueueVariable, SatisfiedPresent {
 
   /**
    * It specifies the maximal size of index domain when the constraint will apply domain consistency
@@ -79,17 +77,11 @@ public class ElementInteger extends Constraint
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  private final int indexOffset;
-
   /**
    * It specifies whether duplicate values should be treated specially (combined to a single check).
    * In general a good idea but when lists are long it makes the process slower instead of faster.
    */
   private final boolean checkDuplicates;
-
-  /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
   private final IntVar value;
@@ -99,9 +91,6 @@ public class ElementInteger extends Constraint
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
   private final int[] list;
-
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
 
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into
@@ -147,13 +136,12 @@ public class ElementInteger extends Constraint
   public ElementInteger(
       IntVar index, int[] list, IntVar value, int indexOffset, boolean checkDuplicates) {
 
+    super(index, indexOffset);
     checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
     checkInputForNullness("list", list);
 
-    this.indexOffset = indexOffset;
     this.checkDuplicates = checkDuplicates;
     this.numberId = idNumber.incrementAndGet();
-    this.index = index;
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
     this.queueIndex = 1;
@@ -212,20 +200,15 @@ public class ElementInteger extends Constraint
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
+  protected int listLength() {
+    return list.length;
   }
 
   @Override
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
+      initFirstConsistencyCheck(store);
     }
 
     // ====== Very simple implementation =========
@@ -320,18 +303,9 @@ public class ElementInteger extends Constraint
   }
 
   @Override
-  public boolean isStateful() {
-    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
-  }
-
-  @Override
   public void impose(Store store) {
 
-    super.impose(store);
-
-    if (!isStateful()) {
-      firstConsistencyCheck = false;
-    }
+    imposeInit(store);
 
     if (checkDuplicates) {
       duplicates = new ArrayList<>();
@@ -410,21 +384,6 @@ public class ElementInteger extends Constraint
 
   @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : elementInteger").append("( ").append(index).append(", [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
-    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
-
-    return result.toString();
+    return buildToString("elementInteger", list, value, true);
   }
 }

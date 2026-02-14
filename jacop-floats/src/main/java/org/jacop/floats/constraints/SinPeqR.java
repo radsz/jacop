@@ -33,9 +33,6 @@ package org.jacop.floats.constraints;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -51,8 +48,8 @@ import org.jacop.floats.core.InternalException;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class SinPeqR extends Constraint
-    implements Stateful, SatisfiedPresent, FloatDerivableConstraint {
+public class SinPeqR extends AbstractTrigConstraint
+    implements SatisfiedPresent, FloatDerivableConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -62,15 +59,6 @@ public class SinPeqR extends Constraint
   private static final int TROUGH = 3;
   private static final int FULL_RANGE = 4;
 
-  /** It contains variable p. */
-  protected final FloatVar p;
-
-  /** It contains variable q. */
-  protected final FloatVar q;
-
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
-
   /**
    * It constructs sin(P) = Q constraints.
    *
@@ -78,38 +66,12 @@ public class SinPeqR extends Constraint
    * @param q variable Q
    */
   public SinPeqR(FloatVar p, FloatVar q) {
-
-    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
-
+    super(p, q);
     numberId = idNumber.incrementAndGet();
-
-    this.queueIndex = 1;
-    this.p = p;
-    this.q = q;
-
-    setScope(p, q);
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    if (firstConsistencyCheck) {
-      q.domain.in(store.level, q, -1.0, 1.0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
-    }
-
-    boundConsistency(store);
-  }
-
-  void boundConsistency(Store store) {
+  protected void boundConsistency(Store store) {
 
     if (p.max() - p.min() >= 2 * FloatDomain.PI) {
       return;
@@ -192,10 +154,6 @@ public class SinPeqR extends Constraint
     } while (store.propagationHasOccurred);
   }
 
-  FloatInterval normalize(FloatVar v) {
-    return FloatDomain.normalizeAngle(v.min(), v.max());
-  }
-
   int intervalNo(double d) {
     if (d >= -2.0 * FloatDomain.PI && d <= -1.5 * FloatDomain.PI) {
       return 1;
@@ -235,11 +193,6 @@ public class SinPeqR extends Constraint
       return (intervalForMin % 2 == 1) ? PEAK : TROUGH;
     }
     return FULL_RANGE;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

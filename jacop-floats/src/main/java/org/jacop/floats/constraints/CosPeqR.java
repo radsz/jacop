@@ -33,9 +33,6 @@ package org.jacop.floats.constraints;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -51,19 +48,10 @@ import org.jacop.floats.core.InternalException;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CosPeqR extends Constraint
-    implements Stateful, SatisfiedPresent, FloatDerivableConstraint {
+public class CosPeqR extends AbstractTrigConstraint
+    implements SatisfiedPresent, FloatDerivableConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It contains variable p. */
-  protected final FloatVar p;
-
-  /** It contains variable q. */
-  protected final FloatVar q;
-
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
 
   /**
    * It constructs cos(P) = Q constraints.
@@ -72,38 +60,12 @@ public class CosPeqR extends Constraint
    * @param q variable Q
    */
   public CosPeqR(FloatVar p, FloatVar q) {
-
-    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
-
+    super(p, q);
     numberId = idNumber.incrementAndGet();
-
-    this.queueIndex = 1;
-    this.p = p;
-    this.q = q;
-
-    setScope(p, q);
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    if (firstConsistencyCheck) {
-      q.domain.in(store.level, q, -1.0, 1.0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
-    }
-
-    boundConsistency(store);
-  }
-
-  void boundConsistency(Store store) {
+  protected void boundConsistency(Store store) {
 
     if (p.max() - p.min() >= 2 * FloatDomain.PI) {
       return;
@@ -249,10 +211,6 @@ public class CosPeqR extends Constraint
     } while (store.propagationHasOccurred);
   }
 
-  FloatInterval normalize(FloatVar v) {
-    return FloatDomain.normalizeAngle(v.min(), v.max());
-  }
-
   int intervalNo(double d) {
     if (d >= -2.0 * FloatDomain.PI && d <= -FloatDomain.PI) {
       return 1;
@@ -268,11 +226,6 @@ public class CosPeqR extends Constraint
     } else {
       return 0; // should not return this
     }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

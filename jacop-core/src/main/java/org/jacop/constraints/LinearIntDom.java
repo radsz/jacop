@@ -225,6 +225,21 @@ public class LinearIntDom extends LinearInt {
   }
 
   void findSupportPositive(int index, long partialSum) {
+    findSupport(true, index, partialSum);
+  }
+
+  void findSupportNegative(int index, long partialSum) {
+    findSupport(false, index, partialSum);
+  }
+
+  /**
+   * Finds support for variables in the linear constraint.
+   *
+   * @param positive true if processing positive coefficients, false for negative coefficients
+   * @param index current variable index
+   * @param partialSum accumulated sum so far
+   */
+  void findSupport(boolean positive, int index, long partialSum) {
 
     int newIndex = index + 1;
 
@@ -256,8 +271,16 @@ public class LinearIntDom extends LinearInt {
     long newPartialSum;
     long w = a[index];
 
-    long lb = b - sumMax + currentDom.max() * w;
-    long ub = b - sumMin + currentDom.min() * w;
+    // Bounds calculation differs based on positive/negative phase
+    long lb;
+    long ub;
+    if (positive) {
+      lb = b - sumMax + currentDom.max() * w;
+      ub = b - sumMin + currentDom.min() * w;
+    } else {
+      lb = b - sumMax + currentDom.min() * w;
+      ub = b - sumMin + currentDom.max() * w;
+    }
 
     if (currentDom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       int n = ((IntervalDomain) currentDom).size;
@@ -271,20 +294,36 @@ public class LinearIntDom extends LinearInt {
         for (int element = eMin; element <= eMax; element++) {
 
           long elementValue = (long) element * w;
-          if (elementValue < lb) {
-            continue; // value too low
-          } else if (elementValue > ub) {
-            break outerloop; // value too large
+          // Loop control differs based on positive/negative phase
+          if (positive) {
+            if (elementValue < lb) {
+              continue; // value too low
+            } else if (elementValue > ub) {
+              break outerloop; // value too large
+            } else {
+              newPartialSum = partialSum + elementValue;
+            }
           } else {
-            newPartialSum = partialSum + elementValue;
+            if (elementValue < lb) {
+              break outerloop; // value too low
+            } else if (elementValue > ub) {
+              continue; // value too large
+            } else {
+              newPartialSum = partialSum + elementValue;
+            }
           }
 
           assignments[index] = element;
 
-          if (newIndex < pos) {
-            findSupportPositive(newIndex, newPartialSum);
+          // Recursion differs based on positive/negative phase
+          if (positive) {
+            if (newIndex < pos) {
+              findSupport(true, newIndex, newPartialSum);
+            } else {
+              findSupport(false, newIndex, newPartialSum);
+            }
           } else {
-            findSupportNegative(newIndex, newPartialSum);
+            findSupport(false, newIndex, newPartialSum);
           }
         }
       }
@@ -293,101 +332,37 @@ public class LinearIntDom extends LinearInt {
         int element = val.nextElement();
 
         long elementValue = (long) element * w;
-        if (elementValue < lb) {
-          continue; // value too low
-        } else if (elementValue > ub) {
-          break; // value too large
-        } else {
-          newPartialSum = partialSum + elementValue;
-        }
-
-        assignments[index] = element;
-
-        if (newIndex < pos) {
-          findSupportPositive(newIndex, newPartialSum);
-        } else {
-          findSupportNegative(newIndex, newPartialSum);
-        }
-      }
-    }
-  }
-
-  void findSupportNegative(int index, long partialSum) {
-
-    int newIndex = index + 1;
-
-    if (index == l - 1) {
-
-      long element = b - partialSum;
-      long val = element / a[index];
-      long rest = element % a[index];
-      int valInt = (int) val;
-      if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
-        assignments[index] = valInt;
-
-        // store assignments
-        for (int i = 0; i < l; i++) {
-          int a = assignments[i];
-          if (support[i] == null) {
-            support[i] = new IntervalDomain(a, a);
-          } else if (support[i].max() < a) {
-            support[i].addLastElement(a);
-          } else if (support[i].max() > a) {
-            support[i].unionAdapt(a, a);
-          }
-        }
-      }
-      return;
-    }
-
-    IntDomain currentDom = x[index].dom();
-    long newPartialSum;
-    long w = a[index];
-
-    long lb = b - sumMax + currentDom.min() * w;
-    long ub = b - sumMin + currentDom.max() * w;
-
-    if (currentDom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-      int n = ((IntervalDomain) currentDom).size;
-
-      outerloop:
-      for (int k = 0; k < n; k++) {
-        Interval e = ((IntervalDomain) currentDom).intervals[k];
-        int eMin = e.min();
-        int eMax = e.max();
-
-        for (int element = eMin; element <= eMax; element++) {
-
-          long elementValue = (long) element * w;
+        // Loop control differs based on positive/negative phase
+        if (positive) {
           if (elementValue < lb) {
-            break outerloop; // value too low
+            continue; // value too low
+          } else if (elementValue > ub) {
+            break; // value too large
+          } else {
+            newPartialSum = partialSum + elementValue;
+          }
+        } else {
+          if (elementValue < lb) {
+            break; // value too low
           } else if (elementValue > ub) {
             continue; // value too large
           } else {
             newPartialSum = partialSum + elementValue;
           }
-
-          assignments[index] = element;
-
-          findSupportNegative(newIndex, newPartialSum);
-        }
-      }
-    } else {
-      for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
-        int element = val.nextElement();
-
-        long elementValue = (long) element * w;
-        if (elementValue < lb) {
-          break; // value too low
-        } else if (elementValue > ub) {
-          continue; // value too large
-        } else {
-          newPartialSum = partialSum + elementValue;
         }
 
         assignments[index] = element;
 
-        findSupportNegative(newIndex, newPartialSum);
+        // Recursion differs based on positive/negative phase
+        if (positive) {
+          if (newIndex < pos) {
+            findSupport(true, newIndex, newPartialSum);
+          } else {
+            findSupport(false, newIndex, newPartialSum);
+          }
+        } else {
+          findSupport(false, newIndex, newPartialSum);
+        }
       }
     }
   }

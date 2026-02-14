@@ -342,191 +342,101 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   public List<Constraint> primitiveDecomposition(Store store) {
 
     if (decomposition == null) {
-
       decomposition = new ArrayList<>();
-
-      if (violationMeasure == ViolationMeasure.VALUE_BASED) {
-
-        List<IntVar> costs = new ArrayList<>(countedValue.length);
-
-        for (int i = 0; i < countedValue.length; i++) {
-
-          if (hardCounters != null && softLowerBound != null) {
-
-            decomposition.add(new Count(xvars, hardCounters[i], countedValue[i]));
-
-            assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
-                : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
-                : "UpperBound for " + i + "-th element must be between 0 and number of variables";
-
-            int[][] table = new int[xvars.length + 1][2];
-            for (int j = 0; j <= xvars.length; j++) {
-              table[j][0] = j;
-              table[j][1] = 0;
-              if (j < softLowerBound[i]) {
-                table[j][1] = softLowerBound[i] - j;
-              }
-              if (j > softUpperBound[i]) {
-                table[j][1] = j - softUpperBound[i];
-              }
-            }
-
-            IntVar v = new IntVar(store, 0, xvars.length);
-            costs.add(v);
-
-            IntVar[] list = {hardCounters[i], v};
-            decomposition.add(new ExtensionalSupportVa(list, table));
-
-            continue;
-          }
-
-          if (softCounters != null) {
-
-            IntVar hardCounter;
-
-            if (hardLowerBound != null) {
-              hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
-            } else {
-              hardCounter = hardCounters[i];
-            }
-
-            decomposition.add(new Count(xvars, hardCounter, countedValue[i]));
-
-            List<int[]> tuples = new ArrayList<>();
-
-            for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
-                hard.hasMoreElements(); ) {
-
-              int hardElement = hard.nextElement();
-
-              for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
-                  soft.hasMoreElements(); ) {
-
-                int softElement = soft.nextElement();
-                int cost;
-
-                if (hardElement > softElement) {
-                  cost = hardElement - softElement;
-                } else {
-                  cost = softElement - hardElement;
-                }
-
-                int[] tuple = {hardElement, softElement, cost};
-                tuples.add(tuple);
-              }
-            }
-
-            IntVar v = new IntVar(store, 0, xvars.length);
-            costs.add(v);
-
-            IntVar[] list = {hardCounter, softCounters[i], v};
-            decomposition.add(
-                new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
-          }
-        }
-
-        decomposition.add(new SumInt(costs, "==", costVar));
-
-      } else {
-        throw new UnsupportedOperationException(
-            "Unsupported violation measure " + violationMeasure);
-      }
-
+      buildValueBasedDecomposition(store, decomposition);
       return decomposition;
     } else {
-
       List<Constraint> result = new ArrayList<>();
+      buildValueBasedDecomposition(store, result);
+      return result;
+    }
+  }
 
-      if (violationMeasure == ViolationMeasure.VALUE_BASED) {
+  private void buildValueBasedDecomposition(Store store, List<Constraint> target) {
 
-        List<IntVar> costs = new ArrayList<>(countedValue.length);
+    if (violationMeasure != ViolationMeasure.VALUE_BASED) {
+      throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
+    }
 
-        for (int i = 0; i < countedValue.length; i++) {
+    List<IntVar> costs = new ArrayList<>(countedValue.length);
 
-          if (hardCounters != null && softLowerBound != null) {
+    for (int i = 0; i < countedValue.length; i++) {
 
-            result.add(new Count(xvars, hardCounters[i], countedValue[i]));
+      if (hardCounters != null && softLowerBound != null) {
 
-            assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
-                : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
-                : "UpperBound for " + i + "-th element must be between 0 and number of variables";
+        target.add(new Count(xvars, hardCounters[i], countedValue[i]));
 
-            int[][] table = new int[xvars.length + 1][2];
-            for (int j = 0; j <= xvars.length; j++) {
-              table[j][0] = j;
-              table[j][1] = 0;
-              if (j < softLowerBound[i]) {
-                table[j][1] = softLowerBound[i] - j;
-              }
-              if (j > softUpperBound[i]) {
-                table[j][1] = j - softUpperBound[i];
-              }
-            }
+        assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
+            : "LowerBound for " + i + "-th element must be between 0 and number of variables";
+        assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
+            : "UpperBound for " + i + "-th element must be between 0 and number of variables";
 
-            IntVar v = new IntVar(store, 0, xvars.length);
-            costs.add(v);
-
-            IntVar[] list = {hardCounters[i], v};
-            result.add(new ExtensionalSupportVa(list, table));
-
-            continue;
+        int[][] table = new int[xvars.length + 1][2];
+        for (int j = 0; j <= xvars.length; j++) {
+          table[j][0] = j;
+          table[j][1] = 0;
+          if (j < softLowerBound[i]) {
+            table[j][1] = softLowerBound[i] - j;
           }
-
-          if (softCounters != null) {
-
-            IntVar hardCounter;
-
-            if (hardLowerBound != null) {
-              hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
-            } else {
-              hardCounter = hardCounters[i];
-            }
-
-            result.add(new Count(xvars, hardCounter, countedValue[i]));
-
-            List<int[]> tuples = new ArrayList<>();
-
-            for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
-                hard.hasMoreElements(); ) {
-
-              int hardElement = hard.nextElement();
-
-              for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
-                  soft.hasMoreElements(); ) {
-
-                int softElement = soft.nextElement();
-                int cost;
-
-                if (hardElement > softElement) {
-                  cost = hardElement - softElement;
-                } else {
-                  cost = softElement - hardElement;
-                }
-
-                int[] tuple = {hardElement, softElement, cost};
-                tuples.add(tuple);
-              }
-            }
-
-            IntVar v = new IntVar(store, 0, xvars.length);
-            costs.add(v);
-
-            IntVar[] list = {hardCounter, softCounters[i], v};
-            result.add(new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
+          if (j > softUpperBound[i]) {
+            table[j][1] = j - softUpperBound[i];
           }
         }
 
-        result.add(new SumInt(costs, "==", costVar));
+        IntVar v = new IntVar(store, 0, xvars.length);
+        costs.add(v);
 
-      } else {
-        throw new UnsupportedOperationException(
-            "Unsupported violation measure " + violationMeasure);
+        IntVar[] list = {hardCounters[i], v};
+        target.add(new ExtensionalSupportVa(list, table));
+
+        continue;
       }
 
-      return result;
+      if (softCounters != null) {
+
+        IntVar hardCounter;
+
+        if (hardLowerBound != null) {
+          hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
+        } else {
+          hardCounter = hardCounters[i];
+        }
+
+        target.add(new Count(xvars, hardCounter, countedValue[i]));
+
+        List<int[]> tuples = new ArrayList<>();
+
+        for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
+            hard.hasMoreElements(); ) {
+
+          int hardElement = hard.nextElement();
+
+          for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
+              soft.hasMoreElements(); ) {
+
+            int softElement = soft.nextElement();
+            int cost;
+
+            if (hardElement > softElement) {
+              cost = hardElement - softElement;
+            } else {
+              cost = softElement - hardElement;
+            }
+
+            int[] tuple = {hardElement, softElement, cost};
+            tuples.add(tuple);
+          }
+        }
+
+        IntVar v = new IntVar(store, 0, xvars.length);
+        costs.add(v);
+
+        IntVar[] list = {hardCounter, softCounters[i], v};
+        target.add(new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
+      }
     }
+
+    target.add(new SumInt(costs, "==", costVar));
   }
 
   @Override

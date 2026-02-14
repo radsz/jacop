@@ -1570,79 +1570,14 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   void gen_jacop_geost(SimpleNode node) {
-    int dim = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
-    int[] rect_size = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    int[] rect_offset = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    IntDomain[] shape = support.getSetArray((SimpleNode) node.jjtGetChild(3));
-    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
-    IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
-
-    // ---- KK, 2023-06-29
-    // geost must not have duplicated variables there
-    // could be constants that have the same value and
-    // are duplicated.
-    IntVar[] xx = removeDuplicates(x);
-
-    ArrayList<Shape> shapes = new ArrayList<>();
-
-    // dummy shape to have right indexes for kind (starting from 1)
-    ArrayList<Dbox> dummy = new ArrayList<>();
-    int[] offsetDummy = new int[dim];
-    int[] sizeDummy = new int[dim];
-    for (int k = 0; k < dim; k++) {
-      offsetDummy[k] = 0;
-      sizeDummy[k] = 1;
-    }
-    dummy.add(new Dbox(offsetDummy, sizeDummy));
-    shapes.add(new Shape(0, dummy));
-
-    // create all shapes (starting with id=1)
-    for (int i = 0; i < shape.length; i++) {
-      ArrayList<Dbox> shape_i = new ArrayList<>();
-
-      for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
-        int j = e.nextElement();
-
-        int[] offset = new int[dim];
-        int[] size = new int[dim];
-
-        for (int k = 0; k < dim; k++) {
-          offset[k] = rect_offset[(j - 1) * dim + k];
-          size[k] = rect_size[(j - 1) * dim + k];
-        }
-        shape_i.add(new Dbox(offset, size));
-      }
-      shapes.add(new Shape((i + 1), shape_i));
-    }
-
-    ArrayList<GeostObject> objects = new ArrayList<>();
-
-    for (int i = 0; i < kind.length; i++) {
-
-      IntVar[] coords = new IntVar[dim];
-
-      System.arraycopy(xx, i * dim, coords, 0, dim);
-
-      IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
-      IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
-      IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
-      GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end);
-      objects.add(obj);
-    }
-
-    ArrayList<ExternalConstraint> constraints = new ArrayList<>();
-    int[] dimensions = new int[dim + 1];
-    for (int i = 0; i < dim + 1; i++) {
-      dimensions[i] = i;
-    }
-
-    NonOverlapping constraint1 = new NonOverlapping(objects, dimensions);
-    constraints.add(constraint1);
-
-    support.pose(new Geost(objects, constraints, shapes));
+    buildGeost(node, false);
   }
 
   void gen_jacop_geost_bb(SimpleNode node) {
+    buildGeost(node, true);
+  }
+
+  private void buildGeost(SimpleNode node, boolean withBoundingBox) {
     int dim = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
     int[] rect_size = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     int[] rect_offset = support.getIntArray((SimpleNode) node.jjtGetChild(2));
@@ -1710,7 +1645,7 @@ class GlobalConstraints implements ParserTreeConstants {
     NonOverlapping constraint1 = new NonOverlapping(objects, dimensions);
     constraints.add(constraint1);
 
-    { // part for geost_bb
+    if (withBoundingBox) {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 

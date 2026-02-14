@@ -111,47 +111,19 @@ public class XorBool extends PrimitiveConstraint {
 
   @Override
   public void consistency(final Store store) {
-
-    IntVar nonGround = null;
-
-    int numberOnes = 0;
-    int numberZeros = 0;
-
-    for (IntVar e : x) {
-      if (e.min() == 1) {
-        numberOnes++;
-      } else if (e.max() == 0) {
-        numberZeros++;
-      } else {
-        nonGround = e;
-      }
-    }
-
-    if (numberOnes + numberZeros == x.length) {
-      if ((numberOnes & 1) == 1) {
-        y.domain.inValue(store.level, y, 1);
-      } else {
-        y.domain.inValue(store.level, y, 0);
-      }
-    } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
-      if (y.min() == 1) {
-        if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, 0);
-        } else {
-          nonGround.domain.inValue(store.level, nonGround, 1);
-        }
-      } else if (y.max() == 0) {
-        if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, 1);
-        } else {
-          nonGround.domain.inValue(store.level, nonGround, 0);
-        }
-      }
-    }
+    propagateXor(store, false);
   }
 
   @Override
   public void notConsistency(final Store store) {
+    propagateXor(store, true);
+  }
+
+  private void propagateXor(final Store store, boolean negated) {
+
+    // When negated, the values assigned for odd/even parity are flipped.
+    int oddVal = negated ? 0 : 1;
+    int evenVal = negated ? 1 : 0;
 
     IntVar nonGround = null;
 
@@ -170,22 +142,22 @@ public class XorBool extends PrimitiveConstraint {
 
     if (numberOnes + numberZeros == x.length) {
       if ((numberOnes & 1) == 1) {
-        y.domain.inValue(store.level, y, 0);
+        y.domain.inValue(store.level, y, oddVal);
       } else {
-        y.domain.inValue(store.level, y, 1);
+        y.domain.inValue(store.level, y, evenVal);
       }
     } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
       if (y.min() == 1) {
         if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, 1);
+          nonGround.domain.inValue(store.level, nonGround, evenVal);
         } else {
-          nonGround.domain.inValue(store.level, nonGround, 0);
+          nonGround.domain.inValue(store.level, nonGround, oddVal);
         }
       } else if (y.max() == 0) {
         if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, 0);
+          nonGround.domain.inValue(store.level, nonGround, oddVal);
         } else {
-          nonGround.domain.inValue(store.level, nonGround, 1);
+          nonGround.domain.inValue(store.level, nonGround, evenVal);
         }
       }
     }

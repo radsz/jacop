@@ -208,7 +208,16 @@ public abstract class Var implements Backtrackable {
    * @param pruningEvent type of the event which must occur to trigger the execution of the
    *     consistency function.
    */
-  public abstract void putModelConstraint(Constraint c, int pruningEvent);
+  public void putModelConstraint(Constraint c, int pruningEvent) {
+    if (singleton()) {
+      return;
+    }
+    if (pruningEvent == Domain.NONE) {
+      return;
+    }
+    dom().putModelConstraint(store.level, this, c, pruningEvent);
+    store.recordChange(this);
+  }
 
   /**
    * It registers constraint with current variable, so always when this variable is changed the
@@ -216,7 +225,13 @@ public abstract class Var implements Backtrackable {
    *
    * @param c the constraint which is added as a search constraint.
    */
-  public abstract void putSearchConstraint(Constraint c);
+  public void putSearchConstraint(Constraint c) {
+    if (singleton()) {
+      return;
+    }
+    dom().putSearchConstraint(store.level, this, c);
+    store.recordChange(this);
+  }
 
   /**
    * It detaches constraint from the current variable, so change in variable will not cause
@@ -225,7 +240,22 @@ public abstract class Var implements Backtrackable {
    *
    * @param c the constraint being detached from the variable.
    */
-  public abstract void removeConstraint(Constraint c);
+  public void removeConstraint(Constraint c) {
+    if (singleton()) {
+      return;
+    }
+    Domain d = dom();
+    int i = d.searchConstraintsToEvaluate - 1;
+    for (; i >= 0; i--) {
+      if (d.searchConstraints.get(i) == c) {
+        d.removeSearchConstraint(store.level, this, i, c);
+      }
+    }
+    if (i == -1) {
+      d.removeModelConstraint(store.level, this, c);
+    }
+    store.recordChange(this);
+  }
 
   /**
    * It checks if the domain contains only one value.
@@ -240,7 +270,9 @@ public abstract class Var implements Backtrackable {
    *
    * @return number of constraints attached to the variable.
    */
-  public abstract int sizeConstraints();
+  public int sizeConstraints() {
+    return dom().sizeConstraints();
+  }
 
   /**
    * It returns all constraints which are associated with variable, even the ones which are already
@@ -248,7 +280,9 @@ public abstract class Var implements Backtrackable {
    *
    * @return number of constraints attached at the earliest level of the variable.
    */
-  public abstract int sizeConstraintsOriginal();
+  public int sizeConstraintsOriginal() {
+    return dom().sizeConstraintsOriginal();
+  }
 
   /**
    * It returns current number of constraints which are associated with variable and are not yet
@@ -256,7 +290,9 @@ public abstract class Var implements Backtrackable {
    *
    * @return number of attached search constraints.
    */
-  public abstract int sizeSearchConstraints();
+  public int sizeSearchConstraints() {
+    return dom().searchConstraintsToEvaluate;
+  }
 
   /**
    * This function returns stamp of the current domain of variable. It is equal or smaller to the
@@ -273,7 +309,21 @@ public abstract class Var implements Backtrackable {
    *
    * @return string representation.
    */
-  public abstract String toStringFull();
+  public String toStringFull() {
+    return id + dom().toStringFull();
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder result = new StringBuilder(id);
+    if (singleton()) {
+      result.append(" = ");
+    } else {
+      result.append("::");
+    }
+    result.append(dom());
+    return result.toString();
+  }
 
   /**
    * It informs the variable that its variable has changed according to the specified event.

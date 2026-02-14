@@ -30,11 +30,6 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-
 /*
  * Implements ThetaLambdaUnaryTree and operations on this tree for Cumulative constraint
  *
@@ -197,58 +192,8 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     return tree[i];
   }
 
-  public void printTree(String name) {
-
-    try (PrintStream out =
-        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
-      out.print(toGraph(name));
-      // out.close(); not needed; auto close
-    } catch (IOException _) {
-      throw new RuntimeException("IO exception; ignored");
-    }
-  }
-
-  public String toGraph(String name) {
-
-    StringBuilder result = new StringBuilder();
-
-    result.append("digraph ThetaLambdaUnaryTree").append(name);
-    result.append(" {");
-    result.append("graph [  fontsize = 12,");
-    result.append("size = \"5,5\" ];\n");
-
-    for (int i = 0; i < treeSize; i++) {
-      result
-          .append("node_")
-          .append(i)
-          .append(" [shape = box, label = \"")
-          .append(tree[i])
-          .append("\"]\n");
-    }
-
-    result.append(treeToGraph(root()));
-
-    result.append("label =\"\n\nThetaLambdaUnaryTree").append(name).append("\n\"");
-
-    result.append("}");
-
-    return result.toString();
-  }
-
-  public String toString() {
-
-    StringBuilder result = new StringBuilder();
-
-    result.append("ThetaLambdaUnaryTree\n");
-    for (int i = 0; i < treeSize; i++) {
-      result
-          .append("Node ")
-          .append(i)
-          .append("\n============\n")
-          .append(tree[i])
-          .append("\n============\n");
-    }
-
-    return result.toString();
+  @Override
+  protected String treeName() {
+    return "ThetaLambdaUnaryTree";
   }
 }

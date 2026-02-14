@@ -102,114 +102,58 @@ public class CountValuesBounds extends AbstractCountValues {
   }
 
   @Override
-  public void consistency(final Store store) {
+  protected void updateCounterRest(Store store, int restEq, int restMayBe) {
+    counterRest.in(restEq, restEq + restMayBe);
+  }
 
-    int start = position.value();
-    int[] numberMayBe = new int[values.length];
-    int[] numberEq = new int[values.length];
-    int restEq;
-    int restMayBe;
+  @Override
+  protected void updateCounter(Store store, int i, int numberEq, int numberMayBe) {
+    counter[i].in(numberEq, numberEq + numberMayBe);
+  }
 
-    restEq = rest.value();
-    for (int i = 0; i < values.length; i++) {
-      numberEq[i] = equal[i].value();
-    }
+  @Override
+  protected int getCounterMin(int i) {
+    return counter[i].min();
+  }
 
-    do {
+  @Override
+  protected int getCounterMax(int i) {
+    return counter[i].max();
+  }
 
-      store.propagationHasOccurred = false;
+  @Override
+  protected int getCounterRestMin() {
+    return counterRest.min();
+  }
 
-      restMayBe = 0;
-      Arrays.fill(numberMayBe, 0);
+  @Override
+  protected int getCounterRestMax() {
+    return counterRest.max();
+  }
 
-      for (int i = start; i < n; i++) {
-        IntVar v = list[i];
-        int noValuesInDomain = 0;
+  @Override
+  protected int getExtendedCounterLength() {
+    return extendedCounter.length;
+  }
 
-        for (int j = 0; j < values.length; j++) {
-          if (v.domain.contains(values[j])) {
-            if (v.singleton()) {
-              numberEq[j]++;
-              swap(start, i);
-              start++;
-            } else {
-              numberMayBe[j]++;
-            }
-          } else { // does not have the values in its domain
-            noValuesInDomain++;
-          }
-        }
+  @Override
+  protected int getExtendedCounterMin(int i) {
+    return extendedCounter[i].min();
+  }
 
-        if (!v.domain.subtract(valuesDomain).isEmpty()) {
-          restMayBe++;
-        }
+  @Override
+  protected int getExtendedCounterMax(int i) {
+    return extendedCounter[i].max();
+  }
 
-        if (noValuesInDomain == values.length) {
-          swap(start, i);
-          start++;
-          restEq++;
-        }
-      }
+  @Override
+  protected void updateExtendedCounter(Store store, int i, int newMin, int newMax) {
+    extendedCounter[i].in(newMin, newMax);
+  }
 
-      counterRest.in(restEq, restEq + restMayBe);
-
-      for (int i = 0; i < values.length; i++) {
-        counter[i].in(numberEq[i], numberEq[i] + numberMayBe[i]);
-      }
-
-      int min = 0;
-      int max = 0;
-      for (Bounds value : extendedCounter) {
-        min += value.min();
-        max += value.max();
-      }
-      for (Bounds bounds : extendedCounter) { // sum(extendedCounter) == n (list length)
-        bounds.in(n - max + bounds.max(), n - min + bounds.min());
-      }
-
-      for (int i = 0; i < values.length; i++) {
-
-        if (numberMayBe[i] == counter[i].min() - numberEq[i]) {
-
-          for (int j = start; j < n; j++) {
-            IntVar v = list[j];
-            if (v.domain.contains(values[i])) {
-              v.domain.inValue(store.level, v, values[i]);
-            }
-          }
-        } else if (numberEq[i] == counter[i].max()) {
-
-          for (int j = start; j < n; j++) {
-            IntVar v = list[j];
-            v.domain.inComplement(store.level, v, values[i]);
-          }
-        }
-      }
-
-      if (restMayBe == counterRest.min() - restEq) {
-
-        for (int j = start; j < n; j++) {
-          IntVar v = list[j];
-          if (!v.domain.subtract(valuesDomain).isEmpty()) {
-            v.domain.in(store.level, v, valuesDomainComplement);
-          }
-        }
-      } else if (restEq == counterRest.max()) {
-
-        for (int j = start; j < n; j++) {
-          IntVar v = list[j];
-          v.domain.in(store.level, v, valuesDomain);
-        }
-      }
-
-    } while (store.propagationHasOccurred);
-
-    for (int i = 0; i < values.length; i++) {
-      equal[i].update(numberEq[i]);
-    }
-    rest.update(restEq);
-
-    position.update(start);
+  @Override
+  protected void assignValue(Store store, IntVar v, int value) {
+    v.domain.inValue(store.level, v, value);
   }
 
   /**

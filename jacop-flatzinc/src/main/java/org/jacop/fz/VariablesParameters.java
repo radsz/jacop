@@ -145,175 +145,74 @@ public class VariablesParameters implements ParserTreeConstants {
 
     dictionary = table;
     annotations = new HashSet<>();
-    boolean var_introduced = false;
-    boolean output_var = false;
-    boolean is_defined_var = false;
+    boolean outputVar = false;
 
     int type = getType(node);
-
     int initChild = getAnnotations(node, 1);
 
     if (annotations.contains("output_var")) {
-      output_var = true;
+      outputVar = true;
     }
 
     String ident;
     IntVar varInt;
     SetVar varSet;
     FloatVar varFloat;
-    BooleanVar boolVar;
-    IntDomain setValue;
-    int initVal;
-    double initValFloat;
-    IntVar initVar;
-    FloatVar initVarFloat;
+
     switch (type) {
       case 0: // int
         ident = ((ASTVarDeclItem) node).getIdent();
         varInt = new IntVar(store, ident, MIN_INT, MAX_INT);
-
-        table.addVariable(ident, varInt);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_int(node, initChild)) {
-            initVal = getScalarFlatExpr(node, initChild);
-            varInt.domain.inValue(store.level, varInt, initVal);
-          } else {
-            initVar = getScalarFlatExpr_var(store, node, initChild);
-            XeqY c = new XeqY(varInt, initVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchVar(varInt);
-        if (output_var) {
-          table.addOutVar(varInt);
-        }
+        initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
         break;
       case 1: // int interval
         ident = ((ASTVarDeclItem) node).getIdent();
-
         if (lowInterval > highInterval) {
           throw Store.failException;
         }
-
-        if (CHECK_BOUNDS) {
-          if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
-            throw new ArithmeticException(
-                "Bounds for "
-                    + ident
-                    + ": "
-                    + lowInterval
-                    + ".."
-                    + highInterval
-                    + " are too low/high");
-          }
+        if (CHECK_BOUNDS && (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT)) {
+          throw new ArithmeticException(
+              "Bounds for "
+                  + ident
+                  + ": "
+                  + lowInterval
+                  + ".."
+                  + highInterval
+                  + " are too low/high");
         }
-
         if (INTERVAL) {
           varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
         } else {
           varInt = new IntVar(store, ident, lowInterval, highInterval);
         }
-
-        table.addVariable(ident, varInt);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_int(node, initChild)) {
-            initVal = getScalarFlatExpr(node, initChild);
-            varInt.domain.inValue(store.level, varInt, initVal);
-          } else {
-            initVar = getScalarFlatExpr_var(store, node, initChild);
-            XeqY c = new XeqY(varInt, initVar);
-            pose(store, c);
-          }
-        }
-        table.addSearchVar(varInt);
-        if (output_var) {
-          table.addOutVar(varInt);
-        }
+        initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
         break;
       case 2: // int list
         ident = ((ASTVarDeclItem) node).getIdent();
         varInt = new IntVar(store, ident);
         for (Integer e : intList) {
           int element = e;
-
-          if (CHECK_BOUNDS) {
-            if (element < IntDomain.MIN_INT || element > IntDomain.MAX_INT) {
-              throw new ArithmeticException(
-                  "Domain value for " + ident + " is too high/low (" + element + ")");
-            }
+          if (CHECK_BOUNDS && (element < IntDomain.MIN_INT || element > IntDomain.MAX_INT)) {
+            throw new ArithmeticException(
+                "Domain value for " + ident + " is too high/low (" + element + ")");
           }
-
           varInt.addDom(element, element);
         }
-        table.addVariable(ident, varInt);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_int(node, initChild)) {
-            initVal = getScalarFlatExpr(node, initChild);
-            varInt.domain.inValue(store.level, varInt, initVal);
-          } else {
-            initVar = getScalarFlatExpr_var(store, node, initChild);
-            XeqY c = new XeqY(varInt, initVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchVar(varInt);
-        if (output_var) {
-          table.addOutVar(varInt);
-        }
+        initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
         break;
       case 3: // bool
         ident = ((ASTVarDeclItem) node).getIdent();
-        boolVar = new BooleanVar(store, ident);
-        table.addVariable(ident, boolVar);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_int(node, initChild)) {
-            initVal = getScalarFlatExpr(node, initChild);
-            boolVar.domain.inValue(store.level, boolVar, initVal);
-          } else {
-            initVar = getScalarFlatExpr_var(store, node, initChild);
-            XeqY c = new XeqY(boolVar, initVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchVar(boolVar);
-        if (output_var) {
-          table.addOutVar(boolVar);
-        }
+        varInt = new BooleanVar(store, ident);
+        initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
         numberBooleanVariables++;
         break;
       case 4: // set int
         ident = ((ASTVarDeclItem) node).getIdent();
         varSet = new SetVar(store, ident, new BoundSetDomain(MIN_INT, MAX_INT));
-        table.addSetVariable(ident, varSet);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_set(node, initChild)) {
-            setValue = getSetLiteral(node, initChild);
-            AeqS c = new AeqS(varSet, setValue);
-            pose(store, c);
-          } else {
-            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, initSetVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchSetVar(varSet);
-        if (output_var) {
-          table.addOutVar(varSet);
-        }
-        numberSetVariables++;
+        initAndRegisterSetVar(store, ident, varSet, node, initChild, table, outputVar);
         break;
       case 5: // set interval
         ident = ((ASTVarDeclItem) node).getIdent();
-
         if (lowInterval > highInterval) {
           varSet = new SetVar(store, ident, new BoundSetDomain());
         } else {
@@ -324,26 +223,7 @@ public class VariablesParameters implements ParserTreeConstants {
                   new BoundSetDomain(
                       new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
         }
-
-        table.addSetVariable(ident, varSet);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_set(node, initChild)) {
-            setValue = getSetLiteral(node, initChild);
-            AeqS c = new AeqS(varSet, setValue);
-            pose(store, c);
-          } else {
-            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, initSetVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchSetVar(varSet);
-        if (output_var) {
-          table.addOutVar(varSet);
-        }
-        numberSetVariables++;
+        initAndRegisterSetVar(store, ident, varSet, node, initChild, table, outputVar);
         break;
       case 6: // set list
         ident = ((ASTVarDeclItem) node).getIdent();
@@ -352,106 +232,28 @@ public class VariablesParameters implements ParserTreeConstants {
           dom.addDom(e, e);
         }
         varSet = new SetVar(store, ident, dom);
-        table.addSetVariable(ident, varSet);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_set(node, initChild)) {
-            setValue = getSetLiteral(node, initChild);
-            AeqS c = new AeqS(varSet, setValue);
-            pose(store, c);
-          } else {
-            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, initSetVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchSetVar(varSet);
-        if (output_var) {
-          table.addOutVar(varSet);
-        }
-        numberSetVariables++;
+        initAndRegisterSetVar(store, ident, varSet, node, initChild, table, outputVar);
         break;
-      case 10:
+      case 10: // range set
         ident = ((ASTVarDeclItem) node).getIdent();
-        IntDomain domR = rangeDomain;
-
         varSet = new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(), rangeDomain));
-        table.addSetVariable(ident, varSet);
-
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_set(node, initChild)) {
-            setValue = getSetLiteral(node, initChild);
-            AeqS c = new AeqS(varSet, setValue);
-            pose(store, c);
-          } else {
-            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, initSetVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchSetVar(varSet);
-        if (output_var) {
-          table.addOutVar(varSet);
-        }
-        numberSetVariables++;
-
+        initAndRegisterSetVar(store, ident, varSet, node, initChild, table, outputVar);
         break;
       case 7: // bool set
         ident = ((ASTVarDeclItem) node).getIdent();
         varSet = new SetVar(store, ident, new BoundSetDomain(0, 1));
-        table.addSetVariable(ident, varSet);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_set(node, initChild)) {
-            setValue = getSetLiteral(node, initChild);
-            AeqS c = new AeqS(varSet, setValue);
-            pose(store, c);
-          } else {
-            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, initSetVar);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchSetVar(varSet);
-        if (output_var) {
-          table.addOutVar(varSet);
-        }
-        numberSetVariables++;
+        initAndRegisterSetVar(store, ident, varSet, node, initChild, table, outputVar);
         break;
       case 8: // float
         ident = ((ASTVarDeclItem) node).getIdent();
         varFloat = new FloatVar(store, ident, MIN_FLOAT, MAX_FLOAT);
-
-        table.addFloatVariable(ident, varFloat);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_float(node, initChild)) {
-            initValFloat = getScalarFlatExprFloat(node, initChild);
-            varFloat.domain.in(store.level, varFloat, initValFloat, initValFloat);
-          } else {
-            initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
-            PeqQ c = new PeqQ(varFloat, initVarFloat);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchFloatVar(varFloat);
-        if (output_var) {
-          table.addOutVar(varFloat);
-        }
-        numberFloatVariables++;
+        initAndRegisterFloatVar(store, ident, varFloat, node, initChild, table, outputVar);
         break;
       case 9: // float interval
         ident = ((ASTVarDeclItem) node).getIdent();
-
         if (lowFloatInterval > highFloatInterval) {
           throw Store.failException;
         }
-
         if (lowFloatInterval < MIN_FLOAT) {
           System.err.println(
               "Minimal value for float variable " + ident + " too low; changed to " + MIN_FLOAT);
@@ -462,31 +264,102 @@ public class VariablesParameters implements ParserTreeConstants {
               "Maximal value for float variable " + ident + " too high; changed to " + MAX_FLOAT);
           highFloatInterval = MAX_FLOAT;
         }
-
         varFloat = new FloatVar(store, ident, lowFloatInterval, highFloatInterval);
-
-        table.addFloatVariable(ident, varFloat);
-        if (initChild < node.jjtGetNumChildren()) {
-
-          if (constant_float(node, initChild)) {
-            initValFloat = getScalarFlatExprFloat(node, initChild);
-            varFloat.domain.in(store.level, varFloat, initValFloat, initValFloat);
-          } else {
-            initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
-            PeqQ c = new PeqQ(varFloat, initVarFloat);
-            pose(store, c);
-          }
-        }
-
-        table.addSearchFloatVar(varFloat);
-        if (output_var) {
-          table.addOutVar(varFloat);
-        }
-        numberFloatVariables++;
+        initAndRegisterFloatVar(store, ident, varFloat, node, initChild, table, outputVar);
         break;
       default:
         throw new IllegalArgumentException("Not supported type in parameter; compilation aborted.");
     }
+  }
+
+  /**
+   * Registers an integer variable in the table, optionally initializes it from the AST node, adds
+   * it to search variables, and marks it as output if needed.
+   */
+  private void initAndRegisterIntVar(
+      Store store,
+      String ident,
+      IntVar var,
+      SimpleNode node,
+      int initChild,
+      Tables table,
+      boolean outputVar) {
+    table.addVariable(ident, var);
+    if (initChild < node.jjtGetNumChildren()) {
+      if (constant_int(node, initChild)) {
+        int initVal = getScalarFlatExpr(node, initChild);
+        var.domain.inValue(store.level, var, initVal);
+      } else {
+        IntVar initVar = getScalarFlatExpr_var(store, node, initChild);
+        pose(store, new XeqY(var, initVar));
+      }
+    }
+    table.addSearchVar(var);
+    if (outputVar) {
+      table.addOutVar(var);
+    }
+  }
+
+  /**
+   * Registers a set variable in the table, optionally initializes it from the AST node, adds it to
+   * search variables, and marks it as output if needed.
+   */
+  private void initAndRegisterSetVar(
+      Store store,
+      String ident,
+      SetVar var,
+      SimpleNode node,
+      int initChild,
+      Tables table,
+      boolean outputVar) {
+    table.addSetVariable(ident, var);
+    if (initChild < node.jjtGetNumChildren()) {
+      if (constant_set(node, initChild)) {
+        IntDomain setValue = getSetLiteral(node, initChild);
+        pose(store, new AeqS(var, setValue));
+      } else {
+        SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+        pose(store, new AeqB(var, initSetVar));
+      }
+    }
+    table.addSearchSetVar(var);
+    if (outputVar) {
+      table.addOutVar(var);
+    }
+    numberSetVariables++;
+  }
+
+  /**
+   * Registers a float variable in the table, optionally initializes it from the AST node, adds it
+   * to search variables, and marks it as output if needed.
+   */
+  private void initAndRegisterFloatVar(
+      Store store,
+      String ident,
+      FloatVar var,
+      SimpleNode node,
+      int initChild,
+      Tables table,
+      boolean outputVar) {
+    table.addFloatVariable(ident, var);
+    if (initChild < node.jjtGetNumChildren()) {
+      if (constant_float(node, initChild)) {
+        double initValFloat = getScalarFlatExprFloat(node, initChild);
+        var.domain.in(store.level, var, initValFloat, initValFloat);
+      } else {
+        FloatVar initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
+        pose(store, new PeqQ(var, initVarFloat));
+      }
+    }
+    table.addSearchFloatVar(var);
+    if (outputVar) {
+      table.addOutVar(var);
+    }
+    numberFloatVariables++;
+  }
+
+  private int computeArraySize(SimpleNode node) {
+    return ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
   }
 
   void generateArray(SimpleNode node, Tables table, Store store) {
@@ -518,7 +391,7 @@ public class VariablesParameters implements ParserTreeConstants {
       case 1: // array of int interval
       case 2: // array of int list
       case 3: // array of bool
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         val = getArrayOfScalarFlatExpr(node, initChild, size);
         table.addIntArray(ident, val);
         break;
@@ -527,13 +400,13 @@ public class VariablesParameters implements ParserTreeConstants {
       case 6: // array of set list
       case 7: // array of bool set
       case 10: // array of range set
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         setValue = getSetLiteralArray(node, initChild, size);
         table.addSetArray(ident, setValue);
         break;
       case 8: // array of float
       case 9:
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         double[] valFloat = getArrayOfScalarFlatExprFloat(node, initChild, size);
         table.addFloatArray(ident, valFloat);
         break;
@@ -548,18 +421,15 @@ public class VariablesParameters implements ParserTreeConstants {
     dictionary = table;
     annotations = new HashSet<>();
     indexBounds = new ArrayList<>();
-    boolean var_introduced = false;
-    boolean output_array = false;
+    boolean outputArray = false;
     OutputArrayAnnotation outArrayAnn = null;
 
     int type = getType(node);
-
     int initChild = getArrayAnnotations(node, 1);
-
     String ident = ((ASTVarDeclItem) node).getIdent();
 
     if (annotations.contains("output_array")) {
-      output_array = true;
+      outputArray = true;
       outArrayAnn = new OutputArrayAnnotation(ident, indexBounds);
     }
 
@@ -570,35 +440,27 @@ public class VariablesParameters implements ParserTreeConstants {
 
     switch (type) {
       case 0: // array of int
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
             varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", MIN_INT, MAX_INT);
           }
           table.addSearchArray(varArrayInt);
         }
-        table.addVariableArray(ident, varArrayInt);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayInt);
-          table.addOutArray(outArrayAnn);
-        }
+        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
         break;
       case 1: // array of int interval
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
-
+        size = computeArraySize(node);
         if (lowInterval > highInterval) {
           throw Store.failException;
         }
-
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayInt = new IntVar[size];
-
           for (int i = 0; i < size; i++) {
             if (INTERVAL) {
               varArrayInt[i] =
@@ -608,21 +470,15 @@ public class VariablesParameters implements ParserTreeConstants {
               varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", lowInterval, highInterval);
             }
           }
-
           table.addSearchArray(varArrayInt);
         }
-        table.addVariableArray(ident, varArrayInt);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayInt);
-          table.addOutArray(outArrayAnn);
-        }
+        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
         break;
       case 2: // array of int list
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
             IntervalDomain dom = new IntervalDomain();
@@ -633,17 +489,13 @@ public class VariablesParameters implements ParserTreeConstants {
           }
           table.addSearchArray(varArrayInt);
         }
-        table.addVariableArray(ident, varArrayInt);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayInt);
-          table.addOutArray(outArrayAnn);
-        }
+        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
         break;
       case 3: // array of bool
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
             varArrayInt[i] = new BooleanVar(store, ident + "[" + i + "]");
@@ -651,18 +503,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchArray(varArrayInt);
           numberBooleanVariables += size;
         }
-        table.addVariableArray(ident, varArrayInt);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayInt);
-          table.addOutArray(outArrayAnn);
-        }
+        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
         break;
       case 4: // array of set int
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             varArraySet[i] =
@@ -671,18 +518,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
-        table.addSetVariableArray(ident, varArraySet);
-        if (output_array) {
-          outArrayAnn.setArray(varArraySet);
-          table.addOutArray(outArrayAnn);
-        }
+        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
         break;
       case 5: // array of set interval
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             if (lowInterval > highInterval) {
@@ -699,18 +541,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
-        table.addSetVariableArray(ident, varArraySet);
-        if (output_array) {
-          outArrayAnn.setArray(varArraySet);
-          table.addOutArray(outArrayAnn);
-        }
+        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
         break;
       case 6: // array of set list
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             IntDomain sd = new IntervalDomain();
@@ -724,18 +561,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
-        table.addSetVariableArray(ident, varArraySet);
-        if (output_array) {
-          outArrayAnn.setArray(varArraySet);
-          table.addOutArray(outArrayAnn);
-        }
+        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
         break;
       case 7: // array of bool set
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(0, 1));
@@ -743,18 +575,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
-        table.addSetVariableArray(ident, varArraySet);
-        if (output_array) {
-          outArrayAnn.setArray(varArraySet);
-          table.addOutArray(outArrayAnn);
-        }
+        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
         break;
       case 10: // array of range set
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else { // no init values
+        } else {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             varArraySet[i] =
@@ -766,17 +593,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
-        table.addSetVariableArray(ident, varArraySet);
-        if (output_array) {
-          outArrayAnn.setArray(varArraySet);
-          table.addOutArray(outArrayAnn);
-        }
+        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
         break;
       case 8: // array of float
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
+        size = computeArraySize(node);
         if (initChild < node.jjtGetNumChildren()) {
           varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayFloat = new FloatVar[size];
           for (int i = 0; i < size; i++) {
             varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", MIN_FLOAT, MAX_FLOAT);
@@ -784,19 +607,13 @@ public class VariablesParameters implements ParserTreeConstants {
           table.addSearchFloatArray(varArrayFloat);
           numberFloatVariables += size;
         }
-        table.addVariableFloatArray(ident, varArrayFloat);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayFloat);
-          table.addOutArray(outArrayAnn);
-        }
+        registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
         break;
       case 9: // array of float interval
-        size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
-
+        size = computeArraySize(node);
         if (lowFloatInterval > highFloatInterval) {
           throw Store.failException;
         }
-
         if (lowFloatInterval < MIN_FLOAT) {
           System.err.println(
               "Minimal value for array float variable "
@@ -813,31 +630,61 @@ public class VariablesParameters implements ParserTreeConstants {
                   + MAX_FLOAT);
           highFloatInterval = MAX_FLOAT;
         }
-
         if (initChild < node.jjtGetNumChildren()) {
-          // array initialization
           varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-        } else { // no init values
+        } else {
           varArrayFloat = new FloatVar[size];
-
           for (int i = 0; i < size; i++) {
             varArrayFloat[i] =
                 new FloatVar(store, ident + "[" + i + "]", lowFloatInterval, highFloatInterval);
           }
-
           table.addSearchFloatArray(varArrayFloat);
           numberFloatVariables += size;
         }
-        table.addVariableFloatArray(ident, varArrayFloat);
-        if (output_array) {
-          outArrayAnn.setArray(varArrayFloat);
-          table.addOutArray(outArrayAnn);
-        }
+        registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
         break;
-
       default:
         throw new IllegalArgumentException(
             "Not supported type in array parameter; compilation aborted.");
+    }
+  }
+
+  private void registerIntArray(
+      Tables table,
+      String ident,
+      IntVar[] array,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    table.addVariableArray(ident, array);
+    if (outputArray) {
+      outArrayAnn.setArray(array);
+      table.addOutArray(outArrayAnn);
+    }
+  }
+
+  private void registerSetArray(
+      Tables table,
+      String ident,
+      SetVar[] array,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    table.addSetVariableArray(ident, array);
+    if (outputArray) {
+      outArrayAnn.setArray(array);
+      table.addOutArray(outArrayAnn);
+    }
+  }
+
+  private void registerFloatArray(
+      Tables table,
+      String ident,
+      FloatVar[] array,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    table.addVariableFloatArray(ident, array);
+    if (outputArray) {
+      outArrayAnn.setArray(array);
+      table.addOutArray(outArrayAnn);
     }
   }
 

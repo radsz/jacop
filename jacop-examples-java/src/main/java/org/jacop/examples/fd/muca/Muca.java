@@ -172,712 +172,167 @@ public class Muca extends ExampleFd {
 
   /** It creates an instance of the auction problem. */
   public void setupProblem1() {
-
     bids = new ArrayList<>();
 
-    final List<List<Transformation>> bid_1 = new ArrayList<>();
+    Transformation t1 = new Transformation(List.of(3, 10), new Delta(0, 1), new Delta(5, 0));
+    Transformation t2 =
+        new Transformation(List.of(4, 10, 11), new Delta(0, 2), new Delta(2, 0), new Delta(2, 0));
+    bids.add(List.of(List.of(t1, t2)));
 
-    final List<Transformation> bid_1_xor1 = new ArrayList<>();
+    Transformation t3 =
+        new Transformation(List.of(5, 11, 12), new Delta(0, 1), new Delta(1, 0), new Delta(1, 1));
+    Transformation t4 =
+        new Transformation(
+            List.of(6, 11, 12, 13),
+            new Delta(0, 2),
+            new Delta(2, 0),
+            new Delta(2, 0),
+            new Delta(2, 0));
+    Transformation t5 =
+        new Transformation(List.of(7, 12, 13), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t3, t4, t5)));
 
-    Transformation t1 = new Transformation();
-    // ((0, 1))
-    t1.goodsIds = new ArrayList<>();
-    t1.goodsIds.add(3);
-    t1.goodsIds.add(10);
-    t1.delta = new ArrayList<>();
-    t1.delta.add(new Delta(0, 1));
-    t1.delta.add(new Delta(5, 0));
+    Transformation t6 =
+        new Transformation(List.of(8, 13, 14), new Delta(2), new Delta(-2), new Delta(-2));
+    Transformation t7 =
+        new Transformation(List.of(9, 13, 14), new Delta(2), new Delta(-3), new Delta(-10));
+    bids.add(List.of(List.of(t6, t7)));
 
-    bid_1_xor1.add(t1);
+    Transformation t8 =
+        new Transformation(List.of(0, 3, 4), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t8)));
 
-    // ((2, 3))
-    Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<>();
-    t2.goodsIds.add(4);
-    t2.goodsIds.add(10);
-    t2.goodsIds.add(11);
-    t2.delta = new ArrayList<>();
-    t2.delta.add(new Delta(0, 2));
-    t2.delta.add(new Delta(2, 0));
-    t2.delta.add(new Delta(2, 0));
+    Transformation t9 =
+        new Transformation(
+            List.of(1, 5, 6, 7), new Delta(4), new Delta(-1), new Delta(-2), new Delta(-1));
+    bids.add(List.of(List.of(t9)));
 
-    bid_1_xor1.add(t2);
+    Transformation t10 =
+        new Transformation(List.of(2, 8, 9), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t10)));
 
-    bid_1.add(bid_1_xor1);
+    Transformation t11 =
+        new Transformation(List.of(5, 11, 12), new Delta(1), new Delta(-1), new Delta(-1));
+    Transformation t12 =
+        new Transformation(
+            List.of(6, 11, 12, 13), new Delta(2), new Delta(-2), new Delta(-2), new Delta(-2));
+    Transformation t13 =
+        new Transformation(List.of(7, 12, 13), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t11, t12, t13)));
 
-    final List<List<Transformation>> bid_2 = new ArrayList<>();
+    Transformation t14 =
+        new Transformation(
+            List.of(1, 5, 6, 7), new Delta(4), new Delta(-1), new Delta(-2), new Delta(-1));
+    bids.add(List.of(List.of(t14)));
 
-    final List<Transformation> bid_2_xor1 = new ArrayList<>();
-
-    Transformation t3 = new Transformation();
-    // ((0, 1))
-    t3.goodsIds = new ArrayList<>();
-    t3.goodsIds.add(5);
-    t3.goodsIds.add(11);
-    t3.goodsIds.add(12);
-    t3.delta = new ArrayList<>();
-    t3.delta.add(new Delta(0, 1));
-    t3.delta.add(new Delta(1, 0));
-    t3.delta.add(new Delta(1, 1));
-
-    bid_2_xor1.add(t3);
-
-    Transformation t4 = new Transformation();
-    // ((0, 1))
-    t4.goodsIds = new ArrayList<>();
-    t4.goodsIds.add(6);
-    t4.goodsIds.add(11);
-    t4.goodsIds.add(12);
-    t4.goodsIds.add(13);
-    t4.delta = new ArrayList<>();
-    t4.delta.add(new Delta(0, 2));
-    t4.delta.add(new Delta(2, 0));
-    t4.delta.add(new Delta(2, 0));
-    t4.delta.add(new Delta(2, 0));
-
-    bid_2_xor1.add(t4);
-
-    Transformation t5 = new Transformation();
-    // ((0, 1))
-    t5.goodsIds = new ArrayList<>();
-    t5.goodsIds.add(7);
-    t5.goodsIds.add(12);
-    t5.goodsIds.add(13);
-    t5.delta = new ArrayList<>();
-    t5.delta.add(new Delta(1));
-    t5.delta.add(new Delta(-1));
-    t5.delta.add(new Delta(-1));
-
-    bid_2_xor1.add(t5);
-
-    bid_2.add(bid_2_xor1);
-
-    final List<List<Transformation>> bid_3 = new ArrayList<>();
-
-    final List<Transformation> bid_3_xor1 = new ArrayList<>();
-
-    Transformation t6 = new Transformation();
-    // ((0, 1))
-    t6.goodsIds = new ArrayList<>();
-    t6.goodsIds.add(8);
-    t6.goodsIds.add(13);
-    t6.goodsIds.add(14);
-    t6.delta = new ArrayList<>();
-    t6.delta.add(new Delta(2));
-    t6.delta.add(new Delta(-2));
-    t6.delta.add(new Delta(-2));
-
-    bid_3_xor1.add(t6);
-
-    // ((2, 3))
-    Transformation t7 = new Transformation();
-    t7.goodsIds = new ArrayList<>();
-    t7.goodsIds.add(9);
-    t7.goodsIds.add(13);
-    t7.goodsIds.add(14);
-    t7.delta = new ArrayList<>();
-    t7.delta.add(new Delta(2));
-    t7.delta.add(new Delta(-3));
-    t7.delta.add(new Delta(-10));
-
-    bid_3_xor1.add(t7);
-
-    bid_3.add(bid_3_xor1);
-
-    final List<List<Transformation>> bid_4 = new ArrayList<>();
-
-    final List<Transformation> bid_4_xor1 = new ArrayList<>();
-
-    Transformation t8 = new Transformation();
-    // ((0, 1))
-    t8.goodsIds = new ArrayList<>();
-    t8.goodsIds.add(0);
-    t8.goodsIds.add(3);
-    t8.goodsIds.add(4);
-    t8.delta = new ArrayList<>();
-    t8.delta.add(new Delta(1));
-    t8.delta.add(new Delta(-1));
-    t8.delta.add(new Delta(-1));
-
-    bid_4_xor1.add(t8);
-
-    bid_4.add(bid_4_xor1);
-
-    final List<List<Transformation>> bid_5 = new ArrayList<>();
-
-    final List<Transformation> bid_5_xor1 = new ArrayList<>();
-
-    Transformation t9 = new Transformation();
-    // ((0, 1))
-    t9.goodsIds = new ArrayList<>();
-    t9.goodsIds.add(1);
-    t9.goodsIds.add(5);
-    t9.goodsIds.add(6);
-    t9.goodsIds.add(7);
-    t9.delta = new ArrayList<>();
-    t9.delta.add(new Delta(4));
-    t9.delta.add(new Delta(-1));
-    t9.delta.add(new Delta(-2));
-    t9.delta.add(new Delta(-1));
-
-    bid_5_xor1.add(t9);
-
-    bid_5.add(bid_5_xor1);
-
-    final List<List<Transformation>> bid_6 = new ArrayList<>();
-
-    final List<Transformation> bid_6_xor1 = new ArrayList<>();
-
-    Transformation t10 = new Transformation();
-    // ((0, 1))
-    t10.goodsIds = new ArrayList<>();
-    t10.goodsIds.add(2);
-    t10.goodsIds.add(8);
-    t10.goodsIds.add(9);
-    t10.delta = new ArrayList<>();
-    t10.delta.add(new Delta(1));
-    t10.delta.add(new Delta(-1));
-    t10.delta.add(new Delta(-1));
-
-    bid_6_xor1.add(t10);
-
-    bid_6.add(bid_6_xor1);
-
-    final List<List<Transformation>> bid_7 = new ArrayList<>();
-
-    final List<Transformation> bid_7_xor1 = new ArrayList<>();
-
-    Transformation t11 = new Transformation();
-    // ((0, 1))
-    t11.goodsIds = new ArrayList<>();
-    t11.goodsIds.add(5);
-    t11.goodsIds.add(11);
-    t11.goodsIds.add(12);
-    t11.delta = new ArrayList<>();
-    t11.delta.add(new Delta(1));
-    t11.delta.add(new Delta(-1));
-    t11.delta.add(new Delta(-1));
-
-    bid_7_xor1.add(t11);
-
-    Transformation t12 = new Transformation();
-    // ((0, 1))
-    t12.goodsIds = new ArrayList<>();
-    t12.goodsIds.add(6);
-    t12.goodsIds.add(11);
-    t12.goodsIds.add(12);
-    t12.goodsIds.add(13);
-    t12.delta = new ArrayList<>();
-    t12.delta.add(new Delta(2));
-    t12.delta.add(new Delta(-2));
-    t12.delta.add(new Delta(-2));
-    t12.delta.add(new Delta(-2));
-
-    bid_7_xor1.add(t12);
-
-    Transformation t13 = new Transformation();
-    // ((0, 1))
-    t13.goodsIds = new ArrayList<>();
-    t13.goodsIds.add(7);
-    t13.goodsIds.add(12);
-    t13.goodsIds.add(13);
-    t13.delta = new ArrayList<>();
-    t13.delta.add(new Delta(1));
-    t13.delta.add(new Delta(-1));
-    t13.delta.add(new Delta(-1));
-
-    bid_7_xor1.add(t13);
-
-    bid_7.add(bid_7_xor1);
-
-    final List<List<Transformation>> bid_8 = new ArrayList<>();
-
-    final List<Transformation> bid_8_xor1 = new ArrayList<>();
-
-    Transformation t14 = new Transformation();
-    // ((1, 2))
-    t14.goodsIds = new ArrayList<>();
-    t14.goodsIds.add(1);
-    t14.goodsIds.add(5);
-    t14.goodsIds.add(6);
-    t14.goodsIds.add(7);
-    t14.delta = new ArrayList<>();
-    t14.delta.add(new Delta(4));
-    t14.delta.add(new Delta(-1));
-    t14.delta.add(new Delta(-2));
-    t14.delta.add(new Delta(-1));
-
-    bid_8_xor1.add(t14);
-    bid_8.add(bid_8_xor1);
-
-    bids.add(bid_1);
-    bids.add(bid_2);
-    bids.add(bid_3);
-    bids.add(bid_4);
-    bids.add(bid_5);
-    bids.add(bid_6);
-    bids.add(bid_7);
-    bids.add(bid_8);
-
-    initialQuantity = new ArrayList<>();
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(3);
-    initialQuantity.add(4);
-    initialQuantity.add(3);
-
-    finalQuantity = new ArrayList<>();
-    finalQuantity.add(0);
-    finalQuantity.add(4);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
+    initialQuantity = new ArrayList<>(List.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 3));
+    finalQuantity = new ArrayList<>(List.of(0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
 
     costs = new ArrayList<>();
-    List<Integer> cost_bid_1 = new ArrayList<>();
-    cost_bid_1.add(-10);
-
-    costs.add(cost_bid_1);
-
-    List<Integer> cost_bid_2 = new ArrayList<>();
-    cost_bid_2.add(-20);
-    costs.add(cost_bid_2);
-
-    List<Integer> cost_bid_3 = new ArrayList<>();
-    cost_bid_3.add(25);
-    costs.add(cost_bid_3);
-
-    List<Integer> cost_bid_4 = new ArrayList<>();
-    cost_bid_4.add(-30);
-    costs.add(cost_bid_4);
-
-    List<Integer> cost_bid_5 = new ArrayList<>();
-    cost_bid_5.add(35);
-    costs.add(cost_bid_5);
-
-    List<Integer> cost_bid_6 = new ArrayList<>();
-    cost_bid_6.add(-32);
-    costs.add(cost_bid_6);
-
-    List<Integer> cost_bid_7 = new ArrayList<>();
-    cost_bid_7.add(-15);
-    costs.add(cost_bid_7);
-
-    List<Integer> cost_bid_8 = new ArrayList<>();
-    cost_bid_8.add(-30);
-    costs.add(cost_bid_8);
+    addBidCost(-10);
+    addBidCost(-20);
+    addBidCost(25);
+    addBidCost(-30);
+    addBidCost(35);
+    addBidCost(-32);
+    addBidCost(-15);
+    addBidCost(-30);
   }
 
   /** It creates an instance of the auction problem. */
   public void setupProblem2() {
     bids = new ArrayList<>();
 
-    final List<List<Transformation>> bid_1 = new ArrayList<>();
+    Transformation t1 =
+        new Transformation(List.of(3, 0, 1), new Delta(1), new Delta(-1), new Delta(-1));
+    Transformation t2 =
+        new Transformation(
+            List.of(4, 0, 1, 2), new Delta(2), new Delta(-2), new Delta(-2), new Delta(-2));
+    Transformation t3 =
+        new Transformation(List.of(5, 1, 2), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t1, t2, t3)));
 
-    final List<Transformation> bid_1_xor1 = new ArrayList<>();
+    Transformation t4 =
+        new Transformation(
+            List.of(6, 3, 4, 5), new Delta(4), new Delta(-1), new Delta(-2), new Delta(-1));
+    bids.add(List.of(List.of(t4)));
 
-    Transformation t1 = new Transformation();
-    // ((0, 1))
-    t1.goodsIds = new ArrayList<>();
-    t1.goodsIds.add(3);
-    t1.goodsIds.add(0);
-    t1.goodsIds.add(1);
-    t1.delta = new ArrayList<>();
-    t1.delta.add(new Delta(1));
-    t1.delta.add(new Delta(-1));
-    t1.delta.add(new Delta(-1));
+    Transformation t5 =
+        new Transformation(List.of(3, 0, 1), new Delta(1), new Delta(-1), new Delta(-1));
+    Transformation t6 =
+        new Transformation(
+            List.of(4, 0, 1, 2), new Delta(2), new Delta(-2), new Delta(-2), new Delta(-2));
+    Transformation t7 =
+        new Transformation(List.of(5, 1, 2), new Delta(1), new Delta(-1), new Delta(-1));
+    bids.add(List.of(List.of(t5, t6, t7)));
 
-    bid_1_xor1.add(t1);
+    Transformation t8 =
+        new Transformation(
+            List.of(6, 3, 4, 5), new Delta(4), new Delta(-1), new Delta(-2), new Delta(-1));
+    bids.add(List.of(List.of(t8)));
 
-    Transformation t2 = new Transformation();
-    // ((0, 1))
-    t2.goodsIds = new ArrayList<>();
-    t2.goodsIds.add(4);
-    t2.goodsIds.add(0);
-    t2.goodsIds.add(1);
-    t2.goodsIds.add(2);
-    t2.delta = new ArrayList<>();
-    t2.delta.add(new Delta(2));
-    t2.delta.add(new Delta(-2));
-    t2.delta.add(new Delta(-2));
-    t2.delta.add(new Delta(-2));
-
-    bid_1_xor1.add(t2);
-
-    Transformation t3 = new Transformation();
-    // ((0, 1))
-    t3.goodsIds = new ArrayList<>();
-    t3.goodsIds.add(5);
-    t3.goodsIds.add(1);
-    t3.goodsIds.add(2);
-    t3.delta = new ArrayList<>();
-    t3.delta.add(new Delta(1));
-    t3.delta.add(new Delta(-1));
-    t3.delta.add(new Delta(-1));
-
-    bid_1_xor1.add(t3);
-
-    bid_1.add(bid_1_xor1);
-
-    final List<List<Transformation>> bid_2 = new ArrayList<>();
-
-    final List<Transformation> bid_2_xor1 = new ArrayList<>();
-
-    Transformation t4 = new Transformation();
-    // ((0, 1))
-    t4.goodsIds = new ArrayList<>();
-    t4.goodsIds.add(6);
-    t4.goodsIds.add(3);
-    t4.goodsIds.add(4);
-    t4.goodsIds.add(5);
-    t4.delta = new ArrayList<>();
-    t4.delta.add(new Delta(4));
-    t4.delta.add(new Delta(-1));
-    t4.delta.add(new Delta(-2));
-    t4.delta.add(new Delta(-1));
-
-    bid_2_xor1.add(t4);
-
-    bid_2.add(bid_2_xor1);
-
-    final List<List<Transformation>> bid_3 = new ArrayList<>();
-
-    final List<Transformation> bid_3_xor1 = new ArrayList<>();
-
-    Transformation t5 = new Transformation();
-    // ((0, 1))
-    t5.goodsIds = new ArrayList<>();
-    t5.goodsIds.add(3);
-    t5.goodsIds.add(0);
-    t5.goodsIds.add(1);
-    t5.delta = new ArrayList<>();
-    t5.delta.add(new Delta(1));
-    t5.delta.add(new Delta(-1));
-    t5.delta.add(new Delta(-1));
-
-    bid_3_xor1.add(t5);
-
-    Transformation t6 = new Transformation();
-    // ((0, 1))
-    t6.goodsIds = new ArrayList<>();
-    t6.goodsIds.add(4);
-    t6.goodsIds.add(0);
-    t6.goodsIds.add(1);
-    t6.goodsIds.add(2);
-    t6.delta = new ArrayList<>();
-    t6.delta.add(new Delta(2));
-    t6.delta.add(new Delta(-2));
-    t6.delta.add(new Delta(-2));
-    t6.delta.add(new Delta(-2));
-
-    bid_3_xor1.add(t6);
-
-    Transformation t7 = new Transformation();
-    // ((0, 1))
-    t7.goodsIds = new ArrayList<>();
-    t7.goodsIds.add(5);
-    t7.goodsIds.add(1);
-    t7.goodsIds.add(2);
-    t7.delta = new ArrayList<>();
-    t7.delta.add(new Delta(1));
-    t7.delta.add(new Delta(-1));
-    t7.delta.add(new Delta(-1));
-
-    bid_3_xor1.add(t7);
-
-    bid_3.add(bid_3_xor1);
-
-    final List<List<Transformation>> bid_4 = new ArrayList<>();
-
-    final List<Transformation> bid_4_xor1 = new ArrayList<>();
-
-    Transformation t8 = new Transformation();
-    // ((1, 2))
-    t8.goodsIds = new ArrayList<>();
-    t8.goodsIds.add(6);
-    t8.goodsIds.add(3);
-    t8.goodsIds.add(4);
-    t8.goodsIds.add(5);
-    t8.delta = new ArrayList<>();
-    t8.delta.add(new Delta(4));
-    t8.delta.add(new Delta(-1));
-    t8.delta.add(new Delta(-2));
-    t8.delta.add(new Delta(-1));
-
-    bid_4_xor1.add(t8);
-    bid_4.add(bid_4_xor1);
-
-    initialQuantity = new ArrayList<>();
-    initialQuantity.add(3);
-    initialQuantity.add(4);
-    initialQuantity.add(3);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-
-    finalQuantity = new ArrayList<>();
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(4);
+    initialQuantity = new ArrayList<>(List.of(3, 4, 3, 0, 0, 0, 0));
+    finalQuantity = new ArrayList<>(List.of(0, 0, 0, 0, 0, 0, 4));
 
     costs = new ArrayList<>();
-
-    bids.add(bid_1);
-    bids.add(bid_2);
-    bids.add(bid_3);
-    bids.add(bid_4);
-
-    List<Integer> cost_bid_1 = new ArrayList<>();
-    cost_bid_1.add(-20);
-    costs.add(cost_bid_1);
-
-    List<Integer> cost_bid_2 = new ArrayList<>();
-    cost_bid_2.add(-35);
-    costs.add(cost_bid_2);
-
-    List<Integer> cost_bid_3 = new ArrayList<>();
-    cost_bid_3.add(-15);
-    costs.add(cost_bid_3);
-
-    List<Integer> cost_bid_4 = new ArrayList<>();
-    cost_bid_4.add(-30);
-    costs.add(cost_bid_4);
+    addBidCost(-20);
+    addBidCost(-35);
+    addBidCost(-15);
+    addBidCost(-30);
   }
 
   /** It creates an instance of the auction problem. */
   public void setupProblem3() {
-
     bids = new ArrayList<>();
 
-    final List<List<Transformation>> bid_1 = new ArrayList<>();
+    Transformation t1 = new Transformation(List.of(0, 1), new Delta(-1), new Delta(1));
+    Transformation t2 = new Transformation(List.of(2, 3), new Delta(-1), new Delta(1));
+    bids.add(List.of(List.of(t1, t2)));
 
-    final List<Transformation> bid_1_xor1 = new ArrayList<>();
+    Transformation t4 = new Transformation(List.of(0, 1), new Delta(-1), new Delta(1));
+    Transformation t5 = new Transformation(List.of(2, 3), new Delta(-1), new Delta(1));
+    bids.add(List.of(List.of(t4, t5)));
 
-    Transformation t1 = new Transformation();
-    // ((0, 1))
-    t1.goodsIds = new ArrayList<>();
-    t1.goodsIds.add(0);
-    t1.goodsIds.add(1);
-    t1.delta = new ArrayList<>();
-    t1.delta.add(new Delta(-1));
-    t1.delta.add(new Delta(1));
+    Transformation t3 = new Transformation(List.of(1, 2), new Delta(-1), new Delta(1));
+    bids.add(List.of(List.of(t3)));
 
-    bid_1_xor1.add(t1);
-
-    // ((2, 3))
-    Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<>();
-    t2.goodsIds.add(2);
-    t2.goodsIds.add(3);
-    t2.delta = new ArrayList<>();
-    t2.delta.add(new Delta(-1));
-    t2.delta.add(new Delta(1));
-
-    bid_1_xor1.add(t2);
-
-    bid_1.add(bid_1_xor1);
-
-    final List<List<Transformation>> bid_2 = new ArrayList<>();
-
-    final List<Transformation> bid_2_xor1 = new ArrayList<>();
-
-    Transformation t4 = new Transformation();
-    // ((0, 1))
-    t4.goodsIds = new ArrayList<>();
-    t4.goodsIds.add(0);
-    t4.goodsIds.add(1);
-    t4.delta = new ArrayList<>();
-    t4.delta.add(new Delta(-1));
-    t4.delta.add(new Delta(1));
-
-    bid_2_xor1.add(t4);
-
-    // ((2, 3))
-    Transformation t5 = new Transformation();
-    t5.goodsIds = new ArrayList<>();
-    t5.goodsIds.add(2);
-    t5.goodsIds.add(3);
-    t5.delta = new ArrayList<>();
-    t5.delta.add(new Delta(-1));
-    t5.delta.add(new Delta(1));
-
-    bid_2_xor1.add(t5);
-
-    bid_2.add(bid_2_xor1);
-
-    final List<List<Transformation>> bid_3 = new ArrayList<>();
-
-    final List<Transformation> bid_3_xor1 = new ArrayList<>();
-
-    Transformation t3 = new Transformation();
-    // ((1, 2))
-    t3.goodsIds = new ArrayList<>();
-    t3.goodsIds.add(1);
-    t3.goodsIds.add(2);
-    t3.delta = new ArrayList<>();
-    t3.delta.add(new Delta(-1));
-    t3.delta.add(new Delta(1));
-
-    bid_3_xor1.add(t3);
-    bid_3.add(bid_3_xor1);
-
-    bids.add(bid_1);
-    bids.add(bid_2);
-    bids.add(bid_3);
-
-    initialQuantity = new ArrayList<>();
-    initialQuantity.add(1);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-
-    finalQuantity = new ArrayList<>();
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(1);
+    initialQuantity = new ArrayList<>(List.of(1, 0, 0, 0));
+    finalQuantity = new ArrayList<>(List.of(0, 0, 0, 1));
 
     costs = new ArrayList<>();
-    List<Integer> cost_bid_1 = new ArrayList<>();
-    cost_bid_1.add(-5);
-
-    costs.add(cost_bid_1);
-
-    List<Integer> cost_bid_2 = new ArrayList<>();
-    cost_bid_2.add(-8);
-
-    costs.add(cost_bid_2);
-
-    List<Integer> cost_bid_3 = new ArrayList<>();
-    cost_bid_3.add(-2);
-    costs.add(cost_bid_3);
+    addBidCost(-5);
+    addBidCost(-8);
+    addBidCost(-2);
   }
 
   /** It creates an instance of the auction problem. */
   public void setupProblem4() {
-
     noGoods = 4;
-
     bids = new ArrayList<>();
 
-    final List<List<Transformation>> bid_1 = new ArrayList<>();
+    Transformation t1 = new Transformation(List.of(0, 1), new Delta(-1), new Delta(1));
+    Transformation t2 = new Transformation(List.of(2, 3), new Delta(-1), new Delta(1));
+    Transformation t4 = new Transformation(List.of(0, 1), new Delta(-1), new Delta(1));
+    Transformation t5 = new Transformation(List.of(2, 3), new Delta(-1), new Delta(1));
+    bids.add(List.of(List.of(t1, t2), List.of(t4, t5)));
 
-    final List<Transformation> bid_1_xor1 = new ArrayList<>();
+    Transformation t3 = new Transformation(List.of(1, 2), new Delta(-1), new Delta(1));
+    bids.add(List.of(List.of(t3)));
 
-    Transformation t1 = new Transformation();
-    // ((0, 1))
-    t1.goodsIds = new ArrayList<>();
-    t1.goodsIds.add(0);
-    t1.goodsIds.add(1);
-    t1.delta = new ArrayList<>();
-    t1.delta.add(new Delta(-1));
-    t1.delta.add(new Delta(1));
-
-    bid_1_xor1.add(t1);
-
-    // ((2, 3))
-    Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<>();
-    t2.goodsIds.add(2);
-    t2.goodsIds.add(3);
-    t2.delta = new ArrayList<>();
-    t2.delta.add(new Delta(-1));
-    t2.delta.add(new Delta(1));
-
-    bid_1_xor1.add(t2);
-
-    bid_1.add(bid_1_xor1);
-
-    final List<Transformation> bid_1_xor2 = new ArrayList<>();
-
-    Transformation t4 = new Transformation();
-    // ((0, 1))
-    t4.goodsIds = new ArrayList<>();
-    t4.goodsIds.add(0);
-    t4.goodsIds.add(1);
-    t4.delta = new ArrayList<>();
-    t4.delta.add(new Delta(-1));
-    t4.delta.add(new Delta(1));
-
-    bid_1_xor2.add(t4);
-
-    // ((2, 3))
-    Transformation t5 = new Transformation();
-    t5.goodsIds = new ArrayList<>();
-    t5.goodsIds.add(2);
-    t5.goodsIds.add(3);
-    t5.delta = new ArrayList<>();
-    t5.delta.add(new Delta(-1));
-    t5.delta.add(new Delta(1));
-
-    bid_1_xor2.add(t5);
-
-    bid_1.add(bid_1_xor2);
-
-    final List<List<Transformation>> bid_2 = new ArrayList<>();
-
-    final List<Transformation> bid_2_xor1 = new ArrayList<>();
-
-    Transformation t3 = new Transformation();
-    // ((1, 2))
-    t3.goodsIds = new ArrayList<>();
-    t3.goodsIds.add(1);
-    t3.goodsIds.add(2);
-    t3.delta = new ArrayList<>();
-    t3.delta.add(new Delta(-1));
-    t3.delta.add(new Delta(1));
-
-    bid_2_xor1.add(t3);
-    bid_2.add(bid_2_xor1);
-
-    bids.add(bid_1);
-    bids.add(bid_2);
-
-    initialQuantity = new ArrayList<>();
-    initialQuantity.add(1);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-    initialQuantity.add(0);
-
-    finalQuantity = new ArrayList<>();
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(0);
-    finalQuantity.add(1);
+    initialQuantity = new ArrayList<>(List.of(1, 0, 0, 0));
+    finalQuantity = new ArrayList<>(List.of(0, 0, 0, 1));
 
     costs = new ArrayList<>();
-    List<Integer> cost_bid_1 = new ArrayList<>();
-    cost_bid_1.add(-5);
-    cost_bid_1.add(-8);
+    addBidCost(-5, -8);
+    addBidCost(-2);
+  }
 
-    costs.add(cost_bid_1);
-
-    List<Integer> cost_bid_2 = new ArrayList<>();
-    cost_bid_2.add(-2);
-    costs.add(cost_bid_2);
+  private void addBidCost(int... values) {
+    List<Integer> costList = new ArrayList<>();
+    for (int v : values) {
+      costList.add(v);
+    }
+    costs.add(costList);
   }
 
   @Override
@@ -1317,37 +772,37 @@ public class Muca extends ExampleFd {
     public List<Delta> delta;
     public int id;
 
-    public int getDelta(int goodId) {
+    /** Default constructor for programmatic building (used by readAuction). */
+    Transformation() {}
 
+    /** Convenience constructor for compact problem setup. */
+    Transformation(List<Integer> goodsIds, Delta... deltas) {
+      this.goodsIds = new ArrayList<>(goodsIds);
+      this.delta = new ArrayList<>(List.of(deltas));
+    }
+
+    private int findGoodIndex(int goodId) {
       for (int i = 0; i < goodsIds.size(); i++) {
         if (goodsIds.get(i) == goodId) {
-          return delta.get(i).output - delta.get(i).input;
+          return i;
         }
       }
+      return -1;
+    }
 
-      return 0;
+    public int getDelta(int goodId) {
+      int i = findGoodIndex(goodId);
+      return i >= 0 ? delta.get(i).output - delta.get(i).input : 0;
     }
 
     public int getDeltaInput(int goodId) {
-
-      for (int i = 0; i < goodsIds.size(); i++) {
-        if (goodsIds.get(i) == goodId) {
-          return delta.get(i).input;
-        }
-      }
-
-      return 0;
+      int i = findGoodIndex(goodId);
+      return i >= 0 ? delta.get(i).input : 0;
     }
 
     public int getDeltaOutput(int goodId) {
-
-      for (int i = 0; i < goodsIds.size(); i++) {
-        if (goodsIds.get(i) == goodId) {
-          return delta.get(i).output;
-        }
-      }
-
-      return 0;
+      int i = findGoodIndex(goodId);
+      return i >= 0 ? delta.get(i).output : 0;
     }
   }
 }

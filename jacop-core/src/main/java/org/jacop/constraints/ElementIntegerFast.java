@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -55,12 +54,9 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {
+public class ElementIntegerFast extends AbstractElement implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   private final IntVar value;
@@ -71,12 +67,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    */
   private final int[] list;
 
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  protected final int indexOffset;
-
   private static final short DETECT = 0;
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
   /*
    * Defines if the current list is order (ascending, descending), needs detection (DETECT)
    * or is not checked (none).
@@ -93,13 +84,12 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    */
   public ElementIntegerFast(IntVar index, int[] list, IntVar value, int indexOffset) {
 
+    super(index, indexOffset);
     checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
     checkInputForNullness("list", list);
 
-    this.indexOffset = indexOffset;
     queueIndex = 1;
     this.numberId = idNumber.incrementAndGet();
-    this.index = index;
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
 
@@ -141,13 +131,15 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   }
 
   @Override
+  protected int listLength() {
+    return list.length;
+  }
+
+  @Override
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      index.domain.in(store.level, index, 1 + this.indexOffset, list.length + this.indexOffset);
-      firstConsistencyLevel = store.level;
-      firstConsistencyCheck = false;
+      initFirstConsistencyCheck(store);
     }
 
     do {
@@ -291,25 +283,9 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
-  public boolean isStateful() {
-    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
-  }
-
-  @Override
   public void impose(Store store) {
 
-    super.impose(store);
-
-    if (!isStateful()) {
-      firstConsistencyCheck = false;
-    }
+    imposeInit(store);
 
     order = new TimeStamp<>(store, DETECT); // set to DETECT
   }
@@ -330,21 +306,6 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
   @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : elementIntegerFast").append("( ").append(index).append(", [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
-    result.append("], ").append(value).append(" )");
-
-    return result.toString();
+    return buildToString("elementIntegerFast", list, value, false);
   }
 }

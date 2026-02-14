@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.UsesQueueVariable;
@@ -123,35 +122,22 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise method exists.");
+    return throwMorePreciseMethodExists();
   }
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-    return getPruningEventFor(v, consistencyPruningEvents);
+    return getPruningEventFor(v, consistencyPruningEvents, b, c);
   }
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise method exists.");
+    return throwMorePreciseMethodExists();
   }
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-    return getPruningEventFor(v, notConsistencyPruningEvents);
-  }
-
-  private int getPruningEventFor(Var v, Map<Var, Integer> eventsMap) {
-    if (eventsMap != null) {
-      Integer possibleEvent = eventsMap.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    if (v == b) {
-      return IntDomain.GROUND;
-    }
-    return computeMaxPruningEvent(v, c);
+    return getPruningEventFor(v, notConsistencyPruningEvents, b, c);
   }
 
   @Override

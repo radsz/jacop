@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -43,7 +42,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusYlteqZ extends PrimitiveConstraint {
+public class XplusYlteqZ extends AbstractArithmeticConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -92,26 +91,6 @@ public class XplusYlteqZ extends PrimitiveConstraint {
     x.domain.inMax(store.level, x, z.max() - y.min());
     y.domain.inMax(store.level, y, z.max() - x.min());
     z.domain.inMin(store.level, z, x.min() + y.min());
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

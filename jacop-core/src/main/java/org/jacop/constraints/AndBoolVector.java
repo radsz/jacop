@@ -77,51 +77,27 @@ public class AndBoolVector extends AbstractBoolVector {
    * @param store the constraint store in which the constraint is imposed.
    */
   public void consistency(Store store) {
-
-    int start = position.value();
-    final int index01 = l - 1;
-
-    if (result.min() == 1) {
-      for (int i = start; i < l; i++) {
-        list[i].domain.inValue(store.level, list[i], 1);
-      }
-      return;
-    }
-
-    for (int i = start; i < l; i++) {
-      if (list[i].min() == 1) {
-        swap(start, i);
-        start++;
-      } else if (list[i].max() == 0) {
-        result.domain.inValue(store.level, result, 0);
-        removeConstraint();
-        return;
-      }
-    }
-    position.update(start);
-
-    if (start == l) {
-      result.domain.inValue(store.level, result, 1);
-      return;
-    }
-
-    if (result.max() == 0 && start == l - 1) {
-      list[index01].domain.inValue(store.level, list[index01], 0);
-    }
-
-    if ((l - start) < 3) {
-      queueIndex = 0;
-    }
+    propagateAndVector(store, false);
   }
 
   @Override
   public void notConsistency(Store store) {
+    propagateAndVector(store, true);
+  }
+
+  private void propagateAndVector(Store store, boolean negated) {
+
+    // When negated: result.max()==0 triggers all-ones; finding a zero sets result to 1;
+    // all-ones sets result to 0; result.max()==0 with one remaining sets it to 1.
+    int allTrueVal = negated ? 0 : 1;
+    int foundFalseVal = negated ? 1 : 0;
+    int lastRemainingVal = negated ? 1 : 0;
 
     int start = position.value();
-
     final int index01 = l - 1;
 
-    if (result.max() == 0) {
+    boolean allForced = negated ? result.max() == 0 : result.min() == 1;
+    if (allForced) {
       for (int i = start; i < l; i++) {
         list[i].domain.inValue(store.level, list[i], 1);
       }
@@ -133,19 +109,22 @@ public class AndBoolVector extends AbstractBoolVector {
         swap(start, i);
         start++;
       } else if (list[i].max() == 0) {
-        result.domain.inValue(store.level, result, 1);
+        result.domain.inValue(store.level, result, foundFalseVal);
+        if (!negated) {
+          removeConstraint();
+        }
         return;
       }
     }
     position.update(start);
 
     if (start == l) {
-      result.domain.inValue(store.level, result, 0);
+      result.domain.inValue(store.level, result, allTrueVal);
       return;
     }
 
     if (result.max() == 0 && start == l - 1) {
-      list[index01].domain.inValue(store.level, list[index01], 1);
+      list[index01].domain.inValue(store.level, list[index01], lastRemainingVal);
     }
 
     if ((l - start) < 3) {
@@ -155,10 +134,24 @@ public class AndBoolVector extends AbstractBoolVector {
 
   @Override
   public boolean satisfied() {
+    return checkSatisfaction(false);
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    return checkSatisfaction(true);
+  }
+
+  private boolean checkSatisfaction(boolean negated) {
 
     int start = position.value();
 
-    if (result.min() == 1) {
+    // For satisfied: result==1 means check all are 1; result==0 means check any is 0
+    // For notSatisfied: result==0 means check all are 1; result==1 means check any is 0
+    boolean checkAllOnes = negated ? result.max() == 0 : result.min() == 1;
+    boolean checkAnyZero = negated ? result.min() == 1 : result.max() == 0;
+
+    if (checkAllOnes) {
       for (int i = start; i < l; i++) {
         if (list[i].min() != 1) {
           return false;
@@ -169,7 +162,7 @@ public class AndBoolVector extends AbstractBoolVector {
         }
       }
       return true;
-    } else if (result.max() == 0) {
+    } else if (checkAnyZero) {
       for (int i = start; i < l; i++) {
         if (list[i].max() == 0) {
           return true;
@@ -180,44 +173,6 @@ public class AndBoolVector extends AbstractBoolVector {
         }
       }
       return false;
-    }
-
-    return false;
-  }
-
-  @Override
-  public boolean notSatisfied() {
-
-    int start = position.value();
-
-    if (result.max() == 0) {
-
-      for (int i = start; i < l; i++) {
-        if (list[i].min() != 1) {
-          return false;
-        } else {
-          swap(start, i);
-          start++;
-          position.update(start);
-        }
-      }
-
-      return true;
-
-    } else {
-
-      if (result.min() == 1) {
-
-        for (int i = start; i < l; i++) {
-          if (list[i].max() == 0) {
-            return true;
-          } else if (list[i].min() == 1) {
-            swap(start, i);
-            start++;
-            position.update(start);
-          }
-        }
-      }
     }
 
     return false;

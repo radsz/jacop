@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -59,16 +58,10 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementVariable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class ElementVariable extends AbstractElement
+    implements UsesQueueVariable, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  private final int indexOffset;
-
-  /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   private final IntVar value;
@@ -83,8 +76,6 @@ public class ElementVariable extends Constraint
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
   final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
   boolean indexHasChanged;
   // For each variable from the list it specifies the values it supports
   IntDomain[] supports;
@@ -100,14 +91,13 @@ public class ElementVariable extends Constraint
    */
   public ElementVariable(IntVar index, IntVar[] list, IntVar value, int indexOffset) {
 
+    super(index, indexOffset);
     checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
     checkInputForNullness("list", list);
 
     queueIndex = 2;
 
-    this.indexOffset = indexOffset;
     this.numberId = idNumber.incrementAndGet();
-    this.index = index;
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
     this.indexRange = new IntervalDomain(1 + this.indexOffset, list.length + this.indexOffset);
@@ -150,10 +140,13 @@ public class ElementVariable extends Constraint
   }
 
   @Override
+  protected int listLength() {
+    return list.length;
+  }
+
+  @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
+    super.removeLevel(level);
     indexHasChanged = false;
     valueHasChanged = false;
     variableQueue.clear();
@@ -378,21 +371,6 @@ public class ElementVariable extends Constraint
 
   @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : elementVariable").append("( ").append(index).append(", [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
-    result.append("], ").append(value).append(" )");
-
-    return result.toString();
+    return buildToString("elementVariable", list, value, false);
   }
 }
