@@ -107,8 +107,8 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
-    return getConsistencyPruningEvent(var);
+  public int getNestedPruningEvent(Var v, boolean mode) {
+    return getConsistencyPruningEvent(v);
   }
 
   @Override
@@ -117,18 +117,18 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    if (var == b) {
+    if (v == b) {
       return IntDomain.GROUND;
     }
-    return computeMaxPruningEvent(var, c);
+    return computeMaxPruningEvent(v, c);
   }
 
   @Override
@@ -137,18 +137,18 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNotConsistencyPruningEvent(Var var) {
+  public int getNotConsistencyPruningEvent(Var v) {
 
     if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    if (var == b) {
+    if (v == b) {
       return IntDomain.GROUND;
     }
-    return computeMaxPruningEvent(var, c);
+    return computeMaxPruningEvent(v, c);
   }
 
   @Override

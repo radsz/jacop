@@ -352,10 +352,10 @@ public class Tables {
    * It adds a variable with a given identity to the storage.
    *
    * @param ident the identity of the added variable.
-   * @param var the variable being added.
+   * @param v the variable being added.
    */
-  public void addVariable(String ident, IntVar var) {
-    variableTable.put(ident, var);
+  public void addVariable(String ident, IntVar v) {
+    variableTable.put(ident, v);
   }
 
   /**
@@ -372,10 +372,10 @@ public class Tables {
    * It adds a variable with a given identity to the storage.
    *
    * @param ident the identity of the added variable.
-   * @param var the variable being added.
+   * @param v the variable being added.
    */
-  public void addFloatVariable(String ident, FloatVar var) {
-    variableFloatTable.put(ident, var);
+  public void addFloatVariable(String ident, FloatVar v) {
+    variableFloatTable.put(ident, v);
   }
 
   /**
@@ -460,10 +460,10 @@ public class Tables {
    * It adds the set variable of the given identity.
    *
    * @param ident the identity of the added set variable.
-   * @param var the set variable being added.
+   * @param v the set variable being added.
    */
-  public void addSetVariable(String ident, SetVar var) {
-    setVariableTable.put(ident, var);
+  public void addSetVariable(String ident, SetVar v) {
+    setVariableTable.put(ident, v);
   }
 
   /**

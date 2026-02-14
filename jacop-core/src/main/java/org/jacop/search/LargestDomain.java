@@ -49,11 +49,11 @@ public class LargestDomain<T extends Var> implements ComparatorVariable<T> {
    * Compares a metric value with a variable's domain size.
    *
    * @param left the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double left, T var) {
-    int right = var.getSize();
+  public int compare(double left, T v) {
+    int right = v.getSize();
 
     if (left > right) {
       return 1;
@@ -83,10 +83,10 @@ public class LargestDomain<T extends Var> implements ComparatorVariable<T> {
   /**
    * Computes the metric for a variable, which is its domain size.
    *
-   * @param var the variable for which the metric is computed.
+   * @param v the variable for which the metric is computed.
    * @return the domain size of the variable.
    */
-  public double metric(T var) {
-    return var.getSize();
+  public double metric(T v) {
+    return v.getSize();
   }
 }

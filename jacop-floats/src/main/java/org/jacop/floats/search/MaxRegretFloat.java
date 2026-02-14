@@ -53,13 +53,13 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
    * smallest values).
    *
    * @param ldiff the metric value to compare
-   * @param var the variable whose regret is compared
-   * @return negative if var has smaller regret, positive if larger, zero if equal
+   * @param v the variable whose regret is compared
+   * @return negative if v has smaller regret, positive if larger, zero if equal
    */
-  public int compare(double ldiff, T var) {
+  public int compare(double ldiff, T v) {
 
-    double rmin = var.min();
-    double rminNext = ((FloatIntervalDomain) var.domain).nextValue(rmin);
+    double rmin = v.min();
+    double rminNext = ((FloatIntervalDomain) v.domain).nextValue(rmin);
 
     double rdiff = rminNext - rmin;
 

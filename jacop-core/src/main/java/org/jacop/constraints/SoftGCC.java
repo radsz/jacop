@@ -668,24 +668,24 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         for (int i = 0; i < n; i++) {
 
           // Arcs between x and d nodes.
-          IntVar var = xvars[i];
+          IntVar v = xvars[i];
 
           List<Arc> arcs = new ArrayList<>();
           List<Domain> domains = new ArrayList<>();
 
-          IntDomain vardom = var.domain;
+          IntDomain vDom = v.domain;
           for (int j = 0; j < m; j++) {
-            if (vardom.isIntersecting(doms[j])) {
+            if (vDom.isIntersecting(doms[j])) {
               arcs.add(addArc(xNodes[i], valueNodes[j], 0, 1));
               domains.add(doms[j]);
             }
-            IntDomain notCounted = vardom.subtract(all);
+            IntDomain notCounted = vDom.subtract(all);
             if (!notCounted.isEmpty()) {
               arcs.add(addArc(xNodes[i], t, 0, 1));
               domains.add(notCounted);
             }
           }
-          handlerList.add(new DomainStructure(var, domains, arcs));
+          handlerList.add(new DomainStructure(v, domains, arcs));
         }
 
         for (int i = 0; i < doms.length; i++) {

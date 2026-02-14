@@ -182,7 +182,6 @@ public class WhoKilledAgatha extends ExampleFd {
       // MiniZinc: sum(j in r) (hates[i,j]) <= 2
       IntVar[] a = new IntVar[n];
       for (int j = 0; j < n; j++) {
-        a[j] = new IntVar(store, "a" + i + "-" + j, 0, 1);
         a[j] = hates[i][j];
       }
       IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);

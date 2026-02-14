@@ -111,32 +111,32 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
     super.getChoiceVariable(index);
-    T var;
+    T v;
 
     if (variableOrdering == null && roundRobin) {
-      var = roundRobinVarSelection(index);
+      v = roundRobinVarSelection(index);
     } else {
-      var = super.getChoiceVariable(index);
+      v = super.getChoiceVariable(index);
     }
 
-    if (var == null) {
+    if (v == null) {
       return null;
     }
 
     assert (index >= 0);
 
-    double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
+    double value = (((FloatVar) v).min() + ((FloatVar) v).max()) / 2.0;
 
     if (leftFirst) {
-      if (((FloatVar) var).max() > value) {
-        return new PlteqC((FloatVar) var, value);
+      if (((FloatVar) v).max() > value) {
+        return new PlteqC((FloatVar) v, value);
       } else {
-        return new PltC((FloatVar) var, value);
+        return new PltC((FloatVar) v, value);
       }
-    } else if (((FloatVar) var).max() > value) {
-      return new PgtC((FloatVar) var, value);
+    } else if (((FloatVar) v).max() > value) {
+      return new PgtC((FloatVar) v, value);
     } else {
-      return new PeqC((FloatVar) var, value);
+      return new PeqC((FloatVar) v, value);
     }
   }
 

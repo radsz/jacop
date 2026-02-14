@@ -1237,9 +1237,9 @@ public class VariablesParameters implements ParserTreeConstants {
           val = ((ASTScalarFlatExpr) child).getInt();
           return dictionary.getConstantBoolean(val);
         case 2: // ident
-          IntVar var = dictionary.getVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) {
-            return var;
+          IntVar v = dictionary.getVariable(((ASTScalarFlatExpr) child).getIdent());
+          if (v != null) {
+            return v;
           } else {
             Integer n = dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
             return dictionary.getConstant(n); // new IntVar(store, n.intValue(), n.intValue());
@@ -1273,9 +1273,9 @@ public class VariablesParameters implements ParserTreeConstants {
     if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
         case 2: // ident
-          FloatVar var = dictionary.getFloatVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) {
-            return var;
+          FloatVar v = dictionary.getFloatVariable(((ASTScalarFlatExpr) child).getIdent());
+          if (v != null) {
+            return v;
           } else {
             Double n = dictionary.getFloat(((ASTScalarFlatExpr) child).getIdent());
             return dictionary.getFloatConstant(
@@ -1330,9 +1330,9 @@ public class VariablesParameters implements ParserTreeConstants {
     if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
         case 2: // ident
-          SetVar var = dictionary.getSetVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) {
-            return var;
+          SetVar v = dictionary.getSetVariable(((ASTScalarFlatExpr) child).getIdent());
+          if (v != null) {
+            return v;
           } else {
             IntDomain n = dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
             if (n != null) {

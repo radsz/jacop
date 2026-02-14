@@ -51,12 +51,12 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
    * Compares a metric value with a variable's domain-to-degree ratio.
    *
    * @param left the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    double right = (double) var.getSize() / var.sizeConstraints();
+    double right = (double) v.getSize() / v.sizeConstraints();
 
     return Double.compare(right, left);
   }
@@ -82,10 +82,10 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
    * Computes the metric for a variable, which is the ratio of domain size to degree (number of
    * constraints).
    *
-   * @param var the variable for which the metric is computed.
+   * @param v the variable for which the metric is computed.
    * @return the domain-to-degree ratio for the variable.
    */
-  public double metric(T var) {
-    return (double) var.getSize() / var.sizeConstraints();
+  public double metric(T v) {
+    return (double) v.getSize() / v.sizeConstraints();
   }
 }

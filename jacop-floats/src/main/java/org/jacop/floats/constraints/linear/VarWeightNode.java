@@ -56,7 +56,7 @@ public class VarWeightNode extends VariableNode {
     this.store = store;
     bound = new BoundsVar(store);
 
-    var = v;
+    this.v = v;
     weight = w;
 
     bound.value.setValue(
@@ -65,7 +65,7 @@ public class VarWeightNode extends VariableNode {
 
   void propagate() {
 
-    FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
+    FloatIntervalDomain mul = FloatDomain.mulBounds(v.min(), v.max(), weight, weight);
     double min = mul.min();
     double max = mul.max();
 
@@ -103,7 +103,7 @@ public class VarWeightNode extends VariableNode {
 
   void propagateAndPrune() {
 
-    FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
+    FloatIntervalDomain mul = FloatDomain.mulBounds(v.min(), v.max(), weight, weight);
     double min = mul.min();
     double max = mul.max();
 
@@ -147,7 +147,7 @@ public class VarWeightNode extends VariableNode {
     double divMin = d.min();
     double divMax = d.max();
 
-    var.domain.in(store.level, var, divMin, divMax);
+    v.domain.in(store.level, v, divMin, divMax);
   }
 
   double min() {
@@ -181,7 +181,7 @@ public class VarWeightNode extends VariableNode {
         + " (rel = "
         + rel
         + ", "
-        + var
+        + v
         + " * "
         + weight
         + ")"

@@ -68,9 +68,9 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    double right = var.activity();
+    double right = v.activity();
 
     return Double.compare(left, right);
   }
@@ -86,8 +86,8 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    return var.activity();
+    return v.activity();
   }
 }

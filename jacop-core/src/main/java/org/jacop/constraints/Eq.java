@@ -98,9 +98,9 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
-    return getConsistencyPruningEvent(var);
+    return getConsistencyPruningEvent(v);
   }
 
   @Override
@@ -109,15 +109,15 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    return computeMaxPruningEvent(var, c1, c2);
+    return computeMaxPruningEvent(v, c1, c2);
   }
 
   @Override
@@ -126,15 +126,15 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNotConsistencyPruningEvent(Var var) {
+  public int getNotConsistencyPruningEvent(Var v) {
 
     if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    return computeMaxPruningEvent(var, c1, c2);
+    return computeMaxPruningEvent(v, c1, c2);
   }
 
   @Override
@@ -171,7 +171,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    queueForward.queueForward(level, var);
+  public void queueVariable(int level, Var v) {
+    queueForward.queueForward(level, v);
   }
 }

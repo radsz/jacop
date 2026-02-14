@@ -67,14 +67,14 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
    * It returns a randomly selected value from the domain of the variable with uniform probability
    * distribution.
    *
-   * @param var the variable for which a value is being selected.
+   * @param v the variable for which a value is being selected.
    * @return a randomly selected value from the variable domain.
    */
-  public int indomain(IntVar var) {
+  public int indomain(IntVar v) {
 
-    assert !var.singleton() : "Indomain should not be called with singleton domain";
+    assert !v.singleton() : "Indomain should not be called with singleton domain";
 
-    IntDomain dom = var.domain;
+    IntDomain dom = v.domain;
 
     int min = dom.min();
     int size = dom.getSize();

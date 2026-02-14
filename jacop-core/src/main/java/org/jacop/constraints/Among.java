@@ -142,41 +142,41 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     // For the variable that signaled the change of domain
     // Count those that entered lbS, or ubS
-    for (IntVar var : variableQueue) {
+    for (IntVar v : variableQueue) {
 
-      int posVar = position.get(var);
+      int posVar = position.get(v);
 
       if (posVar < currentLb || posVar > currentUb) {
         continue;
       }
 
-      if (kSet.contains(var.domain)) {
+      if (kSet.contains(v.domain)) {
 
         if (posVar != currentLb) {
           list[posVar] = list[currentLb];
-          list[currentLb] = var;
-          position.put(var, currentLb);
+          list[currentLb] = v;
+          position.put(v, currentLb);
           position.put(list[posVar], posVar);
         }
         currentLb++;
 
         // If variable entered lb then it would stay there
         // and we can detach the constrain from it
-        var.removeConstraint(this);
+        v.removeConstraint(this);
       }
-      if (!kSet.isIntersecting(var.domain)) {
+      if (!kSet.isIntersecting(v.domain)) {
 
         if (posVar != currentUb) {
           list[posVar] = list[currentUb - 1];
-          list[currentUb - 1] = var;
-          position.put(var, currentUb - 1);
+          list[currentUb - 1] = v;
+          position.put(v, currentUb - 1);
           position.put(list[posVar], posVar);
         }
         currentUb--;
 
         // If the variable entered not ub then it will stay there
         // and we can detach the constrain from it
-        var.removeConstraint(this);
+        v.removeConstraint(this);
       }
     }
 
@@ -205,17 +205,17 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       // have to subtract
       // the K set from the rest of x that do not belong to S
       for (int i = currentLb; i < currentUb; i++) {
-        IntVar var = list[i];
-        if (!kSet.contains(var.domain)) {
+        IntVar v = list[i];
+        if (!kSet.contains(v.domain)) {
           if (debugAll) {
-            log.debug("lb >> The value before in of {}: {}", var.id, var.domain);
+            log.debug("lb >> The value before in of {}: {}", v.id, v.domain);
             log.debug("lb >> subtrack {}", kSet);
-            log.debug("lb >> equals {}", var.domain.subtract(kSet));
+            log.debug("lb >> equals {}", v.domain.subtract(kSet));
           }
-          var.domain.in(store.level, var, var.domain.subtract(kSet));
-          var.removeConstraint(this);
+          v.domain.in(store.level, v, v.domain.subtract(kSet));
+          v.removeConstraint(this);
           if (debugAll) {
-            log.debug("lb >> The value after in of {}: {}", var.id, var.domain);
+            log.debug("lb >> The value after in of {}: {}", v.id, v.domain);
           }
         }
       }
@@ -234,9 +234,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       // have
       // to intersect the domains of X with K set.
       for (int i = currentLb; i < currentUb; i++) {
-        IntVar var = list[i];
-        var.domain.in(store.level, var, kSet);
-        var.removeConstraint(this);
+        IntVar v = list[i];
+        v.domain.in(store.level, v, kSet);
+        v.removeConstraint(this);
       }
 
       // since the constraint is satisfied LB is equal to UB.
@@ -270,13 +270,13 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
     if (debugAll) {
-      log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
+      log.debug("Var {}{}", v, ((IntVar) v).recentDomainPruning());
     }
 
-    if (var != n) {
-      variableQueue.add((IntVar) var);
+    if (v != n) {
+      variableQueue.add((IntVar) v);
     }
   }
 
@@ -294,8 +294,8 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     result.append(": Among([");
 
-    for (IntVar var : this.list) {
-      result.append(var).append(" ");
+    for (IntVar v : this.list) {
+      result.append(v).append(" ");
     }
 
     result.append("], ").append(this.kSet).append(", ");

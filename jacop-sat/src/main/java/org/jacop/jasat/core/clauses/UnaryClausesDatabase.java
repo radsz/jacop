@@ -96,8 +96,8 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
     // propagate the literal if it is not yet set
     int literal = clause[0];
-    int var = literal < 0 ? -literal : literal;
-    int value = trail.values[var];
+    int varIdx = literal < 0 ? -literal : literal;
+    int value = trail.values[varIdx];
     if (value == 0) {
       core.triggerPropagateEvent(literal, newId);
     } else if (value == -literal) {

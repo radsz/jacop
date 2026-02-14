@@ -1644,7 +1644,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * of a change if it occurred.
    */
   @Override
-  public void inMin(int storeLevel, Var var, double min) {
+  public void inMin(int storeLevel, Var v, double min) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1681,9 +1681,9 @@ public class FloatIntervalDomain extends FloatDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(IntDomain.GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        v.domainHasChanged(IntDomain.BOUND);
       }
 
     } else {
@@ -1712,15 +1712,15 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(IntDomain.GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        v.domainHasChanged(IntDomain.BOUND);
       }
     }
   }
@@ -1730,7 +1730,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * of a change if it occurred.
    */
   @Override
-  public void inMax(int storeLevel, Var var, double max) {
+  public void inMax(int storeLevel, Var v, double max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1762,9 +1762,9 @@ public class FloatIntervalDomain extends FloatDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(IntDomain.GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        v.domainHasChanged(IntDomain.BOUND);
       }
 
     } else {
@@ -1793,15 +1793,15 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
       assert result.checkInvariants() == null : result.checkInvariants();
       assert checkInvariants() == null : checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(IntDomain.GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        v.domainHasChanged(IntDomain.BOUND);
       }
     }
   }
@@ -1811,7 +1811,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * decided by the value of stamp. It informs the variable of a change if it occurred.
    */
   @Override
-  public void in(int storeLevel, Var var, double min, double max) {
+  public void in(int storeLevel, Var v, double min, double max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1894,16 +1894,16 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
     }
 
     assert checkInvariants() == null : checkInvariants();
     assert result.checkInvariants() == null : result.checkInvariants();
 
     if (result.singleton()) {
-      var.domainHasChanged(IntDomain.GROUND);
+      v.domainHasChanged(IntDomain.GROUND);
     } else {
-      var.domainHasChanged(IntDomain.BOUND);
+      v.domainHasChanged(IntDomain.BOUND);
     }
   }
 
@@ -1912,7 +1912,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * the value of stamp. It informs the variable of a change if it occurred.
    */
   @Override
-  public void in(int storeLevel, Var var, FloatDomain domain) {
+  public void in(int storeLevel, Var v, FloatDomain domain) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2094,12 +2094,12 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
     }
 
     assert checkInvariants() == null : checkInvariants();
 
-    var.domainHasChanged(returnedEvent);
+    v.domainHasChanged(returnedEvent);
   }
 
   /** It returns the number intervals into which this domain is split. */
@@ -2141,7 +2141,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * if it occurred.
    */
   @Override
-  public void inComplement(int storeLevel, Var var, double complement) {
+  public void inComplement(int storeLevel, Var v, double complement) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2162,14 +2162,14 @@ public class FloatIntervalDomain extends FloatDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
           if (counter == 0) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
@@ -2187,7 +2187,7 @@ public class FloatIntervalDomain extends FloatDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
@@ -2196,9 +2196,9 @@ public class FloatIntervalDomain extends FloatDomain {
           // being removed.
 
           if (counter == 0 || counter == size) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         }
         return;
@@ -2214,14 +2214,14 @@ public class FloatIntervalDomain extends FloatDomain {
         assert checkInvariants() == null : checkInvariants();
 
         if (singleton()) {
-          var.domainHasChanged(IntDomain.GROUND);
+          v.domainHasChanged(IntDomain.GROUND);
           return;
         }
 
         if (counter == size - 1) {
-          var.domainHasChanged(IntDomain.BOUND);
+          v.domainHasChanged(IntDomain.BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          v.domainHasChanged(IntDomain.ANY);
         }
         return;
       }
@@ -2267,7 +2267,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
       if (intervals[counter].min() == complement) {
 
@@ -2284,14 +2284,14 @@ public class FloatIntervalDomain extends FloatDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
           if (counter == 0) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
@@ -2304,14 +2304,14 @@ public class FloatIntervalDomain extends FloatDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
           if (counter == 0 || counter == size - 1) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         }
         return;
@@ -2333,13 +2333,13 @@ public class FloatIntervalDomain extends FloatDomain {
         assert result.checkInvariants() == null : result.checkInvariants();
 
         if (result.singleton()) {
-          var.domainHasChanged(IntDomain.GROUND);
+          v.domainHasChanged(IntDomain.GROUND);
           return;
         }
         if (counter == size - 1) {
-          var.domainHasChanged(IntDomain.BOUND);
+          v.domainHasChanged(IntDomain.BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          v.domainHasChanged(IntDomain.ANY);
         }
         return;
       }
@@ -2367,17 +2367,17 @@ public class FloatIntervalDomain extends FloatDomain {
        * storeLevel; result.prevDomain = this;
        * result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
        * result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-       * var.domain = result;
+       * v.domain = result;
        */
 
     }
-    var.domainHasChanged(IntDomain.ANY);
+    v.domainHasChanged(IntDomain.ANY);
   }
 
   // TODO: check and test inComplement below.
 
   @Override
-  public void inComplement(int storeLevel, Var var, double min, double max) {
+  public void inComplement(int storeLevel, Var v, double min, double max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2435,7 +2435,7 @@ public class FloatIntervalDomain extends FloatDomain {
           }
           size++;
           assert checkInvariants() == null : checkInvariants();
-          var.domainHasChanged(IntDomain.ANY);
+          v.domainHasChanged(IntDomain.ANY);
         } else {
           // intervals[counter].max <= max
           // intervals[counter].min..min-1
@@ -2464,12 +2464,12 @@ public class FloatIntervalDomain extends FloatDomain {
 
           assert checkInvariants() == null : checkInvariants();
 
-          if (var.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+          if (v.singleton()) {
+            v.domainHasChanged(IntDomain.GROUND);
           } else if (max() > max) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         }
 
@@ -2502,13 +2502,13 @@ public class FloatIntervalDomain extends FloatDomain {
         }
         assert checkInvariants() == null : checkInvariants();
         if (singleton()) {
-          var.domainHasChanged(IntDomain.GROUND);
+          v.domainHasChanged(IntDomain.GROUND);
           return;
         }
         if (counter == 0) {
-          var.domainHasChanged(IntDomain.BOUND);
+          v.domainHasChanged(IntDomain.BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          v.domainHasChanged(IntDomain.ANY);
         }
       }
 
@@ -2525,7 +2525,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       result.size = size;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
       int noRemoved = 0;
 
@@ -2550,7 +2550,7 @@ public class FloatIntervalDomain extends FloatDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
           assert checkInvariants() == null : checkInvariants();
 
-          var.domainHasChanged(IntDomain.ANY);
+          v.domainHasChanged(IntDomain.ANY);
 
         } else {
 
@@ -2577,12 +2577,12 @@ public class FloatIntervalDomain extends FloatDomain {
           assert checkInvariants() == null : checkInvariants();
           assert result.checkInvariants() == null : result.checkInvariants();
 
-          if (var.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+          if (v.singleton()) {
+            v.domainHasChanged(IntDomain.GROUND);
           } else if (max() > max) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         }
 
@@ -2602,13 +2602,13 @@ public class FloatIntervalDomain extends FloatDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
           if (counter == 0) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
 
         } else {
@@ -2635,12 +2635,12 @@ public class FloatIntervalDomain extends FloatDomain {
           assert checkInvariants() == null : checkInvariants();
           assert result.checkInvariants() == null : result.checkInvariants();
 
-          if (var.singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
+          if (v.singleton()) {
+            v.domainHasChanged(IntDomain.GROUND);
           } else if (max() >= max || min <= min()) {
-            var.domainHasChanged(IntDomain.BOUND);
+            v.domainHasChanged(IntDomain.BOUND);
           } else {
-            var.domainHasChanged(IntDomain.ANY);
+            v.domainHasChanged(IntDomain.ANY);
           }
         }
       }
@@ -2652,7 +2652,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * {1..4} + 3 = 4..7
    */
   @Override
-  public void inShift(int storeLevel, Var var, FloatDomain domain, double shift) {
+  public void inShift(int storeLevel, Var v, FloatDomain domain, double shift) {
 
     assert checkInvariants() == null : checkInvariants();
     assert this.stamp <= storeLevel;
@@ -2838,10 +2838,10 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
     }
 
-    var.domainHasChanged(returnedEvent);
+    v.domainHasChanged(returnedEvent);
   }
 
   /** It specifies if the domain type is more suited to representing sparse domain. */
@@ -2877,16 +2877,16 @@ public class FloatIntervalDomain extends FloatDomain {
    * pointer within variable will be updated.
    */
   @Override
-  public void removeLevel(int level, Var var) {
+  public void removeLevel(int level, Var v) {
 
     assert (this.stamp <= level);
 
     if (this.stamp == level) {
 
-      ((FloatVar) var).domain = this.prevDomain;
+      ((FloatVar) v).domain = this.prevDomain;
     }
 
-    assert (((FloatVar) var).domain.stamp < level);
+    assert (((FloatVar) v).domain.stamp < level);
   }
 
   /**
@@ -2895,7 +2895,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putSearchConstraint(int storeLevel, Var var, Constraint constraint) {
+  public void putSearchConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (!searchConstraints.contains(constraint)) {
 
@@ -2912,9 +2912,9 @@ public class FloatIntervalDomain extends FloatDomain {
         result.prevDomain = this;
         result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-        ((FloatVar) var).domain = result;
+        ((FloatVar) v).domain = result;
 
-        result.putSearchConstraint(storeLevel, var, constraint);
+        result.putSearchConstraint(storeLevel, v, constraint);
         return;
       }
 
@@ -2945,10 +2945,10 @@ public class FloatIntervalDomain extends FloatDomain {
    * Variable object.
    *
    * @param storeLevel the current level of the store.
-   * @param var the variable for which the constraint is being removed.
+   * @param v the variable for which the constraint is being removed.
    * @param constraint the constraint being removed.
    */
-  public void removeSearchConstraint(int storeLevel, Var var, Constraint constraint) {
+  public void removeSearchConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -2960,9 +2960,9 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, constraint);
+      result.removeSearchConstraint(storeLevel, v, constraint);
       return;
     }
 
@@ -2990,7 +2990,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * Variable object.
    */
   @Override
-  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint constraint) {
+  public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -3002,9 +3002,9 @@ public class FloatIntervalDomain extends FloatDomain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, position, constraint);
+      result.removeSearchConstraint(storeLevel, v, position, constraint);
       return;
     }
 

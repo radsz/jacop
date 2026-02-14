@@ -95,8 +95,8 @@ public class DefaultSearchVars {
           }
         } else if (v instanceof SetVar var1) {
           set_vars.add(var1);
-        } else if (v instanceof FloatVar var) {
-          float_vars.add(var);
+        } else if (v instanceof FloatVar fv) {
+          float_vars.add(fv);
         }
       }
     }
@@ -112,8 +112,8 @@ public class DefaultSearchVars {
         }
       } else if (v instanceof SetVar var1) {
         set_vars.add(var1);
-      } else if (v instanceof FloatVar var) {
-        float_vars.add(var);
+      } else if (v instanceof FloatVar fv) {
+        float_vars.add(fv);
       }
     }
     int_search_variables = int_vars.toArray(new IntVar[0]);
@@ -144,8 +144,8 @@ public class DefaultSearchVars {
     for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++) {
       for (Var v : dictionary.defaultSearchArrays.get(i)) {
         if (!v.singleton()) {
-          if (v instanceof BooleanVar var) {
-            bool_vars.add(var);
+          if (v instanceof BooleanVar bv) {
+            bool_vars.add(bv);
           } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
             bool_vars.add((BooleanVar) v);
           } else {
@@ -156,8 +156,8 @@ public class DefaultSearchVars {
     }
     for (Var v : dictionary.defaultSearchVariables) {
       if (!v.singleton()) {
-        if (v instanceof BooleanVar var) {
-          bool_vars.add(var);
+        if (v instanceof BooleanVar bv) {
+          bool_vars.add(bv);
         } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
           bool_vars.add((BooleanVar) v);
         } else {

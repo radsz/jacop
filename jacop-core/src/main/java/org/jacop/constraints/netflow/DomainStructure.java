@@ -260,10 +260,10 @@ public class DomainStructure implements VarHandler {
   /**
    * Returns the pruning event type for the given variable.
    *
-   * @param var the variable for which to determine the pruning event.
+   * @param v the variable for which to determine the pruning event.
    * @return the pruning event constant for structure variables.
    */
-  public int getPruningEvent(Var var) {
+  public int getPruningEvent(Var v) {
     return IntDomain.ANY; // for S-variables
   }
 

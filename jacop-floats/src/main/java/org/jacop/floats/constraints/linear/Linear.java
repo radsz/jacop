@@ -387,8 +387,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    variableQueue.add((FloatVar) var);
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((FloatVar) v);
   }
 
   @Override

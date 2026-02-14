@@ -115,8 +115,8 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
-  public void queueVariable(int level, Var var) {
-    log.debug("Var: {}, level: {}, constraint: {}", var, level, store.currentConstraint);
+  public void queueVariable(int level, Var v) {
+    log.debug("Var: {}, level: {}, constraint: {}", v, level, store.currentConstraint);
   }
 
   @Override

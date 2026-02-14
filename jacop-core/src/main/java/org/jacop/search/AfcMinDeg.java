@@ -70,9 +70,9 @@ public class AfcMinDeg<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    double right = afcValue(var) / var.getSizeFloat();
+    double right = afcValue(v) / v.getSizeFloat();
 
     return Double.compare(right, left);
   }
@@ -88,9 +88,9 @@ public class AfcMinDeg<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    return afcValue(var) / var.getSizeFloat();
+    return afcValue(v) / v.getSizeFloat();
   }
 
   double afcValue(Var v) {

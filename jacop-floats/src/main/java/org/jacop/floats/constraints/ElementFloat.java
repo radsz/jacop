@@ -304,8 +304,8 @@ public class ElementFloat extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    if (var == index) {
+  public void queueVariable(int level, Var v) {
+    if (v == index) {
       indexHasChanged = true;
     } else {
       valueHasChanged = true;

@@ -94,12 +94,12 @@ public class SearchHandlerRegistry {
   /**
    * Finds an applicable cost variable handler for the given variable.
    *
-   * @param var the variable to find a handler for
+   * @param v the variable to find a handler for
    * @return the first applicable handler, or null if none found
    */
-  public CostVariableHandler findCostHandler(Var var) {
+  public CostVariableHandler findCostHandler(Var v) {
     for (CostVariableHandler handler : costHandlers) {
-      if (handler.isApplicable(var)) {
+      if (handler.isApplicable(v)) {
         return handler;
       }
     }
@@ -109,12 +109,12 @@ public class SearchHandlerRegistry {
   /**
    * Finds an applicable domain operation handler for the given variable.
    *
-   * @param var the variable to find a handler for
+   * @param v the variable to find a handler for
    * @return the first applicable handler, or null if none found
    */
-  public DomainOperationHandler findDomainHandler(Var var) {
+  public DomainOperationHandler findDomainHandler(Var v) {
     for (DomainOperationHandler handler : domainHandlers) {
-      if (handler.isApplicable(var)) {
+      if (handler.isApplicable(v)) {
         return handler;
       }
     }

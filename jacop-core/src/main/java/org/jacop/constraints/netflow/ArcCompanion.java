@@ -321,10 +321,10 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   /**
    * Returns the pruning event type that triggers processing for the given variable.
    *
-   * @param var the variable to get the pruning event for.
+   * @param v the variable to get the pruning event for.
    * @return the pruning event constant (BOUND for X- and W-variables).
    */
-  public int getPruningEvent(Var var) {
+  public int getPruningEvent(Var v) {
     return IntDomain.BOUND; // for X- and W-variables
   }
 

@@ -1584,23 +1584,23 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     // If consistency function mode
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
 
-    GeostObject o = variableObjectMap.get(var);
+    GeostObject o = variableObjectMap.get(v);
 
     if (o == null) {
       return Domain.NONE;
     }
 
-    if (o.shapeId == var) {
+    if (o.shapeId == v) {
       return IntDomain.ANY;
     }
 

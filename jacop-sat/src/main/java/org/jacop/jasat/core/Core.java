@@ -689,8 +689,8 @@ public final class Core implements SolverComponent {
       StringBuilder sb = new StringBuilder();
       sb.append("v ");
       for (int i = 0; i < trail.size(); i++) {
-        int var = trail.assertionStack.array[i];
-        sb.append(trail.values[var]);
+        int varIdx = trail.assertionStack.array[i];
+        sb.append(trail.values[varIdx]);
         sb.append(' ');
         // if line is full, print it and begin another
         if (++count > 20) {

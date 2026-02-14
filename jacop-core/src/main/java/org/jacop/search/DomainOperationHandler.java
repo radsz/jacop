@@ -50,39 +50,39 @@ public interface DomainOperationHandler {
   /**
    * Checks if this handler can process the given variable type.
    *
-   * @param var the variable to check
+   * @param v the variable to check
    * @return true if this handler can process the variable, false otherwise
    */
-  boolean isApplicable(Var var);
+  boolean isApplicable(Var v);
 
   /**
    * Assigns a specific value to the variable's domain. For IntVar: assigns the integer value. For
    * SetVar: adds the value to the GLB (Greatest Lower Bound) or LUB complement.
    *
    * @param store the store containing the variable
-   * @param var the variable to assign
+   * @param v the variable to assign
    * @param value the value to assign
    * @param leftBranch true if this is the left branch (for SetVar: use GLB), false for right branch
    */
-  void inValue(Store store, Var var, int value, boolean leftBranch);
+  void inValue(Store store, Var v, int value, boolean leftBranch);
 
   /**
    * Removes a specific value from the variable's domain (complement operation). For IntVar: removes
    * the integer value. For SetVar: removes from GLB or adds to LUB complement.
    *
    * @param store the store containing the variable
-   * @param var the variable to modify
+   * @param v the variable to modify
    * @param value the value to remove
    * @param leftBranch true if this is the left branch (for SetVar: use LUB complement), false for
    *     right branch
    */
-  void inComplement(Store store, Var var, int value, boolean leftBranch);
+  void inComplement(Store store, Var v, int value, boolean leftBranch);
 
   /**
    * Gets a string representation of the variable's domain for display purposes.
    *
-   * @param var the variable
+   * @param v the variable
    * @return string representation of the domain
    */
-  String getDomainString(Var var);
+  String getDomainString(Var v);
 }

@@ -466,7 +466,7 @@ public final class SatWrapper extends Constraint
    * queue things to be asserted
    */
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
     /* KK: Do not queue variable when this constraint (wrapper) executes
      *     its consistency method
@@ -483,26 +483,26 @@ public final class SatWrapper extends Constraint
      * failure), but rather be scheduled for being executed at next call to
      * consistency()
      */
-    assert registeredVars.contains(var);
-    assert log(this, "queue variable " + var + " at CP level " + level);
+    assert registeredVars.contains(v);
+    assert log(this, "queue variable " + v + " at CP level " + level);
 
     // this must be a SatVar
-    assert var instanceof IntVar;
-    IntVar v = (IntVar) var; // cast it in an IntVar
+    assert v instanceof IntVar;
+    IntVar intVar = (IntVar) v; // cast it in an IntVar
 
-    if (v.singleton()) {
+    if (intVar.singleton()) {
       // singleton => assign this variable to the unique value
-      int lit = cpVarToBoolVar(v, v.domain.value(), true);
+      int lit = cpVarToBoolVar(intVar, intVar.domain.value(), true);
       setBoolVariable(lit, true);
 
     } else {
       // let us check the domain bounds
-      int lower = v.domain.min();
-      int upper = v.domain.max();
+      int lower = intVar.domain.min();
+      int upper = intVar.domain.max();
       assert upper - lower >= 1; // otherwise, singleton
 
-      int lowerLit = cpVarToBoolVar(v, lower - 1, false);
-      int upperLit = cpVarToBoolVar(v, upper, false);
+      int lowerLit = cpVarToBoolVar(intVar, lower - 1, false);
+      int upperLit = cpVarToBoolVar(intVar, upper, false);
 
       // if those literals are not yet set, just add them
       if (lowerLit != 0 && !trail.isSet(lowerLit)) {
@@ -529,7 +529,7 @@ public final class SatWrapper extends Constraint
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
     return IntDomain.BOUND;
   }
 
@@ -723,8 +723,8 @@ public final class SatWrapper extends Constraint
    * @return a range
    */
   public SatCpBridge boolVarToDomain(int literal) {
-    int var = Math.abs(literal);
-    return boolVarToDomains[var];
+    int varIdx = Math.abs(literal);
+    return boolVarToDomains[varIdx];
   }
 
   /**
@@ -736,8 +736,8 @@ public final class SatWrapper extends Constraint
   public IntVar boolVarToCpVar(int literal) {
     assert isVarLiteral(literal);
 
-    int var = Math.abs(literal);
-    SatCpBridge range = boolVarToDomains[var];
+    int varIdx = Math.abs(literal);
+    SatCpBridge range = boolVarToDomains[varIdx];
     return range.variable;
   }
 
@@ -750,10 +750,10 @@ public final class SatWrapper extends Constraint
   public int boolVarToCpValue(int literal) {
     assert isVarLiteral(literal);
 
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
     // find which range this literal belongs to
-    SatCpBridge range = boolVarToDomains[var];
-    return range.boolVarToCpValue(var);
+    SatCpBridge range = boolVarToDomains[varIdx];
+    return range.boolVarToCpValue(varIdx);
   }
 
   /**
@@ -765,10 +765,10 @@ public final class SatWrapper extends Constraint
    */
   public boolean isEqualityBoolVar(int literal) {
     assert isVarLiteral(literal);
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
     IntVar variable = boolVarToCpVar(literal);
     SatCpBridge range = getSatBridge(variable);
-    return range.isEqualityBoolVar(var);
+    return range.isEqualityBoolVar(varIdx);
   }
 
   /**
@@ -781,11 +781,11 @@ public final class SatWrapper extends Constraint
     /*
      * we must ensure it is very fast (called very often)
      */
-    int var = Math.abs(literal);
-    if (var == 0 || var >= boolVarToDomains.length) {
+    int varIdx = Math.abs(literal);
+    if (varIdx == 0 || varIdx >= boolVarToDomains.length) {
       return false;
     }
-    return boolVarToDomains[var] != null;
+    return boolVarToDomains[varIdx] != null;
   }
 
   /**

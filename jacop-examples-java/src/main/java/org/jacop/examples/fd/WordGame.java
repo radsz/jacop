@@ -200,8 +200,8 @@ public class WordGame {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 
-      for (T var : vars) {
-        IO.print((char) ((IntVar) var).dom().min());
+      for (T v : vars) {
+        IO.print((char) ((IntVar) v).dom().min());
       }
       IO.println(" ");
 

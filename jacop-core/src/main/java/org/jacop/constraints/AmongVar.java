@@ -655,8 +655,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         return;
       }
 
-      for (IntVar var : this.listOfY) {
-        ubSdom = ubSdom.union(var.domain);
+      for (IntVar v : this.listOfY) {
+        ubSdom = ubSdom.union(v.domain);
       }
 
       // ----------------------------------------------------------
@@ -1129,16 +1129,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     StringBuilder result = new StringBuilder(id()).append("\n");
 
-    for (IntVar var : this.listOfX) {
-      result.append("X variable ").append(var.id).append(" : ").append(var.domain);
+    for (IntVar v : this.listOfX) {
+      result.append("X variable ").append(v.id).append(" : ").append(v.domain);
       result.append("       among attached : ");
-      result.append(var.domain.constraints().contains(this)).append(" \n");
+      result.append(v.domain.constraints().contains(this)).append(" \n");
     }
 
-    for (IntVar var : this.listOfY) {
-      result.append("Y variable ").append(var.id).append(" : ").append(var.domain);
+    for (IntVar v : this.listOfY) {
+      result.append("Y variable ").append(v.id).append(" : ").append(v.domain);
       result.append("       among attached : ");
-      result.append(var.domain.constraints().contains(this)).append(" \n");
+      result.append(v.domain.constraints().contains(this)).append(" \n");
     }
 
     result.append("variable ").append(n.id).append(" : ").append(n.domain);

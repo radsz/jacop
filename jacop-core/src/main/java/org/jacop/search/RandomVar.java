@@ -52,10 +52,10 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
    * Compares a metric value with a randomly generated value for a variable.
    *
    * @param left the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
     double right = generator.nextFloat();
     return Double.compare(right, left);
   }

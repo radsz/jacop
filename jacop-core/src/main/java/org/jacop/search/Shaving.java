@@ -123,7 +123,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   private int depth;
 
   /** {@inheritDoc} */
-  public boolean leftChild(IntVar var, int value, boolean status) {
+  public boolean leftChild(IntVar v, int value, boolean status) {
 
     leftChild = false;
     leftChildWrongDecision = true;
@@ -142,7 +142,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   }
 
   /** {@inheritDoc} */
-  public void rightChild(IntVar var, int value, boolean status) {
+  public void rightChild(IntVar v, int value, boolean status) {
 
     leftChild = false;
 
@@ -159,8 +159,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
       }
 
       Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
-      LinkedHashSet<Integer> shaveVarList =
-          current.computeIfAbsent(var, _ -> new LinkedHashSet<>());
+      LinkedHashSet<Integer> shaveVarList = current.computeIfAbsent(v, _ -> new LinkedHashSet<>());
 
       shaveVarList.add(value);
     }
@@ -334,17 +333,17 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     return true;
   }
 
-  boolean checkIfShavable(IntVar var, Integer val) {
+  boolean checkIfShavable(IntVar v, Integer val) {
 
-    assert var.domain.contains(val) && !var.domain.singleton()
-        : "var " + var + "val " + val + " should not be checked for shavability";
+    assert v.domain.contains(val) && !v.domain.singleton()
+        : "var " + v + "val " + val + " should not be checked for shavability";
 
     int depth = store.level;
 
     store.setLevel(++depth);
     // store.currentConstraint = null;
 
-    var.domain.in(store.level, var, val, val);
+    v.domain.in(store.level, v, val, val);
 
     boolean shavable = !store.consistency();
 

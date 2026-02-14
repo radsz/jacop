@@ -89,11 +89,11 @@ public final class MapClause implements Iterable<Integer> {
     assert literal != 0;
 
     // key, value
-    int var = Math.abs(literal);
-    boolean sign = var == literal;
+    int varIdx = Math.abs(literal);
+    boolean sign = varIdx == literal;
 
     // old value for this key, if any
-    Boolean oldSign = literals.put(var, sign);
+    Boolean oldSign = literals.put(varIdx, sign);
     return oldSign != null && (oldSign ^ sign);
   }
 
@@ -105,12 +105,12 @@ public final class MapClause implements Iterable<Integer> {
    * @return true if the literal was present (and removed), false otherwise
    */
   public boolean removeLiteral(int literal) {
-    int var = Math.abs(literal);
-    boolean sign = var == literal;
+    int varIdx = Math.abs(literal);
+    boolean sign = varIdx == literal;
 
-    Boolean b = literals.get(var);
+    Boolean b = literals.get(varIdx);
     if (b != null && b == sign) {
-      literals.remove(var);
+      literals.remove(varIdx);
       return true;
     } else {
       return false;
@@ -126,15 +126,15 @@ public final class MapClause implements Iterable<Integer> {
    */
   public void partialResolveWith(int literal) {
 
-    int var = Math.abs(literal);
-    boolean sign = var == literal;
+    int varIdx = Math.abs(literal);
+    boolean sign = varIdx == literal;
 
-    Boolean b = literals.get(var);
+    Boolean b = literals.get(varIdx);
 
     if (b == null) {
-      literals.put(var, sign);
+      literals.put(varIdx, sign);
     } else if (b != sign) {
-      literals.remove(var);
+      literals.remove(varIdx);
     }
   }
 
@@ -147,23 +147,23 @@ public final class MapClause implements Iterable<Integer> {
   public boolean containsLiteral(int literal) {
 
     // key, value
-    int var = Math.abs(literal);
-    boolean sign = var == literal;
+    int varIdx = Math.abs(literal);
+    boolean sign = varIdx == literal;
 
-    Boolean value = literals.get(var);
+    Boolean value = literals.get(varIdx);
     return value != null && value == sign;
   }
 
   /**
    * Predicate which is true iff the variable or its opposite is present.
    *
-   * @param var a variable ({@literal >} 0)
+   * @param varIdx the SAT variable index ({@literal >} 0)
    * @return true if the literal or its opposite is in the clause
    */
-  public boolean containsVariable(int var) {
+  public boolean containsVariable(int varIdx) {
 
-    assert var > 0;
-    return literals.containsKey(var);
+    assert varIdx > 0;
+    return literals.containsKey(varIdx);
   }
 
   /**
@@ -175,8 +175,8 @@ public final class MapClause implements Iterable<Integer> {
   public boolean isUnsatisfiableIn(Trail trail) {
 
     for (int lit : this) {
-      int var = Math.abs(lit);
-      int value = trail.values[var];
+      int varIdx = Math.abs(lit);
+      int value = trail.values[varIdx];
 
       // if this literal is not falsified
       if (value == 0 || lit == value) {
@@ -197,18 +197,18 @@ public final class MapClause implements Iterable<Integer> {
   public boolean isUnitIn(int literal, Trail trail) {
 
     for (int lit : this) {
-      int var = Math.abs(lit);
+      int varIdx = Math.abs(lit);
 
       /*
        * 2 failure case : the literal is not active, or
        * one of the other literals is not set or is satisfied
        */
       if (lit == literal) {
-        if (trail.isSet(var)) {
+        if (trail.isSet(varIdx)) {
           return false;
         }
       } else {
-        if ((!trail.isSet(var)) || trail.values[var] == lit) {
+        if ((!trail.isSet(varIdx)) || trail.values[varIdx] == lit) {
           return false;
         }
       }
@@ -225,8 +225,8 @@ public final class MapClause implements Iterable<Integer> {
   public boolean isUnitIn(Trail trail) {
     // number of non set literals
     int num = 0;
-    for (int var : literals.keySet()) {
-      if (!trail.isSet(var)) {
+    for (int varIdx : literals.keySet()) {
+      if (!trail.isSet(varIdx)) {
         num++;
       }
     }

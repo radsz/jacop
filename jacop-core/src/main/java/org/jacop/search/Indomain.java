@@ -45,8 +45,8 @@ public interface Indomain<T extends Var> {
    * It returns value within a variable which should be used in current assignment. This function
    * only returns value, it is not required to do any changes to variable, its domain, etc.
    *
-   * @param var defines variable for which value for assignment is suggested.
+   * @param v defines variable for which value for assignment is suggested.
    * @return defines value for current assignment.
    */
-  int indomain(T var);
+  int indomain(T v);
 }

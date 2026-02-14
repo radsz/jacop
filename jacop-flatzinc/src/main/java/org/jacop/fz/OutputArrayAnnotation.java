@@ -156,9 +156,9 @@ public class OutputArrayAnnotation {
         } else {
           s.append("false..true");
         }
-      } else if (v instanceof SetVar var) {
+      } else if (v instanceof SetVar setVar) {
         if (v.singleton()) {
-          IntDomain glb = var.dom().glb();
+          IntDomain glb = setVar.dom().glb();
           if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
             s.append(glb.min()).append("..").append(glb.max());
           } else {

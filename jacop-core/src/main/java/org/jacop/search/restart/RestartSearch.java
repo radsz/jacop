@@ -235,8 +235,8 @@ public class RestartSearch<T extends Var> {
 
   void boundCost() {
 
-    if (cost instanceof IntVar var) {
-      store.impose(new XltC(var, intCostValue));
+    if (cost instanceof IntVar v) {
+      store.impose(new XltC(v, intCostValue));
     } else {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
@@ -335,10 +335,10 @@ public class RestartSearch<T extends Var> {
   public void assignRelaxedVariables() {
 
     for (int i = 0; i < rarVars.length; i++) {
-      IntVar var = rarVars[i];
+      IntVar v = rarVars[i];
       int rn = generator.nextInt(101);
       if (rn <= probability) {
-        var.domain.inValue(store.level, var, values[i]);
+        v.domain.inValue(store.level, v, values[i]);
       }
     }
   }
@@ -380,8 +380,8 @@ public class RestartSearch<T extends Var> {
         reportSolution.report();
       }
 
-      if (cost instanceof IntVar var) {
-        intCostValue = var.value();
+      if (cost instanceof IntVar v) {
+        intCostValue = v.value();
       } else {
         CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
         if (costHandler != null) {

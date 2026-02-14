@@ -191,26 +191,26 @@ public abstract class SetDomain extends Domain {
    * This function is equivalent to in(int storeLevel, Variable var, int min, int max).
    *
    * @param storeLevel the level of the store at which the change occurrs.
-   * @param var the set variable for which the domain may change.
+   * @param v the set variable for which the domain may change.
    * @param glb the greatest lower bound of the domain.
    * @param lub the least upper bound of the domain.
    */
-  public abstract void in(int storeLevel, SetVar var, IntDomain glb, IntDomain lub);
+  public abstract void in(int storeLevel, SetVar v, IntDomain glb, IntDomain lub);
 
   /**
    * It updates the domain to have values only within the domain. The type of update is decided by
    * the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param domain the domain according to which the domain is updated.
    */
-  public abstract void in(int storeLevel, SetVar var, SetDomain domain);
+  public abstract void in(int storeLevel, SetVar v, SetDomain domain);
 
   @Override
-  public void in(int level, Var var, Domain domain) {
+  public void in(int level, Var v, Domain domain) {
 
-    in(level, (SetVar) var, (SetDomain) domain);
+    in(level, (SetVar) v, (SetDomain) domain);
   }
 
   /**
@@ -305,7 +305,7 @@ public abstract class SetDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putModelConstraint(int storeLevel, Var var, Constraint constraint, int pruningEvent) {
+  public void putModelConstraint(int storeLevel, Var v, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
 
@@ -317,9 +317,9 @@ public abstract class SetDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) var).domain = result;
+      ((SetVar) v).domain = result;
 
-      result.putModelConstraint(storeLevel, var, constraint, pruningEvent);
+      result.putModelConstraint(storeLevel, v, constraint, pruningEvent);
       return;
     }
 
@@ -396,7 +396,7 @@ public abstract class SetDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putSearchConstraint(int storeLevel, Var var, Constraint constraint) {
+  public void putSearchConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (!searchConstraints.contains(constraint)) {
 
@@ -413,9 +413,9 @@ public abstract class SetDomain extends Domain {
         result.previousDomain = this;
         result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-        ((SetVar) var).domain = result;
+        ((SetVar) v).domain = result;
 
-        result.putSearchConstraint(storeLevel, var, constraint);
+        result.putSearchConstraint(storeLevel, v, constraint);
         return;
       }
 
@@ -466,19 +466,19 @@ public abstract class SetDomain extends Domain {
    * lower at provided level.
    *
    * @param level the level which is being removed.
-   * @param var the variable to which this domain belonged to.
+   * @param v the variable to which this domain belonged to.
    */
   @Override
-  public void removeLevel(int level, Var var) {
+  public void removeLevel(int level, Var v) {
 
     assert (this.stamp <= level);
 
     if (this.stamp == level) {
 
-      ((SetVar) var).domain = this.previousDomain;
+      ((SetVar) v).domain = this.previousDomain;
     }
 
-    assert (var.level() < level);
+    assert (v.level() < level);
   }
 
   /**
@@ -486,7 +486,7 @@ public abstract class SetDomain extends Domain {
    * Variable object.
    */
   @Override
-  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint constraint) {
+  public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -498,9 +498,9 @@ public abstract class SetDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) var).domain = result;
+      ((SetVar) v).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, position, constraint);
+      result.removeSearchConstraint(storeLevel, v, position, constraint);
       return;
     }
 
@@ -519,7 +519,7 @@ public abstract class SetDomain extends Domain {
    * Variable object.
    */
   @Override
-  public void removeModelConstraint(int storeLevel, Var var, Constraint constraint) {
+  public void removeModelConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -531,9 +531,9 @@ public abstract class SetDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) var).domain = result;
+      ((SetVar) v).domain = result;
 
-      result.removeModelConstraint(storeLevel, var, constraint);
+      result.removeModelConstraint(storeLevel, v, constraint);
       return;
     }
 
@@ -818,48 +818,48 @@ public abstract class SetDomain extends Domain {
    * elements currently in LUB but not permitted by the argument domain.
    *
    * @param level level of the store at which this restriction takes place.
-   * @param var variable which domain is being restricted.
+   * @param v variable which domain is being restricted.
    * @param domain the domain specifying the allowed values the domain of the set variable.
    */
-  public abstract void inLub(int level, SetVar var, IntDomain domain);
+  public abstract void inLub(int level, SetVar v, IntDomain domain);
 
   /**
    * It specifies the element which can *NOT* be used as an element within a set assign to a set
    * variable.
    *
    * @param level level of the store at which this restriction takes place.
-   * @param var variable which domain is being restricted.
+   * @param v variable which domain is being restricted.
    * @param element the value being removed from the domain of the set variable.
    */
-  public abstract void inLubComplement(int level, SetVar var, int element);
+  public abstract void inLubComplement(int level, SetVar v, int element);
 
   /**
    * It specifies what elements must be in GLB. It will add new elements if they are not already in
    * GLB.
    *
    * @param level level of the store at which this addition takes place.
-   * @param var variable which domain is being restricted.
+   * @param v variable which domain is being restricted.
    * @param domain the domain specifying the required values of the set variable.
    */
-  public abstract void inGlb(int level, SetVar var, IntDomain domain);
+  public abstract void inGlb(int level, SetVar v, IntDomain domain);
 
   /**
    * It adds if necessary an element to glb.
    *
    * @param level level at which the change is recorded.
-   * @param var set variable to which the change applies to.
+   * @param v set variable to which the change applies to.
    * @param element the element which must be in glb.
    */
-  public abstract void inGlb(int level, SetVar var, int element);
+  public abstract void inGlb(int level, SetVar v, int element);
 
   /**
    * It assigns a set variable to the specified value.
    *
    * @param level level at which the change is recorded.
-   * @param var set variable to which the change applies to.
+   * @param v set variable to which the change applies to.
    * @param set the value assigned to a set variable.
    */
-  public abstract void inValue(int level, SetVar var, IntDomain set);
+  public abstract void inValue(int level, SetVar v, IntDomain set);
 
   /**
    * It returns the number of constraints.

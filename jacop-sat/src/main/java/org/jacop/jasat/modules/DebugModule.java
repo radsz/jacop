@@ -230,8 +230,8 @@ public final class DebugModule
 
   private void printTrail(String prefix, MapClause clause) {
     StringBuilder sb = new StringBuilder(prefix).append("[ ");
-    for (int var : clause.literals.keySet()) {
-      int value = core.trail.values[var];
+    for (int varIdx : clause.literals.keySet()) {
+      int value = core.trail.values[varIdx];
       if (value >= 0) {
         sb.append(' ');
       }
@@ -243,10 +243,10 @@ public final class DebugModule
 
   private void printClause(String prefix, MapClause mapClause) {
     StringBuilder sb = new StringBuilder(prefix).append("[ ");
-    for (int var : mapClause.literals.keySet()) {
-      boolean pos = mapClause.literals.get(var);
+    for (int varIdx : mapClause.literals.keySet()) {
+      boolean pos = mapClause.literals.get(varIdx);
       sb.append(pos ? ' ' : '-');
-      sb.append(var);
+      sb.append(varIdx);
       sb.append(' ');
     }
     core.logc(3, sb.append(']').toString());

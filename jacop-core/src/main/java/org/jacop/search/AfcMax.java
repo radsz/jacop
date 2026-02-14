@@ -70,9 +70,9 @@ public class AfcMax<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    double right = afcValue(var);
+    double right = afcValue(v);
 
     return Double.compare(left, right);
   }
@@ -88,9 +88,9 @@ public class AfcMax<T extends Var> implements ComparatorVariable<T> {
   }
 
   /** {@inheritDoc} */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    return afcValue(var);
+    return afcValue(v);
   }
 
   double afcValue(Var v) {

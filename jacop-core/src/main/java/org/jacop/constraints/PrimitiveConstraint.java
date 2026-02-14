@@ -56,14 +56,14 @@ public abstract class PrimitiveConstraint extends Constraint
    * It retrieves the pruning event which causes reevaluation of the constraint notConsistency()
    * function.
    *
-   * @param var for which pruning event is retrieved
+   * @param v for which pruning event is retrieved
    * @return the int denoting the pruning event associated with given variable.
    */
-  public int getNotConsistencyPruningEvent(Var var) {
+  public int getNotConsistencyPruningEvent(Var v) {
 
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
@@ -73,8 +73,8 @@ public abstract class PrimitiveConstraint extends Constraint
 
       int eventAcross =
           constraintScope.stream()
-              .filter(i -> i.arguments().contains(var))
-              .mapToInt(i -> i.getNestedPruningEvent(var, false))
+              .filter(i -> i.arguments().contains(v))
+              .mapToInt(i -> i.getNestedPruningEvent(v, false))
               .max()
               .orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
@@ -98,16 +98,16 @@ public abstract class PrimitiveConstraint extends Constraint
    * It retrieves the pruning event for which any composed constraint which uses this constraint
    * should be evaluated. This events are the ones which can change satisfied status?
    *
-   * @param var for which pruning event is retrieved
+   * @param v for which pruning event is retrieved
    * @param mode decides if pruning event for consistency or nonconsistency is required.
    * @return pruning event associated with the given variable for a given consistency mode.
    */
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
     // If consistency function mode
     if (mode) {
       if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(var);
+        Integer possibleEvent = consistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
@@ -117,8 +117,8 @@ public abstract class PrimitiveConstraint extends Constraint
 
         int eventAcross =
             constraintScope.stream()
-                .filter(i -> i.arguments().contains(var))
-                .mapToInt(i -> i.getNestedPruningEvent(var, true))
+                .filter(i -> i.arguments().contains(v))
+                .mapToInt(i -> i.getNestedPruningEvent(v, true))
                 .max()
                 .orElse(Integer.MIN_VALUE);
 
@@ -130,7 +130,7 @@ public abstract class PrimitiveConstraint extends Constraint
       return getDefaultNestedConsistencyPruningEvent();
     } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        Integer possibleEvent = notConsistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
@@ -139,8 +139,8 @@ public abstract class PrimitiveConstraint extends Constraint
 
         int eventAcross =
             constraintScope.stream()
-                .filter(i -> i.arguments().contains(var))
-                .mapToInt(i -> i.getNestedPruningEvent(var, false))
+                .filter(i -> i.arguments().contains(v))
+                .mapToInt(i -> i.getNestedPruningEvent(v, false))
                 .max()
                 .orElse(Integer.MIN_VALUE);
 
@@ -185,16 +185,16 @@ public abstract class PrimitiveConstraint extends Constraint
   /**
    * It allows to specify customized events required to trigger execution of notConsitency() method.
    *
-   * @param var variable for which customized event is setup.
+   * @param v variable for which customized event is setup.
    * @param pruningEvent the type of the event being setup.
    */
-  public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
+  public void setNotConsistencyPruningEvent(Var v, int pruningEvent) {
 
     if (notConsistencyPruningEvents == null) {
       notConsistencyPruningEvents = new Hashtable<>();
     }
 
-    notConsistencyPruningEvents.put(var, pruningEvent);
+    notConsistencyPruningEvents.put(v, pruningEvent);
   }
 
   /**
@@ -216,19 +216,19 @@ public abstract class PrimitiveConstraint extends Constraint
    * <p>This helper eliminates duplicated pruning-event computation in reified constraints such as
    * IfThen, Eq, Reified, Xor, Implies, etc.
    *
-   * @param var the variable for which to compute the pruning event.
+   * @param v the variable for which to compute the pruning event.
    * @param constraints the nested constraints to query.
    * @return the maximum pruning event, or {@link Domain#NONE} if the variable is not found.
    */
-  protected static int computeMaxPruningEvent(Var var, PrimitiveConstraint... constraints) {
+  protected static int computeMaxPruningEvent(Var v, PrimitiveConstraint... constraints) {
     int eventAcross = -1;
     for (PrimitiveConstraint constraint : constraints) {
-      if (constraint.arguments().contains(var)) {
-        int event = constraint.getNestedPruningEvent(var, true);
+      if (constraint.arguments().contains(v)) {
+        int event = constraint.getNestedPruningEvent(v, true);
         if (event > eventAcross) {
           eventAcross = event;
         }
-        event = constraint.getNestedPruningEvent(var, false);
+        event = constraint.getNestedPruningEvent(v, false);
         if (event > eventAcross) {
           eventAcross = event;
         }
@@ -240,12 +240,12 @@ public abstract class PrimitiveConstraint extends Constraint
   /**
    * Checks whether the given variable has a boolean domain (0..1).
    *
-   * @param var the variable to check.
+   * @param v the variable to check.
    * @return an error message if the domain is not boolean, or null if valid.
    */
-  protected static String checkBooleanDomain(IntVar var) {
-    if (var.min() < 0 || var.max() > 1) {
-      return "Variable " + var + " does not have boolean domain";
+  protected static String checkBooleanDomain(IntVar v) {
+    if (v.min() < 0 || v.max() > 1) {
+      return "Variable " + v + " does not have boolean domain";
     }
     return null;
   }
@@ -257,8 +257,8 @@ public abstract class PrimitiveConstraint extends Constraint
    * @return an error message for the first non-boolean variable found, or null if all are valid.
    */
   protected static String checkBooleanDomains(IntVar... vars) {
-    for (IntVar var : vars) {
-      String error = checkBooleanDomain(var);
+    for (IntVar v : vars) {
+      String error = checkBooleanDomain(v);
       if (error != null) {
         return error;
       }

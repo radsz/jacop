@@ -81,11 +81,11 @@ public class NoGoodsCollector<T extends IntVar>
    * return parameter specifies if the search should continue according to its course or be forced
    * to exit the parent node of the left child.
    */
-  public boolean leftChild(T var, int value, boolean status) {
+  public boolean leftChild(T v, int value, boolean status) {
 
     if (timeOut) {
       for (List<T> noGood : noGoodsVariables) {
-        noGood.add(var);
+        noGood.add(v);
       }
 
       for (List<Integer> noGood : noGoodsValues) {
@@ -94,7 +94,7 @@ public class NoGoodsCollector<T extends IntVar>
 
       if (exitChildListeners != null) {
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(var, value, status);
+          exitChildListener.leftChild(v, value, status);
         }
       }
 
@@ -105,7 +105,7 @@ public class NoGoodsCollector<T extends IntVar>
       } else {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(var, value, status);
+          code |= exitChildListener.leftChild(v, value, status);
         }
         return code;
       }
@@ -134,15 +134,15 @@ public class NoGoodsCollector<T extends IntVar>
   /**
    * Handles exiting the right child, collecting no-good information during timeout.
    *
-   * @param var the variable of the right branch choice.
+   * @param v the variable of the right branch choice.
    * @param value the value of the right branch choice.
    * @param status true if a solution was found, false otherwise.
    */
-  public void rightChild(T var, int value, boolean status) {
+  public void rightChild(T v, int value, boolean status) {
 
     if (timeOut) {
       List<T> newNoGoodVar = new ArrayList<>();
-      newNoGoodVar.add(var);
+      newNoGoodVar.add(v);
       List<Integer> newNoGoodVal = new ArrayList<>();
       newNoGoodVal.add(value);
 
@@ -152,7 +152,7 @@ public class NoGoodsCollector<T extends IntVar>
 
     if (exitChildListeners != null) {
       for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        exitChildListener.rightChild(var, value, status);
+        exitChildListener.rightChild(v, value, status);
       }
     }
   }

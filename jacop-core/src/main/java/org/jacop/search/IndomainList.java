@@ -67,16 +67,16 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
    * It returns the value to be assigned to the variable from the ordered list of preferred values,
    * or uses the default indomain if none of the preferred values are in the domain.
    *
-   * @param var the variable for which a value is being selected.
+   * @param v the variable for which a value is being selected.
    * @return the value to be assigned to the variable.
    * @throws RuntimeException if no value can be returned since list does not contain a value which
    *     belongs to the domain and default indomain was not supplied.
    */
-  public int indomain(T var) throws RuntimeException {
+  public int indomain(T v) throws RuntimeException {
 
     // FIXME, there is no better way than just creating a BoundDomain object?
     for (int next : order) {
-      if (var.dom().contains(next)) {
+      if (v.dom().contains(next)) {
         return next;
       }
     }
@@ -85,6 +85,6 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
       throw new RuntimeException();
     }
 
-    return defIndomain.indomain(var);
+    return defIndomain.indomain(v);
   }
 }

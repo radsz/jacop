@@ -145,8 +145,8 @@ public class Gardner extends ExampleSet {
 
     if (result) {
       IO.println("*** Yes");
-      for (SetVar var : vars) {
-        IO.println(var);
+      for (SetVar v : vars) {
+        IO.println(v);
       }
     } else {
       IO.println("*** No");

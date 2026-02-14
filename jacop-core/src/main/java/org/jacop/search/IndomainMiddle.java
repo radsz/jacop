@@ -48,16 +48,16 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
   public IndomainMiddle() {}
 
   /** It requires IntVar variable. */
-  public int indomain(IntVar var) {
+  public int indomain(IntVar v) {
 
-    assert !var.singleton() : "indomain does not work with singleton variables.";
+    assert !v.singleton() : "indomain does not work with singleton variables.";
 
-    assert var.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
+    assert v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
         : "It is not possible to use BoundDomain";
 
-    if (var.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+    if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
 
-      IntervalDomain domain = (IntervalDomain) var.domain;
+      IntervalDomain domain = (IntervalDomain) v.domain;
 
       int dMin = domain.min();
       int dMax = domain.max();
@@ -101,7 +101,7 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
     } else {
 
-      IntDomain dom = var.dom();
+      IntDomain dom = v.dom();
       int dMin = dom.min();
       int dMax = dom.max();
 

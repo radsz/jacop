@@ -65,12 +65,12 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
   /**
    * Selects a random value from the set variable's domain.
    *
-   * @param var the set variable from which to select a value.
+   * @param v the set variable from which to select a value.
    * @return a randomly selected element from the difference between lub and glb.
    */
-  public int indomain(T var) {
+  public int indomain(T v) {
 
-    IntDomain difference = var.domain.lub().subtract(var.domain.glb());
+    IntDomain difference = v.domain.lub().subtract(v.domain.glb());
 
     int no = seed.nextInt(difference.getSize());
 

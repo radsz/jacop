@@ -404,10 +404,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             }
             return false;
           }
-        } else if (costVariable instanceof IntVar var) {
+        } else if (costVariable instanceof IntVar v) {
           // Fallback for IntVar (should always have handler, but just in case)
-          if (var.min() <= costValue - 1) {
-            var.domain.in(store.level, var, var.min(), costValue - 1);
+          if (v.min() <= costValue - 1) {
+            v.domain.in(store.level, v, v.min(), costValue - 1);
           } else {
             if (consistencyListener != null) {
               consistencyListener.executeAfterConsistency(false);
@@ -460,9 +460,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
         if (domainHandler != null) {
           domainHandler.inValue(store, fdv, val, einAinleftTree);
-        } else if (fdv instanceof IntVar var) {
+        } else if (fdv instanceof IntVar v) {
           // Fallback for IntVar (should always have handler, but just in case)
-          ((IntDomain) fdv.dom()).inValue(store.level, var, val);
+          ((IntDomain) fdv.dom()).inValue(store.level, v, val);
         }
 
         decisions++;
@@ -539,17 +539,17 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                   } else {
                     costHandler.updateCostDomain(store, costVariable, childCostValue);
                   }
-                } else if (costVariable instanceof IntVar var) {
+                } else if (costVariable instanceof IntVar v) {
                   // Fallback for IntVar
                   int childCostValue = childSearches[currentChildSearch].getCostValue();
                   if (childCostValue < costValue) {
                     costValue = childCostValue;
-                    cost = new XltC(var, costValue);
+                    cost = new XltC(v, costValue);
                   }
-                  if (childCostValue <= var.min()) {
+                  if (childCostValue <= v.min()) {
                     break;
                   } else {
-                    var.domain.inMax(store.level, var, childCostValue - 1);
+                    v.domain.inMax(store.level, v, childCostValue - 1);
                   }
                 }
               }
@@ -576,13 +576,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                   }
                   cost = costHandler.createCostConstraint(costVariable, childCostValue);
                 }
-              } else if (costVariable instanceof IntVar var) {
+              } else if (costVariable instanceof IntVar v) {
                 // Fallback for IntVar
                 int childCostValue = childSearches[currentChildSearch].getCostValue();
                 if (childCostValue < costValue) {
                   costValue = childCostValue;
                 }
-                cost = new XltC(var, costValue);
+                cost = new XltC(v, costValue);
               }
             }
 
@@ -624,10 +624,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 costValueFloat = currentCost;
               }
               cost = costHandler.createCostConstraint(costVariable, currentCost);
-            } else if (costVariable instanceof IntVar var) {
+            } else if (costVariable instanceof IntVar v) {
               // Fallback for IntVar
-              costValue = var.dom().min();
-              cost = new XltC(var, costValue);
+              costValue = v.dom().min();
+              cost = new XltC(v, costValue);
             }
           }
 
@@ -733,9 +733,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
               SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
           if (domainHandler != null) {
             domainHandler.inComplement(store, fdv, val, einAinleftTree);
-          } else if (fdv instanceof IntVar var) {
+          } else if (fdv instanceof IntVar v) {
             // Fallback for IntVar (should always have handler, but just in case)
-            ((IntDomain) fdv.dom()).inComplement(store.level, var, val);
+            ((IntDomain) fdv.dom()).inComplement(store.level, v, val);
           }
 
           consistent = label(firstVariable);

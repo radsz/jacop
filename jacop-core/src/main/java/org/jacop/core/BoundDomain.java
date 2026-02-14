@@ -284,7 +284,7 @@ class BoundDomain extends IntDomain {
   }
 
   @Override
-  public void in(int storeLevel, Var var, int min, int max) {
+  public void in(int storeLevel, Var v, int min, int max) {
 
     assert min <= max;
 
@@ -307,9 +307,9 @@ class BoundDomain extends IntDomain {
       }
 
       if (this.minBound == this.maxBound) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -335,24 +335,24 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
 
   @Override
-  public void in(int storeLevel, Var var, IntDomain domain) {
+  public void in(int storeLevel, Var v, IntDomain domain) {
 
-    in(storeLevel, var, domain.min(), domain.max());
+    in(storeLevel, v, domain.min(), domain.max());
   }
 
   @Override
-  public void inValue(int storeLevel, IntVar var, int value) {
+  public void inValue(int storeLevel, IntVar v, int value) {
 
     if (!(value >= minBound && value <= maxBound)) {
       throw failException;
@@ -378,14 +378,14 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
     }
 
-    var.domainHasChanged(GROUND);
+    v.domainHasChanged(GROUND);
   }
 
   @Override
-  public void inComplement(int storeLevel, Var var, int complement) {
+  public void inComplement(int storeLevel, Var v, int complement) {
 
     if (this.maxBound == this.minBound && this.maxBound == complement) {
       throw failException;
@@ -407,9 +407,9 @@ class BoundDomain extends IntDomain {
       }
 
       if (this.minBound == this.maxBound) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -430,18 +430,18 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
 
   @Override
-  public void inComplement(int storeLevel, Var var, int min, int max) {
+  public void inComplement(int storeLevel, Var v, int min, int max) {
 
     assert min <= max;
 
@@ -470,9 +470,9 @@ class BoundDomain extends IntDomain {
       }
 
       if (this.minBound == this.maxBound) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -493,18 +493,18 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
 
   @Override
-  public void inMax(int storeLevel, Var var, int max) {
+  public void inMax(int storeLevel, Var v, int max) {
 
     if (this.minBound > max) {
       throw failException;
@@ -520,9 +520,9 @@ class BoundDomain extends IntDomain {
       this.maxBound = max;
 
       if (this.minBound == this.maxBound) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -537,18 +537,18 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
 
   @Override
-  public void inMin(int storeLevel, Var var, int min) {
+  public void inMin(int storeLevel, Var v, int min) {
 
     if (this.maxBound < min) {
       throw failException;
@@ -563,9 +563,9 @@ class BoundDomain extends IntDomain {
       this.minBound = min;
 
       if (this.minBound == this.maxBound) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -580,19 +580,19 @@ class BoundDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
 
   @Override
-  public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
-    in(storeLevel, var, domain.min() + shift, domain.max() + shift);
+  public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
+    in(storeLevel, v, domain.min() + shift, domain.max() + shift);
   }
 
   @Override
@@ -792,16 +792,16 @@ class BoundDomain extends IntDomain {
   }
 
   @Override
-  public void removeLevel(int level, Var var) {
+  public void removeLevel(int level, Var v) {
 
     assert this.stamp <= level;
 
     if (this.stamp == level) {
 
-      ((IntVar) var).domain = this.previousDomain;
+      ((IntVar) v).domain = this.previousDomain;
     }
 
-    assert var.level() < level;
+    assert v.level() < level;
   }
 
   @Override

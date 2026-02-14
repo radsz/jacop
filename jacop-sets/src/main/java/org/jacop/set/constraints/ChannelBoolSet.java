@@ -159,17 +159,17 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     // If consistency function mode
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
 
-    if (var instanceof IntVar) {
+    if (v instanceof IntVar) {
       return IntDomain.ANY;
     } else {
       return SetDomain.ANY;

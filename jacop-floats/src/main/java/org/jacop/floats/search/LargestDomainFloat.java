@@ -50,11 +50,11 @@ public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> 
    * Compares a metric value with a variable's domain size.
    *
    * @param left the metric value to compare
-   * @param var the variable whose domain size is compared
-   * @return negative if var has larger domain, positive if smaller, zero if equal
+   * @param v the variable whose domain size is compared
+   * @return negative if v has larger domain, positive if smaller, zero if equal
    */
-  public int compare(double left, T var) {
-    double right = var.getSizeFloat();
+  public int compare(double left, T v) {
+    double right = v.getSizeFloat();
 
     return Double.compare(left, right);
   }
@@ -76,10 +76,10 @@ public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> 
   /**
    * Computes the metric value for a variable based on its domain size.
    *
-   * @param var the variable to compute the metric for
+   * @param v the variable to compute the metric for
    * @return the domain size of the variable
    */
-  public double metric(T var) {
-    return var.getSizeFloat();
+  public double metric(T v) {
+    return v.getSizeFloat();
   }
 }

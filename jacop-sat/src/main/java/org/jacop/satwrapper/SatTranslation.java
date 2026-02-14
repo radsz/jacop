@@ -79,11 +79,11 @@ public class SatTranslation {
   public void generateClause(IntVar[] a1, IntVar[] a2) {
 
     List<IntVar> a1reduced = new ArrayList<>();
-    for (IntVar var : a1) {
-      if (var.min() == 1) {
+    for (IntVar v : a1) {
+      if (v.min() == 1) {
         return;
-      } else if (var.max() != 0) {
-        a1reduced.add(var);
+      } else if (v.max() != 0) {
+        a1reduced.add(v);
       }
     }
     List<IntVar> a2reduced = new ArrayList<>();
@@ -137,8 +137,8 @@ public class SatTranslation {
     System.arraycopy(b, 0, bs, 0, b.length);
     bs[b.length] = r;
     generateClause(a, bs);
-    for (IntVar var : a) {
-      generateClause(new IntVar[] {r}, new IntVar[] {var});
+    for (IntVar v : a) {
+      generateClause(new IntVar[] {r}, new IntVar[] {v});
     }
     for (IntVar intVar : b) {
       generateClause(new IntVar[] {intVar, r}, new IntVar[] {});
@@ -156,8 +156,8 @@ public class SatTranslation {
     // (a1 \/ a2 \/ ... \/ an \/ -c)
     // /\
     // for all i: (-ai \/ c)
-    for (IntVar var : a) {
-      if (var.min() == 1) {
+    for (IntVar v : a) {
+      if (v.min() == 1) {
         c.domain.in(store.level, c, 1, 1);
         return;
       }
@@ -180,8 +180,8 @@ public class SatTranslation {
     // -a1 \/ -a2 \/ ... \/ c
     // /\
     // for all i: ai \/ -c
-    for (IntVar var : a) {
-      if (var.max() == 0) {
+    for (IntVar v : a) {
+      if (v.max() == 0) {
         c.domain.in(store.level, c, 0, 0);
         return;
       }

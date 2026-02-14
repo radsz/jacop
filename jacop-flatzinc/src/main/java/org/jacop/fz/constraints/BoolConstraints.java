@@ -305,15 +305,15 @@ class BoolConstraints implements ParserTreeConstants {
       }
     } else { // not SAT generation, use CP constraints
       ArrayList<IntVar> a1reduced = new ArrayList<>();
-      for (IntVar var : a1) {
-        if (var.min() == 1) {
+      for (IntVar v : a1) {
+        if (v.min() == 1) {
           if (reified || implied) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
           }
           return;
-        } else if (var.max() != 0) {
-          a1reduced.add(var);
+        } else if (v.max() != 0) {
+          a1reduced.add(v);
         }
       }
 

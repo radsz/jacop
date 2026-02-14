@@ -191,8 +191,8 @@ public class Alldistinct extends Constraint
 
     IntDomain sum = new IntervalDomain(5);
 
-    for (IntVar var : this.list) {
-      sum.addDom(var.dom());
+    for (IntVar v : this.list) {
+      sum.addDom(v.dom());
     }
 
     // Each value in any variable domain will appear in a value graph
@@ -1179,13 +1179,13 @@ public class Alldistinct extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
     if (debugAll) {
-      log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
+      log.debug("Var {}{}", v, ((IntVar) v).recentDomainPruning());
     }
 
-    variableQueue.add((IntVar) var);
+    variableQueue.add((IntVar) v);
   }
 
   private void revisitTarjan(

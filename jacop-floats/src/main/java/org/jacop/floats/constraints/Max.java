@@ -92,7 +92,7 @@ public class Max extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    FloatVar var;
+    FloatVar v;
     FloatDomain vDom;
 
     do {
@@ -108,11 +108,11 @@ public class Max extends Constraint implements SatisfiedPresent {
       double maxMax = max.max();
       for (FloatVar floatVar : list) {
 
-        var = floatVar;
+        v = floatVar;
 
-        var.domain.inMax(store.level, var, maxMax);
+        v.domain.inMax(store.level, v, maxMax);
 
-        vDom = var.dom();
+        vDom = v.dom();
         double VdomMin = vDom.min();
         double VdomMax = vDom.max();
 
@@ -125,8 +125,8 @@ public class Max extends Constraint implements SatisfiedPresent {
       int n = 0;
       int pos = -1;
       for (int i = 0; i < list.length; i++) {
-        var = list[i];
-        if (minValue > var.max()) {
+        v = list[i];
+        if (minValue > v.max()) {
           n++;
         } else {
           pos = i;

@@ -97,8 +97,8 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    super.queueVariable(level, var);
+  public void queueVariable(int level, Var v) {
+    super.queueVariable(level, v);
   }
 
   /**

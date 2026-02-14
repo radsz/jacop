@@ -51,56 +51,56 @@ public interface CostVariableHandler {
   /**
    * Checks if this handler can process the given variable type.
    *
-   * @param var the variable to check
+   * @param v the variable to check
    * @return true if this handler can process the variable, false otherwise
    */
-  boolean isApplicable(Var var);
+  boolean isApplicable(Var v);
 
   /**
    * Gets the current cost value from the variable. For IntVar, returns integer cost value. For
    * FloatVar, returns double cost value.
    *
-   * @param var the cost variable
+   * @param v the cost variable
    * @return the current cost value
    */
-  double getCostValue(Var var);
+  double getCostValue(Var v);
 
   /**
    * Creates a constraint that enforces the cost variable to be less than or equal to the given cost
    * value. This is used in optimization to ensure subsequent solutions are better.
    *
-   * @param var the cost variable
+   * @param v the cost variable
    * @param costValue the cost value to enforce
    * @return a constraint enforcing {@code cost <= costValue}
    */
-  Constraint createCostConstraint(Var var, double costValue);
+  Constraint createCostConstraint(Var v, double costValue);
 
   /**
    * Updates the cost variable's domain to exclude values greater than the given cost value. This is
    * used during optimization to prune the search space.
    *
    * @param store the store containing the variable
-   * @param var the cost variable
+   * @param v the cost variable
    * @param costValue the maximum cost value to allow
    */
-  void updateCostDomain(Store store, Var var, double costValue);
+  void updateCostDomain(Store store, Var v, double costValue);
 
   /**
    * Gets the minimum cost value that can be achieved. Used for checking if further optimization is
    * possible.
    *
-   * @param var the cost variable
+   * @param v the cost variable
    * @return the minimum possible cost value
    */
-  double getMinCostValue(Var var);
+  double getMinCostValue(Var v);
 
   /**
    * Gets the maximum cost value that can be achieved. Used for maximization problems.
    *
-   * @param var the cost variable
+   * @param v the cost variable
    * @return the maximum possible cost value
    */
-  double getMaxCostValue(Var var);
+  double getMaxCostValue(Var v);
 
   /**
    * Checks if a given cost value is better than the current best cost. For minimization, returns

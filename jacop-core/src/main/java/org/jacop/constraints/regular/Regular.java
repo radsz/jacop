@@ -535,8 +535,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   }
 
   /**
-   * Collects the damaged states, after pruning the domain of variable "var", and put these states
-   * in two separated sets.
+   * Collects the damaged states, after pruning the domain of variable v, and put these states in
+   * two separated sets.
    *
    * <p>One with the states with zero incoming degree - these are the candidates for the forward
    * part. The other set consists of states with zero out-coming degree - these are the candidates
@@ -567,7 +567,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       boolean alreadyTouched = false;
 
       for (int i = s.outDegree - 1; i >= 0; i--) {
-        // If this transition must be removes because it is not in var's domain
+        // If this transition must be removed because it is not in variable's domain
         if (!s.intersects(domVar, i)) {
 
           if (DEBUG_ALL) {
@@ -876,9 +876,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
-    variableQueue.add((IntVar) var);
+    variableQueue.add((IntVar) v);
   }
 
   @Override
@@ -969,8 +969,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     Arrays.fill(levelHadChanged, false);
 
-    for (Var var : variableQueue) {
-      pruneArc(mapping.get(var));
+    for (Var v : variableQueue) {
+      pruneArc(mapping.get(v));
     }
 
     // if two consistency functions executed one after the other

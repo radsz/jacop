@@ -392,12 +392,12 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
     if (DEBUG_ALL) {
-      log.debug("Var {} {}", var, ((IntVar) var).recentDomainPruning());
+      log.debug("Var {} {}", v, ((IntVar) v).recentDomainPruning());
     }
 
-    variableQueue.add(var);
+    variableQueue.add(v);
   }
 }

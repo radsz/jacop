@@ -136,8 +136,8 @@ public class Element extends Constraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
-    return c.getConsistencyPruningEvent(var);
+  public int getConsistencyPruningEvent(Var v) {
+    return c.getConsistencyPruningEvent(v);
   }
 
   @Override
@@ -156,8 +156,8 @@ public class Element extends Constraint implements UsesQueueVariable {
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    c.queueVariable(level, var);
+  public void queueVariable(int level, Var v) {
+    c.queueVariable(level, v);
   }
 
   @Override

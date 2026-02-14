@@ -92,11 +92,11 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     }
   }
 
-  private int lookup(IntVar var) {
-    Integer id = map.get(var);
+  private int lookup(IntVar v) {
+    Integer id = map.get(v);
     if (id == null) {
-      map.put(var, id = vars.size());
-      vars.add(var);
+      map.put(v, id = vars.size());
+      vars.add(v);
     }
     return id;
   }
@@ -124,8 +124,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     }
 
     int max = 1;
-    for (IntVar var : vars) {
-      int id = lookup(var);
+    for (IntVar v : vars) {
+      int id = lookup(v);
       if (max <= id) {
         max = id + 1;
       }
@@ -325,8 +325,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
       for (int i = 0; i < nodes.length; i++) {
         int[] eqn = eqns[i];
 
-        for (int var = 1; var < eqn.length; var++) {
-          if (eqn[var] == 0) {
+        for (int varIdx = 1; varIdx < eqn.length; varIdx++) {
+          if (eqn[varIdx] == 0) {
             continue;
           }
 
@@ -334,15 +334,15 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
           for (int j = 1; j < nodes.length; j++) {
             int k = (i + j) % nodes.length;
             int[] eqn2 = eqns[k];
-            if (var >= eqn2.length) {
+            if (varIdx >= eqn2.length) {
               continue;
             }
 
-            if (eqn[var] > 0 && eqn[var] <= -eqn2[var]) {
+            if (eqn[varIdx] > 0 && eqn[varIdx] <= -eqn2[varIdx]) {
               found = k;
               break;
             }
-            if (eqn[var] < 0 && -eqn[var] <= eqn2[var]) {
+            if (eqn[varIdx] < 0 && -eqn[varIdx] <= eqn2[varIdx]) {
               found = k;
               break;
             }
@@ -352,20 +352,20 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
           Node n1 = nodes[i];
           Node n2 = found == -1 ? root : nodes[found];
 
-          if (eqn[var] > 0) {
+          if (eqn[varIdx] > 0) {
             // TODO: use variable-view instead
-            for (int cnt = eqn[var]; cnt-- > 0; ) {
-              addArc(n2, n1, 0, vars.get(var));
+            for (int cnt = eqn[varIdx]; cnt-- > 0; ) {
+              addArc(n2, n1, 0, vars.get(varIdx));
             }
           } else {
             // TODO: use variable-view instead
-            for (int cnt = -eqn[var]; cnt-- > 0; ) {
-              addArc(n1, n2, 0, vars.get(var));
+            for (int cnt = -eqn[varIdx]; cnt-- > 0; ) {
+              addArc(n1, n2, 0, vars.get(varIdx));
             }
           }
 
-          eqn2[var] += eqn[var];
-          eqn[var] = 0;
+          eqn2[varIdx] += eqn[varIdx];
+          eqn[varIdx] = 0;
         }
       }
 

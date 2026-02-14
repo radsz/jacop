@@ -70,16 +70,16 @@ public final class HeuristicAssertionModule implements SolverComponent {
     int answer = 0;
 
     // using activity
-    int var = activity.getLiteralToAssert();
-    if (var != 0) {
-      return var;
+    int lit = activity.getLiteralToAssert();
+    if (lit != 0) {
+      return lit;
     }
 
     // the basic way, for remaining vars
     int maxVariable = core.getMaxVariable();
-    for (var = 1; var <= maxVariable; var++) {
-      if (!trail.isSet(var)) {
-        answer = var;
+    for (int varIdx = 1; varIdx <= maxVariable; varIdx++) {
+      if (!trail.isSet(varIdx)) {
+        answer = varIdx;
         break;
       }
     }

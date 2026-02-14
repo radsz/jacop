@@ -47,13 +47,13 @@ import org.jacop.set.core.SetVar;
 public class SetDomainOperationHandler implements DomainOperationHandler {
 
   @Override
-  public boolean isApplicable(Var var) {
-    return var instanceof SetVar;
+  public boolean isApplicable(Var v) {
+    return v instanceof SetVar;
   }
 
   @Override
-  public void inValue(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof SetVar setVar)) {
+  public void inValue(Store store, Var v, int value, boolean leftBranch) {
+    if (!(v instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
     SetDomain setDomain = setVar.dom();
@@ -67,8 +67,8 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
   }
 
   @Override
-  public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof SetVar setVar)) {
+  public void inComplement(Store store, Var v, int value, boolean leftBranch) {
+    if (!(v instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
     SetDomain setDomain = setVar.dom();
@@ -82,8 +82,8 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
   }
 
   @Override
-  public String getDomainString(Var var) {
-    if (!(var instanceof SetVar setVar)) {
+  public String getDomainString(Var v) {
+    if (!(v instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
     return setVar.dom().toString();

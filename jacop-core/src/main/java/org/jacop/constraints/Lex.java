@@ -191,13 +191,13 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
     //   numberStates++;
 
-    IntVar[] var = new IntVar[numberVar];
+    IntVar[] vars = new IntVar[numberVar];
     Fsm g = new Fsm();
     int k = 0;
     for (int i = 0; i < lt.length; i++) {
       for (int j = 0; j < lt[i].length; j++) {
-        var[k++] = lt[i][j];
-        var[k++] = eq[i][j];
+        vars[k++] = lt[i][j];
+        vars[k++] = eq[i][j];
 
         g.allStates.add(state[i][j][0]);
         g.allStates.add(state[i][j][1]);
@@ -263,7 +263,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     terminate.transitions.add(new FsmTransition(new IntervalDomain(0, 1), terminate));
 
-    constraints.add(new Regular(g, var));
+    constraints.add(new Regular(g, vars));
 
     return constraints;
   }
@@ -340,14 +340,14 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
     //   numberStates++;
 
-    IntVar[] var = new IntVar[numberVar];
+    IntVar[] vars = new IntVar[numberVar];
     Fsm g = new Fsm();
     int k = 0;
     for (int i = 0; i < lt.length; i++) {
       for (int j = 0; j < lt[i].length; j++) {
-        var[k++] = lt[i][j];
+        vars[k++] = lt[i][j];
         if (j < eq[i].length) {
-          var[k++] = eq[i][j];
+          vars[k++] = eq[i][j];
         }
 
         g.allStates.add(state[i][j][0]);
@@ -409,7 +409,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     terminate.transitions.add(new FsmTransition(new IntervalDomain(0, 1), terminate));
 
-    constraints.add(new Regular(g, var));
+    constraints.add(new Regular(g, vars));
 
     return constraints;
   }

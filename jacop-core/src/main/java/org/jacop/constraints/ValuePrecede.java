@@ -279,8 +279,8 @@ public class ValuePrecede extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    varQueue.add((IntVar) var);
+  public void queueVariable(int level, Var v) {
+    varQueue.add((IntVar) v);
   }
 
   @Override

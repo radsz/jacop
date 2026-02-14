@@ -537,8 +537,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     varToIndex = Var.positionMapping(list, false, this.getClass());
 
     if (DEBUG_ALL) {
-      for (Var var : list) {
-        log.debug("Variable {}", var);
+      for (Var v : list) {
+        log.debug("Variable {}", v);
       }
     }
 
@@ -555,15 +555,15 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
     if (backtrackOccured) {
       // Variables have changed after backtracking and before consistency function.
-      domainSizeAfterConsistency[varToIndex.get(var)] = 0;
+      domainSizeAfterConsistency[varToIndex.get(v)] = 0;
     }
 
-    if (var.singleton()) {
-      lastAssignedVariablePosition = varToIndex.get(var);
+    if (v.singleton()) {
+      lastAssignedVariablePosition = varToIndex.get(v);
     }
   }
 

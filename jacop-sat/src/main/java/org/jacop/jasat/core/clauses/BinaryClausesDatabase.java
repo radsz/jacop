@@ -99,14 +99,14 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
    */
   public void assertLiteral(int literal) {
 
-    int var = literal > 0 ? literal : -literal; // Math.abs(literal);
+    int varIdx = literal > 0 ? literal : -literal; // Math.abs(literal);
 
-    if (watchLists.length <= var || watchLists[var] == null) {
+    if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return;
     }
 
     // notify all clauses
-    int[] watchedClauses = watchLists[var];
+    int[] watchedClauses = watchLists[varIdx];
     for (int i = watchedClauses[0] - 1; i > 0; i--) {
 
       // notify this clause

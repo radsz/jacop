@@ -418,14 +418,14 @@ public class TraceGenerator<T extends Var>
   // Metods for tracing using ExitChildListener
 
   /** {@inheritDoc} */
-  public boolean leftChild(T var, int value, boolean status) {
+  public boolean leftChild(T v, int value, boolean status) {
 
     boolean returnCode = true;
 
     if (exitChildListeners != null) {
       boolean code = false;
       for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(var, value, status);
+        code |= exitChildListener.leftChild(v, value, status);
       }
       returnCode = code;
     }
@@ -436,7 +436,7 @@ public class TraceGenerator<T extends Var>
     if (!status && returnCode) {
 
       currentSearchNode = new SearchNode();
-      currentSearchNode.v = var;
+      currentSearchNode.v = v;
 
       if (previousSearchNode.dom instanceof IntDomain domain) {
         currentSearchNode.dom = domain.subtract(value);
@@ -497,7 +497,7 @@ public class TraceGenerator<T extends Var>
   }
 
   /** {@inheritDoc} */
-  public void rightChild(T var, int value, boolean status) {
+  public void rightChild(T v, int value, boolean status) {
 
     currentSearchNode = searchStack.pop();
   }

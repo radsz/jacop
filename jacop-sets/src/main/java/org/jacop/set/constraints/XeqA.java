@@ -87,17 +87,17 @@ public class XeqA extends PrimitiveConstraint {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     // If consistency function mode
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
 
-    if (var == a) {
+    if (v == a) {
       return SetDomain.ANY;
     } else {
       return IntDomain.ANY;
@@ -110,17 +110,17 @@ public class XeqA extends PrimitiveConstraint {
   }
 
   @Override
-  public int getNotConsistencyPruningEvent(Var var) {
+  public int getNotConsistencyPruningEvent(Var v) {
 
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
 
-    if (var == a) {
+    if (v == a) {
       return SetDomain.ANY;
     } else {
       return IntDomain.ANY;
@@ -158,25 +158,25 @@ public class XeqA extends PrimitiveConstraint {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
     // If consistency function mode
     if (mode) {
       if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(var);
+        Integer possibleEvent = consistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
       }
-      return getConsistencyPruningEvent(var);
+      return getConsistencyPruningEvent(v);
     } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        Integer possibleEvent = notConsistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
       }
-      return getNotConsistencyPruningEvent(var);
+      return getNotConsistencyPruningEvent(v);
     }
   }
 

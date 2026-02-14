@@ -56,8 +56,8 @@ import org.jacop.core.Var;
 public class Alldiff extends Alldifferent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private final Comparator<Element> maxVariable = Comparator.comparingInt(o -> o.var.max());
-  private final Comparator<Element> minVariable = Comparator.comparingInt(o -> o.var.min());
+  private final Comparator<Element> maxVariable = Comparator.comparingInt(o -> o.v.max());
+  private final Comparator<Element> minVariable = Comparator.comparingInt(o -> o.v.min());
   // it stores the store locally so all the private functions which
   // are part of the consistency function can throw failure exception
   // without passing store argument every time their function is called.
@@ -105,7 +105,7 @@ public class Alldiff extends Alldifferent {
     maxsorted = new Element[n];
     for (int i = 0; i < n; i++) {
       Element el = new Element();
-      el.var = list[i];
+      el.v = list[i];
       minsorted[i] = el;
       maxsorted[i] = el;
     }
@@ -169,8 +169,8 @@ public class Alldiff extends Alldifferent {
     Arrays.sort(minsorted, 0, n, minVariable);
     Arrays.sort(maxsorted, 0, n, maxVariable);
 
-    int min = minsorted[0].var.min();
-    int max = maxsorted[0].var.max() + 1;
+    int min = minsorted[0].v.min();
+    int max = maxsorted[0].v.max() + 1;
     int last = min - 2;
     int nb = 0;
     bounds[0] = last;
@@ -184,7 +184,7 @@ public class Alldiff extends Alldifferent {
 
         minsorted[i].minrank = nb;
         if (++i < n) {
-          min = minsorted[i].var.min();
+          min = minsorted[i].v.min();
         }
 
       } else {
@@ -197,7 +197,7 @@ public class Alldiff extends Alldifferent {
           break;
         }
 
-        max = maxsorted[j].var.max() + 1;
+        max = maxsorted[j].v.max() + 1;
       }
     }
     this.nb = nb;
@@ -231,7 +231,7 @@ public class Alldiff extends Alldifferent {
       }
       if (h[x] > x) {
         int w = pathmax(h, h[x]);
-        maxsorted[i].var.domain.inMin(store.level, maxsorted[i].var, bounds[w]);
+        maxsorted[i].v.domain.inMin(store.level, maxsorted[i].v, bounds[w]);
         pathset(h, x, w, w);
       }
       if (d[z] == bounds[z] - bounds[y]) {
@@ -267,7 +267,7 @@ public class Alldiff extends Alldifferent {
       }
       if (h[x] < x) {
         int w = pathmin(h, h[x]);
-        minsorted[i].var.domain.inMax(store.level, minsorted[i].var, bounds[w] - 1);
+        minsorted[i].v.domain.inMax(store.level, minsorted[i].v, bounds[w] - 1);
         pathset(h, x, w, w);
       }
       if (d[z] == bounds[y] - bounds[z]) {
@@ -350,9 +350,9 @@ public class Alldiff extends Alldifferent {
   protected void propagateAllDifferentOnSingletons(Store store, LinkedHashSet<IntVar> fdvs) {
     for (IntVar changedVar : fdvs) {
       if (changedVar.singleton()) {
-        for (IntVar var : list) {
-          if (var != changedVar) {
-            var.domain.inComplement(store.level, var, changedVar.min());
+        for (IntVar v : list) {
+          if (v != changedVar) {
+            v.domain.inComplement(store.level, v, changedVar.min());
           }
         }
       }
@@ -362,8 +362,8 @@ public class Alldiff extends Alldifferent {
   // Overwritten as QueueForwardQueue checks that constraint has declared this method.
   @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override
-  public void queueVariable(int level, Var var) {
-    super.queueVariable(level, var);
+  public void queueVariable(int level, Var v) {
+    super.queueVariable(level, v);
   }
 
   /**
@@ -371,7 +371,7 @@ public class Alldiff extends Alldifferent {
    * bounds consistency propagation.
    */
   private static class Element {
-    private IntVar var;
+    private IntVar v;
     private int minrank;
     private int maxrank;
   }

@@ -135,21 +135,21 @@ public abstract class Domain {
    * Variable object. It is called for example in a situation when a constraint is satisfied.
    *
    * @param storeLevel specifies the current level of the store, from which it should be removed.
-   * @param var specifies variable for which the constraint is being removed.
+   * @param v specifies variable for which the constraint is being removed.
    * @param c the constraint which is being removed.
    */
-  public abstract void removeModelConstraint(int storeLevel, Var var, Constraint c);
+  public abstract void removeModelConstraint(int storeLevel, Var v, Constraint c);
 
   /**
    * It removes a constraint from a domain, it should only be called by removeConstraint function of
    * Variable object.
    *
    * @param storeLevel specifies the current level of the store, from which it should be removed.
-   * @param var specifies variable for which the constraint is being removed.
+   * @param v specifies variable for which the constraint is being removed.
    * @param position specifies the position of the removed constraint.
    * @param c the constraint which is being removed.
    */
-  public abstract void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c);
+  public abstract void removeSearchConstraint(int storeLevel, Var v, int position, Constraint c);
 
   /**
    * Returns the search constraints imposed after setting up the model.
@@ -224,9 +224,9 @@ public abstract class Domain {
    * lower at provided level.
    *
    * @param level the level which is being removed.
-   * @param var the variable to which this domain belonged to.
+   * @param v the variable to which this domain belonged to.
    */
-  public abstract void removeLevel(int level, Var var);
+  public abstract void removeLevel(int level, Var v);
 
   /**
    * It returns an unique identifier of the domain.
@@ -255,13 +255,13 @@ public abstract class Domain {
    * constraints if vector was not cloned.
    *
    * @param storeLevel the level at which the model constraint is to be added.
-   * @param var variable to which the constraint is attached to.
+   * @param v variable to which the constraint is attached to.
    * @param constraint the constraint which is being attached to a variable.
    * @param pruningEvent the type of the prunning event required to check the consistency of the
    *     attached constraint.
    */
   public abstract void putModelConstraint(
-      int storeLevel, Var var, Constraint constraint, int pruningEvent);
+      int storeLevel, Var v, Constraint constraint, int pruningEvent);
 
   /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
@@ -269,10 +269,10 @@ public abstract class Domain {
    * constraints if vector was not cloned.
    *
    * @param storeLevel the level at which the search constraint is to be added.
-   * @param var variable to which the constraint is attached to.
+   * @param v variable to which the constraint is attached to.
    * @param constraint the constraint which is being attached to a variable.
    */
-  public abstract void putSearchConstraint(int storeLevel, Var var, Constraint constraint);
+  public abstract void putSearchConstraint(int storeLevel, Var v, Constraint constraint);
 
   // public abstract Domain recentDomainPruning(int currentStoreLevel);
 
@@ -324,10 +324,10 @@ public abstract class Domain {
    * It enforces that this domain is included within the specified domain.
    *
    * @param level store level at which this inclusion is enforced.
-   * @param var variable which is informed of the change if any occurs.
+   * @param v variable which is informed of the change if any occurs.
    * @param domain the domain which restricts this domain.
    */
-  public abstract void in(int level, Var var, Domain domain);
+  public abstract void in(int level, Var v, Domain domain);
 
   /**
    * It checks if the domain has correct state.

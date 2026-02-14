@@ -67,16 +67,16 @@ public final class ConflictLearning implements SolverComponent {
     IntStack assertionStack = trail.assertionStack;
     // find the first asserted literal before the one in explainClause
     for (int i = assertionStack.size() - 1; i >= 0; i--) {
-      int var = assertionStack.array[i];
+      int varIdx = assertionStack.array[i];
 
       // this literal is in the clause
-      if (explanationClause.containsVariable(var)) {
+      if (explanationClause.containsVariable(varIdx)) {
         if (firstOne) {
           // ok, we met the first, the next one is the good one
-          explanationClause.assertedLiteral = -trail.values[var];
+          explanationClause.assertedLiteral = -trail.values[varIdx];
           firstOne = false;
         } else {
-          return trail.getLevel(var);
+          return trail.getLevel(varIdx);
         }
       }
     }
@@ -141,22 +141,22 @@ public final class ConflictLearning implements SolverComponent {
     // TODO: improve perfs.
 
     for (int i = startingPosition; i >= 0; i--) {
-      int var = trail.assertionStack.array[i];
-      assert var > 0;
+      int varIdx = trail.assertionStack.array[i];
+      assert varIdx > 0;
 
-      assert trail.isSet(var);
+      assert trail.isSet(varIdx);
 
       // we reached the asserted literal -- the first set in its level
-      if (trail.isAsserted(var)) {
+      if (trail.isAsserted(varIdx)) {
         return -1;
       }
       // we passed under the level
-      if (trail.getLevel(var) < level) {
+      if (trail.getLevel(varIdx) < level) {
         return -1;
       }
 
       // suitable literal, it is in the clause
-      if (explanationClause.containsVariable(var)) {
+      if (explanationClause.containsVariable(varIdx)) {
         return i;
       }
     }

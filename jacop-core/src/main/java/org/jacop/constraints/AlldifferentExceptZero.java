@@ -87,8 +87,8 @@ public class AlldifferentExceptZero extends Alldifferent
   }
 
   @Override
-  protected boolean hasExceptionValues(IntVar var) {
-    return var.domain.contains(0);
+  protected boolean hasExceptionValues(IntVar v) {
+    return v.domain.contains(0);
   }
 
   @Override

@@ -102,14 +102,14 @@ public class NetworkFlow extends Constraint
     this.costVariable = costVariable;
 
     for (VarHandler ds : flowVariables) {
-      for (IntVar var : ds.listVariables()) {
-        VarHandler handler = map.get(var);
+      for (IntVar v : ds.listVariables()) {
+        VarHandler handler = map.get(v);
         if (handler == null) {
-          map.put(var, ds);
+          map.put(v, ds);
         } else if (handler instanceof MultiVarHandler varHandler) {
           varHandler.add(ds);
         } else {
-          map.put(var, new MultiVarHandler(var, handler, ds));
+          map.put(v, new MultiVarHandler(v, handler, ds));
         }
       }
     }
@@ -151,8 +151,8 @@ public class NetworkFlow extends Constraint
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
-    return map.get((IntVar) var).getPruningEvent(var);
+  public int getConsistencyPruningEvent(Var v) {
+    return map.get((IntVar) v).getPruningEvent(v);
   }
 
   @Override

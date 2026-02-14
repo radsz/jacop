@@ -278,8 +278,8 @@ public class SumWeight extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    variableQueue.add((IntVar) var);
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((IntVar) v);
   }
 
   private void treatChangedVariables() {
@@ -287,11 +287,11 @@ public class SumWeight extends Constraint
     LinkedHashSet<IntVar> fdvs = variableQueue;
     variableQueue = new LinkedHashSet<>();
 
-    for (IntVar var : fdvs) {
+    for (IntVar v : fdvs) {
 
-      int i = positionMaping.get(var);
+      int i = positionMaping.get(v);
 
-      if (var.singleton()) {
+      if (v.singleton()) {
 
         int pointer = nextGroundedPosition.value();
 
@@ -299,7 +299,7 @@ public class SumWeight extends Constraint
           return;
         }
 
-        long value = var.min();
+        long value = v.min();
 
         long sumJustGrounded = 0;
 
@@ -339,8 +339,8 @@ public class SumWeight extends Constraint
 
       } else {
 
-        long mul1 = var.min() * weights[i];
-        long mul2 = var.max() * weights[i];
+        long mul1 = v.min() * weights[i];
+        long mul2 = v.max() * weights[i];
 
         if (mul1 <= mul2) {
 

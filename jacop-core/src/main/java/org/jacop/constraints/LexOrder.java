@@ -258,10 +258,10 @@ public class LexOrder extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
-    int[] iValX = varxToIndex.get((IntVar) var);
-    int[] iValY = varyToIndex.get((IntVar) var);
+    int[] iValX = varxToIndex.get((IntVar) v);
+    int[] iValY = varyToIndex.get((IntVar) v);
 
     if (iValX != null) {
       for (int i : iValX) {

@@ -82,7 +82,7 @@ public class Max extends AbstractMinMax {
     do {
 
       store.propagationHasOccurred = false;
-      IntVar var;
+      IntVar v;
       IntDomain vDom;
 
       int minValue = IntDomain.MIN_INT;
@@ -92,9 +92,9 @@ public class Max extends AbstractMinMax {
       int minMax = max.min();
       for (int i = start; i < l; i++) {
 
-        var = list[i];
+        v = list[i];
 
-        vDom = var.dom();
+        vDom = v.dom();
         int varMin = vDom.min();
         int varMax = vDom.max();
 
@@ -102,7 +102,7 @@ public class Max extends AbstractMinMax {
           swap(start, i);
           start++;
         } else if (varMax > maxMax) {
-          var.domain.inMax(store.level, var, maxMax);
+          v.domain.inMax(store.level, v, maxMax);
         }
 
         minValue = Math.max(minValue, varMin);

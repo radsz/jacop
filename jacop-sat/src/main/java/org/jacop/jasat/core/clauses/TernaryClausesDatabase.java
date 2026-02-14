@@ -107,14 +107,14 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
    * @param literal the literal that has been asserted
    */
   public void assertLiteral(int literal) {
-    int var = literal > 0 ? literal : -literal; // Math.abs(literal);
+    int varIdx = literal > 0 ? literal : -literal; // Math.abs(literal);
 
-    if (watchLists.length <= var || watchLists[var] == null) {
+    if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return;
     }
 
     // notify all clauses
-    int[] clauses = watchLists[var];
+    int[] clauses = watchLists[varIdx];
     for (int i = 1; i < clauses[0]; i++) {
       int clauseIndex = clauses[i];
 
@@ -212,9 +212,9 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
     // store current values and literals
     for (int i = 0; i < 3; i++) {
       int literal = clauses[offset + i];
-      int var = Math.abs(literal);
+      int varIdx = Math.abs(literal);
       curLit[i] = literal;
-      int value = trail.values[var];
+      int value = trail.values[varIdx];
 
       if (value == literal) {
         return ClauseState.SATISFIED_CLAUSE;

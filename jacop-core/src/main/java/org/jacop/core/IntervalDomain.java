@@ -78,14 +78,14 @@ public class IntervalDomain extends IntDomain {
    * Copies metadata from this domain into the result domain and installs it on the variable. Sets
    * previousDomain to this.
    */
-  private void installResultDomain(IntervalDomain result, int storeLevel, Var var) {
+  private void installResultDomain(IntervalDomain result, int storeLevel, Var v) {
     result.modelConstraints = modelConstraints;
     result.searchConstraints = searchConstraints;
     result.stamp = storeLevel;
     result.previousDomain = this;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-    ((IntVar) var).domain = result;
+    ((IntVar) v).domain = result;
   }
 
   /**
@@ -2650,7 +2650,7 @@ public class IntervalDomain extends IntDomain {
   }
 
   @Override
-  public void inMin(int storeLevel, Var var, int min) {
+  public void inMin(int storeLevel, Var v, int min) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2688,15 +2688,15 @@ public class IntervalDomain extends IntDomain {
       size = out;
     } else {
       result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
     IntervalDomain effective = stamp == storeLevel ? this : result;
     assert effective.checkInvariants() == null : effective.checkInvariants();
-    var.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
   }
 
   @Override
-  public void inMax(int storeLevel, Var var, int max) {
+  public void inMax(int storeLevel, Var v, int max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2734,15 +2734,15 @@ public class IntervalDomain extends IntDomain {
       size = out;
     } else {
       result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
     IntervalDomain effective = stamp == storeLevel ? this : result;
     assert effective.checkInvariants() == null : effective.checkInvariants();
-    var.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
   }
 
   @Override
-  public void in(int storeLevel, Var var, int min, int max) {
+  public void in(int storeLevel, Var v, int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2801,16 +2801,16 @@ public class IntervalDomain extends IntDomain {
       size = out;
     } else {
       result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
 
     IntervalDomain effective = stamp == storeLevel ? this : result;
     assert effective.checkInvariants() == null : effective.checkInvariants();
-    var.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
   }
 
   @Override
-  public void in(int storeLevel, Var var, IntDomain domain) {
+  public void in(int storeLevel, Var v, IntDomain domain) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2972,13 +2972,13 @@ public class IntervalDomain extends IntDomain {
         size = out;
       } else {
         result = new IntervalDomain(copy, out);
-        installResultDomain(result, storeLevel, var);
+        installResultDomain(result, storeLevel, v);
       }
 
       IntervalDomain effective = stamp == storeLevel ? this : result;
       assert effective.checkInvariants() == null : effective.checkInvariants();
 
-      var.domainHasChanged(returnedEvent);
+      v.domainHasChanged(returnedEvent);
       return;
     }
 
@@ -2990,7 +2990,7 @@ public class IntervalDomain extends IntDomain {
 
       assert size != 0;
 
-      in(storeLevel, var, domain.min(), domain.max());
+      in(storeLevel, v, domain.min(), domain.max());
 
       return;
     }
@@ -3021,14 +3021,14 @@ public class IntervalDomain extends IntDomain {
       result.previousDomain = stamp == storeLevel ? previousDomain : this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert result.eq(this.intersect(input.toIntervalDomain()))
           : "In function improperly implemented." + result + "d " + input;
 
       assert checkInvariants() == null : checkInvariants();
 
-      var.domainHasChanged(returnedEvent);
+      v.domainHasChanged(returnedEvent);
       return;
     }
 
@@ -3188,16 +3188,16 @@ public class IntervalDomain extends IntDomain {
       adoptIntervalsFrom(result);
     } else {
       assert stamp < storeLevel;
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
 
     assert checkInvariants() == null : checkInvariants();
 
-    var.domainHasChanged(returnedEvent);
+    v.domainHasChanged(returnedEvent);
   }
 
   @Override
-  public void inValue(int storeLevel, IntVar var, int value) {
+  public void inValue(int storeLevel, IntVar v, int value) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3226,12 +3226,12 @@ public class IntervalDomain extends IntDomain {
       result.intervals[0] = new Interval(value, value);
       result.size = 1;
 
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
 
     assert checkInvariants() == null : checkInvariants();
 
-    var.domainHasChanged(GROUND);
+    v.domainHasChanged(GROUND);
   }
 
   @Override
@@ -3289,7 +3289,7 @@ public class IntervalDomain extends IntDomain {
   // TODO: check and test inComplement below.
 
   @Override
-  public void inComplement(int storeLevel, Var var, int complement) {
+  public void inComplement(int storeLevel, Var v, int complement) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3310,14 +3310,14 @@ public class IntervalDomain extends IntDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
             return;
           }
 
           if (counter == 0) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
@@ -3335,7 +3335,7 @@ public class IntervalDomain extends IntDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
             return;
           }
 
@@ -3344,9 +3344,9 @@ public class IntervalDomain extends IntDomain {
           // being removed.
 
           if (counter == 0 || counter == size) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         }
         return;
@@ -3362,14 +3362,14 @@ public class IntervalDomain extends IntDomain {
         assert checkInvariants() == null : checkInvariants();
 
         if (singleton()) {
-          var.domainHasChanged(GROUND);
+          v.domainHasChanged(GROUND);
           return;
         }
 
         if (counter == size - 1) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
         return;
       }
@@ -3406,7 +3406,7 @@ public class IntervalDomain extends IntDomain {
 
       // variable obtains new domain, current one (this) becomes
       // previousDomain
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
 
       if (intervals[counter].min() == complement) {
 
@@ -3422,14 +3422,14 @@ public class IntervalDomain extends IntDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
             return;
           }
 
           if (counter == 0) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
@@ -3442,14 +3442,14 @@ public class IntervalDomain extends IntDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
             return;
           }
 
           if (counter == 0 || counter == size - 1) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         }
         return;
@@ -3470,13 +3470,13 @@ public class IntervalDomain extends IntDomain {
         assert result.checkInvariants() == null : result.checkInvariants();
 
         if (result.singleton()) {
-          var.domainHasChanged(GROUND);
+          v.domainHasChanged(GROUND);
           return;
         }
         if (counter == size - 1) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
         return;
       }
@@ -3507,11 +3507,11 @@ public class IntervalDomain extends IntDomain {
        */
 
     }
-    var.domainHasChanged(ANY);
+    v.domainHasChanged(ANY);
   }
 
   @Override
-  public void inComplement(int storeLevel, Var var, int min, int max) {
+  public void inComplement(int storeLevel, Var v, int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3569,7 +3569,7 @@ public class IntervalDomain extends IntDomain {
           }
           size++;
           assert checkInvariants() == null : checkInvariants();
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         } else {
           // intervals[counter].max <= max
           // intervals[counter].min..min-1
@@ -3599,11 +3599,11 @@ public class IntervalDomain extends IntDomain {
           assert checkInvariants() == null : checkInvariants();
 
           if (singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
           } else if (max() < min) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         }
 
@@ -3636,13 +3636,13 @@ public class IntervalDomain extends IntDomain {
         }
         assert checkInvariants() == null : checkInvariants();
         if (singleton()) {
-          var.domainHasChanged(GROUND);
+          v.domainHasChanged(GROUND);
           return;
         }
         if (max() < min || max < min()) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
 
@@ -3652,7 +3652,7 @@ public class IntervalDomain extends IntDomain {
 
       IntervalDomain result = new IntervalDomain(this.size + 1);
 
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
       result.size = size;
 
       int noRemoved = 0;
@@ -3678,7 +3678,7 @@ public class IntervalDomain extends IntDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
           assert checkInvariants() == null : checkInvariants();
 
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
 
         } else {
 
@@ -3705,11 +3705,11 @@ public class IntervalDomain extends IntDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
           } else if (result.max() < min) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         }
 
@@ -3729,14 +3729,14 @@ public class IntervalDomain extends IntDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
             return;
           }
 
           if (result.max() < min || max < result.min()) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
 
         } else {
@@ -3763,11 +3763,11 @@ public class IntervalDomain extends IntDomain {
           assert result.checkInvariants() == null : result.checkInvariants();
 
           if (result.singleton()) {
-            var.domainHasChanged(GROUND);
+            v.domainHasChanged(GROUND);
           } else if (result.max() < min || max < result.min()) {
-            var.domainHasChanged(BOUND);
+            v.domainHasChanged(BOUND);
           } else {
-            var.domainHasChanged(ANY);
+            v.domainHasChanged(ANY);
           }
         }
       }
@@ -3780,7 +3780,7 @@ public class IntervalDomain extends IntDomain {
    * <p>Example: {1..4} + 3 = 4..7
    */
   @Override
-  public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
+  public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
     assert checkInvariants() == null : checkInvariants();
     assert this.stamp <= storeLevel;
@@ -3949,10 +3949,10 @@ public class IntervalDomain extends IntDomain {
         adoptIntervalsFrom(result);
       } else {
         assert stamp < storeLevel;
-        installResultDomain(result, storeLevel, var);
+        installResultDomain(result, storeLevel, v);
       }
 
-      var.domainHasChanged(returnedEvent);
+      v.domainHasChanged(returnedEvent);
       return;
     }
 
@@ -3962,7 +3962,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      in(storeLevel, var, domain.min() + shift, domain.max() + shift);
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
       return;
     }
 
@@ -3989,11 +3989,11 @@ public class IntervalDomain extends IntDomain {
       result.previousDomain = stamp == storeLevel ? previousDomain : this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert checkInvariants() == null : checkInvariants();
 
-      var.domainHasChanged(returnedEvent);
+      v.domainHasChanged(returnedEvent);
       return;
     }
 
@@ -4151,12 +4151,12 @@ public class IntervalDomain extends IntDomain {
       adoptIntervalsFrom(result);
     } else {
       assert stamp < storeLevel;
-      installResultDomain(result, storeLevel, var);
+      installResultDomain(result, storeLevel, v);
     }
 
     assert checkInvariants() == null : checkInvariants();
 
-    var.domainHasChanged(returnedEvent);
+    v.domainHasChanged(returnedEvent);
   }
 
   @Override
@@ -4195,16 +4195,16 @@ public class IntervalDomain extends IntDomain {
    * updated.
    */
   @Override
-  public void removeLevel(int level, Var var) {
+  public void removeLevel(int level, Var v) {
 
     assert this.stamp <= level;
 
     if (this.stamp == level) {
 
-      ((IntVar) var).domain = this.previousDomain;
+      ((IntVar) v).domain = this.previousDomain;
     }
 
-    assert ((IntVar) var).domain.stamp < level;
+    assert ((IntVar) v).domain.stamp < level;
   }
 
   @Override

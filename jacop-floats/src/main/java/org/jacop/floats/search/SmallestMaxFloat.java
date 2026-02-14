@@ -50,11 +50,11 @@ public class SmallestMaxFloat<T extends FloatVar> implements ComparatorVariable<
    * Compares a metric value with a variable's maximum domain value.
    *
    * @param left the metric value to compare
-   * @param var the variable whose maximum value is compared
-   * @return negative if var has smaller maximum, positive if larger, zero if equal
+   * @param v the variable whose maximum value is compared
+   * @return negative if v has smaller maximum, positive if larger, zero if equal
    */
-  public int compare(double left, T var) {
-    double right = var.dom().max();
+  public int compare(double left, T v) {
+    double right = v.dom().max();
     return Double.compare(right, left);
   }
 
@@ -74,10 +74,10 @@ public class SmallestMaxFloat<T extends FloatVar> implements ComparatorVariable<
   /**
    * Computes the metric value for a variable based on its maximum domain value.
    *
-   * @param var the variable to compute the metric for
+   * @param v the variable to compute the metric for
    * @return the maximum value in the variable's domain
    */
-  public double metric(T var) {
-    return var.dom().max();
+  public double metric(T v) {
+    return v.dom().max();
   }
 }

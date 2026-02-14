@@ -107,15 +107,15 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
     // get the current watched clauses for the variable
     assert literal != 0;
-    int var = literal < 0 ? -literal : literal;
+    int varIdx = literal < 0 ? -literal : literal;
 
     // The variable associated with the literal is not watching any clauses.
-    if (watchLists.length <= var || watchLists[var] == null) {
+    if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return;
     }
 
-    assert watchLists[var] != null;
-    int[] varClauses = watchLists[var];
+    assert watchLists[varIdx] != null;
+    int[] varClauses = watchLists[varIdx];
 
     int positionOfFirstAvailablePlace = varClauses[0];
 
@@ -126,13 +126,13 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
       int[] cache = literalsCache[clauseIndex];
 
       // is the literal the first or second watch ?
-      int myWatchPos = (cache[0] < 0 ? -cache[0] : cache[0]) == var ? 0 : 1;
+      int myWatchPos = (cache[0] < 0 ? -cache[0] : cache[0]) == varIdx ? 0 : 1;
 
       // get watches, and perform some checks
       int otherWatch = cache[1 - myWatchPos];
       int myWatch = cache[myWatchPos];
 
-      assert Math.abs(myWatch) == var;
+      assert Math.abs(myWatch) == varIdx;
       assert otherWatch * myWatch != 0; // none is zero
 
       /*
@@ -241,8 +241,8 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     // remember which clauses we watch from now
     if (positionOfFirstAvailablePlace == 1) {
       // recycle old watches
-      pool.storeOld(watchLists[var]);
-      watchLists[var] = null;
+      pool.storeOld(watchLists[varIdx]);
+      watchLists[varIdx] = null;
     }
   }
 

@@ -61,7 +61,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 public class IntDomainTest {
 
   private Method prepareMethod;
-  private @Mock IntVar var;
+  private @Mock IntVar v;
   private IntDomain intDomain;
 
   static Collection<String> parametricTest() {
@@ -320,9 +320,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    intDomain.inComplement(100, var, 2);
+    intDomain.inComplement(100, v, 2);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -332,9 +332,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    intDomain.inComplement(100, var, 1);
+    intDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -345,9 +345,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 1);
+    intDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -357,9 +357,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2);
+    intDomain.inComplement(100, v, 2);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -370,9 +370,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -381,9 +381,9 @@ public class IntDomainTest {
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -394,9 +394,9 @@ public class IntDomainTest {
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -408,9 +408,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -421,9 +421,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5, 7, 7}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -435,9 +435,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -449,9 +449,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 1);
+    intDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -462,9 +462,9 @@ public class IntDomainTest {
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
-    intDomain.inComplement(100, var, 1);
+    intDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -475,9 +475,9 @@ public class IntDomainTest {
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
-    intDomain.inComplement(100, var, 7);
+    intDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -487,9 +487,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 2, 2}});
-    intDomain.inComplement(100, var, 0);
+    intDomain.inComplement(100, v, 0);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -499,9 +499,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -512,9 +512,9 @@ public class IntDomainTest {
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 5, 7, 9, 11, 20}});
-    intDomain.inComplement(100, var, 7);
+    intDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -524,9 +524,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 10);
+    intDomain.inComplement(100, v, 10);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -537,9 +537,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -549,9 +549,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7}});
-    intDomain.inComplement(100, var, 7);
+    intDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -561,8 +561,8 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intDomain.inComplement(100, v, 2);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -573,9 +573,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -587,9 +587,9 @@ public class IntDomainTest {
         (IntDomain)
             prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12, 15, 22}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5);
+    intDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -600,9 +600,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 1, 2);
+    intDomain.inComplement(100, v, 1, 2);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -613,9 +613,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 15}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5, 5);
+    intDomain.inComplement(100, v, 5, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -627,9 +627,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 33}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -640,9 +640,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -653,11 +653,11 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 12, 20}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var, never()).domainHasChanged(IntDomain.ANY);
-    verify(var, never()).domainHasChanged(IntDomain.BOUND);
-    verify(var, never()).domainHasChanged(IntDomain.GROUND);
+    verify(v, never()).domainHasChanged(IntDomain.ANY);
+    verify(v, never()).domainHasChanged(IntDomain.BOUND);
+    verify(v, never()).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -668,9 +668,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 4);
+    intDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -684,9 +684,9 @@ public class IntDomainTest {
             prepareMethod.invoke(
                 this, new Object[] {new int[] {1, 20, 22, 24, 26, 28, 30, 32, 34, 36}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -697,9 +697,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 2, 5);
+    intDomain.inComplement(100, v, 2, 5);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -709,9 +709,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intDomain.inComplement(100, var, 1, 2);
+    intDomain.inComplement(100, v, 1, 2);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -721,9 +721,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intDomain.inComplement(100, var, 2, 4);
+    intDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -733,9 +733,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -745,9 +745,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
-    intDomain.inComplement(100, var, 2, 11);
+    intDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -757,9 +757,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
-    intDomain.inComplement(100, var, 2, 4);
+    intDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -769,9 +769,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 5}});
-    intDomain.inComplement(100, var, 2, 4);
+    intDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -781,9 +781,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intDomain.inComplement(100, var, 1, 9);
+    intDomain.inComplement(100, v, 1, 9);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -793,9 +793,9 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intDomain.inComplement(100, var, 25, 50);
+    intDomain.inComplement(100, v, 25, 50);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -806,8 +806,8 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5, 35);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intDomain.inComplement(100, v, 5, 35);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -817,8 +817,8 @@ public class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intDomain.inComplement(100, var, 5, 11);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intDomain.inComplement(100, v, 5, 11);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -829,8 +829,8 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 11, 41);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intDomain.inComplement(100, v, 11, 41);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -841,9 +841,9 @@ public class IntDomainTest {
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 3, 6, 7, 18}});
-    intDomain.inComplement(100, var, 2, 4);
+    intDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -854,8 +854,8 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {18, 20, 22, 23}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 18, 22);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intDomain.inComplement(100, v, 18, 22);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -867,9 +867,9 @@ public class IntDomainTest {
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 4, 4, 16, 26}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 5, 17);
+    intDomain.inComplement(100, v, 5, 17);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -880,9 +880,9 @@ public class IntDomainTest {
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
-    intDomain.inComplement(100, var, 3, 6);
+    intDomain.inComplement(100, v, 3, 6);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   private IntDomain createDomain(Interval... intervals) {

@@ -48,21 +48,21 @@ import org.jacop.search.CostVariableHandler;
 public class FloatCostVariableHandler implements CostVariableHandler {
 
   @Override
-  public boolean isApplicable(Var var) {
-    return var instanceof FloatVar;
+  public boolean isApplicable(Var v) {
+    return v instanceof FloatVar;
   }
 
   @Override
-  public double getCostValue(Var var) {
-    if (!(var instanceof FloatVar floatVar)) {
+  public double getCostValue(Var v) {
+    if (!(v instanceof FloatVar floatVar)) {
       throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
     return floatVar.dom().max();
   }
 
   @Override
-  public Constraint createCostConstraint(Var var, double costValue) {
-    if (!(var instanceof FloatVar floatVar)) {
+  public Constraint createCostConstraint(Var v, double costValue) {
+    if (!(v instanceof FloatVar floatVar)) {
       throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
     double previousCost = FloatDomain.previousForMinimization(costValue);
@@ -70,8 +70,8 @@ public class FloatCostVariableHandler implements CostVariableHandler {
   }
 
   @Override
-  public void updateCostDomain(Store store, Var var, double costValue) {
-    if (!(var instanceof FloatVar floatVar)) {
+  public void updateCostDomain(Store store, Var v, double costValue) {
+    if (!(v instanceof FloatVar floatVar)) {
       throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
     double previousCost = FloatDomain.previous(costValue);
@@ -79,16 +79,16 @@ public class FloatCostVariableHandler implements CostVariableHandler {
   }
 
   @Override
-  public double getMinCostValue(Var var) {
-    if (!(var instanceof FloatVar floatVar)) {
+  public double getMinCostValue(Var v) {
+    if (!(v instanceof FloatVar floatVar)) {
       throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
     return floatVar.dom().min();
   }
 
   @Override
-  public double getMaxCostValue(Var var) {
-    if (!(var instanceof FloatVar floatVar)) {
+  public double getMaxCostValue(Var v) {
+    if (!(v instanceof FloatVar floatVar)) {
       throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
     return floatVar.dom().max();

@@ -244,8 +244,8 @@ public final class WrapperDebugModule
    */
   private void printTrail(String prefix, MapClause clause) {
     StringBuilder sb = new StringBuilder().append("[ ");
-    for (int var : clause.literals.keySet()) {
-      int value = core.trail.values[var];
+    for (int varIdx : clause.literals.keySet()) {
+      int value = core.trail.values[varIdx];
       if (value >= 0) {
         sb.append(' ');
       }

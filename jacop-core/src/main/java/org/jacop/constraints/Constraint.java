@@ -262,14 +262,14 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /**
    * It retrieves the pruning event which causes reevaluation of the constraint.
    *
-   * @param var variable for which pruning event is retrieved
+   * @param v variable for which pruning event is retrieved
    * @return it returns the int code of the pruning event (GROUND, BOUND, ANY, NONE)
    */
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     // If consistency function mode
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
@@ -279,8 +279,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
       int eventAcross =
           constraintScope.stream()
-              .filter(i -> i.arguments().contains(var))
-              .mapToInt(i -> i.getNestedPruningEvent(var, true))
+              .filter(i -> i.arguments().contains(v))
+              .mapToInt(i -> i.getNestedPruningEvent(v, true))
               .max()
               .orElse(Integer.MIN_VALUE);
 
@@ -364,9 +364,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * also indicates a store level at which the change has occurred.
    *
    * @param level the level of the store at which the change has occurred.
-   * @param var variable which has changed.
+   * @param v variable which has changed.
    */
-  public void queueVariable(final int level, final Var var) {}
+  public void queueVariable(final int level, final Var v) {}
 
   private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
     if (c instanceof RemoveLevelLate late) {
@@ -391,10 +391,10 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /**
    * Sets the watched variable used as a quick check for groundedness.
    *
-   * @param var the variable to watch for grounding.
+   * @param v the variable to watch for grounding.
    */
-  public void setWatchedVariableGrounded(Var var) {
-    watchedVariableGrounded = var;
+  public void setWatchedVariableGrounded(Var v) {
+    watchedVariableGrounded = v;
   }
 
   /**
@@ -485,15 +485,15 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It allows to customize the event for a given variable which causes the re-execution of the
    * consistency method for a constraint.
    *
-   * @param var variable for which the events are customized.
+   * @param v variable for which the events are customized.
    * @param pruningEvent the event which must occur to trigger execution of the consistency method.
    */
-  public void setConsistencyPruningEvent(final Var var, final int pruningEvent) {
+  public void setConsistencyPruningEvent(final Var v, final int pruningEvent) {
 
     if (consistencyPruningEvents == null) {
       consistencyPruningEvents = new Hashtable<>();
     }
-    consistencyPruningEvents.put(var, pruningEvent);
+    consistencyPruningEvents.put(v, pruningEvent);
   }
 
   /**

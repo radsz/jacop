@@ -148,9 +148,9 @@ public class CountValues extends AbstractCountValues {
 
       int min = 0;
       int max = 0;
-      for (IntVar var : extendedCounter) {
-        min += var.min();
-        max += var.max();
+      for (IntVar v : extendedCounter) {
+        min += v.min();
+        max += v.max();
       }
       for (IntVar intVar : extendedCounter) { // sum(extendedCounter) == n (list length)
         intVar.domain.in(store.level, intVar, n - max + intVar.max(), n - min + intVar.min());

@@ -315,11 +315,11 @@ public class BoundSetDomain extends SetDomain {
    * This function is equivalent to in(int storeLevel, Variable var, int min, int max).
    *
    * @param storeLevel the level of the store at which the change occurrs.
-   * @param var the set variable for which the domain may change.
+   * @param v the set variable for which the domain may change.
    * @param inGlb the greatest lower bound of the domain.
    * @param inLub the least upper bound of the domain.
    */
-  public void in(int storeLevel, SetVar var, IntDomain inGlb, IntDomain inLub) {
+  public void in(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
 
     // FIXME, this check should be done outside if it can be violated.
     if (!inLub.contains(inGlb)) {
@@ -342,7 +342,7 @@ public class BoundSetDomain extends SetDomain {
         if (cardDomain.isEmpty()) {
           throw Store.failException;
         }
-        var.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(IntDomain.GROUND);
       } else {
         int min = glbDomain.getSize();
         int max = lubDomain.getSize();
@@ -361,24 +361,24 @@ public class BoundSetDomain extends SetDomain {
           if (cardDomain.min() == lubDomain.getSize()) {
             glbDomain = lubDomain;
             cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
           if (cardDomain.max() == glbDomain.getSize()) {
             lubDomain = glbDomain;
             cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-            var.domainHasChanged(IntDomain.GROUND);
+            v.domainHasChanged(IntDomain.GROUND);
             return;
           }
         }
 
         if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
-          var.domainHasChanged(SetDomain.ANY);
+          v.domainHasChanged(SetDomain.ANY);
         } else if (eventGlb != Domain.NONE) {
-          var.domainHasChanged(SetDomain.GLB_EVENT);
+          v.domainHasChanged(SetDomain.GLB_EVENT);
         } else if (eventLub != Domain.NONE) {
-          var.domainHasChanged(SetDomain.LUB_EVENT);
+          v.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
 
@@ -423,17 +423,17 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
         if (eventGlb == SetDomain.GLB_EVENT && eventLub == SetDomain.LUB_EVENT) {
-          var.domainHasChanged(SetDomain.BOUND);
+          v.domainHasChanged(SetDomain.BOUND);
         } else if (eventGlb != Domain.NONE) {
-          var.domainHasChanged(SetDomain.GLB_EVENT);
+          v.domainHasChanged(SetDomain.GLB_EVENT);
         } else if (eventLub != Domain.NONE) {
-          var.domainHasChanged(SetDomain.LUB_EVENT);
+          v.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
     }
@@ -444,11 +444,11 @@ public class BoundSetDomain extends SetDomain {
    * the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param setDom the domain according to which the domain is updated.
    */
-  public void in(int storeLevel, SetVar var, SetDomain setDom) {
-    in(storeLevel, var, setDom.glb(), setDom.lub());
+  public void in(int storeLevel, SetVar v, SetDomain setDom) {
+    in(storeLevel, v, setDom.glb(), setDom.lub());
   }
 
   /**
@@ -783,10 +783,10 @@ public class BoundSetDomain extends SetDomain {
    * It adds if necessary an element to glbDomain.
    *
    * @param level level at which the change is recorded.
-   * @param var set variable to which the change applies to.
+   * @param v set variable to which the change applies to.
    * @param element the element which must be in glbDomain.
    */
-  public void inGlb(int level, SetVar var, int element) {
+  public void inGlb(int level, SetVar v, int element) {
 
     if (glbDomain.contains(element)) {
       return;
@@ -811,9 +811,9 @@ public class BoundSetDomain extends SetDomain {
       }
 
       if (singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB_EVENT);
+        v.domainHasChanged(SetDomain.GLB_EVENT);
       }
 
     } else {
@@ -844,18 +844,18 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB_EVENT);
+        v.domainHasChanged(SetDomain.GLB_EVENT);
       }
     }
   }
 
   @Override
-  public void inGlb(int level, SetVar var, IntDomain intersect) {
+  public void inGlb(int level, SetVar v, IntDomain intersect) {
 
     if (glbDomain.contains(intersect)) {
       return;
@@ -883,9 +883,9 @@ public class BoundSetDomain extends SetDomain {
         }
 
         if (singleton()) {
-          var.domainHasChanged(SetDomain.GROUND);
+          v.domainHasChanged(SetDomain.GROUND);
         } else {
-          var.domainHasChanged(SetDomain.GLB_EVENT);
+          v.domainHasChanged(SetDomain.GLB_EVENT);
         }
       }
 
@@ -924,12 +924,12 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB_EVENT);
+        v.domainHasChanged(SetDomain.GLB_EVENT);
       }
     }
   }
@@ -938,11 +938,11 @@ public class BoundSetDomain extends SetDomain {
    * It removes if necessary an element from lubDomain.
    *
    * @param level level at which the change is recorded.
-   * @param var set variable to which the change applies to.
+   * @param v set variable to which the change applies to.
    * @param element the element which can not be in lubDomain.
    */
   @Override
-  public void inLubComplement(int level, SetVar var, int element) {
+  public void inLubComplement(int level, SetVar v, int element) {
 
     if (!lubDomain.contains(element)) {
       return;
@@ -967,9 +967,9 @@ public class BoundSetDomain extends SetDomain {
       }
 
       if (singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB_EVENT);
+        v.domainHasChanged(SetDomain.LUB_EVENT);
       }
 
     } else {
@@ -1001,18 +1001,18 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB_EVENT);
+        v.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
   }
 
   @Override
-  public void inValue(int level, SetVar var, IntDomain set) {
+  public void inValue(int level, SetVar v, IntDomain set) {
 
     if (!set.contains(glbDomain)) {
       throw Store.failException;
@@ -1050,14 +1050,14 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
     }
 
-    var.domainHasChanged(SetDomain.GROUND);
+    v.domainHasChanged(SetDomain.GROUND);
   }
 
   @Override
-  public void inLub(int level, SetVar var, IntDomain intersect) {
+  public void inLub(int level, SetVar v, IntDomain intersect) {
 
     if (intersect.contains(lubDomain)) {
       return;
@@ -1091,9 +1091,9 @@ public class BoundSetDomain extends SetDomain {
         }
 
         if (singleton()) {
-          var.domainHasChanged(SetDomain.GROUND);
+          v.domainHasChanged(SetDomain.GROUND);
         } else {
-          var.domainHasChanged(SetDomain.LUB_EVENT);
+          v.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
 
@@ -1135,12 +1135,12 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       if (result.singleton()) {
-        var.domainHasChanged(SetDomain.GROUND);
+        v.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB_EVENT);
+        v.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
   }
@@ -1149,9 +1149,9 @@ public class BoundSetDomain extends SetDomain {
    * It assigns a set variable to the least upper bound of its current domain.
    *
    * @param level the level of the store at which the change takes place.
-   * @param var the variable for which the domain is changing.
+   * @param v the variable for which the domain is changing.
    */
-  public void inValueLub(int level, SetVar var) {
+  public void inValueLub(int level, SetVar v) {
 
     if (lubDomain.eq(glbDomain)) {
       return;
@@ -1183,19 +1183,19 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
     }
 
-    var.domainHasChanged(SetDomain.GROUND);
+    v.domainHasChanged(SetDomain.GROUND);
   }
 
   /**
    * It assigns a set variable to glb of its current domain.
    *
    * @param level level of the store at which the change takes place.
-   * @param var variable for which the domain is changing.
+   * @param v variable for which the domain is changing.
    */
-  public void inValueGlb(int level, SetVar var) {
+  public void inValueGlb(int level, SetVar v) {
 
     if (lubDomain.eq(glbDomain)) {
       return;
@@ -1225,14 +1225,14 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
     }
 
-    var.domainHasChanged(SetDomain.GROUND);
+    v.domainHasChanged(SetDomain.GROUND);
   }
 
   @Override
-  public void inCardinality(int level, SetVar var, int min, int max) {
+  public void inCardinality(int level, SetVar v, int min, int max) {
 
     // it is needed to make sure that this function is only executed when something is being
     // changed.
@@ -1242,21 +1242,21 @@ public class BoundSetDomain extends SetDomain {
 
     if (stamp == level) {
 
-      IntDomain cardDom = var.domain.card();
+      IntDomain cardDom = v.domain.card();
 
       cardDom.intersectAdapt(min, max);
 
-      if (var.domain.card().isEmpty()) {
+      if (v.domain.card().isEmpty()) {
         throw Store.failException;
       }
 
       if (cardDom.max() == glbDomain.getSize()) {
-        this.inValue(level, var, glbDomain);
+        this.inValue(level, v, glbDomain);
         return;
       }
 
       if (cardDom.min() == lubDomain.getSize()) {
-        this.inValue(level, var, lubDomain);
+        this.inValue(level, v, lubDomain);
         return;
       }
 
@@ -1271,11 +1271,11 @@ public class BoundSetDomain extends SetDomain {
       }
 
       if (resultCardinality.max() == glbDomain.getSize()) {
-        this.inValue(level, var, glbDomain);
+        this.inValue(level, v, glbDomain);
         return;
       }
       if (resultCardinality.min() == lubDomain.getSize()) {
-        this.inValue(level, var, lubDomain);
+        this.inValue(level, v, lubDomain);
         return;
       }
 
@@ -1288,9 +1288,9 @@ public class BoundSetDomain extends SetDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
     }
 
-    var.domainHasChanged(SetDomain.CARDINALITY_EVENT);
+    v.domainHasChanged(SetDomain.CARDINALITY_EVENT);
   }
 }

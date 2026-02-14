@@ -325,8 +325,8 @@ public class Assignment extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    variableQueue.add((IntVar) var);
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((IntVar) v);
   }
 
   @Override

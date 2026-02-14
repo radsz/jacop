@@ -74,7 +74,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
    * parameter of this function specifies if the search should continue undisturbed or exit the
    * current search node with value false.
    */
-  public boolean leftChild(T var, int value, boolean status) {
+  public boolean leftChild(T v, int value, boolean status) {
 
     if (!status) {
       // we will enter right node if we can, thus increasing the
@@ -87,7 +87,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
         // since we do not want to
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(var, value, false);
+            exitChildListener.leftChild(v, value, false);
           }
         }
 
@@ -99,7 +99,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
         if (exitChildListeners != null) {
           boolean code = false;
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            code |= exitChildListener.leftChild(var, value, false);
+            code |= exitChildListener.leftChild(v, value, false);
           }
 
           // the children listeners disallow entering the right child
@@ -173,7 +173,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
    * Exiting the right children requires reduction of the current number of discrepancies being
    * used.
    */
-  public void rightChild(T var, int value, boolean status) {
+  public void rightChild(T v, int value, boolean status) {
 
     noDiscrepancies--;
   }

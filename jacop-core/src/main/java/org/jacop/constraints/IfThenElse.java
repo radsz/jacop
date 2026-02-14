@@ -130,24 +130,24 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
     if (mode) {
       if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(var);
+        Integer possibleEvent = consistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
       }
     } else {
       if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        Integer possibleEvent = notConsistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
       }
     }
-    return computeMaxPruningEvent(var, condC, thenC, elseC);
+    return computeMaxPruningEvent(v, condC, thenC, elseC);
   }
 
   @Override
@@ -156,15 +156,15 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
+  public int getConsistencyPruningEvent(Var v) {
 
     if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
+      Integer possibleEvent = consistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    return computeMaxPruningEvent(var, condC, thenC, elseC);
+    return computeMaxPruningEvent(v, condC, thenC, elseC);
   }
 
   @Override
@@ -173,15 +173,15 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   }
 
   @Override
-  public int getNotConsistencyPruningEvent(Var var) {
+  public int getNotConsistencyPruningEvent(Var v) {
 
     if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-    return computeMaxPruningEvent(var, condC, thenC, elseC);
+    return computeMaxPruningEvent(v, condC, thenC, elseC);
   }
 
   @Override

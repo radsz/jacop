@@ -50,7 +50,7 @@ public class IndexDomainView {
   /** It specifies mapping of the index value onto value in the domain of the variable. */
   public final int[] indexToValue;
 
-  final IntVar var;
+  final IntVar v;
   final boolean viewOfSparseDomain;
   boolean[] forRemoval;
 
@@ -58,27 +58,27 @@ public class IndexDomainView {
    * It creates an index domain view for a given variable. It currently implements only sparse
    * representation for index domain view.
    *
-   * @param var variable for which the index domain view is created.
+   * @param v variable for which the index domain view is created.
    * @param forceSparse forces a sparse representation inside (one value has one entry within the
    *     mapping).
    */
-  public IndexDomainView(IntVar var, boolean forceSparse) {
+  public IndexDomainView(IntVar v, boolean forceSparse) {
 
-    this.var = var;
+    this.v = v;
     viewOfSparseDomain =
-        var.domain.isSparseRepresentation() || var.domain.getSize() < 10 || forceSparse;
+        v.domain.isSparseRepresentation() || v.domain.getSize() < 10 || forceSparse;
 
     if (viewOfSparseDomain) {
 
-      indexToValue = new int[var.domain.getSize()];
+      indexToValue = new int[v.domain.getSize()];
       int i = 0;
-      for (ValueEnumeration enumer = var.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
+      for (ValueEnumeration enumer = v.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
         indexToValue[i++] = enumer.nextElement();
       }
 
     } else {
 
-      indexToValue = new int[var.domain.noIntervals()];
+      indexToValue = new int[v.domain.noIntervals()];
 
       assert false : "Not implemented functionality. Only sparse index domain view is implemented.";
     }
@@ -90,12 +90,12 @@ public class IndexDomainView {
    * It creates an index domain view with only given values being in focus of the index domain view.
    * Only values in focus may end up being removed if no support is founded.
    *
-   * @param var variable for which the index domain view is created.
+   * @param v variable for which the index domain view is created.
    * @param valuesInFocus values which are of interest.
    */
-  public IndexDomainView(IntVar var, int[] valuesInFocus) {
+  public IndexDomainView(IntVar v, int[] valuesInFocus) {
 
-    this.var = var;
+    this.v = v;
     viewOfSparseDomain = true;
 
     indexToValue = new int[valuesInFocus.length];
@@ -115,11 +115,11 @@ public class IndexDomainView {
 
     if (viewOfSparseDomain) {
 
-      if (var.domain.getSize() <= indexToValue.length) {
+      if (v.domain.getSize() <= indexToValue.length) {
         Arrays.fill(forRemoval, false);
 
         int index = 0;
-        for (ValueEnumeration enumer = var.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
+        for (ValueEnumeration enumer = v.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
           int value = enumer.nextElement();
           while (indexToValue[index] < value) {
             index++;
@@ -135,7 +135,7 @@ public class IndexDomainView {
       } else {
         Arrays.fill(forRemoval, true);
         for (int i = 0; i < indexToValue.length; i++) {
-          if (!var.domain.contains(indexToValue[i])) {
+          if (!v.domain.contains(indexToValue[i])) {
             forRemoval[i] = false;
           }
         }
@@ -157,7 +157,7 @@ public class IndexDomainView {
     if (viewOfSparseDomain) {
       for (int i = 0; i < indexToValue.length; i++) {
         if (forRemoval[i]) {
-          var.domain.inComplement(store.level, var, indexToValue[i]);
+          v.domain.inComplement(store.level, v, indexToValue[i]);
         }
       }
     }
@@ -171,7 +171,7 @@ public class IndexDomainView {
    */
   public boolean contains(int i) {
     // check if ith index is still int the domain
-    return var.domain.contains(indexToValue[i]);
+    return v.domain.contains(indexToValue[i]);
   }
 
   /**
@@ -277,6 +277,6 @@ public class IndexDomainView {
    *     created.
    */
   public int getSize() {
-    return var.getSize();
+    return v.getSize();
   }
 }

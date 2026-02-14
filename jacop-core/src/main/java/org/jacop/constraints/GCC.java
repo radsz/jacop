@@ -323,17 +323,17 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // Fix suggested by Radek (moved from queueVariable)
       Set<IntVar> changedVariablesCopy = this.changedVariables;
       this.changedVariables = new HashSet<>();
-      for (IntVar var : changedVariablesCopy) {
+      for (IntVar v : changedVariablesCopy) {
         // if v is singleton and is an X variable
-        if (var.singleton()
-            && xNodesHash.containsKey(var)
-            && xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
+        if (v.singleton()
+            && xNodesHash.containsKey(v)
+            && xNodesHash.get(v) < stamp.value()) { // changing '<=' to '<' (KK)
           if (DEBUG) {
-            log.debug(" in xVariableToChange: {}", var);
+            log.debug(" in xVariableToChange: {}", v);
           }
           if (stamp.value() > 0) {
             stamp.update(stamp.value() - 1);
-            putToTheEnd(x, xNodesHash.get(var));
+            putToTheEnd(x, xNodesHash.get(v));
           }
         }
       }
@@ -548,11 +548,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
     if (DEBUG) {
-      log.debug("in queue variable {} level {}", var, level);
+      log.debug("in queue variable {} level {}", v, level);
     }
-    this.changedVariables.add((IntVar) var);
+    this.changedVariables.add((IntVar) v);
   }
 
   @Override

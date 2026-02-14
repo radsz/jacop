@@ -114,8 +114,8 @@ public abstract class AbstractExtensionalVa extends Constraint
    */
   protected void filterAndIndexTuples(Store store) {
     if (DEBUG_ALL) {
-      for (Var var : list) {
-        log.debug("Variable {}", var);
+      for (Var v : list) {
+        log.debug("Variable {}", v);
       }
     }
 

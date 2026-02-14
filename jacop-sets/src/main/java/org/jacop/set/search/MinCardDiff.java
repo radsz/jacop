@@ -49,9 +49,9 @@ public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
   public MinCardDiff() {}
 
   /** Compares the cardinality difference of the variable to the float value. */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    SetDomain setDom = var.dom();
+    SetDomain setDom = v.dom();
 
     int right = setDom.lub().getSize() - setDom.glb().getSize();
 
@@ -77,9 +77,9 @@ public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
   }
 
   /** Returns the metric(Cardinality difference) of the variable. */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    SetDomain setDom = var.dom();
+    SetDomain setDom = v.dom();
     return setDom.lub().getSize() - setDom.glb().getSize();
   }
 }

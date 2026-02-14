@@ -44,13 +44,13 @@ import org.jacop.core.Var;
 public class IntDomainOperationHandler implements DomainOperationHandler {
 
   @Override
-  public boolean isApplicable(Var var) {
-    return var instanceof IntVar;
+  public boolean isApplicable(Var v) {
+    return v instanceof IntVar;
   }
 
   @Override
-  public void inValue(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof IntVar intVar)) {
+  public void inValue(Store store, Var v, int value, boolean leftBranch) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
     // For IntVar, leftBranch parameter is ignored - always use inValue
@@ -58,8 +58,8 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
   }
 
   @Override
-  public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof IntVar intVar)) {
+  public void inComplement(Store store, Var v, int value, boolean leftBranch) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
     // For IntVar, leftBranch parameter is ignored - always use inComplement
@@ -67,8 +67,8 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
   }
 
   @Override
-  public String getDomainString(Var var) {
-    if (!(var instanceof IntVar intVar)) {
+  public String getDomainString(Var v) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
     return intVar.dom().toString();

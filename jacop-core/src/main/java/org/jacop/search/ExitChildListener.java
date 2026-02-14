@@ -46,13 +46,13 @@ public interface ExitChildListener<T extends Var> {
   /**
    * It is executed after exiting the left child.
    *
-   * @param var variable used in the choice point.
+   * @param v variable used in the choice point.
    * @param value value used in the choice point.
    * @param status true if the solution was found in the child subtree, false otherwise.
    * @return true if the search should continue undisturbed, false if it should exit the current
    *     node with false
    */
-  boolean leftChild(T var, int value, boolean status);
+  boolean leftChild(T v, int value, boolean status);
 
   /**
    * It is executed after exiting the left child.
@@ -67,12 +67,12 @@ public interface ExitChildListener<T extends Var> {
   /**
    * It is executed after exiting the right child.
    *
-   * @param var variable used in the choice point.
+   * @param v variable used in the choice point.
    * @param value value used in the choice point.
    * @param status true if the solution was found in the child subtree, false otherwise. exit the
    *     current node with false
    */
-  void rightChild(T var, int value, boolean status);
+  void rightChild(T v, int value, boolean status);
 
   /**
    * It is executed after exiting the right child.

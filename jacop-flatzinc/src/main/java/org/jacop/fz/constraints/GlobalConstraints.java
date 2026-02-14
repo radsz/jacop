@@ -194,8 +194,8 @@ class GlobalConstraints implements ParserTreeConstants {
      */
 
     int resSum = 0;
-    for (IntVar var : r) {
-      resSum += var.max();
+    for (IntVar v : r) {
+      resSum += v.max();
     }
     if (resSum <= b.min()) {
       return;
@@ -386,8 +386,8 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     IntervalDomain dom = new IntervalDomain();
-    for (IntVar var : v) {
-      dom = (IntervalDomain) dom.union(var.dom());
+    for (IntVar vv : v) {
+      dom = (IntervalDomain) dom.union(vv.dom());
     }
     if (v.length <= 100) { // && v.length == dom.getSize()) {
       // we do not not pose Alldistinct directly because of possible inconsistency with its

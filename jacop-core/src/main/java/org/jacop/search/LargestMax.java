@@ -48,11 +48,11 @@ public class LargestMax<T extends IntVar> implements ComparatorVariable<T> {
    * Compares a metric value with a variable's maximum domain value.
    *
    * @param left the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double left, T var) {
-    int right = var.dom().max();
+  public int compare(double left, T v) {
+    int right = v.dom().max();
     if (left > right) {
       return 1;
     }
@@ -80,10 +80,10 @@ public class LargestMax<T extends IntVar> implements ComparatorVariable<T> {
   /**
    * Computes the metric for a variable, which is the maximum value in its domain.
    *
-   * @param var the variable for which the metric is computed.
+   * @param v the variable for which the metric is computed.
    * @return the maximum value in the variable's domain.
    */
-  public double metric(T var) {
-    return var.dom().max();
+  public double metric(T v) {
+    return v.dom().max();
   }
 }

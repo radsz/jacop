@@ -47,7 +47,7 @@ public class VarNode extends VariableNode {
     id = n.incrementAndGet();
     this.store = store;
 
-    var = v;
+    this.v = v;
   }
 
   void propagateAndPrune() {
@@ -67,24 +67,24 @@ public class VarNode extends VariableNode {
   }
 
   double min() {
-    return var.min();
+    return v.min();
   }
 
   double max() {
-    return var.max();
+    return v.max();
   }
 
   double lb() {
-    return var.min();
+    return v.min();
   }
 
   double ub() {
-    return var.max();
+    return v.max();
   }
 
   void updateBounds(double min, double max, double lb, double ub) {
 
-    var.domain.in(store.level, var, min, max);
+    v.domain.in(store.level, v, min, max);
   }
 
   /**
@@ -93,6 +93,6 @@ public class VarNode extends VariableNode {
    * @return string representation including relation and variable
    */
   public String toString() {
-    return super.toString() + " (rel = " + rel + ", " + var + ")";
+    return super.toString() + " (rel = " + rel + ", " + v + ")";
   }
 }

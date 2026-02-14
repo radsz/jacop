@@ -50,11 +50,11 @@ public class SmallestMinFloat<T extends FloatVar> implements ComparatorVariable<
    * Compares a metric value with a variable's minimum domain value.
    *
    * @param left the metric value to compare
-   * @param var the variable whose minimum value is compared
-   * @return negative if var has smaller minimum, positive if larger, zero if equal
+   * @param v the variable whose minimum value is compared
+   * @return negative if v has smaller minimum, positive if larger, zero if equal
    */
-  public int compare(double left, T var) {
-    double right = var.dom().min();
+  public int compare(double left, T v) {
+    double right = v.dom().min();
     return Double.compare(right, left);
   }
 

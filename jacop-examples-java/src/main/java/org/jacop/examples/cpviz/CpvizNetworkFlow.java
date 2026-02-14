@@ -181,8 +181,8 @@ public class CpvizNetworkFlow {
 
       IO.print("[");
 
-      for (Var var : vars) {
-        IO.print(var + " ");
+      for (Var v : vars) {
+        IO.print(v + " ");
       }
 
       IO.println("]");

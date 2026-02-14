@@ -95,8 +95,8 @@ public class Sequence extends DecomposedConstraint<Constraint> {
   public static List<Constraint> decomposeByRegular(Sequence sequence) {
 
     IntDomain setComplement = new IntervalDomain();
-    for (IntVar var : sequence.list) {
-      setComplement.addDom(var.domain);
+    for (IntVar v : sequence.list) {
+      setComplement.addDom(v.domain);
     }
     setComplement = setComplement.subtract(sequence.set);
 

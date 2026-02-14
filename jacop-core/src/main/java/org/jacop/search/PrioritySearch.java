@@ -802,8 +802,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     @SuppressWarnings("unchecked")
     void constraineCost() {
-      if (costVariable instanceof IntVar var) {
-        int newCost = var.dom().max();
+      if (costVariable instanceof IntVar v) {
+        int newCost = v.dom().max();
 
         if (newCost < costValue) {
           costValue = newCost;
@@ -811,7 +811,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
           for (int i = 0; i < n; i++) {
             DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
-            ls.costValue = var.dom().max();
+            ls.costValue = v.dom().max();
             ls.cost = new XltC((IntVar) search.get(2 * i).costVariable, newCost);
           }
         }

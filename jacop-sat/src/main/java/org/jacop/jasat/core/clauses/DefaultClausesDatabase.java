@@ -97,15 +97,15 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      */
 
     // get the current watched clauses for the variable
-    int var = literal < 0 ? -literal : literal;
-    if (watchLists.length <= var || watchLists[var] == null) {
+    int varIdx = literal < 0 ? -literal : literal;
+    if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return;
     }
 
     // watched clauses for this literal
-    int[] watchList = watchLists[var];
+    int[] watchList = watchLists[varIdx];
     // value of the literal in the trail
-    int myValue = trail.values[var];
+    int myValue = trail.values[varIdx];
     assert myValue != 0;
 
     // new watched clauses[], to replace the current one after propagation
@@ -123,7 +123,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       int[] clause = clauses[clauseIndex];
 
       // is the literal the first or second watch ?
-      int myWatchPos = clause[0] == var || -clause[0] == var ? 0 : 1;
+      int myWatchPos = clause[0] == varIdx || -clause[0] == varIdx ? 0 : 1;
       int myWatch = clause[myWatchPos];
 
       /*
@@ -138,7 +138,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       int otherWatch = clause[1 - myWatchPos];
       int otherValue = trail.values[otherWatch < 0 ? -otherWatch : otherWatch];
 
-      assert Math.abs(myWatch) == var;
+      assert Math.abs(myWatch) == varIdx;
       assert otherWatch * myWatch != 0; // none is zero
       assert doesWatch(myWatch, clauseIndex);
       assert doesWatch(otherWatch, clauseIndex);
@@ -296,13 +296,13 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      */
     // remember which clauses we watch from now
     if (newWatchNum == 1) { // no clauses
-      watchLists[var] = null;
+      watchLists[varIdx] = null;
       pool.storeOld(newWatchList); // useless because empty
     } else {
       assert newWatchNum > 1;
       // save the length of the array, and the array itself
       newWatchList[0] = newWatchNum;
-      watchLists[var] = newWatchList;
+      watchLists[varIdx] = newWatchList;
     }
 
     // recycle old watch list
@@ -514,13 +514,13 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    * that watch this clause.
    */
   @SuppressWarnings("unused")
-  private String checkWatches4var(int var) {
+  private String checkWatches4var(int varIdx) {
 
-    if (watchLists.length <= var) {
+    if (watchLists.length <= varIdx) {
       return null;
     }
 
-    int[] watchList = watchLists[var];
+    int[] watchList = watchLists[varIdx];
 
     if (watchList == null) {
       return null;
@@ -535,8 +535,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       assert doesWatch(clause[1], clauseIndex);
       for (int j = 2; j < clause.length; j++) {
         assert !doesWatch(clause[j], clauseIndex)
-            : "Too many watches on var "
-                + var
+            : "Too many watches on variable "
+                + varIdx
                 + " watches also on "
                 + j
                 + " "

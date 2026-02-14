@@ -122,9 +122,9 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
-    return getConsistencyPruningEvent(var);
+    return getConsistencyPruningEvent(v);
   }
 
   @Override
@@ -138,10 +138,10 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
     propagation = true;
-    queueForward.queueForward(level, var);
+    queueForward.queueForward(level, v);
   }
 
   @Override

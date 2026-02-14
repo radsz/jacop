@@ -51,11 +51,11 @@ class ImplicationConstraints extends ChannelMap {
     Set<Map.Entry<IntVar, Map<Integer, IntVar>>> entries = cs.entrySet();
 
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : entries) {
-      IntVar var = e.getKey();
+      IntVar v = e.getKey();
       Map<Integer, IntVar> vb = e.getValue();
 
       if (vb.size() > minSize) {
-        support.pose(new ChannelImply(var, vb));
+        support.pose(new ChannelImply(v, vb));
       }
     }
   }

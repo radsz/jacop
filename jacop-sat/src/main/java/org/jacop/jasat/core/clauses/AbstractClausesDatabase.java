@@ -146,13 +146,13 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final boolean doesWatch(int literal, int clauseIndex) {
 
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
 
-    if (watchLists.length <= var || watchLists[var] == null) {
+    if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return false;
     }
 
-    int[] watchList = watchLists[var];
+    int[] watchList = watchLists[varIdx];
     for (int i = 1; i < watchList[0]; i++) {
       if (watchList[i] == clauseIndex) {
         return true;
@@ -163,16 +163,16 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * Ensures that varWatches.get(var) will succeed with a correct content.
+   * Ensures that varWatches.get(varIdx) will succeed with a correct content.
    *
-   * @param var the var we want to be able to add clauses to watch to
+   * @param varIdx the SAT variable index we want to be able to add clauses to watch to
    */
-  protected final void ensureWatch(int var) {
+  protected final void ensureWatch(int varIdx) {
 
-    assert var > 0;
+    assert varIdx > 0;
 
     // already has a watch-list
-    if (watchLists.length > var && watchLists[var] != null) {
+    if (watchLists.length > varIdx && watchLists[varIdx] != null) {
       return;
     }
 
@@ -180,14 +180,14 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     int[] watchList = pool.getNew(MINIMUM_VAR_WATCH_SIZE);
     watchList[0] = 1; // first empty slot = 1;
 
-    // put it as value for var
-    if (watchLists.length <= var) {
+    // put it as value for varIdx
+    if (watchLists.length <= varIdx) {
       int oldLength = watchLists.length;
-      watchLists = Utils.resize(watchLists, 2 * var);
+      watchLists = Utils.resize(watchLists, 2 * varIdx);
       Arrays.fill(watchLists, oldLength, watchLists.length, null);
     }
 
-    watchLists[var] = watchList;
+    watchLists[varIdx] = watchList;
   }
 
   /**
@@ -202,11 +202,11 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     assert dbStore.uniqueIdToIndex(clauseIndex) == clauseIndex;
     assert !doesWatch(literal, clauseIndex);
 
-    int var = Math.abs(literal);
-    // get the watched clauses for the variable var
-    ensureWatch(var);
+    int varIdx = Math.abs(literal);
+    // get the watched clauses for the variable varIdx
+    ensureWatch(varIdx);
 
-    int[] watchList = watchLists[var];
+    int[] watchList = watchLists[varIdx];
 
     assert watchList[0] <= watchList.length;
     assert watchList[0] > 0;
@@ -215,7 +215,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     if (watchList[0] == watchList.length) {
       int newSize = watchList.length * 2;
       watchList = Utils.resize(watchList, newSize, watchList.length, pool);
-      watchLists[var] = watchList;
+      watchLists[varIdx] = watchList;
     }
 
     watchList[watchList[0]] = clauseIndex;
@@ -232,8 +232,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     assert doesWatch(literal, clauseIndex);
 
-    int var = Math.abs(literal);
-    int[] watchList = watchLists[var];
+    int varIdx = Math.abs(literal);
+    int[] watchList = watchLists[varIdx];
 
     // find the index of the clause in the int[]. Start from the
     // right so that recently added clauses are found faster.
@@ -243,10 +243,10 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
         // clause index here
         watchList[0]--;
 
-        // this was the only clause the var watched
+        // this was the only clause this variable watched
         if (watchList[0] == 1) {
           pool.storeOld(watchList);
-          watchLists[var] = null;
+          watchLists[varIdx] = null;
         }
 
         // put the last element at this place

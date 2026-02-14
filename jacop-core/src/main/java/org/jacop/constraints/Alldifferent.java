@@ -163,10 +163,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
    * Determines whether the given variable's domain intersects with the set of exception values.
    * Subclasses override this to define exception sets.
    *
-   * @param var the variable to check
+   * @param v the variable to check
    * @return true if the variable may take an exception value, false otherwise
    */
-  protected boolean hasExceptionValues(IntVar var) {
+  protected boolean hasExceptionValues(IntVar v) {
     return false;
   }
 
@@ -293,8 +293,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    variableQueue.add((IntVar) var);
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((IntVar) v);
   }
 
   /**

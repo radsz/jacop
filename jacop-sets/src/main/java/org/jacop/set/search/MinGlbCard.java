@@ -48,9 +48,9 @@ public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
   public MinGlbCard() {}
 
   /** Compares the cardinality of the variables glb to the float value. */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    SetDomain setDom = var.dom();
+    SetDomain setDom = v.dom();
 
     int right = setDom.glb().getSize();
 
@@ -76,9 +76,9 @@ public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
   }
 
   /** Returns the cardinality of the glb. */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    SetDomain setDom = var.dom();
+    SetDomain setDom = v.dom();
     return setDom.glb().getSize();
   }
 }

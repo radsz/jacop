@@ -1050,12 +1050,12 @@ public abstract class FloatDomain extends Domain {
    * of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the minimum value to which the domain is updated.
    */
-  public void inMin(int storeLevel, Var var, double min) {
+  public void inMin(int storeLevel, Var v, double min) {
 
-    in(storeLevel, var, min, max());
+    in(storeLevel, v, min, max());
   }
 
   /**
@@ -1063,12 +1063,12 @@ public abstract class FloatDomain extends Domain {
    * of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param max the maximum value to which the domain is updated.
    */
-  public void inMax(int storeLevel, Var var, double max) {
+  public void inMax(int storeLevel, Var v, double max) {
 
-    in(storeLevel, var, min(), max);
+    in(storeLevel, v, min(), max);
   }
 
   /**
@@ -1076,39 +1076,39 @@ public abstract class FloatDomain extends Domain {
    * decided by the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the minimum value to which the domain is updated.
    * @param max the maximum value to which the domain is updated.
    */
-  public abstract void in(int storeLevel, Var var, double min, double max);
+  public abstract void in(int storeLevel, Var v, double min, double max);
 
   /**
    * It updates the domain to have values only within the domain. The type of update is decided by
    * the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param domain the domain according to which the domain is updated.
    */
-  public void in(int storeLevel, Var var, FloatDomain domain) {
+  public void in(int storeLevel, Var v, FloatDomain domain) {
 
-    inShift(storeLevel, var, domain, 0);
+    inShift(storeLevel, v, domain, 0);
   }
 
   @Override
-  public void in(int level, Var var, Domain domain) {
-    in(level, var, (FloatDomain) domain);
+  public void in(int level, Var v, Domain domain) {
+    in(level, v, (FloatDomain) domain);
   }
 
   /**
    * It reduces domain to a single value.
    *
    * @param level level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param value the value according to which the domain is updated.
    */
-  public void inValue(int level, Var var, double value) {
-    in(level, var, value, value);
+  public void inValue(int level, Var v, double value) {
+    in(level, v, value, value);
   }
 
   /**
@@ -1116,12 +1116,12 @@ public abstract class FloatDomain extends Domain {
    * if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param complement value which is removed from the domain if it belonged to the domain.
    */
-  public void inComplement(int storeLevel, Var var, double complement) {
+  public void inComplement(int storeLevel, Var v, double complement) {
 
-    inComplement(storeLevel, var, complement, complement);
+    inComplement(storeLevel, v, complement, complement);
   }
 
   /**
@@ -1129,11 +1129,11 @@ public abstract class FloatDomain extends Domain {
    * a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the left bound of the interval (inclusive).
    * @param max the right bound of the interval (inclusive).
    */
-  public abstract void inComplement(int storeLevel, Var var, double min, double max);
+  public abstract void inComplement(int storeLevel, Var v, double min, double max);
 
   /**
    * It returns number of intervals required to represent this domain.
@@ -1155,11 +1155,11 @@ public abstract class FloatDomain extends Domain {
    * {1..4} + 3 = 4..7
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param domain the domain according to which the domain is updated.
    * @param shift the shift which is used to shift the domain supplied as argument.
    */
-  public abstract void inShift(int storeLevel, Var var, FloatDomain domain, double shift);
+  public abstract void inShift(int storeLevel, Var v, FloatDomain domain, double shift);
 
   /**
    * It returns the left most element of the given interval.
@@ -1341,7 +1341,7 @@ public abstract class FloatDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putModelConstraint(int storeLevel, Var var, Constraint constraint, int pruningEvent) {
+  public void putModelConstraint(int storeLevel, Var v, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
 
@@ -1353,9 +1353,9 @@ public abstract class FloatDomain extends Domain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
-      result.putModelConstraint(storeLevel, var, constraint, pruningEvent);
+      result.putModelConstraint(storeLevel, v, constraint, pruningEvent);
       return;
     }
 
@@ -1437,7 +1437,7 @@ public abstract class FloatDomain extends Domain {
   }
 
   @Override
-  public void removeModelConstraint(int storeLevel, Var var, Constraint constraint) {
+  public void removeModelConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -1449,9 +1449,9 @@ public abstract class FloatDomain extends Domain {
       result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) var).domain = result;
+      ((FloatVar) v).domain = result;
 
-      result.removeModelConstraint(storeLevel, var, constraint);
+      result.removeModelConstraint(storeLevel, v, constraint);
       return;
     }
 

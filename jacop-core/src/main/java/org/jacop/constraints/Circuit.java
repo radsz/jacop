@@ -175,10 +175,10 @@ public class Circuit extends Alldiff implements Stateful {
 
     IntDomain dom;
 
-    for (IntVar var : fdvs) {
-      dom = var.dom();
+    for (IntVar v : fdvs) {
+      dom = v.dom();
       if (dom.singleton()) {
-        updateChains(var);
+        updateChains(v);
         int Qmin = dom.min();
 
         chainLength = 0;

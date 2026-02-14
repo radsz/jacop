@@ -29,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class SmallDenseDomainTest {
 
-  @Mock IntVar var;
+  @Mock IntVar v;
   IntDomain intervalDomain;
   private Method prepareMethod;
 
@@ -298,9 +298,9 @@ public class SmallDenseDomainTest {
   public void testinterval() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    intervalDomain.inComplement(100, var, 2);
+    intervalDomain.inComplement(100, v, 2);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -308,9 +308,9 @@ public class SmallDenseDomainTest {
   public void testinterval2() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    intervalDomain.inComplement(100, var, 1);
+    intervalDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -319,9 +319,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 1);
+    intervalDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -329,9 +329,9 @@ public class SmallDenseDomainTest {
   public void testinterval4() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2);
+    intervalDomain.inComplement(100, v, 2);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -340,18 +340,18 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
   public void testinterval6() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -360,9 +360,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -372,9 +372,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -383,9 +383,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5, 7, 7}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -395,9 +395,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -407,9 +407,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 1);
+    intervalDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -418,9 +418,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
-    intervalDomain.inComplement(100, var, 1);
+    intervalDomain.inComplement(100, v, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -429,9 +429,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
-    intervalDomain.inComplement(100, var, 7);
+    intervalDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -439,9 +439,9 @@ public class SmallDenseDomainTest {
   public void testinterval14() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 2, 2}});
-    intervalDomain.inComplement(100, var, 0);
+    intervalDomain.inComplement(100, v, 0);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -449,9 +449,9 @@ public class SmallDenseDomainTest {
   public void testinterval15() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -460,9 +460,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 5, 7, 9, 11, 20}});
-    intervalDomain.inComplement(100, var, 7);
+    intervalDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -470,9 +470,9 @@ public class SmallDenseDomainTest {
   public void testinterval17() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 10);
+    intervalDomain.inComplement(100, v, 10);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -481,9 +481,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -491,9 +491,9 @@ public class SmallDenseDomainTest {
   public void testinterval19() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7}});
-    intervalDomain.inComplement(100, var, 7);
+    intervalDomain.inComplement(100, v, 7);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -501,8 +501,8 @@ public class SmallDenseDomainTest {
   public void testinterval20() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intervalDomain.inComplement(100, v, 2);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -511,9 +511,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -523,9 +523,9 @@ public class SmallDenseDomainTest {
         (IntDomain)
             prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12, 15, 22}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5);
+    intervalDomain.inComplement(100, v, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -534,9 +534,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 1, 2);
+    intervalDomain.inComplement(100, v, 1, 2);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -545,9 +545,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 15}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5, 5);
+    intervalDomain.inComplement(100, v, 5, 5);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -557,9 +557,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 33}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2, 11);
+    intervalDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -568,9 +568,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2, 11);
+    intervalDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -579,9 +579,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2, 4);
+    intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -593,9 +593,9 @@ public class SmallDenseDomainTest {
             prepareMethod.invoke(
                 this, new Object[] {new int[] {1, 20, 22, 24, 26, 28, 30, 32, 34, 36}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2, 11);
+    intervalDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -604,9 +604,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 2, 5);
+    intervalDomain.inComplement(100, v, 2, 5);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -614,9 +614,9 @@ public class SmallDenseDomainTest {
   public void testinterval30() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intervalDomain.inComplement(100, var, 1, 2);
+    intervalDomain.inComplement(100, v, 1, 2);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -624,9 +624,9 @@ public class SmallDenseDomainTest {
   public void testinterval31() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intervalDomain.inComplement(100, var, 2, 4);
+    intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -634,9 +634,9 @@ public class SmallDenseDomainTest {
   public void testinterval32() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intervalDomain.inComplement(100, var, 2, 11);
+    intervalDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -644,9 +644,9 @@ public class SmallDenseDomainTest {
   public void testinterval33() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
-    intervalDomain.inComplement(100, var, 2, 11);
+    intervalDomain.inComplement(100, v, 2, 11);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -654,9 +654,9 @@ public class SmallDenseDomainTest {
   public void testinterval34() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
-    intervalDomain.inComplement(100, var, 2, 4);
+    intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -664,9 +664,9 @@ public class SmallDenseDomainTest {
   public void testinterval35() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 5}});
-    intervalDomain.inComplement(100, var, 2, 4);
+    intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -674,9 +674,9 @@ public class SmallDenseDomainTest {
   public void testinterval36() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
-    intervalDomain.inComplement(100, var, 1, 9);
+    intervalDomain.inComplement(100, v, 1, 9);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -685,9 +685,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inComplement(100, var, 25, 50);
+    intervalDomain.inComplement(100, v, 25, 50);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -697,8 +697,8 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5, 35);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intervalDomain.inComplement(100, v, 5, 35);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -707,8 +707,8 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inComplement(100, var, 5, 11);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intervalDomain.inComplement(100, v, 5, 11);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -717,8 +717,8 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 11, 41);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intervalDomain.inComplement(100, v, 11, 41);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -727,9 +727,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 3, 6, 7, 18}});
-    intervalDomain.inComplement(100, var, 2, 4);
+    intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -739,8 +739,8 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {18, 20, 22, 23}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 18, 22);
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    intervalDomain.inComplement(100, v, 18, 22);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -750,9 +750,9 @@ public class SmallDenseDomainTest {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 4, 4, 16, 26}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 5, 17);
+    intervalDomain.inComplement(100, v, 5, 17);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -761,9 +761,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
-    intervalDomain.inComplement(100, var, 3, 6);
+    intervalDomain.inComplement(100, v, 3, 6);
 
-    verify(var).domainHasChanged(IntDomain.ANY);
+    verify(v).domainHasChanged(IntDomain.ANY);
   }
 
   @ParameterizedTest
@@ -772,9 +772,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 11, 50);
+    intervalDomain.in(100, v, 11, 50);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -783,9 +783,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 35, 50);
+    intervalDomain.in(100, v, 35, 50);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -794,9 +794,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 9, 11);
+    intervalDomain.in(100, v, 9, 11);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -805,9 +805,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 9, 21);
+    intervalDomain.in(100, v, 9, 21);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -816,9 +816,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 9, 31);
+    intervalDomain.in(100, v, 9, 31);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -827,9 +827,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 11, 31);
+    intervalDomain.in(100, v, 11, 31);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -838,9 +838,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inMax(100, var, 11); // in(100, var, 29, 41);
+    intervalDomain.inMax(100, v, 11); // in(100, v, 29, 41);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -849,9 +849,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inMax(100, var, 21); // in(100, var, 29, 41);
+    intervalDomain.inMax(100, v, 21); // in(100, v, 29, 41);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -860,9 +860,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inMax(100, var, 32); // in(100, var, 29, 41);
+    intervalDomain.inMax(100, v, 32); // in(100, v, 29, 41);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -871,8 +871,8 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inMin(200, var, 19);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intervalDomain.inMin(200, v, 19);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -881,8 +881,8 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inMin(200, var, 21);
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    intervalDomain.inMin(200, v, 21);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -891,9 +891,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inShift(100, var, intervalDomain, 2);
+    intervalDomain.inShift(100, v, intervalDomain, 2);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -902,9 +902,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inShift(100, var, intervalDomain, 15);
+    intervalDomain.inShift(100, v, intervalDomain, 15);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -913,9 +913,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.inValue(100, var, 11);
+    intervalDomain.inValue(100, v, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -924,9 +924,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
-    intervalDomain.in(100, var, 14, 15);
+    intervalDomain.in(100, v, 14, 15);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -935,9 +935,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 20, 22, 22}});
-    intervalDomain.in(100, var, 10, 11);
+    intervalDomain.in(100, v, 10, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -946,9 +946,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 20, 22, 22}});
-    intervalDomain.in(100, var, 22, 23);
+    intervalDomain.in(100, v, 22, 23);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -957,9 +957,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 12, 22, 22}});
-    intervalDomain.in(100, var, 12, 20);
+    intervalDomain.in(100, v, 12, 20);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -968,9 +968,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 12, 22, 22}});
-    intervalDomain.in(100, var, 10, 11);
+    intervalDomain.in(100, v, 10, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -979,9 +979,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
-    intervalDomain.in(100, var, 10, 10);
+    intervalDomain.in(100, v, 10, 10);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -990,9 +990,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
-    intervalDomain.in(100, var, 10, 11);
+    intervalDomain.in(100, v, 10, 11);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1001,9 +1001,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
-    intervalDomain.in(100, var, 14, 15);
+    intervalDomain.in(100, v, 14, 15);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1012,9 +1012,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
-    intervalDomain.in(100, var, 9, 14);
+    intervalDomain.in(100, v, 9, 14);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1022,9 +1022,9 @@ public class SmallDenseDomainTest {
   public void testinterval68() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
-    intervalDomain.in(100, var, 11, 11);
+    intervalDomain.in(100, v, 11, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1032,9 +1032,9 @@ public class SmallDenseDomainTest {
   public void testinterval69() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
-    intervalDomain.in(100, var, 10, 10);
+    intervalDomain.in(100, v, 10, 10);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1042,9 +1042,9 @@ public class SmallDenseDomainTest {
   public void testinterval70() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 12}});
-    intervalDomain.in(100, var, 11, 11);
+    intervalDomain.in(100, v, 11, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1053,9 +1053,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 12, 14, 21}});
-    intervalDomain.inShift(100, var, intervalDomain, 11);
+    intervalDomain.inShift(100, v, intervalDomain, 11);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1063,9 +1063,9 @@ public class SmallDenseDomainTest {
   public void testinterval72() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
-    intervalDomain.in(100, var, -1, 1);
+    intervalDomain.in(100, v, -1, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1073,9 +1073,9 @@ public class SmallDenseDomainTest {
   public void testinterval73() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
-    intervalDomain.in(100, var, -1, 2);
+    intervalDomain.in(100, v, -1, 2);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1084,9 +1084,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -10, 14, 21}});
-    intervalDomain.inShift(100, var, intervalDomain, 6);
+    intervalDomain.inShift(100, v, intervalDomain, 6);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1095,9 +1095,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-2, -2, -1, -1}});
-    intervalDomain.inShift(100, var, intervalDomain, 1);
+    intervalDomain.inShift(100, v, intervalDomain, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1105,9 +1105,9 @@ public class SmallDenseDomainTest {
   public void testinterval76() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, 10}});
-    intervalDomain.inShift(100, var, intervalDomain, 5);
+    intervalDomain.inShift(100, v, intervalDomain, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1116,9 +1116,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
-    intervalDomain.inShift(100, var, intervalDomain, 5);
+    intervalDomain.inShift(100, v, intervalDomain, 5);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1127,9 +1127,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
-    intervalDomain.in(100, var, -10, -10);
+    intervalDomain.in(100, v, -10, -10);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1138,9 +1138,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
-    intervalDomain.in(100, var, -9, 10);
+    intervalDomain.in(100, v, -9, 10);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1149,9 +1149,9 @@ public class SmallDenseDomainTest {
 
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
-    intervalDomain.in(100, var, -9, 9);
+    intervalDomain.in(100, v, -9, 9);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1159,9 +1159,9 @@ public class SmallDenseDomainTest {
   public void testinterval81() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    intDomain.inShift(100, var, intDomain, 1);
+    intDomain.inShift(100, v, intDomain, 1);
 
-    verify(var).domainHasChanged(IntDomain.GROUND);
+    verify(v).domainHasChanged(IntDomain.GROUND);
   }
 
   @ParameterizedTest
@@ -1170,9 +1170,9 @@ public class SmallDenseDomainTest {
 
     IntDomain intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    intDomain.inShift(100, var, intDomain, 1);
+    intDomain.inShift(100, v, intDomain, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest
@@ -1181,9 +1181,9 @@ public class SmallDenseDomainTest {
 
     IntDomain intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    intDomain.inShift(100, var, intDomain, 1);
+    intDomain.inShift(100, v, intDomain, 1);
 
-    verify(var).domainHasChanged(IntDomain.BOUND);
+    verify(v).domainHasChanged(IntDomain.BOUND);
   }
 
   @ParameterizedTest

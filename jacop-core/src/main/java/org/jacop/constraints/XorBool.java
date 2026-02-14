@@ -192,12 +192,12 @@ public class XorBool extends PrimitiveConstraint {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
+  public int getNestedPruningEvent(Var v, boolean mode) {
 
     // If consistency function mode
     if (mode) {
       if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(var);
+        Integer possibleEvent = consistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }
@@ -205,7 +205,7 @@ public class XorBool extends PrimitiveConstraint {
       return IntDomain.GROUND;
     } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        Integer possibleEvent = notConsistencyPruningEvents.get(v);
         if (possibleEvent != null) {
           return possibleEvent;
         }

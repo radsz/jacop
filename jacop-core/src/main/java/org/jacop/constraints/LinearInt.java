@@ -229,20 +229,20 @@ public class LinearInt extends PrimitiveConstraint {
     Set<Map.Entry<IntVar, Long>> entries = parameters.entrySet();
 
     for (Map.Entry<IntVar, Long> e : entries) {
-      IntVar var = e.getKey();
+      IntVar v = e.getKey();
       long coeff = e.getValue();
       if (coeff > 0) {
-        this.x[i] = var;
+        this.x[i] = v;
         this.a[i] = coeff;
         i++;
       }
     }
     pos = i;
     for (Map.Entry<IntVar, Long> e : entries) {
-      IntVar var = e.getKey();
+      IntVar v = e.getKey();
       long coeff = e.getValue();
       if (coeff < 0) {
-        this.x[i] = var;
+        this.x[i] = v;
         this.a[i] = coeff;
         i++;
       }

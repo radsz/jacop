@@ -454,7 +454,7 @@ public class SmallDenseDomain extends IntDomain {
   }
 
   @Override
-  public void inValue(int storeLevel, IntVar var, int value) {
+  public void inValue(int storeLevel, IntVar v, int value) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -478,7 +478,7 @@ public class SmallDenseDomain extends IntDomain {
 
       assert checkInvariants() == null : checkInvariants();
 
-      var.domainHasChanged(GROUND);
+      v.domainHasChanged(GROUND);
 
     } else {
 
@@ -497,18 +497,18 @@ public class SmallDenseDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
+      v.domain = result;
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
-      var.domainHasChanged(GROUND);
+      v.domainHasChanged(GROUND);
     }
   }
 
   /** {@inheritDoc} */
   @Override
-  public void in(int storeLevel, Var var, int min, int max) {
+  public void in(int storeLevel, Var v, int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -591,9 +591,9 @@ public class SmallDenseDomain extends IntDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
 
     } else {
@@ -629,15 +629,15 @@ public class SmallDenseDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(BOUND);
+        v.domainHasChanged(BOUND);
       }
     }
   }
@@ -646,10 +646,10 @@ public class SmallDenseDomain extends IntDomain {
    * Restricts the domain to the intersection with the given bit representation.
    *
    * @param storeLevel the level of the store
-   * @param var the variable to update
+   * @param v the variable to update
    * @param domain the bit representation of the domain to intersect with
    */
-  public void in(int storeLevel, Var var, long domain) {
+  public void in(int storeLevel, Var v, long domain) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -687,13 +687,13 @@ public class SmallDenseDomain extends IntDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
 
         if (previousMin != minBound || previousMax != max) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
 
@@ -709,7 +709,7 @@ public class SmallDenseDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert result.max <= previousMax : "Domain update incorrect.";
       assert result.minBound >= previousMin : "Domain update incorrect.";
@@ -718,23 +718,23 @@ public class SmallDenseDomain extends IntDomain {
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
 
         if (previousMin != result.minBound || previousMax != result.max) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
     }
   }
 
   @Override
-  public void in(int storeLevel, Var var, IntDomain domain) {
+  public void in(int storeLevel, Var v, IntDomain domain) {
 
     if (domain.singleton()) {
-      in(storeLevel, var, domain.value(), domain.value());
+      in(storeLevel, v, domain.value(), domain.value());
       return;
     }
 
@@ -760,7 +760,7 @@ public class SmallDenseDomain extends IntDomain {
         }
       }
 
-      in(storeLevel, var, inBits);
+      in(storeLevel, v, inBits);
       return;
     }
 
@@ -814,9 +814,9 @@ public class SmallDenseDomain extends IntDomain {
 
       inBits = inBits << (this.minBound + 63 - this.max);
 
-      in(storeLevel, var, inBits);
+      in(storeLevel, v, inBits);
 
-      assert !domain.complement().isIntersecting((IntDomain) var.dom())
+      assert !domain.complement().isIntersecting((IntDomain) v.dom())
           : "Error either in in or isIntersecting.";
 
       return;
@@ -825,7 +825,7 @@ public class SmallDenseDomain extends IntDomain {
     assert domain.max() - domain.min() + 1 == domain.getSize() : "Loosing propagation" + domain;
 
     // TODO: improve, it does not take yet holes in the domain.
-    in(storeLevel, var, domain.min(), domain.max());
+    in(storeLevel, v, domain.min(), domain.max());
   }
 
   private void adaptMin() {
@@ -844,7 +844,7 @@ public class SmallDenseDomain extends IntDomain {
   }
 
   @Override
-  public void inComplement(int storeLevel, Var var, int complement) {
+  public void inComplement(int storeLevel, Var v, int complement) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -903,12 +903,12 @@ public class SmallDenseDomain extends IntDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
 
@@ -945,25 +945,25 @@ public class SmallDenseDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
     }
   }
 
   @Override
-  public void inComplement(int storeLevel, Var var, int minComplement, int maxComplement) {
+  public void inComplement(int storeLevel, Var v, int minComplement, int maxComplement) {
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1033,12 +1033,12 @@ public class SmallDenseDomain extends IntDomain {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
 
@@ -1076,47 +1076,47 @@ public class SmallDenseDomain extends IntDomain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(GROUND);
+        v.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(BOUND);
+          v.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(ANY);
+          v.domainHasChanged(ANY);
         }
       }
     }
   }
 
   @Override
-  public void inMax(int storeLevel, Var var, int max) {
+  public void inMax(int storeLevel, Var v, int max) {
 
     if (max < minBound) {
       throw Store.failException;
     }
 
     // TODO: improve.
-    in(storeLevel, var, minBound, max);
+    in(storeLevel, v, minBound, max);
   }
 
   @Override
-  public void inMin(int storeLevel, Var var, int min) {
+  public void inMin(int storeLevel, Var v, int min) {
 
     if (max < min) {
       throw Store.failException;
     }
 
     // TODO: improve.
-    in(storeLevel, var, min, max);
+    in(storeLevel, v, min, max);
   }
 
   @Override
-  public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
+  public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1140,7 +1140,7 @@ public class SmallDenseDomain extends IntDomain {
         }
       }
 
-      in(storeLevel, var, inBits);
+      in(storeLevel, v, inBits);
       return;
     }
 
@@ -1199,14 +1199,14 @@ public class SmallDenseDomain extends IntDomain {
 
       inBits = inBits << (this.minBound + 63 - this.max);
 
-      in(storeLevel, var, inBits);
+      in(storeLevel, v, inBits);
       return;
     }
 
     assert domain.max() - domain.min() + 1 == domain.getSize() : "Loosing propagation" + domain;
 
     // TODO: improve, it does not take yet holes in the domain.
-    in(storeLevel, var, domain.min() + shift, domain.max() + shift);
+    in(storeLevel, v, domain.min() + shift, domain.max() + shift);
   }
 
   /**
@@ -2240,16 +2240,16 @@ public class SmallDenseDomain extends IntDomain {
   }
 
   @Override
-  public void removeLevel(int level, Var var) {
+  public void removeLevel(int level, Var v) {
 
     assert this.stamp <= level;
 
     if (this.stamp == level) {
 
-      ((IntVar) var).domain = this.previousDomain;
+      ((IntVar) v).domain = this.previousDomain;
     }
 
-    assert ((IntVar) var).domain.stamp < level;
+    assert ((IntVar) v).domain.stamp < level;
   }
 
   @Override

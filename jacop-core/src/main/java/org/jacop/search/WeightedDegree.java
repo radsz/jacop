@@ -62,13 +62,13 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
    * Compares a precomputed metric value against the weighted degree metric of the given variable.
    *
    * @param left the precomputed metric value.
-   * @param var the variable whose metric is computed and compared.
+   * @param v the variable whose metric is computed and compared.
    * @return a negative integer, zero, or a positive integer as left is less than, equal to, or
    *     greater than the variable's metric.
    */
-  public int compare(double left, T var) {
+  public int compare(double left, T v) {
 
-    double right = ((double) var.weight) / var.getSizeFloat();
+    double right = ((double) v.weight) / v.getSizeFloat();
 
     return Double.compare(left, right);
   }
@@ -93,11 +93,11 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
   /**
    * Computes the weighted degree metric for the given variable (weight divided by domain size).
    *
-   * @param var the variable for which the metric is computed.
+   * @param v the variable for which the metric is computed.
    * @return the weighted degree metric value.
    */
-  public double metric(T var) {
+  public double metric(T v) {
 
-    return var.weight / var.getSizeFloat();
+    return v.weight / v.getSizeFloat();
   }
 }

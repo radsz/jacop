@@ -219,8 +219,8 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     IntVar[] vars = mdd.vars;
 
-    for (IntVar var : vars) {
-      result.append(var).append(" ");
+    for (IntVar v : vars) {
+      result.append(v).append(" ");
     }
 
     result.append(")").append("size = ").append(mdd.freePosition);

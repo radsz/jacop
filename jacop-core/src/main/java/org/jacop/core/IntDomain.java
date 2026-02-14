@@ -807,12 +807,12 @@ public abstract class IntDomain extends Domain {
    * of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the minimum value to which the domain is updated.
    */
-  public void inMin(int storeLevel, Var var, int min) {
+  public void inMin(int storeLevel, Var v, int min) {
 
-    in(storeLevel, var, min, max());
+    in(storeLevel, v, min, max());
   }
 
   /**
@@ -820,12 +820,12 @@ public abstract class IntDomain extends Domain {
    * of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param max the maximum value to which the domain is updated.
    */
-  public void inMax(int storeLevel, Var var, int max) {
+  public void inMax(int storeLevel, Var v, int max) {
 
-    in(storeLevel, var, min(), max);
+    in(storeLevel, v, min(), max);
   }
 
   /**
@@ -833,28 +833,28 @@ public abstract class IntDomain extends Domain {
    * decided by the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the minimum value to which the domain is updated.
    * @param max the maximum value to which the domain is updated.
    */
-  public abstract void in(int storeLevel, Var var, int min, int max);
+  public abstract void in(int storeLevel, Var v, int min, int max);
 
   /**
    * It updates the domain to have values only within the domain. The type of update is decided by
    * the value of stamp. It informs the variable of a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param domain the domain according to which the domain is updated.
    */
-  public void in(int storeLevel, Var var, IntDomain domain) {
+  public void in(int storeLevel, Var v, IntDomain domain) {
 
-    inShift(storeLevel, var, domain, 0);
+    inShift(storeLevel, v, domain, 0);
   }
 
   @Override
-  public void in(int level, Var var, Domain domain) {
-    in(level, var, (IntDomain) domain);
+  public void in(int level, Var v, Domain domain) {
+    in(level, v, (IntDomain) domain);
   }
 
   /*
@@ -867,11 +867,11 @@ public abstract class IntDomain extends Domain {
    * It reduces domain to a single value.
    *
    * @param level level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param value the value according to which the domain is updated.
    */
-  public void inValue(int level, IntVar var, int value) {
-    in(level, var, value, value);
+  public void inValue(int level, IntVar v, int value) {
+    in(level, v, value, value);
   }
 
   /**
@@ -879,12 +879,12 @@ public abstract class IntDomain extends Domain {
    * if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param complement value which is removed from the domain if it belonged to the domain.
    */
-  public void inComplement(int storeLevel, Var var, int complement) {
+  public void inComplement(int storeLevel, Var v, int complement) {
 
-    inComplement(storeLevel, var, complement, complement);
+    inComplement(storeLevel, v, complement, complement);
   }
 
   /**
@@ -892,11 +892,11 @@ public abstract class IntDomain extends Domain {
    * a change if it occurred.
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param min the left bound of the interval (inclusive).
    * @param max the right bound of the interval (inclusive).
    */
-  public abstract void inComplement(int storeLevel, Var var, int min, int max);
+  public abstract void inComplement(int storeLevel, Var v, int min, int max);
 
   /**
    * It returns number of intervals required to represent this domain.
@@ -918,11 +918,11 @@ public abstract class IntDomain extends Domain {
    * {1..4} + 3 = 4..7
    *
    * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
+   * @param v variable for which this domain is used.
    * @param domain the domain according to which the domain is updated.
    * @param shift the shift which is used to shift the domain supplied as argument.
    */
-  public abstract void inShift(int storeLevel, Var var, IntDomain domain, int shift);
+  public abstract void inShift(int storeLevel, Var v, IntDomain domain, int shift);
 
   /**
    * It returns the left most element of the given interval.
@@ -1007,7 +1007,7 @@ public abstract class IntDomain extends Domain {
   }
 
   @Override
-  public void putModelConstraint(int storeLevel, Var var, Constraint c, int pruningEvent) {
+  public void putModelConstraint(int storeLevel, Var v, Constraint c, int pruningEvent) {
 
     if (stamp < storeLevel) {
 
@@ -1019,9 +1019,9 @@ public abstract class IntDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
-      result.putModelConstraint(storeLevel, var, c, pruningEvent);
+      result.putModelConstraint(storeLevel, v, c, pruningEvent);
       return;
     }
 
@@ -1103,7 +1103,7 @@ public abstract class IntDomain extends Domain {
   }
 
   @Override
-  public void removeModelConstraint(int storeLevel, Var var, Constraint c) {
+  public void removeModelConstraint(int storeLevel, Var v, Constraint c) {
 
     if (stamp < storeLevel) {
 
@@ -1115,9 +1115,9 @@ public abstract class IntDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
-      result.removeModelConstraint(storeLevel, var, c);
+      result.removeModelConstraint(storeLevel, v, c);
       return;
     }
 
@@ -1244,7 +1244,7 @@ public abstract class IntDomain extends Domain {
   }
 
   @Override
-  public void putSearchConstraint(int storeLevel, Var var, Constraint c) {
+  public void putSearchConstraint(int storeLevel, Var v, Constraint c) {
 
     if (!searchConstraints.contains(c)) {
 
@@ -1261,9 +1261,9 @@ public abstract class IntDomain extends Domain {
         result.previousDomain = this;
         result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-        ((IntVar) var).domain = result;
+        ((IntVar) v).domain = result;
 
-        result.putSearchConstraint(storeLevel, var, c);
+        result.putSearchConstraint(storeLevel, v, c);
         return;
       }
 
@@ -1294,10 +1294,10 @@ public abstract class IntDomain extends Domain {
    * level, a clone is created first.
    *
    * @param storeLevel the current level of the store.
-   * @param var the variable associated with this domain.
+   * @param v the variable associated with this domain.
    * @param c the search constraint to remove.
    */
-  public void removeSearchConstraint(int storeLevel, Var var, Constraint c) {
+  public void removeSearchConstraint(int storeLevel, Var v, Constraint c) {
 
     if (stamp < storeLevel) {
 
@@ -1309,9 +1309,9 @@ public abstract class IntDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, c);
+      result.removeSearchConstraint(storeLevel, v, c);
       return;
     }
 
@@ -1335,7 +1335,7 @@ public abstract class IntDomain extends Domain {
   }
 
   @Override
-  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c) {
+  public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint c) {
 
     if (stamp < storeLevel) {
 
@@ -1347,9 +1347,9 @@ public abstract class IntDomain extends Domain {
       result.previousDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) var).domain = result;
+      ((IntVar) v).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, position, c);
+      result.removeSearchConstraint(storeLevel, v, position, c);
       return;
     }
 

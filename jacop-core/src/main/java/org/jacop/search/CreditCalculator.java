@@ -243,7 +243,7 @@ public class CreditCalculator<T extends Var>
    * parameter of this function specifies if the search should continue undisturbed or exit the
    * current search node with false.
    */
-  public boolean leftChild(T var, int value, boolean status) {
+  public boolean leftChild(T v, int value, boolean status) {
 
     // TODO: if credits are encountered in the node then backtracks should be set to zero. where?
 
@@ -259,7 +259,7 @@ public class CreditCalculator<T extends Var>
 
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(var, value, false);
+            exitChildListener.leftChild(v, value, false);
           }
         }
 
@@ -272,7 +272,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(var, value, true);
+          code |= exitChildListener.leftChild(v, value, true);
         }
 
         if (!code) {
@@ -287,7 +287,7 @@ public class CreditCalculator<T extends Var>
     if (timeOut) {
       if (exitChildListeners != null) {
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(var, value, false);
+          exitChildListener.leftChild(v, value, false);
         }
       }
 
@@ -300,7 +300,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(var, value, false);
+          code |= exitChildListener.leftChild(v, value, false);
         }
         if (!code) {
           currentLevel--;
@@ -386,7 +386,7 @@ public class CreditCalculator<T extends Var>
    * Exiting the right children if no credits have been distributed to a right child involves
    * increasing the number of backtracks occurred.
    */
-  public void rightChild(T var, int value, boolean status) {
+  public void rightChild(T v, int value, boolean status) {
 
     currentLevel--;
 
@@ -403,7 +403,7 @@ public class CreditCalculator<T extends Var>
 
     if (exitChildListeners != null) {
       for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        exitChildListener.rightChild(var, value, status);
+        exitChildListener.rightChild(v, value, status);
       }
     }
   }

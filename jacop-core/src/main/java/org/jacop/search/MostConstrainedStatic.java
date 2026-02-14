@@ -50,11 +50,11 @@ public class MostConstrainedStatic<T extends Var> implements ComparatorVariable<
    * Compares a metric value with a variable's original constraint count.
    *
    * @param left the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double left, T var) {
-    int right = var.sizeConstraintsOriginal();
+  public int compare(double left, T v) {
+    int right = v.sizeConstraintsOriginal();
     if (left > right) {
       return 1;
     }

@@ -80,7 +80,7 @@ public class Min extends AbstractMinMax {
     do {
 
       store.propagationHasOccurred = false;
-      IntVar var;
+      IntVar v;
       IntDomain vDom;
 
       // @todo keep one variable with the smallest value as watched variable
@@ -93,9 +93,9 @@ public class Min extends AbstractMinMax {
       int minMin = min.min();
       int maxMin = min.max();
       for (int i = start; i < l; i++) {
-        var = list[i];
+        v = list[i];
 
-        vDom = var.dom();
+        vDom = v.dom();
         int varMin = vDom.min();
         int varMax = vDom.max();
 
@@ -103,7 +103,7 @@ public class Min extends AbstractMinMax {
           swap(start, i);
           start++;
         } else if (varMin < minMin) {
-          var.domain.inMin(store.level, var, minMin);
+          v.domain.inMin(store.level, v, minMin);
         }
 
         minValue = Math.min(minValue, varMin);

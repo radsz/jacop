@@ -354,19 +354,19 @@ public class ElementVariable extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var v) {
 
-    if (var == index) {
+    if (v == index) {
       indexHasChanged = true;
       return;
     }
 
-    if (var == value) {
+    if (v == value) {
       valueHasChanged = true;
       return;
     }
 
-    variableQueue.add((IntVar) var);
+    variableQueue.add((IntVar) v);
   }
 
   @Override

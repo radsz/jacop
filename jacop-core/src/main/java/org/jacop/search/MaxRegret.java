@@ -52,12 +52,12 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
    * Compares a metric value (regret) with a variable's regret value.
    *
    * @param ldiff the metric value to compare.
-   * @param var the variable to compare against.
-   * @return positive if ldiff has higher priority, negative if var has higher priority, 0 if equal.
+   * @param v the variable to compare against.
+   * @return positive if ldiff has higher priority, negative if v has higher priority, 0 if equal.
    */
-  public int compare(double ldiff, T var) {
+  public int compare(double ldiff, T v) {
 
-    ValueEnumeration rEnum = var.domain.valueEnumeration();
+    ValueEnumeration rEnum = v.domain.valueEnumeration();
 
     int rmin = rEnum.nextElement();
     int rminNext;

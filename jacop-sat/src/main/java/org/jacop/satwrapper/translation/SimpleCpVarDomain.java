@@ -99,19 +99,19 @@ public class SimpleCpVarDomain extends SatCpBridge {
 
   @Override
   public final int boolVarToCpValue(int literal) {
-    int var = Math.abs(literal);
-    assert var >= firstVar;
-    assert var <= firstVar + (max - min + 1) * 2;
+    int varIdx = Math.abs(literal);
+    assert varIdx >= firstVar;
+    assert varIdx <= firstVar + (max - min + 1) * 2;
 
-    return min + (var - firstVar) / 2;
+    return min + (varIdx - firstVar) / 2;
   }
 
   @Override
   public final boolean isEqualityBoolVar(int literal) {
     assert wrapper.boolVarToCpVar(literal) == this.variable;
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
 
-    return ((var - firstVar) & 0x1) == 0; // modulo 2
+    return ((varIdx - firstVar) & 0x1) == 0; // modulo 2
     // TODO: later, use parity (be sure the equality literal is even)
   }
 

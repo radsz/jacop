@@ -195,11 +195,11 @@ public class SetVar extends Var {
   /**
    * It checks if the domains of variables are equal.
    *
-   * @param var the variable to which current variable is compared to.
+   * @param v the variable to which current variable is compared to.
    * @return true if both variables have the same domain.
    */
-  public boolean eq(SetVar var) {
-    return domain.eq(var.dom());
+  public boolean eq(SetVar v) {
+    return domain.eq(v.dom());
   }
 
   /**

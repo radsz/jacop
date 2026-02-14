@@ -61,15 +61,15 @@ public final class Trail implements SolverComponent {
   /**
    * It adds a variable to the trail.
    *
-   * @param var the variable
+   * @param varIdx the SAT variable index
    */
-  public void addVariable(int var) {
+  public void addVariable(int varIdx) {
 
-    assert var > 0;
-    ensureCapacity(var);
+    assert varIdx > 0;
+    ensureCapacity(varIdx);
 
-    values[var] = 0;
-    levels[var] = 0;
+    values[varIdx] = 0;
+    levels[varIdx] = 0;
   }
 
   /**
@@ -107,14 +107,14 @@ public final class Trail implements SolverComponent {
 
     assert level >= 0;
 
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
 
-    assert var < values.length;
-    assert !isSet(var) : "variable already set !";
+    assert varIdx < values.length;
+    assert !isSet(varIdx) : "variable already set !";
 
-    assertLit(var, literal, level, true);
+    assertLit(varIdx, literal, level, true);
 
-    assertionStack.push(var);
+    assertionStack.push(varIdx);
   }
 
   /**
@@ -127,41 +127,41 @@ public final class Trail implements SolverComponent {
   public void assertLiteral(int literal, int level, int causeId) {
 
     assert causeId >= 0;
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
 
-    assertLit(var, literal, level, false);
-    explanations[var] = causeId;
+    assertLit(varIdx, literal, level, false);
+    explanations[varIdx] = causeId;
 
-    assertionStack.push(var);
+    assertionStack.push(varIdx);
   }
 
   /** Real assignment of literal at level. */
-  private void assertLit(int var, int literal, int level, boolean asserted) {
-    assert values.length > var;
-    assert values[var] == 0;
+  private void assertLit(int varIdx, int literal, int level, boolean asserted) {
+    assert values.length > varIdx;
+    assert values[varIdx] == 0;
 
     // remember value
-    values[var] = literal;
+    values[varIdx] = literal;
 
     // pack level and some more data in an int
     int value = level;
     if (asserted) {
       value |= ASSERTED_MASK;
     }
-    levels[var] = value;
+    levels[varIdx] = value;
   }
 
   /**
    * It unsets the given variable. Does not take car of assertionLevels !
    *
-   * @param var the variable to unset. Must be positive.
+   * @param varIdx the SAT variable index to unset. Must be positive.
    */
-  public void unset(int var) {
-    assert var > 0;
-    assert var < values.length;
-    assert isSet(var) : "var must be set";
+  public void unset(int varIdx) {
+    assert varIdx > 0;
+    assert varIdx < values.length;
+    assert isSet(varIdx) : "varIdx must be set";
 
-    values[var] = 0;
+    values[varIdx] = 0;
   }
 
   /**
@@ -176,15 +176,15 @@ public final class Trail implements SolverComponent {
 
     // remove all asserted items above level
     while (!assertionStack.isEmpty()) {
-      int var = assertionStack.peek();
-      assert var > 0;
-      assert var < values.length;
-      int currentLevel = getLevel(var);
+      int varIdx = assertionStack.peek();
+      assert varIdx > 0;
+      assert varIdx < values.length;
+      int currentLevel = getLevel(varIdx);
 
       if (currentLevel > level) {
         // this variable must be unset, because its level is > @param level
         assertionStack.pop();
-        unset(var);
+        unset(varIdx);
       } else {
         // from now, we are under @param level
         break;
@@ -196,65 +196,65 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * It returns the level at which @param var has been set. @param var *must* be set, otherwise this
-   * will fail.
+   * It returns the level at which the given variable has been set. The variable *must* be set,
+   * otherwise this will fail.
    *
-   * @param var the literal which level we wish to know
+   * @param varIdx the SAT variable index whose level we wish to know
    * @return the level
    */
-  public int getLevel(int var) {
+  public int getLevel(int varIdx) {
 
-    assert var > 0;
-    assert var < values.length;
-    assert isSet(var);
+    assert varIdx > 0;
+    assert varIdx < values.length;
+    assert isSet(varIdx);
 
-    return levels[var] & LEVEL_MASK;
+    return levels[varIdx] & LEVEL_MASK;
   }
 
   /**
    * It returns the index of the clause that caused this variable to be set.
    *
-   * @param var the literal. Must be set.
+   * @param varIdx the SAT variable index. Must be set.
    * @return an index if there was an explanation, 0 otherwise
    */
-  public int getExplanation(int var) {
+  public int getExplanation(int varIdx) {
 
-    assert var > 0;
+    assert varIdx > 0;
     assert explanations.length == values.length;
-    assert var < explanations.length;
-    assert isSet(var);
-    assert !isAsserted(var) : "only propagated literals have explanations";
+    assert varIdx < explanations.length;
+    assert isSet(varIdx);
+    assert !isAsserted(varIdx) : "only propagated literals have explanations";
 
-    return explanations[var];
+    return explanations[varIdx];
   }
 
   /**
    * It returns information if a variable was asserted or only propagated.
    *
-   * @param var the variable
+   * @param varIdx the SAT variable index
    * @return true if the variable was asserted
    */
-  public boolean isAsserted(int var) {
+  public boolean isAsserted(int varIdx) {
 
-    assert var > 0;
-    assert isSet(var) : "var must be set";
+    assert varIdx > 0;
+    assert isSet(varIdx) : "varIdx must be set";
 
     // isAsserted is encoded together with other data, for cache issues
-    int value = levels[var];
+    int value = levels[varIdx];
     return (value & ASSERTED_MASK) != 0;
   }
 
   /**
    * Checks if this variable is set or unknown.
    *
-   * @param var the variable, must be positive
+   * @param varIdx the SAT variable index, must be positive
    * @return true if the variable is set.
    */
-  public boolean isSet(int var) {
-    assert var > 0;
-    assert var < values.length;
+  public boolean isSet(int varIdx) {
+    assert varIdx > 0;
+    assert varIdx < values.length;
 
-    int value = values[var];
+    int value = values[varIdx];
     return value != 0;
   }
 
@@ -272,10 +272,10 @@ public final class Trail implements SolverComponent {
     StringBuilder sb = new StringBuilder("trail [");
     int n = assertionStack.size();
     for (int i = n - 1; i >= 0; i--) {
-      int var = assertionStack.array[i];
-      sb.append(values[var]);
+      int varIdx = assertionStack.array[i];
+      sb.append(values[varIdx]);
       sb.append('(');
-      sb.append(getLevel(var));
+      sb.append(getLevel(varIdx));
       sb.append(')');
       sb.append(" ");
     }

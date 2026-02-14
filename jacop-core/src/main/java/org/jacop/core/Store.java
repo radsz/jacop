@@ -420,23 +420,23 @@ public class Store {
    * re-evaluation. This function must add all attached constraints for reevaluation but it will do
    * it any order which suits it.
    *
-   * @param var variable for which some pruning event has occurred.
+   * @param v variable for which some pruning event has occurred.
    * @param pruningEvent specifies the type of the pruning event.
    * @param info it specifies detailed information about the change of the variable domain. the
    *     inputs of the currentConstraint in the manner that would validate another execution.
    */
-  public void addChanged(Var var, int pruningEvent, int info) {
+  public void addChanged(Var v, int pruningEvent, int info) {
 
     propagationHasOccurred = true;
 
     if (variableActivityManagement) {
-      variablesPrunned.add(var);
+      variablesPrunned.add(v);
     }
 
     // It records V as being changed so backtracking later on can be invoked for this variable.
-    recordChange(var);
+    recordChange(v);
 
-    Domain vDom = var.dom();
+    Domain vDom = v.dom();
 
     Constraint[] addedConstraints;
     Constraint c;
@@ -453,7 +453,7 @@ public class Store {
 
         c = addedConstraints[i];
 
-        c.queueVariable(level, var);
+        c.queueVariable(level, v);
 
         if (currentConstraint != c) {
           addChanged(c);
@@ -467,7 +467,7 @@ public class Store {
 
       c = constr.get(i);
 
-      c.queueVariable(level, var);
+      c.queueVariable(level, v);
 
       if (currentConstraint != c) {
 
@@ -478,11 +478,11 @@ public class Store {
     // Watched constraints
     if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
 
-      Set<Constraint> list = watchedConstraints.get(var);
+      Set<Constraint> list = watchedConstraints.get(v);
 
       if (list != null) {
         for (Constraint con : list) {
-          con.queueVariable(level, var);
+          con.queueVariable(level, v);
 
           if (currentConstraint != con) {
             addChanged(con);
@@ -874,28 +874,27 @@ public class Store {
    * from variable constructor. It returns the current position of fdv in a store local data
    * structure.
    *
-   * @param var variable to be registered.
+   * @param v variable to be registered.
    * @return position of the variable at which it is being stored.
    */
-  public int putVariable(Var var) {
+  public int putVariable(Var v) {
 
-    Var previousVar = variablesHashMap.put(var.id(), var);
+    Var previousVar = variablesHashMap.put(v.id(), v);
 
-    assert previousVar == null : "Two variables have the same id " + previousVar + " " + var;
+    assert previousVar == null : "Two variables have the same id " + previousVar + " " + v;
 
-    if (var.storeIndex != -1 && vars[var.storeIndex] == var) {
-      throw new IllegalArgumentException(
-          "\nSetting Variable: Variable already exists: " + var.id());
+    if (v.storeIndex != -1 && vars[v.storeIndex] == v) {
+      throw new IllegalArgumentException("\nSetting Variable: Variable already exists: " + v.id());
     }
 
     // boolean variables are not trailed the same fashion as int variables.
-    if (var instanceof BooleanVar) {
+    if (v instanceof BooleanVar) {
       return -1;
     }
 
     if (size < vars.length) {
 
-      vars[size] = var;
+      vars[size] = v;
       size++;
 
     } else {
@@ -905,7 +904,7 @@ public class Store {
 
       System.arraycopy(oldVars, 0, vars, 0, size);
 
-      vars[size] = var;
+      vars[size] = v;
       size++;
 
       trailManager.update(vars, size);
@@ -1052,8 +1051,8 @@ public class Store {
     }
 
     // It needs to be before as there is a timestamp for number of boolean variables.
-    for (Stateful var : timeStamps) {
-      var.removeLevel(level);
+    for (Stateful v : timeStamps) {
+      v.removeLevel(level);
     }
 
     // Boolean Variables.
@@ -1182,16 +1181,16 @@ public class Store {
     }
 
     int i = 0;
-    for (MutableVar var : mutableVariables) {
+    for (MutableVar v : mutableVariables) {
       result
           .append("MutableVar[")
           .append(i++)
           .append("] ")
           .append("(")
-          .append(var.value().stamp())
+          .append(v.value().stamp())
           .append(")");
 
-      result.append(var.value()).append("\n");
+      result.append(v.value()).append("\n");
     }
 
     for (Constraint c : getConstraints()) {
@@ -1321,20 +1320,20 @@ public class Store {
     // all other variables
     TreeSet<Var> orderedVariables = new TreeSet<>(Comparator.comparing(Var::id));
     orderedVariables.addAll(Arrays.asList(vars).subList(0, size));
-    for (Var var : orderedVariables) {
-      result.append(var).append(",");
+    for (Var v : orderedVariables) {
+      result.append(v).append(",");
     }
 
     int i = 0;
-    for (MutableVar var : mutableVariables) {
+    for (MutableVar v : mutableVariables) {
       result
           .append("MutableVar[")
           .append(i++)
           .append("] ")
           .append("(")
-          .append(var.value().stamp())
+          .append(v.value().stamp())
           .append(")");
-      result.append(var.value()).append(",");
+      result.append(v.value()).append(",");
     }
 
     result.replace(result.length() - 1, result.length(), "]");

@@ -265,11 +265,11 @@ public class NetworkBuilder {
     int n = vars.length;
     int m = domains.length;
 
-    Node[] v = new Node[n];
+    Node[] varNodes = new Node[n];
     Node[] d = new Node[m];
 
     for (int i = 0; i < n; i++) {
-      v[i] = addNode(vars[i].id, 1);
+      varNodes[i] = addNode(vars[i].id, 1);
     }
 
     for (int i = 0; i < m; i++) {
@@ -278,21 +278,21 @@ public class NetworkBuilder {
 
     for (int i = 0; i < n; i++) {
 
-      IntVar var = vars[i];
+      IntVar v = vars[i];
 
       List<Arc> arcs = new ArrayList<>();
       List<Domain> doms = new ArrayList<>();
 
-      IntDomain vardom = var.domain;
+      IntDomain vDom = v.domain;
       for (int j = 0; j < m; j++) {
-        if (vardom.isIntersecting(domains[j])) {
-          arcs.add(addArc(v[i], d[j], 0, 1));
+        if (vDom.isIntersecting(domains[j])) {
+          arcs.add(addArc(varNodes[i], d[j], 0, 1));
           doms.add(domains[j]);
         }
       }
-      handlerList.add(new DomainStructure(var, doms, arcs));
+      handlerList.add(new DomainStructure(v, doms, arcs));
     }
-    return new Node[][] {v, d};
+    return new Node[][] {varNodes, d};
   }
 
   /* list variables */
@@ -353,21 +353,21 @@ public class NetworkBuilder {
             arc.companion = new ArcCompanion(arc, 0);
           }
 
-          IntVar var = arc.getCompanion().xVar;
-          if (var == null) {
-            var =
+          IntVar v = arc.getCompanion().xVar;
+          if (v == null) {
+            v =
                 new IntVar(
                     store,
                     arc.getCompanion().flowOffset,
                     arc.getCompanion().flowOffset + arc.capacity + arc.sister.capacity);
           }
           if (arc.head == node) {
-            in.add(var);
+            in.add(v);
           }
           if (arc.tail() == node) {
-            out.add(var);
+            out.add(v);
           }
-          arc.getCompanion().xVar = var;
+          arc.getCompanion().xVar = v;
         }
       }
 
@@ -424,9 +424,9 @@ public class NetworkBuilder {
     boolean simpleSum = true;
     for (Arc arc : arcList) {
       if (arc.getCompanion().wVar != null) {
-        IntVar var = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
-        result.add(new XmulYeqZ(arc.getCompanion().xVar, arc.getCompanion().wVar, var));
-        vars.add(var);
+        IntVar v = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
+        result.add(new XmulYeqZ(arc.getCompanion().xVar, arc.getCompanion().wVar, v));
+        vars.add(v);
         weights.add(1);
       } else if (arc.cost == 1) {
         vars.add(arc.getCompanion().xVar);

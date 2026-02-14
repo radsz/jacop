@@ -92,8 +92,8 @@ public class AlldifferentExcept extends Alldifferent
   }
 
   @Override
-  protected boolean hasExceptionValues(IntVar var) {
-    return s.isIntersecting(var.dom());
+  protected boolean hasExceptionValues(IntVar v) {
+    return s.isIntersecting(v.dom());
   }
 
   @Override

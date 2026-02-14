@@ -226,30 +226,30 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         int max = 0;
         int min = 0;
         for (int i = 0; i < values.length; i++) {
-          IntVar var = (IntVar) search_variables[i];
+          IntVar v = (IntVar) search_variables[i];
           int val = values[i];
 
-          if (var.domain.contains(val)) {
-            if (preferedValues.get(var) != null && preferedValues.get(var) != val) {
+          if (v.domain.contains(val)) {
+            if (preferedValues.get(v) != null && preferedValues.get(v) != val) {
               IO.println(
                   "% Warning: Double defintion on warm_start for variable "
-                      + var
+                      + v
                       + "("
-                      + preferedValues.get(var)
+                      + preferedValues.get(v)
                       + ", "
                       + val
                       + "), the first value is used.");
             } else {
-              if ((var.max() - val) > (val - var.min())) {
+              if ((v.max() - val) > (val - v.min())) {
                 max++;
               } else {
                 min++;
               }
-              preferedValues.put(var, val);
+              preferedValues.put(v, val);
             }
           } else {
             IO.println(
-                "% Warning: warm_start value " + val + " is not in domain of " + var + "; ignored");
+                "% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
           }
         }
 

@@ -51,14 +51,14 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
   public IndomainMedian() {}
 
   /** It requires IntVar variable. */
-  public int indomain(IntVar var) {
+  public int indomain(IntVar v) {
 
-    assert !var.singleton() : "indomain does not work with singleton variables.";
+    assert !v.singleton() : "indomain does not work with singleton variables.";
 
-    assert var.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
+    assert v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
         : "It is not possible to use BoundDomain";
 
-    int position = var.getSize();
+    int position = v.getSize();
 
     if (position % 2 == 0) {
       position = (position >> 1) - 1;
@@ -66,9 +66,9 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
       position = position >> 1;
     }
 
-    if (var.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+    if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
 
-      IntervalDomain domain = (IntervalDomain) var.domain;
+      IntervalDomain domain = (IntervalDomain) v.domain;
 
       for (int i = 0; i < domain.size; i++) {
 
@@ -83,7 +83,7 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
       assert false : "Indomain Median does not work properly.";
     }
 
-    IntDomain dom = var.dom();
+    IntDomain dom = v.dom();
 
     if (dom.isSparseRepresentation()) {
 

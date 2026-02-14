@@ -1919,11 +1919,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           }
 
           printBuffer.append(";\n");
-        } else if (v instanceof SetVar var) {
+        } else if (v instanceof SetVar setVar) {
           // print set variables
           printBuffer.append(v.id()).append(" = ");
           if (v.singleton()) {
-            IntDomain glb = var.dom().glb();
+            IntDomain glb = setVar.dom().glb();
             if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
               printBuffer.append(glb.min()).append("..").append(glb.max());
             } else {
@@ -1967,14 +1967,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (minimize) {
           if (costVariable instanceof IntVar var1) {
             printBuffer.append("%%%mzn-stat: objective=").append(var1.value()).append("\n");
-          } else if (costVariable instanceof FloatVar var) {
-            printBuffer.append("%%%mzn-stat: objective=").append(var.value()).append("\n");
+          } else if (costVariable instanceof FloatVar fv) {
+            printBuffer.append("%%%mzn-stat: objective=").append(fv.value()).append("\n");
           }
         } else {
           if (costVariable instanceof IntVar var1) {
             printBuffer.append("%%%mzn-stat: objective=").append(-var1.value()).append("\n");
-          } else if (costVariable instanceof FloatVar var) {
-            printBuffer.append("%%%mzn-stat: objective=").append(-var.value()).append("\n");
+          } else if (costVariable instanceof FloatVar fv) {
+            printBuffer.append("%%%mzn-stat: objective=").append(-fv.value()).append("\n");
           }
         }
       }

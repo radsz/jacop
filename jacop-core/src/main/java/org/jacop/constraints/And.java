@@ -112,8 +112,8 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getNestedPruningEvent(Var var, boolean mode) {
-    return getConsistencyPruningEvent(var);
+  public int getNestedPruningEvent(Var v, boolean mode) {
+    return getConsistencyPruningEvent(v);
   }
 
   @Override

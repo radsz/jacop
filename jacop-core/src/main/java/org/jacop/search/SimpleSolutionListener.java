@@ -396,8 +396,8 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
       for (int i = 0; i < vars.length; i++) {
 
-        if (vars[i] instanceof IntVar var) {
-          result[no] = new XeqC(var, ((IntDomain) solutions[i][number]).min());
+        if (vars[i] instanceof IntVar v) {
+          result[no] = new XeqC(v, ((IntDomain) solutions[i][number]).min());
         }
 
         no++;

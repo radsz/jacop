@@ -118,12 +118,12 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     // clause index to give as an explanation for this propagation
     int clauseIndex = trail.size(); // TODO: faster?
     int clauseId = indexToUniqueId(clauseIndex);
-    int var = Math.abs(literal);
+    int varIdx = Math.abs(literal);
 
-    if (trail.isSet(var)) {
+    if (trail.isSet(varIdx)) {
       // no need to propagate, this variable has already a value
 
-      if (trail.values[var] == -literal) {
+      if (trail.values[varIdx] == -literal) {
         // this is a conflict ! build the conflict clause
         MapClause conflictClause = core.explanationClause;
         conflictClause.clear();
@@ -132,7 +132,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
         // wrapper.log(this, "  failure : literal "+literal+
         //   " meaning "+wrapper.showLiteralMeaning(literal)+
-        //   " is set to "+trail.values[var]
+        //   " is set to "+trail.values[varIdx]
         //   +" (explanation "+conflictClause+")");
 
         // trigger the conflict and fail
@@ -154,16 +154,16 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       // ignore this literal, now
 
       // remember which asserted literal is cause for this propagation
-      if (propagationCauses.length <= var) {
-        propagationCauses = Utils.resize(propagationCauses, 2 * var, pool);
+      if (propagationCauses.length <= varIdx) {
+        propagationCauses = Utils.resize(propagationCauses, 2 * varIdx, pool);
       }
-      propagationCauses[var] = assertedLiteral;
+      propagationCauses[varIdx] = assertedLiteral;
 
       // invariant : the explanation is equal to the depth in trail stack
       // FIXME : check it
-      assert trail.assertionStack.array[clauseIndex] == var;
-      assert trail.values[var] == literal;
-      assert clauseId == trail.getExplanation(var);
+      assert trail.assertionStack.array[clauseIndex] == varIdx;
+      assert trail.values[varIdx] == literal;
+      assert clauseId == trail.getExplanation(varIdx);
     }
   }
 

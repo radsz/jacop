@@ -64,17 +64,17 @@ public class QueueForward<T extends Constraint> {
 
     forwardMap = Var.createEmptyPositioning();
 
-    for (Var var : variables) {
-      forwardMap.put(var, new ArrayList<>());
+    for (Var v : variables) {
+      forwardMap.put(v, new ArrayList<>());
       for (T constraint : constraints) {
 
-        if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(var)) {
+        if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
 
           try {
             // We assume that all constraint needing queueVariable declare this method, even for
             // the ones that inherit from other constraints.
             constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-            forwardMap.get(var).add(constraint);
+            forwardMap.get(v).add(constraint);
           } catch (NoSuchMethodException ignored) {
             // constraint may use empty queueVariable provided by abstract class Constraint
           }
@@ -82,16 +82,16 @@ public class QueueForward<T extends Constraint> {
       }
     }
 
-    for (Var var : variables) {
+    for (Var v : variables) {
 
-      List<T> varConstraints = forwardMap.get(var);
+      List<T> varConstraints = forwardMap.get(v);
 
       if (varConstraints == null) {
         continue;
       }
 
       if (varConstraints.isEmpty()) {
-        forwardMap.remove(var);
+        forwardMap.remove(v);
       }
     }
 
@@ -132,20 +132,20 @@ public class QueueForward<T extends Constraint> {
    * Constructs a queue forward from a collection of constraints and a single variable.
    *
    * @param constraints the constraints to consider for forwarding.
-   * @param var the variable whose changes should be forwarded.
+   * @param v the variable whose changes should be forwarded.
    */
-  public QueueForward(Collection<T> constraints, Var var) {
-    this(constraints, Collections.singletonList(var));
+  public QueueForward(Collection<T> constraints, Var v) {
+    this(constraints, Collections.singletonList(v));
   }
 
   /**
    * Constructs a queue forward from a single constraint and a single variable.
    *
    * @param constraint the constraint to consider for forwarding.
-   * @param var the variable whose changes should be forwarded.
+   * @param v the variable whose changes should be forwarded.
    */
-  public QueueForward(T constraint, Var var) {
-    this(Collections.singletonList(constraint), Collections.singletonList(var));
+  public QueueForward(T constraint, Var v) {
+    this(Collections.singletonList(constraint), Collections.singletonList(v));
   }
 
   /**

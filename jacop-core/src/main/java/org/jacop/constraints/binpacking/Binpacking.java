@@ -255,20 +255,20 @@ public class Binpacking extends Constraint
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
       Iterator<IntVar> it = binQueue.iterator();
-      IntVar var = it.next();
+      IntVar v = it.next();
       it.remove();
-      int i = binMap.get(var) + minBinNumber;
+      int i = binMap.get(v) + minBinNumber;
       d.addDom(new IntervalDomain(i, i));
     }
     while (!itemQueue.isEmpty()) {
       Iterator<IntVar> it = itemQueue.iterator();
-      IntVar var = it.next();
+      IntVar v = it.next();
       it.remove();
-      IntDomain pd = var.dom().previousDomain;
+      IntDomain pd = v.dom().previousDomain;
       if (pd != null) {
         d.addDom(pd);
       } else {
-        d.addDom(var.dom());
+        d.addDom(v.dom());
       }
     }
 
@@ -457,11 +457,11 @@ public class Binpacking extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    if (itemMap.containsKey((IntVar) var)) {
-      itemQueue.add((IntVar) var);
+  public void queueVariable(int level, Var v) {
+    if (itemMap.containsKey((IntVar) v)) {
+      itemQueue.add((IntVar) v);
     } else {
-      binQueue.add((IntVar) var);
+      binQueue.add((IntVar) v);
     }
   }
 

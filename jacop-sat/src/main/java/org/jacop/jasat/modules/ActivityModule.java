@@ -164,16 +164,16 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
       bumpVar(literal);
 
       // get it in the priority queue
-      int var = Math.abs(literal);
-      if (!prioritizedVars.get(var)) {
+      int varIdx = Math.abs(literal);
+      if (!prioritizedVars.get(varIdx)) {
         if (prioritiesIndex + 2 >= priorities.length) {
           int newLength = 2 * priorities.length;
           priorities = Arrays.copyOf(priorities, newLength);
         }
 
-        priorities[prioritiesIndex++] = var;
-        priorities[prioritiesIndex++] = -var;
-        prioritizedVars.set(var);
+        priorities[prioritiesIndex++] = varIdx;
+        priorities[prioritiesIndex++] = -varIdx;
+        prioritizedVars.set(varIdx);
       }
     }
   }
@@ -197,10 +197,10 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     // by decreasing activity order
     for (int i = 0; i < prioritiesIndex; i++) {
       int literal = priorities[i];
-      int var = Math.abs(literal);
+      int varIdx = Math.abs(literal);
 
-      // var with highest activity
-      if (!core.trail.isSet(var)) {
+      // varIdx with highest activity
+      if (!core.trail.isSet(varIdx)) {
         return literal;
       }
     }
@@ -214,13 +214,13 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    *
    * @return the activity of this (variable, polarity)
    */
-  private int getLiteralActivity(int var, boolean polarity) {
-    assert var > 0;
+  private int getLiteralActivity(int varIdx, boolean polarity) {
+    assert varIdx > 0;
 
     if (polarity) {
-      return posActivities[var];
+      return posActivities[varIdx];
     } else {
-      return negActivities[var];
+      return negActivities[varIdx];
     }
   }
 
@@ -230,9 +230,9 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    * @return the new activity of the variable
    */
   private int bumpVar(int literal) {
-    int var = Math.abs(literal);
-    ensureVarSize(var);
-    int curValue = literal > 0 ? posActivities[var] : negActivities[var];
+    int varIdx = Math.abs(literal);
+    ensureVarSize(varIdx);
+    int curValue = literal > 0 ? posActivities[varIdx] : negActivities[varIdx];
 
     // keep rates under some threshold
     if (curValue >= rebaseThreshold) {
@@ -241,30 +241,30 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     // increase rate
     if (literal > 0) {
-      return posActivities[var] = curValue + currentBumpRate;
+      return posActivities[varIdx] = curValue + currentBumpRate;
     } else {
-      return negActivities[var] = curValue + currentBumpRate;
+      return negActivities[varIdx] = curValue + currentBumpRate;
     }
   }
 
   // be sure the variable bump can be accessed safely
-  private void ensureVarSize(int var) {
-    assert var > 0;
+  private void ensureVarSize(int varIdx) {
+    assert varIdx > 0;
     assert posActivities.length == negActivities.length;
 
-    if (var > activitiesIndex) {
-      if (var >= posActivities.length) {
+    if (varIdx > activitiesIndex) {
+      if (varIdx >= posActivities.length) {
         // resize the arrays
-        int newSize = 2 * var;
+        int newSize = 2 * varIdx;
         posActivities = Arrays.copyOf(posActivities, newSize);
         negActivities = Arrays.copyOf(negActivities, newSize);
       }
 
-      // set rate = 0 for elements between maxVar+1 and var
-      Arrays.fill(posActivities, activitiesIndex + 1, var, 0);
-      Arrays.fill(negActivities, activitiesIndex + 1, var, 0);
+      // set rate = 0 for elements between maxVar+1 and varIdx
+      Arrays.fill(posActivities, activitiesIndex + 1, varIdx, 0);
+      Arrays.fill(negActivities, activitiesIndex + 1, varIdx, 0);
 
-      activitiesIndex = var;
+      activitiesIndex = varIdx;
     }
   }
 

@@ -46,21 +46,21 @@ import org.jacop.core.Var;
 public class IntCostVariableHandler implements CostVariableHandler {
 
   @Override
-  public boolean isApplicable(Var var) {
-    return var instanceof IntVar;
+  public boolean isApplicable(Var v) {
+    return v instanceof IntVar;
   }
 
   @Override
-  public double getCostValue(Var var) {
-    if (!(var instanceof IntVar intVar)) {
+  public double getCostValue(Var v) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
     return intVar.dom().min();
   }
 
   @Override
-  public Constraint createCostConstraint(Var var, double costValue) {
-    if (!(var instanceof IntVar intVar)) {
+  public Constraint createCostConstraint(Var v, double costValue) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
     int intCostValue = (int) costValue;
@@ -68,8 +68,8 @@ public class IntCostVariableHandler implements CostVariableHandler {
   }
 
   @Override
-  public void updateCostDomain(Store store, Var var, double costValue) {
-    if (!(var instanceof IntVar intVar)) {
+  public void updateCostDomain(Store store, Var v, double costValue) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
     int intCostValue = (int) costValue;
@@ -77,16 +77,16 @@ public class IntCostVariableHandler implements CostVariableHandler {
   }
 
   @Override
-  public double getMinCostValue(Var var) {
-    if (!(var instanceof IntVar intVar)) {
+  public double getMinCostValue(Var v) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
     return intVar.dom().min();
   }
 
   @Override
-  public double getMaxCostValue(Var var) {
-    if (!(var instanceof IntVar intVar)) {
+  public double getMaxCostValue(Var v) {
+    if (!(v instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
     return intVar.dom().max();

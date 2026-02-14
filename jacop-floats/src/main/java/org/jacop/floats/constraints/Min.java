@@ -90,7 +90,7 @@ public class Min extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    FloatVar var;
+    FloatVar v;
     FloatDomain vDom;
 
     // @todo keep one variable with the smallest value as watched variable
@@ -109,11 +109,11 @@ public class Min extends Constraint implements SatisfiedPresent {
 
       double minMin = min.min();
       for (FloatVar floatVar : list) {
-        var = floatVar;
+        v = floatVar;
 
-        var.domain.inMin(store.level, var, minMin);
+        v.domain.inMin(store.level, v, minMin);
 
-        vDom = var.dom();
+        vDom = v.dom();
         double VdomMin = vDom.min();
         double VdomMax = vDom.max();
         minValue = Math.min(minValue, VdomMin);
@@ -126,9 +126,9 @@ public class Min extends Constraint implements SatisfiedPresent {
       int n = 0;
       int pos = -1;
       for (int i = 0; i < list.length; i++) {
-        var = list[i];
+        v = list[i];
 
-        if (maxValue < var.min()) {
+        if (maxValue < v.min()) {
           n++;
         } else {
           pos = i;
