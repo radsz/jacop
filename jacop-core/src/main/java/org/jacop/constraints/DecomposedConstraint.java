@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -68,7 +69,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    */
   public static Set<Var> getDubletonsSkipSingletons(Var[] parameters) {
     List<Var> notGroundedParametersList =
-        Arrays.stream(parameters).filter(i -> !i.singleton()).collect(Collectors.toList());
+        new ArrayList<>(Arrays.stream(parameters).filter(i -> !i.singleton()).toList());
     Set<Var> notGroundedParametersSet = new HashSet<>(notGroundedParametersList);
     if (notGroundedParametersSet.size() != notGroundedParametersList.size()) {
       notGroundedParametersSet.forEach(notGroundedParametersList::remove);

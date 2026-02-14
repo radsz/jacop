@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -482,8 +482,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // pureUbs ubs usually equals to ubs \ lbs and is used upon calculating
     // the lbV and ubV hashtables
     IntervalDomain pureUbs = new IntervalDomain();
-    Hashtable<Integer, Integer> lbV = new Hashtable<>();
-    Hashtable<Integer, Integer> ubV = new Hashtable<>();
+    HashMap<Integer, Integer> lbV = new HashMap<>();
+    HashMap<Integer, Integer> ubV = new HashMap<>();
 
     // Take the lbs domain computed on the previous level
     // it contain the Y values that will be or must be present in S domain

@@ -853,7 +853,7 @@ public class Alldistinct extends Constraint
         log.debug("Non Free Values{}", nonFreeValues);
       }
 
-      Set<IntVar> visitedVariables = new HashSet<>(matching.size());
+      Set<IntVar> visitedVariables = HashSet.newHashSet(matching.size());
 
       // Very important since above it is also defined
       currentlyUsedPotentialFreeValue = 0;
@@ -1057,7 +1057,7 @@ public class Alldistinct extends Constraint
 
         // Points at edge which was not yet used by Karp-Hopcroft
         // algorithm
-        notYetUsedVariablePointer = new HashMap<>(sizePotentialFreeValues);
+        notYetUsedVariablePointer = HashMap.newHashMap(sizePotentialFreeValues);
 
         while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 

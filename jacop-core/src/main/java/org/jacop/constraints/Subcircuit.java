@@ -32,9 +32,10 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -55,7 +56,7 @@ public class Subcircuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final int[] val;
-  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final Map<Var, Integer> valueIndex = new HashMap<>();
   final SophisticatedLengauerTarjan graphDominance;
   final int[] stack; // stack for strongly connected compoents algorithm
   boolean firstConsistencyCheck = true;

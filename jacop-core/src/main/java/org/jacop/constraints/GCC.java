@@ -701,7 +701,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           // it was checked that the min == i so max cannot be under min. Well, yes there are cases
           // where it's useful.
         }
-        //       j++;
       }
     }
 
@@ -760,22 +759,18 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           throw Store.failException;
         }
         top = pSecond.remove().index;
-        // change, check.
         match2[top] = i;
 
         match2xOrder[match2xOrderIndex] = top;
         match2xOrderIndex++;
         nbOfMatchPerY[i]++;
-        //       j++;
       }
       while (!pSecond.isEmpty() && pSecond.element().max() < i + 1) {
         top = pSecond.remove().index;
-        // change, check.
         match2[top] = i;
         match2xOrder[match2xOrderIndex] = top;
         match2xOrderIndex++;
         nbOfMatchPerY[i]++;
-        //       j++;
       }
     }
 

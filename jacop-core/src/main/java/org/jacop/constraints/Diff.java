@@ -567,22 +567,13 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
           if (t.origins[i] <= s && s - rLengthiMin < tCompletion) {
             consideredRect.add(t);
-            // rectSize += t.lengths[j];
           }
         }
 
-        if (!consideredRect.isEmpty()
-        // && rSize < (rectSize + (rLengthjMin - 1) *
-        // consideredRect.size())
-        ) {
+        if (!consideredRect.isEmpty()) {
 
           IntDomain rIdom = r.origin[i].dom();
           if (s >= rIdom.min() && s <= rIdom.max()) {
-            // "+i+
-            // " starting at time interval "+ s + ".."
-            // +(int)(s+r.length(i).min()-1)+
-            // "\nCosideredRect =" + consideredRect);
-
             Pair exclude = minForbiddenInterval(s, i, r, consideredRect);
 
             if (exclude.max != -1) {

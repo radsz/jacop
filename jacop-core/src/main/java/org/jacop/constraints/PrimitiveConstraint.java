@@ -30,7 +30,8 @@
 
 package org.jacop.constraints;
 
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
 import org.jacop.core.Domain;
@@ -50,7 +51,7 @@ public abstract class PrimitiveConstraint extends Constraint
     implements StoreAware, SatisfiedPresent {
 
   /** It specifies the events which must occur for notConsistency() method being executed. */
-  protected Hashtable<Var, Integer> notConsistencyPruningEvents;
+  protected Map<Var, Integer> notConsistencyPruningEvents;
 
   /**
    * It retrieves the pruning event which causes reevaluation of the constraint notConsistency()
@@ -191,7 +192,7 @@ public abstract class PrimitiveConstraint extends Constraint
   public void setNotConsistencyPruningEvent(Var v, int pruningEvent) {
 
     if (notConsistencyPruningEvents == null) {
-      notConsistencyPruningEvents = new Hashtable<>();
+      notConsistencyPruningEvents = new HashMap<>();
     }
 
     notConsistencyPruningEvents.put(v, pruningEvent);

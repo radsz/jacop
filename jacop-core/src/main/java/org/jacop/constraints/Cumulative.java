@@ -485,7 +485,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         final int estS = startOfS;
         boolean after = (long) (lLct - startOfS) * limitMax - area1 >= l.areaMin();
 
-        // larea = l.dur.min()*l.res.min();
         long larea = minOverlap(l, startOfS, completionOfS);
         boolean between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 
@@ -670,7 +669,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         final int lctS = completionOfS;
         boolean before = (long) (completionOfS - lEst) * limitMax >= area1 + l.areaMin();
 
-        // larea = l.dur.min()*l.res.min();
         long larea = minOverlap(l, startOfS, completionOfS);
         boolean between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 

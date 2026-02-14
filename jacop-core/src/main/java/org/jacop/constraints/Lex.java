@@ -117,7 +117,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    if (x.length == 2) { // && x[0].length > 100)
+    if (x.length == 2) {
       if (lexLt) {
         return decomposeLt(store);
       } else {
@@ -178,7 +178,6 @@ public class Lex extends DecomposedConstraint<Constraint> {
         state[i][j][0] = new FsmState();
         state[i][j][1] = new FsmState();
         numberVar += 2;
-        //       numberStates += 2;
 
         if (i < x.length - 2 && j == 0) {
           addState[i] = new FsmState[2 * (sizeToCompare - j) - 1];
@@ -189,7 +188,6 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    //   numberStates++;
 
     IntVar[] vars = new IntVar[numberVar];
     Fsm g = new Fsm();
@@ -323,10 +321,8 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
         state[i][j] = new FsmState[2];
         state[i][j][0] = new FsmState();
-        //       numberStates++;
         if (j < sizeToCompare - 1) {
           state[i][j][1] = new FsmState();
-          //         numberStates++;
         }
 
         if (i < x.length - 2 && j == 0) {
@@ -338,7 +334,6 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    //   numberStates++;
 
     IntVar[] vars = new IntVar[numberVar];
     Fsm g = new Fsm();

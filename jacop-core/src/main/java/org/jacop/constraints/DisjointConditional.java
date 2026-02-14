@@ -578,13 +578,8 @@ public class DisjointConditional extends Diff {
       }
 
       if (availArea < area) {
-        // level "+currentStore.level);
         throw Store.failException;
-      } else
-      // check whether there is enough room for
-      // all minimal rectangles
-      if (rectNumber < (totalNumberOfRectangles + 1)) {
-        // "+currentStore.level);
+      } else if (rectNumber < (totalNumberOfRectangles + 1)) {
         throw Store.failException;
       }
     }
@@ -700,11 +695,6 @@ public class DisjointConditional extends Diff {
           int m = 0;
           for (; m < rOriginDom.noIntervals(); m++) {
             if (s >= rOriginDom.leftElement(m) && s <= rOriginDom.rightElement(m)) {
-              // dimension "+i+
-              // " starting at time interval "+ s + ".."
-              // +(int)(s+r.length(i).min()-1)+
-              // "\nCosideredRect =" + consideredRect);
-
               exclude = minForbiddenInterval(s, i, r, consideredRect, minI);
 
               if (exclude.max() != -1) {
@@ -758,11 +748,7 @@ public class DisjointConditional extends Diff {
           barrier.addToProfile(hinder.origins[j], hinder.origins[j] + hinder.lengths[j], 1);
           if (doesNotFit(j, r, barrier)) {
             lengthOk = false;
-            newMaxLength =
-                hinder.origins[i]
-                    // ((Interval)r.origin[i].dom().lastElement()).Min;
-                    - // ((Interval)r.origin[i].dom().lastElement()).Min;
-                    r.origin[i].min();
+            newMaxLength = hinder.origins[i] - r.origin[i].min();
           }
           n++;
         }
@@ -807,12 +793,9 @@ public class DisjointConditional extends Diff {
     for (int l = 0; l < rectangles.length; l++) {
       r = rectangles[l];
 
-      boolean minLengthLt0 = false; // settled=true
+      boolean minLengthLt0 = false;
       for (int i = 0; i < r.dim(); i++) {
-        minLengthLt0 = minLengthLt0 || (r.length[i].min() < 0); // (
-        // rLength.min()
-        // < 0
-        // );
+        minLengthLt0 = minLengthLt0 || (r.length[i].min() < 0);
       }
 
       if (!minLengthLt0 // Check for rectangle r which has
@@ -871,7 +854,6 @@ public class DisjointConditional extends Diff {
           ProfileItem p = barrier.get(k);
           int hinderStart = p.min;
           int hinderStop = p.max;
-          // "+hinderStart+".."+hinderStop);
           if (hinderStart - currentJposition >= durJ) {
             excludedState = false;
           }

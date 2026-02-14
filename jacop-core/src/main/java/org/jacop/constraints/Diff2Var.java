@@ -95,7 +95,6 @@ class Diff2Var implements MutableVar {
 
   public void update(MutableVarValue val) {
     if (value.stamp == store.level) {
-      // New " + val);
       value.setValue(((Diff2VarValue) val).Rects);
     } else if (value.stamp < store.level) {
 

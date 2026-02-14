@@ -379,8 +379,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
       nexts[nexts.length - 1] = -1;
       last = nexts.length - 1;
 
-      //   domainSizeAfterConsistency = new int[list.length];
-
       for (int j = 0; j < views.length; j++) {
 
         list[j].domain.in(store.level, list[j], valuesInFocus[j]);

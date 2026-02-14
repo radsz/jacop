@@ -363,7 +363,7 @@ public class LexOrder extends Constraint
 
       if (!lexLt) {
         if (i == n) {
-          b = n + 1; // IntDomain.MAX_INT;
+          b = n + 1;
         } else if (b == -1) {
           b = i;
         }

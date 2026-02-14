@@ -37,7 +37,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,7 +83,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   protected Set<PrimitiveConstraint> constraintScope;
 
   /** It specifies the event which must occur in order for the consistency function to be called. */
-  protected Hashtable<Var, Integer> consistencyPruningEvents;
+  protected Map<Var, Integer> consistencyPruningEvents;
 
   /**
    * It specifies if the constraint consistency function can be prematurely terminated through other
@@ -491,7 +490,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public void setConsistencyPruningEvent(final Var v, final int pruningEvent) {
 
     if (consistencyPruningEvents == null) {
-      consistencyPruningEvents = new Hashtable<>();
+      consistencyPruningEvents = new HashMap<>();
     }
     consistencyPruningEvents.put(v, pruningEvent);
   }

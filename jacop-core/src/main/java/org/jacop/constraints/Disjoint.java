@@ -213,6 +213,7 @@ public class Disjoint extends Diff {
    *
    * @param store the constraint store in which the constraint is imposed.
    */
+  @Override
   public void impose(Store store) {
 
     super.impose(store);

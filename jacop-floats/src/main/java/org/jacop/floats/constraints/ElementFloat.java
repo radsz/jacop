@@ -32,7 +32,6 @@ package org.jacop.floats.constraints;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,7 +85,7 @@ public class ElementFloat extends Constraint
    * It specifies for each value what are the possible values of the index variable (it takes into
    * account indexOffset.
    */
-  final Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<>();
+  final Map<Double, IntDomain> mappingValuesToIndex = new HashMap<>();
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

@@ -31,9 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
@@ -54,7 +55,7 @@ public class Circuit extends Alldiff implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final int[] val;
-  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final Map<Var, Integer> valueIndex = new HashMap<>();
   int chainLength;
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
