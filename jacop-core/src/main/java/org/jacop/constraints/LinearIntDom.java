@@ -133,7 +133,7 @@ public class LinearIntDom extends LinearInt {
 
   @Override
   public void notConsistency(Store store) {
-    propagate(negRel[relationType]);
+    propagate(NEG_REL[relationType]);
   }
 
   /**
@@ -144,7 +144,7 @@ public class LinearIntDom extends LinearInt {
   public void propagate(int rel) {
 
     switch (rel) {
-      case eq:
+      case EQ:
         if (domainSize() < limitDomainPruning) {
           computeInit();
           pruneEq(); // domain consistency
@@ -155,7 +155,7 @@ public class LinearIntDom extends LinearInt {
 
         break;
 
-      case ne:
+      case NE:
         if (domainSize() < limitDomainPruning) {
           computeInit();
           pruneNeq();

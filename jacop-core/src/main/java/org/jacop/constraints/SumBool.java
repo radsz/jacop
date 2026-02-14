@@ -103,7 +103,7 @@ public class SumBool extends AbstractSum {
 
   @Override
   public void notConsistency(Store store) {
-    prune(negRel[relationType]);
+    prune(NEG_REL[relationType]);
   }
 
   private void prune(byte rel) {
@@ -118,7 +118,7 @@ public class SumBool extends AbstractSum {
     }
 
     switch (rel) {
-      case eq:
+      case EQ:
         sum.domain.in(store.level, sum, min, max);
 
         if (sum.singleton() && min != max) {
@@ -140,7 +140,7 @@ public class SumBool extends AbstractSum {
           }
         }
         break;
-      case le:
+      case LE:
         sum.domain.inMin(store.level, sum, min);
 
         if (!reified && max <= sum.min()) {
@@ -156,7 +156,7 @@ public class SumBool extends AbstractSum {
           }
         }
         break;
-      case lt:
+      case LT:
         sum.domain.inMin(store.level, sum, min + 1);
 
         if (!reified && max < sum.min()) {
@@ -172,7 +172,7 @@ public class SumBool extends AbstractSum {
           }
         }
         break;
-      case ne:
+      case NE:
         if (min == max) {
           sum.domain.inComplement(store.level, sum, min);
         }
@@ -187,7 +187,7 @@ public class SumBool extends AbstractSum {
           }
         }
         break;
-      case gt:
+      case GT:
         sum.domain.inMax(store.level, sum, max - 1);
 
         if (!reified && min > sum.max()) {
@@ -203,7 +203,7 @@ public class SumBool extends AbstractSum {
           }
         }
         break;
-      case ge:
+      case GE:
         sum.domain.inMax(store.level, sum, max);
 
         if (!reified && min >= sum.max()) {
@@ -266,7 +266,7 @@ public class SumBool extends AbstractSum {
   @Override
   public boolean notSatisfied() {
 
-    return entailed(negRel[relationType]);
+    return entailed(NEG_REL[relationType]);
   }
 
   private boolean entailed(byte rel) {
@@ -281,13 +281,13 @@ public class SumBool extends AbstractSum {
     }
 
     return switch (rel) {
-      case eq -> sum.singleton(min) && min == max;
-      case lt -> max < sum.min();
-      case le -> max <= sum.min();
-      case ne ->
+      case EQ -> sum.singleton(min) && min == max;
+      case LT -> max < sum.min();
+      case LE -> max <= sum.min();
+      case NE ->
           sum.min() > max || sum.max() < min; // sum.singleton() && min == max && sum.min() != min;
-      case gt -> min > sum.max();
-      case ge -> min >= sum.max();
+      case GT -> min > sum.max();
+      case GE -> min >= sum.max();
       default -> false;
     };
   }

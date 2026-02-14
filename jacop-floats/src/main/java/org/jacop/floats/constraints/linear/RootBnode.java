@@ -86,32 +86,32 @@ public class RootBnode extends Bnode {
     double max = d.max();
 
     switch (rel) {
-      case Linear.eq:
+      case Linear.EQ:
         if (min > val || max < val) {
           throw Store.failException;
         }
         break;
-      case Linear.lt:
+      case Linear.LT:
         if (min >= val) {
           throw Store.failException;
         }
         break;
-      case Linear.le:
+      case Linear.LE:
         if (min > val) {
           throw Store.failException;
         }
         break;
-      case Linear.gt:
+      case Linear.GT:
         if (max <= val) {
           throw Store.failException;
         }
         break;
-      case Linear.ge:
+      case Linear.GE:
         if (max < val) {
           throw Store.failException;
         }
         break;
-      case Linear.ne:
+      case Linear.NE:
         if (min == max && min == val) {
           throw Store.failException;
         }
@@ -167,17 +167,17 @@ public class RootBnode extends Bnode {
     double max = max();
 
     switch (rel) {
-      case Linear.eq: // =============================================
+      case Linear.EQ: // =============================================
         min = val;
         max = val;
         break;
-      case Linear.lt: // =============================================
+      case Linear.LT: // =============================================
         max = FloatDomain.previous(val);
         break;
-      case Linear.le: // =============================================
+      case Linear.LE: // =============================================
         max = val;
         break;
-      case Linear.ne: // =============================================
+      case Linear.NE: // =============================================
         if (val >= min && val <= max) {
           if (min == val) {
             if (FloatDomain.next(min) <= max) {
@@ -196,10 +196,10 @@ public class RootBnode extends Bnode {
           }
         }
         break;
-      case Linear.gt: // =============================================
+      case Linear.GT: // =============================================
         min = FloatDomain.next(val);
         break;
-      case Linear.ge: // =============================================
+      case Linear.GE: // =============================================
         min = val;
         break;
       default:

@@ -62,22 +62,22 @@ public class LinearInt extends PrimitiveConstraint {
   /*
    * Defines relations
    */
-  static final byte eq = 0;
-  static final byte le = 1;
-  static final byte lt = 2;
-  static final byte ne = 3;
-  static final byte gt = 4;
-  static final byte ge = 5;
+  static final byte EQ = 0;
+  static final byte LE = 1;
+  static final byte LT = 2;
+  static final byte NE = 3;
+  static final byte GT = 4;
+  static final byte GE = 5;
   /*
    * Defines negated relations
    */
-  static final byte[] negRel = {
-    ne, // eq=0,
-    gt, // le=1,
-    ge, // lt=2,
-    eq, // ne=3,
-    le, // gt=4,
-    lt // ge=5;
+  static final byte[] NEG_REL = {
+    NE, // EQ=0,
+    GT, // LE=1,
+    GE, // LT=2,
+    EQ, // NE=3,
+    LE, // GT=4,
+    LT // GE=5;
   };
   static final AtomicInteger idNumber = new AtomicInteger(0);
   public byte relationType;
@@ -270,7 +270,7 @@ public class LinearInt extends PrimitiveConstraint {
 
   @Override
   public void notConsistency(Store store) {
-    propagate(negRel[relationType]);
+    propagate(NEG_REL[relationType]);
   }
 
   /**
@@ -287,13 +287,13 @@ public class LinearInt extends PrimitiveConstraint {
       store.propagationHasOccurred = false;
 
       switch (rel) {
-        case eq:
+        case EQ:
           pruneLtEq(b);
           pruneGtEq(b);
 
           break;
 
-        case le:
+        case LE:
           pruneLtEq(b);
 
           if (!reified && sumMax <= b) {
@@ -301,28 +301,28 @@ public class LinearInt extends PrimitiveConstraint {
           }
           break;
 
-        case lt:
+        case LT:
           pruneLtEq(b - 1L);
 
           if (!reified && sumMax < b) {
             removeConstraint();
           }
           break;
-        case ne:
+        case NE:
           pruneNeq();
 
           if (!reified && (sumMin > b || sumMax < b)) {
             removeConstraint();
           }
           break;
-        case gt:
+        case GT:
           pruneGtEq(b + 1L);
 
           if (!reified && sumMin > b) {
             removeConstraint();
           }
           break;
-        case ge:
+        case GE:
           pruneGtEq(b);
 
           if (!reified && sumMin >= b) {
@@ -628,18 +628,18 @@ public class LinearInt extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-    return entailed(negRel[relationType]);
+    return entailed(NEG_REL[relationType]);
   }
 
   private boolean entailed(int rel) {
 
     return switch (rel) {
-      case eq -> satisfiedEq();
-      case le -> satisfiedLtEq(b);
-      case lt -> satisfiedLtEq(b - 1);
-      case ne -> satisfiedNeq();
-      case gt -> satisfiedGtEq(b + 1);
-      case ge -> satisfiedGtEq(b);
+      case EQ -> satisfiedEq();
+      case LE -> satisfiedLtEq(b);
+      case LT -> satisfiedLtEq(b - 1);
+      case NE -> satisfiedNeq();
+      case GT -> satisfiedGtEq(b + 1);
+      case GE -> satisfiedGtEq(b);
       default -> false;
     };
   }
@@ -654,26 +654,26 @@ public class LinearInt extends PrimitiveConstraint {
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
-        return eq;
+        return EQ;
       }
       case "<" -> {
-        return lt;
+        return LT;
       }
       case "<=", "=<" -> {
-        return le;
+        return LE;
       }
       case "!=" -> {
-        return ne;
+        return NE;
       }
       case ">" -> {
-        return gt;
+        return GT;
       }
       case ">=", "=>" -> {
-        return ge;
+        return GE;
       }
       case null, default -> {
         log.error("Wrong relation symbol in LinearInt constraint {}; assumed ==", r);
-        return eq;
+        return EQ;
       }
     }
   }
@@ -686,12 +686,12 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public String rel2String() {
     return switch (relationType) {
-      case eq -> "==";
-      case lt -> "<";
-      case le -> "<=";
-      case ne -> "!=";
-      case gt -> ">";
-      case ge -> ">=";
+      case EQ -> "==";
+      case LT -> "<";
+      case LE -> "<=";
+      case NE -> "!=";
+      case GT -> ">";
+      case GE -> ">=";
       default -> "?";
     };
   }

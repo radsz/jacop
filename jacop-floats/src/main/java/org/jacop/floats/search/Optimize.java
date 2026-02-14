@@ -199,7 +199,7 @@ public class Optimize<T extends Var> {
   /** Listener that captures the result of optimization search. */
   public class ResultListener extends SimpleSolutionListener<T> {
 
-    final Var[] vars;
+    final Var[] variables;
 
     /**
      * Creates a result listener that tracks solutions for the given variables.
@@ -207,7 +207,7 @@ public class Optimize<T extends Var> {
      * @param v the variables to track in solutions.
      */
     public ResultListener(Var[] v) {
-      vars = v;
+      variables = v;
     }
 
     /** {@inheritDoc} */
@@ -217,7 +217,7 @@ public class Optimize<T extends Var> {
 
       costValue = cost.max();
 
-      IO.println(Arrays.asList(vars));
+      IO.println(Arrays.asList(variables));
       IO.println("% Found solution with cost " + cost);
 
       lastCost = new FloatInterval(cost.min(), cost.max());

@@ -112,7 +112,7 @@ public class SumInt extends AbstractSum {
 
   @Override
   public void notConsistency(Store store) {
-    propagate(negRel[relationType]);
+    propagate(NEG_REL[relationType]);
   }
 
   /**
@@ -129,13 +129,13 @@ public class SumInt extends AbstractSum {
       store.propagationHasOccurred = false;
 
       switch (rel) {
-        case eq:
+        case EQ:
           pruneLtEq(0L);
           pruneGtEq(0L);
 
           break;
 
-        case le:
+        case LE:
           pruneLtEq(0L);
 
           if (!reified && sumXmax <= sum.min()) {
@@ -143,28 +143,28 @@ public class SumInt extends AbstractSum {
           }
           break;
 
-        case lt:
+        case LT:
           pruneLtEq(1L);
 
           if (!reified && sumXmax < sum.min()) {
             removeConstraint();
           }
           break;
-        case ne:
+        case NE:
           pruneNeq();
 
           if (!reified && (sumXmin > sum.max() || sumXmax < sum.min())) {
             removeConstraint();
           }
           break;
-        case gt:
+        case GT:
           pruneGtEq(1L);
 
           if (!reified && sumXmin > sum.max()) {
             removeConstraint();
           }
           break;
-        case ge:
+        case GE:
           pruneGtEq(0L);
 
           if (!reified && sumXmin >= sum.max()) {
@@ -407,18 +407,18 @@ public class SumInt extends AbstractSum {
   @Override
   public boolean notSatisfied() {
 
-    return entailed(negRel[relationType]);
+    return entailed(NEG_REL[relationType]);
   }
 
   private boolean entailed(int rel) {
 
     return switch (rel) {
-      case eq -> satisfiedEq();
-      case le -> satisfiedLtEq(0);
-      case lt -> satisfiedLtEq(1);
-      case ne -> satisfiedNeq();
-      case gt -> satisfiedGtEq(1);
-      case ge -> satisfiedGtEq(0);
+      case EQ -> satisfiedEq();
+      case LE -> satisfiedLtEq(0);
+      case LT -> satisfiedLtEq(1);
+      case NE -> satisfiedNeq();
+      case GT -> satisfiedGtEq(1);
+      case GE -> satisfiedGtEq(0);
       default -> false;
     };
   }

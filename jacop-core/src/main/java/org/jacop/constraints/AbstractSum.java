@@ -45,22 +45,22 @@ import org.jacop.core.Store;
 public abstract class AbstractSum extends PrimitiveConstraint {
 
   /** Defines relation constants. */
-  static final byte eq = 0;
+  static final byte EQ = 0;
 
-  static final byte le = 1;
-  static final byte lt = 2;
-  static final byte ne = 3;
-  static final byte gt = 4;
-  static final byte ge = 5;
+  static final byte LE = 1;
+  static final byte LT = 2;
+  static final byte NE = 3;
+  static final byte GT = 4;
+  static final byte GE = 5;
 
   /** Defines negated relations. */
-  static final byte[] negRel = {
-    ne, // eq=0,
-    gt, // le=1,
-    ge, // lt=2,
-    eq, // ne=3,
-    le, // gt=4,
-    lt // ge=5;
+  static final byte[] NEG_REL = {
+    NE, // EQ=0,
+    GT, // LE=1,
+    GE, // LT=2,
+    EQ, // NE=3,
+    LE, // GT=4,
+    LT // GE=5;
   };
 
   /** It specifies what relation is used by this constraint. */
@@ -106,15 +106,15 @@ public abstract class AbstractSum extends PrimitiveConstraint {
    */
   protected static byte parseRelation(String r) {
     return switch (r) {
-      case "==", "=" -> eq;
-      case "<" -> lt;
-      case "<=", "=<" -> le;
-      case "!=" -> ne;
-      case ">" -> gt;
-      case ">=", "=>" -> ge;
+      case "==", "=" -> EQ;
+      case "<" -> LT;
+      case "<=", "=<" -> LE;
+      case "!=" -> NE;
+      case ">" -> GT;
+      case ">=", "=>" -> GE;
       default -> {
         log.error("Wrong relation symbol in Sum constraint {}; assumed ==", r);
-        yield eq;
+        yield EQ;
       }
     };
   }
@@ -136,12 +136,12 @@ public abstract class AbstractSum extends PrimitiveConstraint {
    */
   public String rel2String() {
     return switch (relationType) {
-      case eq -> "==";
-      case lt -> "<";
-      case le -> "<=";
-      case ne -> "!=";
-      case gt -> ">";
-      case ge -> ">=";
+      case EQ -> "==";
+      case LT -> "<";
+      case LE -> "<=";
+      case NE -> "!=";
+      case GT -> ">";
+      case GE -> ">=";
       default -> "?";
     };
   }

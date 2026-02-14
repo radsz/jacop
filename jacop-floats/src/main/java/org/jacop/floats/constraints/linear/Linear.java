@@ -64,22 +64,22 @@ import org.jacop.floats.core.FloatVar;
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   /** Defines relations. */
-  public static final byte eq = 0;
+  public static final byte EQ = 0;
 
-  public static final byte lt = 1;
-  public static final byte le = 2;
-  public static final byte ne = 3;
-  public static final byte gt = 4;
-  public static final byte ge = 5;
+  public static final byte LT = 1;
+  public static final byte LE = 2;
+  public static final byte NE = 3;
+  public static final byte GT = 4;
+  public static final byte GE = 5;
 
   /** Defines negated relations. */
-  static final byte[] negRel = {
-    ne, // eq=0,
-    ge, // lt=1,
-    gt, // le=2,
-    eq, // ne=3,
-    le, // gt=4,
-    lt // ge=5;
+  static final byte[] NEG_REL = {
+    NE, // EQ=0,
+    GE, // LT=1,
+    GT, // LE=2,
+    EQ, // NE=3,
+    LE, // GT=4,
+    LT // GE=5;
   };
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -314,7 +314,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     pruneRelation();
 
-    if (relationType != eq && entailed(relationType)) {
+    if (relationType != EQ && entailed(relationType)) {
       removeConstraint();
     }
   }
@@ -323,11 +323,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public void notConsistency(Store store) {
 
     // compute for negated original relation
-    linearTree.root.rel = negRel[relationType];
+    linearTree.root.rel = NEG_REL[relationType];
 
     pruneRelation();
 
-    if (negRel[relationType] != eq && entailed(negRel[relationType])) {
+    if (NEG_REL[relationType] != EQ && entailed(NEG_REL[relationType])) {
       removeConstraint();
     }
   }
@@ -436,7 +436,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       }
     }
 
-    return entailed(negRel[relationType]);
+    return entailed(NEG_REL[relationType]);
   }
 
   private boolean entailed(byte rel) {
@@ -444,34 +444,34 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     BoundsVarValue b = (BoundsVarValue) linearTree.root.bound.value();
 
     switch (rel) {
-      case eq:
+      case EQ:
         FloatInterval rootInterval = new FloatInterval(b.lb, b.ub);
 
         if (rootInterval.singleton() && b.lb <= sum && sum <= b.ub) {
           return true;
         }
         break;
-      case lt:
+      case LT:
         if (b.ub < sum) {
           return true;
         }
         break;
-      case le:
+      case LE:
         if (b.ub <= sum) {
           return true;
         }
         break;
-      case ne:
+      case NE:
         if (b.lb > sum || b.ub < sum) {
           return true;
         }
         break;
-      case gt:
+      case GT:
         if (b.lb > sum) {
           return true;
         }
         break;
-      case ge:
+      case GE:
         if (b.lb >= sum) {
           return true;
         }
@@ -518,26 +518,26 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
-        return eq;
+        return EQ;
       }
       case "<" -> {
-        return lt;
+        return LT;
       }
       case "<=", "=<" -> {
-        return le;
+        return LE;
       }
       case "!=" -> {
-        return ne;
+        return NE;
       }
       case ">" -> {
-        return gt;
+        return GT;
       }
       case ">=", "=>" -> {
-        return ge;
+        return GE;
       }
       default -> {
         System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
-        return eq;
+        return EQ;
       }
     }
   }
@@ -549,12 +549,12 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
    */
   public String rel2String() {
     return switch (relationType) {
-      case eq -> "==";
-      case lt -> "<";
-      case le -> "<=";
-      case ne -> "!=";
-      case gt -> ">";
-      case ge -> ">=";
+      case EQ -> "==";
+      case LT -> "<";
+      case LE -> "<=";
+      case NE -> "!=";
+      case GT -> ">";
+      case GE -> ">=";
       default -> "?";
     };
   }
