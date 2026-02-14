@@ -94,11 +94,16 @@ public class SeqPrecedeChain extends Constraint {
   @Override
   public void consistency(Store store) {
 
-    int up = 0;
-    int low = 0;
     Arrays.fill(first, 0);
     Arrays.fill(last, n + 1);
 
+    int low = forwardPass(store);
+    backwardPass(store, low);
+  }
+
+  private int forwardPass(Store store) {
+    int up = 0;
+    int low = 0;
     for (int i = 1; i < n + 1; i++) {
       IntVar xi = x[i - 1];
 
@@ -114,7 +119,10 @@ public class SeqPrecedeChain extends Constraint {
         low = xi.min();
       }
     }
+    return low;
+  }
 
+  private void backwardPass(Store store, int low) {
     for (int i = n; i >= 1; i--) {
       IntVar xi = x[i - 1];
 

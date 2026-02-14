@@ -72,8 +72,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   /** It turns out printing debugging information. */
   public static final boolean DEBUG_ALL = false;
 
-  public static final boolean debugAll = DEBUG_ALL;
-
   /** Number of Among constraints created. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -189,7 +187,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       ub0Ts.update(ub0);
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR X -------------");
       log.debug("--LEVEL : {}", store.level);
       log.debug("{}", this);
@@ -207,7 +205,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     n.domain.in(store.level, n, minN, maxN);
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("-- K =  {}", lbSdom);
     }
 
@@ -223,7 +221,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           x = listOfX[i];
 
           x.domain.in(store.level, x, x.domain.subtract(lbSdom));
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("-- {} in {}", x.id(), x.domain);
           }
         }
@@ -233,7 +231,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         for (int i = lb0; i < ub0; i++) {
           x = listOfX[i];
           x.domain.in(store.level, x, x.domain.intersect(lbSdom));
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("-- {} in {}", x.id(), x.domain);
           }
         }
@@ -264,7 +262,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("-------------Consistency when LB0 == UB0 -------------");
       log.debug("--LEVEL : {}", store.level);
       IntDomain lbSdom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
@@ -276,14 +274,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (potentialCover < futureDom.getSize()) {
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Fail beacuase there are not enough of y to cover x");
       }
       throw Store.failException;
     }
 
     if (potentialCover == futureDom.getSize()) {
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("if the number of y is just enough to cover future domain");
         log.debug("than we can decrease their domain to future dom");
         log.debug("and detauch those who are not intersecting the future dom");
@@ -331,7 +329,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       U = new IntervalDomain();
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR Y -------------");
       log.debug("--LEVEL : {}", store.level);
       log.debug("{}", this);
@@ -402,7 +400,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("--number of x already covered=       {}", countCoverMin);
       log.debug("--number of y that already cover x = {}", alreadyCover);
       log.debug("--number of no role y=               {}", noRoleY);
@@ -412,14 +410,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (countCoverMin > n.max()) {
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("........Fail because the number of covered X is bigger than N........");
       }
       throw Store.failException;
     }
 
     if (noRoleY == (listOfY.length - alreadyCover)) {
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("........N must be equal to {}", countCoverMin);
       }
       n.domain.inValue(store.level, n, countCoverMin);
@@ -429,7 +427,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if ((countCoverMin == n.min()) && n.singleton()) {
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("--K \\ U = {}", K);
       }
 
@@ -521,7 +519,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     while (!variableQueueY.isEmpty() || firstTimeWhileLoop) {
 
       // ----------------------------------------------------------
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("LEVEL : {}", store.level);
         log.debug("{}", this);
       }
@@ -533,7 +531,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         for (Integer yi : this.variableQueueY) {
           y = this.listOfY[yi];
           if (y.singleton()) {
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("New y {} was grouded to {}", y.id, y.value());
             }
             // Increase the lbSdom with grounded y
@@ -581,7 +579,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         // If there appeared the Y values that have a risk to stay ungrounded
         // we will count their cardinality and FAIL if its 0, ground some Y if it is 1
         if (mustBeCoveredNow.getSize() > 0) {
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("It appears that we must cover such values : {}", mustBeCoveredNow);
           }
           int cardinalityV;
@@ -611,13 +609,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 }
               }
               if (cardinalityV == 0) {
-                if (debugAll) {
+                if (DEBUG_ALL) {
                   log.debug("Cardinality of {} is 0 => FAIL ", v);
                 }
                 throw Store.failException;
               } else if (cardinalityV == 1) {
                 y_last = this.listOfY[last];
-                if (debugAll) {
+                if (DEBUG_ALL) {
                   log.debug("Cardinality of {} is 1 => Groud {}", v, y_last.id);
                 }
 
@@ -635,19 +633,19 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       mustBeCoveredNow = new IntervalDomain();
       futureLbS.update(new MutableDomainValue(futureDom));
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Future domain is {}", futureDom);
       }
 
       if (this.listOfY.length - this.yGrounded.value() < futureDom.getSize()) {
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug(
               "Fail because the number of not grounded y is not enough to cover future lbS domain");
         }
         throw Store.failException;
       }
       if (this.yGrounded.value() == this.listOfY.length) {
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug(
               "All Y were grounded, thus we can pass to simple ve rsion of Among contrians where GAC can be reached");
         }
@@ -660,7 +658,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
 
       // ----------------------------------------------------------
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("lbS = {}", lbSdom);
         log.debug("ubS = {}", ubSdom);
         log.debug("--------");
@@ -714,7 +712,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         return;
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("--------");
         log.debug("- lb0  = {}", lb0);
         log.debug("- glb0 = {}", glb0);
@@ -800,10 +798,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 ubTmp++;
               }
             }
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("--- lb[{}] = {}", v, lbTmp);
             }
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("--- ub[{}] = {}", v, ubTmp);
             }
             lbV.put(v, lbTmp);
@@ -816,7 +814,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               lbMin = lbTmp;
             }
 
-            if (debugAll && firstTimeWhileLoop) {
+            if (DEBUG_ALL && firstTimeWhileLoop) {
               log.debug("--- weight[{}] = {}", v, weight);
             }
 
@@ -833,10 +831,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
                     if (min <= max) {
                       lbVubV = (IntervalDomain) lbVubV.union(min, max);
-                      if (debugAll && a != null) {
+                      if (DEBUG_ALL && a != null) {
                         log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
                       }
-                    } else if (debugAll && a != null) {
+                    } else if (DEBUG_ALL && a != null) {
                       log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
                     }
                   }
@@ -847,7 +845,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         }
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug(" Made up n domain = {}", lbVubV);
       }
 
@@ -867,11 +865,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         if (inv != null) {
 
           for (int v = inv.min(); v <= inv.max(); v++) {
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug(">>>>>>>>>>>>>>>>>>>{}", v);
             }
             if (ubV.get(v) < n.min()) {
-              if (debugAll) {
+              if (DEBUG_ALL) {
                 log.debug("{} must be be present in S", v);
               }
               lbSdom = lbSdom.union(v);
@@ -894,7 +892,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 if (!y_last.singleton()) {
                   y_last = this.listOfY[last];
 
-                  if (debugAll) {
+                  if (DEBUG_ALL) {
                     log.debug("Only {} can cover {} so I ground it", y_last.id, v);
                   }
 
@@ -918,7 +916,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               ubSdom = ubSdom.subtract(v, v);
               recalculateUb0 = true;
 
-              if (debugAll) {
+              if (DEBUG_ALL) {
                 log.debug("{} must be pruned out of all y", v);
               }
 
@@ -956,7 +954,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         }
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Future domain is {}", futureDom);
       }
       this.futureLbS.update(new MutableDomainValue(futureDom));
@@ -995,7 +993,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       lbS.update(new MutableDomainValue(lbSdom));
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("lb(S) := lb(S) U {{v | ub[v] < min(N) }} = {}", lbSdom);
         log.debug("ub(S) := ub(S) \\ {{v | lb[v] > max(N) }} = {}", ubSdom);
         log.debug("(min(N) = max(N)) = {}", n.singleton());
@@ -1011,7 +1009,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       n.domain.in(store.level, n, Math.max(n.min(), lb0), Math.min(n.max(), ub0));
 
       if (lbSdom.getSize() > ubSdom.getSize() || lbSdom.getSize() > listOfY.length) {
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug(
               "........Fail because lbSdom.getSize() > ubSdom.getSize()  || lbSdom.getSize() > this.yVarList.length........");
         }
@@ -1044,7 +1042,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         return;
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("{}", this);
       }
 
@@ -1081,7 +1079,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       return;
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug(" %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ");
       log.debug("Var {}{}", intVar, intVar.recentDomainPruning());
     }

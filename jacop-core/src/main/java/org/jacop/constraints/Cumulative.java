@@ -377,32 +377,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       store.propagationHasOccurred = false;
 
       if (doProfile) {
-
-        cumulativeProfiles.make(ts, setLimit);
-
-        minProfile = cumulativeProfiles.minProfile();
-        if (setLimit) {
-          maxProfile = cumulativeProfiles.maxProfile();
-        }
-
-        if (debugEnabled) {
-          log.debug(
-              "\n--------------------------------------\nMinProfile for {} :{}\nMaxProfile for {} :{}\n--------------------------------------",
-              id(),
-              minProfile,
-              id(),
-              maxProfile);
-        }
-
-        if (setLimit) {
-          limit.domain.in(store.level, limit, minProfile.max(), maxProfile.max());
-        } else if (limit.max() < minProfile.max()) {
-          throw Store.failException;
-        }
-
-        updateTasksRes(store);
-
-        profileCheckTasks(store);
+        propagateUsingProfile(store);
       }
 
       // max limit is 1 (heuristic) !!!
@@ -417,6 +392,35 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     minProfile = null;
     maxProfile = null;
+  }
+
+  private void propagateUsingProfile(Store store) {
+
+    cumulativeProfiles.make(ts, setLimit);
+
+    minProfile = cumulativeProfiles.minProfile();
+    if (setLimit) {
+      maxProfile = cumulativeProfiles.maxProfile();
+    }
+
+    if (debugEnabled) {
+      log.debug(
+          "\n--------------------------------------\nMinProfile for {} :{}\nMaxProfile for {} :{}\n--------------------------------------",
+          id(),
+          minProfile,
+          id(),
+          maxProfile);
+    }
+
+    if (setLimit) {
+      limit.domain.in(store.level, limit, minProfile.max(), maxProfile.max());
+    } else if (limit.max() < minProfile.max()) {
+      throw Store.failException;
+    }
+
+    updateTasksRes(store);
+
+    profileCheckTasks(store);
   }
 
   private void edgeFindingDown(Store store) {

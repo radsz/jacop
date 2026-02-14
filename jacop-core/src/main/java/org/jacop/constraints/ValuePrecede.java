@@ -201,28 +201,32 @@ public class ValuePrecede extends Constraint
     if (b <= gammaValue) {
       int a = alphaValue;
       if (i == a && !x[i].domain.contains(s)) {
-        a++;
-        while (a < b) {
-          x[a].domain.inComplement(store.level, x[a], t);
-          a++;
-        }
-        while (a < n && !x[a].domain.contains(s)) {
-          x[a].domain.inComplement(store.level, x[a], t);
-          a++;
-        }
-        if (a < n) {
-          x[a].domain.inComplement(store.level, x[a], t);
-        }
-        alphaValue = a;
-        betaValue = a;
-        if (a < n) {
-          updateBeta();
-        }
+        propagateFromAlpha(a, b);
       } else if (i == b && !x[i].domain.contains(s)) {
         updateBeta();
       }
     }
     checkGamma(i);
+  }
+
+  private void propagateFromAlpha(int a, int b) {
+    a++;
+    while (a < b) {
+      x[a].domain.inComplement(store.level, x[a], t);
+      a++;
+    }
+    while (a < n && !x[a].domain.contains(s)) {
+      x[a].domain.inComplement(store.level, x[a], t);
+      a++;
+    }
+    if (a < n) {
+      x[a].domain.inComplement(store.level, x[a], t);
+    }
+    alphaValue = a;
+    betaValue = a;
+    if (a < n) {
+      updateBeta();
+    }
   }
 
   private void updateBeta() {

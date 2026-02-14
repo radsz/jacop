@@ -127,13 +127,17 @@ public class ChannelReif extends AbstractChannel {
     }
 
     if (x.singleton()) {
-      IntVar b = valueMap.get(x.value());
-      b.domain.inValue(store.level, b, 1);
+      propagateWhenXIsSingleton(store, start);
+    }
+  }
 
-      for (int i = start; i < n; i++) {
-        if (item[i].b() != b) {
-          item[i].b().domain.inValue(store.level, item[i].b(), 0);
-        }
+  private void propagateWhenXIsSingleton(Store store, int start) {
+    IntVar b = valueMap.get(x.value());
+    b.domain.inValue(store.level, b, 1);
+
+    for (int i = start; i < n; i++) {
+      if (item[i].b() != b) {
+        item[i].b().domain.inValue(store.level, item[i].b(), 0);
       }
     }
   }

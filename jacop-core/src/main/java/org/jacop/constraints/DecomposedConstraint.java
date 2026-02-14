@@ -138,29 +138,34 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    */
   public void checkInputForNullness(String[] a, Object[]... parameters) {
 
-    // Case when parameters is just one array.
     if (parameters.length == 1) {
-      if (a.length != parameters[0].length) {
-        throw new IllegalArgumentException(
-            "Constraint "
-                + this.getClass().getSimpleName()
-                + " has parameters and descriptions that are not equal length as variables.");
-      }
+      validateSingleParameterArray(a, parameters[0]);
+    } else {
+      validateMultipleParameterArrays(a, parameters);
+    }
+  }
 
-      for (int i = 0; i < a.length; i++) {
-        if (parameters[0][i] == null) {
-          throw new IllegalArgumentException(
-              "Constraint of type "
-                  + this.getClass().getSimpleName()
-                  + " has parameter "
-                  + a[i]
-                  + " that is null.");
-        }
-      }
-      return;
+  private void validateSingleParameterArray(String[] a, Object[] parameter) {
+    if (a.length != parameter.length) {
+      throw new IllegalArgumentException(
+          "Constraint "
+              + this.getClass().getSimpleName()
+              + " has parameters and descriptions that are not equal length as variables.");
     }
 
-    // Case when parameters is more than one array then the length of a and parameters must match.
+    for (int i = 0; i < a.length; i++) {
+      if (parameter[i] == null) {
+        throw new IllegalArgumentException(
+            "Constraint of type "
+                + this.getClass().getSimpleName()
+                + " has parameter "
+                + a[i]
+                + " that is null.");
+      }
+    }
+  }
+
+  private void validateMultipleParameterArrays(String[] a, Object[][] parameters) {
     if (a.length != parameters.length) {
       throw new IllegalArgumentException(
           "Constraint "

@@ -199,6 +199,24 @@ public class LinearInt extends PrimitiveConstraint {
     this.store = store;
     this.b = sum;
 
+    LinkedHashMap<IntVar, Long> parameters = normalizeAndMergeParameters(list, weights);
+    fillCoefficientArrays(parameters);
+
+    this.l = x.length;
+    this.I = new long[l];
+
+    checkForOverflow();
+
+    if (l <= 3) {
+      queueIndex = 0;
+    } else {
+      queueIndex = 1;
+    }
+
+    setScope(list);
+  }
+
+  private LinkedHashMap<IntVar, Long> normalizeAndMergeParameters(IntVar[] list, int[] weights) {
     LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<>();
 
     for (int i = 0; i < list.length; i++) {
@@ -215,6 +233,10 @@ public class LinearInt extends PrimitiveConstraint {
         }
       }
     }
+    return parameters;
+  }
+
+  private void fillCoefficientArrays(LinkedHashMap<IntVar, Long> parameters) {
     int size = 0;
     for (Long e : parameters.values()) {
       if (e != 0) {
@@ -247,19 +269,6 @@ public class LinearInt extends PrimitiveConstraint {
         i++;
       }
     }
-
-    this.l = x.length;
-    this.I = new long[l];
-
-    checkForOverflow();
-
-    if (l <= 3) {
-      queueIndex = 0;
-    } else {
-      queueIndex = 1;
-    }
-
-    setScope(list);
   }
 
   @Override

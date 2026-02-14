@@ -74,11 +74,11 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   protected final int indexOffset;
 
-  private static final short detect = 0;
+  private static final short DETECT = 0;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   /*
-   * Defines if the current list is order (ascending, descending), needs detection (detect)
+   * Defines if the current list is order (ascending, descending), needs detection (DETECT)
    * or is not checked (none).
    */
   private TimeStamp<Short> order;
@@ -197,7 +197,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
         index.domain.in(store.level, index, indexDom.complement());
 
-      } else if (sort == detect) {
+      } else if (sort == DETECT) {
 
         int min = IntDomain.MAX_INT;
         int max = IntDomain.MIN_INT;
@@ -311,7 +311,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
       firstConsistencyCheck = false;
     }
 
-    order = new TimeStamp<>(store, detect); // set to detect
+    order = new TimeStamp<>(store, DETECT); // set to DETECT
   }
 
   @Override

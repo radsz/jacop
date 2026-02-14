@@ -85,54 +85,57 @@ public class XmulYeqC extends PrimitiveConstraint {
 
   @Override
   public void consistency(final Store store) {
-
-    if (xSquare) { // x^2 = c
-      do {
-
-        store.propagationHasOccurred = false;
-
-        if (c < 0) {
-          throw Store.failException;
-        }
-
-        double sqrtOfC = Math.sqrt(c);
-
-        if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) {
-          throw Store.failException;
-        }
-
-        int value = (int) sqrtOfC;
-
-        IntDomain dom = new IntervalDomain(-value, -value);
-        dom.unionAdapt(value, value);
-
-        x.domain.in(store.level, x, dom);
-
-      } while (store.propagationHasOccurred);
-    } else { // X*Y=C
-      do {
-
-        store.propagationHasOccurred = false;
-
-        // Bounds for X
-        Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
-
-        x.domain.in(store.level, x, xBounds.min(), xBounds.max());
-
-        // Bounds for Y
-        Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
-
-        y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
-        // check bounds, if C is covered.
-        Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
-
-        if (c < cBounds.min() || c > cBounds.max()) {
-          throw Store.failException;
-        }
-
-      } while (store.propagationHasOccurred);
+    if (xSquare) {
+      propagateXSquareEqC(store);
+    } else {
+      propagateXMulYEqC(store);
     }
+  }
+
+  private void propagateXSquareEqC(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      if (c < 0) {
+        throw Store.failException;
+      }
+
+      double sqrtOfC = Math.sqrt(c);
+
+      if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) {
+        throw Store.failException;
+      }
+
+      int value = (int) sqrtOfC;
+
+      IntDomain dom = new IntervalDomain(-value, -value);
+      dom.unionAdapt(value, value);
+
+      x.domain.in(store.level, x, dom);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagateXMulYEqC(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      // Bounds for X
+      Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
+      x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+
+      // Bounds for Y
+      Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
+      y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+
+      // check bounds, if C is covered.
+      Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+
+      if (c < cBounds.min() || c > cBounds.max()) {
+        throw Store.failException;
+      }
+
+    } while (store.propagationHasOccurred);
   }
 
   @Override

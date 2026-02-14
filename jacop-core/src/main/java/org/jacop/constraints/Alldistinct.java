@@ -120,7 +120,7 @@ public class Alldistinct extends Constraint
   final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
   final Map<Integer, ArrayList<IntVar>> valueMapVariable;
-  static final boolean greedy = true;
+  static final boolean GREEDY = true;
 
   /** It counts the number of executions of the consistency function. */
   private int consistencyChecks;
@@ -1470,7 +1470,7 @@ public class Alldistinct extends Constraint
               if (stamps.get(firstValue).value() < stamps.get(secondValue).value()
                   || (Objects.equals(
                           stamps.get(firstValue).value(), stamps.get(secondValue).value())
-                      && !greedy)) {
+                      && !GREEDY)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
                 guideVariable = list[i];
@@ -1490,7 +1490,7 @@ public class Alldistinct extends Constraint
               if (stamps.get(firstValue).value() < stamps.get(secondValue).value()
                   || (Objects.equals(
                           stamps.get(firstValue).value(), stamps.get(secondValue).value())
-                      && !greedy)) {
+                      && !GREEDY)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
 
@@ -1513,7 +1513,7 @@ public class Alldistinct extends Constraint
               if (stamps.get(firstValue).value() <= stamps.get(secondValue).value()
                   || (Objects.equals(
                           stamps.get(firstValue).value(), stamps.get(secondValue).value())
-                      && greedy)) {
+                      && GREEDY)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
                 guideVariable = list[i];
@@ -1532,7 +1532,7 @@ public class Alldistinct extends Constraint
               if (stamps.get(firstValue).value() <= stamps.get(secondValue).value()
                   || (Objects.equals(
                           stamps.get(firstValue).value(), stamps.get(secondValue).value())
-                      && greedy)) {
+                      && GREEDY)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
                 guideVariable = list[i];
@@ -1596,7 +1596,7 @@ public class Alldistinct extends Constraint
               // Equals sign means no greedy in propagation
               // Lack of equal sign means greedy in propagation
               if (currentList.get(0).getSize() < currentList.get(1).getSize()
-                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !GREEDY)) {
 
                 guideVariable = currentList.getFirst();
                 guideValue = value;
@@ -1613,7 +1613,7 @@ public class Alldistinct extends Constraint
               // case of tie break
               // Lack of equal sign means greedy in propagation
               if (currentList.get(0).getSize() < currentList.get(1).getSize()
-                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !GREEDY)) {
 
                 guideVariable = currentList.getFirst();
                 guideValue = value;
@@ -1633,7 +1633,7 @@ public class Alldistinct extends Constraint
 
               // Equal sign means greedy in case of tie break
               if (currentList.get(0).getSize() <= currentList.get(1).getSize()
-                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && greedy)) {
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && GREEDY)) {
 
                 guideVariable = currentList.getFirst();
                 guideValue = value;
@@ -1649,7 +1649,7 @@ public class Alldistinct extends Constraint
 
               // Equal sign means greedy in case of tie break
               if (currentList.get(0).getSize() <= currentList.get(1).getSize()
-                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !GREEDY)) {
 
                 guideVariable = currentList.getFirst();
                 guideValue = value;

@@ -1636,7 +1636,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   @Override
   public void increaseWeight() {
 
-    if (isIncreaseWeightEnabled) {
+    if (IS_INCREASE_WEIGHT_ENABLED) {
       for (GeostObject o : objects) {
         for (Var v : o.getVariables()) {
           v.weight++;

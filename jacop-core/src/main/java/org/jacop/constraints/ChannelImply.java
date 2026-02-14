@@ -126,12 +126,16 @@ public class ChannelImply extends AbstractChannel {
     }
 
     if (x.singleton()) {
-      IntVar b = valueMap.get(x.value());
+      propagateWhenXIsSingleton(store, start);
+    }
+  }
 
-      for (int i = start; i < n; i++) {
-        if (item[i].b() != b) {
-          item[i].b().domain.inValue(store.level, item[i].b(), 0);
-        }
+  private void propagateWhenXIsSingleton(Store store, int start) {
+    IntVar b = valueMap.get(x.value());
+
+    for (int i = start; i < n; i++) {
+      if (item[i].b() != b) {
+        item[i].b().domain.inValue(store.level, item[i].b(), 0);
       }
     }
   }

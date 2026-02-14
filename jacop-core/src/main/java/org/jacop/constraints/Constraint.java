@@ -71,7 +71,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if upon the failure of the constraint, all variables in the constraint scope
    * should have their weight increased.
    */
-  protected static final boolean isIncreaseWeightEnabled = true;
+  protected static final boolean IS_INCREASE_WEIGHT_ENABLED = true;
 
   protected boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
 
@@ -478,7 +478,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It increases the weight of the variables in the constraint scope. */
   public void increaseWeight() {
 
-    if (isIncreaseWeightEnabled) {
+    if (IS_INCREASE_WEIGHT_ENABLED) {
       arguments().forEach(v -> v.weight++);
     }
   }

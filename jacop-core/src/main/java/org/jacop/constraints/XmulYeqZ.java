@@ -93,77 +93,74 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    if (xSquare) { // X^2 = Z
-      do {
-
-        // Bounds for Z
-        Interval zBounds = IntDomain.squareBounds(x.min(), x.max());
-        z.domain.in(store.level, z, zBounds.min(), zBounds.max());
-
-        store.propagationHasOccurred = false;
-
-        // Bounds for X
-        int xMin = toInt(Math.round(Math.ceil(Math.sqrt(z.min()))));
-        int xMax = toInt(Math.round(Math.floor(Math.sqrt(z.max()))));
-
-        if (xMin > xMax) {
-          throw Store.failException;
-        }
-
-        if (x.min() < 0) {
-          IntDomain dom = new IntervalDomain(-xMax, -xMin);
-          dom.unionAdapt(xMin, xMax);
-          x.domain.in(store.level, x, dom);
-        } else {
-          x.domain.in(store.level, x, xMin, xMax);
-        }
-
-      } while (store.propagationHasOccurred);
-    } else { // X*Y=Z
-
-      if (x.singleton(1)) {
-        this.queueIndex = 0;
-        yEqz.consistency(store);
-        return;
-      }
-      if (y.singleton(1)) {
-        this.queueIndex = 0;
-        xEqz.consistency(store);
-        return;
-      }
-
-      do {
-        this.queueIndex = 1;
-
-        // Bounds for Z
-        Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
-
-        z.domain.in(store.level, z, zBounds.min(), zBounds.max());
-
-        store.propagationHasOccurred = false;
-
-        // Bounds for X
-        Interval xBounds =
-            IntDomain.divIntBounds(
-                z.min(), z.max(),
-                y.min(), y.max());
-
-        x.domain.in(store.level, x, xBounds.min(), xBounds.max());
-
-        // Bounds for Y
-        Interval yBounds =
-            IntDomain.divIntBounds(
-                z.min(), z.max(),
-                x.min(), x.max());
-
-        y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
-      } while (store.propagationHasOccurred);
+    if (xSquare) {
+      propagateXSquareBounds(store);
+    } else {
+      propagateMulBounds(store);
     }
 
     if (x.singleton(0) || y.singleton(0)) {
       removeConstraint();
     }
+  }
+
+  private void propagateXSquareBounds(Store store) {
+    do {
+      // Bounds for Z
+      Interval zBounds = IntDomain.squareBounds(x.min(), x.max());
+      z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+      store.propagationHasOccurred = false;
+
+      // Bounds for X
+      int xMin = toInt(Math.round(Math.ceil(Math.sqrt(z.min()))));
+      int xMax = toInt(Math.round(Math.floor(Math.sqrt(z.max()))));
+
+      if (xMin > xMax) {
+        throw Store.failException;
+      }
+
+      if (x.min() < 0) {
+        IntDomain dom = new IntervalDomain(-xMax, -xMin);
+        dom.unionAdapt(xMin, xMax);
+        x.domain.in(store.level, x, dom);
+      } else {
+        x.domain.in(store.level, x, xMin, xMax);
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagateMulBounds(Store store) {
+    if (x.singleton(1)) {
+      this.queueIndex = 0;
+      yEqz.consistency(store);
+      return;
+    }
+    if (y.singleton(1)) {
+      this.queueIndex = 0;
+      xEqz.consistency(store);
+      return;
+    }
+
+    do {
+      this.queueIndex = 1;
+
+      // Bounds for Z
+      Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+      z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+      store.propagationHasOccurred = false;
+
+      // Bounds for X
+      Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
+      x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+
+      // Bounds for Y
+      Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
+      y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+
+    } while (store.propagationHasOccurred);
   }
 
   @Override

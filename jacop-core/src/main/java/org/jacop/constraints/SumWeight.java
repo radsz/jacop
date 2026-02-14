@@ -182,36 +182,8 @@ public class SumWeight extends Constraint
     treatChangedVariables();
 
     if (backtrackHasOccured) {
-
       backtrackHasOccured = false;
-
-      int pointer = nextGroundedPosition.value();
-
-      lMin = sumGrounded.value();
-      lMax = lMin;
-
-      for (int i = pointer; i < list.length; i++) {
-
-        IntDomain currentDomain = list[i].domain;
-
-        assert !currentDomain.singleton() : "Singletons should not occur in this part of the array";
-
-        long mul1 = currentDomain.min() * weights[i];
-        long mul2 = currentDomain.max() * weights[i];
-
-        if (mul1 <= mul2) {
-          lMin += mul1;
-          lMinArray[i] = mul1;
-          lMax += mul2;
-          lMaxArray[i] = mul2;
-        } else {
-
-          lMin += mul2;
-          lMinArray[i] = mul2;
-          lMax += mul1;
-          lMaxArray[i] = mul1;
-        }
-      }
+      recomputeBoundsAfterBacktrack(nextGroundedPosition.value());
     }
 
     do {
@@ -222,36 +194,65 @@ public class SumWeight extends Constraint
 
       store.propagationHasOccurred = false;
 
-      long min = equalTo - lMax;
-      long max = equalTo - lMin;
-
-      int pointer1 = nextGroundedPosition.value();
-
-      for (int i = pointer1; i < list.length; i++) {
-
-        IntVar v = list[i];
-
-        long w = weights[i];
-        int divMin;
-        int divMax;
-        if (w > 0) {
-          divMin = long2int(IntDomain.divRoundUp(min + lMaxArray[i], w));
-          divMax = long2int(IntDomain.divRoundDown(max + lMinArray[i], w));
-        } else { // w < 0
-          divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
-          divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
-        }
-
-        if (divMin > divMax) {
-          throw Store.failException;
-        }
-
-        v.domain.in(store.level, v, divMin, divMax);
-      }
+      propagateBoundsToVariables(
+          store, equalTo - lMax, equalTo - lMin, nextGroundedPosition.value());
 
       treatChangedVariables();
 
     } while (store.propagationHasOccurred);
+  }
+
+  private void recomputeBoundsAfterBacktrack(int pointer) {
+
+    lMin = sumGrounded.value();
+    lMax = lMin;
+
+    for (int i = pointer; i < list.length; i++) {
+
+      IntDomain currentDomain = list[i].domain;
+
+      assert !currentDomain.singleton() : "Singletons should not occur in this part of the array";
+
+      long mul1 = currentDomain.min() * weights[i];
+      long mul2 = currentDomain.max() * weights[i];
+
+      if (mul1 <= mul2) {
+        lMin += mul1;
+        lMinArray[i] = mul1;
+        lMax += mul2;
+        lMaxArray[i] = mul2;
+      } else {
+        lMin += mul2;
+        lMinArray[i] = mul2;
+        lMax += mul1;
+        lMaxArray[i] = mul1;
+      }
+    }
+  }
+
+  private void propagateBoundsToVariables(Store store, long min, long max, int pointer) {
+
+    for (int i = pointer; i < list.length; i++) {
+
+      IntVar v = list[i];
+
+      long w = weights[i];
+      int divMin;
+      int divMax;
+      if (w > 0) {
+        divMin = long2int(IntDomain.divRoundUp(min + lMaxArray[i], w));
+        divMax = long2int(IntDomain.divRoundDown(max + lMinArray[i], w));
+      } else { // w < 0
+        divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
+        divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
+      }
+
+      if (divMin > divMax) {
+        throw Store.failException;
+      }
+
+      v.domain.in(store.level, v, divMin, divMax);
+    }
   }
 
   @Override
