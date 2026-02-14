@@ -242,35 +242,9 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
   @Override
   public Var getGuideVariable() {
-
-    int regret = 1;
-    Var proposedVariable = null;
-
-    for (IntVar v : list) {
-
-      IntDomain listDom = v.dom();
-
-      if (v.singleton()) {
-        continue;
-      }
-
-      int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
-
-      if (currentRegret > regret) {
-        regret = currentRegret;
-        proposedVariable = v;
-        guideValue = listDom.min();
-      }
-
-      currentRegret = listDom.max() - listDom.previousValue(listDom.max());
-
-      if (currentRegret > regret) {
-        regret = currentRegret;
-        proposedVariable = v;
-        guideValue = listDom.max();
-      }
-    }
-
-    return proposedVariable;
+    int[] guideValueOut = new int[1];
+    Var result = AbstractSum.computeGuideVariable(list, guideValueOut);
+    guideValue = guideValueOut[0];
+    return result;
   }
 }

@@ -38,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * SumInt constraint implements the summation over several variables.
@@ -65,8 +64,6 @@ public class SumInt extends AbstractSum {
   long sumXmin;
 
   long sumXmax;
-
-  int guideValue;
 
   /**
    * Constructs a SumInt constraint with the specified relation.
@@ -231,42 +228,56 @@ public class SumInt extends AbstractSum {
   }
 
   private void pruneLtEq(long b) {
-
-    sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
-
-    long min;
-    long max;
-    long sMax = sum.max();
-
-    for (int i = 0; i < l; i++) {
-      if (I[i] > (sMax - sumXmin - b)) {
-        min = x[i].min();
-        max = min + I[i];
-        if (pruneMax(x[i], sMax - sumXmin + min - b)) {
-          long newMax = x[i].max();
-          sumXmax -= max - newMax;
-          I[i] = newMax - min;
-        }
-      }
-    }
+    pruneDirection(true, b);
   }
 
   private void pruneGtEq(long b) {
+    pruneDirection(false, b);
+  }
 
-    sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
+  /**
+   * Prunes variables based on the direction of the constraint.
+   *
+   * @param isLtEq true for less-than-or-equal pruning, false for greater-than-or-equal pruning
+   * @param b the offset value
+   */
+  private void pruneDirection(boolean isLtEq, long b) {
+
+    if (isLtEq) {
+      sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
+    } else {
+      sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
+    }
 
     long min;
     long max;
-    long sMin = sum.min();
+    long sumBound = isLtEq ? sum.max() : sum.min();
 
     for (int i = 0; i < l; i++) {
-      if (I[i] > -(sMin - sumXmax + b)) {
-        max = x[i].max();
-        min = max - I[i];
-        if (pruneMin(x[i], sMin - sumXmax + max + b)) {
-          long newMin = x[i].min();
-          sumXmin += newMin - min;
-          I[i] = max - newMin;
+      boolean condition;
+      if (isLtEq) {
+        condition = I[i] > (sumBound - sumXmin - b);
+      } else {
+        condition = I[i] > -(sumBound - sumXmax + b);
+      }
+
+      if (condition) {
+        if (isLtEq) {
+          min = x[i].min();
+          max = min + I[i];
+          if (pruneMax(x[i], sumBound - sumXmin + min - b)) {
+            long newMax = x[i].max();
+            sumXmax -= max - newMax;
+            I[i] = newMax - min;
+          }
+        } else {
+          max = x[i].max();
+          min = max - I[i];
+          if (pruneMin(x[i], sumBound - sumXmax + max + b)) {
+            long newMin = x[i].min();
+            sumXmin += newMin - min;
+            I[i] = max - newMin;
+          }
         }
       }
     }
@@ -328,12 +339,11 @@ public class SumInt extends AbstractSum {
   }
 
   /**
-   * Checks whether the equality relation is satisfied.
+   * Computes the minimum and maximum sum bounds from all variables.
    *
-   * @return true if the sum of variables equals the sum variable.
+   * @return a two-element array where [0] is sMin and [1] is sMax
    */
-  public boolean satisfiedEq() {
-
+  private long[] computeSumBounds() {
     long sMin = 0;
     long sMax = 0;
 
@@ -341,6 +351,20 @@ public class SumInt extends AbstractSum {
       sMin += x[i].min();
       sMax += x[i].max();
     }
+
+    return new long[] {sMin, sMax};
+  }
+
+  /**
+   * Checks whether the equality relation is satisfied.
+   *
+   * @return true if the sum of variables equals the sum variable.
+   */
+  public boolean satisfiedEq() {
+
+    long[] bounds = computeSumBounds();
+    long sMin = bounds[0];
+    long sMax = bounds[1];
 
     return sMax <= (long) sum.min()
         && sMin >= (long) sum.max(); // sMin == sMax && sMin == sum.min() && sMin == sum.max();
@@ -353,15 +377,27 @@ public class SumInt extends AbstractSum {
    */
   public boolean satisfiedNeq() {
 
-    long sMax = 0;
-    long sMin = 0;
-
-    for (int i = 0; i < l; i++) {
-      sMin += x[i].min();
-      sMax += x[i].max();
-    }
+    long[] bounds = computeSumBounds();
+    long sMin = bounds[0];
+    long sMax = bounds[1];
 
     return sMin > (long) sum.max() || sMax < (long) sum.min();
+  }
+
+  /**
+   * Computes the sum of variable bounds in the specified direction.
+   *
+   * @param useMax true to compute sum of max values, false to compute sum of min values
+   * @return the computed sum
+   */
+  private long computeSumBound(boolean useMax) {
+    long sumBound = 0;
+
+    for (int i = 0; i < l; i++) {
+      sumBound += useMax ? x[i].max() : x[i].min();
+    }
+
+    return sumBound;
   }
 
   /**
@@ -372,11 +408,7 @@ public class SumInt extends AbstractSum {
    */
   public boolean satisfiedLtEq(int b) {
 
-    long sMax = 0;
-
-    for (int i = 0; i < l; i++) {
-      sMax += x[i].max();
-    }
+    long sMax = computeSumBound(true);
 
     return sMax <= (long) sum.min() - b;
   }
@@ -389,11 +421,7 @@ public class SumInt extends AbstractSum {
    */
   public boolean satisfiedGtEq(int b) {
 
-    long sMin = 0;
-
-    for (int i = 0; i < l; i++) {
-      sMin += x[i].min();
-    }
+    long sMin = computeSumBound(false);
 
     return sMin >= (long) sum.max() + b;
   }
@@ -426,55 +454,5 @@ public class SumInt extends AbstractSum {
   @Override
   public String toString() {
     return toStringHelper("SumInt");
-  }
-
-  @Override
-  public Constraint getGuideConstraint() {
-
-    IntVar proposedVariable = (IntVar) getGuideVariable();
-    if (proposedVariable != null) {
-      return new XeqC(proposedVariable, guideValue);
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public int getGuideValue() {
-    return guideValue;
-  }
-
-  @Override
-  public Var getGuideVariable() {
-
-    int regret = 1;
-    Var proposedVariable = null;
-
-    for (IntVar v : x) {
-
-      IntDomain listDom = v.dom();
-
-      if (v.singleton()) {
-        continue;
-      }
-
-      int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
-
-      if (currentRegret > regret) {
-        regret = currentRegret;
-        proposedVariable = v;
-        guideValue = listDom.min();
-      }
-
-      currentRegret = listDom.max() - listDom.previousValue(listDom.max());
-
-      if (currentRegret > regret) {
-        regret = currentRegret;
-        proposedVariable = v;
-        guideValue = listDom.max();
-      }
-    }
-
-    return proposedVariable;
   }
 }

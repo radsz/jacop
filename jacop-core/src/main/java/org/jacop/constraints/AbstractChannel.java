@@ -155,6 +155,72 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     position = new TimeStamp<>(store, 0);
   }
 
+  /**
+   * Handles the case when b.max() == 0 for a given item index.
+   *
+   * @param store the constraint store
+   * @param i the index of the item
+   */
+  protected abstract void handleBMaxZero(Store store, int i);
+
+  /**
+   * Handles the case when b.min() == 1 for a given item index.
+   *
+   * @param store the constraint store
+   * @param i the index of the item
+   */
+  protected abstract void handleBMinOne(Store store, int i);
+
+  /**
+   * Propagates constraints when x becomes a singleton.
+   *
+   * @param store the constraint store
+   * @param start the starting index for propagation
+   */
+  protected abstract void propagateWhenXIsSingleton(Store store, int start);
+
+  @Override
+  public void consistency(final Store store) {
+
+    int start = position.value();
+    boolean startChanged = false;
+
+    for (int i = start; i < n; i++) {
+
+      if (item[i].b().max() == 0) {
+        handleBMaxZero(store, i);
+        swap(start, i);
+        start++;
+        startChanged = true;
+        continue;
+      } else if (item[i].b().min() == 1) {
+        handleBMinOne(store, i);
+      }
+
+      if (!x.domain.contains(item[i].value())) {
+        item[i].b().domain.inValue(store.level, item[i].b(), 0);
+        swap(start, i);
+        start++;
+        startChanged = true;
+      }
+    }
+
+    if (startChanged) {
+      position.update(start);
+    }
+
+    if (start == n) {
+      if (!x.singleton()) {
+        removeConstraint();
+      }
+      return;
+    }
+
+    if (x.singleton()) {
+      propagateWhenXIsSingleton(store, start);
+    }
+  }
+
   record Item(IntVar b, int value) {
     public String toString() {
       return "[" + b + ", " + value + "]";

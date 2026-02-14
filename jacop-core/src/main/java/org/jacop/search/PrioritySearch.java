@@ -540,69 +540,40 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     throw new RuntimeException("Method label is not defined for PrioritySearch.");
   }
 
-  @Override
-  public int getNodes() {
-    nodes = 0;
+  private int getStatistic(java.util.function.ToIntFunction<Search<?>> getter) {
+    int result = 0;
     for (DepthFirstSearch<T> l : search) {
-      nodes += l.getNodes();
-
+      result += getter.applyAsInt(l);
       if (l.childSearches != null) {
-        nodes += l.childSearches[0].getNodes();
+        result += getter.applyAsInt(l.childSearches[0]);
       }
     }
-    return nodes;
+    return result;
+  }
+
+  @Override
+  public int getNodes() {
+    return nodes = getStatistic(Search::getNodes);
   }
 
   @Override
   public int getDecisions() {
-    decisions = 0;
-    for (DepthFirstSearch<T> l : search) {
-      decisions += l.getDecisions();
-
-      if (l.childSearches != null) {
-        decisions += l.childSearches[0].getDecisions();
-      }
-    }
-    return decisions;
+    return decisions = getStatistic(Search::getDecisions);
   }
 
   @Override
   public int getWrongDecisions() {
-    wrongDecisions = 0;
-    for (DepthFirstSearch<T> l : search) {
-      wrongDecisions += l.getWrongDecisions();
-
-      if (l.childSearches != null) {
-        wrongDecisions += l.childSearches[0].getWrongDecisions();
-      }
-    }
-    return wrongDecisions;
+    return wrongDecisions = getStatistic(Search::getWrongDecisions);
   }
 
   @Override
   public int getBacktracks() {
-    numberBacktracks = 0;
-    for (DepthFirstSearch<T> l : search) {
-      numberBacktracks += l.getBacktracks();
-
-      if (l.childSearches != null) {
-        numberBacktracks += l.childSearches[0].getBacktracks();
-      }
-    }
-    return numberBacktracks;
+    return numberBacktracks = getStatistic(Search::getBacktracks);
   }
 
   @Override
   public int getMaximumDepth() {
-    maxDepthExcludePaths = 0;
-    for (DepthFirstSearch<T> l : search) {
-      maxDepthExcludePaths += l.getMaximumDepth();
-
-      if (l.childSearches != null) {
-        maxDepthExcludePaths += l.childSearches[0].getMaximumDepth();
-      }
-    }
-    return maxDepthExcludePaths;
+    return maxDepthExcludePaths = getStatistic(Search::getMaximumDepth);
   }
 
   /** Collects and aggregates search statistics from all sub-searches. */
@@ -800,37 +771,49 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
 
     @SuppressWarnings("unchecked")
+    private void updateIntVarCost(int newCost, int costValueForSearch) {
+      if (newCost < costValue) {
+        costValue = newCost;
+        master.costValue = newCost;
+
+        for (int i = 0; i < n; i++) {
+          DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
+          ls.costValue = costValueForSearch;
+          ls.cost = new XltC((IntVar) search.get(2 * i).costVariable, newCost);
+        }
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void updateIntVarCost(int newCost) {
+      updateIntVarCost(newCost, newCost);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void updateFloatCost(double newCost, CostVariableHandler costHandler) {
+      if (costHandler.isBetterCost(costValueFloat, newCost, true)) {
+        costValueFloat = newCost;
+        master.costValueFloat = newCost;
+
+        for (int i = 0; i < n; i++) {
+          DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
+          ls.costValueFloat = costHandler.getCostValue(search.get(2 * i).costVariable);
+          ls.cost = costHandler.createCostConstraint(search.get(2 * i).costVariable, newCost);
+        }
+      }
+    }
+
+    @SuppressWarnings("unchecked")
     void constraineCost() {
       if (costVariable instanceof IntVar v) {
         int newCost = v.dom().max();
-
-        if (newCost < costValue) {
-          costValue = newCost;
-          master.costValue = newCost;
-
-          for (int i = 0; i < n; i++) {
-            DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
-            ls.costValue = v.dom().max();
-            ls.cost = new XltC((IntVar) search.get(2 * i).costVariable, newCost);
-          }
-        }
-
+        updateIntVarCost(newCost, v.dom().max());
       } else {
         CostVariableHandler costHandler =
             SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
         if (costHandler != null) {
           double newCost = costHandler.getCostValue(costVariable);
-
-          if (costHandler.isBetterCost(costValueFloat, newCost, true)) {
-            costValueFloat = newCost;
-            master.costValueFloat = newCost;
-
-            for (int i = 0; i < n; i++) {
-              DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
-              ls.costValueFloat = costHandler.getCostValue(search.get(2 * i).costVariable);
-              ls.cost = costHandler.createCostConstraint(search.get(2 * i).costVariable, newCost);
-            }
-          }
+          updateFloatCost(newCost, costHandler);
         }
       }
     }
@@ -839,34 +822,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     void constraineCostFromChild(DepthFirstSearch<T> child) {
       if (costVariable instanceof IntVar) {
         int newCost = child.costValue;
-
-        if (newCost < costValue) {
-          costValue = newCost;
-          master.costValue = newCost;
-
-          for (int i = 0; i < n; i++) {
-            DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
-            ls.costValue = newCost;
-            ls.cost = new XltC((IntVar) search.get(2 * i).costVariable, newCost);
-          }
-        }
-
+        updateIntVarCost(newCost);
       } else {
         CostVariableHandler costHandler =
             SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
         if (costHandler != null) {
           double newCost = child.costValueFloat;
-
-          if (costHandler.isBetterCost(costValueFloat, newCost, true)) {
-            costValueFloat = newCost;
-            master.costValueFloat = newCost;
-
-            for (int i = 0; i < n; i++) {
-              DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search.get(2 * i));
-              ls.costValueFloat = newCost;
-              ls.cost = costHandler.createCostConstraint(search.get(2 * i).costVariable, newCost);
-            }
-          }
+          updateFloatCost(newCost, costHandler);
         }
       }
     }

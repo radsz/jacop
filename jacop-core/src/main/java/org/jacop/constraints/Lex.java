@@ -140,6 +140,252 @@ public class Lex extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Helper class to build FSM for lexicographic constraints. Encapsulates common FSM construction
+   * logic for both LE and LT variants.
+   */
+  private class RegularFsmBuilder {
+
+    private final Store store;
+    private final boolean isLe;
+    private int numberVar;
+    private BooleanVar[][] lt;
+    private BooleanVar[][] eq;
+    private FsmState[][][] state;
+    private FsmState[][] addState;
+    private IntVar[] vars;
+    private Fsm fsm;
+
+    RegularFsmBuilder(Store store, boolean isLe) {
+      this.store = store;
+      this.isLe = isLe;
+    }
+
+    void buildFsm() {
+      numberVar = 0;
+      lt = new BooleanVar[x.length - 1][];
+      eq = new BooleanVar[x.length - 1][];
+      state = new FsmState[x.length - 1][][];
+      addState = new FsmState[x.length - 2][];
+
+      buildVariablesAndStates();
+      buildVarsArray();
+      initializeFsm();
+      buildTransitions();
+    }
+
+    private void buildVariablesAndStates() {
+      for (int i = 0; i < x.length - 1; i++) {
+        int sizeToCompare = Math.min(x[i].length, x[i + 1].length);
+
+        if (isLe) {
+          lt[i] = new BooleanVar[sizeToCompare];
+          eq[i] = new BooleanVar[sizeToCompare];
+        } else {
+          lt[i] = new BooleanVar[sizeToCompare];
+          eq[i] = new BooleanVar[sizeToCompare - 1];
+        }
+        state[i] = new FsmState[sizeToCompare][];
+
+        for (int j = 0; j < sizeToCompare; j++) {
+          buildLtVariable(i, j, sizeToCompare);
+          buildEqVariable(i, j, sizeToCompare);
+          buildStates(i, j, sizeToCompare);
+          buildAddStates(i, j, sizeToCompare);
+        }
+      }
+    }
+
+    private void buildLtVariable(int i, int j, int sizeToCompare) {
+      if (isLe) {
+        lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+        constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
+      } else {
+        if (x[i].length < x[i + 1].length) {
+          if (j < sizeToCompare - 1) {
+            lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+            constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
+            numberVar++;
+          } else {
+            lt[i][j] = new BooleanVar(store, "le_" + i + "_" + j);
+            constraints.add(new Reified(new XlteqY(x[i][j], x[i + 1][j]), lt[i][j]));
+            numberVar++;
+          }
+        } else {
+          lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+          constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
+          numberVar++;
+        }
+      }
+    }
+
+    private void buildEqVariable(int i, int j, int sizeToCompare) {
+      if (isLe) {
+        eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
+        constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
+
+        if (x[i].length > x[i + 1].length && j == sizeToCompare - 1) {
+          constraints.add(new XeqC(eq[i][j], 0));
+        }
+      } else {
+        if (j < sizeToCompare - 1) {
+          eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
+          constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
+          numberVar++;
+        }
+      }
+    }
+
+    private void buildStates(int i, int j, int sizeToCompare) {
+      state[i][j] = new FsmState[2];
+      state[i][j][0] = new FsmState();
+      if (isLe) {
+        state[i][j][1] = new FsmState();
+        numberVar += 2;
+      } else {
+        if (j < sizeToCompare - 1) {
+          state[i][j][1] = new FsmState();
+        }
+      }
+    }
+
+    private void buildAddStates(int i, int j, int sizeToCompare) {
+      if (i < x.length - 2 && j == 0) {
+        int addStateSize = isLe ? 2 * (sizeToCompare - j) - 1 : 2 * (sizeToCompare - j) - 2;
+        addState[i] = new FsmState[addStateSize];
+
+        for (int k = 0; k < addState[i].length; k++) {
+          addState[i][k] = new FsmState();
+        }
+      }
+    }
+
+    private void buildVarsArray() {
+      vars = new IntVar[numberVar];
+      fsm = new Fsm();
+      int k = 0;
+      for (int i = 0; i < lt.length; i++) {
+        for (int j = 0; j < lt[i].length; j++) {
+          vars[k++] = lt[i][j];
+          if (isLe) {
+            vars[k++] = eq[i][j];
+            fsm.allStates.add(state[i][j][0]);
+            fsm.allStates.add(state[i][j][1]);
+          } else {
+            if (j < eq[i].length) {
+              vars[k++] = eq[i][j];
+            }
+            fsm.allStates.add(state[i][j][0]);
+            if (j < eq[i].length) {
+              fsm.allStates.add(state[i][j][1]);
+            }
+          }
+        }
+      }
+      for (FsmState[] fsmStates : addState) {
+        fsm.allStates.addAll(Arrays.asList(fsmStates));
+      }
+    }
+
+    private void initializeFsm() {
+      fsm.initState = state[0][0][0];
+      FsmState terminate = new FsmState();
+      fsm.allStates.add(terminate);
+      fsm.finalStates.add(terminate);
+    }
+
+    private void buildTransitions() {
+      FsmState terminate = fsm.finalStates.iterator().next();
+
+      for (int i = 0; i < state.length; i++) {
+        for (int j = 0; j < state[i].length; j++) {
+          buildState0Transitions(i, j, terminate);
+          buildState1Transitions(i, j, terminate);
+        }
+      }
+
+      terminate.transitions.add(new FsmTransition(new IntervalDomain(0, 1), terminate));
+    }
+
+    private void buildState0Transitions(int i, int j, FsmState terminate) {
+      if (i != state.length - 1) {
+        if (addState[i].length != 0) {
+          if (j == 0) {
+            state[i][j][0].transitions.add(
+                new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
+
+            for (int s = 1; s < addState[i].length; s++) {
+              addState[i][s - 1].transitions.add(
+                  new FsmTransition(new IntervalDomain(0, 1), addState[i][s]));
+            }
+            addState[i][addState[i].length - 1].transitions.add(
+                new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
+          } else {
+            if (isLe) {
+              state[i][j][0].transitions.add(
+                  new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+            } else {
+              if (j != state[i].length - 1) {
+                state[i][j][0].transitions.add(
+                    new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+              } else {
+                state[i][j][0].transitions.add(
+                    new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+              }
+            }
+          }
+
+          if (isLe) {
+            state[i][j][0].transitions.add(
+                new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
+          } else {
+            if (j != state[i].length - 1) {
+              state[i][j][0].transitions.add(
+                  new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
+            }
+          }
+        } else {
+          if (!isLe) {
+            state[i][j][0].transitions.add(
+                new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+          }
+        }
+      } else {
+        state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
+        if (isLe) {
+          state[i][j][0].transitions.add(
+              new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
+        }
+      }
+    }
+
+    private void buildState1Transitions(int i, int j, FsmState terminate) {
+      if (isLe) {
+        if (i != state.length - 1) {
+          if (j != state[i].length - 1) {
+            state[i][j][1].transitions.add(
+                new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
+          } else {
+            state[i][j][1].transitions.add(
+                new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+          }
+        } else {
+          if (j != state[i].length - 1) {
+            state[i][j][1].transitions.add(
+                new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
+          } else {
+            state[i][j][1].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
+          }
+        }
+      } else {
+        if (j != state[i].length - 1) {
+          state[i][j][1].transitions.add(
+              new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
+        }
+      }
+    }
+  }
+
+  /**
    * Decomposes the less-than-or-equal lexicographic constraint using a Regular automaton.
    *
    * @param store the constraint store used for decomposition.
@@ -153,121 +399,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    // first index represents compared vectors and the second variables within vectors
-    int numberVar = 0;
-
-    BooleanVar[][] lt = new BooleanVar[x.length - 1][];
-    BooleanVar[][] eq = new BooleanVar[x.length - 1][];
-    FsmState[][][] state = new FsmState[x.length - 1][][];
-    FsmState[][] addState = new FsmState[x.length - 2][];
-
-    for (int i = 0; i < x.length - 1; i++) {
-
-      int sizeToCompare = Math.min(x[i].length, x[i + 1].length);
-
-      lt[i] = new BooleanVar[sizeToCompare];
-      eq[i] = new BooleanVar[sizeToCompare];
-      state[i] = new FsmState[sizeToCompare][];
-
-      for (int j = 0; j < sizeToCompare; j++) {
-        lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
-        eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
-
-        constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
-        constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
-
-        if (x[i].length > x[i + 1].length && j == sizeToCompare - 1) {
-          constraints.add(new XeqC(eq[i][j], 0));
-        }
-
-        state[i][j] = new FsmState[2];
-        state[i][j][0] = new FsmState();
-        state[i][j][1] = new FsmState();
-        numberVar += 2;
-
-        if (i < x.length - 2 && j == 0) {
-          addState[i] = new FsmState[2 * (sizeToCompare - j) - 1];
-
-          for (int k = 0; k < addState[i].length; k++) {
-            addState[i][k] = new FsmState();
-          }
-        }
-      }
-    }
-
-    IntVar[] vars = new IntVar[numberVar];
-    Fsm g = new Fsm();
-    int k = 0;
-    for (int i = 0; i < lt.length; i++) {
-      for (int j = 0; j < lt[i].length; j++) {
-        vars[k++] = lt[i][j];
-        vars[k++] = eq[i][j];
-
-        g.allStates.add(state[i][j][0]);
-        g.allStates.add(state[i][j][1]);
-      }
-    }
-    for (FsmState[] fsmStates : addState) {
-      g.allStates.addAll(Arrays.asList(fsmStates));
-    }
-
-    g.initState = state[0][0][0];
-    FsmState terminate = new FsmState();
-    g.allStates.add(terminate);
-    g.finalStates.add(terminate);
-
-    for (int i = 0; i < state.length; i++) {
-      for (int j = 0; j < state[i].length; j++) {
-
-        if (i != state.length - 1) {
-          // cannot go directly- must go through other states :(
-          if (addState[i].length != 0) {
-            if (j == 0) {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
-
-              for (int s = 1; s < addState[i].length; s++) {
-                addState[i][s - 1].transitions.add(
-                    new FsmTransition(new IntervalDomain(0, 1), addState[i][s]));
-              }
-              addState[i][addState[i].length - 1].transitions.add(
-                  new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
-            } else {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
-            }
-
-            state[i][j][0].transitions.add(
-                new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-          }
-        } else { // i == state.length
-          state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
-          state[i][j][0].transitions.add(
-              new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-        }
-
-        if (i != state.length - 1) {
-          if (j != state[i].length - 1) {
-            state[i][j][1].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
-          } else {
-            state[i][j][1].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-          }
-        } else { // i == state.length
-          if (j != state[i].length - 1) {
-            state[i][j][1].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
-          } else {
-            state[i][j][1].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
-          }
-        }
-      }
-    }
-
-    terminate.transitions.add(new FsmTransition(new IntervalDomain(0, 1), terminate));
-
-    constraints.add(new Regular(g, vars));
+    RegularFsmBuilder builder = new RegularFsmBuilder(store, true);
+    builder.buildFsm();
+    constraints.add(new Regular(builder.fsm, builder.vars));
 
     return constraints;
   }
@@ -286,131 +420,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    // first index represents compared vectors and the second varinbales within vectors
-    int numberVar = 0;
-    BooleanVar[][] lt = new BooleanVar[x.length - 1][];
-    BooleanVar[][] eq = new BooleanVar[x.length - 1][];
-    FsmState[][][] state = new FsmState[x.length - 1][][];
-    FsmState[][] addState = new FsmState[x.length - 2][];
-
-    for (int i = 0; i < x.length - 1; i++) {
-
-      int sizeToCompare = Math.min(x[i].length, x[i + 1].length);
-
-      lt[i] = new BooleanVar[sizeToCompare];
-      eq[i] = new BooleanVar[sizeToCompare - 1];
-      state[i] = new FsmState[sizeToCompare][];
-
-      for (int j = 0; j < sizeToCompare; j++) {
-
-        if (x[i].length < x[i + 1].length) {
-          if (j < sizeToCompare - 1) {
-            lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
-            numberVar++;
-            constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
-          } else { // j == sizeToCompare - 1 , i.e., last check
-            lt[i][j] = new BooleanVar(store, "le_" + i + "_" + j);
-            numberVar++;
-            constraints.add(new Reified(new XlteqY(x[i][j], x[i + 1][j]), lt[i][j]));
-          }
-        } else {
-          lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
-          numberVar++;
-          constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
-        }
-
-        if (j < sizeToCompare - 1) {
-          eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
-          numberVar++;
-          constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
-        }
-
-        state[i][j] = new FsmState[2];
-        state[i][j][0] = new FsmState();
-        if (j < sizeToCompare - 1) {
-          state[i][j][1] = new FsmState();
-        }
-
-        if (i < x.length - 2 && j == 0) {
-          addState[i] = new FsmState[2 * (sizeToCompare - j) - 2];
-
-          for (int k = 0; k < addState[i].length; k++) {
-            addState[i][k] = new FsmState();
-          }
-        }
-      }
-    }
-
-    IntVar[] vars = new IntVar[numberVar];
-    Fsm g = new Fsm();
-    int k = 0;
-    for (int i = 0; i < lt.length; i++) {
-      for (int j = 0; j < lt[i].length; j++) {
-        vars[k++] = lt[i][j];
-        if (j < eq[i].length) {
-          vars[k++] = eq[i][j];
-        }
-
-        g.allStates.add(state[i][j][0]);
-        if (j < eq[i].length) {
-          g.allStates.add(state[i][j][1]);
-        }
-      }
-    }
-    for (FsmState[] fsmStates : addState) {
-      g.allStates.addAll(Arrays.asList(fsmStates));
-    }
-
-    g.initState = state[0][0][0];
-    FsmState terminate = new FsmState();
-    g.allStates.add(terminate);
-    g.finalStates.add(terminate);
-
-    for (int i = 0; i < state.length; i++) {
-      for (int j = 0; j < state[i].length; j++) {
-
-        if (i != state.length - 1) {
-          // cannot go directly - must go through other states :(
-          if (addState[i].length != 0) {
-            if (j == 0) {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
-
-              for (int s = 1; s < addState[i].length; s++) {
-                addState[i][s - 1].transitions.add(
-                    new FsmTransition(new IntervalDomain(0, 1), addState[i][s]));
-              }
-              addState[i][addState[i].length - 1].transitions.add(
-                  new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
-            } else if (j != state[i].length - 1) {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
-            } else {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-            }
-          } else {
-            state[i][j][0].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-          }
-        } else {
-          state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
-        }
-        if (j != state[i].length - 1) {
-          state[i][j][0].transitions.add(
-              new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-        }
-
-        if (j != state[i].length - 1) {
-          state[i][j][1].transitions.add(
-              new FsmTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
-        }
-      }
-    }
-
-    terminate.transitions.add(new FsmTransition(new IntervalDomain(0, 1), terminate));
-
-    constraints.add(new Regular(g, vars));
+    RegularFsmBuilder builder = new RegularFsmBuilder(store, false);
+    builder.buildFsm();
+    constraints.add(new Regular(builder.fsm, builder.vars));
 
     return constraints;
   }

@@ -85,15 +85,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-
-    // If consistency function mode
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return c.getNestedPruningEvent(v, false);
+    return getPruningEventForNested(v, consistencyPruningEvents, c, false);
   }
 
   @Override
@@ -103,15 +95,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-
-    // If notConsistency function mode
-    if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return c.getNestedPruningEvent(v, true);
+    return getPruningEventForNested(v, notConsistencyPruningEvents, c, true);
   }
 
   @Override

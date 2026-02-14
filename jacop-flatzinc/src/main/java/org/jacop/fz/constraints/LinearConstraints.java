@@ -171,6 +171,15 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   void int_lin_relation_reif(int operation, SimpleNode node) throws FailException {
+    int_lin_relation_reif_imp(operation, node, true);
+  }
+
+  void int_lin_relation_imp(int operation, SimpleNode node) throws FailException {
+    int_lin_relation_reif_imp(operation, node, false);
+  }
+
+  private void int_lin_relation_reif_imp(int operation, SimpleNode node, boolean isReified)
+      throws FailException {
 
     int[] p1 = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] p2 = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -194,37 +203,60 @@ class LinearConstraints implements ParserTreeConstants {
     switch (operation) {
       case Support.EQ:
         if (p2Fixed) {
-          if (s == p3) {
-            p4.domain.inValue(store.level, p4, 1);
+          if (isReified) {
+            if (s == p3) {
+              p4.domain.inValue(store.level, p4, 1);
+            } else {
+              p4.domain.inValue(store.level, p4, 0);
+            }
           } else {
-            p4.domain.inValue(store.level, p4, 0);
+            if (s != p3) {
+              p4.domain.inValue(store.level, p4, 0);
+            }
           }
           return;
         }
 
         if (p1.length == 1) {
           if (p1[0] == 1) {
-            if (p2[0].min() == 0 && p2[0].max() == 1 && p3 >= 0 && p3 <= 1) { // binary variable
-              if (p3 == 0) {
-                support.pose(new XneqY(p2[0], p4));
-                return;
+            if (isReified) {
+              if (p2[0].min() == 0 && p2[0].max() == 1 && p3 >= 0 && p3 <= 1) { // binary variable
+                if (p3 == 0) {
+                  support.pose(new XneqY(p2[0], p4));
+                  return;
+                } else {
+                  support.pose(new XeqY(p2[0], p4));
+                  return;
+                }
               } else {
-                support.pose(new XeqY(p2[0], p4));
-                return;
+                support.pose(support.fzXeqCreified(p2[0], p3, p4));
               }
             } else {
-              support.pose(support.fzXeqCreified(p2[0], p3, p4));
+              support.pose(support.fzXeqCimplied(p2[0], p3, p4));
             }
           } else {
-            support.pose(
-                new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
+            if (isReified) {
+              support.pose(
+                  new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
+            } else {
+              support.pose(
+                  new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
+            }
           }
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          support.pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
+          if (isReified) {
+            support.pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
+          } else {
+            support.pose(new Implies(p4, new XplusCeqZ(p2[1], p3, p2[0])));
+          }
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          support.pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
+          if (isReified) {
+            support.pose(new Reified(new XplusCeqZ(p2[0], p3, p2[1]), p4));
+          } else {
+            support.pose(new Implies(p4, new XplusCeqZ(p2[0], p3, p2[1])));
+          }
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-          if (binaryVar(p2[0]) && binaryVar(p2[1]) && p3 >= 0 && p3 <= 2) {
+          if (isReified && binaryVar(p2[0]) && binaryVar(p2[1]) && p3 >= 0 && p3 <= 2) {
             if (p3 == 0) {
               support.pose(new Not(new OrBoolSimple(p2[0], p2[1], p4)));
             } else if (p3 == 1) {
@@ -233,10 +265,18 @@ class LinearConstraints implements ParserTreeConstants {
               support.pose(new AndBoolSimple(p2[0], p2[1], p4));
             }
           } else {
-            support.pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+            if (isReified) {
+              support.pose(new Reified(new XplusYeqC(p2[0], p2[1], p3), p4));
+            } else {
+              support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], p3)));
+            }
           }
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-          support.pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
+          if (isReified) {
+            support.pose(new Reified(new XplusYeqC(p2[0], p2[1], -p3), p4));
+          } else {
+            support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], -p3)));
+          }
         } else {
           int pos = sumPossible(p1, p3);
           if (pos > -1) {
@@ -248,146 +288,305 @@ class LinearConstraints implements ParserTreeConstants {
               }
             }
             if (boolSum(vect)) {
-              support.pose(new Reified(new SumBool(vect, "==", p2[pos]), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(vect, "==", p2[pos]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(vect, "==", p2[pos])));
+              }
             } else {
-              support.pose(new Reified(new SumInt(vect, "==", p2[pos]), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumInt(vect, "==", p2[pos]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumInt(vect, "==", p2[pos])));
+              }
             }
           } else if (allWeightsOne(p1)) {
             IntVar v = support.dictionary.getConstant(p3);
             if (boolSum(p2)) {
-              support.pose(new Reified(new SumBool(p2, "==", v), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(p2, "==", v), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(p2, "==", v)));
+              }
             } else {
-              support.pose(new Reified(new SumInt(p2, "==", v), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumInt(p2, "==", v), p4));
+              } else {
+                support.pose(new Implies(p4, new SumInt(p2, "==", v)));
+              }
             }
           } else if (allWeightsMinusOne(p1)) {
             IntVar v = support.dictionary.getConstant(-p3);
             if (boolSum(p2)) {
-              support.pose(new Reified(new SumBool(p2, "==", v), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(p2, "==", v), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(p2, "==", v)));
+              }
             } else {
-              support.pose(new Reified(new SumInt(p2, "==", v), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumInt(p2, "==", v), p4));
+              } else {
+                support.pose(new Implies(p4, new SumInt(p2, "==", v)));
+              }
             }
           } else {
-            support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
+            if (isReified) {
+              support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
+            } else {
+              support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
+            }
           }
         }
         break;
       case Support.NE:
-        if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 == 0) {
-            if (binaryVar(p2[0]) && binaryVar(p2[1])) {
-              // (x != y) <=> b == x xor y = b
-              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-            } else if (p2[0].singleton()) {
-              support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
-            } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
-            } else {
-              support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-            }
-          } else {
-            support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
-          }
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 == 0) {
-            if (binaryVar(p2[0]) && binaryVar(p2[1])) {
-              // (x != y) <=> b == x xor y = b
-              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-            } else if (p2[0].singleton()) {
-              support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
-            } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
-            } else {
-              support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
-            }
-          } else {
-            support.pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
-          }
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-          support.pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-          support.pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
-        } else if (allWeightsOne(p1)) {
-          if (p1.length == 1) {
+        if (p1.length == 1 && p1[0] == 1) {
+          if (isReified) {
             if (p2[0].domain.isIntersecting(p3, p3)) {
               support.pose(support.fzXneqCreified(p2[0], p3, p4));
             } else {
               p4.domain.inValue(store.level, p4, 1);
             }
           } else {
-            t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-            if (boolSum(p2)) {
-              support.pose(new Reified(new SumBool(p2, "!=", t), p4));
-            } else {
-              support.pose(new Reified(new SumInt(p2, "!=", t), p4));
-            }
+            support.pose(support.fzXneqCimplied(p2[0], p3, p4));
           }
-        } else if (allWeightsMinusOne(p1)) {
-          if (p1.length == 1) {
+        } else if (p1.length == 1 && p1[0] == -1) {
+          if (isReified) {
             if (p2[0].domain.isIntersecting(-p3, -p3)) {
               support.pose(support.fzXneqCreified(p2[0], -p3, p4));
             } else {
               p4.domain.inValue(store.level, p4, 1);
             }
           } else {
-            t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-            if (boolSum(p2)) {
-              support.pose(new Reified(new SumBool(p2, "!=", t), p4));
-            } else {
-              support.pose(new Reified(new SumInt(p2, "!=", t), p4));
-            }
+            support.pose(support.fzXneqCimplied(p2[0], -p3, p4));
           }
-        } else {
-          support.pose(new Reified(new LinearInt(p2, p1, "!=", p3), p4));
-        }
-        break;
-      case Support.LT:
-        support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
-        break;
-      // gt not present in the newest flatzinc version
-      case Support.LE:
-        if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
-            support.pose(new Reified(new XlteqY(p2[0], p2[1]), p4));
-          } else if (p4.min() == 1) {
-            support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
-          } else if (p4.max() == 0) {
-            support.pose(new Not(new XplusClteqZ(p2[0], -p3, p2[1])));
-          } else if (p2[0].singleton()) {
-            support.pose(new Reified(new XgteqC(p2[1], p2[0].value() - p3), p4));
+            if (isReified && binaryVar(p2[0]) && binaryVar(p2[1])) {
+              // (x != y) <=> b == x xor y = b
+              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+            } else if (p2[0].singleton()) {
+              if (isReified) {
+                support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
+              } else {
+                support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
+              }
+            } else if (p2[1].singleton()) {
+              if (isReified) {
+                support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
+              } else {
+                support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
+              }
+            } else {
+              if (isReified) {
+                support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+              } else {
+                support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
+              }
+            }
           } else {
-            support.pose(new Reified(new XplusClteqZ(p2[0], -p3, p2[1]), p4));
+            if (isReified) {
+              support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
+            } else {
+              support.pose(new Implies(p4, new Not(new XplusCeqZ(p2[1], p3, p2[0]))));
+            }
           }
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
           if (p3 == 0) {
-            support.pose(new Reified(new XlteqY(p2[1], p2[0]), p4));
-          } else if (p4.min() == 1) {
-            support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
-          } else if (p4.max() == 0) {
-            support.pose(new Not(new XplusClteqZ(p2[1], -p3, p2[0])));
-          } else if (p2[1].singleton()) {
-            support.pose(new Reified(new XgteqC(p2[0], p2[1].value() - p3), p4));
+            if (isReified && binaryVar(p2[0]) && binaryVar(p2[1])) {
+              // (x != y) <=> b == x xor y = b
+              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
+            } else if (p2[0].singleton()) {
+              if (isReified) {
+                support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
+              } else {
+                support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
+              }
+            } else if (p2[1].singleton()) {
+              if (isReified) {
+                support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
+              } else {
+                support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
+              }
+            } else {
+              if (isReified) {
+                support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
+              } else {
+                support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
+              }
+            }
           } else {
-            support.pose(new Reified(new XplusClteqZ(p2[1], -p3, p2[0]), p4));
+            if (isReified) {
+              support.pose(new Reified(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4));
+            } else {
+              support.pose(new Implies(p4, new Not(new XplusCeqZ(p2[0], p3, p2[1]))));
+            }
+          }
+        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+          if (isReified) {
+            support.pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4));
+          } else {
+            support.pose(new Implies(p4, new Not(new XplusYeqC(p2[0], p2[1], p3))));
+          }
+        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+          if (isReified) {
+            support.pose(new Reified(new Not(new XplusYeqC(p2[0], p2[1], -p3)), p4));
+          } else {
+            support.pose(new Implies(p4, new Not(new XplusYeqC(p2[0], p2[1], -p3))));
+          }
+        } else if (allWeightsOne(p1)) {
+          t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
+          if (boolSum(p2)) {
+            if (isReified) {
+              support.pose(new Reified(new SumBool(p2, "!=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
+            }
+          } else {
+            if (isReified) {
+              support.pose(new Reified(new SumInt(p2, "!=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
+            }
+          }
+        } else if (allWeightsMinusOne(p1)) {
+          t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
+          if (boolSum(p2)) {
+            if (isReified) {
+              support.pose(new Reified(new SumBool(p2, "!=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
+            }
+          } else {
+            if (isReified) {
+              support.pose(new Reified(new SumInt(p2, "!=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
+            }
+          }
+        } else {
+          if (isReified) {
+            support.pose(new Reified(new LinearInt(p2, p1, "!=", p3), p4));
+          } else {
+            support.pose(new Implies(p4, new LinearInt(p2, p1, "!=", p3)));
+          }
+        }
+        break;
+      case Support.LT:
+        if (isReified) {
+          support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
+        } else {
+          support.pose(new Implies(p4, new LinearInt(p2, p1, "<", p3)));
+        }
+        break;
+      case Support.GT:
+        if (isReified) {
+          // gt not present in the newest flatzinc version for reified
+          throw new IllegalArgumentException(
+              "%% ERROR: Relation GT not supported for reified constraint.");
+        } else {
+          support.pose(new Implies(p4, new LinearInt(p2, p1, ">", p3)));
+        }
+        break;
+      case Support.GE:
+        if (isReified) {
+          // ge not present in the newest flatzinc version for reified
+          throw new IllegalArgumentException(
+              "%% ERROR: Relation GE not supported for reified constraint.");
+        } else {
+          support.pose(new Implies(p4, new LinearInt(p2, p1, ">=", p3)));
+        }
+        break;
+      case Support.LE:
+        if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+          if (p3 == 0) {
+            if (isReified) {
+              support.pose(new Reified(new XlteqY(p2[0], p2[1]), p4));
+            } else {
+              support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
+            }
+          } else {
+            if (isReified) {
+              if (p4.min() == 1) {
+                support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
+              } else if (p4.max() == 0) {
+                support.pose(new Not(new XplusClteqZ(p2[0], -p3, p2[1])));
+              } else if (p2[0].singleton()) {
+                support.pose(new Reified(new XgteqC(p2[1], p2[0].value() - p3), p4));
+              } else {
+                support.pose(new Reified(new XplusClteqZ(p2[0], -p3, p2[1]), p4));
+              }
+            } else {
+              if (p2[0].singleton()) {
+                support.pose(new Implies(p4, new XgteqC(p2[1], p2[0].value() - p3)));
+              } else {
+                support.pose(new Implies(p4, new XplusClteqZ(p2[0], -p3, p2[1])));
+              }
+            }
+          }
+        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+          if (p3 == 0) {
+            if (isReified) {
+              support.pose(new Reified(new XlteqY(p2[1], p2[0]), p4));
+            } else {
+              support.pose(new Implies(p4, new XlteqY(p2[1], p2[0])));
+            }
+          } else {
+            if (isReified) {
+              if (p4.min() == 1) {
+                support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
+              } else if (p4.max() == 0) {
+                support.pose(new Not(new XplusClteqZ(p2[1], -p3, p2[0])));
+              } else if (p2[1].singleton()) {
+                support.pose(new Reified(new XgteqC(p2[0], p2[1].value() - p3), p4));
+              } else {
+                support.pose(new Reified(new XplusClteqZ(p2[1], -p3, p2[0]), p4));
+              }
+            } else {
+              if (p2[1].singleton()) {
+                support.pose(new Implies(p4, new XgteqC(p2[0], p2[1].value() - p3)));
+              } else {
+                support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
+              }
+            }
           }
         } else if (p1.length == 1 && p1[0] == 1) {
-          support.pose(new Reified(new XlteqC(p2[0], p3), p4));
+          if (isReified) {
+            support.pose(new Reified(new XlteqC(p2[0], p3), p4));
+          } else {
+            support.pose(new Implies(p4, new XlteqC(p2[0], p3)));
+          }
         } else if (p1.length == 1 && p1[0] == -1) {
-          support.pose(new Reified(new XgteqC(p2[0], -p3), p4));
+          if (isReified) {
+            support.pose(new Reified(new XgteqC(p2[0], -p3), p4));
+          } else {
+            support.pose(new Implies(p4, new XgteqC(p2[0], -p3)));
+          }
         } else if (boolSum(p2) && p3 == 0 && allPositive(p1)) {
           // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=>
           // p4)
-          if (support.options.useSat()) {
-            sat.generateAllZeroReif(support.unique(p2), p4);
+          if (isReified) {
+            if (support.options.useSat()) {
+              sat.generateAllZeroReif(support.unique(p2), p4);
+            } else {
+              support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
+            }
           } else {
-            support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
+            // This case doesn't exist in _imp version
+            support.pose(new Implies(p4, new LinearInt(p2, p1, "<=", p3)));
           }
         } else if (boolSum(p2) && p3 == 0 && allNonPositive(p1)) {
           // very special case: negative weighted sum of 0/1 variables <= 0 =>  (p4 = 1)
-          p4.domain.inValue(store.level, p4, 1);
+          if (isReified) {
+            p4.domain.inValue(store.level, p4, 1);
+          } else {
+            // This case doesn't exist in _imp version
+            support.pose(new Implies(p4, new LinearInt(p2, p1, "<=", p3)));
+          }
         } else if (allWeightsOne(p1)) {
           t = support.dictionary.getConstant(p3);
           if (boolSum(p2)) {
-            if (p3 == 0) {
+            if (isReified && p3 == 0) {
               // all p2's zero <=> p4
               if (support.options.useSat()) {
                 sat.generateAllZeroReif(support.unique(p2), p4);
@@ -395,17 +594,37 @@ class LinearConstraints implements ParserTreeConstants {
                 support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
               }
             } else {
-              support.pose(new Reified(new SumBool(p2, "<=", t), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(p2, "<=", t), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(p2, "<=", t)));
+              }
             }
           } else {
-            support.pose(new Reified(new SumInt(p2, "<=", t), p4));
+            if (isReified) {
+              support.pose(new Reified(new SumInt(p2, "<=", t), p4));
+            } else {
+              if (p2.length == 2) {
+                support.pose(new Implies(p4, new XplusYlteqZ(p2[0], p2[1], t)));
+              } else {
+                support.pose(new Implies(p4, new SumInt(p2, "<=", t)));
+              }
+            }
           }
         } else if (allWeightsMinusOne(p1)) {
           t = support.dictionary.getConstant(-p3);
           if (boolSum(p2)) {
-            support.pose(new Reified(new SumBool(p2, ">=", t), p4));
+            if (isReified) {
+              support.pose(new Reified(new SumBool(p2, ">=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumBool(p2, ">=", t)));
+            }
           } else {
-            support.pose(new Reified(new SumInt(p2, ">=", t), p4));
+            if (isReified) {
+              support.pose(new Reified(new SumInt(p2, ">=", t), p4));
+            } else {
+              support.pose(new Implies(p4, new SumInt(p2, ">=", t)));
+            }
           }
         } else {
           int posLe = sumLePossible(p1, p3);
@@ -419,11 +638,23 @@ class LinearConstraints implements ParserTreeConstants {
               }
             }
             if (boolSum(vect)) {
-              support.pose(new Reified(new SumBool(vect, "<=", p2[posLe]), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(vect, "<=", p2[posLe]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(vect, "<=", p2[posLe])));
+              }
             } else if (vect.length == 2) {
-              support.pose(new Reified(new XplusYlteqZ(vect[0], vect[1], p2[posLe]), p4));
+              if (isReified) {
+                support.pose(new Reified(new XplusYlteqZ(vect[0], vect[1], p2[posLe]), p4));
+              } else {
+                support.pose(new Implies(p4, new XplusYlteqZ(vect[0], vect[1], p2[posLe])));
+              }
             } else {
-              support.pose(new Reified(new SumInt(vect, "<=", p2[posLe]), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumInt(vect, "<=", p2[posLe]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumInt(vect, "<=", p2[posLe])));
+              }
             }
           } else if (posGe > -1) {
             IntVar[] vect = new IntVar[p1.length - 1];
@@ -434,234 +665,24 @@ class LinearConstraints implements ParserTreeConstants {
               }
             }
             if (boolSum(vect)) {
-              support.pose(new Reified(new SumBool(vect, ">=", p2[posGe]), p4));
+              if (isReified) {
+                support.pose(new Reified(new SumBool(vect, ">=", p2[posGe]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumBool(vect, ">=", p2[posGe])));
+              }
             } else {
-              support.pose(new Reified(new SumInt(vect, ">=", p2[posGe]), p4));
-            }
-          } else {
-            support.pose(new Reified(new LinearInt(p2, p1, "<=", p3), p4));
-          }
-        }
-        break;
-      default:
-        throw new IllegalArgumentException(
-            "%% ERROR: Relation in linear constraint not supported.");
-    }
-  }
-
-  void int_lin_relation_imp(int operation, SimpleNode node) throws FailException {
-
-    int[] p1 = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-    IntVar[] p2 = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-    // If a linear term contains only constants and can be evaluated
-    // check if satisfied and do not generate constraint
-    boolean p2Fixed = allConstants(p2);
-    int s = 0;
-    if (p2Fixed) {
-      int el = 0;
-      while (el < p2.length) {
-        s += p2[el].min() * p1[el];
-        el++;
-      }
-    }
-
-    IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
-
-    IntVar t;
-    switch (operation) {
-      case Support.EQ:
-        if (p2Fixed) {
-          if (s != p3) {
-            p4.domain.inValue(store.level, p4, 0);
-          }
-          return;
-        }
-
-        if (p1.length == 1) {
-          if (p1[0] == 1) {
-            support.pose(support.fzXeqCimplied(p2[0], p3, p4));
-          } else {
-            support.pose(
-                new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
-          }
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          support.pose(new Implies(p4, new XplusCeqZ(p2[1], p3, p2[0])));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          support.pose(new Implies(p4, new XplusCeqZ(p2[0], p3, p2[1])));
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-          support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], p3)));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-          support.pose(new Implies(p4, new XplusYeqC(p2[0], p2[1], -p3)));
-        } else {
-          int pos = sumPossible(p1, p3);
-          if (pos > -1) {
-            IntVar[] vect = new IntVar[p1.length - 1];
-            int n = 0;
-            for (int i = 0; i < p2.length; i++) {
-              if (i != pos) {
-                vect[n++] = p2[i];
+              if (isReified) {
+                support.pose(new Reified(new SumInt(vect, ">=", p2[posGe]), p4));
+              } else {
+                support.pose(new Implies(p4, new SumInt(vect, ">=", p2[posGe])));
               }
             }
-            if (boolSum(vect)) {
-              support.pose(new Implies(p4, new SumBool(vect, "==", p2[pos])));
+          } else {
+            if (isReified) {
+              support.pose(new Reified(new LinearInt(p2, p1, "<=", p3), p4));
             } else {
-              support.pose(new Implies(p4, new SumInt(vect, "==", p2[pos])));
+              support.pose(new Implies(p4, new LinearInt(p2, p1, "<=", p3)));
             }
-          } else if (allWeightsOne(p1)) {
-            IntVar v = support.dictionary.getConstant(p3);
-            if (boolSum(p2)) {
-              support.pose(new Implies(p4, new SumBool(p2, "==", v)));
-            } else {
-              support.pose(new Implies(p4, new SumInt(p2, "==", v)));
-            }
-          } else if (allWeightsMinusOne(p1)) {
-            IntVar v = support.dictionary.getConstant(-p3);
-            if (boolSum(p2)) {
-              support.pose(new Implies(p4, new SumBool(p2, "==", v)));
-            } else {
-              support.pose(new Implies(p4, new SumInt(p2, "==", v)));
-            }
-          } else {
-            support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
-          }
-        }
-        break;
-      case Support.NE:
-        if (p1.length == 1 && p1[0] == 1) {
-          support.pose(support.fzXneqCimplied(p2[0], p3, p4));
-        } else if (p1.length == 1 && p1[0] == -1) {
-          support.pose(support.fzXneqCimplied(p2[0], -p3, p4));
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 == 0) {
-            if (p2[0].singleton()) {
-              support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
-            } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
-            } else {
-              support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
-            }
-          } else {
-            support.pose(new Reified(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4));
-          }
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 == 0) {
-            if (p2[0].singleton()) {
-              support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
-            } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
-            } else {
-              support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
-            }
-          } else {
-            support.pose(new Implies(p4, new Not(new XplusCeqZ(p2[0], p3, p2[1]))));
-          }
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-          support.pose(new Implies(p4, new Not(new XplusYeqC(p2[0], p2[1], p3))));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-          support.pose(new Implies(p4, new Not(new XplusYeqC(p2[0], p2[1], -p3))));
-        } else if (allWeightsOne(p1)) {
-          t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-          if (boolSum(p2)) {
-            support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
-          } else {
-            support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
-          }
-        } else if (allWeightsMinusOne(p1)) {
-          t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
-          if (boolSum(p2)) {
-            support.pose(new Implies(p4, new SumBool(p2, "!=", t)));
-          } else {
-            support.pose(new Implies(p4, new SumInt(p2, "!=", t)));
-          }
-        } else {
-          support.pose(new Implies(p4, new LinearInt(p2, p1, "!=", p3)));
-        }
-        break;
-      case Support.LT:
-        support.pose(new Implies(p4, new LinearInt(p2, p1, "<", p3)));
-        break;
-      case Support.GT:
-        support.pose(new Implies(p4, new LinearInt(p2, p1, ">", p3)));
-        break;
-      case Support.GE:
-        support.pose(new Implies(p4, new LinearInt(p2, p1, ">=", p3)));
-        break;
-      case Support.LE:
-        if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 == 0) {
-            support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
-          } else {
-            if (p2[0].singleton()) {
-              support.pose(new Implies(p4, new XgteqC(p2[1], p2[0].value() - p3)));
-            } else {
-              support.pose(new Implies(p4, new XplusClteqZ(p2[0], -p3, p2[1])));
-            }
-          }
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 == 0) {
-            support.pose(new Implies(p4, new XlteqY(p2[1], p2[0])));
-          } else {
-            if (p2[1].singleton()) {
-              support.pose(new Implies(p4, new XgteqC(p2[0], p2[1].value() - p3)));
-            } else {
-              support.pose(new Implies(p4, new XplusClteqZ(p2[1], -p3, p2[0])));
-            }
-          }
-        } else if (p1.length == 1 && p1[0] == 1) {
-          support.pose(new Implies(p4, new XlteqC(p2[0], p3)));
-        } else if (p1.length == 1 && p1[0] == -1) {
-          support.pose(new Implies(p4, new XgteqC(p2[0], -p3)));
-        } else if (allWeightsOne(p1)) {
-          t = support.dictionary.getConstant(p3);
-          if (boolSum(p2)) {
-            support.pose(new Implies(p4, new SumBool(p2, "<=", t)));
-          } else if (p2.length == 2) {
-            support.pose(new Implies(p4, new XplusYlteqZ(p2[0], p2[1], t)));
-          } else {
-            support.pose(new Implies(p4, new SumInt(p2, "<=", t)));
-          }
-        } else if (allWeightsMinusOne(p1)) {
-          t = support.dictionary.getConstant(-p3);
-          if (boolSum(p2)) {
-            support.pose(new Implies(p4, new SumBool(p2, ">=", t)));
-          } else {
-            support.pose(new Implies(p4, new SumInt(p2, ">=", t)));
-          }
-        } else {
-          int posLe = sumLePossible(p1, p3);
-          int posGe = sumGePossible(p1, p3);
-          if (posLe > -1) {
-            IntVar[] vect = new IntVar[p1.length - 1];
-            int n = 0;
-            for (int i = 0; i < p2.length; i++) {
-              if (i != posLe) {
-                vect[n++] = p2[i];
-              }
-            }
-            if (boolSum(vect)) {
-              support.pose(new Implies(p4, new SumBool(vect, "<=", p2[posLe])));
-            } else if (vect.length == 2) {
-              support.pose(new Implies(p4, new XplusYlteqZ(vect[0], vect[1], p2[posLe])));
-            } else {
-              support.pose(new Implies(p4, new SumInt(vect, "<=", p2[posLe])));
-            }
-          } else if (posGe > -1) {
-            IntVar[] vect = new IntVar[p1.length - 1];
-            int n = 0;
-            for (int i = 0; i < p2.length; i++) {
-              if (i != posGe) {
-                vect[n++] = p2[i];
-              }
-            }
-            if (boolSum(vect)) {
-              support.pose(new Implies(p4, new SumBool(vect, ">=", p2[posGe])));
-            } else {
-              support.pose(new Implies(p4, new SumInt(vect, ">=", p2[posGe])));
-            }
-          } else {
-            support.pose(new Implies(p4, new LinearInt(p2, p1, "<=", p3)));
           }
         }
         break;

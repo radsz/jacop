@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
@@ -112,57 +113,28 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return computeMaxPruningEvent(v, condC, thenC);
+    return getPruningEventForConstraints(v, consistencyPruningEvents, condC, thenC);
   }
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("It should not be called as overrides exist.");
+    return throwMorePreciseMethodExists();
   }
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-
-    if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return computeMaxPruningEvent(v, condC, thenC);
+    return getPruningEventForConstraints(v, notConsistencyPruningEvents, condC, thenC);
   }
 
   @Override
   public int getNestedPruningEvent(Var v, boolean mode) {
-
-    if (mode) {
-      if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
-      }
-    } else {
-      if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
-      }
-    }
-    return computeMaxPruningEvent(v, condC, thenC);
+    Map<Var, Integer> eventsMap = mode ? consistencyPruningEvents : notConsistencyPruningEvents;
+    return getPruningEventForConstraints(v, eventsMap, condC, thenC);
   }
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    throw new IllegalStateException("It should not be called as overrides exist.");
+    return throwMorePreciseMethodExists();
   }
 
   @Override

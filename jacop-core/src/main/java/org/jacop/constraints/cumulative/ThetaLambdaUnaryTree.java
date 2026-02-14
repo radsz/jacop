@@ -196,4 +196,9 @@ class ThetaLambdaUnaryTree extends ThetaTree {
   protected String treeName() {
     return "ThetaLambdaUnaryTree";
   }
+
+  @Override
+  protected String getNodeString(int i) {
+    return tree[i].toString();
+  }
 }

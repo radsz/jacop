@@ -31,8 +31,10 @@
 package org.jacop.constraints;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Abstract base class for SumInt and SumBool constraints. Provides shared relation constants,
@@ -80,6 +82,9 @@ public abstract class AbstractSum extends PrimitiveConstraint {
 
   /** Whether this constraint is reified. */
   boolean reified = true;
+
+  /** Guide value for search heuristics. */
+  int guideValue;
 
   /**
    * Constructs with pre-set fields. Subclasses must call this from their constructors.
@@ -167,5 +172,72 @@ public abstract class AbstractSum extends PrimitiveConstraint {
     result.append(rel2String()).append(", ").append(sum).append(" )");
 
     return result.toString();
+  }
+
+  /**
+   * Computes the guide variable for search heuristics based on regret calculation.
+   *
+   * @param vars the array of variables to consider
+   * @param guideValueOut output array where guideValueOut[0] will be set to the computed guide
+   *     value
+   * @return the proposed variable (or null if none found)
+   */
+  public static Var computeGuideVariable(IntVar[] vars, int[] guideValueOut) {
+
+    int regret = 1;
+    Var proposedVariable = null;
+    int guideVal = 0;
+
+    for (IntVar v : vars) {
+
+      IntDomain listDom = v.dom();
+
+      if (v.singleton()) {
+        continue;
+      }
+
+      int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
+
+      if (currentRegret > regret) {
+        regret = currentRegret;
+        proposedVariable = v;
+        guideVal = listDom.min();
+      }
+
+      currentRegret = listDom.max() - listDom.previousValue(listDom.max());
+
+      if (currentRegret > regret) {
+        regret = currentRegret;
+        proposedVariable = v;
+        guideVal = listDom.max();
+      }
+    }
+
+    guideValueOut[0] = guideVal;
+    return proposedVariable;
+  }
+
+  @Override
+  public Var getGuideVariable() {
+    int[] guideValueOut = new int[1];
+    Var result = computeGuideVariable(x, guideValueOut);
+    guideValue = guideValueOut[0];
+    return result;
+  }
+
+  @Override
+  public Constraint getGuideConstraint() {
+
+    IntVar proposedVariable = (IntVar) getGuideVariable();
+    if (proposedVariable != null) {
+      return new XeqC(proposedVariable, guideValue);
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public int getGuideValue() {
+    return guideValue;
   }
 }

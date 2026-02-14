@@ -103,29 +103,53 @@ public abstract class ExampleSet {
   }
 
   /**
+   * Template method for executing search with common boilerplate.
+   *
+   * @param select the SelectChoicePoint to use for variable/value selection
+   * @param costVar optional cost variable for optimization (null if not optimizing)
+   * @param configureSearch optional callback to configure the search before labeling
+   * @param printStats whether to print search statistics
+   * @param printTime whether to print execution time
+   * @return true if a solution was found, false otherwise
+   */
+  protected boolean executeSearch(
+      SelectChoicePoint<SetVar> select,
+      IntVar costVar,
+      java.util.function.Consumer<DepthFirstSearch<SetVar>> configureSearch,
+      boolean printStats,
+      boolean printTime) {
+    final long t1 = System.currentTimeMillis();
+    searchLabel = new DepthFirstSearch<>();
+    if (configureSearch != null) {
+      configureSearch.accept((DepthFirstSearch<SetVar>) searchLabel);
+    }
+    boolean result;
+    if (costVar != null) {
+      result = searchLabel.labeling(store, select, costVar);
+    } else {
+      result = searchLabel.labeling(store, select);
+    }
+    if (printTime) {
+      printExecutionTime(t1);
+    }
+    if (printStats) {
+      printSearchStats();
+    }
+    return result;
+  }
+
+  /**
    * It specifies simple search method based on input order and lexigraphical ordering of values.
    *
    * @return true if there is a solution, false otherwise.
    */
   public boolean search() {
-
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-
-    boolean result = searchLabel.labeling(store, select);
-
+    boolean result = executeSearch(select, null, null, true, true);
     if (result) {
       store.print();
     }
-
-    printExecutionTime(T1);
-    printSearchStats();
     return result;
   }
 
@@ -136,22 +160,12 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchOptimal() {
-
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-
-    boolean result = searchLabel.labeling(store, select, cost);
-
+    boolean result = executeSearch(select, cost, null, false, true);
     if (result) {
       store.print();
     }
-    printExecutionTime(T1);
     return result;
   }
 
@@ -161,19 +175,17 @@ public abstract class ExampleSet {
    * @return true if any optimal solution has been found.
    */
   public boolean searchAllOptimal() {
-
-    final long T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-    searchLabel.getSolutionListener().searchAll(true);
-    searchLabel.getSolutionListener().recordSolutions(true);
-
-    boolean result = searchLabel.labeling(store, select, cost);
-    printExecutionTime(T1);
-    return result;
+    return executeSearch(
+        select,
+        cost,
+        search -> {
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(true);
+        },
+        false,
+        true);
   }
 
   /**
@@ -184,25 +196,10 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchSmallestDomain(boolean optimal) {
-
-    final long T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new SmallestDomain<>(), new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-
-    if (optimal) {
-      searchLabel.labeling(store, select, cost);
-    } else {
-      searchLabel.labeling(store, select);
-    }
-
-    final boolean result = false;
-    printSearchStats();
-    printExecutionTime(T1);
-    return result;
+    return executeSearch(select, optimal ? cost : null, null, true, true);
   }
 
   /**
@@ -213,24 +210,16 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchWeightedDegree() {
-
-    final long T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]),
             new WeightedDegree<>(store),
             new SmallestDomain<>(),
             new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-
-    final boolean result = searchLabel.labeling(store, select);
-    printSearchStats();
+    boolean result = executeSearch(select, null, null, true, true);
     if (result) {
       store.print();
     }
-    printExecutionTime(T1);
     return result;
   }
 
@@ -241,15 +230,10 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchMostConstrainedStatic() {
-
-    searchLabel = new DepthFirstSearch<>();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
-
-    final boolean result = searchLabel.labeling(store, select);
-    printSearchStats();
+    boolean result = executeSearch(select, null, null, true, false);
     if (!result) {
       IO.println("**** No Solution ****");
     }
@@ -263,27 +247,25 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchAllAtOnce() {
-
-    final long T1 = System.currentTimeMillis();
-
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
-
-    searchLabel = new DepthFirstSearch<>();
-
-    searchLabel.getSolutionListener().searchAll(true);
-    searchLabel.getSolutionListener().recordSolutions(true);
-    searchLabel.setAssignSolution(true);
-
-    boolean result = searchLabel.labeling(store, select);
-
+    boolean result =
+        executeSearch(
+            select,
+            null,
+            search -> {
+              search.getSolutionListener().searchAll(true);
+              search.getSolutionListener().recordSolutions(true);
+              search.setAssignSolution(true);
+            },
+            false,
+            true);
     if (result) {
       IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
       IO.println("Failed to find any solution");
     }
-    printExecutionTime(T1);
     return result;
   }
 

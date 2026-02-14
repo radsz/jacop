@@ -1,5 +1,5 @@
 /*
- * AbstractXcompY.java
+ * AbstractXplusYeq.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -31,40 +31,30 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntVar;
+import org.jacop.core.IntDomain;
 
 /**
- * Abstract base for two-variable integer comparison constraints (XgtY, XltY, XgteqY, XlteqY).
- * Provides shared fields and constructor logic. Inherits pruning event configuration from {@link
- * AbstractArithmeticConstraint}.
+ * Abstract base for addition equality constraints (XplusCeqZ, XplusYeqC). Provides shared pruning
+ * event configuration and common constraint patterns.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractXcompY extends AbstractArithmeticConstraint {
+public abstract class AbstractXplusYeq extends PrimitiveConstraint {
 
-  /** It specifies the first variable. */
-  protected final IntVar x;
+  /** Shared ID counter for subclasses. */
+  protected static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies the second variable. */
-  protected final IntVar y;
+  /** Checks for overflow in the constraint. */
+  protected abstract void checkForOverflow();
 
-  /**
-   * Constructs a comparison constraint between two integer variables.
-   *
-   * @param idNum the id counter for the concrete subclass.
-   * @param x variable x.
-   * @param y variable y.
-   */
-  protected AbstractXcompY(AtomicInteger idNum, IntVar x, IntVar y) {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNum.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-
-    setScope(x, y);
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
   }
 }

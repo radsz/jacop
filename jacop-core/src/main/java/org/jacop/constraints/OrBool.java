@@ -31,87 +31,75 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 
 /**
- * OrBool constraint implements logic and operation on its arguments and returns result.
+ * OrBool constraint implements logic or operation on its arguments and returns result.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
-
-  final PrimitiveConstraint c;
+public class OrBool extends AbstractBool {
 
   /**
-   * It constructs and constraint on variables.
+   * It constructs or constraint on variables.
    *
    * @param a parameters
    * @param result result variable.
    */
   public OrBool(IntVar[] a, IntVar result) {
-
-    int[] shortCircuit = {-1};
-    IntVar[] r = filter(a, shortCircuit);
-
-    if (shortCircuit[0] == 1) {
-      c = new XeqC(result, 1);
-    } else if (r.length == 0) {
-      c = new XeqC(result, 0);
-    } else if (r.length == 1) {
-      c = new XeqY(r[0], result);
-    } else if (r.length == 2) {
-      c = new OrBoolSimple(r[0], r[1], result);
-    } else {
-      c = new OrBoolVector(r, result);
-    }
+    super(a, result);
   }
 
   /**
-   * It constructs and constraint on variables.
+   * It constructs or constraint on variables.
    *
    * @param a parameters
    * @param result result variable.
    */
   public OrBool(List<? extends IntVar> a, IntVar result) {
-    this(a.toArray(new IntVar[0]), result);
+    super(a, result);
   }
 
   /**
-   * It constructs and constraint on variables.
+   * It constructs or constraint on variables.
    *
    * @param a a parameter
    * @param b b parameter
    * @param result result variable.
    */
   public OrBool(IntVar a, IntVar b, IntVar result) {
-    this(new IntVar[] {a, b}, result);
+    super(a, b, result);
   }
 
   @Override
-  public void imposeDecomposition(Store store) {
-
-    store.impose(c);
+  protected int getShortCircuitValue() {
+    return 1;
   }
 
   @Override
-  public List<PrimitiveConstraint> decompose(Store store) {
-    return Collections.singletonList(c);
+  protected int getShortCircuitResult() {
+    return 1;
   }
 
-  /**
-   * Returns a string representation of the constraint.
-   *
-   * @return string representation of the constraint.
-   */
-  public String toString() {
-    return c.toString();
+  @Override
+  protected int getEmptyArrayResult() {
+    return 0;
   }
 
-  IntVar[] filter(IntVar[] xs, int[] shortCircuit) {
+  @Override
+  protected PrimitiveConstraint createSimpleConstraint(IntVar a, IntVar b, IntVar result) {
+    return new OrBoolSimple(a, b, result);
+  }
+
+  @Override
+  protected PrimitiveConstraint createVectorConstraint(IntVar[] vars, IntVar result) {
+    return new OrBoolVector(vars, result);
+  }
+
+  @Override
+  protected IntVar[] filter(IntVar[] xs, int[] shortCircuit) {
     List<IntVar> result = new ArrayList<>();
     for (IntVar x : xs) {
       if (x.min() == 1) {

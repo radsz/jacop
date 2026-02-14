@@ -30,6 +30,11 @@
 
 package org.jacop.constraints.cumulative;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+
 /*
  * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
  *
@@ -48,6 +53,10 @@ abstract class Tree {
   int n;
 
   abstract void clearNode(int i);
+
+  protected abstract String treeName();
+
+  protected abstract String getNodeString(int i);
 
   void clearTree() {
     for (int i = 0; i < treeSize; i++) {
@@ -117,5 +126,81 @@ abstract class Tree {
     } else {
       return x + y;
     }
+  }
+
+  public void printTree(String name) {
+
+    try (PrintStream out =
+        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
+      out.print(toGraph(name));
+      // out.close(); not needed; auto close
+    } catch (IOException _) {
+      throw new RuntimeException("IO exception; ignored");
+    }
+  }
+
+  public String toGraph(String name) {
+
+    StringBuilder result = new StringBuilder();
+
+    result.append("digraph ").append(treeName()).append(name);
+    result.append(" {");
+    result.append("graph [  fontsize = 12,");
+    result.append("size = \"5,5\" ];\n");
+
+    for (int i = 0; i < treeSize; i++) {
+      result
+          .append("node_")
+          .append(i)
+          .append(" [shape = box, label = \"")
+          .append(getNodeString(i))
+          .append("\"]\n");
+    }
+
+    result.append(treeToGraph(root()));
+
+    result.append("label =\"\n\n").append(treeName()).append(name).append("\n\"");
+
+    result.append("}");
+
+    return result.toString();
+  }
+
+  StringBuffer treeToGraph(int i) {
+
+    StringBuffer result = new StringBuffer();
+
+    if (notExist(i)) {
+      return result;
+    } else {
+      String s = "node_" + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
+      if (exist(left(i))) {
+        result.append(s).append("node_").append(left(i)).append("\n");
+        result.append(treeToGraph(left(i)));
+      }
+      if (exist(right(i))) {
+        result.append(s).append("node_").append(right(i)).append("\n");
+        result.append(treeToGraph(right(i)));
+      }
+
+      return result;
+    }
+  }
+
+  public String toString() {
+
+    StringBuilder result = new StringBuilder();
+
+    result.append(treeName()).append("\n");
+    for (int i = 0; i < treeSize; i++) {
+      result
+          .append("Node ")
+          .append(i)
+          .append("\n============\n")
+          .append(getNodeString(i))
+          .append("\n============\n");
+    }
+
+    return result.toString();
   }
 }

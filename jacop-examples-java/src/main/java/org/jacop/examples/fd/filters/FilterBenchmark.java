@@ -191,6 +191,223 @@ public class FilterBenchmark {
     return list.toArray(IntVar[]::new);
   }
 
+  /** Holds resource range boundaries. */
+  private static class ResourceRanges {
+    final int addMin;
+    final int addMax;
+    final int mulMin;
+    final int mulMax;
+
+    ResourceRanges(int addNum, int mulNum) {
+      this.addMin = 1;
+      this.addMax = addMin + addNum - 1;
+      this.mulMin = addMax + 1;
+      this.mulMax = mulMin + mulNum - 1;
+    }
+  }
+
+  /**
+   * Creates dependency constraints and end operation cost calculation.
+   *
+   * @param store the constraint store
+   * @param dependencies operation dependencies
+   * @param delays operation delays
+   * @param lastOp indices of last operations
+   * @param T start time variables
+   * @param D delay values
+   * @param costVar variable to store the cost (will be created if null)
+   * @param costMax maximum value for cost variable (used only if costVar is null)
+   * @return the cost variable
+   */
+  private static IntVar createDependencyAndCostConstraints(
+      Store store,
+      int[][] dependencies,
+      int[] delays,
+      int[] lastOp,
+      IntVar[] T,
+      int[] D,
+      IntVar costVar,
+      int costMax) {
+    for (int[] dependency : dependencies) {
+      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
+    }
+
+    List<IntVar> endOp = new ArrayList<>();
+    int endMax = costVar == null ? costMax : costVar.max();
+    for (int value : lastOp) {
+      IntVar end = new IntVar(store, 0, endMax);
+      store.impose(new XplusCeqZ(T[value], D[value], end));
+      endOp.add(end);
+    }
+
+    if (costVar == null) {
+      costVar = new IntVar(store, 0, costMax);
+    }
+    store.impose(new Max(endOp, costVar));
+    return costVar;
+  }
+
+  /**
+   * Common experiment runner pattern.
+   *
+   * @param store the constraint store
+   * @param headerMsg header message to print
+   * @param constraintBuilder function that builds constraints and returns task vars
+   * @param selectorBuilder function that creates the selector
+   * @param consistencyMsg consistency check message
+   * @param extraSuccessLineSupplier function that computes extra line to print on success (called
+   *     after constraints built)
+   * @return cost value or -1 if no solution found
+   */
+  private static int runExperiment(
+      Store store,
+      String headerMsg,
+      java.util.function.Function<Store, List<List<IntVar>>> constraintBuilder,
+      java.util.function.Function<List<List<IntVar>>, SelectChoicePoint<IntVar>> selectorBuilder,
+      String consistencyMsg,
+      java.util.function.Supplier<String> extraSuccessLineSupplier) {
+    if (headerMsg != null) {
+      IO.println(headerMsg);
+    }
+    List<List<IntVar>> taskVars = constraintBuilder.apply(store);
+    SelectChoicePoint<IntVar> select = selectorBuilder.apply(taskVars);
+    checkConsistency(store, consistencyMsg);
+    boolean result = runLabelingWithTiming(store, select);
+    String extraLine = extraSuccessLineSupplier != null ? extraSuccessLineSupplier.get() : null;
+    return reportResult(result, extraLine);
+  }
+
+  /**
+   * Common experiment runner for two-phase labeling.
+   *
+   * @param store the constraint store
+   * @param headerMsg header message to print
+   * @param constraintBuilder function that builds constraints
+   * @param selectMc selector for first phase
+   * @param selectIo selector for second phase
+   * @param consistencyMsg consistency check message
+   * @param extraSuccessLineSupplier function that computes extra line to print on success (called
+   *     after constraints built)
+   * @param firstPhaseSearch optional search instance for first phase
+   * @return cost value or -1 if no solution found
+   */
+  private static int runTwoPhaseExperiment(
+      Store store,
+      String headerMsg,
+      Runnable constraintBuilder,
+      SelectChoicePoint<IntVar> selectMc,
+      SelectChoicePoint<IntVar> selectIo,
+      String consistencyMsg,
+      java.util.function.Supplier<String> extraSuccessLineSupplier,
+      Search<IntVar> firstPhaseSearch) {
+    if (headerMsg != null) {
+      IO.println(headerMsg);
+    }
+    constraintBuilder.run();
+    checkConsistency(store, consistencyMsg);
+    boolean result =
+        firstPhaseSearch != null
+            ? runTwoPhaseLabelingWithTiming(store, selectMc, selectIo, firstPhaseSearch)
+            : runTwoPhaseLabelingWithTiming(store, selectMc, selectIo);
+    String extraLine = extraSuccessLineSupplier != null ? extraSuccessLineSupplier.get() : null;
+    return reportResult(result, extraLine);
+  }
+
+  /**
+   * Populates resource arrays (T, R, D, Tadd, Radd, etc.) based on filter operations.
+   *
+   * @param store the constraint store
+   * @param filter the filter being scheduled
+   * @param ranges resource range boundaries
+   * @param T start time variables (output)
+   * @param R resource assignment variables (output)
+   * @param D delay values (output)
+   * @param Tadd start times for additions (output)
+   * @param Radd resource assignments for additions (output)
+   * @param Dadd delays for additions (output)
+   * @param ResAdd resource usage for additions (output)
+   * @param Tmul start times for multiplications (output)
+   * @param Rmul resource assignments for multiplications (output)
+   * @param Dmul delays for multiplications (output)
+   * @param ResMul resource usage for multiplications (output)
+   * @param addDelay delay variable for additions
+   * @param mulDelay delay variable for multiplications
+   * @param one constant one variable
+   * @param tMin minimum value for T variables
+   * @param tMax maximum value for T variables
+   */
+  private static void populateResourceArrays(
+      Store store,
+      Filter filter,
+      ResourceRanges ranges,
+      IntVar[] T,
+      IntVar[] R,
+      int[] D,
+      IntVar[] Tadd,
+      IntVar[] Radd,
+      IntVar[] Dadd,
+      IntVar[] ResAdd,
+      IntVar[] Tmul,
+      IntVar[] Rmul,
+      IntVar[] Dmul,
+      IntVar[] ResMul,
+      IntVar addDelay,
+      IntVar mulDelay,
+      IntVar one,
+      int tMin,
+      int tMax) {
+    int[] delays = filter.delays();
+    String nameT = "T";
+    String nameR = "R";
+
+    int j = 0;
+    int k = 0;
+    for (int i = 0; i < delays.length; i++) {
+      String t = nameT + i;
+      String r = nameR + i;
+
+      T[i] = new IntVar(store, t, tMin, tMax);
+
+      if (filter.ids()[i] == filter.addId()) {
+        R[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
+        Tadd[j] = T[i];
+        Radd[j] = R[i];
+        Dadd[j] = addDelay;
+        D[i] = filter.addDel();
+        ResAdd[j] = one;
+        j++;
+      } else {
+        R[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
+        Tmul[k] = T[i];
+        Rmul[k] = R[i];
+        Dmul[k] = mulDelay;
+        D[i] = filter.mulDel();
+        ResMul[k] = one;
+        k++;
+      }
+    }
+  }
+
+  /**
+   * Finalizes static fields Ts, Rs, Ds, Ns from computed arrays.
+   *
+   * @param T start time variables
+   * @param R resource assignment variables
+   * @param D delay values
+   * @param names operation names
+   */
+  private static void finalizeStaticFields(IntVar[] T, IntVar[] R, int[] D, List<String> names) {
+    Ts = new ArrayList<>();
+    Ts.addAll(Arrays.asList(T));
+    Rs = new ArrayList<>();
+    Rs.addAll(Arrays.asList(R));
+    Ds = new ArrayList<>();
+    for (Integer v : D) {
+      Ds.add(v);
+    }
+    Ns = names;
+  }
+
   /** Prints success/failure and returns cost value or -1. */
   private static int reportResult(boolean result) {
     return reportResult(result, null);
@@ -486,17 +703,20 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
-
     printExperimentHeader(filter, addNum, mulNum);
-
-    List<List<IntVar>> taskVars = makeConstraints(store, filter, addNum, mulNum);
-    IntVar[][] vars = taskVarsToMatrix(taskVars);
-    SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<>(
-            vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
-
-    checkConsistency(store, "1. Constraints consistent");
-    return reportResult(runLabelingWithTiming(store, select));
+    return runExperiment(
+        store,
+        null,
+        s -> makeConstraints(s, filter, addNum, mulNum),
+        taskVars ->
+            new SimpleMatrixSelect<>(
+                taskVarsToMatrix(taskVars),
+                new SmallestMin<>(),
+                new MostConstrainedStatic<>(),
+                new IndomainMin<>(),
+                0),
+        "1. Constraints consistent",
+        null);
   }
 
   /**
@@ -511,18 +731,20 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
-
     printExperimentHeader(filter, addNum, mulNum, clock);
-
-    List<List<IntVar>> taskVars = makeConstraintsChain(store, filter, addNum, mulNum, clock);
-    IntVar[][] vars = taskVarsToMatrix(taskVars);
-    SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<>(
-            vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
-
-    checkConsistency(store, "2. Constraints consistent");
-    boolean result = runLabelingWithTiming(store, select);
-    return reportResult(result, "Schedule length: " + div(cost.min(), clock));
+    return runExperiment(
+        store,
+        null,
+        s -> makeConstraintsChain(s, filter, addNum, mulNum, clock),
+        taskVars ->
+            new SimpleMatrixSelect<>(
+                taskVarsToMatrix(taskVars),
+                new SmallestMin<>(),
+                new MostConstrainedStatic<>(),
+                new IndomainMin<>(),
+                0),
+        "2. Constraints consistent",
+        () -> "Schedule length: " + div(cost.min(), clock));
   }
 
   /**
@@ -552,19 +774,30 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1Pm(Store store, Filter filter, int addNum, int mulNum) {
-
-    IO.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
-
-    List<List<IntVar>> taskVars = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
-    IntVar[][] vars = taskVarsToMatrix(taskVars);
-    SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<>(
-            vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
-
-    checkConsistency(store, "3. Constraints consistent");
-    return reportResult(runLabelingWithTiming(store, select));
+    String header =
+        "\n\nTest of scheduling for "
+            + filter.name()
+            + " example with pipeline multiplier\nwith "
+            + addNum
+            + " adders and "
+            + mulNum
+            + " multipliers\nadd duration "
+            + filter.addDel()
+            + " and mul duration "
+            + filter.mulDel();
+    return runExperiment(
+        store,
+        header,
+        s -> makeConstraintsPipeMultiplier(s, filter, addNum, mulNum),
+        taskVars ->
+            new SimpleMatrixSelect<>(
+                taskVarsToMatrix(taskVars),
+                new SmallestMax<>(),
+                new MostConstrainedStatic<>(),
+                new IndomainMin<>(),
+                0),
+        "3. Constraints consistent",
+        null);
   }
 
   /**
@@ -578,13 +811,17 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment2Pm(Store store, Filter filter, int addNum, int mulNum) {
-
-    IO.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
-
-    makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
-
+    String header =
+        "\n\nTest of scheduling for "
+            + filter.name()
+            + " example with pipeline multiplier\nwith "
+            + addNum
+            + " adders and "
+            + mulNum
+            + " multipliers\nadd duration "
+            + filter.addDel()
+            + " and mul duration "
+            + filter.mulDel();
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             listToArray(Ts),
@@ -593,9 +830,15 @@ public class FilterBenchmark {
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
-
-    checkConsistency(store, "4. Constraints consistent");
-    return reportResult(runTwoPhaseLabelingWithTiming(store, selectMc, selectIo));
+    return runTwoPhaseExperiment(
+        store,
+        header,
+        () -> makeConstraintsPipeMultiplier(store, filter, addNum, mulNum),
+        selectMc,
+        selectIo,
+        "4. Constraints consistent",
+        null,
+        null);
   }
 
   /**
@@ -699,11 +942,7 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment2(Store store, Filter filter, int addNum, int mulNum) {
-
     printExperimentHeader(filter, addNum, mulNum);
-
-    makeConstraints(store, filter, addNum, mulNum);
-
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             listToArray(Ts),
@@ -712,9 +951,15 @@ public class FilterBenchmark {
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
-
-    checkConsistency(store, "8. Constraints consistent");
-    return reportResult(runTwoPhaseLabelingWithTiming(store, selectMc, selectIo));
+    return runTwoPhaseExperiment(
+        store,
+        null,
+        () -> makeConstraints(store, filter, addNum, mulNum),
+        selectMc,
+        selectIo,
+        "8. Constraints consistent",
+        null,
+        null);
   }
 
   /**
@@ -729,11 +974,7 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
-
     printExperimentHeader(filter, addNum, mulNum, clock);
-
-    makeConstraintsChain(store, filter, addNum, mulNum, clock);
-
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             listToArray(Ts),
@@ -742,11 +983,15 @@ public class FilterBenchmark {
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
-
-    checkConsistency(store, "10. Constraints consistent");
-    return reportResult(
-        runTwoPhaseLabelingWithTiming(store, selectMc, selectIo),
-        "Schedule length: " + div(cost.min(), clock));
+    return runTwoPhaseExperiment(
+        store,
+        null,
+        () -> makeConstraintsChain(store, filter, addNum, mulNum, clock),
+        selectMc,
+        selectIo,
+        "10. Constraints consistent",
+        () -> "Schedule length: " + div(cost.min(), clock),
+        null);
   }
 
   /**
@@ -761,14 +1006,7 @@ public class FilterBenchmark {
   public static List<List<IntVar>> makeConstraints(
       Store store, Filter filter, int addNum, int mulNum) {
 
-    final int addMin = 1;
-    final int addMax = addMin + addNum - 1;
-    final int mulMin = addMax + 1;
-    final int mulMax = mulMin + mulNum - 1;
-
-    String nameT = "T";
-    String nameR = "R";
-
+    ResourceRanges ranges = new ResourceRanges(addNum, mulNum);
     int[][] dependencies = filter.dependencies();
     int[] delays = filter.delays();
     int[] lastOp = filter.lastOp();
@@ -790,48 +1028,11 @@ public class FilterBenchmark {
     IntVar[] Dmul = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
-    int j = 0;
-    int k = 0;
-    for (int i = 0; i < delays.length; i++) {
-      String t = nameT + i;
-      String r = nameR + i;
+    populateResourceArrays(
+        store, filter, ranges, T, R, D, Tadd, Radd, Dadd, ResAdd, Tmul, Rmul, Dmul, ResMul,
+        addDelay, mulDelay, one, 0, 100);
 
-      T[i] = new IntVar(store, t, 0, 100);
-
-      if (filter.ids()[i] == filter.addId()) {
-        R[i] = new IntVar(store, r, addMin, addMax);
-        Tadd[j] = T[i];
-        Radd[j] = R[i];
-        Dadd[j] = addDelay;
-        D[i] = filter.addDel();
-        ResAdd[j] = one;
-
-        j++;
-      } else {
-        R[i] = new IntVar(store, r, mulMin, mulMax);
-        Tmul[k] = T[i];
-        Rmul[k] = R[i];
-        Dmul[k] = mulDelay;
-        D[i] = filter.mulDel();
-        ResMul[k] = one;
-
-        k++;
-      }
-    }
-
-    for (int[] dependency : dependencies) {
-      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
-    }
-
-    List<IntVar> endOp = new ArrayList<>();
-    for (int value : lastOp) {
-      IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[value], D[value], end));
-      endOp.add(end);
-    }
-
-    cost = new IntVar(store, 0, 100);
-    store.impose(new Max(endOp, cost));
+    cost = createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 100);
 
     store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
     store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
@@ -841,16 +1042,7 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 1, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<>();
-    Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<>();
-    Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<>();
-    for (Integer v : D) {
-      Ds.add(v);
-    }
-
-    Ns = filter.names();
+    finalizeStaticFields(T, R, D, filter.names());
 
     return makeLabelingList(T, R);
   }
@@ -868,21 +1060,13 @@ public class FilterBenchmark {
   public static List<List<IntVar>> makeConstraintsPipeMultiplier(
       Store store, Filter filter, int addNum, int mulNum) {
 
-    final int addMin = 1;
-    final int addMax = addMin + addNum - 1;
-    final int mulMin = addMax + 1;
-    final int mulMax = mulMin + mulNum - 1;
-
-    String nameT = "T";
-    String nameR = "R";
-
+    ResourceRanges ranges = new ResourceRanges(addNum, mulNum);
     int[][] dependencies = filter.dependencies();
     int[] delays = filter.delays();
     int[] lastOp = filter.lastOp();
-
     IntVar addDelay = new IntVar(store, filter.addDel(), filter.addDel());
-    IntVar mulDelay = new IntVar(store, 1, 1); // since pipelined multiplier
-    // the effective delay is 1; filter.mulDel(), filter.mulDel());
+    IntVar mulDelay =
+        new IntVar(store, 1, 1); // since pipelined multiplier the effective delay is 1
     IntVar one = new IntVar(store, 1, 1);
 
     IntVar[] T = new IntVar[delays.length];
@@ -899,48 +1083,11 @@ public class FilterBenchmark {
     IntVar[] Dmul = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
-    int j = 0;
-    int k = 0;
-    for (int i = 0; i < delays.length; i++) {
-      String t = nameT + i;
-      String r = nameR + i;
+    populateResourceArrays(
+        store, filter, ranges, T, R, D, Tadd, Radd, Dadd, ResAdd, Tmul, Rmul, Dmul, ResMul,
+        addDelay, mulDelay, one, 0, 100);
 
-      T[i] = new IntVar(store, t, 0, 100);
-
-      if (filter.ids()[i] == filter.addId()) {
-
-        R[i] = new IntVar(store, r, addMin, addMax);
-        Tadd[j] = T[i];
-        Radd[j] = R[i];
-        Dadd[j] = addDelay;
-        D[i] = filter.addDel();
-        ResAdd[j] = one;
-
-        j++;
-      } else {
-        R[i] = new IntVar(store, r, mulMin, mulMax);
-        Tmul[k] = T[i];
-        Rmul[k] = R[i];
-        Dmul[k] = mulDelay;
-        D[i] = filter.mulDel();
-        ResMul[k] = one;
-        k++;
-      }
-    }
-
-    for (int[] dependency : dependencies) {
-      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
-    }
-
-    List<IntVar> endOp = new ArrayList<>();
-    for (int value : lastOp) {
-      IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[value], D[value], end));
-      endOp.add(end);
-    }
-
-    cost = new IntVar(store, 0, 100);
-    store.impose(new Max(endOp, cost));
+    cost = createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 100);
 
     store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
     store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
@@ -950,16 +1097,7 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 0, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<>();
-    Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<>();
-    Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<>();
-    for (Integer v : D) {
-      Ds.add(v);
-    }
-
-    Ns = filter.names();
+    finalizeStaticFields(T, R, D, filter.names());
 
     return makeLabelingList(T, R);
   }
@@ -978,14 +1116,7 @@ public class FilterBenchmark {
   public static List<List<IntVar>> makeConstraintsChain(
       Store store, Filter filter, int addNum, int mulNum, int clk) {
 
-    final int addMin = 1;
-    final int addMax = addMin + addNum - 1;
-    final int mulMin = addMax + 1;
-    final int mulMax = mulMin + mulNum - 1;
-
-    String nameT = "T";
-    String nameR = "R";
-
+    ResourceRanges ranges = new ResourceRanges(addNum, mulNum);
     int[][] dependencies = filter.dependencies();
     int[] delays = filter.delays();
     int[] lastOp = filter.lastOp();
@@ -1013,6 +1144,8 @@ public class FilterBenchmark {
     IntVar[] DmulClock = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
+    String nameT = "T";
+    String nameR = "R";
     int j = 0;
     int k = 0;
     for (int i = 0; i < delays.length; i++) {
@@ -1025,7 +1158,7 @@ public class FilterBenchmark {
       if (filter.ids()[i] == filter.addId()) {
 
         Tstep[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.addDel());
-        R[i] = new IntVar(store, r, addMin, addMax);
+        R[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
         Tadd[j] = T[i];
         TaddClock[j] = Tclock[i];
         Radd[j] = R[i];
@@ -1036,7 +1169,7 @@ public class FilterBenchmark {
         j++;
       } else {
         Tstep[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.mulDel());
-        R[i] = new IntVar(store, r, mulMin, mulMax);
+        R[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
         Tmul[k] = T[i];
         TmulClock[k] = Tclock[i];
         Rmul[k] = R[i];
@@ -1053,19 +1186,8 @@ public class FilterBenchmark {
       store.impose(new XplusYeqZ(temp, Tstep[i], T[i]));
     }
 
-    for (int[] dependency : dependencies) {
-      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
-    }
-
-    List<IntVar> endOp = new ArrayList<>();
-    for (int value : lastOp) {
-      IntVar end = new IntVar(store, 0, 1000);
-      store.impose(new XplusCeqZ(T[value], D[value], end));
-      endOp.add(end);
-    }
-
-    cost = new IntVar(store, 0, 1000);
-    store.impose(new Max(endOp, cost));
+    cost =
+        createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 1000);
 
     store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
     store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
@@ -1079,16 +1201,7 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 1, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<>();
-    Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<>();
-    Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<>();
-    for (Integer v : D) {
-      Ds.add(v);
-    }
-
-    Ns = filter.names();
+    finalizeStaticFields(T, R, D, filter.names());
 
     return makeLabelingList(T, R);
   }

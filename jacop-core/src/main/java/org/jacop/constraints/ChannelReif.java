@@ -90,48 +90,17 @@ public class ChannelReif extends AbstractChannel {
   }
 
   @Override
-  public void consistency(final Store store) {
-
-    int start = position.value();
-    boolean startChanged = false;
-
-    for (int i = start; i < n; i++) {
-
-      if (item[i].b().max() == 0) {
-        x.domain.inComplement(store.level, x, item[i].value());
-        swap(start, i);
-        start++;
-        startChanged = true;
-        continue;
-      } else if (item[i].b().min() == 1) {
-        x.domain.in(store.level, x, item[i].value(), item[i].value());
-      }
-
-      if (!x.domain.contains(item[i].value())) {
-        item[i].b().domain.inValue(store.level, item[i].b(), 0);
-        swap(start, i);
-        start++;
-        startChanged = true;
-      }
-    }
-
-    if (startChanged) {
-      position.update(start);
-    }
-
-    if (start == n) {
-      if (!x.singleton()) {
-        removeConstraint();
-      }
-      return;
-    }
-
-    if (x.singleton()) {
-      propagateWhenXIsSingleton(store, start);
-    }
+  protected void handleBMaxZero(Store store, int i) {
+    x.domain.inComplement(store.level, x, item[i].value());
   }
 
-  private void propagateWhenXIsSingleton(Store store, int start) {
+  @Override
+  protected void handleBMinOne(Store store, int i) {
+    x.domain.in(store.level, x, item[i].value(), item[i].value());
+  }
+
+  @Override
+  protected void propagateWhenXIsSingleton(Store store, int start) {
     IntVar b = valueMap.get(x.value());
     b.domain.inValue(store.level, b, 1);
 

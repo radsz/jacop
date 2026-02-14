@@ -395,62 +395,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         label = int_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if ("bool_search".equals(si.type())) {
         label = int_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if ("set_search".equals(si.type())) {
         label = set_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if ("float_search".equals(si.type())) {
         label = float_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if ("priority_search".equals(si.type())) {
         label = priority_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if ("warm_start".equals(si.type())) {
         label = warm_start_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
-
-        // time-out option
-        int to = options.getTimeOut();
-        if (to > 0) {
-          label.setTimeOutMilliseconds(to);
-        }
+        setSearchTimeout(label);
       } else if (si.type().startsWith("restart_")) {
         ArrayList<SearchItem<T>> sa = new ArrayList<>();
         sa.add(si);
@@ -584,10 +554,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
                 rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
                 rs.setRestartsLimit(options.getRestartLimit());
-                int to = options.getTimeOut();
-                if (to > 0) {
-                  rs.setTimeOutMilliseconds(to);
-                }
+                setSearchTimeout(rs);
 
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -634,10 +601,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     new RestartSearch<>(
                         store, label, variable_selection, restartCalculator, (T) cost);
                 rs.setRestartsLimit(options.getRestartLimit());
-                int to = options.getTimeOut();
-                if (to > 0) {
-                  rs.setTimeOutMilliseconds(to);
-                }
+                setSearchTimeout(rs);
 
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -683,10 +647,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     new RestartSearch<>(
                         store, label, variable_selection, restartCalculator, (T) max_cost);
                 rs.setRestartsLimit(options.getRestartLimit());
-                int to = options.getTimeOut();
-                if (to > 0) {
-                  rs.setTimeOutMilliseconds(to);
-                }
+                setSearchTimeout(rs);
 
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -791,23 +752,53 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Prints statistics for single search execution.
+   * Sets timeout on a search if timeout option is configured.
+   *
+   * @param search the search to set timeout on
+   */
+  void setSearchTimeout(Search<T> search) {
+    int to = options.getTimeOut();
+    if (to > 0) {
+      search.setTimeOutMilliseconds(to);
+    }
+  }
+
+  void setSearchTimeout(RestartSearch<T> search) {
+    int to = options.getTimeOut();
+    if (to > 0) {
+      search.setTimeOutMilliseconds(to);
+    }
+  }
+
+  /**
+   * Sets timeout on all searches in a list if timeout option is configured.
+   *
+   * @param searches the list of searches to set timeout on
+   */
+  void setSearchTimeout(ArrayList<Search<T>> searches) {
+    int to = options.getTimeOut();
+    if (to > 0) {
+      for (Search<T> s : searches) {
+        s.setTimeOutMilliseconds(to);
+      }
+    }
+  }
+
+  /**
+   * Prints the result status based on search outcome.
    *
    * @param interrupted whether the search was interrupted
    * @param result whether a solution was found
+   * @param timeoutOccurred whether a timeout occurred
+   * @param isComplete whether the search exploration is complete
    */
-  void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
-
-    if (label == null) {
-      IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
-      return;
-    }
-
+  void printResultStatus(
+      boolean interrupted, boolean result, boolean timeoutOccurred, boolean isComplete) {
     if (result || (rs != null && rs.atLeastOneSolution() && !interrupted)) {
       if (!optimization && options.getAll()) {
         if (!interrupted) {
-          if ("complete".equals(si.exploration())) {
-            if (!label.timeOutOccured) {
+          if (isComplete) {
+            if (!timeoutOccurred) {
               if ((options.getNumberSolutions() == -1
                       || options.getNumberSolutions() > numberSolutions)
                   && relaxVars == null) {
@@ -816,13 +807,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             } else {
               IO.println("%% =====TIME-OUT=====");
             }
-          } else if (label.timeOutOccured) {
+          } else if (timeoutOccurred) {
             IO.println("%% =====TIME-OUT=====");
           }
         }
       } else if (optimization) {
-        if (!interrupted && "complete".equals(si.exploration())) {
-          if (!label.timeOutOccured) {
+        if (!interrupted && isComplete) {
+          if (!timeoutOccurred) {
             if ((options.getNumberSolutions() == -1
                     || options.getNumberSolutions() > numberSolutions)
                 && relaxVars == null) {
@@ -831,16 +822,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           } else {
             IO.println("%% =====TIME-OUT=====");
           }
-        } else if (label.timeOutOccured) {
+        } else if (timeoutOccurred) {
           IO.println("%% =====TIME-OUT=====");
         }
       }
-    } else if (label.timeOutOccured) {
+    } else if (timeoutOccurred) {
       IO.println("=====UNKNOWN=====");
       IO.println("%% =====TIME-OUT=====");
     } else if (interrupted) {
       IO.println("%% =====INTERRUPTED=====");
-    } else if ("complete".equals(si.exploration())) {
+    } else if (isComplete) {
       IO.println("=====UNSATISFIABLE=====");
       if (!options.getOutputFilename().isEmpty()) {
         String st = "=====UNSATISFIABLE=====";
@@ -853,9 +844,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       IO.println("=====UNKNOWN=====");
     }
+  }
+
+  /**
+   * Prints statistics for single search execution.
+   *
+   * @param interrupted whether the search was interrupted
+   * @param result whether a solution was found
+   */
+  void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
+
+    if (label == null) {
+      IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+      return;
+    }
+
+    printResultStatus(
+        interrupted, result, label.timeOutOccured, "complete".equals(si.exploration()));
 
     if (options.getStatistics()) {
-
       int nodes = 0;
       int decisions = 0;
       int wrong = 0;
@@ -964,11 +971,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         intSearch.setOptimize(true);
       }
 
-      // time-out option
-      int to = options.getTimeOut();
-      if (to > 0) {
-        setSearch.setTimeOutMilliseconds(to);
-      }
+      setSearchTimeout(setSearch);
 
       intAndSetSearch[0] = setSearch;
     }
@@ -1003,11 +1006,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
 
-      // time-out option
-      int to = options.getTimeOut();
-      if (to > 0) {
-        intSearch.setTimeOutMilliseconds(to);
-      }
+      setSearchTimeout(intSearch);
 
       intAndSetSearch[1] = intSearch;
     }
@@ -1080,11 +1079,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         intSearch.setOptimize(true);
       }
 
-      // time-out option
-      int to = options.getTimeOut();
-      if (to > 0) {
-        floatSearch.setTimeOutMilliseconds(to);
-      }
+      setSearchTimeout(floatSearch);
 
       intAndSetSearch[3] = floatSearch;
     }
@@ -1216,12 +1211,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     initTime = currentTime - startCpu;
     startCpu = currentTime;
 
-    int to = options.getTimeOut();
-    if (to > 0) {
-      for (Search<T> s : list_seq_searches) {
-        s.setTimeOutMilliseconds(to);
-      }
-    }
+    setSearchTimeout(list_seq_searches);
 
     if (si.exploration() == null || "complete".equals(si.exploration())) {
       switch (solveKind) {
@@ -1252,6 +1242,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
                 rs.setRestartsLimit(options.getRestartLimit());
+                setSearchTimeout(rs);
 
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -1316,6 +1307,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     new RestartSearch<>(
                         store, masterLabel, masterSelect, restartCalculator, (T) cost);
                 rs.setRestartsLimit(options.getRestartLimit());
+                setSearchTimeout(rs);
+
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
                 }
@@ -1391,6 +1384,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     new RestartSearch<>(
                         store, masterLabel, masterSelect, restartCalculator, (T) max_cost);
                 rs.setRestartsLimit(options.getRestartLimit());
+                setSearchTimeout(rs);
 
                 if (relaxVars != null) {
                   rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -1464,44 +1458,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
 
-    if (result || (rs != null && rs.atLeastOneSolution() && !interrupted)) {
-      if (!optimization && options.getAll()) {
-        if (!heuristicSeqSearch) {
-          if (!anyTimeOutOccured(list_seq_searches)) {
-            if ((options.getNumberSolutions() == -1
-                    || options.getNumberSolutions() > numberSolutions)
-                && relaxVars == null) {
-              IO.println("==========");
-            }
-          } else {
-            IO.println("%% =====TIME-OUT=====");
-          }
-        } else if (anyTimeOutOccured(list_seq_searches)) {
-          IO.println("%% =====TIME-OUT=====");
-        }
-      } else if (optimization) {
-        if (!heuristicSeqSearch) {
-          if (!anyTimeOutOccured(list_seq_searches)) {
-            if ((options.getNumberSolutions() == -1
-                    || options.getNumberSolutions() > numberSolutions)
-                && relaxVars == null) {
-              IO.println("==========");
-            }
-          } else {
-            IO.println("%% =====TIME-OUT=====");
-          }
-        } else if (anyTimeOutOccured(list_seq_searches)) {
-          IO.println("%% =====TIME-OUT=====");
-        }
-      }
-    } else if (anyTimeOutOccured(list_seq_searches)) {
-      IO.println("=====UNKNOWN=====");
-      IO.println("%% =====TIME-OUT=====");
-    } else if (interrupted) {
-      IO.println("%% =====INTERRUPTED=====");
-    } else {
-      IO.println("=====UNSATISFIABLE=====");
-    }
+    boolean timeoutOccurred = anyTimeOutOccured(list_seq_searches);
+    printResultStatus(interrupted, result, timeoutOccurred, !heuristicSeqSearch);
 
     if (options.getStatistics()) {
       int nodes = 0;
@@ -1753,9 +1711,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> float_search(SearchItem<T> si) {
-
     variable_selection = (SelectChoicePoint<T>) si.getFloatSelect();
-
     DepthFirstSearch<T> label = new DepthFirstSearch<>();
     label.setAssignSolution(false);
 
@@ -1846,9 +1802,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       label.setConsistencyListener(failStatistics);
     }
 
+    setSearchTimeout(label);
     int to = options.getTimeOut();
     if (to > 0) {
-      label.setTimeOutMilliseconds(to);
       for (DepthFirstSearch<T> s : searches) {
         s.setTimeOutMilliseconds(to);
       }

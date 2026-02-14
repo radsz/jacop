@@ -205,54 +205,60 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     constraints.add(new Nooverlap(x, y, lx, ly));
 
     // add cumulative in x direction
-    IntVar[] ey = new IntVar[y.length];
-    int yMin = IntDomain.MAX_INT;
-    int yMax = IntDomain.MIN_INT;
-    for (int i = 0; i < x.length; i++) {
-      yMin = Math.min(yMin, y[i].min());
-      yMax = Math.max(yMax, y[i].max() + ly[i].max());
-      ey[i] = new IntVar(store, y[i].min() + ly[i].min(), y[i].max() + ly[i].max());
-      constraints.add(new XplusYeqZ(y[i], ly[i], ey[i]));
-      auxVar.add(ey[i]);
-    }
-
-    IntVar byMin = new IntVar(store, yMin, yMax);
-    IntVar byMax = new IntVar(store, yMin, yMax);
-    IntVar by = new IntVar(store, 0, yMax - yMin);
-    auxVar.add(byMin);
-    auxVar.add(byMax);
-    auxVar.add(by);
-    constraints.add(new Max(ey, byMax));
-    constraints.add(new Min(y, byMin));
-    constraints.add(new XplusYeqZ(byMin, by, byMax));
-    CumulativeBasic ccx = new CumulativeBasic(x, lx, ly, by);
-    constraints.add(ccx);
+    addCumulativeConstraints(store, constraints, y, ly, x, lx, "by", 0);
 
     // add cumulative in y direction
-    IntVar[] ex = new IntVar[x.length];
-    int xMin = IntDomain.MAX_INT;
-    int xMax = IntDomain.MIN_INT;
-    for (int i = 0; i < x.length; i++) {
-      xMin = Math.min(xMin, x[i].min());
-      xMax = Math.max(xMax, x[i].max() + lx[i].max());
-      ex[i] = new IntVar(store, x[i].min() + lx[i].min(), x[i].max() + lx[i].max());
-      constraints.add(new XplusYeqZ(x[i], lx[i], ex[i]));
-      auxVar.add(ex[i]);
-    }
-
-    IntVar bxMin = new IntVar(store, "bxMin", xMin, xMax);
-    IntVar bxMax = new IntVar(store, "bxMax", xMin, xMax);
-    IntVar bx = new IntVar(store, 0, xMax - xMin);
-    auxVar.add(bxMin);
-    auxVar.add(bxMax);
-    auxVar.add(bx);
-    constraints.add(new Max(ex, bxMax));
-    constraints.add(new Min(x, bxMin));
-    constraints.add(new XplusYeqZ(bxMin, bx, bxMax));
-    CumulativeBasic ccy = new CumulativeBasic(y, ly, lx, bx);
-    constraints.add(ccy);
+    addCumulativeConstraints(store, constraints, x, lx, y, ly, "bx", 1);
 
     return constraints;
+  }
+
+  /**
+   * Adds cumulative constraints for a given direction.
+   *
+   * @param store the constraint store
+   * @param result the list to add constraints to
+   * @param origins the origin variables for this direction
+   * @param lengths the length variables for this direction
+   * @param otherOrigins the origin variables for the other direction (used in CumulativeBasic)
+   * @param otherLengths the length variables for the other direction (used in CumulativeBasic)
+   * @param suffix the suffix for variable names (e.g., "bx" or "by")
+   * @param dim the dimension index (0 for x direction, 1 for y direction)
+   */
+  private void addCumulativeConstraints(
+      Store store,
+      List<Constraint> result,
+      IntVar[] origins,
+      IntVar[] lengths,
+      IntVar[] otherOrigins,
+      IntVar[] otherLengths,
+      String suffix,
+      int dim) {
+
+    IntVar[] ends = new IntVar[origins.length];
+    int min = IntDomain.MAX_INT;
+    int max = IntDomain.MIN_INT;
+    for (int i = 0; i < origins.length; i++) {
+      min = Math.min(min, origins[i].min());
+      max = Math.max(max, origins[i].max() + lengths[i].max());
+      ends[i] =
+          new IntVar(
+              store, origins[i].min() + lengths[i].min(), origins[i].max() + lengths[i].max());
+      result.add(new XplusYeqZ(origins[i], lengths[i], ends[i]));
+      auxVar.add(ends[i]);
+    }
+
+    IntVar bMin = new IntVar(store, dim == 1 ? suffix + "Min" : null, min, max);
+    IntVar bMax = new IntVar(store, dim == 1 ? suffix + "Max" : null, min, max);
+    IntVar b = new IntVar(store, 0, max - min);
+    auxVar.add(bMin);
+    auxVar.add(bMax);
+    auxVar.add(b);
+    result.add(new Max(ends, bMax));
+    result.add(new Min(origins, bMin));
+    result.add(new XplusYeqZ(bMin, b, bMax));
+    CumulativeBasic cc = new CumulativeBasic(otherOrigins, otherLengths, lengths, b);
+    result.add(cc);
   }
 
   /**

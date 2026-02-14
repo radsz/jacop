@@ -299,6 +299,52 @@ public abstract class PrimitiveConstraint extends Constraint
   }
 
   /**
+   * Computes the pruning event for a variable by first checking a custom events map, then computing
+   * the maximum pruning event across multiple nested constraints.
+   *
+   * <p>This helper eliminates duplicated pruning-event computation in constraints such as IfThen.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @param eventsMap the map of custom pruning events, or null if none.
+   * @param constraints the nested constraints to query.
+   * @return the pruning event for the variable.
+   */
+  protected static int getPruningEventForConstraints(
+      Var v, Map<Var, Integer> eventsMap, PrimitiveConstraint... constraints) {
+    if (eventsMap != null) {
+      Integer possibleEvent = eventsMap.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    return computeMaxPruningEvent(v, constraints);
+  }
+
+  /**
+   * Computes the pruning event for a variable by first checking a custom events map, then
+   * delegating to a nested constraint's getNestedPruningEvent with a specified mode.
+   *
+   * <p>This helper eliminates duplicated pruning-event computation in constraints such as Not.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @param eventsMap the map of custom pruning events, or null if none.
+   * @param nestedConstraint the nested constraint to query.
+   * @param mode the mode to use when querying the nested constraint (true for consistency, false
+   *     for notConsistency).
+   * @return the pruning event for the variable.
+   */
+  protected static int getPruningEventForNested(
+      Var v, Map<Var, Integer> eventsMap, PrimitiveConstraint nestedConstraint, boolean mode) {
+    if (eventsMap != null) {
+      Integer possibleEvent = eventsMap.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    return nestedConstraint.getNestedPruningEvent(v, mode);
+  }
+
+  /**
    * Throws an IllegalStateException indicating that a more precise method exists and should be used
    * instead. This helper method eliminates duplication in subclasses that override default pruning
    * event methods to throw this exception.
@@ -307,5 +353,49 @@ public abstract class PrimitiveConstraint extends Constraint
    */
   protected static int throwMorePreciseMethodExists() {
     throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
+
+  /**
+   * Helper method for constraints with a boolean variable and nested constraint (e.g., Reified,
+   * Implies). Returns the consistency pruning event for the given variable by delegating to
+   * getConsistencyPruningEvent.
+   *
+   * <p>This helper eliminates duplication in constraints such as Reified and Implies.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @return the consistency pruning event for the variable.
+   */
+  protected int getNestedPruningEventForReified(Var v) {
+    return getConsistencyPruningEvent(v);
+  }
+
+  /**
+   * Helper method for constraints with a boolean variable and nested constraint (e.g., Reified,
+   * Implies). Computes the consistency pruning event for the given variable.
+   *
+   * <p>This helper eliminates duplication in constraints such as Reified and Implies.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @param b the boolean variable of the reified constraint.
+   * @param c the nested constraint.
+   * @return the consistency pruning event for the variable.
+   */
+  protected int getConsistencyPruningEventForReified(Var v, IntVar b, PrimitiveConstraint c) {
+    return getPruningEventFor(v, consistencyPruningEvents, b, c);
+  }
+
+  /**
+   * Helper method for constraints with a boolean variable and nested constraint (e.g., Reified,
+   * Implies). Computes the notConsistency pruning event for the given variable.
+   *
+   * <p>This helper eliminates duplication in constraints such as Reified and Implies.
+   *
+   * @param v the variable for which to compute the pruning event.
+   * @param b the boolean variable of the reified constraint.
+   * @param c the nested constraint.
+   * @return the notConsistency pruning event for the variable.
+   */
+  protected int getNotConsistencyPruningEventForReified(Var v, IntVar b, PrimitiveConstraint c) {
+    return getPruningEventFor(v, notConsistencyPruningEvents, b, c);
   }
 }

@@ -33,13 +33,10 @@ package org.jacop.constraints.cumulative;
 // import org.jacop.constraints.Constraint;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
 /**
@@ -144,282 +141,47 @@ public class ProfileOptional {
 
     final int optMin = minStartOpt(tn, opt);
 
-    Event[] es = new Event[4 * ts.length];
-    final int limitMax = limit.max();
-
-    int j = 0;
-    int minProfile = Integer.MAX_VALUE;
-    int maxProfile = Integer.MIN_VALUE;
-    for (int i = 0; i < ts.length; i++) {
-      TaskView t = ts[i];
-      t.index = i;
-
-      // mandatory task parts to create PROFILE
-      int min = t.lst();
-      int max = t.ect();
-      int tResMin = t.res.min();
-      if (min < max && tResMin > 0) {
-        es[j++] = new Event(PROFILE, t, min, tResMin);
-        es[j++] = new Event(PROFILE, t, max, -tResMin);
-        minProfile = Math.min(min, minProfile);
-        maxProfile = Math.max(max, maxProfile);
-      }
-    }
-    if (j == 0) {
-      return;
-    }
-
-    for (TaskView t : ts) {
-      // overlapping tasks for pruning
-      // from start to end
-      int min = t.est();
-      int max = t.lct();
-      if (t.maxNonZero()
-          && !(min > maxProfile || max < minProfile)) { // t.dur.max() > 0 && t.res.max() > 0
-        es[j++] = new Event(PRUNE_START, t, min, 0);
-        es[j++] = new Event(PRUNE_END, t, max, 0);
-      }
-    }
-
-    int N = j;
-    Arrays.sort(es, 0, N, eventComparator);
-
-    if (debugNarr) {
-      log.debug("{}", Arrays.asList(es));
-      log.debug("limit.max() = {}", limitMax);
-      log.debug("===========================");
-    }
-
-    final BitSet tasksToPrune = new BitSet(ts.length);
-    final boolean[] inProfile = new boolean[ts.length];
-
-    // used for start variable pruning
-    final int[] startExcluded = new int[ts.length];
-    final boolean[] startConsidered = new boolean[ts.length];
-
-    // used for duration variable pruning
-    int[] maxDuration = new int[ts.length];
-    // value Integer.MIN_VALUE for maxDuration means that the
-    // duration does not need to be prunned
-    Arrays.fill(maxDuration, Integer.MIN_VALUE);
-    int[] lastStart = new int[ts.length];
-    Arrays.fill(lastStart, Integer.MAX_VALUE);
-    int[] lastFree = new int[ts.length];
-    Arrays.fill(lastFree, Integer.MAX_VALUE);
-    boolean[] barier = new boolean[ts.length];
-
-    int profilePointer = 0;
+    // Initialize utilizationProfile for optional tasks
+    int[] profilePointer = new int[1];
     if (existsOpt) {
       utilizationProfile.add(new Event(PROFILE, null, optMin, 0));
     }
-    int curProfile = 0;
-    for (int i = 0; i < N; i++) {
 
-      Event e = es[i];
-      Event ne = null; // next event
-      if (i < N - 1) {
-        ne = es[i + 1];
-      }
-
-      switch (e.type()) {
-        case PROFILE: // =========== PROFILE event ===========
-
-          // ====> PROFILE to be used by optional tasks
-          if (existsOpt) {
-
-            Event ce = utilizationProfile.get(profilePointer);
-            if (ce.date() == e.date()) {
-              ce.value += e.value();
-              if (ce.date() > 0
-                  && profilePointer > 0
-                  && ce.value == utilizationProfile.get(profilePointer - 1).value()) {
-                utilizationProfile.remove(profilePointer--);
-              }
-            } else {
-              utilizationProfile.add(new Event(PROFILE, null, e.date(), ce.value() + e.value()));
-              profilePointer++;
-            }
-          }
-          // <==== PROFILE to be used by optional tasks
-
-          curProfile += e.value();
-          inProfile[e.task().index] = e.value() > 0;
-
-          if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
-            // check the tasks for pruning only at the end of all PROFILE events
-
-            if (debug) {
-              log.debug("Profile at {}: {}", e.date(), curProfile);
-            }
-
-            // prune limit variable
-            if (curProfile > limit.min()) {
-              limit.domain.inMin(store.level, limit, curProfile);
-            }
-
-            for (int ti = tasksToPrune.nextSetBit(0);
-                ti >= 0;
-                ti = tasksToPrune.nextSetBit(ti + 1)) {
-              TaskView t = ts[ti];
-
-              int profileValue = curProfile;
-              if (inProfile[ti]) {
-                profileValue -= t.res.min();
-              }
-              boolean noSpace = limitMax - profileValue < t.res.min();
-
-              // ========= Pruning start variable
-              if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
-                if (!startConsidered[ti]) {
-                  if (noSpace) {
-                    startExcluded[ti] = e.date() - t.dur.min() + 1;
-                    startConsidered[ti] = true;
-                  }
-                } else // startExcluded[ti] != Integer.MAX_VALUE
-                if (!noSpace) {
-                  // end of excluded interval
-
-                  if (debugNarr) {
-                    log.debug(
-                        ">>> CumulativeBasic Profile 1. Narrowed {} \\ {}",
-                        t.start,
-                        new IntervalDomain(startExcluded[ti], e.date() - 1));
-                  }
-
-                  t.start.domain.inComplement(
-                      store.level, t.start, startExcluded[ti], e.date() - 1);
-
-                  if (debugNarr) {
-                    log.debug(" => {}", t.start);
-                  }
-
-                  startConsidered[ti] = false;
+    // Profile update callback for building utilizationProfile
+    CumulativeBasic.ProfileUpdateCallback<Event> profileUpdateCallback =
+        existsOpt
+            ? (event, currentProfile) -> {
+              Event ce = utilizationProfile.get(profilePointer[0]);
+              int eventDate = event.date();
+              int eventValue = event.value();
+              if (ce.date() == eventDate) {
+                ce.value += eventValue;
+                if (ce.date() > 0
+                    && profilePointer[0] > 0
+                    && ce.value == utilizationProfile.get(profilePointer[0] - 1).value()) {
+                  utilizationProfile.remove(profilePointer[0]--);
                 }
-              }
-
-              // ========= for duration pruning
-              if (noSpace) {
-                maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastFree[ti]);
-                barier[ti] = true;
-              } else if (barier[ti]) { // free to go
-                barier[ti] = false;
-                lastFree[ti] = e.date();
-                if (e.date() <= t.start.max()) {
-                  lastStart[ti] = e.date();
-                }
-              }
-
-              // ========= resource pruning;
-
-              // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date()
-              // < t.ect())
-              // since tasks with res = 0 are not in the PROFILE :(
-              if (limitMax - profileValue < t.res.max()
-                  && t.lst() <= e.date()
-                  && e.date() < t.ect()) {
-                t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+              } else {
+                utilizationProfile.add(
+                    new Event(PROFILE, null, eventDate, ce.value() + eventValue));
+                profilePointer[0]++;
               }
             }
-          }
+            : null;
 
-          break;
+    // Post-process callback for pruneOpt
+    Runnable postProcessCallback = existsOpt ? () -> pruneOpt(store, tn, opt) : null;
 
-        case PRUNE_START: // =========== start of a task ===========
-          int profileValue = curProfile;
-          TaskView t = e.task();
-          int ti = t.index;
-
-          if (inProfile[ti]) {
-            profileValue -= t.res.min();
-          }
-          boolean noSpace = limitMax - profileValue < t.res.min();
-
-          // ========= for start pruning
-          if (t.exists() && noSpace) { // t.res.min() > 0 && t.dur.min() > 0
-            startExcluded[ti] = e.date();
-            startConsidered[ti] = true;
-          }
-
-          // ========= for duration pruning
-          if (noSpace) {
-            barier[ti] = true;
-          } else {
-            lastStart[ti] = t.start.min();
-            lastFree[ti] = t.start.min();
-            barier[ti] = false;
-          }
-
-          // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
-            t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
-          }
-
-          tasksToPrune.set(ti);
-          break;
-
-        case PRUNE_END: // =========== end of a task ===========
-          profileValue = curProfile;
-          t = e.task();
-          ti = t.index;
-
-          if (inProfile[ti]) {
-            profileValue -= t.res.min();
-          }
-
-          // ========= pruning start variable
-          if (t.exists() && startConsidered[ti]) {
-            // task ends and we remove forbidden area
-
-            if (debugNarr) {
-              log.debug(
-                  ">>> CumulativeBasic Profile 2. Narrowed {} inMax {} => {}",
-                  t.start,
-                  startExcluded[ti] - 1,
-                  t.start);
-            }
-
-            t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
-          }
-
-          startConsidered[ti] = false;
-
-          // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
-            t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
-          }
-
-          // ========= duration pruning
-          if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min()) {
-            maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastStart[ti]);
-          }
-
-          if (lastStart[ti] == Integer.MAX_VALUE) { // no room for the task; must have 0 duration
-            maxDuration[ti] = 0;
-          }
-
-          if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
-            if (debugNarr) {
-              log.debug(
-                  ">>> CumulativeBasic Profile 3. Narrowed {} in 0..{} => {}",
-                  t.dur,
-                  maxDuration[ti],
-                  t.dur);
-            }
-
-            t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
-          }
-
-          tasksToPrune.set(ti, false);
-          break;
-
-        default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
-      }
-    }
-
-    if (existsOpt) {
-      pruneOpt(store, tn, opt);
-    }
+    CumulativeBasic.sweepPruningCore(
+        store,
+        ts,
+        limit,
+        debug,
+        debugNarr,
+        (type, t, date, value) -> new Event(type, t, date, value),
+        eventComparator,
+        profileUpdateCallback,
+        postProcessCallback);
   }
 
   void pruneOpt(Store store, TaskView[] tn, IntVar[] opt) {

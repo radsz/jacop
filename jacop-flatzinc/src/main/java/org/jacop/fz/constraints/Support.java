@@ -754,22 +754,28 @@ public class Support implements ParserTreeConstants {
     imply.pose();
   }
 
-  Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
+  Constraint fzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      final int numberId = n1.incrementAndGet();
+      final int numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
 
         if (x.singleton(c)) {
-          b.domain.inValue(store.level, b, 1);
+          if (isReified) {
+            b.domain.inValue(store.level, b, 1);
+          } else {
+            removeConstraint();
+          }
         } else if (!x.domain.contains(c)) {
           b.domain.inValue(store.level, b, 0);
           removeConstraint();
         } else if (b.max() == 0) { // x==c must be false
-          x.domain.inComplement(store.level, x, c);
+          if (isReified) {
+            x.domain.inComplement(store.level, x, c);
+          }
           removeConstraint();
         } else if (b.min() == 1) { // x==c must be true
           x.domain.inValue(store.level, x, c);
@@ -778,199 +784,145 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public String toString() {
-        return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+        if (isReified) {
+          return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+        } else {
+          return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+        }
       }
 
       public String id() {
-        return "fzXeqCreified" + numberId;
+        return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
       }
     };
   }
 
+  Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
+    return fzXeqC(x, c, b, true);
+  }
+
   Constraint fzXeqCimplied(IntVar x, int c, IntVar b) {
+    return fzXeqC(x, c, b, false);
+  }
+
+  Constraint fzXneqC(IntVar x, int c, IntVar b, boolean isReified) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      final int numberId = n2.incrementAndGet();
+      final int numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
 
         if (x.singleton(c)) {
-          removeConstraint();
-        } else if (!x.domain.contains(c)) {
           b.domain.inValue(store.level, b, 0);
+        } else if (!x.domain.contains(c)) {
+          if (isReified) {
+            b.domain.inValue(store.level, b, 1);
+          }
           removeConstraint();
-        } else if (b.max() == 0) {
+        } else if (b.max() == 0) { // x!=c must be false
+          if (isReified) {
+            x.domain.inValue(store.level, x, c);
+          }
           removeConstraint();
-        } else if (b.min() == 1) { // x==c must be true
-          x.domain.inValue(store.level, x, c);
+        } else if (b.min() == 1) { // x!=c must be true
+          x.domain.inComplement(store.level, x, c);
+          if (isReified) {
+            removeConstraint();
+          }
         }
       }
 
       @Override
       public String toString() {
-        return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+        if (isReified) {
+          return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+        } else {
+          return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+        }
       }
 
       public String id() {
-        return "fzXeqCimplied" + numberId;
+        return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
       }
     };
   }
 
   Constraint fzXneqCreified(IntVar x, int c, IntVar b) {
-
-    return new Constraint(new IntVar[] {x, b}) {
-
-      final int numberId = n3.incrementAndGet();
-
-      @Override
-      public void consistency(final Store store) {
-
-        if (x.singleton(c)) {
-          b.domain.inValue(store.level, b, 0);
-        } else if (!x.domain.contains(c)) {
-          b.domain.inValue(store.level, b, 1);
-          removeConstraint();
-        } else if (b.max() == 0) { // x!=c must be false
-          x.domain.inValue(store.level, x, c);
-          removeConstraint();
-        } else if (b.min() == 1) { // x!=c must be true
-          x.domain.inComplement(store.level, x, c);
-          removeConstraint();
-        }
-      }
-
-      @Override
-      public String toString() {
-        return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
-      }
-
-      public String id() {
-        return "fzXneqCreified" + numberId;
-      }
-    };
+    return fzXneqC(x, c, b, true);
   }
 
   Constraint fzXneqCimplied(IntVar x, int c, IntVar b) {
+    return fzXneqC(x, c, b, false);
+  }
 
-    return new Constraint(new IntVar[] {x, b}) {
+  Constraint fzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
 
-      final int numberId = n4.incrementAndGet();
+    return new Constraint(new IntVar[] {x, y, b}) {
+
+      final int numberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
 
-        if (x.singleton(c)) {
+        if (x == y || x.singleton(y.min()) && y.singleton(x.min())) {
+          if (isReified) {
+            b.domain.inValue(store.level, b, 1);
+          } else {
+            removeConstraint();
+          }
+        } else if (!x.domain.isIntersecting(y.domain)) {
           b.domain.inValue(store.level, b, 0);
-        } else if (!x.domain.contains(c)) {
           removeConstraint();
-        } else if (b.max() == 0) {
-          removeConstraint();
-        } else if (b.min() == 1) { // x!=c must be true
-          x.domain.inComplement(store.level, x, c);
+        } else if (b.max() == 0) { // x!=y must be false
+          if (isReified) {
+            if (y.singleton()) {
+              x.domain.inComplement(store.level, x, y.value());
+              removeConstraint();
+            }
+            if (x.singleton()) {
+              y.domain.inComplement(store.level, y, x.value());
+              removeConstraint();
+            }
+          } else {
+            removeConstraint();
+          }
+        } else if (b.min() == 1) { // x==y must be true
+          do {
+
+            // domain consistency
+            x.domain.in(store.level, x, y.domain);
+
+            store.propagationHasOccurred = false;
+
+            y.domain.in(store.level, y, x.domain);
+
+          } while (store.propagationHasOccurred);
         }
       }
 
       @Override
       public String toString() {
-        return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+        if (isReified) {
+          return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
+        } else {
+          return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
+        }
       }
 
       public String id() {
-        return "fzXneqCimplied" + numberId;
+        return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
       }
     };
   }
 
   Constraint fzXeqYreified(IntVar x, IntVar y, IntVar b) {
-
-    return new Constraint(new IntVar[] {x, y, b}) {
-
-      final int numberId = n5.incrementAndGet();
-
-      @Override
-      public void consistency(final Store store) {
-
-        if (x == y || x.singleton(y.min()) && y.singleton(x.min())) {
-          b.domain.inValue(store.level, b, 1);
-        } else if (!x.domain.isIntersecting(y.domain)) {
-          b.domain.inValue(store.level, b, 0);
-          removeConstraint();
-        } else if (b.max() == 0) { // x!=y must be false
-          if (y.singleton()) {
-            x.domain.inComplement(store.level, x, y.value());
-            removeConstraint();
-          }
-          if (x.singleton()) {
-            y.domain.inComplement(store.level, y, x.value());
-            removeConstraint();
-          }
-        } else if (b.min() == 1) { // x==y must be true
-          do {
-
-            // domain consistency
-            x.domain.in(store.level, x, y.domain);
-
-            store.propagationHasOccurred = false;
-
-            y.domain.in(store.level, y, x.domain);
-
-          } while (store.propagationHasOccurred);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
-      }
-
-      public String id() {
-        return "fzXeqYreified" + numberId;
-      }
-    };
+    return fzXeqY(x, y, b, true);
   }
 
   Constraint fzXeqYimplied(IntVar x, IntVar y, IntVar b) {
-
-    return new Constraint(new IntVar[] {x, y, b}) {
-
-      final int numberId = n6.incrementAndGet();
-
-      @Override
-      public void consistency(final Store store) {
-
-        if (x == y || x.singleton(y.min()) && y.singleton(x.min())) {
-          removeConstraint();
-        } else if (!x.domain.isIntersecting(y.domain)) {
-          b.domain.inValue(store.level, b, 0);
-          removeConstraint();
-        } else if (b.max() == 0) { // x!=y must be false
-          removeConstraint();
-        } else if (b.min() == 1) { // x==y must be true
-          do {
-
-            // domain consistency
-            x.domain.in(store.level, x, y.domain);
-
-            store.propagationHasOccurred = false;
-
-            y.domain.in(store.level, y, x.domain);
-
-          } while (store.propagationHasOccurred);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
-      }
-
-      public String id() {
-        return "fzXeqYimplied" + numberId;
-      }
-    };
+    return fzXeqY(x, y, b, false);
   }
 
   Constraint fzIfThenBool(IntVar b, IntVar x) {

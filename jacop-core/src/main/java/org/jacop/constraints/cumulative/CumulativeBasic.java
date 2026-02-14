@@ -57,9 +57,9 @@ public class CumulativeBasic extends Constraint {
   private static final boolean DEBUG = false;
   private static final boolean DEBUG_NARR = false;
   // event type
-  private static final int PROFILE = 0;
-  private static final int PRUNE_START = 1;
-  private static final int PRUNE_END = 2;
+  protected static final int PROFILE = 0;
+  protected static final int PRUNE_START = 1;
+  protected static final int PRUNE_END = 2;
 
   /** It specifies the limit of the PROFILE of cumulative use of resources. */
   protected final IntVar limit;
@@ -217,15 +217,51 @@ public class CumulativeBasic extends Constraint {
 
   // Sweep algorithm for PROFILE
   private void sweepPruning(Store store) {
+    sweepPruningCore(
+        store,
+        taskNormal,
+        limit,
+        DEBUG,
+        DEBUG_NARR,
+        (type, t, date, value) -> new Event(type, t, date, value),
+        eventComparator,
+        null,
+        null);
+  }
 
-    Event[] es = new Event[4 * taskNormal.length];
-    final int limitMax = limit.max();
+  /**
+   * Shared core sweep pruning logic extracted from CumulativeBasic and ProfileOptional.
+   *
+   * @param store the store
+   * @param tasks the tasks to process
+   * @param limitVar the limit variable
+   * @param debug debug flag
+   * @param debugNarr detailed debug flag
+   * @param eventFactory factory for creating events
+   * @param eventComparator comparator for sorting events
+   * @param profileUpdateCallback optional callback for profile updates (for optional tasks)
+   * @param postProcessCallback optional callback for post-processing (for optional tasks)
+   */
+  @SuppressWarnings("unchecked")
+  protected static <E> void sweepPruningCore(
+      Store store,
+      TaskView[] tasks,
+      IntVar limitVar,
+      boolean debug,
+      boolean debugNarr,
+      EventFactory<E> eventFactory,
+      Comparator<E> eventComparator,
+      ProfileUpdateCallback<E> profileUpdateCallback,
+      Runnable postProcessCallback) {
+
+    E[] es = (E[]) new Object[4 * tasks.length];
+    final int limitMax = limitVar.max();
 
     int j = 0;
     int minProfile = Integer.MAX_VALUE;
     int maxProfile = Integer.MIN_VALUE;
-    for (int i = 0; i < taskNormal.length; i++) {
-      TaskView t = taskNormal[i];
+    for (int i = 0; i < tasks.length; i++) {
+      TaskView t = tasks[i];
       t.index = i;
 
       // mandatory task parts to create PROFILE
@@ -233,8 +269,8 @@ public class CumulativeBasic extends Constraint {
       int max = t.ect();
       int tResMin = t.res.min();
       if (min < max && tResMin > 0) {
-        es[j++] = new Event(PROFILE, t, min, tResMin);
-        es[j++] = new Event(PROFILE, t, max, -tResMin);
+        es[j++] = eventFactory.create(PROFILE, t, min, tResMin);
+        es[j++] = eventFactory.create(PROFILE, t, max, -tResMin);
         minProfile = Math.min(min, minProfile);
         maxProfile = Math.max(max, maxProfile);
       }
@@ -243,75 +279,82 @@ public class CumulativeBasic extends Constraint {
       return;
     }
 
-    for (TaskView t : taskNormal) {
+    for (TaskView t : tasks) {
       // overlapping tasks for pruning
       // from start to end
       int min = t.est();
       int max = t.lct();
       if (t.maxNonZero()
           && !(min > maxProfile || max < minProfile)) { // t.dur.max() > 0 && t.res.max() > 0
-        es[j++] = new Event(PRUNE_START, t, min, 0);
-        es[j++] = new Event(PRUNE_END, t, max, 0);
+        es[j++] = eventFactory.create(PRUNE_START, t, min, 0);
+        es[j++] = eventFactory.create(PRUNE_END, t, max, 0);
       }
     }
 
     int N = j;
     Arrays.sort(es, 0, N, eventComparator);
 
-    if (DEBUG_NARR) {
+    if (debugNarr) {
       log.debug("{}", Arrays.asList(es));
       log.debug("limit.max() = {}", limitMax);
       log.debug("===========================");
     }
 
-    final BitSet tasksToPrune = new BitSet(taskNormal.length);
-    final boolean[] inProfile = new boolean[taskNormal.length];
+    final BitSet tasksToPrune = new BitSet(tasks.length);
+    final boolean[] inProfile = new boolean[tasks.length];
 
     // used for start variable pruning
-    final int[] startExcluded = new int[taskNormal.length];
-    final boolean[] startConsidered = new boolean[taskNormal.length];
+    final int[] startExcluded = new int[tasks.length];
+    final boolean[] startConsidered = new boolean[tasks.length];
 
     // used for duration variable pruning
-    int[] maxDuration = new int[taskNormal.length];
+    int[] maxDuration = new int[tasks.length];
     // value Integer.MIN_VALUE for maxDuration means that the
     // duration does not need to be prunned
     Arrays.fill(maxDuration, Integer.MIN_VALUE);
-    int[] lastStart = new int[taskNormal.length];
+    int[] lastStart = new int[tasks.length];
     Arrays.fill(lastStart, Integer.MAX_VALUE);
-    int[] lastFree = new int[taskNormal.length];
+    int[] lastFree = new int[tasks.length];
     Arrays.fill(lastFree, Integer.MAX_VALUE);
-    boolean[] barier = new boolean[taskNormal.length];
+    boolean[] barier = new boolean[tasks.length];
 
     int curProfile = 0;
     for (int i = 0; i < N; i++) {
 
-      Event e = es[i];
-      Event ne = null; // next event
+      E e = es[i];
+      E ne = null; // next event
       if (i < N - 1) {
         ne = es[i + 1];
       }
 
-      switch (e.type()) {
+      int eventType = getEventType(e);
+      switch (eventType) {
         case PROFILE: // =========== PROFILE event ===========
-          curProfile += e.value();
-          inProfile[e.task().index] = e.value() > 0;
 
-          if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
+          // Profile update callback for optional tasks
+          if (profileUpdateCallback != null) {
+            profileUpdateCallback.onProfileEvent(e, curProfile);
+          }
+
+          curProfile += getEventValue(e);
+          inProfile[getEventTask(e).index] = getEventValue(e) > 0;
+
+          if (ne == null || getEventType(ne) != PROFILE || getEventDate(e) < getEventDate(ne)) {
             // check the tasks for pruning only at the end of all PROFILE events
 
-            if (DEBUG) {
-              log.debug("Profile at {}: {}", e.date(), curProfile);
+            if (debug) {
+              log.debug("Profile at {}: {}", getEventDate(e), curProfile);
             }
 
             // prune limit variable
-            if (curProfile > limit.min()) {
-              limit.domain.inMin(store.level, limit, curProfile);
+            if (curProfile > limitVar.min()) {
+              limitVar.domain.inMin(store.level, limitVar, curProfile);
             }
 
             for (int ti = tasksToPrune.nextSetBit(0);
                 ti >= 0;
                 ti = tasksToPrune.nextSetBit(ti + 1)) {
-              TaskView t = taskNormal[ti];
+              TaskView t = tasks[ti];
 
               int profileValue = curProfile;
               if (inProfile[ti]) {
@@ -323,23 +366,23 @@ public class CumulativeBasic extends Constraint {
               if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
                 if (!startConsidered[ti]) {
                   if (noSpace) {
-                    startExcluded[ti] = e.date() - t.dur.min() + 1;
+                    startExcluded[ti] = getEventDate(e) - t.dur.min() + 1;
                     startConsidered[ti] = true;
                   }
                 } else // startExcluded[ti] != Integer.MAX_VALUE
                 if (!noSpace) {
                   // end of excluded interval
 
-                  if (DEBUG_NARR) {
+                  if (debugNarr) {
                     log.debug(
                         ">>> CumulativeBasic Profile 1. Narrowed {} \\ {} => {}",
                         t.start,
-                        new IntervalDomain(startExcluded[ti], e.date() - 1),
+                        new IntervalDomain(startExcluded[ti], getEventDate(e) - 1),
                         t.start);
                   }
 
                   t.start.domain.inComplement(
-                      store.level, t.start, startExcluded[ti], e.date() - 1);
+                      store.level, t.start, startExcluded[ti], getEventDate(e) - 1);
 
                   startConsidered[ti] = false;
                 }
@@ -347,13 +390,13 @@ public class CumulativeBasic extends Constraint {
 
               // ========= for duration pruning
               if (noSpace) {
-                maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastFree[ti]);
+                maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastFree[ti]);
                 barier[ti] = true;
               } else if (barier[ti]) { // free to go
                 barier[ti] = false;
-                lastFree[ti] = e.date();
-                if (e.date() <= t.start.max()) {
-                  lastStart[ti] = e.date();
+                lastFree[ti] = getEventDate(e);
+                if (getEventDate(e) <= t.start.max()) {
+                  lastStart[ti] = getEventDate(e);
                 }
               }
 
@@ -363,8 +406,8 @@ public class CumulativeBasic extends Constraint {
               // < t.ect())
               // since tasks with res = 0 are not in the PROFILE :(
               if (limitMax - profileValue < t.res.max()
-                  && t.lst() <= e.date()
-                  && e.date() < t.ect()) {
+                  && t.lst() <= getEventDate(e)
+                  && getEventDate(e) < t.ect()) {
                 t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
               }
             }
@@ -374,7 +417,7 @@ public class CumulativeBasic extends Constraint {
 
         case PRUNE_START: // =========== start of a task ===========
           int profileValue = curProfile;
-          TaskView t = e.task();
+          TaskView t = getEventTask(e);
           int ti = t.index;
 
           if (inProfile[ti]) {
@@ -384,7 +427,7 @@ public class CumulativeBasic extends Constraint {
 
           // ========= for start pruning
           if (t.exists() && noSpace) { // t.res.min() > 0 && t.dur.min() > 0
-            startExcluded[ti] = e.date();
+            startExcluded[ti] = getEventDate(e);
             startConsidered[ti] = true;
           }
 
@@ -398,7 +441,9 @@ public class CumulativeBasic extends Constraint {
           }
 
           // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
+          if (limitMax - profileValue < t.res.max()
+              && t.lst() <= getEventDate(e)
+              && getEventDate(e) < t.ect()) {
             t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
           }
 
@@ -407,7 +452,7 @@ public class CumulativeBasic extends Constraint {
 
         case PRUNE_END: // =========== end of a task ===========
           profileValue = curProfile;
-          t = e.task();
+          t = getEventTask(e);
           ti = t.index;
 
           if (inProfile[ti]) {
@@ -418,7 +463,7 @@ public class CumulativeBasic extends Constraint {
           if (t.exists() && startConsidered[ti]) {
             // task ends and we remove forbidden area
 
-            if (DEBUG_NARR) {
+            if (debugNarr) {
               log.debug(
                   ">>> CumulativeBasic Profile 2. Narrowed {} inMax {}",
                   t.start,
@@ -427,7 +472,7 @@ public class CumulativeBasic extends Constraint {
 
             t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 
-            if (DEBUG_NARR) {
+            if (debugNarr) {
               log.debug(" => {}", t.start);
             }
           }
@@ -435,13 +480,15 @@ public class CumulativeBasic extends Constraint {
           startConsidered[ti] = false;
 
           // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
+          if (limitMax - profileValue < t.res.max()
+              && t.lst() <= getEventDate(e)
+              && getEventDate(e) < t.ect()) {
             t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
           }
 
           // ========= duration pruning
           if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min()) {
-            maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastStart[ti]);
+            maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastStart[ti]);
           }
 
           if (lastStart[ti] == Integer.MAX_VALUE) { // no room for the task; must have 0 duration
@@ -449,7 +496,7 @@ public class CumulativeBasic extends Constraint {
           }
 
           if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
-            if (DEBUG_NARR) {
+            if (debugNarr) {
               log.debug(
                   ">>> CumulativeBasic Profile 3. Narrowed {} in 0..{} => {}",
                   t.dur,
@@ -464,8 +511,77 @@ public class CumulativeBasic extends Constraint {
           break;
 
         default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
+          throw new RuntimeException("Internal error");
       }
+    }
+
+    if (postProcessCallback != null) {
+      postProcessCallback.run();
+    }
+  }
+
+  // Functional interfaces for event handling
+  @FunctionalInterface
+  interface EventFactory<E> {
+    E create(int type, TaskView task, int date, int value);
+  }
+
+  @FunctionalInterface
+  interface ProfileUpdateCallback<E> {
+    void onProfileEvent(E event, int currentProfile);
+  }
+
+  // Event accessor methods - handle both CumulativeBasic.Event (record) and ProfileOptional.Event
+  // (class)
+  @SuppressWarnings("unchecked")
+  private static <E> int getEventType(E event) {
+    if (event instanceof Event) {
+      return ((Event) event).type();
+    }
+    // ProfileOptional.Event case - use reflection as fallback
+    try {
+      return (Integer) event.getClass().getMethod("type").invoke(event);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get event type", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <E> int getEventDate(E event) {
+    if (event instanceof Event) {
+      return ((Event) event).date();
+    }
+    // ProfileOptional.Event case
+    try {
+      return (Integer) event.getClass().getMethod("date").invoke(event);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get event date", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <E> int getEventValue(E event) {
+    if (event instanceof Event) {
+      return ((Event) event).value();
+    }
+    // ProfileOptional.Event case
+    try {
+      return (Integer) event.getClass().getMethod("value").invoke(event);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get event value", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <E> TaskView getEventTask(E event) {
+    if (event instanceof Event) {
+      return ((Event) event).task();
+    }
+    // ProfileOptional.Event case
+    try {
+      return (TaskView) event.getClass().getMethod("task").invoke(event);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get event task", e);
     }
   }
 

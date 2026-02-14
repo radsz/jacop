@@ -117,7 +117,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-    return getPruningEventFor(v, consistencyPruningEvents, b, c);
+    return getConsistencyPruningEventForReified(v, b, c);
   }
 
   @Override
@@ -127,7 +127,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-    return getPruningEventFor(v, notConsistencyPruningEvents, b, c);
+    return getNotConsistencyPruningEventForReified(v, b, c);
   }
 
   @Override

@@ -277,208 +277,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return contains;
   }
 
-  private boolean findRectangles(
-      Rectangle r,
-      List<IntRectangle> usedRect,
-      List<Rectangle> profileCandidates,
-      Set<IntVar> fdvQueue) {
-
-    boolean contains = false;
-    boolean checkArea = false;
-
-    long area = 0;
-    long commonArea = 0;
-    int totalNumberOfRectangles = 0;
-    int dim = r.dim;
-    int[] startMin = new int[dim];
-    int[] stopMax = new int[dim];
-    int[] minLength = new int[dim];
-    int[] r_min = new int[dim];
-    int[] r_max = new int[dim];
-    for (int i = 0; i < startMin.length; i++) {
-      startMin[i] = IntDomain.MAX_INT;
-      stopMax[i] = 0;
-      minLength[i] = r.length[i].min();
-
-      IntDomain rOriginDom = r.origin[i].dom();
-      r_min[i] = rOriginDom.min();
-      r_max[i] = rOriginDom.max() + r.length[i].max();
-    }
-
-    int[] sOriginMin = new int[dim];
-    int[] sOriginMax = new int[dim];
-    int[] sLengthMin = new int[dim];
-
-    for (Rectangle s : rectangles) {
-
-      boolean overlap = true;
-
-      if (r != s) {
-        boolean sChanged = containsChangedVariable(s, fdvQueue);
-
-        IntRectangle Use = new IntRectangle(dim);
-        long sArea = 1;
-        long partialCommonArea = 1;
-
-        boolean use = true;
-        boolean minLength0 = false;
-        int s_min;
-        int s_max;
-        int start;
-        int stop;
-        int m = 0;
-        int j = 0;
-
-        while (overlap && m < dim) {
-          // check if domains of r and s overlap
-          IntDomain sOriginIdom = s.origin[m].dom();
-          IntDomain sLengthIdom = s.length[m].dom();
-          final int sLengthiMin = sLengthIdom.min();
-          int sOriginiMax = sOriginIdom.max();
-          s_min = sOriginIdom.min();
-          s_max = sOriginiMax + sLengthIdom.max();
-
-          overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
-
-          // min start, max stop and min length
-          sOriginMin[m] = s_min;
-          sOriginMax[m] = sOriginiMax + sLengthiMin;
-          sLengthMin[m] = sLengthiMin;
-
-          // check if s occupies some space
-          start = sOriginiMax;
-          stop = s_min + sLengthiMin;
-          if (start < stop) {
-            Use.add(start, stop - start);
-            j++;
-          } else {
-            use = false;
-          }
-
-          // min length == 0
-          minLength0 = minLength0 || (sLengthMin[m] <= 0);
-
-          m++;
-        }
-
-        if (overlap) {
-          if (use) { // rectangles taking space
-            usedRect.add(Use);
-            contains = contains || sChanged;
-          }
-
-          if (!minLength0) { // profile candiates
-            if (j > 0) {
-              profileCandidates.add(s);
-              contains = contains || sChanged;
-            }
-
-            checkArea = true;
-            totalNumberOfRectangles++;
-            for (int i = 0; i < dim; i++) {
-              if (sOriginMin[i] < startMin[i]) {
-                startMin[i] = sOriginMin[i];
-              }
-              if (sOriginMax[i] > stopMax[i]) {
-                stopMax[i] = sOriginMax[i];
-              }
-              if (minLength[i] > sLengthMin[i]) {
-                minLength[i] = sLengthMin[i];
-              }
-
-              sArea *= sLengthMin[i];
-            }
-            area += sArea;
-          } // profile candidate end
-
-          // calculate area within rectangle r possible placement
-          for (int i = 0; i < dim; i++) {
-            if (sOriginMin[i] <= r_min[i]) {
-              if (sOriginMax[i] <= r_max[i]) {
-                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
-                sLengthMin[i] = Math.max(distance1, 0);
-              } else {
-                // sOriginMax[i] > r_max[i])
-                int rmax = r.origin[i].max() + r.length[i].min();
-
-                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
-                int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
-                if (distance1 > rmax - r_min[i]) {
-                  distance1 = rmax - r_min[i];
-                }
-                if (distance2 > rmax - r_min[i]) {
-                  distance2 = rmax - r_min[i];
-                }
-                if (distance1 < distance2) {
-                  sLengthMin[i] = Math.max(distance1, 0);
-                } else if (distance2 > 0) {
-                  if (distance2 < sLengthMin[i]) {
-                    sLengthMin[i] = distance2;
-                  }
-                } else {
-                  sLengthMin[i] = 0;
-                }
-              }
-            } else // sOriginMin[i] > r_min[i]
-            if (sOriginMax[i] > r_max[i]) {
-              int distance2 =
-                  sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
-              if (distance2 > 0) {
-                if (distance2 < sLengthMin[i]) {
-                  sLengthMin[i] = distance2;
-                }
-              } else {
-                sLengthMin[i] = 0;
-              }
-            }
-
-            partialCommonArea = partialCommonArea * sLengthMin[i];
-          }
-          // end for
-          commonArea += partialCommonArea;
-        }
-        if (commonArea + r.minArea() > (long) (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
-          throw Store.failException;
-        }
-      }
-    }
-
-    if (checkArea) { // check whether there is
-      // enough room for all rectangles
-      area += r.minArea();
-      long availArea = 1;
-      long rectNumber = 1;
-      for (int i = 0; i < startMin.length; i++) {
-        IntDomain rOriginIdom = r.origin[i].dom();
-        IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginiMin = rOriginIdom.min();
-        int rOriginiMax = rOriginIdom.max();
-        int rLengthiMin = rLengthIdom.min();
-        if (rOriginiMin < startMin[i]) {
-          startMin[i] = rOriginiMin;
-        }
-        if (rOriginiMax + rLengthiMin > stopMax[i]) {
-          stopMax[i] = rOriginiMax + rLengthiMin;
-        }
-      }
-      boolean checkRectNumber = true;
-      for (int i = 0; i < startMin.length; i++) {
-        availArea *= stopMax[i] - startMin[i];
-        if (minLength[i] != 0) {
-          rectNumber *= (stopMax[i] - startMin[i]) / minLength[i];
-        } else {
-          checkRectNumber = false;
-        }
-      }
-
-      if (availArea < area || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1))) {
-        throw Store.failException;
-      }
-    }
-
-    return contains;
-  }
-
   /**
    * Returns the array of rectangles constrained by this diff constraint.
    *
@@ -650,45 +448,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   }
 
   void narrowRectangles(Set<IntVar> fdvQueue) {
-    boolean needToNarrow = false;
-    List<IntRectangle> usedRect = new ArrayList<>();
-    List<Rectangle> profileCandidates = new ArrayList<>();
-
-    for (Rectangle r : rectangles) {
-      boolean settled = true;
-      boolean minLengthEq0 = false;
-      int maxLevel = 0;
-      for (int i = 0; i < r.dim; i++) {
-        IntDomain rOrigin = r.origin[i].dom();
-        IntDomain rLength = r.length[i].dom();
-        settled = settled && rOrigin.singleton() && rLength.singleton();
-
-        minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
-
-        int originStamp = rOrigin.stamp;
-        int lengthStamp = rLength.stamp;
-        if (maxLevel < originStamp) {
-          maxLevel = originStamp;
-        }
-        if (maxLevel < lengthStamp) {
-          maxLevel = lengthStamp;
-        }
-      }
-
-      if (!(settled && maxLevel < currentStore.level)) {
-
-        needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
-
-        usedRect.clear();
-        profileCandidates.clear();
-        boolean ntN = findRectangles(r, usedRect, profileCandidates, fdvQueue);
-        needToNarrow = needToNarrow || ntN;
-
-        if (needToNarrow) {
-          narrowRectangle(r, usedRect, profileCandidates);
-        }
-      }
-    }
+    narrowRectanglesEval(null, fdvQueue, false, true);
   }
 
   private boolean notFit(
@@ -944,7 +704,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   /**
    * Shared narrowRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
    *
-   * @param evalRects the backtrackable rectangle variables.
+   * @param evalRects the backtrackable rectangle variables (null for base Diff class).
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
    *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
@@ -965,7 +725,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       boolean settled = true;
       boolean minLengthEq0 = false;
       int maxLevel = 0;
-      for (int i = 0; i < r.dim(); i++) {
+      for (int i = 0; i < r.dim; i++) {
         IntDomain rOrigin = r.origin[i].dom();
         IntDomain rLength = r.length[i].dom();
         settled = settled && rOrigin.singleton() && rLength.singleton();
@@ -982,18 +742,24 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
       }
 
-      if (!minLengthEq0 && !(settled && maxLevel < currentStore.level)) {
+      boolean shouldProcess =
+          evalRects != null
+              ? (!minLengthEq0 && !(settled && maxLevel < currentStore.level))
+              : !(settled && maxLevel < currentStore.level);
+
+      if (shouldProcess) {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
         List<IntRectangle> usedRect = new ArrayList<>();
         List<Rectangle> profileCandidates = new ArrayList<>();
-        List<Rectangle> overlappingRects = new ArrayList<>();
+        List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
+        Rectangle[] rectsToCheck =
+            evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
         boolean ntN =
             findRectanglesEval(
-                evalRects,
+                rectsToCheck,
                 r,
-                l,
                 usedRect,
                 profileCandidates,
                 overlappingRects,
@@ -1006,7 +772,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
 
-          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
+          if (evalRects != null
+              && overlappingRects != null
+              && overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
             Diff2VarValue newRects = new Diff2VarValue();
             newRects.setValue(overlappingRects);
             evalRects[l].update(newRects);
@@ -1021,12 +789,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   /**
    * Shared findRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
    *
-   * @param evalRects the backtrackable rectangle variables.
+   * @param rectsToCheck the array of rectangles to check against rectangle r.
    * @param r the rectangle being narrowed.
-   * @param index the index of rectangle r in the rectangles array.
    * @param usedRect output list of used rectangles.
    * @param profileCandidates output list of profile candidate rectangles.
-   * @param overlappingRects output list of overlapping rectangles.
+   * @param overlappingRects output list of overlapping rectangles (may be null if not needed).
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
    *     (Diff2).
@@ -1036,9 +803,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    */
   @SuppressWarnings("java:S3776") // cognitive complexity inherited from original code
   protected boolean findRectanglesEval(
-      Diff2Var[] evalRects,
+      Rectangle[] rectsToCheck,
       Rectangle r,
-      int index,
       List<IntRectangle> usedRect,
       List<Rectangle> profileCandidates,
       List<Rectangle> overlappingRects,
@@ -1052,7 +818,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     long area = 0;
     long commonArea = 0;
     int totalNumberOfRectangles = 0;
-    int dim = r.dim();
+    int dim = r.dim;
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
@@ -1069,7 +835,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       r_max[i] = rOriginDom.max() + rLengthDom.max();
     }
 
-    for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).rects) {
+    for (Rectangle s : rectsToCheck) {
       boolean overlap = true;
 
       if (r != s) {
@@ -1124,7 +890,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         if (overlap) {
 
-          overlappingRects.add(s);
+          if (overlappingRects != null) {
+            overlappingRects.add(s);
+          }
 
           if (use) { // rectangles taking space
             usedRect.add(Use);
@@ -1206,7 +974,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       }
     }
 
-    if (checkArea) { // check whether there is
+    if (checkArea || checkAreaAlways) { // check whether there is
       // enough room for all rectangles
       area += r.minArea();
       long availArea = 1;
@@ -1234,9 +1002,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
       }
 
-      if (checkAreaAlways
-          && (availArea < area
-              || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)))) {
+      if (availArea < area || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1))) {
         throw Store.failException;
       }
     }

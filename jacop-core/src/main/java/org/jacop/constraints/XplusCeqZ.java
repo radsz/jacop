@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -41,9 +39,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusCeqZ extends PrimitiveConstraint {
-
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+public class XplusCeqZ extends AbstractXplusYeq {
 
   /** It specifies variable x in constraint x+c=z. */
   private final IntVar x;
@@ -65,7 +61,7 @@ public class XplusCeqZ extends PrimitiveConstraint {
 
     checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
-    numberId = idNumber.incrementAndGet();
+    numberId = AbstractXplusYeq.idNumber.incrementAndGet();
 
     this.x = x;
     this.c = c;
@@ -76,7 +72,8 @@ public class XplusCeqZ extends PrimitiveConstraint {
     setScope(x, z);
   }
 
-  void checkForOverflow() {
+  @Override
+  protected void checkForOverflow() {
     checkSumOverflow(x.min(), x.max(), c, c, z.min(), z.max());
   }
 
@@ -92,16 +89,6 @@ public class XplusCeqZ extends PrimitiveConstraint {
       z.domain.inShift(store.level, z, x.domain, c);
 
     } while (store.propagationHasOccurred);
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.GROUND;
   }
 
   @Override
