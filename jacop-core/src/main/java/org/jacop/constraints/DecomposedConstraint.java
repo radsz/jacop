@@ -60,7 +60,16 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    * Cumulative Diff2 Priorytet 3 - polynomial execution time Priorytet 4 - execution time can be
    * exponential in worst case, SumWeightDom
    */
-  public int queueIndex;
+  protected int queueIndex;
+
+  /**
+   * Returns the queue index for this constraint.
+   *
+   * @return the queue index.
+   */
+  public int getQueueIndex() {
+    return queueIndex;
+  }
 
   /**
    * Returns the set of non-singleton variables that appear more than once in the given array.

@@ -67,7 +67,7 @@ public class DisjointConditional extends Diff {
   /** It specifies what rectangles can conditionally overlap. */
   private ExclusiveList exclusionList = new ExclusiveList();
 
-  List<? extends IntVar>[] condVariables;
+  List<IntVar>[] condVariables;
   DisjointCondVar[] evalRects;
 
   /**
@@ -374,7 +374,7 @@ public class DisjointConditional extends Diff {
 
   boolean conditionChanged(Set<IntVar> fdvQueue, int j) {
     boolean changed = false;
-    List<? extends IntVar> el = condVariables[j];
+    List<IntVar> el = condVariables[j];
     int i = 0;
     while (!changed && i < el.size()) {
       changed = fdvQueue.contains(el.get(i));

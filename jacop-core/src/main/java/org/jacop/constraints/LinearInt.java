@@ -505,7 +505,7 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   private boolean pruneMin(IntVar x, long min) {
-    if (min > (long) x.min()) {
+    if (min > x.min()) {
       x.domain.inMin(store.level, x, long2int(min));
       return true;
     } else {
@@ -514,7 +514,7 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   private boolean pruneMax(IntVar x, long max) {
-    if (max < (long) x.max()) {
+    if (max < x.max()) {
       x.domain.inMax(store.level, x, long2int(max));
       return true;
     } else {

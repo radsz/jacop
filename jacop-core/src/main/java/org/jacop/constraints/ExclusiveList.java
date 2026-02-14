@@ -62,7 +62,7 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
     return c;
   }
 
-  List<? extends IntVar> fdvs(int index) {
+  List<IntVar> fdvs(int index) {
     List<IntVar> list = new ArrayList<>();
     for (int i = 0; i < size(); i++) {
       ExclusiveItem v = get(i);

@@ -423,11 +423,11 @@ public class Store {
 
     propagationHasOccurred = true;
 
-    if (c.queueIndex < currentQueue) {
-      currentQueue = c.queueIndex;
+    if (c.getQueueIndex() < currentQueue) {
+      currentQueue = c.getQueueIndex();
     }
 
-    changed[c.queueIndex].add(c);
+    changed[c.getQueueIndex()].add(c);
   }
 
   /**

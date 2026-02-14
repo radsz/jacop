@@ -261,7 +261,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
     int position = (left + right) >> 1;
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (smaller(t, tuplesForGivenVariableValuePair[position])) {
         right = position;

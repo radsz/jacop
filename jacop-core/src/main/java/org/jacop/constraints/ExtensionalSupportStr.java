@@ -88,10 +88,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   private int[] nexts;
 
   /** Gives the first position of the eliminated tuple at a given level. */
-  public TimeStamp<Integer> headsOfEliminatedTuples;
+  private TimeStamp<Integer> headsOfEliminatedTuples;
 
   /** Gives the last position of the eliminated tuple at a given level. */
-  public TimeStamp<Integer> tailsOfEliminatedTuples;
+  private TimeStamp<Integer> tailsOfEliminatedTuples;
 
   /** The number of variable-value pairs which need to have support. */
   private int nbGlobalValuesToBeSupported;

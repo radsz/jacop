@@ -1264,7 +1264,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       log.debug("{}", sb);
     }
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (DEBUG) {
         log.debug("left {} right {} position {}", left, right, position);

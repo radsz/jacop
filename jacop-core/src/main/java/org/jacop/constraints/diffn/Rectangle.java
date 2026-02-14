@@ -104,11 +104,11 @@ public class Rectangle {
         .flatMap(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)));
   }
 
-  IntVar origin(int dim) {
+  IntVar getOrigin(int dim) {
     return origin[dim];
   }
 
-  IntVar length(int dim) {
+  IntVar getLength(int dim) {
     return length[dim];
   }
 

@@ -224,7 +224,7 @@ public class LexOrder extends Constraint
         int i = it.next();
         it.remove();
 
-        if (!(i >= betaValue)) {
+        if (i < betaValue) {
           reestablishGac(i);
         }
       }
@@ -260,8 +260,8 @@ public class LexOrder extends Constraint
   @Override
   public void queueVariable(int level, Var v) {
 
-    int[] iValX = varxToIndex.get((IntVar) v);
-    int[] iValY = varyToIndex.get((IntVar) v);
+    int[] iValX = varxToIndex.get(v);
+    int[] iValY = varyToIndex.get(v);
 
     if (iValX != null) {
       for (int i : iValX) {

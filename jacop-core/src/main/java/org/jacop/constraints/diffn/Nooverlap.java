@@ -321,11 +321,11 @@ public class Nooverlap extends Constraint {
     int ectJ = rj.ect(dim);
 
     if (lstI < ectI || lstJ < ectJ) {
-      IntVar riOrigin = ri.origin(dim);
-      IntVar rjOrigin = rj.origin(dim);
+      IntVar riOrigin = ri.getOrigin(dim);
+      IntVar rjOrigin = rj.getOrigin(dim);
 
       if (lstI < ectJ) { // i before j
-        IntVar riLength = ri.length(dim);
+        IntVar riLength = ri.getLength(dim);
 
         if (strict || (ri.exists() && rj.exists())) {
           rjOrigin.domain.inMin(store.level, rjOrigin, ectI);
@@ -333,7 +333,7 @@ public class Nooverlap extends Constraint {
           riLength.domain.inMax(store.level, riLength, lstJ - ri.est(dim));
         }
       } else if (lstJ < ectI) { // j before i
-        IntVar rjLength = rj.length(dim);
+        IntVar rjLength = rj.getLength(dim);
 
         if (strict || (ri.exists() && rj.exists())) {
           riOrigin.domain.inMin(store.level, riOrigin, ectJ);
@@ -358,8 +358,8 @@ public class Nooverlap extends Constraint {
     int yMin = r.est(Y);
     int yMax = r.lct(Y);
     long rSpace = (long) (xMax - xMin) * (yMax - yMin);
-    int xLengthMin = r.length(X).min();
-    int yLengthMin = r.length(Y).min();
+    int xLengthMin = r.getLength(X).min();
+    int yLengthMin = r.getLength(Y).min();
     long minArea = (long) xLengthMin * yLengthMin;
     for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
       Rectangle rectj = rectangle[j];
@@ -367,8 +367,8 @@ public class Nooverlap extends Constraint {
       xMax = Math.max(xMax, rectj.lct(X));
       yMin = Math.min(yMin, rectj.est(Y));
       yMax = Math.max(yMax, rectj.lct(Y));
-      int rjxLength = rectj.length(X).min();
-      int rjyLength = rectj.length(Y).min();
+      int rjxLength = rectj.getLength(X).min();
+      int rjyLength = rectj.getLength(Y).min();
       xLengthMin = Math.min(xLengthMin, rjxLength);
       yLengthMin = Math.min(yLengthMin, rjyLength);
       minArea += (long) rjxLength * rjyLength;
@@ -401,8 +401,8 @@ public class Nooverlap extends Constraint {
       overlapping[i] = new TimeStamp<>(store, bs);
 
       // impose constraint on rectangle length >= 0
-      rectangle[i].length(0).domain.inMin(store.level, rectangle[i].length(0), 0);
-      rectangle[i].length(1).domain.inMin(store.level, rectangle[i].length(1), 0);
+      rectangle[i].getLength(0).domain.inMin(store.level, rectangle[i].getLength(0), 0);
+      rectangle[i].getLength(1).domain.inMin(store.level, rectangle[i].getLength(1), 0);
     }
   }
 
