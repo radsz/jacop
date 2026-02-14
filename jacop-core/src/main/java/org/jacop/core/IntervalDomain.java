@@ -113,6 +113,60 @@ public class IntervalDomain extends IntDomain {
     return ANY;
   }
 
+  /** Ensures the intervals array can hold at least one more element beyond current size. */
+  private void ensureCapacity() {
+    if (size >= intervals.length) {
+      Interval[] old = intervals;
+      intervals = new Interval[old.length + 5];
+      System.arraycopy(old, 0, intervals, 0, size);
+    }
+  }
+
+  /**
+   * Appends a human-readable representation of the domain intervals to the given StringBuilder. If
+   * the domain is a singleton, just the single interval is appended; otherwise the intervals are
+   * wrapped in braces and separated by commas.
+   *
+   * @param sb the StringBuilder to append to
+   */
+  private void appendIntervals(StringBuilder sb) {
+    if (!singleton()) {
+      sb.append("{");
+      for (int e = 0; e < size; e++) {
+        sb.append(intervals[e]);
+        if (e + 1 < size) {
+          sb.append(", ");
+        }
+      }
+      sb.append("}");
+    } else {
+      sb.append(intervals[0]);
+    }
+  }
+
+  /**
+   * Installs a computed interval array as the new domain on a variable, handling both the in-place
+   * (stamp==storeLevel) and copy-on-write cases. Fires a GROUND or BOUND event as appropriate.
+   *
+   * @param copy the new intervals array
+   * @param out the number of valid intervals in copy
+   * @param storeLevel the current store level
+   * @param v the variable to update
+   */
+  private void installArrayResult(Interval[] copy, int out, int storeLevel, Var v) {
+    IntervalDomain result = null;
+    if (stamp == storeLevel) {
+      intervals = copy;
+      size = out;
+    } else {
+      result = new IntervalDomain(copy, out);
+      installResultDomain(result, storeLevel, v);
+    }
+    IntervalDomain effective = stamp == storeLevel ? this : result;
+    assert effective.checkInvariants() == null : effective.checkInvariants();
+    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+  }
+
   /** Empty constructor, does not initialize anything. */
   public IntervalDomain() {
     // FIXME, check what is calling it and maybe remove some inappropriate callers.
@@ -184,11 +238,7 @@ public class IntervalDomain extends IntDomain {
     // TODO: Move all check invariant code into Aspect CheckInvariants.
     assert checkInvariants() == null : checkInvariants();
 
-    if (size == intervals.length) {
-      Interval[] oldIntervals = intervals;
-      intervals = new Interval[oldIntervals.length + 5];
-      System.arraycopy(oldIntervals, 0, intervals, 0, size);
-    }
+    ensureCapacity();
 
     intervals[size++] = i;
 
@@ -218,12 +268,7 @@ public class IntervalDomain extends IntDomain {
         if (max + 1 < intervals[i].min()) {
           // interval is inserted at position i
 
-          if (size == intervals.length) {
-            // no empty intervals to fill in
-            Interval[] oldIntervals = intervals;
-            intervals = new Interval[intervals.length + 5];
-            System.arraycopy(oldIntervals, 0, intervals, 0, size);
-          }
+          ensureCapacity();
 
           // empty intervals are available
           Interval temp = intervals[i];
@@ -247,12 +292,7 @@ public class IntervalDomain extends IntDomain {
 
       if (i == size) {
 
-        if (size == intervals.length) {
-          // no empty intervals to fill in
-          Interval[] oldIntervals = intervals;
-          intervals = new Interval[intervals.length + 5];
-          System.arraycopy(oldIntervals, 0, intervals, 0, size);
-        }
+        ensureCapacity();
 
         intervals[size] = new Interval(min, max);
         size++;
@@ -337,12 +377,7 @@ public class IntervalDomain extends IntDomain {
     if (intervals[size - 1].max() + 1 == i) {
       intervals[size - 1] = new Interval(intervals[size - 1].min(), i);
     } else {
-      if (size == intervals.length) {
-        Interval[] oldIntervals = intervals;
-        intervals = new Interval[oldIntervals.length + 5];
-        System.arraycopy(oldIntervals, 0, intervals, 0, size);
-      }
-
+      ensureCapacity();
       intervals[size] = new Interval(i, i);
       size++;
     }
@@ -609,13 +644,7 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    IntervalDomain cloned = new IntervalDomain();
-
-    cloned.intervals = new Interval[this.intervals.length];
-
-    System.arraycopy(intervals, 0, cloned.intervals, 0, size);
-
-    cloned.size = size;
+    IntervalDomain cloned = cloneLight();
 
     cloned.stamp = stamp;
     cloned.previousDomain = previousDomain;
@@ -649,67 +678,6 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.isEmpty()) {
       return true;
-    }
-
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain dom2 = (IntervalDomain) domain;
-
-      assert dom2.checkInvariants() == null : dom2.checkInvariants();
-
-      int max2 = dom2.size;
-
-      int i1 = 0;
-      int i2 = 0;
-
-      if (max2 == 0) {
-        return true;
-      }
-
-      Interval interval1 = intervals[0];
-      Interval interval2 = dom2.intervals[0];
-
-      while (true) {
-
-        while (interval2.min() > interval1.max()) {
-
-          i1++;
-
-          if (i1 == size) {
-            return false;
-          }
-
-          interval1 = intervals[i1];
-        }
-
-        if (interval2.min() < interval1.min() || interval2.max() > interval1.max()) {
-          return false;
-        }
-
-        i2++;
-
-        if (i2 == max2) {
-          return true;
-        }
-
-        interval2 = dom2.intervals[i2];
-      }
-    }
-
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      int i = 0;
-      int min = domain.min();
-
-      while (i < size && intervals[i].max() < min) {
-        i++;
-      }
-
-      if (i == size) {
-        return false;
-      }
-
-      return intervals[i].min() <= min && intervals[i].max() >= domain.max();
     }
 
     // TODO: CRUCIAL implement SmallDenseDomain case.
@@ -874,40 +842,6 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain intervalDomain = (IntervalDomain) domain;
-
-      assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants();
-
-      boolean equal = true;
-      int i = 0;
-
-      if (size == intervalDomain.size) {
-        while (equal && i < size) {
-          equal = intervals[i].eq(intervalDomain.intervals[i]);
-          i++;
-        }
-      } else {
-        equal = false;
-      }
-
-      return equal;
-    }
-
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      if (size == 0 && domain.isEmpty()) {
-        return true;
-      }
-
-      if (size != 1) {
-        return false;
-      }
-
-      return intervals[0].min() == domain.min() && intervals[0].max() == domain.max();
-    }
-
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       // TODO: CRUCIAL, create special code for SmallDenseDomain.
@@ -938,19 +872,16 @@ public class IntervalDomain extends IntDomain {
 
     } else {
 
-      boolean equal = true;
-      int i = 0;
-
-      if (this.getSize() == domain.getSize()) {
-        while (equal && i < size) {
-          equal = intervals[i].eq(domain.getInterval(i));
-          i++;
-        }
-      } else {
-        equal = false;
+      int n = domain.noIntervals();
+      if (size != n) {
+        return false;
       }
-
-      return equal;
+      for (int i = 0; i < n; i++) {
+        if (!intervals[i].eq(domain.getInterval(i))) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 
@@ -977,165 +908,8 @@ public class IntervalDomain extends IntDomain {
       return emptyDomain;
     }
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      assert input.checkInvariants() == null : input.checkInvariants();
-
-      IntervalDomain temp;
-
-      if (size > input.size) {
-        temp = new IntervalDomain(size);
-      } else {
-        temp = new IntervalDomain(input.size);
-      }
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int size1 = size;
-      int size2 = input.size;
-
-      if (size1 == 0 || size2 == 0) {
-        return temp;
-      }
-
-      Interval interval1 = intervals[pointer1];
-      Interval interval2 = input.intervals[pointer2];
-
-      while (true) {
-        if (interval1.max() < interval2.min()) {
-          pointer1++;
-          if (pointer1 < size1) {
-            interval1 = intervals[pointer1];
-          } else {
-            break;
-          }
-        } else if (interval2.max() < interval1.min()) {
-          pointer2++;
-          if (pointer2 < size2) {
-            interval2 = input.intervals[pointer2];
-          } else {
-            break;
-          }
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        if (interval1.min() <= interval2.min()) {
-
-          if (interval1.max() <= interval2.max()) {
-
-            temp.unionAdapt(interval2.min(), interval1.max());
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          } else {
-            temp.unionAdapt(interval2.min(), interval2.max());
-            pointer2++;
-            if (pointer2 < size2) {
-              interval2 = input.intervals[pointer2];
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1.max >= interval2.min
-          // interval2.max >= interval1.min
-          // interval1.min > interval2.min
-          if (interval2.max() <= interval1.max()) {
-            temp.unionAdapt(interval1.min(), interval2.max());
-            pointer2++;
-            if (pointer2 < size2) {
-              interval2 = input.intervals[pointer2];
-            } else {
-              break;
-            }
-          } else {
-            temp.unionAdapt(interval1.min(), interval1.max());
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      assert temp.checkInvariants() == null : temp.checkInvariants();
-
-      return temp;
-    }
-
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      int min = domain.min();
-      int max = domain.max();
-
-      IntervalDomain temp = new IntervalDomain(size);
-
-      int pointer1 = 0;
-
-      if (size == 0) {
-        return emptyDomain;
-      }
-
-      Interval interval1 = intervals[pointer1];
-
-      while (true) {
-        if (interval1.max() < min) {
-          pointer1++;
-          if (pointer1 < size) {
-            interval1 = intervals[pointer1];
-          } else {
-            break;
-          }
-        } else if (max < interval1.min()) {
-          break;
-        } else
-        // interval1.max >= min
-        // max >= interval1.min
-        if (interval1.min() <= min) {
-
-          if (interval1.max() <= max) {
-
-            temp.unionAdapt(min, interval1.max());
-            pointer1++;
-            if (pointer1 < size) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          } else {
-            temp.unionAdapt(min, max);
-            break;
-          }
-
-        } else {
-          // interval1.max >= min
-          // max >= interval1.min
-          // interval1.min > min
-          if (max <= interval1.max()) {
-            temp.unionAdapt(interval1.min(), max);
-            break;
-          } else {
-            temp.unionAdapt(interval1.min(), interval1.max());
-            pointer1++;
-            if (pointer1 < size) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      return temp;
+      return intersect(domain.min(), domain.max());
     }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
@@ -1539,226 +1313,11 @@ public class IntervalDomain extends IntDomain {
       return EMPTY;
     }
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain intervalDomain = (IntervalDomain) domain;
-
-      assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants();
-
-      if (intervalDomain.size == 0) {
-        return cloneLight();
-      }
-
-      IntervalDomain result = new IntervalDomain();
-
-      result.intervals = new Interval[size + 1 + ALLOCATION_MARGIN];
-
-      int i1 = 0;
-      int i2 = 0;
-
-      Interval currentDomain1 = intervals[i1];
-      Interval currentDomain2 = intervalDomain.intervals[i2];
-
-      boolean minIncluded = false;
-
-      int max2 = intervalDomain.size;
-
-      while (true) {
-
-        if (currentDomain1.max() < currentDomain2.min()) {
-          result.unionAdapt(currentDomain1);
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
-          minIncluded = false;
-          continue;
-        }
-
-        if (currentDomain2.max() < currentDomain1.min()) {
-          i2++;
-          if (i2 == max2) {
-            break;
-          }
-          currentDomain2 = intervalDomain.intervals[i2];
-          continue;
-        }
-
-        if (currentDomain1.min() >= currentDomain2.min()) {
-
-          if (currentDomain1.max() <= currentDomain2.max()) {
-            // Skip current interval of i1 completely
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
-            minIncluded = false;
-          } else {
-
-            // interval of dom2 ends before interval of dom1 ends
-            // currentDomain2.max+1 .. currentDomain1.max
-            // BUT next currentdomain2.min needs to be larger than
-            // currentDomain1.max
-
-            int oldMax = currentDomain2.max();
-            i2++;
-            if (i2 != max2) {
-              currentDomain2 = intervalDomain.intervals[i2];
-            }
-
-            if (i2 == max2 || currentDomain2.min() > currentDomain1.max()) {
-              result.unionAdapt(new Interval(oldMax + 1, currentDomain1.max()));
-              i1++;
-              if (i1 == size) {
-                break;
-              }
-              currentDomain1 = intervals[i1];
-              minIncluded = false;
-
-              if (i2 == max2) {
-                break;
-              }
-            } else {
-
-              result.unionAdapt(new Interval(oldMax + 1, currentDomain2.min() - 1));
-              minIncluded = true;
-            }
-          }
-
-        } else { // currentDomain1.min < currentDomain2.min)
-
-          if (currentDomain1.max() <= currentDomain2.max()) {
-
-            if (!minIncluded) {
-              if (currentDomain1.max() >= currentDomain2.min()) {
-                result.unionAdapt(new Interval(currentDomain1.min(), currentDomain2.min() - 1));
-              } else {
-                result.unionAdapt(new Interval(currentDomain1.min(), currentDomain1.max()));
-              }
-            }
-
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
-            minIncluded = false;
-          } else {
-
-            // interval of dom2 ends before interval of dom1 ends
-            // currentDomain2.max+1 .. currentDomain1.max
-            // BUT next currentdomain2.min needs to be larger than
-            // currentDomain1.max
-
-            if (!minIncluded) {
-              result.unionAdapt(new Interval(currentDomain1.min(), currentDomain2.min() - 1));
-              minIncluded = true;
-            }
-
-            int oldMax = currentDomain2.max();
-            i2++;
-            if (i2 != max2) {
-              currentDomain2 = intervalDomain.intervals[i2];
-            }
-
-            if (i2 == max2 || currentDomain2.min() > currentDomain1.max()) {
-              result.unionAdapt(new Interval(oldMax + 1, currentDomain1.max()));
-              i1++;
-              if (i1 == size) {
-                break;
-              }
-              currentDomain1 = intervals[i1];
-              minIncluded = false;
-
-              if (i2 == max2) {
-                break;
-              }
-            } else {
-
-              result.unionAdapt(new Interval(oldMax + 1, currentDomain2.min() - 1));
-            }
-          }
-        }
-      }
-
-      while (i1 < size) {
-        result.unionAdapt(intervals[i1]);
-        i1++;
-      }
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      return result;
-    }
-
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-
       if (domain.isEmpty()) {
         return cloneLight();
       }
-
-      IntervalDomain result = new IntervalDomain();
-
-      result.intervals = new Interval[size + 1 + ALLOCATION_MARGIN];
-
-      int i1 = 0;
-
-      Interval currentDomain1 = intervals[i1];
-
-      int min = domain.min();
-      int max = domain.max();
-
-      while (true) {
-
-        if (currentDomain1.max() < min) {
-          result.unionAdapt(currentDomain1);
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
-          continue;
-        }
-
-        if (max < currentDomain1.min()) {
-          break;
-        }
-
-        if (currentDomain1.min() >= min) {
-
-          if (currentDomain1.max() > max) {
-            // interval (min, max) ends before interval of dom1 ends
-            result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
-          }
-
-        } else { // currentDomain1.min < min)
-
-          result.unionAdapt(new Interval(currentDomain1.min(), min - 1));
-
-          if (currentDomain1.max() > max) {
-
-            result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
-          }
-        }
-        i1++;
-        if (i1 == size) {
-          break;
-        }
-        currentDomain1 = intervals[i1];
-      }
-
-      while (i1 < size) {
-        result.unionAdapt(intervals[i1]);
-        i1++;
-      }
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      return result;
+      return subtract(domain.min(), domain.max());
     }
 
     if (domain.isSparseRepresentation()) {
@@ -2034,232 +1593,11 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain intervalDomain = (IntervalDomain) domain;
-
-      assert intervalDomain.checkInvariants() == null : intervalDomain.checkInvariants();
-
-      if (intervalDomain.size == 0) {
-
-        return cloneLight();
-      }
-
-      if (size == 0) {
-
-        return intervalDomain.cloneLight();
-      }
-
-      IntervalDomain result = new IntervalDomain(size + intervalDomain.size);
-
-      int i1 = 0;
-      int i2 = 0;
-
-      Interval currentDomain1 = intervals[i1];
-      Interval currentDomain2 = intervalDomain.intervals[i2];
-
-      int max1 = size;
-      int max2 = intervalDomain.size;
-
-      while (true) {
-
-        if (currentDomain1.max() + 1 < currentDomain2.min()) {
-          result.unionAdapt(new Interval(currentDomain1.min(), currentDomain1.max()));
-          i1++;
-          if (i1 == max1) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
-          continue;
-        }
-
-        if (currentDomain2.max() + 1 < currentDomain1.min()) {
-          result.unionAdapt(new Interval(currentDomain2.min(), currentDomain2.max()));
-          i2++;
-          if (i2 == max2) {
-            break;
-          }
-          currentDomain2 = intervalDomain.intervals[i2];
-          continue;
-        }
-
-        // currentDomain2.max > currentDomain1.min) {
-
-        int min = Math.min(currentDomain1.min(), currentDomain2.min());
-
-        while ((currentDomain1.max() + 1 >= currentDomain2.min()
-                && currentDomain1.min() <= currentDomain2.min())
-            || (currentDomain2.max() + 1 >= currentDomain1.min()
-                && currentDomain2.min() <= currentDomain1.min())) {
-
-          if (currentDomain1.max() <= currentDomain2.max()) {
-            i1++;
-            if (i1 == max1) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
-            continue;
-          }
-
-          i2++;
-          if (i2 == max2) {
-            break;
-          }
-          currentDomain2 = intervalDomain.intervals[i2];
-        }
-
-        if (i1 == max1) {
-
-          while (currentDomain2.max() <= currentDomain1.max()) {
-            i2++;
-            if (i2 == max2) {
-              break;
-            }
-            currentDomain2 = intervalDomain.intervals[i2];
-          }
-
-          if (currentDomain1.max() <= currentDomain2.max()
-              && currentDomain1.max() + 1 >= currentDomain2.min()) {
-            result.unionAdapt(new Interval(min, currentDomain2.max()));
-            i2++;
-          } else {
-            result.unionAdapt(new Interval(min, currentDomain1.max()));
-          }
-          break;
-        }
-
-        if (i2 == max2) {
-
-          while (currentDomain1.max() <= currentDomain2.max()) {
-            i1++;
-            if (i1 == max1) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
-          }
-
-          if (currentDomain2.max() <= currentDomain1.max()
-              && currentDomain2.max() + 1 >= currentDomain1.min()) {
-            result.unionAdapt(new Interval(min, currentDomain1.max()));
-            i1++;
-          } else {
-            result.unionAdapt(new Interval(min, currentDomain2.max()));
-          }
-          break;
-        }
-
-        if (currentDomain1.max() < currentDomain2.max()) {
-          result.unionAdapt(new Interval(min, currentDomain1.max()));
-          i1++;
-          if (i1 == max1) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
-        } else {
-          result.unionAdapt(new Interval(min, currentDomain2.max()));
-          i2++;
-          if (i2 == max2) {
-            break;
-          }
-          currentDomain2 = intervalDomain.intervals[i2];
-        }
-      }
-
-      if (i1 < max1) {
-        for (; i1 < max1; i1++) {
-          result.unionAdapt(intervals[i1]);
-        }
-      }
-
-      if (i2 < max2) {
-        for (; i2 < max2; i2++) {
-          result.unionAdapt(intervalDomain.intervals[i2]);
-        }
-      }
-
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      return result;
-    }
-
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-
       if (domain.isEmpty()) {
         return cloneLight();
       }
-
-      int min = domain.min();
-      int max = domain.max();
-
-      if (size == 0) {
-        return new IntervalDomain(min, max);
-      }
-
-      IntervalDomain result = new IntervalDomain(size + 1);
-
-      int i1 = 0;
-
-      Interval currentInterval1 = intervals[i1];
-
-      // all intervals before and not glued (min..max) are included
-      while (i1 < size && currentInterval1.max() + 1 < min) {
-        result.unionAdapt(currentInterval1);
-        i1++;
-        if (i1 < size) {
-          currentInterval1 = intervals[i1];
-        }
-      }
-
-      if (i1 < size) {
-        // currentInterval if after and not glued
-        if (max + 1 < currentInterval1.min()) {
-          result.unionAdapt(new Interval(min, max));
-        } else {
-          // current interval is glued or intersects with (min..max).
-
-          int tempMin;
-
-          if (currentInterval1.min() < min) {
-            tempMin = currentInterval1.min();
-          } else {
-            tempMin = min;
-          }
-
-          if (currentInterval1.max() > max) {
-            result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
-            i1++;
-          } else {
-
-            // (min..max) can cover multiple intervals.
-            while (currentInterval1.max() <= max) {
-              i1++;
-              if (i1 == size) {
-                result.unionAdapt(new Interval(tempMin, max));
-                break;
-              }
-              currentInterval1 = intervals[i1];
-            }
-
-            // if current interval is glued or intersects with (min..max)
-            if (max + 1 >= currentInterval1.min()) {
-              result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
-              i1++;
-            } else {
-              result.unionAdapt(new Interval(tempMin, max));
-            }
-          }
-        }
-      }
-
-      if (i1 < size) {
-        for (; i1 < size; i1++) {
-          result.unionAdapt(intervals[i1]);
-        }
-      }
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-      return result;
+      return union(domain.min(), domain.max());
     }
 
     if (domain.isSparseRepresentation()) {
@@ -2570,20 +1908,7 @@ public class IntervalDomain extends IntDomain {
   public String toString() {
 
     StringBuilder s = new StringBuilder();
-
-    if (!singleton()) {
-      s.append("{");
-      for (int e = 0; e < size; e++) {
-        s.append(intervals[e]);
-        if (e + 1 < size) {
-          s.append(", ");
-        }
-      }
-      s.append("}");
-    } else {
-      s.append(intervals[0]);
-    }
-
+    appendIntervals(s);
     return s.toString();
   }
 
@@ -2678,17 +2003,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = intervals[p++];
     }
 
-    IntervalDomain result = null;
-    if (stamp == storeLevel) {
-      intervals = copy;
-      size = out;
-    } else {
-      result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, v);
-    }
-    IntervalDomain effective = stamp == storeLevel ? this : result;
-    assert effective.checkInvariants() == null : effective.checkInvariants();
-    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    installArrayResult(copy, out, storeLevel, v);
   }
 
   @Override
@@ -2724,17 +2039,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = iv;
     }
 
-    IntervalDomain result = null;
-    if (stamp == storeLevel) {
-      intervals = copy;
-      size = out;
-    } else {
-      result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, v);
-    }
-    IntervalDomain effective = stamp == storeLevel ? this : result;
-    assert effective.checkInvariants() == null : effective.checkInvariants();
-    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    installArrayResult(copy, out, storeLevel, v);
   }
 
   @Override
@@ -2791,18 +2096,7 @@ public class IntervalDomain extends IntDomain {
       out++;
     }
 
-    IntervalDomain result = null;
-    if (stamp == storeLevel) {
-      intervals = copy;
-      size = out;
-    } else {
-      result = new IntervalDomain(copy, out);
-      installResultDomain(result, storeLevel, v);
-    }
-
-    IntervalDomain effective = stamp == storeLevel ? this : result;
-    assert effective.checkInvariants() == null : effective.checkInvariants();
-    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    installArrayResult(copy, out, storeLevel, v);
   }
 
   @Override
@@ -4799,161 +4093,6 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.isEmpty()) {
       return 0;
-    }
-
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      assert input.checkInvariants() == null : input.checkInvariants();
-
-      int temp = 0;
-      //                  IntervalDomain temp;
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int size1 = size;
-      int size2 = input.size;
-
-      if (size1 == 0 || size2 == 0) {
-        return 0;
-      }
-
-      Interval interval1 = intervals[pointer1];
-      Interval interval2 = input.intervals[pointer2];
-
-      while (true) {
-        if (interval1.max() < interval2.min()) {
-          pointer1++;
-          if (pointer1 < size1) {
-            interval1 = intervals[pointer1];
-          } else {
-            break;
-          }
-        } else if (interval2.max() < interval1.min()) {
-          pointer2++;
-          if (pointer2 < size2) {
-            interval2 = input.intervals[pointer2];
-          } else {
-            break;
-          }
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        if (interval1.min() <= interval2.min()) {
-
-          if (interval1.max() <= interval2.max()) {
-
-            temp += interval1.max() - interval2.min() + 1;
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          } else {
-            temp += interval2.max() - interval2.min() + 1;
-            pointer2++;
-            if (pointer2 < size2) {
-              interval2 = input.intervals[pointer2];
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1.max >= interval2.min
-          // interval2.max >= interval1.min
-          // interval1.min > interval2.min
-          if (interval2.max() <= interval1.max()) {
-            temp += interval2.max() - interval1.min() + 1;
-            pointer2++;
-            if (pointer2 < size2) {
-              interval2 = input.intervals[pointer2];
-            } else {
-              break;
-            }
-          } else {
-            temp += interval1.max() - interval1.min() + 1;
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      return temp;
-    }
-
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      int min = domain.min();
-      int max = domain.max();
-
-      int temp = 0;
-
-      int pointer1 = 0;
-
-      if (size == 0) {
-        return 0;
-      }
-
-      Interval interval1 = intervals[pointer1];
-
-      while (true) {
-        if (interval1.max() < min) {
-          pointer1++;
-          if (pointer1 < size) {
-            interval1 = intervals[pointer1];
-          } else {
-            break;
-          }
-        } else if (max < interval1.min()) {
-          break;
-        } else
-        // interval1.max >= min
-        // max >= interval1.min
-        if (interval1.min() <= min) {
-
-          if (interval1.max() <= max) {
-
-            temp += interval1.max() - min + 1;
-
-            pointer1++;
-            if (pointer1 < size) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          } else {
-            temp += max - min;
-            break;
-          }
-
-        } else {
-          // interval1.max >= min
-          // max >= interval1.min
-          // interval1.min > min
-          if (max <= interval1.max()) {
-            temp += max - interval1.min() - 1;
-            break;
-          } else {
-            temp += interval1.max() - interval1.min() + 1;
-            pointer1++;
-            if (pointer1 < size) {
-              interval1 = intervals[pointer1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      return temp;
     }
 
     if (domain.isSparseRepresentation()) {
