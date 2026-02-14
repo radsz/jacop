@@ -51,13 +51,13 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
    * It specifies the first constraint which status must be equivalent to the status of the second
    * constraint.
    */
-  public final PrimitiveConstraint c1;
+  private final PrimitiveConstraint c1;
 
   /**
    * It specifies the second constraint which status must be equivalent to the status of the first
    * constraint.
    */
-  public final PrimitiveConstraint c2;
+  private final PrimitiveConstraint c2;
 
   /**
    * It constructs equality constraint between two constraints.

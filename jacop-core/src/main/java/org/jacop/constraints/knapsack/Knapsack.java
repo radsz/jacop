@@ -80,16 +80,16 @@ public class Knapsack extends Constraint
    * It specifies the current level of the constraint store at which the consistency function of
    * this constraint is being executed.
    */
-  public int currentLevel;
+  private int currentLevel;
 
   /**
    * The tree for the storing information about the maximalWeight, sum of weights and sum of
    * profits.
    */
-  public Tree tree;
+  private Tree tree;
 
   /** The array of items present in the knapsack constraint. */
-  public KnapsackItem[] items;
+  private KnapsackItem[] items;
 
   /** This is a finite domain variable to specify the knapsack capacity. */
   protected IntVar knapsackCapacity;

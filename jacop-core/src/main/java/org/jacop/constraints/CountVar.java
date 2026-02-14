@@ -49,10 +49,10 @@ public class CountVar extends AbstractCount {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable to count the number of occurences of the specified value in a list. */
-  public final IntVar counter;
+  private final IntVar counter;
 
   /** The value to which is any variable is equal to makes the constraint count it. */
-  public final IntVar value;
+  private final IntVar value;
 
   /**
    * It constructs a CountVar constraint.

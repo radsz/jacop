@@ -62,31 +62,31 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It stores variables within this extensional constraint, order does matter. */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /** It specifies if the tuples previously removed are re-inserted at the beginning. */
-  public final boolean reinsertBefore;
+  private final boolean reinsertBefore;
 
   /** It specifies if the residues are moved at the beginning of the list. */
-  public final boolean residuesBefore;
+  private final boolean residuesBefore;
 
   final IndexDomainView[] views;
 
   /** It specifies the tuples. */
-  public int[][] tuples;
+  private int[][] tuples;
 
   /**
    * Gives the position of the first tuple (in the current list) or -1 if the current list is empty.
    */
-  public int first;
+  private int first;
 
   /**
    * Gives the position of the last tuple (in the current list) or -1 if the current list is empty.
    */
-  public int last;
+  private int last;
 
   /** Gives the position of the next tuple wrt the position given in index, or -1. */
-  public int[] nexts;
+  private int[] nexts;
 
   /** Gives the first position of the eliminated tuple at a given level. */
   public TimeStamp<Integer> headsOfEliminatedTuples;
@@ -95,51 +95,51 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   public TimeStamp<Integer> tailsOfEliminatedTuples;
 
   /** The number of variable-value pairs which need to have support. */
-  public int nbGlobalValuesToBeSupported;
+  private int nbGlobalValuesToBeSupported;
 
   /** The number of variable-value pairs which need to have support per variable. */
-  public int[] nbValuesToBeSupported; // ID = variable position
+  private int[] nbValuesToBeSupported; // ID = variable position
 
   /** It stores the position of the first residue. */
-  public int firstResidue;
+  private int firstResidue;
 
   /** It stores the position of the last residue. */
-  public int lastResidue;
+  private int lastResidue;
 
   /**
    * It specifies the number of variables for which validity check within a tuple must be performed.
    */
-  public int nbValidityVariables;
+  private int nbValidityVariables;
 
   /** The positions of the variables for which validity of any tuple must be checked. */
-  public int[] validityVariablePositions;
+  private int[] validityVariablePositions;
 
   /**
    * It specifies the current number of variables for which it is required to check if their values
    * from the domains are supported.
    */
-  public int nbSupportsVariables;
+  private int nbSupportsVariables;
 
   /**
    * The positions of the variables for which GAC must be checked. It does not contain variables
    * which were singletons in previous invocation of the consistency function.
    */
-  public int[] supportsVariablePositions;
+  private int[] supportsVariablePositions;
 
   /** It specifies the mapping of the variable into its index. */
-  public Map<Var, Integer> varToIndex;
+  private Map<Var, Integer> varToIndex;
 
   /** It specifies the position of the last assigned variable. */
-  public int lastAssignedVariablePosition = -1;
+  private int lastAssignedVariablePosition = -1;
 
   /** It specifies if there was no first consistency check yet. */
-  public boolean firstConsistencyCheck = true;
+  private boolean firstConsistencyCheck = true;
 
   /**
    * It specifies if there was a backtrack and no yet consistency function execution after
    * backtracking.
    */
-  public boolean backtrackOccured;
+  private boolean backtrackOccured;
 
   // FIXME, remove the need for this attribute.
   Store store;

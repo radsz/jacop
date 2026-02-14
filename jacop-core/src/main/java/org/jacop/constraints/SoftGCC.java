@@ -58,17 +58,17 @@ import org.jacop.core.ValueEnumeration;
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
 public class SoftGCC extends DecomposedConstraint<Constraint> {
 
-  public final IntVar[] xvars;
-  public final int[] countedValue;
-  public final IntVar costVar;
-  public final ViolationMeasure violationMeasure;
-  public List<Constraint> decomposition;
-  public IntVar[] hardCounters;
-  public IntVar[] softCounters;
-  public int[] softLowerBound;
-  public int[] softUpperBound;
-  public int[] hardLowerBound;
-  public int[] hardUpperBound;
+  private final IntVar[] xvars;
+  private final int[] countedValue;
+  private final IntVar costVar;
+  private final ViolationMeasure violationMeasure;
+  private List<Constraint> decomposition;
+  private IntVar[] hardCounters;
+  private IntVar[] softCounters;
+  private int[] softLowerBound;
+  private int[] softUpperBound;
+  private int[] hardLowerBound;
+  private int[] hardUpperBound;
 
   /**
    * It specifies soft-GCC constraint.

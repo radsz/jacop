@@ -47,7 +47,7 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the constraint which negation is being created. */
-  public final PrimitiveConstraint c;
+  private final PrimitiveConstraint c;
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 

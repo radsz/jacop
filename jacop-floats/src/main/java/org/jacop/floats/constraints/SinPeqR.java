@@ -63,10 +63,10 @@ public class SinPeqR extends Constraint
   private static final int FULL_RANGE = 4;
 
   /** It contains variable p. */
-  public final FloatVar p;
+  protected final FloatVar p;
 
   /** It contains variable q. */
-  public final FloatVar q;
+  protected final FloatVar q;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

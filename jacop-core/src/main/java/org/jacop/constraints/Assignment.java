@@ -60,16 +60,16 @@ public class Assignment extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables d. */
-  public final IntVar[] d;
+  private final IntVar[] d;
 
   /** It specifies a list of variables x. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
   /** It specifies a shift applied to variables d. */
-  public final int shiftD;
+  private final int shiftD;
 
   /** It specifies a shift applied to variables x. */
-  public final int shiftX;
+  private final int shiftX;
 
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;

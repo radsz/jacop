@@ -49,10 +49,10 @@ import org.jacop.core.TimeStamp;
 public abstract class AbstractCountValues extends Constraint implements SatisfiedPresent {
 
   /** The list of variables which are checked and counted if equal to specified value. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** The values to which variables are compared. */
-  public final int[] values;
+  protected final int[] values;
 
   /** Domain consisting of all counted values. */
   final IntDomain valuesDomain;

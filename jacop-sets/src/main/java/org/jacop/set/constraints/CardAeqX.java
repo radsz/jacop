@@ -51,10 +51,10 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a which is being restricted. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies integer variable c specifying the possible cardinality of set variable a. */
-  public final IntVar cardinality;
+  private final IntVar cardinality;
 
   /**
    * It constructs a cardinality constraint to restrict the number of elements in the set assigned

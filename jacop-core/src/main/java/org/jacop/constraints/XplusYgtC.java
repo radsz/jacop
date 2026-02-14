@@ -46,13 +46,13 @@ public class XplusYgtC extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x in constraint x + y{@literal >} c. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies variable y in constraint x + y{@literal >} c. */
-  public final IntVar y;
+  private final IntVar y;
 
   /** It specifies constant c in constraint x + y{@literal >} c. */
-  public final int c;
+  private final int c;
 
   /**
    * It constructs X+Y{@literal >} C constraint.

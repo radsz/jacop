@@ -51,13 +51,13 @@ public abstract class AbstractAtLeastMost extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The required count threshold. */
-  public final int counter;
+  protected final int counter;
 
   /** The list of variables checked for occurrences of value. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** The value whose occurrences are counted. */
-  public final int value;
+  protected final int value;
 
   /** Whether this constraint is used in a reified context. */
   boolean reified = true;

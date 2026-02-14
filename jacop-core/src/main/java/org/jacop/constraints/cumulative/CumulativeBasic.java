@@ -62,7 +62,7 @@ public class CumulativeBasic extends Constraint {
   private static final int PRUNE_END = 2;
 
   /** It specifies the limit of the PROFILE of cumulative use of resources. */
-  public final IntVar limit;
+  protected final IntVar limit;
 
   /*
    * All tasks of the constraint

@@ -46,29 +46,29 @@ public class GeostObject {
    * A unique identifier greater or equal to 0. The last object supplied to GeostConstraint should
    * have an identifier equal to n-1, where n is the total number of objects.
    */
-  public final int no;
+  final int no;
 
   /** It specifies the number of dimensions in this object. */
-  public final int dimension;
+  final int dimension;
 
   /**
    * It specifies the coordinates in k-dimensional space at which the object is fixed. It is the
    * origin of the object. The actual starting point of the object depends at the end also on the
    * shape used by the object or in particular the origins of the boxes which constitutes the shape.
    */
-  public final IntVar[] coords;
+  final IntVar[] coords;
 
   /** It specifies the possible shape ids to be taken by this object. */
-  public final IntVar shapeId;
+  final IntVar shapeId;
 
   /** It specifies the start time of this object in time dimension. */
-  public final IntVar start;
+  final IntVar start;
 
   /** It specifies the duration time of this object. */
-  public final IntVar duration;
+  final IntVar duration;
 
   /** It specifies the end time of this object. */
-  public final IntVar end;
+  final IntVar end;
 
   /**
    * It stores all finite domain variables in connection to this object. E.g. shape variables are

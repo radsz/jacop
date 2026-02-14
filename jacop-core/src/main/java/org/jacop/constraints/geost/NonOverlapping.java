@@ -45,16 +45,16 @@ import java.util.Set;
 public class NonOverlapping implements ExternalConstraint {
 
   /** It specifies the objects which are being in the scope of this external constraint. */
-  public final GeostObject[] objects;
+  final GeostObject[] objects;
 
   /**
    * The dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
    * include dimension in the array
    */
-  public final int[] selectedDimensions;
+  final int[] selectedDimensions;
 
   /** It maps object (through object.id) to the internal constraint connected to this object. */
-  public ObstacleObjectFrame[] objectConstraintMap;
+  ObstacleObjectFrame[] objectConstraintMap;
 
   // For a moment not really needed, if the dead code inside function
   // isInternalConstraintApplicableTo

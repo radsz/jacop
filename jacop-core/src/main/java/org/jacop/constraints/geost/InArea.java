@@ -51,7 +51,7 @@ import java.util.Set;
 public class InArea implements ExternalConstraint {
 
   /** It specifies the allowed area in which the objects can reside. */
-  public final Dbox allowedArea;
+  final Dbox allowedArea;
 
   /** It specifies the holes within the allowed area in which the objects can not be placed. */
   public final Collection<Dbox> holes;

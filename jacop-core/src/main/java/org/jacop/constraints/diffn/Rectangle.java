@@ -46,9 +46,9 @@ import org.jacop.core.Var;
 public class Rectangle {
 
   /** It specifies the the rectangle. */
-  public final IntVar[] origin;
+  final IntVar[] origin;
 
-  public final IntVar[] length;
+  final IntVar[] length;
   int index;
 
   /**

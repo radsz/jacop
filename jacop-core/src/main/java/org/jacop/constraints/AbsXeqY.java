@@ -57,10 +57,10 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
   static final boolean DEBUG_ALL = false;
 
   /** It contains variable x. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It contains variable y. */
-  public final IntVar y;
+  private final IntVar y;
 
   boolean firstConsistencyCheck = true;
   boolean domainConsistent;

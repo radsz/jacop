@@ -48,7 +48,7 @@ public class CountBounds extends AbstractCount {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The value to which is any variable is equal to makes the constraint count it. */
-  public final int value;
+  private final int value;
 
   /** It specifies a lower and upper bounds of occurences of the specified value in a list. */
   final int lb;

@@ -53,12 +53,12 @@ import org.jacop.core.Var;
 @Slf4j
 public class DomainStructure implements VarHandler {
 
-  public final IntVar variable;
-  public final Arc[] arcs;
-  public final IntDomain[] domains;
+  final IntVar variable;
+  final Arc[] arcs;
+  final IntDomain[] domains;
   // public final int[] supports;
-  public final Behavior behavior;
-  public int notGrounded;
+  final Behavior behavior;
+  int notGrounded;
 
   /**
    * Creates an S-variable.

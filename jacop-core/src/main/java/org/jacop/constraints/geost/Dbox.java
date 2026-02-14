@@ -52,10 +52,10 @@ public class Dbox {
   private static final ArrayList<ArrayList<Dbox>> freeBoxes = new ArrayList<>();
 
   /** It specifies point in n-dimensional space where the dbox originates from. */
-  public final int[] origin;
+  final int[] origin;
 
   /** It specifies for each dimension the length of dbox in that dimension. */
-  public final int[] length;
+  final int[] length;
 
   // private static final ArrayList<Dbox> workingList = new ArrayList<>();
 

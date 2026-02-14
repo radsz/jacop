@@ -44,16 +44,16 @@ import lombok.Setter;
 public class TreeNode {
 
   /** It specifies the left child. It can not be equal to null. */
-  public final TreeNode left;
+  final TreeNode left;
 
   /** It specifies the right child. It can not be equal to null. */
-  public final TreeNode right;
+  final TreeNode right;
 
   /**
    * It specifies the parent of this node. If it is equal to null then this node is the root of the
    * whole item tree.
    */
-  public TreeNode parent;
+  TreeNode parent;
 
   /** It specifies the left neighbor. */
   @Setter public TreeNode leftNeighbor;

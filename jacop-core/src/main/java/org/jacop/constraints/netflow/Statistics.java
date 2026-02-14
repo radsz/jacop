@@ -38,10 +38,10 @@ package org.jacop.constraints.netflow;
  */
 public class Statistics extends StatisticsBase {
 
-  public final StatisticsBase Nvars = new StatisticsBase();
-  public final StatisticsBase Xvars = new StatisticsBase();
-  public final StatisticsBase Wvars = new StatisticsBase();
-  public final StatisticsBase Svars = new StatisticsBase();
+  final StatisticsBase Nvars = new StatisticsBase();
+  final StatisticsBase Xvars = new StatisticsBase();
+  final StatisticsBase Wvars = new StatisticsBase();
+  final StatisticsBase Svars = new StatisticsBase();
 
   /**
    * Returns a string representation of all collected statistics including detailed breakdown by

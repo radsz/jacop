@@ -48,16 +48,16 @@ import org.jacop.core.IntVar;
 public final class KnapsackItem implements Comparable<KnapsackItem> {
 
   /** It is a finite domain variable specifying the possible quantity of that item. */
-  public final IntVar quantity;
+  final IntVar quantity;
 
   /** It specifies the weight of a single instance of this item. */
-  public final int weight;
+  final int weight;
 
   /** It specifies the profit of a single instance of this item. */
-  public final int profit;
+  final int profit;
 
   /** It stores information about the item efficiency - profit/weight. */
-  public final double efficiency;
+  final double efficiency;
 
   /**
    * It constructs an item. It requires information about weight and profit, as well as finite

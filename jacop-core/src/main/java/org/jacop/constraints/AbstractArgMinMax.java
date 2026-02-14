@@ -48,13 +48,13 @@ import org.jacop.core.Var;
 public abstract class AbstractArgMinMax extends Constraint implements SatisfiedPresent {
 
   /** It specifies a list of variables among which the extremum is being searched for. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** It specifies variable which stores the index of the extremum. */
-  public final IntVar extremeIndex;
+  protected final IntVar extremeIndex;
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  public int indexOffset;
+  protected int indexOffset;
 
   boolean firstConsistencyCheck = true;
 

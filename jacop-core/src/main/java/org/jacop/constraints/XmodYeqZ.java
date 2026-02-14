@@ -52,17 +52,17 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
   /*
    * It specifies variable x in constraint x mod y = z.
    */
-  public final IntVar x;
+  private final IntVar x;
 
   /*
    * It specifies variable y in constraint x mod y = z.
    */
-  public final IntVar y;
+  private final IntVar y;
 
   /*
    * It specifies variable z in constraint x mod y = z.
    */
-  public final IntVar z;
+  private final IntVar z;
 
   /**
    * It constructs a constraint X mod Y = Z.

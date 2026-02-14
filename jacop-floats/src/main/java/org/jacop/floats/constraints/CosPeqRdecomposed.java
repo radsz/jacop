@@ -49,10 +49,10 @@ import org.jacop.floats.core.FloatVar;
 public class CosPeqRdecomposed extends DecomposedConstraint<Constraint> {
 
   /** It contains variable p. */
-  public final FloatVar p;
+  private final FloatVar p;
 
   /** It contains variable q. */
-  public final FloatVar q;
+  private final FloatVar q;
 
   /** It contains constraints of the CosPeqRdecomposed constraint decomposition. */
   List<Constraint> constraints;

@@ -71,26 +71,26 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if upon the failure of the constraint, all variables in the constraint scope
    * should have their weight increased.
    */
-  public final boolean isIncreaseWeightEnabled = true;
+  protected final boolean isIncreaseWeightEnabled = true;
 
-  public boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
+  protected boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
 
   /**
    * It specifies the number id for a given constraint. All constraints within the same type have
    * unique number ids.
    */
-  public int numberId;
+  protected int numberId;
 
-  public Set<PrimitiveConstraint> constraintScope;
+  protected Set<PrimitiveConstraint> constraintScope;
 
   /** It specifies the event which must occur in order for the consistency function to be called. */
-  public Hashtable<Var, Integer> consistencyPruningEvents;
+  protected Hashtable<Var, Integer> consistencyPruningEvents;
 
   /**
    * It specifies if the constraint consistency function can be prematurely terminated through other
    * than FailureException exception.
    */
-  public boolean earlyTerminationOk;
+  protected boolean earlyTerminationOk;
 
   /**
    * It specifies if the constraint consistency function requires consistency function executed in
@@ -98,7 +98,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * outside entity then the constraint may not work correctly if the execution is continued, but it
    * will work well if consistency() function is restarted.
    */
-  public boolean atomicExecution = true;
+  protected boolean atomicExecution = true;
 
   /** It specifies a set of variables that in the scope of this constraint. */
   protected Set<Var> scope;

@@ -50,10 +50,10 @@ public class CardA extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a set variable x which is being restricted. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies variable c specifying the possible cardinality of variable x. */
-  public IntDomain cardinality;
+  private IntDomain cardinality;
 
   /**
    * It constructs a cardinality constraint to restrict the number of elements in the set assigned

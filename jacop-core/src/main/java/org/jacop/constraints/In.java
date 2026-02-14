@@ -50,10 +50,10 @@ public class In extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x whose domain must lie within a specified domain. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies domain d which restricts the possible value of the specified variable. */
-  public final IntDomain dom;
+  private final IntDomain dom;
 
   /** It specifies all the values which can not be taken by a variable. */
   private final IntDomain DomComplement;

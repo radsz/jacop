@@ -53,13 +53,13 @@ public class BoxDisplay extends JFrame {
   @Serial private static final long serialVersionUID = -1620053778620352318L;
 
   /** It specifies the number of pixels per unit of length. */
-  public final int pixelsPerUnit;
+  final int pixelsPerUnit;
 
   /** It defines the shift in x dimension for drawing. */
-  public int xCellsShift;
+  int xCellsShift;
 
-  /** It defines the shift in x dimension for drawing. */
-  public int yCellsShift;
+  /** It defines the shift in y dimension for drawing. */
+  int yCellsShift;
 
   private Image bufferImage;
   private Image displayImgae; // page flipping

@@ -48,10 +48,10 @@ import org.jacop.set.core.SetVar;
 public abstract class AbstractAleqB extends PrimitiveConstraint {
 
   /** It specifies the first variable of the constraint. */
-  public final SetVar a;
+  protected final SetVar a;
 
   /** It specifies the second variable of the constraint. */
-  public final SetVar b;
+  protected final SetVar b;
 
   /** Negated constraint used for notConsistency and notSatisfied delegation. */
   PrimitiveConstraint negatedConstraint;

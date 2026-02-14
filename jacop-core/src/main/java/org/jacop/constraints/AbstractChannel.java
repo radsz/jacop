@@ -43,7 +43,7 @@ import org.jacop.core.ValueEnumeration;
 
 abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
 
-  public final IntVar x;
+  final IntVar x;
   final int n;
   final Item[] item;
   final Map<Integer, IntVar> valueMap = new HashMap<>();

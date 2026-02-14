@@ -78,7 +78,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           };
 
   /** It specifies the list of rectangles which are of interest for this diff constraint. */
-  public Rectangle[] rectangles;
+  protected Rectangle[] rectangles;
 
   Store currentStore;
   int stamp;

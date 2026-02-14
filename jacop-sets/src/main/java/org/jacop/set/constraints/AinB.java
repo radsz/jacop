@@ -50,13 +50,13 @@ public class AinB extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies variable b. */
-  public final SetVar b;
+  private final SetVar b;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict;
+  private boolean strict;
 
   /**
    * It constructs an AinB constraint to restrict the domain of the variables A and B. By default

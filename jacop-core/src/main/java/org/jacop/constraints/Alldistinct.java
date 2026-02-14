@@ -85,7 +85,7 @@ public class Alldistinct extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies all variables which have to have different values. */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   // Any variable which matched edge ends up deleted is added to this
   // structure to obtain a new matched edge
@@ -123,13 +123,13 @@ public class Alldistinct extends Constraint
   final boolean greedy = true;
 
   /** It counts the number of executions of the consistency function. */
-  public int consistencyChecks;
+  private int consistencyChecks;
 
   /**
    * It computes how many times did consistency execution has been re-executed due to narrowing
    * event at the end of the consistency function.
    */
-  public int fullConsistencyPassesWithNarrowingEvent;
+  private int fullConsistencyPassesWithNarrowingEvent;
 
   boolean backtrackOccured = true;
   // failure (inconsistency) discovered during imposition

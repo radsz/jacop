@@ -45,10 +45,10 @@ import org.jacop.core.IntVar;
 public abstract class AbstractXcompC extends PrimitiveConstraint {
 
   /** It specifies the variable. */
-  public final IntVar x;
+  protected final IntVar x;
 
   /** It specifies the constant. */
-  public final int c;
+  protected final int c;
 
   /**
    * Constructs a comparison constraint between a variable and a constant.

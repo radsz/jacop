@@ -49,13 +49,13 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifes variable x in constraint |x-y|=z. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifes variable y in constraint |x-y|=z. */
-  public final IntVar y;
+  private final IntVar y;
 
   /** It specifes variable z in constraint |x-y|=z. */
-  public final IntVar z;
+  private final IntVar z;
 
   boolean firstConsistencyCheck;
   int firstConsistencyLevel;

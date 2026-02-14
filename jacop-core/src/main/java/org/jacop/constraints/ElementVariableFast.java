@@ -60,16 +60,16 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  public final IntVar index;
+  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
-  public final IntVar value;
+  private final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   protected final int indexOffset;

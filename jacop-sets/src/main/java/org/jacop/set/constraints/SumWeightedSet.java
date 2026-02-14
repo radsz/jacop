@@ -55,10 +55,10 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** A set variable a whose elements contribute with their weight to the sum. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** Integer variable containing the total weight of all elements within a set variable a. */
-  public final IntVar totalWeight;
+  private final IntVar totalWeight;
 
   /** It provides a quick access to the weights of given elements of the set. */
   final Map<Integer, Integer> elementWeights;

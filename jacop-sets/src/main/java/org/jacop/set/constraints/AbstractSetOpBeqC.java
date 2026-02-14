@@ -51,19 +51,19 @@ public abstract class AbstractSetOpBeqC extends Constraint
     implements UsesQueueVariable, SatisfiedPresent {
 
   /** It specifies set variable a. */
-  public final SetVar a;
+  protected final SetVar a;
 
   /** It specifies set variable b. */
-  public final SetVar b;
+  protected final SetVar b;
 
   /** It specifies set variable c. */
-  public final SetVar c;
+  protected final SetVar c;
 
   /**
    * It specifies if the constraint attempts to perform expensive and yet unlikely propagation due
    * to cardinality information.
    */
-  public final boolean performCardinalityReasoning = false;
+  protected final boolean performCardinalityReasoning = false;
 
   /** Change flags for incremental propagation. */
   protected boolean aHasChanged = true;

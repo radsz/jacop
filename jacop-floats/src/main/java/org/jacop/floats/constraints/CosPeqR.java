@@ -57,10 +57,10 @@ public class CosPeqR extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It contains variable p. */
-  public final FloatVar p;
+  protected final FloatVar p;
 
   /** It contains variable q. */
-  public final FloatVar q;
+  protected final FloatVar q;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

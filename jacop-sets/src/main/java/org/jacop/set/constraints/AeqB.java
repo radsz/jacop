@@ -47,10 +47,10 @@ public class AeqB extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a, which must be equal to set variable b. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies set variable b, which must be equal to set variable a. */
-  public final SetVar b;
+  private final SetVar b;
 
   /**
    * It constructs an AeqB constraint to restrict the domain of the variables.

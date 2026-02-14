@@ -91,7 +91,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 1) ¬ [x<=d] \/ [x<=d+1]
        */
-      for (int i = domain.min; i < domain.max - 1; i++) {
+      for (int i = domain.getMin(); i < domain.getMax() - 1; i++) {
         clause.clear();
         clause.add(-domain.cpValueToBoolVar(i, false));
         clause.add(domain.cpValueToBoolVar(i + 1, false));
@@ -101,7 +101,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 2) ¬ [x=d] \/ [x<=d]
        */
-      for (int i = domain.min; i < domain.max; i++) {
+      for (int i = domain.getMin(); i < domain.getMax(); i++) {
         clause.clear();
         clause.add(-domain.cpValueToBoolVar(i, true));
         clause.add(domain.cpValueToBoolVar(i, false));
@@ -111,7 +111,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 3) ¬ [x=d] \/ ¬ [x<=d-1]
        */
-      for (int i = domain.min + 1; i <= domain.max; i++) {
+      for (int i = domain.getMin() + 1; i <= domain.getMax(); i++) {
         clause.clear();
         clause.add(-domain.cpValueToBoolVar(i, true));
         clause.add(-domain.cpValueToBoolVar(i - 1, false));
@@ -122,14 +122,14 @@ public final class DomainTranslator implements WrapperComponent {
        * rule 4) [x=l] \/ ¬ [x<=l]
        */
       clause.clear();
-      clause.add(domain.cpValueToBoolVar(domain.min, true));
-      clause.add(-domain.cpValueToBoolVar(domain.min, false));
+      clause.add(domain.cpValueToBoolVar(domain.getMin(), true));
+      clause.add(-domain.cpValueToBoolVar(domain.getMin(), false));
       wrapper.addModelClause(clause);
 
       /*
        * rule 5) [x=d] \/ ¬ [x<=d] \/ [x<=d-1]
        */
-      for (int i = domain.min + 1; i < domain.max; i++) {
+      for (int i = domain.getMin() + 1; i < domain.getMax(); i++) {
         clause.clear();
         clause.add(domain.cpValueToBoolVar(i, true));
         clause.add(-domain.cpValueToBoolVar(i, false));
@@ -141,8 +141,8 @@ public final class DomainTranslator implements WrapperComponent {
        * rule 6) [x=u] \/ [x<=u-1]
        */
       clause.clear();
-      clause.add(domain.cpValueToBoolVar(domain.max, true));
-      clause.add(domain.cpValueToBoolVar(domain.max - 1, false));
+      clause.add(domain.cpValueToBoolVar(domain.getMax(), true));
+      clause.add(domain.cpValueToBoolVar(domain.getMax() - 1, false));
       wrapper.addModelClause(clause);
     }
   }

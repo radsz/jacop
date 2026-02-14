@@ -51,10 +51,10 @@ import org.jacop.util.fsm.FsmTransition;
 public class Lex extends DecomposedConstraint<Constraint> {
 
   /** Indicates if the lex enforces a lower-than relationship. */
-  public final boolean lexLt;
+  private final boolean lexLt;
 
   /** A two dimensional array containing arrays which have to be lexicographically ordered. */
-  public IntVar[][] x;
+  private IntVar[][] x;
 
   /** It contains constraints of the lex constraint decomposition. */
   List<Constraint> constraints;

@@ -64,7 +64,7 @@ public abstract class AbstractExtensionalVa extends Constraint
   static final boolean DEBUG_ALL = false;
 
   /** It stores variables within this extensional constraint, order does matter. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /**
    * It represents tuples which are supports/conflicts for each of the variables. The first index

@@ -48,13 +48,13 @@ public class EinA extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the element which must be present in the set variable. */
-  public final int element;
+  private final int element;
 
   /** It specifies the set variable which must contain a specified element. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict;
+  private boolean strict;
 
   /**
    * It constructs an eInA constraint to restrict the domain of the variable.

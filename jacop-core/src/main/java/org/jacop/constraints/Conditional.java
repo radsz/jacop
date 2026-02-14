@@ -54,10 +54,10 @@ public class Conditional extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The list of 0/1 (Boolean) variables for assignment decision. */
-  public final IntVar[] b;
+  private final IntVar[] b;
 
   /** The list of constraints that are to be selected. */
-  public final PrimitiveConstraint[] c;
+  private final PrimitiveConstraint[] c;
 
   /**
    * It constructs a Conditional constraint.

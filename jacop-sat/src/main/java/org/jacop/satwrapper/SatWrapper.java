@@ -710,7 +710,7 @@ public final class SatWrapper extends Constraint
 
     assert range != null;
 
-    if (value < range.min || value > range.max) {
+    if (value < range.getMin() || value > range.getMax()) {
       return 0;
     }
     return range.cpValueToBoolVar(value, isEquality);

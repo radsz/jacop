@@ -52,10 +52,10 @@ public class Count extends AbstractCount {
    * It specifies variable idNumber to count the number of occurences of the specified value in a
    * list.
    */
-  public final IntVar counter;
+  private final IntVar counter;
 
   /** The value to which is any variable is equal to makes the constraint count it. */
-  public final int value;
+  private final int value;
 
   /**
    * It constructs a Count constraint.

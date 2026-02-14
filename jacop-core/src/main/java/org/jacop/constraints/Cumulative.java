@@ -68,16 +68,16 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private final Comparator<Task> taskDescLstComparator = (o1, o2) -> o2.lst() - o1.lst();
 
   /** It specifies the limit of the profile of cumulative use of resources. */
-  public IntVar limit;
+  private IntVar limit;
 
   /** It specifies/stores start variables for each corresponding task. */
-  public IntVar[] starts;
+  private IntVar[] starts;
 
   /** It specifies/stores duration variables for each corresponding task. */
-  public IntVar[] durations;
+  private IntVar[] durations;
 
   /** It specifies/stores resource variable for each corresponding task. */
-  public IntVar[] resources;
+  private IntVar[] resources;
 
   /** It specifies if the edge finding algorithm should be used. */
   protected boolean doEdgeFinding;

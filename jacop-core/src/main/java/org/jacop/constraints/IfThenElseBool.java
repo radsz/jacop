@@ -46,13 +46,13 @@ public class IfThenElseBool extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies constraint condVar in the IfThenElseBool constraint. */
-  public final BooleanVar condVar;
+  private final BooleanVar condVar;
 
   /** It specifies constraint thenVar in the IfThenElseBool constraint. */
-  public final BooleanVar thenVar;
+  private final BooleanVar thenVar;
 
   /** It specifies constraint elseVar in the IfThenElseBool constraint. */
-  public final BooleanVar elseVar;
+  private final BooleanVar elseVar;
 
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint

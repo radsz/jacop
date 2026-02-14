@@ -48,13 +48,13 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies constraint condC in the IfThenElse constraint. */
-  public final PrimitiveConstraint condC;
+  private final PrimitiveConstraint condC;
 
   /** It specifies constraint condC in the IfThenElse constraint. */
-  public final PrimitiveConstraint thenC;
+  private final PrimitiveConstraint thenC;
 
   /** It specifies constraint elseC in the IfThenElse constraint. */
-  public final PrimitiveConstraint elseC;
+  private final PrimitiveConstraint elseC;
 
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint

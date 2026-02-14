@@ -42,14 +42,14 @@ public class StatisticsBase {
 
   protected static final DecimalFormat DF = new DecimalFormat("0.###");
 
-  public int arcsExamined;
-  public int arcsPruned;
-  public int amountPruned;
-  public long maxScoreSum;
-  public long minScoreSum;
+  int arcsExamined;
+  int arcsPruned;
+  int amountPruned;
+  long maxScoreSum;
+  long minScoreSum;
 
-  public int consistencyCalls;
-  public int consistencyIterations;
+  int consistencyCalls;
+  int consistencyIterations;
 
   /**
    * Appends statistics information to the provided string builder.

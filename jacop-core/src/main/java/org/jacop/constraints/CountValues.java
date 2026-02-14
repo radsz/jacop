@@ -49,10 +49,10 @@ public class CountValues extends AbstractCountValues {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It counts the number of occurences of the specified value in a list. */
-  public final IntVar[] counter;
+  private final IntVar[] counter;
 
-  public final IntVar counterRest;
-  public final IntVar[] extendedCounter;
+  private final IntVar counterRest;
+  private final IntVar[] extendedCounter;
 
   /**
    * It constructs a CountValues constraint.

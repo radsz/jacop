@@ -80,7 +80,7 @@ public class LinearInt extends PrimitiveConstraint {
     LT // GE=5;
   };
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  public byte relationType;
+  protected byte relationType;
   Store store;
 
   /*

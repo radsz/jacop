@@ -62,7 +62,7 @@ public class ValuePrecede extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies lists of variables for the constraint. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
   /** It specifies values s and t for the constraint. */
   protected final int s;

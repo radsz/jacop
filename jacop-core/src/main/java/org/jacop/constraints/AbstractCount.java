@@ -47,7 +47,7 @@ import org.jacop.core.TimeStamp;
 public abstract class AbstractCount extends PrimitiveConstraint {
 
   /** The list of variables which are checked and counted if equal to specified value. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** Tracks the first position of undecided variables. */
   protected TimeStamp<Integer> position;

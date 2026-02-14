@@ -48,10 +48,10 @@ public class XeqY extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies a right hand variable in equality constraint. */
-  public final IntVar y;
+  private final IntVar y;
 
   /**
    * It constructs constraint X = Y.

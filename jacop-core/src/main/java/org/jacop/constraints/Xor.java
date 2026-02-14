@@ -49,13 +49,13 @@ public class Xor extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies constraint c, which status must satisfy xor relationship with variable b. */
-  public final PrimitiveConstraint c;
+  private final PrimitiveConstraint c;
 
   /**
    * It specifies variable b, which boolean status must satisfy xor relationship with status of
    * constraint c.
    */
-  public final IntVar b;
+  private final IntVar b;
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 

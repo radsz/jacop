@@ -72,23 +72,23 @@ public class NetworkFlow extends Constraint
 
   /** The network. */
   // public final Network network;
-  public final Pruning network;
+  private final Pruning network;
 
   /** The variables and their handlers. */
-  public final Map<IntVar, VarHandler> map;
+  private final Map<IntVar, VarHandler> map;
 
   /** The set of queued variables. */
-  public final Set<IntVar> queue;
+  private final Set<IntVar> queue;
 
   final Statistics statistics = new Statistics();
 
   /** The cost variable. */
-  public IntVar costVariable;
+  private IntVar costVariable;
 
   /** Disables the queue variable function during consistency. */
-  public boolean disableQueueVariable;
+  private boolean disableQueueVariable;
 
-  public int previousLevel = -1;
+  private int previousLevel = -1;
 
   /* Initialization */
 

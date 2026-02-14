@@ -55,10 +55,10 @@ public class Sum extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the variables to be summed. */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /** It specifies variable sum to store the overall sum of the variables being summed up. */
-  public final IntVar sum;
+  private final IntVar sum;
 
   int guideValue;
 

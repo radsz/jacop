@@ -81,16 +81,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    * List of variables x which values are checked against values of variables y. Each x is counted
    * only once as equal to one of the elements of list y.
    */
-  public final IntVar[] listOfX;
+  private final IntVar[] listOfX;
 
   /** It specifies what values we are counting in the list of x's. */
-  public final IntVar[] listOfY;
+  private final IntVar[] listOfY;
 
   // Derived variables
   /**
    * It specifies the number of x variables equal to at least one value present in the list of y.
    */
-  public final IntVar n;
+  private final IntVar n;
 
   private final LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<>();
   // All variables attributes

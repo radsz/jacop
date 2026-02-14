@@ -65,7 +65,7 @@ class CumulativePrimary extends Constraint {
   /*
    * It specifies the limit of the PROFILE of cumulative use of resources.
    */
-  public final IntVar limit;
+  protected final IntVar limit;
   /*
    * start times of tasks
    */

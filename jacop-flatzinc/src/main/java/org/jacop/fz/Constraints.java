@@ -103,7 +103,7 @@ public class Constraints implements ParserTreeConstants {
       support.options.setSat();
     }
 
-    sat.debug = debug;
+    sat.setDebug(debug);
 
     int n = astTree.jjtGetNumChildren();
 

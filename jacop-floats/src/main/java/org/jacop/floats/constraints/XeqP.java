@@ -51,10 +51,10 @@ public class XeqP extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies a right hand variable in equality constraint. */
-  public final FloatVar p;
+  private final FloatVar p;
 
   /**
    * It constructs constraint X = P.

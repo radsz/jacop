@@ -44,10 +44,10 @@ import org.jacop.core.IntVar;
 public abstract class AbstractXcompY extends PrimitiveConstraint {
 
   /** It specifies the first variable. */
-  public final IntVar x;
+  protected final IntVar x;
 
   /** It specifies the second variable. */
-  public final IntVar y;
+  protected final IntVar y;
 
   /**
    * Constructs a comparison constraint between two integer variables.

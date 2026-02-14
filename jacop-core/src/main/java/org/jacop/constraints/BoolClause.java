@@ -53,9 +53,9 @@ public class BoolClause extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies lists of variables for the constraint. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
-  public final IntVar[] y;
+  private final IntVar[] y;
 
   /** It specifies length of lists x and y respectively. */
   private final int lx;

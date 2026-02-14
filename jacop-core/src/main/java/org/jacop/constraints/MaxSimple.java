@@ -50,12 +50,12 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a variables between which a maximum value is being searched for. */
-  public final IntVar x1;
+  private final IntVar x1;
 
-  public final IntVar x2;
+  private final IntVar x2;
 
   /** It specifies variable max which stores the maximum value present in the list. */
-  public final IntVar max;
+  private final IntVar max;
 
   /**
    * It constructs max constraint.

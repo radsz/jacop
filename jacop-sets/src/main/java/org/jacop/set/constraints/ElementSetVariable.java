@@ -61,16 +61,16 @@ public class ElementSetVariable extends Constraint implements Stateful {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  public final IntVar index;
+  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
-  public final SetVar value;
+  private final SetVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public final SetVar[] list;
+  private final SetVar[] list;
 
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   private final int indexOffset;

@@ -45,7 +45,7 @@ import org.jacop.satwrapper.SatWrapper;
  */
 public class SimpleCpVarDomain extends SatCpBridge {
 
-  public boolean translated = true;
+  private boolean translated = true;
   // first boolean variable representing this
   private int firstVar;
   // the special clauses database of the wrapper
@@ -85,10 +85,10 @@ public class SimpleCpVarDomain extends SatCpBridge {
 
   @Override
   public final int cpValueToBoolVar(int value, boolean isEquality) {
-    assert value >= min;
-    assert value <= max;
+    assert value >= getMin();
+    assert value <= getMax();
 
-    int offset = value - min;
+    int offset = value - getMin();
 
     if (isEquality) {
       return firstVar + 2 * offset;
@@ -101,9 +101,9 @@ public class SimpleCpVarDomain extends SatCpBridge {
   public final int boolVarToCpValue(int literal) {
     int varIdx = Math.abs(literal);
     assert varIdx >= firstVar;
-    assert varIdx <= firstVar + (max - min + 1) * 2;
+    assert varIdx <= firstVar + (getMax() - getMin() + 1) * 2;
 
-    return min + (varIdx - firstVar) / 2;
+    return getMin() + (varIdx - firstVar) / 2;
   }
 
   @Override
@@ -148,10 +148,10 @@ public class SimpleCpVarDomain extends SatCpBridge {
     int value = boolVarToCpValue(literal);
     boolean isEquality = isEqualityBoolVar(literal);
 
-    assert max >= min;
+    assert getMax() >= getMin();
 
-    if (max == min) {
-      clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
+    if (getMax() == getMin()) {
+      clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
       return;
     }
 
@@ -161,39 +161,39 @@ public class SimpleCpVarDomain extends SatCpBridge {
         // 'x=value' is true
 
         // set false all other equality literals
-        for (int i = min; i <= max; i++) {
+        for (int i = getMin(); i <= getMax(); i++) {
           if (i == value) {
             continue;
           }
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set false all 'x<=d' for d < value (ie x>d)
-        for (int i = min; i < value; i++) {
+        for (int i = getMin(); i < value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
         }
         // set true all 'x<=d' for d >= value
-        for (int i = value; i <= max; i++) {
+        for (int i = value; i <= getMax(); i++) {
           clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
         }
       } else {
         // assertion 'x!=value'
 
-        if (value == min) { // 'x!=min' => 'x>min'
+        if (value == getMin()) { // 'x!=min' => 'x>min'
           clauseDatabase.propagate(-cpValueToBoolVar(value, false), literal);
         }
-        if (value == max) { // 'x!=max' => 'x<= max-1'
+        if (value == getMax()) { // 'x!=max' => 'x<= max-1'
           clauseDatabase.propagate(cpValueToBoolVar(value - 1, false), literal);
         }
 
         // if there were 2 values, and one is falsified, assert the other
-        if (max - min == 1 && value == max) {
-          clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
+        if (getMax() - getMin() == 1 && value == getMax()) {
+          clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
         }
-        if (max - min == 1 && value == min) {
-          clauseDatabase.propagate(cpValueToBoolVar(max, true), literal);
+        if (getMax() - getMin() == 1 && value == getMin()) {
+          clauseDatabase.propagate(cpValueToBoolVar(getMax(), true), literal);
         }
-        if (value == min + 1) {
-          clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
+        if (value == getMin() + 1) {
+          clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
         }
       }
     } else {
@@ -203,22 +203,22 @@ public class SimpleCpVarDomain extends SatCpBridge {
         // assertion 'x<=value'
 
         // set false all 'x=d' for d > value
-        for (int i = value + 1; i <= max; i++) {
+        for (int i = value + 1; i <= getMax(); i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set true all 'x<=d' for d > value
-        for (int i = value + 1; i <= max; i++) {
+        for (int i = value + 1; i <= getMax(); i++) {
           clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
         }
       } else {
         // assertion 'x>value'
 
         // set false all 'x=d' for d <= value
-        for (int i = min; i <= value; i++) {
+        for (int i = getMin(); i <= value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set false all 'x<=d' for d <= value
-        for (int i = min; i <= value; i++) {
+        for (int i = getMin(); i <= value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
         }
       }

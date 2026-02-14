@@ -46,13 +46,13 @@ public class XplusCeqZ extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x in constraint x+c=z. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies constant c in constraint x+c=z. */
-  public final int c;
+  private final int c;
 
   /** It specifies variable z in constraint x+c=z. */
-  public final IntVar z;
+  private final IntVar z;
 
   /**
    * It constructs a constraint x+c=z.

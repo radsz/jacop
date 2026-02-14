@@ -45,10 +45,10 @@ import org.jacop.floats.core.FloatVar;
 public abstract class AbstractPcompQ extends PrimitiveConstraint {
 
   /** It specifies the first float variable. */
-  public final FloatVar p;
+  protected final FloatVar p;
 
   /** It specifies the second float variable. */
-  public final FloatVar q;
+  protected final FloatVar q;
 
   /**
    * Constructs a comparison constraint between two float variables.

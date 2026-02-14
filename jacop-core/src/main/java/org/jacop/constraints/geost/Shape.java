@@ -45,13 +45,13 @@ import java.util.LinkedList;
 public class Shape {
 
   /** It specifies the smallest bounding box which encapsulates all boxes constituting the shape. */
-  public final Dbox boundingBox;
+  final Dbox boundingBox;
 
   /** The collection of DBoxes that constitute the shape. */
   public final Collection<Dbox> boxes;
 
   /** It defines unique shape id which is used by geost objects to define their shapes. */
-  public final int no;
+  final int no;
 
   /** It defines the area (2D) or volume (3D) of the shape. */
   private int area;

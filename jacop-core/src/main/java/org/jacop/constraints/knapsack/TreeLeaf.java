@@ -43,40 +43,40 @@ import org.jacop.core.IntVar;
 public final class TreeLeaf extends TreeNode {
 
   /** It specifies the finite domain variable denoting the allowed quantity of the item,. */
-  public final IntVar quantity;
+  final IntVar quantity;
 
   /** It specifies the efficiency of the item in the leaf. */
-  public final double efficiency;
+  final double efficiency;
 
   /** It stores the weight of one instance of the item stored in this leaf. */
-  public final int weightOfOne;
+  final int weightOfOne;
 
   /** It store the profit of one instance of the item stored in this leaf. */
-  public final int profitOfOne;
+  final int profitOfOne;
 
   /**
    * It specifies the maximal value of quantity variable after the last consistency check. It is
    * used to determine if the maximal value of the quantity variable has changed since the last
    * execution of the consistency function.
    */
-  public int previousMaxQ;
+  int previousMaxQ;
 
   /**
    * It specifies the minimal value of quantity variable after the last consistency check. It is
    * used to determine if the minimal value of the quantity variable has changed since the last
    * execution of the consistency function.
    */
-  public int previousMinQ;
+  int previousMinQ;
 
   /**
    * It represents the offset from the minimal value. Slice of value 1 means that 1 item has been
    * already counted in capacity and profit of the knapsack and quantity variable should be offset
    * by one. Both min and max values will be reduced by one.
    */
-  public int slice;
+  int slice;
 
   /** It specifies the position in the tree. */
-  public int positionInTheTree;
+  int positionInTheTree;
 
   /**
    * It creates a leaf in the tree of items.

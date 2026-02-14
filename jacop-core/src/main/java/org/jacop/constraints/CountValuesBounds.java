@@ -49,10 +49,10 @@ public class CountValuesBounds extends AbstractCountValues {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It counts the number of occurences of the specified value in a list. */
-  public final Bounds[] counter;
+  private final Bounds[] counter;
 
-  public final Bounds counterRest;
-  public final Bounds[] extendedCounter;
+  private final Bounds counterRest;
+  private final Bounds[] extendedCounter;
 
   /** Lower and upper bounds on values occurence. */
   final int[] lb;

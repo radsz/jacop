@@ -51,10 +51,10 @@ public class XeqA extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies variable b. */
-  public final SetVar a;
+  private final SetVar a;
 
   /**
    * It constructs an XeqA constraint to restrict the domain of the integer variables x and set

@@ -148,19 +148,19 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * average length of objects in the particular dimension. The dimension with higher average length
    * in this dimension will have the preference.
    */
-  public final LexicographicalOrder order;
+  final LexicographicalOrder order;
 
   /**
    * It specifies that filtering of useless internal constraint takes place before an object is
    * being pruned. It may be costly for small instances.
    */
-  public final boolean filterUseless = true;
+  final boolean filterUseless = true;
 
   /**
    * It stores the reference to the collection of objects provided to the constructor. It does not
    * perform cloning so the collection can not change after geost constraint was imposed.
    */
-  public final GeostObject[] objects;
+  final GeostObject[] objects;
 
   /**
    * It stores the reference to the collection of external constraints which must be satisfied
@@ -168,20 +168,20 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * No copying is employed therefore the collection can not change even after the constraint is
    * imposed.
    */
-  public final ExternalConstraint[] externalConstraints;
+  final ExternalConstraint[] externalConstraints;
 
   /**
    * It stores information about shapes used by objects within this geost constraint. It is based on
    * shapes information provided in the constructor.
    */
-  public final Shape[] shapeRegister;
+  final Shape[] shapeRegister;
 
   /** If set to true, a variable will never be skipped, even if grounded and not in queue. */
-  public final boolean enforceNoSkip =
+  final boolean enforceNoSkip =
       true; // setting to false is causing a bug that allows incorrect solution to be accepted.
 
   /** Set to false to disable relaxed shape pruning. */
-  public final boolean partialShapeSweep = true;
+  final boolean partialShapeSweep = true;
 
   /**
    * It defines whether outbox generation should always rely on overlapping frames. For problems
@@ -189,7 +189,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * provide a better performance (up to 50% faster). It can only be changed before impose()
    * function, changing it afterwards will lead to improper behavior.
    */
-  public final boolean alwaysUseFrames = false;
+  final boolean alwaysUseFrames = false;
 
   /**
    * It specifies for each object if consistency function should be run if this object becomes
@@ -271,7 +271,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It is a flag set to true during remove level late function execution so objects which are being
    * updated upon backtracking can be handled properly.
    */
-  public boolean backtracking;
+  boolean backtracking;
 
   /** It keeps a reference to the store. */
   protected Store store;

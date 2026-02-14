@@ -48,7 +48,7 @@ public class Min extends AbstractMinMax {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable min, which stores the minimum value within the whole list. */
-  public final IntVar min;
+  private final IntVar min;
 
   /**
    * It constructs min constraint.

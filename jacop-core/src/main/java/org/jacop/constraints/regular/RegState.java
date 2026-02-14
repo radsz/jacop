@@ -46,22 +46,22 @@ public abstract class RegState {
   static final boolean DEBUG_ALL = false;
 
   /** It specifies the list of successor states for this state. */
-  public RegState[] successors;
+  RegState[] successors;
 
   /** It specifies the number of edges outgoing from the state. */
-  public int outDegree;
+  int outDegree;
 
   /** It specifies the number of edges incoming to the state. */
-  public int inDegree;
+  int inDegree;
 
   /** The unique id of the state. */
-  public int id;
+  int id;
 
   /** It specifies the level, the variable position this state is associated with. */
-  public int level;
+  int level;
 
   /** The position of the state within a level. */
-  public int pos;
+  int pos;
 
   /**
    * It specifies that for a given values from an interval an automata will move from the current

@@ -51,13 +51,13 @@ public class XinA extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies variable b. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict;
+  private boolean strict;
 
   /**
    * It constructs an XinY constraint to restrict the domain of the variables X and Y.

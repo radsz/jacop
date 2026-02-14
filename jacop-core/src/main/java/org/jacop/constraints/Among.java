@@ -67,16 +67,16 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   private static boolean debugAll = DEBUG_ALL;
 
   /** It specifies the list of variables whose values are checked. */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /**
    * It specifies a set of values which if assigned to a variable from a list makes variable
    * counted.
    */
-  public final IntervalDomain kSet;
+  private final IntervalDomain kSet;
 
   /** It is a idNumber variable. */
-  public final IntVar n;
+  private final IntVar n;
 
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   // number if x that belongs to K (Kset)

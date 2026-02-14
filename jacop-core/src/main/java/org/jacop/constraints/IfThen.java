@@ -48,10 +48,10 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies constraint condC in the IfThen constraint. */
-  public final PrimitiveConstraint condC;
+  private final PrimitiveConstraint condC;
 
   /** It specifies constraint condC in the IfThen constraint. */
-  public final PrimitiveConstraint thenC;
+  private final PrimitiveConstraint thenC;
 
   boolean imposed;
   Store store;

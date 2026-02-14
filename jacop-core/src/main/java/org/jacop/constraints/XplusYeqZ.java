@@ -48,13 +48,13 @@ public class XplusYeqZ extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x in constraint x+y=z. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies variable x in constraint x+y=z. */
-  public final IntVar y;
+  private final IntVar y;
 
   /** It specifies variable x in constraint x+y=z. */
-  public final IntVar z;
+  private final IntVar z;
 
   /**
    * It constructs constraint X+Y=Z.

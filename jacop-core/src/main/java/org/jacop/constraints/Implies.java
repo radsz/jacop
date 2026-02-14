@@ -49,10 +49,10 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable b in the Implies constraint. */
-  public IntVar b;
+  private IntVar b;
 
   /** It specifies constraint in the Implies constraint. */
-  public PrimitiveConstraint c;
+  private PrimitiveConstraint c;
 
   boolean imposed;
   Store store;

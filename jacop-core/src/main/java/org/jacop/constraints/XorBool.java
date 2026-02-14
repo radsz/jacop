@@ -64,9 +64,9 @@ public class XorBool extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variables x for the constraint. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
-  public final IntVar y;
+  private final IntVar y;
 
   /**
    * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.

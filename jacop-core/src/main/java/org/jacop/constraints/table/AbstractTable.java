@@ -54,10 +54,10 @@ public abstract class AbstractTable extends Constraint implements UsesQueueVaria
   static final boolean DEBUG = false;
 
   /** Variables within the scope of table constraint. */
-  public final IntVar[] x;
+  protected final IntVar[] x;
 
   /** Tuples specifying the allowed values. */
-  public final int[][] tuple;
+  protected final int[][] tuple;
 
   /** Maps variables to their indices. */
   final Map<IntVar, Integer> varMap;

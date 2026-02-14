@@ -50,12 +50,12 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a variables between which a minimum value is being searched for. */
-  public final IntVar x1;
+  private final IntVar x1;
 
-  public final IntVar x2;
+  private final IntVar x2;
 
   /** It specifies variable min which stores the minimum value present in the list. */
-  public final IntVar min;
+  private final IntVar min;
 
   /**
    * It constructs min constraint.

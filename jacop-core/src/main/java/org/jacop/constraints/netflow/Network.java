@@ -73,7 +73,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public TimeStamp<Integer> deletedSize;
 
   /** Cost due to deleted arcs. */
-  public long costOffset;
+  long costOffset;
 
   /** Number of modified arcs at each level. */
   public TimeStamp<Integer> modifiedSize;
@@ -81,7 +81,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // Data structure for pruning
 
   /** The store. */
-  public Store store;
+  Store store;
 
   /**
    * Constructs a network with the given nodes and arcs.

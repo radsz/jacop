@@ -50,7 +50,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies a list of constraints from which one constraint must be satisfied. */
-  public final PrimitiveConstraint[] listOfC;
+  private final PrimitiveConstraint[] listOfC;
 
   /** It specifies if during the consistency execution a propagation has occurred. */
   private boolean propagation;

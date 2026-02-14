@@ -48,10 +48,10 @@ public class XneqY extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x in the constraint x != y. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies variable y in the constraint x != y. */
-  public final IntVar y;
+  private final IntVar y;
 
   /**
    * It constructs X != Y constraint.

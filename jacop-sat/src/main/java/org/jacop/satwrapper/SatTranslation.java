@@ -46,8 +46,17 @@ public class SatTranslation {
 
   final SatWrapper clauses;
   final Store store;
-  public boolean debug;
+  private boolean debug;
   long numberClauses;
+
+  /**
+   * Sets the debug flag.
+   *
+   * @param debug true to enable debug output.
+   */
+  public void setDebug(boolean debug) {
+    this.debug = debug;
+  }
 
   private int[] toBoolVarArray(List<IntVar> vars) {
     int[] result = new int[vars.size()];

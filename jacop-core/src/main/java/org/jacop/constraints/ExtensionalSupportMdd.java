@@ -62,7 +62,7 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a multiple value decision diagram used by this constraint. */
-  public final Mdd mdd;
+  private final Mdd mdd;
 
   final SparseSet G_no;
   final IndexDomainView[] views;

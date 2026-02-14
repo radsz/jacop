@@ -51,10 +51,10 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It contains variable p. */
-  public final FloatVar p;
+  private final FloatVar p;
 
   /** It contains variable q. */
-  public final FloatVar q;
+  private final FloatVar q;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

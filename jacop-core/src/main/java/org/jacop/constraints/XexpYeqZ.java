@@ -51,13 +51,13 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the variable x in equation x^y = z. */
-  public final IntVar x;
+  private final IntVar x;
 
   /** It specifies the variable y in equation x^y = z. */
-  public final IntVar y;
+  private final IntVar y;
 
   /** It specifies the variable z in equation x^y = z. */
-  public final IntVar z;
+  private final IntVar z;
 
   /**
    * It constructs constraint X^Y=Z.

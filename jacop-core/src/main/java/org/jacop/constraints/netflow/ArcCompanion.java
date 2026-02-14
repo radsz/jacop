@@ -55,25 +55,25 @@ import org.jacop.core.Var;
 public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> {
 
   /** The (forward) arc. */
-  public final Arc arc;
+  final Arc arc;
 
   /** Current lower capacity of the arc. */
   public int flowOffset;
 
   /** The FDV for lower and upper capacity. */
-  public IntVar xVar;
+  IntVar xVar;
 
   /** The FDV for lower and upper cost. */
-  public IntVar wVar;
+  IntVar wVar;
 
   /** The associated structure variable. */
-  public DomainStructure structure;
+  DomainStructure structure;
 
   /** Identifier for this arc in the structure variable. */
-  public int arcId;
+  int arcId;
 
   /** The pruningScore. */
-  public int pruningScore;
+  int pruningScore;
 
   /**
    * Constructs an arc companion with the given arc and flow offset.

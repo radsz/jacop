@@ -75,10 +75,10 @@ public class Binpacking extends Constraint
   static long LBnumber;
 
   /** It keeps together a list of variables which define bin for item i and their weigts. */
-  public final BinItem[] item;
+  private final BinItem[] item;
 
   /** It specifies a list of variables which define bin load. */
-  public final IntVar[] load;
+  private final IntVar[] load;
 
   private final LinkedHashSet<IntVar> itemQueue = new LinkedHashSet<>();
   private final LinkedHashSet<IntVar> binQueue = new LinkedHashSet<>();

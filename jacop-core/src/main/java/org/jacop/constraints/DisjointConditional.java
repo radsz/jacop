@@ -65,7 +65,7 @@ public class DisjointConditional extends Diff {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */
-  public ExclusiveList exclusionList = new ExclusiveList();
+  private ExclusiveList exclusionList = new ExclusiveList();
 
   List<? extends IntVar>[] condVariables;
   DisjointCondVar[] evalRects;

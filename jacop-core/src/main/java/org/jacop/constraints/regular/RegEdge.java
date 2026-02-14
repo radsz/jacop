@@ -41,10 +41,10 @@ import org.jacop.core.TimeStamp;
 public class RegEdge {
 
   /** The origin state. */
-  public RegState org;
+  RegState org;
 
   /** The destination state. */
-  public RegState dest;
+  RegState dest;
 
   /**
    * The constructor which creates an edge.

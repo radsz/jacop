@@ -64,7 +64,7 @@ public abstract class AbstractSum extends PrimitiveConstraint {
   };
 
   /** It specifies what relation is used by this constraint. */
-  public final byte relationType;
+  protected final byte relationType;
 
   /** The constraint store. */
   final Store store;

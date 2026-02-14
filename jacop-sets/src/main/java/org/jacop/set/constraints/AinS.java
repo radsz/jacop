@@ -49,13 +49,13 @@ public class AinS extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies set which must contain the value of set variable A. */
-  public final IntDomain set;
+  private final IntDomain set;
 
   /** It specifies if the inclusion relation is strict. */
-  public final boolean strict;
+  private final boolean strict;
 
   /**
    * It constructs a constraint that makes sure that value of set variable a is contained within a

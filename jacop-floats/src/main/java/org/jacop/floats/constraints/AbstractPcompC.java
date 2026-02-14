@@ -46,7 +46,7 @@ import org.jacop.floats.core.FloatVar;
 public abstract class AbstractPcompC extends PrimitiveConstraint {
 
   /** It specifies the float variable. */
-  public final FloatVar p;
+  protected final FloatVar p;
 
   /** It specifies the constant. */
   public final double c;

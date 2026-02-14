@@ -64,7 +64,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables which must take different values. */
-  public IntVar[] list;
+  protected IntVar[] list;
 
   protected Map<IntVar, Integer> positionMapping;
   protected TimeStamp<Integer> grounded;

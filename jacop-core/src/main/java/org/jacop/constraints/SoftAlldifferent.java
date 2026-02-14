@@ -51,10 +51,10 @@ import org.jacop.core.ValueEnumeration;
  */
 public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
-  public final IntVar[] xVars;
-  public final IntVar costVar;
-  public final ViolationMeasure violationMeasure;
-  public List<Constraint> decomposition;
+  private final IntVar[] xVars;
+  private final IntVar costVar;
+  private final ViolationMeasure violationMeasure;
+  private List<Constraint> decomposition;
 
   /**
    * Constructs a soft alldifferent constraint that allows violations with an associated cost.

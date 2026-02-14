@@ -49,10 +49,10 @@ import org.jacop.core.TimeStamp;
 public abstract class AbstractMinMax extends Constraint implements SatisfiedPresent {
 
   /** It specifies a list of variables among which the extremum is being searched for. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** It specifies the target variable storing the min or max value. */
-  public final IntVar target;
+  protected final IntVar target;
 
   /** It specifies length of the list. */
   final int l;

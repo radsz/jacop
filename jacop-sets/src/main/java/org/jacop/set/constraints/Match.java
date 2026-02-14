@@ -57,13 +57,13 @@ public class Match extends Constraint implements SatisfiedPresent {
    * It specifies a set variable whose values are being matched against integer variables from the
    * list.
    */
-  public final SetVar a;
+  private final SetVar a;
 
   /**
    * It specifies the list of integer variables which value is being matched against elements from a
    * set variable a.
    */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /**
    * It constructs a match constraint to connect the value of set variable a to the values of

@@ -50,10 +50,10 @@ public class PneqQ extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
-  public final FloatVar p;
+  private final FloatVar p;
 
   /** It specifies a right hand variable in equality constraint. */
-  public final FloatVar q;
+  private final FloatVar q;
 
   /**
    * It constructs constraint P = Q.

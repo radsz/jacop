@@ -53,11 +53,11 @@ public abstract class SatCpBridge implements WrapperComponent {
   // the variable this object represents the range of
   public final IntVar variable;
   // the domain of the variable
-  public final IntDomain initialDomain;
+  private final IntDomain initialDomain;
   // lower bound of the domain
-  public int min;
+  private int min;
   // upper bound of the domain
-  public int max;
+  private int max;
   // the wrapper
   protected SatWrapper wrapper;
   protected boolean hasSetDomain;
@@ -72,6 +72,24 @@ public abstract class SatCpBridge implements WrapperComponent {
     this.initialDomain = variable.domain;
     // Note: satBridge registration is now done via SatWrapper.setSatBridge()
     // This will be called by the wrapper after construction
+  }
+
+  /**
+   * Returns the current minimum value of the domain range.
+   *
+   * @return the minimum value of the range
+   */
+  public final int getMin() {
+    return min;
+  }
+
+  /**
+   * Returns the current maximum value of the domain range.
+   *
+   * @return the maximum value of the range
+   */
+  public final int getMax() {
+    return max;
   }
 
   /**

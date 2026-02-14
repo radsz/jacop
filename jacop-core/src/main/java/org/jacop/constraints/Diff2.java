@@ -55,7 +55,7 @@ public class Diff2 extends Diff {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of pairs of rectangles which can overlap. */
-  public int[] exclusiveList = new int[0];
+  private int[] exclusiveList = new int[0];
 
   Diff2Var[] EvalRects;
   boolean exceptionListPresent;

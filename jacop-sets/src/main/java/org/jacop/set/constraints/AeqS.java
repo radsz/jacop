@@ -49,10 +49,10 @@ public class AeqS extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a, which must be equal to set variable b. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies the set which must be equal to set variable a. */
-  public final IntDomain set;
+  private final IntDomain set;
 
   /** It specifies the size of b. */
   final int sizeOfB;

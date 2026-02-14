@@ -80,25 +80,25 @@ public class ElementInteger extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  public final int indexOffset;
+  private final int indexOffset;
 
   /**
    * It specifies whether duplicate values should be treated specially (combined to a single check).
    * In general a good idea but when lists are long it makes the process slower instead of faster.
    */
-  public final boolean checkDuplicates;
+  private final boolean checkDuplicates;
 
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public final IntVar index;
+  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public final IntVar value;
+  private final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public final int[] list;
+  private final int[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

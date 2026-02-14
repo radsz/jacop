@@ -44,13 +44,13 @@ import org.jacop.core.IntVar;
 public abstract class AbstractBoolSimple extends PrimitiveConstraint {
 
   /** First boolean operand. */
-  public final IntVar a;
+  protected final IntVar a;
 
   /** Second boolean operand. */
-  public final IntVar b;
+  protected final IntVar b;
 
   /** Result variable storing the outcome of the boolean operation. */
-  public final IntVar result;
+  protected final IntVar result;
 
   /**
    * Constructs a two-input boolean constraint.

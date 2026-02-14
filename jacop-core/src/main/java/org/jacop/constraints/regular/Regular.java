@@ -83,13 +83,13 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * requires finding and storing all solutions in mtrie before translation to an optimized Mdd can
    * take place. Fsm also has to be a deterministic one.
    */
-  public final boolean optimizedMdd = false;
+  private final boolean optimizedMdd = false;
 
   /** It specifies if the edges should have a list of values associated with them. */
-  public final boolean listRepresentation = true;
+  private final boolean listRepresentation = true;
 
   /** It specifies if the support functionality should be used. */
-  public final boolean oneSupport = true;
+  private final boolean oneSupport = true;
 
   /** It specifies finite state machine used by this regular. */
   public final Fsm fsm;
@@ -108,17 +108,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * Name of the file to store the latex output after consistency call The output will be :
    * file_name + "call number" + ".tex".
    */
-  public String latexFile = "/home/radek/";
+  private String latexFile = "/home/radek/";
 
   /**
    * DNames contain a "name" for each value from the union of all variabl's domains. If Hashmap -
    * dNames - is not null then upon saving the latex graph the values on the edges will be replaced
    * with their "names".
    */
-  public Map<Integer, String> dNames;
+  private Map<Integer, String> dNames;
 
   /** It keeps for each variable value pair a current support. */
-  public Map<Integer, RegEdge>[] supports;
+  private Map<Integer, RegEdge>[] supports;
 
   /** Number of states in the graph used only during the printing to latex function. */
   int stateNumber;

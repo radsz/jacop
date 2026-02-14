@@ -66,10 +66,10 @@ public class LexOrder extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Two vectors that have to be lexicographically ordered. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
-  public final IntVar[] y;
-  public final boolean originalLexLt;
+  private final IntVar[] y;
+  private final boolean originalLexLt;
 
   /** Size of the longest vector. */
   final int n;
@@ -78,7 +78,7 @@ public class LexOrder extends Constraint
   final Map<IntVar, int[]> varyToIndex = Var.createEmptyPositioning();
 
   /** Lex enforcing "{@literal <}" relationship (true). */
-  public boolean lexLt;
+  private boolean lexLt;
 
   boolean satisfied;
   boolean firstConsistencyCheck = true;

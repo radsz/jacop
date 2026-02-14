@@ -53,10 +53,10 @@ import org.jacop.core.TimeStamp;
 public abstract class AbstractBoolVector extends PrimitiveConstraint {
 
   /** The list of boolean variables. */
-  public final IntVar[] list;
+  protected final IntVar[] list;
 
   /** The result variable. */
-  public final IntVar result;
+  protected final IntVar result;
 
   /** Length of the list after deduplication. */
   final int l;

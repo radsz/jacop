@@ -49,13 +49,13 @@ public class SinA extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the set s which must be in variable a. */
-  public final IntDomain set;
+  private final IntDomain set;
 
   /** It specifies variable a within which it must contains set s. */
-  public final SetVar a;
+  private final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public final boolean strict;
+  private final boolean strict;
 
   /**
    * It creates a set inclusion constraint.

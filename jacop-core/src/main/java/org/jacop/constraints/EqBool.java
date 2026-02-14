@@ -52,10 +52,10 @@ public class EqBool extends PrimitiveConstraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies x variables in the constraint. */
-  public final IntVar[] list;
+  private final IntVar[] list;
 
   /** It specifies variable result in the constraint. */
-  public final IntVar result;
+  private final IntVar result;
 
   List<Constraint> constraints;
 

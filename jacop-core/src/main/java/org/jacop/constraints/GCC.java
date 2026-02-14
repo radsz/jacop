@@ -70,7 +70,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private static final boolean DEBUG = false;
 
   /** It specifies variables x whose values are counted. */
-  public final IntVar[] x;
+  private final IntVar[] x;
 
   /**
    * It species variables counters for counting occurences of each possible value from the intial

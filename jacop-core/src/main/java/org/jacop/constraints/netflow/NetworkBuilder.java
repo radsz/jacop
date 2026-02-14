@@ -61,7 +61,7 @@ public class NetworkBuilder {
   public final List<Node> nodeList = new ArrayList<>();
   public final List<Arc> arcList = new ArrayList<>();
   public final List<VarHandler> handlerList = new ArrayList<>();
-  public IntVar costVariable;
+  IntVar costVariable;
   private int nextNodeName = 1;
 
   /** Creates a new network builder with no cost variable. */

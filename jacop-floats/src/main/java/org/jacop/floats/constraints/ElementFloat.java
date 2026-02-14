@@ -68,19 +68,19 @@ public class ElementFloat extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  public final int indexOffset;
+  private final int indexOffset;
 
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public final IntVar index;
+  private final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public final FloatVar value;
+  private final FloatVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0.
    */
-  public final double[] list;
+  private final double[] list;
 
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into
