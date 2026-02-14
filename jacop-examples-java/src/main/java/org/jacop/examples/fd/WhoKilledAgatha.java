@@ -199,20 +199,20 @@ public class WhoKilledAgatha extends ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
-    boolean result = search.labeling(store, select);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
+    boolean result = searchLabel.labeling(store, select);
 
     // output
     if (result) {
 
-      int numSolutions = search.getSolutionListener().solutionsNo();
+      int numSolutions = searchLabel.getSolutionListener().solutionsNo();
 
       IO.println("Number of Solutions: " + numSolutions);
 
       for (int s = 1; s <= numSolutions; s++) {
-        Domain[] res = search.getSolutionListener().getSolution(s);
+        Domain[] res = searchLabel.getSolutionListener().getSolution(s);
         int len = res.length;
 
         IO.println("the_killer: " + res[0]);

@@ -298,23 +298,23 @@ public class CrossWord extends ExampleFd {
     long T1;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
-    search.setSolutionListener(new PrintListener<>(crosswordTemplate));
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.setSolutionListener(new PrintListener<>(crosswordTemplate));
 
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(false);
-    search.setAssignSolution(true);
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(false);
+    searchLabel.setAssignSolution(true);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long T2 = System.currentTimeMillis();
 
     if (result) {
-      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
-      search.printAllSolutions();
+      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      searchLabel.printAllSolutions();
     } else {
       IO.println("Failed to find any solution");
     }

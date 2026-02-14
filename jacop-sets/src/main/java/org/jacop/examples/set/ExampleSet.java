@@ -65,7 +65,7 @@ public abstract class ExampleSet {
   public Store store;
 
   /** It specifies the search procedure used by a given example. */
-  public Search<SetVar> search;
+  public Search<SetVar> searchLabel;
 
   /**
    * It prints a matrix of variables. All variables must be grounded.
@@ -90,11 +90,11 @@ public abstract class ExampleSet {
   /** Prints search statistics (nodes, decisions, wrong decisions, backtracks, max depth). */
   protected void printSearchStats() {
     IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
+    IO.print(searchLabel.getNodes() + "\t");
+    IO.print(searchLabel.getDecisions() + "\t");
+    IO.print(searchLabel.getWrongDecisions() + "\t");
+    IO.print(searchLabel.getBacktracks() + "\t");
+    IO.print(searchLabel.getMaximumDepth() + "\t");
   }
 
   /** Prints execution time in ms since the given start time. */
@@ -116,9 +116,9 @@ public abstract class ExampleSet {
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     if (result) {
       store.print();
@@ -144,9 +144,9 @@ public abstract class ExampleSet {
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     if (result) {
       store.print();
@@ -167,11 +167,11 @@ public abstract class ExampleSet {
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
     printExecutionTime(T1);
     return result;
   }
@@ -191,12 +191,12 @@ public abstract class ExampleSet {
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new SmallestDomain<>(), new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     if (optimal) {
-      search.labeling(store, select, cost);
+      searchLabel.labeling(store, select, cost);
     } else {
-      search.labeling(store, select);
+      searchLabel.labeling(store, select);
     }
 
     final boolean result = false;
@@ -223,9 +223,9 @@ public abstract class ExampleSet {
             new SmallestDomain<>(),
             new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    final boolean result = search.labeling(store, select);
+    final boolean result = searchLabel.labeling(store, select);
     printSearchStats();
     if (result) {
       store.print();
@@ -242,13 +242,13 @@ public abstract class ExampleSet {
    */
   public boolean searchMostConstrainedStatic() {
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
 
-    final boolean result = search.labeling(store, select);
+    final boolean result = searchLabel.labeling(store, select);
     printSearchStats();
     if (!result) {
       IO.println("**** No Solution ****");
@@ -270,16 +270,16 @@ public abstract class ExampleSet {
         new SimpleSelect<>(
             vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
-    search.setAssignSolution(true);
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
+    searchLabel.setAssignSolution(true);
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     if (result) {
-      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
       IO.println("Failed to find any solution");
     }
@@ -309,7 +309,7 @@ public abstract class ExampleSet {
 
     labelMaster.addChildSearch(labelSlave);
 
-    search = labelMaster;
+    searchLabel = labelMaster;
 
     boolean result = labelMaster.labeling(store, selectMaster);
 
@@ -330,7 +330,7 @@ public abstract class ExampleSet {
    * @return the search used within an example.
    */
   public Search<SetVar> getSearch() {
-    return search;
+    return searchLabel;
   }
 
   /**

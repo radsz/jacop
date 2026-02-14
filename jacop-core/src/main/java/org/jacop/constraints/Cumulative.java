@@ -1183,9 +1183,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           }
         } else { // ( Overlapping &&
           // limit.max() - p.Value >= resources.min() )
-          if (mustUseMin != -1 && !(mustUseMax <= p.min() || mustUseMin >= p.max())) {
+          if (mustUseMin != -1 && !(mustUseMax <= p.getMin() || mustUseMin >= p.getMax())) {
             int offset = 0;
-            if (intervalOverlap(p.min(), p.max(), mustUseMin, mustUseMax)) {
+            if (intervalOverlap(p.getMin(), p.getMax(), mustUseMin, mustUseMax)) {
               offset = resources.min();
             }
             if (debugNarrEnabled) {
@@ -1198,7 +1198,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             resources.domain.in(store.level, resources, 0, limit.max() - p.value + offset);
           }
         }
-      } else { // ( ( i.min() >= p.max() || i.max()+dur <= p.min()) )
+      } else { // ( ( i.min() >= p.getMax() || i.max()+dur <= p.getMin()) )
         if (start.max() < p.min && start.dom().noIntervals() == 1) {
           int ps = p.min - start.min();
           if (ps < duration.max() && limit.max() - p.value < resources.min()) {

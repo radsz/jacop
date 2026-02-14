@@ -113,7 +113,7 @@ public class ExampleBasedTest {
     }
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(6);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -126,7 +126,7 @@ public class ExampleBasedTest {
 
     crossWord.searchAllAtOnceNoRecord();
 
-    assertThat(crossWord.search.getSolutionListener().solutionsNo()).isEqualTo(129);
+    assertThat(crossWord.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(129);
   }
 
   @Test
@@ -196,7 +196,7 @@ public class ExampleBasedTest {
         IO.println("Solution(s) found");
       }
 
-      assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+      assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
       assertThat(example.store.toStringOrderedVars()).isEqualTo(solutions[i / 10]);
     }
   }
@@ -228,7 +228,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -239,7 +239,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -250,7 +250,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -267,7 +267,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(151200);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(151200);
   }
 
   @Test
@@ -278,7 +278,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(24);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(24);
   }
 
   @Test
@@ -289,7 +289,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(480);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(480);
   }
 
   @Test
@@ -300,7 +300,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(24);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(24);
   }
 
   @Test
@@ -311,7 +311,7 @@ public class ExampleBasedTest {
     exampleBasic.modelBasic();
 
     assertThat(exampleBasic.searchAllAtOnce()).isTrue();
-    assertThat(exampleBasic.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(exampleBasic.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
 
     exampleBasic.getSearch().assignSolution();
 
@@ -329,7 +329,7 @@ public class ExampleBasedTest {
 
     assertThat(example.searchAllAtOnce()).isTrue();
 
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
 
     example.getSearch().assignSolution();
 
@@ -346,7 +346,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(2);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(2);
   }
 
   @Test
@@ -380,7 +380,7 @@ public class ExampleBasedTest {
 
       assertThat(exampleLeft.searchAllAtOnce()).isTrue();
 
-      assertThat(exampleLeft.search.getSolutionListener().solutionsNo()).isEqualTo(noSol[i]);
+      assertThat(exampleLeft.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(noSol[i]);
     }
   }
 
@@ -414,7 +414,7 @@ public class ExampleBasedTest {
       IO.println(" : " + example.x[i].value());
     }
 
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(14);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(14);
   }
 
   @Test
@@ -430,7 +430,7 @@ public class ExampleBasedTest {
 
     Diet.printLastSolution(exampleSumWeight);
 
-    assertThat(exampleSumWeight.search.getSolutionListener().solutionsNo()).isEqualTo(6);
+    assertThat(exampleSumWeight.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -445,7 +445,7 @@ public class ExampleBasedTest {
 
     Diet.printLastSolution(exampleKnapsack);
 
-    assertThat(exampleKnapsack.search.getSolutionListener().solutionsNo()).isEqualTo(6);
+    assertThat(exampleKnapsack.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -456,7 +456,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(36);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(36);
   }
 
   @Test
@@ -467,7 +467,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -478,7 +478,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -489,7 +489,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(6967);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(6967);
   }
 
   @Test
@@ -499,7 +499,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -509,7 +509,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -519,7 +519,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchSpecific()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(36);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(36);
   }
 
   @Test
@@ -529,7 +529,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchSpecific()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test
@@ -539,7 +539,7 @@ public class ExampleBasedTest {
     example.model(Gates::tableConstraintProviderUsingExtensionalStr);
 
     assertThat(example.searchSpecific()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test
@@ -549,7 +549,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -567,7 +567,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -577,7 +577,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -588,7 +588,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -599,7 +599,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(18);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(18);
   }
 
   @Test
@@ -611,7 +611,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(10);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(10);
 
     Langford exampleDual = new Langford();
     exampleDual.n = 3;
@@ -619,7 +619,7 @@ public class ExampleBasedTest {
     exampleDual.modelDual();
 
     assertThat(exampleDual.searchAllAtOnce()).isTrue();
-    assertThat(exampleDual.search.getSolutionListener().solutionsNo()).isEqualTo(10);
+    assertThat(exampleDual.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(10);
   }
 
   @Test
@@ -630,7 +630,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(120);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(120);
   }
 
   @Test
@@ -641,7 +641,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1760);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1760);
   }
 
   @Test
@@ -651,7 +651,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(12);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(12);
   }
 
   @Test
@@ -737,11 +737,11 @@ public class ExampleBasedTest {
       IO.print(noSides + "\t");
       IO.print(currentBest + "\t");
       IO.print(result + "\t");
-      IO.print(example.search.getNodes() + "\t");
-      IO.print(example.search.getDecisions() + "\t");
-      IO.print(example.search.getWrongDecisions() + "\t");
-      IO.print(example.search.getBacktracks() + "\t");
-      IO.println(example.search.getMaximumDepth() + "\t");
+      IO.print(example.searchLabel.getNodes() + "\t");
+      IO.print(example.searchLabel.getDecisions() + "\t");
+      IO.print(example.searchLabel.getWrongDecisions() + "\t");
+      IO.print(example.searchLabel.getBacktracks() + "\t");
+      IO.println(example.searchLabel.getMaximumDepth() + "\t");
 
       currentBest--;
 
@@ -856,7 +856,7 @@ public class ExampleBasedTest {
 
     example.searchAllAtOnce();
 
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(40);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(40);
 
     example = new Queens();
     example.numberQ = 7;
@@ -864,7 +864,7 @@ public class ExampleBasedTest {
 
     example.searchAllAtOnce();
 
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(40);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(40);
   }
 
   @Test
@@ -994,7 +994,7 @@ public class ExampleBasedTest {
     boolean result = survoPuzzle.searchWithMaxRegret();
 
     if (result) {
-      int numSolutions = survoPuzzle.search.getSolutionListener().solutionsNo();
+      int numSolutions = survoPuzzle.searchLabel.getSolutionListener().solutionsNo();
       IO.println("Number of solutions: " + numSolutions);
     }
 
@@ -1051,7 +1051,7 @@ public class ExampleBasedTest {
       IO.println("Solution(s) found");
     }
 
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test

@@ -45,7 +45,7 @@ import org.jacop.satwrapper.SatWrapper;
  */
 public class SimpleCpVarDomain extends SatCpBridge {
 
-  public boolean isTranslated = true;
+  public boolean translated = true;
   // first boolean variable representing this
   private int firstVar;
   // the special clauses database of the wrapper
@@ -61,7 +61,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
     super(variable);
     initialize(wrapper);
     setDomain(variable.min(), variable.max());
-    if (isTranslated) {
+    if (translated) {
       wrapper.domainTranslator.translate(variable);
     }
   }
@@ -75,10 +75,10 @@ public class SimpleCpVarDomain extends SatCpBridge {
    */
   public SimpleCpVarDomain(SatWrapper wrapper, IntVar variable, boolean translate) {
     super(variable);
-    this.isTranslated = translate;
+    this.translated = translate;
     initialize(wrapper);
     setDomain(variable.min(), variable.max());
-    if (isTranslated) {
+    if (translated) {
       wrapper.domainTranslator.translate(variable);
     }
   }
@@ -228,7 +228,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
   /** {@inheritDoc} */
   @Override
   public boolean isTranslated() {
-    return isTranslated;
+    return translated;
   }
 
   /** {@inheritDoc} */

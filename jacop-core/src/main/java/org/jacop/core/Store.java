@@ -883,7 +883,7 @@ public class Store {
 
     assert previousVar == null : "Two variables have the same id " + previousVar + " " + var;
 
-    if (var.index != -1 && vars[var.index] == var) {
+    if (var.storeIndex != -1 && vars[var.storeIndex] == var) {
       throw new IllegalArgumentException(
           "\nSetting Variable: Variable already exists: " + var.id());
     }
@@ -948,7 +948,7 @@ public class Store {
 
     // Boolean variables or other variables with index -1 are
     // stored each time they change in the special 1D array.
-    if (recordedVariable.index == -1) {
+    if (recordedVariable.storeIndex == -1) {
       recordBooleanChange((BooleanVar) recordedVariable);
       return;
     }
@@ -961,7 +961,7 @@ public class Store {
     //                             "An error. Trail should be containing all changes but it is not
     // available";
 
-    trailManager.addChanged(recordedVariable.index);
+    trailManager.addChanged(recordedVariable.storeIndex);
   }
 
   /**
@@ -1126,7 +1126,7 @@ public class Store {
 
       for (int i = 0; i < size; i++) {
 
-        assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].index)
+        assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].storeIndex)
             : "Variable position " + i + " not properly recorded to have changed ";
       }
     }

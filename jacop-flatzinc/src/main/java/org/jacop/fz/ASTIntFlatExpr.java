@@ -5,7 +5,7 @@ package org.jacop.fz;
 
 public class ASTIntFlatExpr extends SimpleNode {
   // My additions
-  int value;
+  int intValue;
 
   public ASTIntFlatExpr(int id) {
     super(id);
@@ -16,17 +16,17 @@ public class ASTIntFlatExpr extends SimpleNode {
   }
 
   public int getInt() {
-    return value;
+    return intValue;
   }
 
   public void setInt(int i) {
-    value = i;
+    intValue = i;
     //         System.err.println("Error: Too large or too small integer " + i +
     //                "; execution aborted");
   }
 
   public String toString() {
-    return super.toString() + ": " + value;
+    return super.toString() + ": " + intValue;
   }
 }
 /* JavaCC - OriginalChecksum=c6d9e8b614a5d7a17f9a1b5ab4da61c7 (do not edit this line) */

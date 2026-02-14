@@ -147,7 +147,7 @@ public class XinA extends PrimitiveConstraint {
     if (var == x) {
       return IntDomain.ANY;
     } else {
-      return SetDomain.GLB;
+      return SetDomain.GLB_EVENT;
     }
   }
 
@@ -200,7 +200,7 @@ public class XinA extends PrimitiveConstraint {
     if (var == x) {
       return IntDomain.ANY;
     } else {
-      return SetDomain.GLB;
+      return SetDomain.GLB_EVENT;
     }
   }
 

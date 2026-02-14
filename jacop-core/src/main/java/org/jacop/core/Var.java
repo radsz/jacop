@@ -52,7 +52,7 @@ public abstract class Var implements Backtrackable {
   public String id;
 
   /** It specifies the index at which it is stored in Store. */
-  public int index = -1;
+  public int storeIndex = -1;
 
   /** It specifies the current weight of the variable. */
   public int weight = 1;
@@ -305,7 +305,7 @@ public abstract class Var implements Backtrackable {
    * @return the index of the variable.
    */
   public int index() {
-    return index;
+    return storeIndex;
   }
 
   /**

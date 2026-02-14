@@ -50,7 +50,7 @@ public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
   public SmallDenseDomainIntervalEnumeration(SmallDenseDomain dom) {
 
     domain = dom;
-    current = dom.min;
+    current = dom.minBound;
     bits = dom.bits;
   }
 

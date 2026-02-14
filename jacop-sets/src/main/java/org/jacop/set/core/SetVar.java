@@ -74,7 +74,7 @@ public class SetVar extends Var {
     id = name;
     domain = dom;
     domain.stamp = 0;
-    index = store.putVariable(this);
+    storeIndex = store.putVariable(this);
     this.store = store;
   }
 
@@ -407,11 +407,11 @@ public class SetVar extends Var {
    */
   public void domainHasChanged(int event) {
 
-    assert ((event == SetDomain.LUB && !singleton())
-            || (event == SetDomain.GLB && !singleton())
+    assert ((event == SetDomain.LUB_EVENT && !singleton())
+            || (event == SetDomain.GLB_EVENT && !singleton())
             || (event == SetDomain.ANY && !singleton())
             || (event == SetDomain.BOUND && !singleton())
-            || (event == SetDomain.CARDINALITY && !singleton())
+            || (event == SetDomain.CARDINALITY_EVENT && !singleton())
             || (event == SetDomain.GROUND && singleton()))
         : "Wrong event generated " + event + "? " + singleton();
 

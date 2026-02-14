@@ -257,7 +257,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         log.info(
             "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
-            id,
+            searchId,
             nodes,
             decisions,
             wrongDecisions,

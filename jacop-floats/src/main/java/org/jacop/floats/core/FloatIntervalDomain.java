@@ -82,7 +82,7 @@ public class FloatIntervalDomain extends FloatDomain {
     this.size = 0;
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
-    previousDomain = null;
+    prevDomain = null;
     searchConstraintsCloned = false;
   }
 
@@ -106,7 +106,7 @@ public class FloatIntervalDomain extends FloatDomain {
     intervals = new FloatInterval[5];
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
-    previousDomain = null;
+    prevDomain = null;
     searchConstraintsCloned = false;
     intervals[0] = new FloatInterval(min, max);
     this.size = 1;
@@ -120,7 +120,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
   /** {@inheritDoc} */
   public FloatDomain previousDomain() {
-    return previousDomain;
+    return prevDomain;
   }
 
   /**
@@ -430,7 +430,7 @@ public class FloatIntervalDomain extends FloatDomain {
     cloned.size = size;
 
     cloned.stamp = stamp;
-    cloned.previousDomain = previousDomain;
+    cloned.prevDomain = prevDomain;
 
     cloned.searchConstraints = searchConstraints;
     cloned.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
@@ -1632,7 +1632,7 @@ public class FloatIntervalDomain extends FloatDomain {
       }
 
       FloatIntervalDomain dom = (FloatIntervalDomain) domain;
-      domain = dom.previousDomain;
+      domain = dom.prevDomain;
 
     } while (domain != null);
 
@@ -1709,7 +1709,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -1790,7 +1790,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -1891,7 +1891,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -2091,7 +2091,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -2259,12 +2259,12 @@ public class FloatIntervalDomain extends FloatDomain {
       FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
 
       // variable obtains new domain, current one (this) becomes
-      // previousDomain
+      // prevDomain
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -2364,7 +2364,7 @@ public class FloatIntervalDomain extends FloatDomain {
       /*
        * result.modelConstraints = modelConstraints;
        * result.searchConstraints = searchConstraints; result.stamp =
-       * storeLevel; result.previousDomain = this;
+       * storeLevel; result.prevDomain = this;
        * result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
        * result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
        * var.domain = result;
@@ -2521,7 +2521,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       result.size = size;
@@ -2835,7 +2835,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -2883,7 +2883,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     if (this.stamp == level) {
 
-      ((FloatVar) var).domain = this.previousDomain;
+      ((FloatVar) var).domain = this.prevDomain;
     }
 
     assert (((FloatVar) var).domain.stamp < level);
@@ -2909,7 +2909,7 @@ public class FloatIntervalDomain extends FloatDomain {
             new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
         result.searchConstraintsCloned = true;
         result.stamp = storeLevel;
-        result.previousDomain = this;
+        result.prevDomain = this;
         result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
         ((FloatVar) var).domain = result;
@@ -2957,7 +2957,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -2999,7 +2999,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -3028,7 +3028,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatDomain recentDomainPruning(int storeLevel) {
 
-    if (previousDomain == null) {
+    if (prevDomain == null) {
       return emptyDomain;
     }
 
@@ -3036,7 +3036,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return emptyDomain;
     }
 
-    return previousDomain.subtract(this);
+    return prevDomain.subtract(this);
   }
 
   /**
@@ -3052,8 +3052,8 @@ public class FloatIntervalDomain extends FloatDomain {
 
       FloatIntervalDomain dom = (FloatIntervalDomain) domain;
 
-      if (dom.previousDomain != null) {
-        domain = dom.previousDomain;
+      if (dom.prevDomain != null) {
+        domain = dom.prevDomain;
       } else {
         break;
       }

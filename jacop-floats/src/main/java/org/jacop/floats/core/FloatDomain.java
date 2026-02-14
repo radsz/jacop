@@ -129,7 +129,7 @@ public abstract class FloatDomain extends Domain {
    * It specifies the previous domain which was used by this domain. The old domain is stored here
    * and can be easily restored if necessary.
    */
-  public FloatDomain previousDomain;
+  public FloatDomain prevDomain;
 
   /*
    * It defines rounding method
@@ -1350,7 +1350,7 @@ public abstract class FloatDomain extends Domain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
@@ -1446,7 +1446,7 @@ public abstract class FloatDomain extends Domain {
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
-      result.previousDomain = this;
+      result.prevDomain = this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;

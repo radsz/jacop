@@ -56,7 +56,7 @@ import org.jacop.search.SimpleSelect;
  */
 public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
-  final TimeStamp<Integer> currentIndex;
+  final TimeStamp<Integer> roundRobinIndex;
 
   /**
    * It specifies if the left branch (values smaller or equal to the value selected) are first
@@ -77,7 +77,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, null);
 
-    currentIndex = new TimeStamp<>(store, 0);
+    roundRobinIndex = new TimeStamp<>(store, 0);
   }
 
   /**
@@ -99,7 +99,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, tieBreakerVarSelect, null);
 
-    currentIndex = new TimeStamp<>(store, 0);
+    roundRobinIndex = new TimeStamp<>(store, 0);
   }
 
   @Override
@@ -147,12 +147,12 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
     int N = searchVariables.length;
 
     int n = 0;
-    int i = currentIndex.value();
+    int i = roundRobinIndex.value();
     int ii;
     do {
 
       if (!searchVariables[i].singleton()) {
-        currentIndex.update((i + 1) % N);
+        roundRobinIndex.update((i + 1) % N);
 
         return searchVariables[i];
       }

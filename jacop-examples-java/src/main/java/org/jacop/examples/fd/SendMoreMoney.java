@@ -248,9 +248,9 @@ public class SendMoreMoney extends ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    return search.labeling(store, select);
+    return searchLabel.labeling(store, select);
   }
 
   /**

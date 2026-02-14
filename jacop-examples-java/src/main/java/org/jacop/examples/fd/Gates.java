@@ -242,18 +242,18 @@ public class Gates extends ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
-    boolean searchResult = search.labeling(store, select);
+    boolean searchResult = searchLabel.labeling(store, select);
 
     if (searchResult) {
       IO.println("\nYes");
-      Domain[][] solutions = new Domain[search.getSolutionListener().solutionsNo()][];
+      Domain[][] solutions = new Domain[searchLabel.getSolutionListener().solutionsNo()][];
       for (int i = 1; i <= solutions.length; i++) {
-        solutions[i - 1] = search.getSolution(i);
+        solutions[i - 1] = searchLabel.getSolution(i);
       }
 
       IO.println("\nAll solutions:\n");

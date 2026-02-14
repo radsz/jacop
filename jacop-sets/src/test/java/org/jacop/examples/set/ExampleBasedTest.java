@@ -30,6 +30,8 @@
 
 package org.jacop.examples.set;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -43,7 +45,7 @@ public class ExampleBasedTest {
     Gardner example = new Gardner();
     example.model();
 
-    example.search();
+    assertTrue(example.search());
   }
 
   @Test
@@ -53,71 +55,71 @@ public class ExampleBasedTest {
 
     example.setup(3, 2, 2);
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(2, 5, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(2, 6, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(2, 7, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(3, 5, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(3, 6, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(3, 7, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(4, 5, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(4, 6, 5); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(4, 7, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(4, 9, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(5, 5, 3); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(5, 7, 4); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(5, 8, 3); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(6, 6, 3); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(5, 3, 2); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
 
     example.setup(4, 3, 3); // weeks - groups - players in each group
     example.model();
-    example.search();
+    assertTrue(example.search());
   }
 
   @Test
@@ -127,6 +129,6 @@ public class ExampleBasedTest {
     example.n = 7;
     example.model();
 
-    example.search();
+    assertTrue(example.search());
   }
 }

@@ -412,23 +412,23 @@ public class Nonogram extends ExampleFd {
     final SelectChoicePoint<IntVar> select =
         new InputOrderSelect<>(store, vars.toArray(new IntVar[1]), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(false);
-    search.setAssignSolution(true);
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(false);
+    searchLabel.setAssignSolution(true);
 
     IO.println("Search has begun ...");
 
     final long T1 = System.currentTimeMillis();
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long T2 = System.currentTimeMillis();
 
     if (result) {
-      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
-      search.printAllSolutions();
+      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      searchLabel.printAllSolutions();
     } else {
       IO.println("Failed to find any solution");
     }

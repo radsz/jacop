@@ -135,14 +135,14 @@ public class Tsp extends ExampleFd {
     long T;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     // pivot variable is at index 0.
     SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
             varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;

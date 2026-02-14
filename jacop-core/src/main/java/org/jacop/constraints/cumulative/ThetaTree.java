@@ -49,7 +49,7 @@ class ThetaTree extends Tree {
 
   private final ThetaNode empty = new ThetaNode();
   // number of leaves (tasks)
-  int n;
+  int leafCount;
   // array that keeps all nodes of the balanced binary tree and organizes the tree structure
   private ThetaNode[] tree;
   // list of ordered tasks
@@ -58,31 +58,33 @@ class ThetaTree extends Tree {
   public ThetaTree() {}
 
   public void buildTree(TaskView[] task) {
-    n = task.length;
-    treeSize = (int) Math.pow(2, Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
+    leafCount = task.length;
+    treeSize =
+        (int) Math.pow(2, Math.round(Math.ceil(Math.log(leafCount) / Math.log(2)))) + leafCount - 1;
     tree = new ThetaNode[treeSize];
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+    for (int i = treeSize - 1; i >= treeSize - leafCount; i--) {
       computeLeaveVals(i);
     }
-    for (int i = treeSize - n - 1; i >= 0; i--) {
+    for (int i = treeSize - leafCount - 1; i >= 0; i--) {
       computeNodeVals(i);
     }
   }
 
   public void initTree(TaskView[] task) {
-    n = task.length;
-    treeSize = (int) Math.pow(2, Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
+    leafCount = task.length;
+    treeSize =
+        (int) Math.pow(2, Math.round(Math.ceil(Math.log(leafCount) / Math.log(2)))) + leafCount - 1;
     tree = new ThetaNode[treeSize];
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+    for (int i = treeSize - 1; i >= treeSize - leafCount; i--) {
       addLeave(i);
     }
-    for (int i = treeSize - n - 1; i >= 0; i--) {
+    for (int i = treeSize - leafCount - 1; i >= 0; i--) {
       addNode(i);
     }
   }
@@ -92,7 +94,7 @@ class ThetaTree extends Tree {
     tree[i] = node;
     node.index = i;
 
-    int t = i - (treeSize - n); // in our case we pass list of ordered tasks already
+    int t = i - (treeSize - leafCount); // in our case we pass list of ordered tasks already
     node.task = orderedTasks[t];
     orderedTasks[t].treeIndex = i;
 
@@ -111,7 +113,7 @@ class ThetaTree extends Tree {
   }
 
   void addToThetaInit(int i) {
-    int t = i - (treeSize - n); // in our case we pass list of ordered tasks already
+    int t = i - (treeSize - leafCount); // in our case we pass list of ordered tasks already
     tree[i].task = orderedTasks[t];
     orderedTasks[t].treeIndex = i;
 
@@ -223,7 +225,7 @@ class ThetaTree extends Tree {
   }
 
   private int leaveIndex(int i) {
-    return i - (treeSize - n);
+    return i - (treeSize - leafCount);
   }
 
   ThetaNode leaf(int i) {
@@ -232,7 +234,7 @@ class ThetaTree extends Tree {
 
   boolean isLeaf(int i) {
     int l = tree[i].index;
-    return l >= treeSize - n && l < treeSize;
+    return l >= treeSize - leafCount && l < treeSize;
   }
 
   ThetaNode rootNode() {

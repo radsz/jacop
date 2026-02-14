@@ -70,7 +70,7 @@ public class ConferenceTalkPlacement {
   IntVar cost;
   List<IntVar> vars;
   IntVar[][] varsMatrix;
-  DepthFirstSearch<IntVar> search;
+  DepthFirstSearch<IntVar> searchLabel;
 
   /**
    * It executes the program to solve this Travelling Salesman Problem.
@@ -283,12 +283,12 @@ public class ConferenceTalkPlacement {
     long T2;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
     PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
-    search.setSolutionListener(solutionListener);
+    searchLabel.setSolutionListener(solutionListener);
 
     if (timeOutSeconds > 0) {
-      search.setTimeOut(timeOutSeconds);
+      searchLabel.setTimeOut(timeOutSeconds);
     }
 
     // pivot variable is at index 0.
@@ -296,7 +296,7 @@ public class ConferenceTalkPlacement {
         new SimpleMatrixSelect<>(
             varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     T2 = System.currentTimeMillis();
     long T = T2 - T1;
@@ -329,7 +329,7 @@ public class ConferenceTalkPlacement {
     long T2;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     // pivot variable is at index 0.
     SelectChoicePoint<IntVar> select =
@@ -337,10 +337,10 @@ public class ConferenceTalkPlacement {
             varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
     if (timeOutSeconds > 0) {
-      search.setTimeOut(timeOutSeconds);
+      searchLabel.setTimeOut(timeOutSeconds);
     }
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     T2 = System.currentTimeMillis();
     long T = T2 - T1;

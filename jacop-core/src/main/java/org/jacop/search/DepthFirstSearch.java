@@ -108,7 +108,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public boolean timeOutOccured;
 
   /** It specifies the id of the search. */
-  public String id;
+  public String searchId;
 
   /** It remembers what child search has been already examined. */
   public int currentChildSearch = -1;
@@ -213,7 +213,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It specifies current child search. */
   public DepthFirstSearch() {
-    id = "DFS" + no.incrementAndGet();
+    searchId = "DFS" + no.incrementAndGet();
   }
 
   /**
@@ -222,12 +222,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    * @param name the id of the store object.
    */
   public void setId(String name) {
-    id = name;
+    searchId = name;
   }
 
   /** {@inheritDoc} */
   public String id() {
-    return id;
+    return searchId;
   }
 
   /**
@@ -874,7 +874,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         log.info(
             "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
-            id,
+            searchId,
             nodes,
             decisions,
             wrongDecisions,
@@ -972,7 +972,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         log.info(
             "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
-            id,
+            searchId,
             nodes,
             decisions,
             wrongDecisions,
@@ -1075,7 +1075,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         log.info(
             "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
-            id,
+            searchId,
             nodes,
             decisions,
             wrongDecisions,
@@ -1178,7 +1178,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   @Override
   public String toString() {
 
-    return id + ": DFS(" + heuristic + ")";
+    return searchId + ": DFS(" + heuristic + ")";
   }
 
   /**
@@ -1190,7 +1190,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     StringBuilder buf = new StringBuilder();
 
-    buf.append("Depth First Search ").append(id).append("\n");
+    buf.append("Depth First Search ").append(searchId).append("\n");
 
     buf.append(heuristic);
 

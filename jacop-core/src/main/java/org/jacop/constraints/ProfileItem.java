@@ -95,21 +95,6 @@ public class ProfileItem {
     value = val;
   }
 
-  /** Returns the starting point of the profile item. */
-  public int min() {
-    return getMin();
-  }
-
-  /** Returns the ending point of the profile item. */
-  public int max() {
-    return getMax();
-  }
-
-  /** Returns the amount contributed by this profile item to the profile. */
-  public int value() {
-    return getValue();
-  }
-
   /**
    * It compute the overlap with the specified profile item. The results are given as profile items
    * too.

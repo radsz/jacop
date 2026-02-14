@@ -123,7 +123,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
     this(starts, durations, resources, limit, opt);
 
     this.doProfile = doProfile;
-    this.doEdgeFind = doEdgeFind;
+    this.doUnaryEdgeFind = doEdgeFind;
   }
 
   /**
@@ -190,7 +190,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         up.sweepPruning(store, tvn, opt);
       }
 
-      if (doEdgeFind && !store.propagationHasOccurred) {
+      if (doUnaryEdgeFind && !store.propagationHasOccurred) {
 
         TaskView[] tn = filterZeroTasks(tvn);
         if (tn == null) {

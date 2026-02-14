@@ -127,12 +127,12 @@ public class CpvizSendMoreMoney extends SendMoreMoney {
     SelectChoicePoint<IntVar> varSelect =
         new SimpleSelect<>(vars.toArray(IntVar[]::new), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    TraceGenerator<IntVar> traceSelect = new TraceGenerator<>(search, varSelect);
+    TraceGenerator<IntVar> traceSelect = new TraceGenerator<>(searchLabel, varSelect);
     traceSelect.addTracedVar(letters[iE]);
 
-    search.labeling(store, traceSelect);
+    searchLabel.labeling(store, traceSelect);
   }
 
   /**
@@ -147,11 +147,11 @@ public class CpvizSendMoreMoney extends SendMoreMoney {
     SelectChoicePoint<IntVar> varSelect =
         new SimpleSelect<>(vars.toArray(IntVar[]::new), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     TraceGenerator<IntVar> traceSelect =
-        new TraceGenerator<>(search, varSelect, vars.toArray(IntVar[]::new));
+        new TraceGenerator<>(searchLabel, varSelect, vars.toArray(IntVar[]::new));
 
-    search.labeling(store, traceSelect);
+    searchLabel.labeling(store, traceSelect);
   }
 }

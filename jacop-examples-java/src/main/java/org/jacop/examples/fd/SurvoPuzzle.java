@@ -121,7 +121,7 @@ public class SurvoPuzzle extends ExampleFd {
     boolean result = m.searchWithMaxRegret();
 
     if (result) {
-      int numSolutions = m.search.getSolutionListener().solutionsNo();
+      int numSolutions = m.searchLabel.getSolutionListener().solutionsNo();
       IO.println("Number of solutions: " + numSolutions);
       printMatrix(m.x, m.r, m.c);
     }

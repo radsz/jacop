@@ -5,7 +5,7 @@ package org.jacop.fz;
 
 public class ASTAnnExpr extends SimpleNode {
   // My additions
-  String id = "";
+  String identifier = "";
   boolean ident_present;
 
   public ASTAnnExpr(int id) {
@@ -17,12 +17,12 @@ public class ASTAnnExpr extends SimpleNode {
   }
 
   String getIdent() {
-    return id;
+    return identifier;
   }
 
   void setIdent(String ID) {
     ident_present = true;
-    id = ID;
+    identifier = ID;
   }
 
   boolean idPresent() {
@@ -31,7 +31,7 @@ public class ASTAnnExpr extends SimpleNode {
 
   public String toString() {
     if (ident_present) {
-      return super.toString() + "(ident): " + id;
+      return super.toString() + "(ident): " + identifier;
     } else {
       return super.toString();
     }

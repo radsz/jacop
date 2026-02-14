@@ -72,8 +72,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       dim ->
           (IntRectangle o1, IntRectangle o2) -> {
-            int v1 = o1.origin[dim];
-            int v2 = o2.origin[dim];
+            int v1 = o1.origins[dim];
+            int v2 = o2.origins[dim];
             return v1 - v2;
           };
 
@@ -558,16 +558,16 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       List<IntRectangle> consideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
-        int s = ir.origin[i];
+        int s = ir.origins[i];
 
         consideredRect.clear();
 
         for (IntRectangle t : usedRectArray) {
-          int tCompletion = t.origin[i] + t.length[i];
+          int tCompletion = t.origins[i] + t.lengths[i];
 
-          if (t.origin[i] <= s && s - rLengthiMin < tCompletion) {
+          if (t.origins[i] <= s && s - rLengthiMin < tCompletion) {
             consideredRect.add(t);
-            // rectSize += t.length[j];
+            // rectSize += t.lengths[j];
           }
         }
 
@@ -725,10 +725,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         int currentJposition = minJ;
         barrier.clear();
         for (IntRectangle hinder : consideredRect) {
-          int hinderJ = hinder.origin[j];
-          int hinderValue = hinder.origin[i] + hinder.length[i] - barierPosition;
+          int hinderJ = hinder.origins[j];
+          int hinderValue = hinder.origins[i] + hinder.lengths[i] - barierPosition;
           if (hinderValue > 0) {
-            barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], hinderValue);
+            barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], hinderValue);
           }
         }
 

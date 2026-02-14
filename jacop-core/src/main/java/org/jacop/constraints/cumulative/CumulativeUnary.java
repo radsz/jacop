@@ -63,7 +63,7 @@ public class CumulativeUnary extends Cumulative {
   private final Comparator<TaskView> taskIncEctComparator =
       (o1, o2) -> o1.ect() == o2.ect() ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
   boolean doProfile;
-  boolean doEdgeFind;
+  boolean doUnaryEdgeFind;
 
   /**
    * It creates a cumulative constraint.
@@ -92,9 +92,9 @@ public class CumulativeUnary extends Cumulative {
     if (s != null) {
       limitOnEdgeFind = Integer.parseInt(s);
     }
-    doEdgeFind = starts.length <= limitOnEdgeFind;
+    doUnaryEdgeFind = starts.length <= limitOnEdgeFind;
 
-    if (!doEdgeFind) {
+    if (!doUnaryEdgeFind) {
       doProfile = true;
     }
   }
@@ -114,7 +114,7 @@ public class CumulativeUnary extends Cumulative {
 
     this(starts, durations, resources, limit);
 
-    if (doEdgeFind) {
+    if (doUnaryEdgeFind) {
       this.doProfile = doProfile;
     } else {
       this.doProfile = true;
@@ -146,7 +146,7 @@ public class CumulativeUnary extends Cumulative {
       log.warn("CumulativeUnary has no effect (no propagators defined).");
     } else {
       this.doProfile = doProfile;
-      this.doEdgeFind = doEdgeFind;
+      this.doUnaryEdgeFind = doEdgeFind;
     }
   }
 
@@ -213,7 +213,7 @@ public class CumulativeUnary extends Cumulative {
         profileProp(store);
       }
 
-      if (doEdgeFind && !store.propagationHasOccurred) {
+      if (doUnaryEdgeFind && !store.propagationHasOccurred) {
 
         if (!doProfile) {
           overload(tn);

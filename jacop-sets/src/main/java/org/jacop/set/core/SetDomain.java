@@ -61,10 +61,10 @@ public abstract class SetDomain extends Domain {
   public static final int GROUND = 0;
 
   /** It specifies event that GLB has grown. */
-  public static final int GLB = 1;
+  public static final int GLB_EVENT = 1;
 
   /** It specifies event that LUB has shrank. */
-  public static final int LUB = 2;
+  public static final int LUB_EVENT = 2;
 
   /** Bound event. Both bounds have changed. */
   public static final int BOUND = 3;
@@ -73,19 +73,19 @@ public abstract class SetDomain extends Domain {
   public static final int ANY = 4;
 
   /** It specifies event that has changed the cardinality of the set. */
-  public static final int CARDINALITY = 5;
+  public static final int CARDINALITY_EVENT = 5;
 
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.
    */
   static final int[][] eventsInclusion = {
-    {GROUND, GLB, LUB, BOUND, ANY, CARDINALITY}, // GROUND event
-    {GLB, BOUND, ANY, CARDINALITY}, // GLB event
-    {LUB, BOUND, ANY, CARDINALITY}, // LUB event
-    {BOUND, ANY, CARDINALITY}, // BOUND event
-    {ANY, CARDINALITY}, // ANY event
-    {CARDINALITY}
+    {GROUND, GLB_EVENT, LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // GROUND event
+    {GLB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // GLB event
+    {LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // LUB event
+    {BOUND, ANY, CARDINALITY_EVENT}, // BOUND event
+    {ANY, CARDINALITY_EVENT}, // ANY event
+    {CARDINALITY_EVENT}
   }; // CARDINALITY event
 
   /**
@@ -870,8 +870,8 @@ public abstract class SetDomain extends Domain {
   public int noConstraints() {
     return searchConstraintsToEvaluate
         + modelConstraintsToEvaluate[GROUND]
-        + modelConstraintsToEvaluate[LUB]
-        + modelConstraintsToEvaluate[GLB]
+        + modelConstraintsToEvaluate[LUB_EVENT]
+        + modelConstraintsToEvaluate[GLB_EVENT]
         + modelConstraintsToEvaluate[ANY];
   }
 

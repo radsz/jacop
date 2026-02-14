@@ -30,6 +30,8 @@
 
 package org.jacop.examples.floats;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -42,7 +44,7 @@ public class ExampleBasedTest {
   public void testWilkinson() {
     Wilkinson example = new Wilkinson();
 
-    example.wilkinson();
+    assertDoesNotThrow(() -> example.wilkinson());
   }
 
   @Test
@@ -50,7 +52,7 @@ public class ExampleBasedTest {
   public void testRosenbrock() {
     Rosenbrock example = new Rosenbrock();
 
-    example.rosenbrock();
+    assertDoesNotThrow(() -> example.rosenbrock());
   }
 
   @Test
@@ -58,7 +60,7 @@ public class ExampleBasedTest {
   public void testMinCostFlow() {
     MinCostFlow example = new MinCostFlow();
 
-    example.minCostFlow();
+    assertDoesNotThrow(() -> example.minCostFlow());
   }
 
   @Test
@@ -66,7 +68,7 @@ public class ExampleBasedTest {
   public void testCircleIntersection() {
     CircleIntersection example = new CircleIntersection();
 
-    example.circleIntersection();
+    assertDoesNotThrow(() -> example.circleIntersection());
   }
 
   @Test
@@ -74,7 +76,7 @@ public class ExampleBasedTest {
   public void testCyclohexane() {
     Cyclohexane example = new Cyclohexane();
 
-    example.cyclohexane();
+    assertDoesNotThrow(() -> example.cyclohexane());
   }
 
   @Test
@@ -82,7 +84,7 @@ public class ExampleBasedTest {
   public void testSixHumpCamelFunction() {
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
-    example.sixHumpCamelFunction();
+    assertDoesNotThrow(() -> example.sixHumpCamelFunction());
   }
 
   @Test
@@ -90,7 +92,7 @@ public class ExampleBasedTest {
   public void testCurveFitting() {
     CurveFitting example = new CurveFitting();
 
-    example.curveFitting3();
+    assertDoesNotThrow(() -> example.curveFitting3());
   }
 
   @Test
@@ -98,7 +100,7 @@ public class ExampleBasedTest {
   public void testTinyTSP() {
     TinyTsp example = new TinyTsp();
 
-    example.tinyTsp();
+    assertDoesNotThrow(() -> example.tinyTsp());
   }
 
   @Test
@@ -106,7 +108,7 @@ public class ExampleBasedTest {
   public void testSinCosExample() {
     SinCosExample example = new SinCosExample();
 
-    example.model();
+    assertDoesNotThrow(() -> example.model());
   }
 
   @Test
@@ -114,7 +116,7 @@ public class ExampleBasedTest {
   public void testTanExample() {
     TanExample example = new TanExample();
 
-    example.model();
+    assertDoesNotThrow(() -> example.model());
   }
 
   @Test
@@ -122,7 +124,7 @@ public class ExampleBasedTest {
   public void testLaplace() {
     Laplace example = new Laplace();
 
-    example.laplace();
+    assertDoesNotThrow(() -> example.laplace());
   }
 
   @Test
@@ -130,7 +132,7 @@ public class ExampleBasedTest {
   public void testMarkov() {
     Markov example = new Markov();
 
-    example.markovChainsTaha();
+    assertDoesNotThrow(() -> example.markovChainsTaha());
   }
 
   @Test
@@ -143,6 +145,6 @@ public class ExampleBasedTest {
     double r = Double.parseDouble("260.0");
     double b4 = Double.parseDouble("65.78");
 
-    example.loan(i, p, r, b4);
+    assertDoesNotThrow(() -> example.loan(i, p, r, b4));
   }
 }

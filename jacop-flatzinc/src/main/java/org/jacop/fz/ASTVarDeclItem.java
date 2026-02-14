@@ -5,7 +5,7 @@ package org.jacop.fz;
 
 public class ASTVarDeclItem extends SimpleNode {
   // My additions
-  String id;
+  String identifier;
   int kind; // 0=var, 1=non-var; 2=array-var, 3=array-non-var
   int index1, index2; // array indexs: low & high
 
@@ -18,11 +18,11 @@ public class ASTVarDeclItem extends SimpleNode {
   }
 
   void setId(String ID) {
-    id = ID;
+    identifier = ID;
   }
 
   String getIdent() {
-    return id;
+    return identifier;
   }
 
   void setIndexes(int i1, int i2) {
@@ -59,7 +59,7 @@ public class ASTVarDeclItem extends SimpleNode {
           case 3 -> "(array-non-var): ";
           default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
         };
-    return super.toString() + kindS + id + limits;
+    return super.toString() + kindS + identifier + limits;
   }
 }
 /* JavaCC - OriginalChecksum=0cd4d854fd034047f62c804d8aeaa8e0 (do not edit this line) */

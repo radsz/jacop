@@ -518,18 +518,18 @@ public class MineSweeper extends ExampleFd {
     SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(mines, new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(recordSolutions);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(recordSolutions);
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
-    int numSolutions = search.getSolutionListener().solutionsNo();
+    int numSolutions = searchLabel.getSolutionListener().solutionsNo();
 
     if (result) {
 
       if (numSolutions <= 100) {
-        search.printAllSolutions();
+        searchLabel.printAllSolutions();
       } else {
         IO.println("Too many solutions to print...");
       }

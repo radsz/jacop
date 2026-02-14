@@ -80,16 +80,16 @@ class DisjointConditionalProfile extends ProfileConditional {
           if (traceOn) {
             log.debug(
                 "Update profile [{}..{})={}",
-                rect.origin[j],
-                rect.origin[j] + rect.length[j],
+                rect.origins[j],
+                rect.origins[j] + rect.lengths[j],
                 t.length(i).min());
           }
 
           ExclusiveList tExclusive = exList.listFor(t.index);
           addToProfile(
               t.index,
-              rect.origin[j],
-              rect.origin[j] + rect.length[j],
+              rect.origins[j],
+              rect.origins[j] + rect.lengths[j],
               t.length[i].min(),
               tExclusive);
         }

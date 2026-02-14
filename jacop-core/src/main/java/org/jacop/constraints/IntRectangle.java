@@ -42,38 +42,38 @@ import org.jacop.core.IntDomain;
  */
 class IntRectangle {
 
-  final int[] length;
-  final int[] origin;
+  final int[] lengths;
+  final int[] origins;
   @Setter int dim;
 
   public IntRectangle(List<Integer> r) {
     dim = r.size() / 2;
-    origin = new int[dim];
-    length = new int[dim];
+    origins = new int[dim];
+    lengths = new int[dim];
     for (int i = 0; i < dim; i++) {
-      origin[i] = r.get(i);
-      length[i] = r.get(i + dim);
+      origins[i] = r.get(i);
+      lengths[i] = r.get(i + dim);
     }
   }
 
   public IntRectangle(int size) {
-    origin = new int[size];
-    length = new int[size];
+    origins = new int[size];
+    lengths = new int[size];
   }
 
   public IntRectangle(int[] r) {
     dim = r.length / 2;
-    origin = new int[dim];
-    length = new int[dim];
+    origins = new int[dim];
+    lengths = new int[dim];
     for (int i = 0; i < dim; i++) {
-      origin[i] = r[i];
-      length[i] = r[i + dim];
+      origins[i] = r[i];
+      lengths[i] = r[i + dim];
     }
   }
 
   void add(int o, int l) {
-    origin[dim] = o;
-    length[dim] = l;
+    origins[dim] = o;
+    lengths[dim] = l;
     dim++;
   }
 
@@ -89,8 +89,8 @@ class IntRectangle {
     int max2;
     int i = 0;
     while (overlap && i < dim) {
-      min1 = origin[i];
-      max1 = origin[i] + length[i];
+      min1 = origins[i];
+      max1 = origins[i] + lengths[i];
       IntDomain rectOriginiDom = rect.origin[i].dom();
       min2 = rectOriginiDom.min();
       max2 = rectOriginiDom.max() + rect.length[i].max();
@@ -105,11 +105,11 @@ class IntRectangle {
   }
 
   int length(int i) {
-    return length[i];
+    return lengths[i];
   }
 
   int origin(int i) {
-    return origin[i];
+    return origins[i];
   }
 
   public boolean overlap(IntRectangle rect) {
@@ -120,10 +120,10 @@ class IntRectangle {
     int max2;
     int i = 0;
     while (overlap && i < dim) {
-      min1 = origin[i];
-      max1 = min1 + length[i];
-      min2 = rect.origin[i];
-      max2 = min2 + rect.length[i];
+      min1 = origins[i];
+      max1 = min1 + lengths[i];
+      min2 = rect.origins[i];
+      max2 = min2 + rect.lengths[i];
       overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }
@@ -134,10 +134,10 @@ class IntRectangle {
   public String toString() {
     StringBuilder s = new StringBuilder("[");
     for (int i = 0; i < dim; i++) {
-      s.append(origin[i]).append(", ");
+      s.append(origins[i]).append(", ");
     }
     for (int i = 0; i < dim; i++) {
-      s.append(length[i]);
+      s.append(lengths[i]);
       if (i < dim - 1) {
         s.append(", ");
       }

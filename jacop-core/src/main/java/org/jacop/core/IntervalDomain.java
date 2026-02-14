@@ -495,7 +495,7 @@ public class IntervalDomain extends IntDomain {
         return false;
       }
 
-      if (input.min == min() || input.max() == max()) {
+      if (input.min() == min() || input.max() == max()) {
         return true;
       }
 
@@ -4656,16 +4656,16 @@ public class IntervalDomain extends IntDomain {
         return GROUND;
       }
 
-      if (input.min == this.min()
+      if (input.minBound == this.min()
           && input.max() == this.max()
           && input.getSize() == this.getSize()
-          && input.min + input.getSize() - 1 == input.max()) {
+          && input.minBound + input.getSize() - 1 == input.max()) {
         return NONE;
       }
 
       IntervalDomain result = new IntervalDomain(this.size);
 
-      int current = input.min;
+      int current = input.minBound;
       long bits = input.bits;
       int position = 0;
 

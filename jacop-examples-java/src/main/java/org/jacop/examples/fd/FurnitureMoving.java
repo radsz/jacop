@@ -157,28 +157,28 @@ public class FurnitureMoving extends ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
     boolean result;
     if (generateAll) {
       // Generate all optimal solutions.
       // Note: Gives null pointer exception when searchAll(true)
-      result = search.labeling(store, select);
+      result = searchLabel.labeling(store, select);
     } else {
       // minimize over numPersons
-      result = search.labeling(store, select, cost);
+      result = searchLabel.labeling(store, select, cost);
     }
 
-    Var[] variables = search.getSolutionListener().getVariables();
+    Var[] variables = searchLabel.getSolutionListener().getVariables();
     for (int i = 0; i < variables.length; i++) {
       IO.println("Variable " + i + " " + variables[i]);
     }
 
     if (result) {
 
-      search.printAllSolutions();
+      searchLabel.printAllSolutions();
 
       IO.println("\nNumber of persons needed: " + cost.value());
       IO.println(

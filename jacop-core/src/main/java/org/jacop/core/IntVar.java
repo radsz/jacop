@@ -135,7 +135,7 @@ public class IntVar extends Var {
     id = name;
     domain = dom;
     domain.stamp = 0;
-    index = store.putVariable(this);
+    storeIndex = store.putVariable(this);
     this.store = store;
   }
 

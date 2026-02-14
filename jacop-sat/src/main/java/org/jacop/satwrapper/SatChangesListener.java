@@ -137,7 +137,7 @@ public final class SatChangesListener
       booleanVarsToUpdate.add(cpBoolVar);
     } else {
       // remember that something happened;
-      int cpVarIndex = cpVar.index;
+      int cpVarIndex = cpVar.storeIndex;
       intVarsToUpdate.set(cpVarIndex);
 
       // is this the negation or the affirmation of some proposition ?
@@ -238,7 +238,7 @@ public final class SatChangesListener
       }
 
       // exclude some values from the domain
-      Set<Integer> excluded = excludedValues[variable.index];
+      Set<Integer> excluded = excludedValues[variable.storeIndex];
       if (excluded == null) {
         continue;
       }
@@ -274,10 +274,10 @@ public final class SatChangesListener
    */
   public void ensureAccess(IntVar cpVar) {
     // only check things for true IntVar, not BooleanVar
-    if (cpVar.index >= 0) {
+    if (cpVar.storeIndex >= 0) {
 
-      if (upperBounds.length <= cpVar.index) {
-        int newLen = 2 * cpVar.index;
+      if (upperBounds.length <= cpVar.storeIndex) {
+        int newLen = 2 * cpVar.storeIndex;
         upperBounds = Arrays.copyOf(upperBounds, newLen);
         lowerBounds = Arrays.copyOf(lowerBounds, newLen);
         excludedValues = Arrays.copyOf(excludedValues, newLen);

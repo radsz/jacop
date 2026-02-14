@@ -30,6 +30,8 @@
 
 package org.jacop.fz;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -47,138 +49,141 @@ public class ExampleBasedTest {
   @Test
   @Timeout(TIMEOUT_MS)
   public void testConcert() {
-    runFzn("src/main/java/org/jacop/fz/examples/concert.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/concert.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testCurveFitting2() {
-    runFzn("src/main/java/org/jacop/fz/examples/curve_fitting2.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/curve_fitting2.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testFilter() {
-    runFzn("src/main/java/org/jacop/fz/examples/filter.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/filter.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testGardnerDinner() {
-    runFzn("src/main/java/org/jacop/fz/examples/gardner_dinner.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/gardner_dinner.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testJobshop() {
-    runFzn("src/main/java/org/jacop/fz/examples/jobshop.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/jobshop.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testRostering() {
-    runFzn("src/main/java/org/jacop/fz/examples/rostering.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/rostering.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testTinyTsp() {
-    runFzn("src/main/java/org/jacop/fz/examples/tiny_tsp.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/tiny_tsp.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testWilkinson() {
-    runFzn("src/main/java/org/jacop/fz/examples/wilkinson.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/wilkinson.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincAr() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/ar.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/ar.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincAssignment() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/assignment.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/assignment.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincBinpack() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/binpack.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/binpack.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincDct() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/dct.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/dct.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincDfq() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/dfq.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/dfq.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincEwf() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/ewf.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/ewf.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincFir() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincFir16() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir16.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir16.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincParcel() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/parcel.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/parcel.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_LONG_MS)
   public void testMinizincPerfectSquare() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/perfect_square.fzn");
+    assertDoesNotThrow(
+        () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/perfect_square.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincTransistors() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/transistors.fzn");
+    assertDoesNotThrow(
+        () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/transistors.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincTransportation() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/transportation.fzn");
+    assertDoesNotThrow(
+        () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/transportation.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincTsp() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincTsp1() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp1.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp1.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
   public void testMinizincTsp2() {
-    runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp2.fzn");
+    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp2.fzn"));
   }
 }

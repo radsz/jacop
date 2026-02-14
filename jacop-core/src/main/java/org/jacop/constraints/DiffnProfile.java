@@ -72,11 +72,11 @@ class DiffnProfile extends Profile {
           if (traceOn) {
             log.debug(
                 "Update profile [{}..{})={}",
-                iR.origin[j],
-                iR.origin[j] + iR.length[j],
+                iR.origins[j],
+                iR.origins[j] + iR.lengths[j],
                 t.length(i).min());
           }
-          addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
+          addToProfile(iR.origins[j], iR.origins[j] + iR.lengths[j], t.length[i].min());
         }
       }
     }

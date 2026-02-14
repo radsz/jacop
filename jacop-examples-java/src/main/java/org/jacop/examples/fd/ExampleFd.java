@@ -74,7 +74,7 @@ public abstract class ExampleFd {
   public Store store;
 
   /** It specifies the search procedure used by a given example. */
-  public Search<IntVar> search;
+  public Search<IntVar> searchLabel;
 
   /**
    * It prints a matrix of variables. All variables must be grounded.
@@ -99,11 +99,11 @@ public abstract class ExampleFd {
   /** Prints search statistics (nodes, decisions, wrong decisions, backtracks, max depth). */
   protected void printSearchStats() {
     IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
+    IO.print(searchLabel.getNodes() + "\t");
+    IO.print(searchLabel.getDecisions() + "\t");
+    IO.print(searchLabel.getWrongDecisions() + "\t");
+    IO.print(searchLabel.getBacktracks() + "\t");
+    IO.print(searchLabel.getMaximumDepth() + "\t");
   }
 
   /** Prints execution time in ms since the given start time. */
@@ -125,9 +125,9 @@ public abstract class ExampleFd {
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     if (result) {
       store.print();
@@ -153,9 +153,9 @@ public abstract class ExampleFd {
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     if (result) {
       store.print();
@@ -177,11 +177,11 @@ public abstract class ExampleFd {
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     long T2 = System.currentTimeMillis();
     long T = T2 - T1;
@@ -205,12 +205,12 @@ public abstract class ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     if (optimal) {
-      search.labeling(store, select, cost);
+      searchLabel.labeling(store, select, cost);
     } else {
-      search.labeling(store, select);
+      searchLabel.labeling(store, select);
     }
 
     final boolean result = false;
@@ -237,9 +237,9 @@ public abstract class ExampleFd {
             new SmallestDomain<>(),
             new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    final boolean result = search.labeling(store, select);
+    final boolean result = searchLabel.labeling(store, select);
     printSearchStats();
     if (result) {
       store.print();
@@ -256,13 +256,13 @@ public abstract class ExampleFd {
    */
   public boolean searchMostConstrainedStatic() {
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-    final boolean result = search.labeling(store, select);
+    final boolean result = searchLabel.labeling(store, select);
     printSearchStats();
     if (!result) {
       IO.println("**** No Solution ****");
@@ -284,16 +284,16 @@ public abstract class ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
-    search.setAssignSolution(true);
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
+    searchLabel.setAssignSolution(true);
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     if (result) {
-      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
       IO.println("Failed to find any solution");
     }
@@ -310,12 +310,12 @@ public abstract class ExampleFd {
 
     long begin = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long end = System.currentTimeMillis();
 
@@ -343,16 +343,16 @@ public abstract class ExampleFd {
 
     long begin = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
-    search.setPrintInfo(printInfo);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.setPrintInfo(printInfo);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
-    search.setConsistencyListener(shaving);
-    search.setExitChildListener(shaving);
+    searchLabel.setConsistencyListener(shaving);
+    searchLabel.setExitChildListener(shaving);
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long end = System.currentTimeMillis();
 
@@ -386,12 +386,12 @@ public abstract class ExampleFd {
     int backtracks = 0;
     int wrongDecisions = 0;
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     NoGoodsCollector<IntVar> collector = new NoGoodsCollector<>();
-    search.setExitChildListener(collector);
-    search.setTimeOutListener(collector);
-    search.setExitListener(collector);
+    searchLabel.setExitChildListener(collector);
+    searchLabel.setTimeOutListener(collector);
+    searchLabel.setExitListener(collector);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -399,21 +399,21 @@ public abstract class ExampleFd {
 
     while (timeout) {
 
-      search.setNodesOut(1000);
+      searchLabel.setNodesOut(1000);
 
-      result = search.labeling(store, select);
+      result = searchLabel.labeling(store, select);
       timeout = collector.timeOut;
 
-      nodes += search.getNodes();
-      decisions += search.getDecisions();
-      wrongDecisions += search.getWrongDecisions();
-      backtracks += search.getBacktracks();
+      nodes += searchLabel.getNodes();
+      decisions += searchLabel.getDecisions();
+      wrongDecisions += searchLabel.getWrongDecisions();
+      backtracks += searchLabel.getBacktracks();
 
-      search = new DepthFirstSearch<>();
+      searchLabel = new DepthFirstSearch<>();
       collector = new NoGoodsCollector<>();
-      search.setExitChildListener(collector);
-      search.setTimeOutListener(collector);
-      search.setExitListener(collector);
+      searchLabel.setExitChildListener(collector);
+      searchLabel.setTimeOutListener(collector);
+      searchLabel.setExitListener(collector);
     }
 
     IO.println();
@@ -447,18 +447,18 @@ public abstract class ExampleFd {
 
     CreditCalculator<IntVar> credit = new CreditCalculator<>(credits, backtracks, maxDepth);
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    if (search.getConsistencyListener() == null) {
-      search.setConsistencyListener(credit);
+    if (searchLabel.getConsistencyListener() == null) {
+      searchLabel.setConsistencyListener(credit);
     } else {
-      search.getConsistencyListener().setChildrenListeners(credit);
+      searchLabel.getConsistencyListener().setChildrenListeners(credit);
     }
 
-    search.setExitChildListener(credit);
-    search.setTimeOutListener(credit);
+    searchLabel.setExitChildListener(credit);
+    searchLabel.setTimeOutListener(credit);
 
-    final boolean result = search.labeling(store, select);
+    final boolean result = searchLabel.labeling(store, select);
     store.print();
     printSearchStats();
     IO.println(result ? 1 : 0);
@@ -479,11 +479,11 @@ public abstract class ExampleFd {
             new SmallestDomain<>(),
             new IndomainMiddle<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
-    return search.labeling(store, select);
+    return searchLabel.labeling(store, select);
   }
 
   /**
@@ -494,7 +494,7 @@ public abstract class ExampleFd {
    */
   public boolean searchLds(int noDiscrepancy) {
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     boolean result;
 
@@ -504,16 +504,16 @@ public abstract class ExampleFd {
 
     Lds<IntVar> lds = new Lds<>(noDiscrepancy);
 
-    if (search.getExitChildListener() == null) {
-      search.setExitChildListener(lds);
+    if (searchLabel.getExitChildListener() == null) {
+      searchLabel.setExitChildListener(lds);
     } else {
-      search.getExitChildListener().setChildrenListeners(lds);
+      searchLabel.getExitChildListener().setChildrenListeners(lds);
     }
 
     // Execution time measurement
     long begin = System.currentTimeMillis();
 
-    result = search.labeling(store, select);
+    result = searchLabel.labeling(store, select);
 
     // Execution time measurement
     long end = System.currentTimeMillis();
@@ -536,12 +536,12 @@ public abstract class ExampleFd {
     long T;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());
 
-    boolean result = search.labeling(store, select, cost);
+    boolean result = searchLabel.labeling(store, select, cost);
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
@@ -568,13 +568,13 @@ public abstract class ExampleFd {
 
     boolean result;
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
-    result = search.labeling(store, select);
+    result = searchLabel.labeling(store, select);
 
     long end = System.currentTimeMillis();
 
@@ -594,13 +594,13 @@ public abstract class ExampleFd {
 
     boolean result;
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMedian<>());
 
-    result = search.labeling(store, select);
+    result = searchLabel.labeling(store, select);
 
     long end = System.currentTimeMillis();
 
@@ -622,9 +622,9 @@ public abstract class ExampleFd {
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMin<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
+    searchLabel = new DepthFirstSearch<>();
 
-    boolean solution = search.labeling(store, select, cost);
+    boolean solution = searchLabel.labeling(store, select, cost);
 
     long end = System.currentTimeMillis();
 
@@ -661,7 +661,7 @@ public abstract class ExampleFd {
 
     labelMaster.addChildSearch(labelSlave);
 
-    search = labelMaster;
+    searchLabel = labelMaster;
 
     boolean result = labelMaster.labeling(store, selectMaster);
 
@@ -686,7 +686,7 @@ public abstract class ExampleFd {
    * @return the search used within an example.
    */
   public Search<IntVar> getSearch() {
-    return search;
+    return searchLabel;
   }
 
   /**

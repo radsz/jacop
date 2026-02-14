@@ -125,7 +125,7 @@ public class EinA extends PrimitiveConstraint {
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return SetDomain.GLB;
+    return SetDomain.GLB_EVENT;
   }
 
   @Override

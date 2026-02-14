@@ -674,17 +674,17 @@ public class DisjointConditional extends Diff {
 
       List<IntRectangle> consideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
-        s = ir.origin[i];
+        s = ir.origins[i];
 
         consideredRect.clear();
         int minI = IntDomain.MaxInt;
         long rectSize = 0;
         for (IntRectangle t : usedRectArray) {
-          int tempMin = t.origin[i] + t.length[i];
+          int tempMin = t.origins[i] + t.lengths[i];
 
-          if (t.origin[i] - s < rLengthiMin && s < tempMin) {
+          if (t.origins[i] - s < rLengthiMin && s < tempMin) {
             consideredRect.add(t);
-            rectSize += t.length[j];
+            rectSize += t.lengths[j];
             // Determine minimum length in direction i
             // (possibly new start time)
             if (tempMin < minI) {
@@ -738,7 +738,7 @@ public class DisjointConditional extends Diff {
       for (IntRectangle t : usedRectArray) {
         if (t.overlap(maxRect)) {
           consideredRectDur.add(t);
-          barierSize += t.length[j];
+          barierSize += t.lengths[j];
         }
       }
 
@@ -755,11 +755,11 @@ public class DisjointConditional extends Diff {
         int n = 0;
         while (n < rects.length && lengthOk) {
           IntRectangle hinder = rects[n];
-          barrier.addToProfile(hinder.origin[j], hinder.origin[j] + hinder.length[j], 1);
+          barrier.addToProfile(hinder.origins[j], hinder.origins[j] + hinder.lengths[j], 1);
           if (doesNotFit(j, r, barrier)) {
             lengthOk = false;
             newMaxLength =
-                hinder.origin[i]
+                hinder.origins[i]
                     // ((Interval)r.origin[i].dom().lastElement()).Min;
                     - // ((Interval)r.origin[i].dom().lastElement()).Min;
                     r.origin[i].min();
@@ -860,8 +860,8 @@ public class DisjointConditional extends Diff {
 
         barrier.clear();
         for (IntRectangle hinder : consideredRect) {
-          int hinderJ = hinder.origin[j];
-          barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], 1);
+          int hinderJ = hinder.origins[j];
+          barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], 1);
         }
 
         int currentJposition = minJ;

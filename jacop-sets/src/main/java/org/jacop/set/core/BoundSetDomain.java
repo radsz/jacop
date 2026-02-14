@@ -55,16 +55,16 @@ public class BoundSetDomain extends SetDomain {
 
   // FIXME do not use emptySet to assign to lub, glb.
   /** The greatest lower bound of the domain. */
-  public IntDomain glb;
+  public IntDomain glbDomain;
 
   /** The least upper bound of the domain. */
-  public IntDomain lub;
+  public IntDomain lubDomain;
 
   /** The cardinality of the set. */
-  public IntDomain cardinality;
+  public IntDomain cardDomain;
 
   /**
-   * Creates BoundSetDomain object. It requires glb to be a subset of lub.
+   * Creates BoundSetDomain object. It requires glb to be a subset of lubDomain.
    *
    * @param glb it specifies the left bound of the SetDomain (inclusive).
    * @param lub it specifies the right bound of the setDomain (inclusive).
@@ -76,9 +76,9 @@ public class BoundSetDomain extends SetDomain {
       throw new IllegalArgumentException();
     }
 
-    this.glb = glb.cloneLight();
-    this.lub = lub.cloneLight();
-    this.cardinality = cardinality.cloneLight();
+    this.glbDomain = glb.cloneLight();
+    this.lubDomain = lub.cloneLight();
+    this.cardDomain = cardinality.cloneLight();
 
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
@@ -87,7 +87,7 @@ public class BoundSetDomain extends SetDomain {
   }
 
   /**
-   * Creates a new instance of SetDomain. It requires glb to be a subset of lub.
+   * Creates a new instance of SetDomain. It requires glb to be a subset of lubDomain.
    *
    * @param glb it specifies the left bound of the SetDomain (inclusive).
    * @param lub it specifies the right bound of the setDomain (inclusive).
@@ -98,12 +98,12 @@ public class BoundSetDomain extends SetDomain {
       throw new IllegalArgumentException();
     }
 
-    this.glb = glb.cloneLight();
-    this.lub = lub.cloneLight();
-    this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
+    this.glbDomain = glb.cloneLight();
+    this.lubDomain = lub.cloneLight();
+    this.cardDomain = new IntervalDomain(glb.getSize(), lub.getSize());
 
     // TODO: test the replacement of intervaldomain when possible by SmallDenseDomain.
-    // this.cardinality = new SmallDenseDomain(glb.getSize(), lub.getSize());
+    // this.cardDomain = new SmallDenseDomain(glb.getSize(), lub.getSize());
 
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
@@ -117,9 +117,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public BoundSetDomain() {
 
-    this.glb = new IntervalDomain(0);
-    this.lub = new IntervalDomain(0);
-    this.cardinality = new IntervalDomain(0, 0);
+    this.glbDomain = new IntervalDomain(0);
+    this.lubDomain = new IntervalDomain(0);
+    this.cardDomain = new IntervalDomain(0, 0);
 
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
@@ -130,20 +130,20 @@ public class BoundSetDomain extends SetDomain {
   /**
    * It creates a new instance of SetDomain with glb empty and lub={e1..e2}
    *
-   * @param e1 the minimum element of lub.
-   * @param e2 the maximum element of lub.
+   * @param e1 the minimum element of lubDomain.
+   * @param e2 the maximum element of lubDomain.
    */
   public BoundSetDomain(int e1, int e2) {
 
     if (e2 - e1 > 63) {
-      this.glb = new IntervalDomain(0);
-      this.lub = new IntervalDomain(e1, e2);
+      this.glbDomain = new IntervalDomain(0);
+      this.lubDomain = new IntervalDomain(e1, e2);
     } else {
-      this.glb = new SmallDenseDomain();
-      this.lub = new SmallDenseDomain(e1, e2);
+      this.glbDomain = new SmallDenseDomain();
+      this.lubDomain = new SmallDenseDomain(e1, e2);
     }
 
-    this.cardinality = new IntervalDomain(0, e2 - e1 + 1);
+    this.cardDomain = new IntervalDomain(0, e2 - e1 + 1);
 
     searchConstraints = null;
     searchConstraintsToEvaluate = 0;
@@ -159,8 +159,8 @@ public class BoundSetDomain extends SetDomain {
 
     assert set.checkInvariants() == null : set.checkInvariants();
 
-    this.lub = this.lub.union(set);
-    this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
+    this.lubDomain = this.lubDomain.union(set);
+    this.cardDomain = new IntervalDomain(glbDomain.getSize(), lubDomain.getSize());
   }
 
   /** Adds a set to the domain. */
@@ -169,9 +169,9 @@ public class BoundSetDomain extends SetDomain {
     assert domain.lub().checkInvariants() == null : domain.lub().checkInvariants();
     assert domain.glb().checkInvariants() == null : domain.glb().checkInvariants();
 
-    lub = lub.union(domain.lub());
-    glb = glb.intersect(domain.glb());
-    this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
+    lubDomain = lubDomain.union(domain.lub());
+    glbDomain = glbDomain.intersect(domain.glb());
+    this.cardDomain = new IntervalDomain(glbDomain.getSize(), lubDomain.getSize());
   }
 
   /**
@@ -187,31 +187,32 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public void addDom(Interval i) {
 
-    this.lub = this.lub.union(i.min(), i.max());
-    this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
+    this.lubDomain = this.lubDomain.union(i.min(), i.max());
+    this.cardDomain = new IntervalDomain(glbDomain.getSize(), lubDomain.getSize());
   }
 
   /**
-   * Returns the cardinality of the setDomain as [glb.card(), lub.card()]
+   * Returns the cardinality of the setDomain as [glb.card(), lubDomain.card()]
    *
    * @return The cardinality of the setDomain given as a boundDomain.
    */
   public IntDomain card() {
-    return cardinality;
+    return cardDomain;
   }
 
   /** Sets the domain to an empty SetDomain. */
   @Override
   public void clear() {
-    glb = new IntervalDomain();
-    lub = new IntervalDomain();
-    this.cardinality = new IntervalDomain(0, 0);
+    glbDomain = new IntervalDomain();
+    lubDomain = new IntervalDomain();
+    this.cardDomain = new IntervalDomain(0, 0);
   }
 
   @Override
   public BoundSetDomain copy() {
 
-    BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight(), cardinality);
+    BoundSetDomain cloned =
+        new BoundSetDomain(glbDomain.cloneLight(), lubDomain.cloneLight(), cardDomain);
     cloned.stamp = stamp;
     cloned.previousDomain = previousDomain;
 
@@ -234,7 +235,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain cloneLight() {
     // FIXME, why no glb and lub cloning is safe?
-    return new BoundSetDomain(glb, lub, cardinality);
+    return new BoundSetDomain(glbDomain, lubDomain, cardDomain);
   }
 
   /**
@@ -246,7 +247,7 @@ public class BoundSetDomain extends SetDomain {
     // FIXME, is it right?
     // FIXME, it is not possible to express the complement of the set interval using just one set,
     // right?
-    return new BoundSetDomain(this.lub.complement(), this.glb.complement());
+    return new BoundSetDomain(this.lubDomain.complement(), this.glbDomain.complement());
   }
 
   /** It checks if the supplied set or setDomain is a subset of this domain. */
@@ -254,7 +255,7 @@ public class BoundSetDomain extends SetDomain {
 
     assert set.checkInvariants() == null : set.checkInvariants();
 
-    return this.lub.contains(set);
+    return this.lubDomain.contains(set);
   }
 
   /**
@@ -267,12 +268,12 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    return this.lub.contains(domain.lub());
+    return this.lubDomain.contains(domain.lub());
   }
 
   /** It checks if value belongs to the domain. */
   public boolean contains(int value) {
-    return lub.contains(value);
+    return lubDomain.contains(value);
   }
 
   /**
@@ -292,13 +293,13 @@ public class BoundSetDomain extends SetDomain {
    * @return true if suppled domain has the same elements as this domain.
    */
   public boolean eq(SetDomain domain) {
-    return domain.glb().eq(this.glb) && domain.lub().eq(this.lub);
+    return domain.glb().eq(this.glbDomain) && domain.lub().eq(this.lubDomain);
   }
 
   /** Returns the number of elements in the domain. */
   @Override
   public int getSize() {
-    return (int) Math.pow(2, lub.getSize() - glb.getSize());
+    return (int) Math.pow(2, lubDomain.getSize() - glbDomain.getSize());
   }
 
   /**
@@ -307,7 +308,7 @@ public class BoundSetDomain extends SetDomain {
    * @return the greatest lower bound of the domain.
    */
   public IntDomain glb() {
-    return this.glb;
+    return glbDomain;
   }
 
   /**
@@ -326,47 +327,47 @@ public class BoundSetDomain extends SetDomain {
     }
 
     // FIXME, do we need to do this expensive check in this manner, or at all here?
-    if (glb.contains(inGlb) && inLub.contains(lub)) {
+    if (glbDomain.contains(inGlb) && inLub.contains(lubDomain)) {
       // New domain is the same or "larger" than the old one; do nothing,
       return;
     }
 
     if (stamp == storeLevel) {
 
-      int eventGlb = glb.unionAdapt(inGlb);
-      int eventLub = lub.intersectAdapt(inLub);
+      int eventGlb = glbDomain.unionAdapt(inGlb);
+      int eventLub = lubDomain.intersectAdapt(inLub);
 
-      if (lub.eq(glb)) {
-        cardinality.intersectAdapt(glb.getSize(), lub.getSize());
-        if (cardinality.isEmpty()) {
+      if (lubDomain.eq(glbDomain)) {
+        cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
+        if (cardDomain.isEmpty()) {
           throw Store.failException;
         }
         var.domainHasChanged(IntDomain.GROUND);
       } else {
-        int min = glb.getSize();
-        int max = lub.getSize();
+        int min = glbDomain.getSize();
+        int max = lubDomain.getSize();
         if (min > max) {
           throw Store.failException;
         }
 
-        int eventCardinality = cardinality.intersectAdapt(min, max);
+        int eventCardinality = cardDomain.intersectAdapt(min, max);
 
-        if (cardinality.isEmpty()) {
+        if (cardDomain.isEmpty()) {
           throw Store.failException;
         }
 
         if (eventCardinality != Domain.NONE) {
 
-          if (cardinality.min() == lub.getSize()) {
-            glb = lub;
-            cardinality.intersectAdapt(lub.getSize(), lub.getSize());
+          if (cardDomain.min() == lubDomain.getSize()) {
+            glbDomain = lubDomain;
+            cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
             var.domainHasChanged(IntDomain.GROUND);
             return;
           }
 
-          if (cardinality.max() == glb.getSize()) {
-            lub = glb;
-            cardinality.intersectAdapt(glb.getSize(), glb.getSize());
+          if (cardDomain.max() == glbDomain.getSize()) {
+            lubDomain = glbDomain;
+            cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
             var.domainHasChanged(IntDomain.GROUND);
             return;
           }
@@ -375,9 +376,9 @@ public class BoundSetDomain extends SetDomain {
         if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
           var.domainHasChanged(SetDomain.ANY);
         } else if (eventGlb != Domain.NONE) {
-          var.domainHasChanged(SetDomain.GLB);
+          var.domainHasChanged(SetDomain.GLB_EVENT);
         } else if (eventLub != Domain.NONE) {
-          var.domainHasChanged(SetDomain.LUB);
+          var.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
 
@@ -385,36 +386,36 @@ public class BoundSetDomain extends SetDomain {
 
       assert stamp < storeLevel;
 
-      IntDomain resultGlb = glb.cloneLight();
+      IntDomain resultGlb = glbDomain.cloneLight();
       int eventGlb = resultGlb.unionAdapt(inGlb);
 
-      IntDomain resultLub = lub.cloneLight();
+      IntDomain resultLub = lubDomain.cloneLight();
       int eventLub = resultLub.intersectAdapt(inLub);
 
-      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), lub.getSize());
+      IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), lubDomain.getSize());
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
-      if (!resultCardinality.eq(cardinality)) {
+      if (!resultCardinality.eq(cardDomain)) {
 
-        if (cardinality.min() == lub.getSize()) {
-          resultGlb = lub;
-          eventGlb = SetDomain.GLB;
-          resultCardinality.intersectAdapt(lub.getSize(), lub.getSize());
+        if (cardDomain.min() == lubDomain.getSize()) {
+          resultGlb = lubDomain;
+          eventGlb = SetDomain.GLB_EVENT;
+          resultCardinality.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
         }
 
-        if (cardinality.max() == glb.getSize()) {
-          resultLub = glb;
-          eventLub = SetDomain.LUB;
-          resultCardinality.intersectAdapt(glb.getSize(), glb.getSize());
+        if (cardDomain.max() == glbDomain.getSize()) {
+          resultLub = glbDomain;
+          eventLub = SetDomain.LUB_EVENT;
+          resultCardinality.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
         }
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.glb = resultGlb;
-      result.lub = resultLub;
-      result.cardinality = resultCardinality;
+      result.glbDomain = resultGlb;
+      result.lubDomain = resultLub;
+      result.cardDomain = resultCardinality;
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -427,12 +428,12 @@ public class BoundSetDomain extends SetDomain {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        if (eventGlb == SetDomain.GLB && eventLub == SetDomain.LUB) {
+        if (eventGlb == SetDomain.GLB_EVENT && eventLub == SetDomain.LUB_EVENT) {
           var.domainHasChanged(SetDomain.BOUND);
         } else if (eventGlb != Domain.NONE) {
-          var.domainHasChanged(SetDomain.GLB);
+          var.domainHasChanged(SetDomain.GLB_EVENT);
         } else if (eventLub != Domain.NONE) {
-          var.domainHasChanged(SetDomain.LUB);
+          var.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
     }
@@ -460,13 +461,13 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    IntDomain lub_i = lub.intersect(domain.lub());
+    IntDomain lub_i = lubDomain.intersect(domain.lub());
 
     if (lub_i.isEmpty()) {
       return emptyDomain;
     }
 
-    IntDomain glb_i = glb.intersect(domain.glb());
+    IntDomain glb_i = glbDomain.intersect(domain.glb());
 
     return new BoundSetDomain(glb_i, lub_i);
   }
@@ -481,13 +482,13 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    IntDomain lubResult = lub.intersect(domain);
+    IntDomain lubResult = lubDomain.intersect(domain);
 
     if (lubResult.isEmpty()) {
       return emptyDomain;
     }
 
-    IntDomain glbResult = glb.intersect(domain);
+    IntDomain glbResult = glbDomain.intersect(domain);
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -499,7 +500,7 @@ public class BoundSetDomain extends SetDomain {
    */
   @Override
   public boolean isEmpty() {
-    return glb.isEmpty() && lub.isEmpty();
+    return glbDomain.isEmpty() && lubDomain.isEmpty();
   }
 
   /**
@@ -521,7 +522,7 @@ public class BoundSetDomain extends SetDomain {
    */
   // FIXME, improve the implementation.
   public boolean isIntersecting(int min, int max) {
-    return lub.isIntersecting(new IntervalDomain(min, max));
+    return lubDomain.isIntersecting(new IntervalDomain(min, max));
   }
 
   /**
@@ -550,7 +551,7 @@ public class BoundSetDomain extends SetDomain {
    * @return the least upper bound of the domain.
    */
   public IntDomain lub() {
-    return this.lub;
+    return lubDomain;
   }
 
   /**
@@ -562,8 +563,8 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    this.glb = domain.glb();
-    this.lub = domain.lub();
+    this.glbDomain = domain.glb();
+    this.lubDomain = domain.lub();
   }
 
   /** It sets the domain to the the set {min..max}. It grounds it. FIXME should it be grounded? */
@@ -571,8 +572,8 @@ public class BoundSetDomain extends SetDomain {
 
     assert (min <= max);
     // FIXME, BUG?
-    this.lub = new IntervalDomain(min, max);
-    this.glb = new IntervalDomain();
+    this.lubDomain = new IntervalDomain(min, max);
+    this.glbDomain = new IntervalDomain();
 
     // FIXME, remove after checking.
     throw new RuntimeException("check that the caller of this function is using it as intended.");
@@ -585,7 +586,7 @@ public class BoundSetDomain extends SetDomain {
    */
   @Override
   public boolean singleton() {
-    return lub.eq(glb);
+    return lubDomain.eq(glbDomain);
   }
 
   /**
@@ -595,7 +596,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public boolean singleton(IntDomain set) {
 
-    return lub.eq(set) && glb.eq(set);
+    return lubDomain.eq(set) && glbDomain.eq(set);
   }
 
   @Override
@@ -606,7 +607,7 @@ public class BoundSetDomain extends SetDomain {
     }
 
     if (value instanceof IntDomain domain) {
-      return glb.eq(domain);
+      return glbDomain.eq(domain);
     }
 
     if (value instanceof BoundSetDomain input) {
@@ -614,7 +615,7 @@ public class BoundSetDomain extends SetDomain {
         throw new IllegalArgumentException("The input parameter value is not a singleton domain.");
       }
 
-      return glb.eq(input.glb);
+      return glbDomain.eq(input.glbDomain);
     }
 
     throw new IllegalArgumentException("Not recognized domain type for the input parameter value.");
@@ -630,8 +631,8 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    IntDomain glbResult = glb.subtract(domain.lub());
-    IntDomain lubResult = lub.subtract(domain.glb());
+    IntDomain glbResult = glbDomain.subtract(domain.lub());
+    IntDomain lubResult = lubDomain.subtract(domain.glb());
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -645,8 +646,8 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain subtract(int min, int max) {
 
-    IntDomain lubResult = lub.subtract(min, max);
-    IntDomain glbResult = glb.subtract(min, max);
+    IntDomain lubResult = lubDomain.subtract(min, max);
+    IntDomain glbResult = glbDomain.subtract(min, max);
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -673,31 +674,31 @@ public class BoundSetDomain extends SetDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (this.glb.eq(this.lub)) {
-      if (glb.singleton()) {
-        return "{" + glb.toString() + "}";
+    if (this.glbDomain.eq(this.lubDomain)) {
+      if (glbDomain.singleton()) {
+        return "{" + glbDomain.toString() + "}";
       } else {
-        return glb.toString();
+        return glbDomain.toString();
       }
     } else {
 
       StringBuilder result = new StringBuilder("{");
 
-      if (glb.singleton()) {
-        result.append("{").append(glb.toString()).append("}");
+      if (glbDomain.singleton()) {
+        result.append("{").append(glbDomain.toString()).append("}");
       } else {
-        result.append(glb.toString());
+        result.append(glbDomain.toString());
       }
 
       result.append("..");
 
-      if (lub.singleton()) {
-        result.append("{").append(lub.toString()).append("}");
+      if (lubDomain.singleton()) {
+        result.append("{").append(lubDomain.toString()).append("}");
       } else {
-        result.append(lub.toString());
+        result.append(lubDomain.toString());
       }
 
-      result.append("}[card=").append(cardinality).append("]");
+      result.append("}[card=").append(cardDomain).append("]");
 
       return result.toString();
     }
@@ -713,8 +714,8 @@ public class BoundSetDomain extends SetDomain {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    IntDomain glbResult = glb.intersect(domain.glb());
-    IntDomain lubResult = lub.union(domain.lub());
+    IntDomain glbResult = glbDomain.intersect(domain.glb());
+    IntDomain lubResult = lubDomain.union(domain.lub());
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -731,8 +732,8 @@ public class BoundSetDomain extends SetDomain {
     // FIXME, why not max >= min?
     assert max > min : "min value is larger than max value";
 
-    IntDomain glbResult = glb.union(min, max);
-    IntDomain lubResult = lub.union(min, max);
+    IntDomain glbResult = glbDomain.union(min, max);
+    IntDomain lubResult = lubDomain.union(min, max);
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -745,8 +746,8 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(int value) {
 
-    IntDomain glbResult = glb.union(value);
-    IntDomain lubResult = lub.union(value);
+    IntDomain glbResult = glbDomain.union(value);
+    IntDomain lubResult = lubDomain.union(value);
 
     return new BoundSetDomain(glbResult, lubResult);
   }
@@ -770,7 +771,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public String checkInvariants() {
 
-    if (!lub.contains(glb)) {
+    if (!lubDomain.contains(glbDomain)) {
       return "Greatest lower bound is larger than least upper bound ";
     }
 
@@ -779,40 +780,40 @@ public class BoundSetDomain extends SetDomain {
   }
 
   /**
-   * It adds if necessary an element to glb.
+   * It adds if necessary an element to glbDomain.
    *
    * @param level level at which the change is recorded.
    * @param var set variable to which the change applies to.
-   * @param element the element which must be in glb.
+   * @param element the element which must be in glbDomain.
    */
   public void inGlb(int level, SetVar var, int element) {
 
-    if (glb.contains(element)) {
+    if (glbDomain.contains(element)) {
       return;
     }
 
-    if (!lub.contains(element)) {
+    if (!lubDomain.contains(element)) {
       throw Store.failException;
     }
 
     if (stamp == level) {
 
-      glb.unionAdapt(element);
+      glbDomain.unionAdapt(element);
 
-      cardinality.intersectAdapt(glb.getSize(), lub.getSize());
-      if (cardinality.isEmpty()) {
+      cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
+      if (cardDomain.isEmpty()) {
         throw Store.failException;
       }
 
-      if (cardinality.max() == glb.getSize()) {
-        lub = glb;
-        cardinality.intersectAdapt(glb.getSize(), glb.getSize());
+      if (cardDomain.max() == glbDomain.getSize()) {
+        lubDomain = glbDomain;
+        cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
       }
 
       if (singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB);
+        var.domainHasChanged(SetDomain.GLB_EVENT);
       }
 
     } else {
@@ -820,23 +821,23 @@ public class BoundSetDomain extends SetDomain {
       assert stamp < level;
 
       BoundSetDomain result = new BoundSetDomain();
-      IntDomain resultGlb = glb.union(element);
-      IntDomain resultCardinality = cardinality.intersect(resultGlb.getSize(), lub.getSize());
+      IntDomain resultGlb = glbDomain.union(element);
+      IntDomain resultCardinality = cardDomain.intersect(resultGlb.getSize(), lubDomain.getSize());
 
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
-      result.glb = resultGlb;
+      result.glbDomain = resultGlb;
 
       if (resultCardinality.max() == resultGlb.getSize()) {
-        result.lub = resultGlb;
+        result.lubDomain = resultGlb;
         resultCardinality.intersectAdapt(resultGlb.getSize(), resultGlb.getSize());
       } else {
-        result.lub = lub.cloneLight();
+        result.lubDomain = lubDomain.cloneLight();
       }
 
-      result.cardinality = resultCardinality;
+      result.cardDomain = resultCardinality;
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = level;
@@ -848,7 +849,7 @@ public class BoundSetDomain extends SetDomain {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB);
+        var.domainHasChanged(SetDomain.GLB_EVENT);
       }
     }
   }
@@ -856,35 +857,35 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public void inGlb(int level, SetVar var, IntDomain intersect) {
 
-    if (glb.contains(intersect)) {
+    if (glbDomain.contains(intersect)) {
       return;
     }
 
-    if (!lub.contains(intersect)) {
+    if (!lubDomain.contains(intersect)) {
       throw Store.failException;
     }
 
     if (stamp == level) {
 
-      int event = glb.unionAdapt(intersect);
+      int event = glbDomain.unionAdapt(intersect);
 
       if (event == Domain.NONE) {
       } else {
 
-        cardinality.intersectAdapt(glb.getSize(), lub.getSize());
-        if (cardinality.isEmpty()) {
+        cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
+        if (cardDomain.isEmpty()) {
           throw Store.failException;
         }
 
-        if (cardinality.max() == glb.getSize()) {
-          lub = glb;
-          cardinality.intersectAdapt(glb.getSize(), glb.getSize());
+        if (cardDomain.max() == glbDomain.getSize()) {
+          lubDomain = glbDomain;
+          cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
         }
 
         if (singleton()) {
           var.domainHasChanged(SetDomain.GROUND);
         } else {
-          var.domainHasChanged(SetDomain.GLB);
+          var.domainHasChanged(SetDomain.GLB_EVENT);
         }
       }
 
@@ -892,7 +893,7 @@ public class BoundSetDomain extends SetDomain {
 
       assert stamp < level;
 
-      IntDomain resultGlb = glb.union(intersect);
+      IntDomain resultGlb = glbDomain.union(intersect);
 
       // TODO: CRUCIAL, if resultGlb is equal current glb then nothing should happen and the
       // function
@@ -900,22 +901,22 @@ public class BoundSetDomain extends SetDomain {
       // correct.
       // Turn on the lines below after domains are stable to check for potential pruning bugs.
 
-      IntDomain resultCardinality = cardinality.intersect(resultGlb.getSize(), lub.getSize());
+      IntDomain resultCardinality = cardDomain.intersect(resultGlb.getSize(), lubDomain.getSize());
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.glb = resultGlb;
+      result.glbDomain = resultGlb;
 
       if (resultCardinality.max() == resultGlb.getSize()) {
-        result.lub = resultGlb;
+        result.lubDomain = resultGlb;
         resultCardinality.intersectAdapt(resultGlb.getSize(), resultGlb.getSize());
       } else {
-        result.lub = lub.cloneLight();
+        result.lubDomain = lubDomain.cloneLight();
       }
 
-      result.cardinality = resultCardinality;
+      result.cardDomain = resultCardinality;
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -928,71 +929,71 @@ public class BoundSetDomain extends SetDomain {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.GLB);
+        var.domainHasChanged(SetDomain.GLB_EVENT);
       }
     }
   }
 
   /**
-   * It removes if necessary an element from lub.
+   * It removes if necessary an element from lubDomain.
    *
    * @param level level at which the change is recorded.
    * @param var set variable to which the change applies to.
-   * @param element the element which can not be in lub.
+   * @param element the element which can not be in lubDomain.
    */
   @Override
   public void inLubComplement(int level, SetVar var, int element) {
 
-    if (!lub.contains(element)) {
+    if (!lubDomain.contains(element)) {
       return;
     }
 
-    if (glb.contains(element)) {
+    if (glbDomain.contains(element)) {
       throw Store.failException;
     }
 
     if (stamp == level) {
 
-      lub.subtractAdapt(element);
+      lubDomain.subtractAdapt(element);
 
-      cardinality.intersectAdapt(glb.getSize(), lub.getSize());
-      if (cardinality.isEmpty()) {
+      cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
+      if (cardDomain.isEmpty()) {
         throw Store.failException;
       }
 
-      if (cardinality.min() == lub.getSize()) {
-        glb = lub;
-        cardinality.intersectAdapt(lub.getSize(), lub.getSize());
+      if (cardDomain.min() == lubDomain.getSize()) {
+        glbDomain = lubDomain;
+        cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
       }
 
       if (singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB);
+        var.domainHasChanged(SetDomain.LUB_EVENT);
       }
 
     } else {
 
       assert stamp < level;
 
-      IntDomain resultLub = lub.subtract(element);
-      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLub.getSize());
+      IntDomain resultLub = lubDomain.subtract(element);
+      IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), resultLub.getSize());
 
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.lub = resultLub;
+      result.lubDomain = resultLub;
 
       if (resultCardinality.min() == resultLub.getSize()) {
-        result.glb = resultLub;
+        result.glbDomain = resultLub;
         resultCardinality.intersectAdapt(resultLub.getSize(), resultLub.getSize());
       } else {
-        result.glb = glb.cloneLight();
+        result.glbDomain = glbDomain.cloneLight();
       }
 
-      result.cardinality = resultCardinality;
+      result.cardDomain = resultCardinality;
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1005,7 +1006,7 @@ public class BoundSetDomain extends SetDomain {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB);
+        var.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
   }
@@ -1013,27 +1014,27 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public void inValue(int level, SetVar var, IntDomain set) {
 
-    if (!set.contains(glb)) {
+    if (!set.contains(glbDomain)) {
       throw Store.failException;
     }
 
-    if (!lub.contains(set)) {
+    if (!lubDomain.contains(set)) {
       throw Store.failException;
     }
 
-    if (!cardinality.contains(set.getSize())) {
+    if (!cardDomain.contains(set.getSize())) {
       throw Store.failException;
     }
 
-    if (lub.eq(glb)) {
+    if (lubDomain.eq(glbDomain)) {
       return;
     }
 
     if (stamp == level) {
 
-      glb.unionAdapt(set);
-      lub = glb;
-      cardinality.intersectAdapt(glb.getSize(), glb.getSize());
+      glbDomain.unionAdapt(set);
+      lubDomain = glbDomain;
+      cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
 
     } else {
 
@@ -1041,7 +1042,7 @@ public class BoundSetDomain extends SetDomain {
 
       // FIXME, allow specification of the sets in parts, so no unnecessary copying occur.
       BoundSetDomain result = new BoundSetDomain(set, set);
-      result.cardinality = new IntervalDomain(set.getSize(), set.getSize());
+      result.cardDomain = new IntervalDomain(set.getSize(), set.getSize());
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1058,11 +1059,11 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public void inLub(int level, SetVar var, IntDomain intersect) {
 
-    if (intersect.contains(lub)) {
+    if (intersect.contains(lubDomain)) {
       return;
     }
 
-    if (!intersect.contains(glb)) {
+    if (!intersect.contains(glbDomain)) {
       throw Store.failException;
     }
 
@@ -1072,27 +1073,27 @@ public class BoundSetDomain extends SetDomain {
 
       // IntDomain.IntervalDomainID) {
       //       event = replacement.intersectAdapt(lub);
-      //       lub = replacement;
-      event = lub.intersectAdapt(intersect);
+      //       lubDomain = replacement;
+      event = lubDomain.intersectAdapt(intersect);
 
       if (event == Domain.NONE) {
       } else {
 
-        cardinality.intersectAdapt(glb.getSize(), lub.getSize());
+        cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
 
-        if (cardinality.isEmpty()) {
+        if (cardDomain.isEmpty()) {
           throw Store.failException;
         }
 
-        if (cardinality.min() == lub.getSize()) {
-          glb = lub;
-          cardinality.intersectAdapt(lub.getSize(), lub.getSize());
+        if (cardDomain.min() == lubDomain.getSize()) {
+          glbDomain = lubDomain;
+          cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
         }
 
         if (singleton()) {
           var.domainHasChanged(SetDomain.GROUND);
         } else {
-          var.domainHasChanged(SetDomain.LUB);
+          var.domainHasChanged(SetDomain.LUB_EVENT);
         }
       }
 
@@ -1100,7 +1101,7 @@ public class BoundSetDomain extends SetDomain {
 
       assert stamp < level;
 
-      IntDomain resultLub = lub.intersect(intersect);
+      IntDomain resultLub = lubDomain.intersect(intersect);
 
       // This check was generalized and moved to the beginning of the function.
       // TODO: Check that early exit is ok. For some reason it is NOT ok,
@@ -1109,7 +1110,7 @@ public class BoundSetDomain extends SetDomain {
       // propagation and only forced call of consistency function below recovers
       // the lost pruning.
 
-      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLub.getSize());
+      IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), resultLub.getSize());
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
@@ -1119,14 +1120,14 @@ public class BoundSetDomain extends SetDomain {
       BoundSetDomain result = new BoundSetDomain();
 
       if (resultCardinality.min() == resultLub.getSize()) {
-        result.glb = resultLub;
+        result.glbDomain = resultLub;
         resultCardinality.intersectAdapt(resultLub.getSize(), resultLub.getSize());
       } else {
-        result.glb = glb.cloneLight();
+        result.glbDomain = glbDomain.cloneLight();
       }
 
-      result.lub = resultLub;
-      result.cardinality = resultCardinality;
+      result.lubDomain = resultLub;
+      result.cardDomain = resultCardinality;
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1139,7 +1140,7 @@ public class BoundSetDomain extends SetDomain {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        var.domainHasChanged(SetDomain.LUB);
+        var.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
   }
@@ -1152,18 +1153,18 @@ public class BoundSetDomain extends SetDomain {
    */
   public void inValueLub(int level, SetVar var) {
 
-    if (lub.eq(glb)) {
+    if (lubDomain.eq(glbDomain)) {
       return;
     }
 
-    if (!cardinality.contains(lub.getSize())) {
+    if (!cardDomain.contains(lubDomain.getSize())) {
       throw Store.failException;
     }
 
     if (stamp == level) {
 
-      glb = lub;
-      cardinality.intersectAdapt(glb.getSize(), lub.getSize());
+      glbDomain = lubDomain;
+      cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
 
     } else {
 
@@ -1171,10 +1172,10 @@ public class BoundSetDomain extends SetDomain {
 
       // FIXME, allow specification of the sets in parts, so no unnecessary copying occur.
       BoundSetDomain result = new BoundSetDomain();
-      result.lub = lub.cloneLight();
-      result.glb = result.lub;
+      result.lubDomain = lubDomain.cloneLight();
+      result.glbDomain = result.lubDomain;
 
-      result.cardinality = new IntervalDomain(lub.getSize(), lub.getSize());
+      result.cardDomain = new IntervalDomain(lubDomain.getSize(), lubDomain.getSize());
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1196,27 +1197,27 @@ public class BoundSetDomain extends SetDomain {
    */
   public void inValueGlb(int level, SetVar var) {
 
-    if (lub.eq(glb)) {
+    if (lubDomain.eq(glbDomain)) {
       return;
     }
 
-    if (!cardinality.contains(glb.getSize())) {
+    if (!cardDomain.contains(glbDomain.getSize())) {
       throw Store.failException;
     }
 
     if (stamp == level) {
 
-      lub = glb;
-      cardinality.intersectAdapt(glb.getSize(), lub.getSize());
+      lubDomain = glbDomain;
+      cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
 
     } else {
 
       assert stamp < level;
 
       BoundSetDomain result = new BoundSetDomain();
-      result.glb = glb.cloneLight();
-      result.lub = result.glb;
-      result.cardinality = new IntervalDomain(glb.getSize(), glb.getSize());
+      result.glbDomain = glbDomain.cloneLight();
+      result.lubDomain = result.glbDomain;
+      result.cardDomain = new IntervalDomain(glbDomain.getSize(), glbDomain.getSize());
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1235,27 +1236,27 @@ public class BoundSetDomain extends SetDomain {
 
     // it is needed to make sure that this function is only executed when something is being
     // changed.
-    if (min <= cardinality.min() && cardinality.max() <= max) {
+    if (min <= cardDomain.min() && cardDomain.max() <= max) {
       return;
     }
 
     if (stamp == level) {
 
-      IntDomain cardinality = var.domain.card();
+      IntDomain cardDom = var.domain.card();
 
-      cardinality.intersectAdapt(min, max);
+      cardDom.intersectAdapt(min, max);
 
       if (var.domain.card().isEmpty()) {
         throw Store.failException;
       }
 
-      if (cardinality.max() == glb.getSize()) {
-        this.inValue(level, var, glb);
+      if (cardDom.max() == glbDomain.getSize()) {
+        this.inValue(level, var, glbDomain);
         return;
       }
 
-      if (cardinality.min() == lub.getSize()) {
-        this.inValue(level, var, lub);
+      if (cardDom.min() == lubDomain.getSize()) {
+        this.inValue(level, var, lubDomain);
         return;
       }
 
@@ -1263,23 +1264,23 @@ public class BoundSetDomain extends SetDomain {
 
       assert stamp < level;
 
-      IntDomain resultCardinality = cardinality.intersect(min, max);
+      IntDomain resultCardinality = cardDomain.intersect(min, max);
 
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
-      if (resultCardinality.max() == glb.getSize()) {
-        this.inValue(level, var, glb);
+      if (resultCardinality.max() == glbDomain.getSize()) {
+        this.inValue(level, var, glbDomain);
         return;
       }
-      if (resultCardinality.min() == lub.getSize()) {
-        this.inValue(level, var, lub);
+      if (resultCardinality.min() == lubDomain.getSize()) {
+        this.inValue(level, var, lubDomain);
         return;
       }
 
-      BoundSetDomain result = new BoundSetDomain(glb, lub);
-      result.cardinality = resultCardinality;
+      BoundSetDomain result = new BoundSetDomain(glbDomain, lubDomain);
+      result.cardDomain = resultCardinality;
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1290,6 +1291,6 @@ public class BoundSetDomain extends SetDomain {
       var.domain = result;
     }
 
-    var.domainHasChanged(SetDomain.CARDINALITY);
+    var.domainHasChanged(SetDomain.CARDINALITY_EVENT);
   }
 }

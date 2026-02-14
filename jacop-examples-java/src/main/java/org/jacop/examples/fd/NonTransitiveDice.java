@@ -167,11 +167,11 @@ public class NonTransitiveDice extends ExampleFd {
       IO.print(noSides + "\t");
       IO.print(currentBest + "\t");
       IO.print(result + "\t");
-      IO.print(example.search.getNodes() + "\t");
-      IO.print(example.search.getDecisions() + "\t");
-      IO.print(example.search.getWrongDecisions() + "\t");
-      IO.print(example.search.getBacktracks() + "\t");
-      IO.println(example.search.getMaximumDepth() + "\t");
+      IO.print(example.searchLabel.getNodes() + "\t");
+      IO.print(example.searchLabel.getDecisions() + "\t");
+      IO.print(example.searchLabel.getWrongDecisions() + "\t");
+      IO.print(example.searchLabel.getBacktracks() + "\t");
+      IO.println(example.searchLabel.getMaximumDepth() + "\t");
 
       currentBest--;
 
@@ -359,24 +359,24 @@ public class NonTransitiveDice extends ExampleFd {
    */
   public boolean searchSpecial() {
 
-    search = new DepthFirstSearch<>();
-    search.setPrintInfo(false);
-    search.setBacktracksOut(10000000);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.setPrintInfo(false);
+    searchLabel.setBacktracksOut(10000000);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     IO.print(noDices + "\t");
     IO.print(noSides + "\t");
     IO.print(currentBest + "\t");
     IO.print(result + "\t");
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.println(search.getMaximumDepth() + "\t");
+    IO.print(searchLabel.getNodes() + "\t");
+    IO.print(searchLabel.getDecisions() + "\t");
+    IO.print(searchLabel.getWrongDecisions() + "\t");
+    IO.print(searchLabel.getBacktracks() + "\t");
+    IO.println(searchLabel.getMaximumDepth() + "\t");
 
     return result;
   }

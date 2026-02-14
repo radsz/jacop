@@ -50,7 +50,7 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
   public SmallDenseDomainValueEnumeration(SmallDenseDomain dom) {
 
     domain = dom;
-    current = dom.min;
+    current = dom.minBound;
     bits = dom.bits;
   }
 
@@ -83,12 +83,12 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
   public void domainHasChanged() {
 
     // current, denotes the last element which has been returned.
-    if (domain.min + 63 < current) {
+    if (domain.minBound + 63 < current) {
       bits = 0;
       // no more elements.
       return;
     }
 
-    bits = domain.bits << (current - domain.min);
+    bits = domain.bits << (current - domain.minBound);
   }
 }

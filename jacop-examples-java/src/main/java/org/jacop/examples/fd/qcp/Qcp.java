@@ -254,16 +254,16 @@ public class Qcp extends ExampleFd {
 
     long begin = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<>();
-    search.setPrintInfo(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.setPrintInfo(true);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
-    search.setConsistencyListener(shaving);
-    search.setExitChildListener(shaving);
+    searchLabel.setConsistencyListener(shaving);
+    searchLabel.setExitChildListener(shaving);
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long end = System.currentTimeMillis();
 
@@ -301,14 +301,14 @@ public class Qcp extends ExampleFd {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(true);
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.getSolutionListener().searchAll(true);
+    searchLabel.getSolutionListener().recordSolutions(true);
 
-    search.setInitializeListener(transform);
+    searchLabel.setInitializeListener(transform);
     transform.solutionLimit = 50000;
 
-    boolean result = search.labeling(store, select);
+    boolean result = searchLabel.labeling(store, select);
 
     long T2 = System.currentTimeMillis();
     long T = T2 - T1;
