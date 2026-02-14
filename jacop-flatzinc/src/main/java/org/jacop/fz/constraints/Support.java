@@ -777,11 +777,6 @@ public class Support implements ParserTreeConstants {
       }
 
       @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-      }
-
-      @Override
       public String toString() {
         return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
       }
@@ -811,11 +806,6 @@ public class Support implements ParserTreeConstants {
         } else if (b.min() == 1) { // x==c must be true
           x.domain.inValue(store.level, x, c);
         }
-      }
-
-      @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
       }
 
       @Override
@@ -853,11 +843,6 @@ public class Support implements ParserTreeConstants {
       }
 
       @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-      }
-
-      @Override
       public String toString() {
         return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
       }
@@ -886,11 +871,6 @@ public class Support implements ParserTreeConstants {
         } else if (b.min() == 1) { // x!=c must be true
           x.domain.inComplement(store.level, x, c);
         }
-      }
-
-      @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
       }
 
       @Override
@@ -942,11 +922,6 @@ public class Support implements ParserTreeConstants {
       }
 
       @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-      }
-
-      @Override
       public String toString() {
         return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
       }
@@ -985,11 +960,6 @@ public class Support implements ParserTreeConstants {
 
           } while (store.propagationHasOccurred);
         }
-      }
-
-      @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
       }
 
       @Override

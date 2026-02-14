@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -198,11 +197,6 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
     }
 
     return result;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

@@ -311,10 +311,6 @@ public class Assignment extends Constraint
     return true;
   }
 
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   // registers the constraint in the constraint store
   @Override
   public void impose(Store store) {

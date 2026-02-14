@@ -1053,11 +1053,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void impose(Store store) {
 
     xIndex = Var.positionMapping(listOfX, false, this.getClass());

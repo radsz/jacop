@@ -91,11 +91,6 @@ public class PeqQ extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void notConsistency(Store store) {
 
     if (q.singleton()) {

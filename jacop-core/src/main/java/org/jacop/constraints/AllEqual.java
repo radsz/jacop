@@ -162,11 +162,6 @@ public class AllEqual extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public int getDefaultNotConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

@@ -110,11 +110,6 @@ public class XeqP extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean satisfied() {
     return grounded() && x.min() <= p.max() && x.max() >= p.min();
   }

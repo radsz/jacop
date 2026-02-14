@@ -479,11 +479,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return contains;
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   /**
    * Returns the array of rectangles constrained by this diff constraint.
    *

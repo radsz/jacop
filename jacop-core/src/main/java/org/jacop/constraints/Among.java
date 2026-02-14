@@ -41,7 +41,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -251,11 +250,6 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     if (debugAll) {
       log.debug("{}", this);
     }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

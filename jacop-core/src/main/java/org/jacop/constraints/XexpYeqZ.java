@@ -132,11 +132,6 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean satisfied() {
 
     return grounded() && toInt(Math.pow(x.min(), y.min())) == z.min();

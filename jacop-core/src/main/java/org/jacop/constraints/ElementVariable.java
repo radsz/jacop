@@ -327,11 +327,6 @@ public class ElementVariable extends Constraint
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void impose(Store store) {
 
     super.impose(store);

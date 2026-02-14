@@ -771,11 +771,6 @@ public class Alldistinct extends Constraint
     }
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   private boolean hopcroftKarpMaximumMatching() {
 
     maximumMatchingNotRecomputed = false;

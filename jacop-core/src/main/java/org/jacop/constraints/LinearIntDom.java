@@ -403,11 +403,6 @@ public class LinearIntDom extends LinearInt {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

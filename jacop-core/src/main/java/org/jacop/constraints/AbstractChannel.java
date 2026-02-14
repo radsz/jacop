@@ -124,11 +124,6 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     }
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   public boolean satisfied() {
     int one = Integer.MIN_VALUE;
     if (x.singleton()) {

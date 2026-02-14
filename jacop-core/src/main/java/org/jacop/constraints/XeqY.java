@@ -113,11 +113,6 @@ public class XeqY extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void notConsistency(final Store store) {
 
     if (y.singleton()) {

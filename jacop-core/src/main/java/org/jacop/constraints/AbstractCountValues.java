@@ -108,11 +108,6 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     rest = new TimeStamp<>(store, 0);
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   /**
    * Swaps two elements in the list array.
    *

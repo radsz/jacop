@@ -113,11 +113,6 @@ public abstract class AbstractAtLeastMost extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   protected int getDefaultNestedConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

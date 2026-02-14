@@ -125,11 +125,6 @@ public class XplusYeqC extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void notConsistency(final Store store) {
 
     do {

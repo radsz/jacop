@@ -444,11 +444,6 @@ public class Binpacking extends Constraint
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean satisfied() {
 
     grounded();

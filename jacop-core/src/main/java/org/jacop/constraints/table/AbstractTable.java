@@ -36,7 +36,6 @@ import java.util.Set;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -133,11 +132,6 @@ public abstract class AbstractTable extends Constraint implements UsesQueueVaria
       i++;
     }
     return true;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

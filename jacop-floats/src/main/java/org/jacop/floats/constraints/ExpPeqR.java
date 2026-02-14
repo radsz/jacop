@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -137,11 +136,6 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
   @Override
   public boolean satisfied() {
     return grounded() && java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

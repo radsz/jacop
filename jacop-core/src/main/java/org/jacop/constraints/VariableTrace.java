@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -108,11 +107,6 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
 
   /** {@inheritDoc} */
   public void consistency(Store store) {}
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
 
   /** {@inheritDoc} */
   public void queueVariable(int level, Var v) {

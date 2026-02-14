@@ -1122,11 +1122,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public String toString() {
 
     StringBuilder result = new StringBuilder(id());

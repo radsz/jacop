@@ -215,11 +215,6 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void removeLevel(int level) {
     if (level == firstConsistencyLevel) {
       firstConsistencyCheck = true;

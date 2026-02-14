@@ -219,11 +219,6 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void queueVariable(int level, Var v) {
     if (v == index) {
       indexHasChanged = true;

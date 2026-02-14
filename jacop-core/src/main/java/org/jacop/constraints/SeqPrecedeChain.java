@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -90,11 +89,6 @@ public class SeqPrecedeChain extends Constraint {
    */
   public SeqPrecedeChain(List<? extends IntVar> x) {
     this(x.toArray(new IntVar[0]));
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

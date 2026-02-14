@@ -299,11 +299,6 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean isStateful() {
     return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }

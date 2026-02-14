@@ -47,6 +47,7 @@ import lombok.NoArgsConstructor;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
@@ -297,7 +298,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    *
    * @return the int code of the default pruning event.
    */
-  public abstract int getDefaultConsistencyPruningEvent();
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
   /**
    * It gives the id string of a constraint.

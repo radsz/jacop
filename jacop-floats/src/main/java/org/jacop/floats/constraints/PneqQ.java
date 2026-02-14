@@ -132,11 +132,6 @@ public class PneqQ extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public String toString() {
     return id() + " : PneqQ(" + p + ", " + q + " )";
   }

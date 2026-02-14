@@ -221,11 +221,6 @@ public class ElementSetVariable extends Constraint implements Stateful {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public void removeLevel(int level) {
     if (level == firstConsistencyLevel) {
       firstConsistencyCheck = true;

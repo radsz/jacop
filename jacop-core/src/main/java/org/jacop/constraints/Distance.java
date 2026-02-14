@@ -318,11 +318,6 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean notSatisfied() {
 
     IntDomain Xdom = x.dom();

@@ -137,11 +137,6 @@ public class Circuit extends Alldiff implements Stateful {
     return current;
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   // registers the constraint in the constraint store
   @Override
   public void impose(Store store) {

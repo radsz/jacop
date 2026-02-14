@@ -37,7 +37,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -105,11 +104,6 @@ public class Conditional extends Constraint implements SatisfiedPresent {
    */
   public Conditional(List<? extends IntVar> b, List<? extends PrimitiveConstraint> c) {
     this(b.toArray(new IntVar[0]), c.toArray(new PrimitiveConstraint[0]));
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

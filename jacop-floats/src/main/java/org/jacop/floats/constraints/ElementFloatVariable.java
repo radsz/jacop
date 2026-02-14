@@ -37,7 +37,6 @@ import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -216,11 +215,6 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
   private boolean disjoint(FloatVar v1, FloatVar v2) {
     return v1.min() > v2.max() || v2.min() > v1.max() || !v1.domain.isIntersecting(v2.domain);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override

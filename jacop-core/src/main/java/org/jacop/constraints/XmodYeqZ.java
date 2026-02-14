@@ -236,11 +236,6 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean satisfied() {
     return grounded() && z.min() == mod(x.min(), y.min());
   }

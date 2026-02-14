@@ -29,7 +29,6 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -385,11 +384,6 @@ public class Nooverlap extends Constraint {
     }
 
     doAreaCheck = rSpace < minArea;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   // registers the constraint in the constraint store

@@ -79,7 +79,6 @@ import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -122,11 +121,6 @@ public class SingleConstraintTest extends TestHelper {
                   }
 
                 } while (store.propagationHasOccurred);
-              }
-
-              @Override
-              public int getDefaultConsistencyPruningEvent() {
-                return IntDomain.ANY;
               }
             };
 

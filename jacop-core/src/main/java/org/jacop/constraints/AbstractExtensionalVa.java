@@ -42,7 +42,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
@@ -280,11 +279,6 @@ public abstract class AbstractExtensionalVa extends Constraint
    */
   protected int findPosition(int value, int[] values) {
     return findValuePosition(value, values);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   /**

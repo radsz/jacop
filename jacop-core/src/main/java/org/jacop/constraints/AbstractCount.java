@@ -83,11 +83,6 @@ public abstract class AbstractCount extends PrimitiveConstraint {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

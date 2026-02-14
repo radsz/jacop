@@ -255,11 +255,6 @@ public class ElementFloat extends Constraint
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
   public boolean isStateful() {
     return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
