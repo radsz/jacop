@@ -51,14 +51,7 @@ class DisjointConditionalProfile extends ProfileConditional {
 
   DisjointConditionalProfile() {}
 
-  void make(
-      int i,
-      int j,
-      Rectangle r,
-      int begin,
-      int end,
-      List<RectangleWithCondition> rs,
-      ExclusiveList exList) {
+  void make(int i, int j, Rectangle r, List<RectangleWithCondition> rs, ExclusiveList exList) {
 
     clear();
     MaxProfile = 0;

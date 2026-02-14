@@ -331,7 +331,7 @@ public class LinearInt extends PrimitiveConstraint {
 
           break;
         default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
+          throw new IllegalStateException("Internal error in " + getClass().getName());
       }
 
     } while (store.propagationHasOccurred);

@@ -121,7 +121,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    */
   public Diff(IntVar[][] rectangles) {
 
-    assert rectangles != null : "Rectangles list is null";
+    if (rectangles == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
+    }
 
     queueIndex = 2;
     this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
@@ -877,15 +879,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   void profileNarrowing(int i, Rectangle r, List<Rectangle> profileCandidates) {
     // check profile first
 
-    IntDomain rOriginIdom = r.origin[i].dom();
-    int rOriginIdomMin = rOriginIdom.min();
-    int rOriginIdomMax = rOriginIdom.max();
     DiffnProfile profile = new DiffnProfile();
 
     for (int j = 0; j < r.dim; j++) {
       if (j != i) {
-        profile.make(
-            j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), profileCandidates);
+        profile.make(j, i, r, profileCandidates);
 
         if (!profile.isEmpty()) {
           if (traceOn) {

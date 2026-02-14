@@ -307,7 +307,9 @@ public class DisjointConditional extends Diff {
       List<List<Integer>> exceptionIndices,
       List<? extends IntVar> exceptionCondition) {
 
-    assert rectangles != null : "Rectangles list is null";
+    if (rectangles == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
+    }
 
     queueIndex = 2;
     IntVar[] R;
@@ -316,7 +318,9 @@ public class DisjointConditional extends Diff {
     this.rectangles = new Rectangle[rectangles.length];
 
     for (int i = 0; i < rectangles.length; i++) {
-      assert rectangles[i] != null : i + "-th list within rectangles list is null";
+      if (rectangles[i] == null) {
+        throw new IllegalArgumentException(i + "-th list within rectangles list is null");
+      }
       R = rectangles[i];
       if (R.length == size) {
         Rectangle rect = new Rectangle(R);
@@ -951,22 +955,12 @@ public class DisjointConditional extends Diff {
       int i, Rectangle r, List<RectangleWithCondition> profileCandidates) {
     // check profile first
 
-    IntDomain rOriginIdom = r.origin[i].dom();
-    int rOriginIdomMin = rOriginIdom.min();
-    int rOriginIdomMax = rOriginIdom.max();
     DisjointConditionalProfile profile = new DisjointConditionalProfile();
 
     for (int j = 0; j < r.dim; j++) {
       if (j != i && r.length[i].min() != 0) {
 
-        profile.make(
-            j,
-            i,
-            r,
-            rOriginIdomMin,
-            rOriginIdomMax + r.length[i].min(),
-            profileCandidates,
-            exclusionList);
+        profile.make(j, i, r, profileCandidates, exclusionList);
 
         if (!profile.isEmpty()) {
           if (traceOn) {

@@ -132,9 +132,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
     }
 
-    assert starts.length == durations.length : "Starts and durations list have different length";
-    assert resources.length == durations.length
-        : "Resources and durations list have different length";
+    if (starts.length != durations.length) {
+      throw new IllegalArgumentException("Starts and durations list have different length");
+    }
+    if (resources.length != durations.length) {
+      throw new IllegalArgumentException("Resources and durations list have different length");
+    }
 
     this.queueIndex = 2;
     this.numberId = idNumber.incrementAndGet();

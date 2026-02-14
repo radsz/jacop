@@ -146,7 +146,7 @@ public class NoGood extends Constraint {
         // mostly improper use of no-goods has been performed.
         for (IntVar listOfVar : listOfVars) {
           if (listOfVar.getSize() != 1 && listOfVar != firstWatch) {
-            throw new RuntimeException(
+            throw new IllegalStateException(
                 "The NoGood learnt for one model is used in different model (model created across many store levels)");
           }
         }

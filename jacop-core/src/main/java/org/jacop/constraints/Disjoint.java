@@ -188,7 +188,9 @@ public class Disjoint extends Diff {
    */
   public Disjoint(IntVar[][] rectangles) {
 
-    assert rectangles != null : "Rectangles list is null";
+    if (rectangles == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
+    }
 
     queueIndex = 2;
     this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
@@ -498,16 +500,12 @@ public class Disjoint extends Diff {
   void profileNarrowing(int i, Rectangle r, List<Rectangle> profileCandidates) {
     // check profile first
 
-    IntDomain rOriginIdom = r.origin[i].dom();
-    int rOriginIdomMin = rOriginIdom.min();
-    int rOriginIdomMax = rOriginIdom.max();
     DiffnProfile profile = new DiffnProfile();
 
     for (int j = 0; j < r.dim; j++) {
       if (j != i && r.length[i].min() != 0) {
 
-        profile.make(
-            j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), profileCandidates);
+        profile.make(j, i, r, profileCandidates);
 
         if (!profile.isEmpty()) {
           if (traceOn) {

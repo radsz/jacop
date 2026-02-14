@@ -51,7 +51,7 @@ class DiffnProfile extends Profile {
 
   DiffnProfile() {}
 
-  void make(int i, int j, Rectangle r, int begin, int end, List<Rectangle> rs) {
+  void make(int i, int j, Rectangle r, List<Rectangle> rs) {
 
     clear();
     maxProfileItemHeight = 0;

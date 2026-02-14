@@ -121,7 +121,7 @@ public class Circuit extends Alldiff implements Stateful {
 
     } while (store.propagationHasOccurred);
 
-    sccs(store); // strongly connected components
+    sccs(); // strongly connected components
   }
 
   int firstNode(int current) {
@@ -154,7 +154,7 @@ public class Circuit extends Alldiff implements Stateful {
     }
   }
 
-  int lastNode(Store store, int current) {
+  int lastNode(int current) {
     int start = current;
     int last;
     do {
@@ -183,7 +183,7 @@ public class Circuit extends Alldiff implements Stateful {
         int Qmin = dom.min();
 
         chainLength = 0;
-        int lastInChain = lastNode(store, Qmin);
+        int lastInChain = lastNode(Qmin);
         int firstInChain = firstNode(Qmin);
         if (chainLength < list.length - 1) {
           list[lastInChain - 1].domain.inComplement(
@@ -227,7 +227,7 @@ public class Circuit extends Alldiff implements Stateful {
   // to build a circuit. Based on the algorithm from the book
   // Robert Sedgewick, Algorithms, 1988, p. 482.
 
-  void sccs(Store store) {
+  void sccs() {
 
     Arrays.fill(val, 0);
     idd = 0;

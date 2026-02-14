@@ -793,7 +793,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     int xIndex = stampValue - 1;
     int e;
-    int x = 0;
+    int xIdx = 0;
 
     System.arraycopy(match2, 0, match3, 0, stampValue);
 
@@ -808,20 +808,20 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         assert match2[match2xOrder[xIndex]] == i;
 
         while (xIndex >= 0) {
-          x = match2xOrder[xIndex];
-          if (match1[x] == i) {
+          xIdx = match2xOrder[xIndex];
+          if (match1[xIdx] == i) {
             xIndex--;
           } else {
             break;
           }
         }
 
-        assert match1[x] < i;
-        assert match2[x] == i;
+        assert match1[xIdx] < i;
+        assert match2[xIdx] == i;
 
-        match3[x] = match1[x];
+        match3[xIdx] = match1[xIdx];
         nbOfMatchPerY[i]--;
-        nbOfMatchPerY[match1[x]]++;
+        nbOfMatchPerY[match1[xIdx]]++;
         xIndex--;
         e--;
       }
@@ -1103,13 +1103,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // I swap the element with the last one before the stamp
     // which have nothing to do in the no-more-seen variables
     IntVar v1 = list[element];
-    int stampValue = stamp.value();
-    list[element] = list[stampValue];
+    int currentStampValue = stamp.value();
+    list[element] = list[currentStampValue];
     // update the index of the moved element which was behind the stamp value
-    xNodesHash.put(list[stampValue], element);
+    xNodesHash.put(list[currentStampValue], element);
     // and update the one put to the end
-    xNodesHash.put(v1, stampValue);
-    list[stampValue] = v1;
+    xNodesHash.put(v1, currentStampValue);
+    list[currentStampValue] = v1;
   }
 
   // ---------------------------COUNT_BOUND_CONCISTENCY-----------------------//
@@ -1178,14 +1178,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void upperCount(int[] maxU) {
 
     int xIndex;
-    int x;
+    int xIdx;
     pCount.clear();
     xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
       while (xIndex >= 0) {
-        x = match2xOrder[xIndex];
-        if (match2[x] == i) {
-          pCount.add(match1[x]);
+        xIdx = match2xOrder[xIndex];
+        if (match2[xIdx] == i) {
+          pCount.add(match1[xIdx]);
           xIndex--;
         } else {
           break;
@@ -1207,15 +1207,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void lowerCount(int[] minL) {
     int xIndex;
     int count;
-    int x;
+    int xIdx;
     pCount.clear();
     xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
       count = 0;
       while (xIndex >= 0) {
-        x = match2xOrder[xIndex];
-        if (match2[x] == i) {
-          pCount.add(match1[x]);
+        xIdx = match2xOrder[xIndex];
+        if (match2[xIdx] == i) {
+          pCount.add(match1[xIdx]);
           xIndex--;
         } else {
           break;
