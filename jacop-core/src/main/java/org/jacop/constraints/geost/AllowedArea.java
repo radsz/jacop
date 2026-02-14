@@ -45,7 +45,7 @@ import org.jacop.core.Var;
 public class AllowedArea extends InternalConstraint {
 
   // TODO: What is the reason for using it? What are the limitation of using this solution?
-  private static final int half_max = (Integer.MAX_VALUE - 1) / 2;
+  private static final int HALF_MAX = (Integer.MAX_VALUE - 1) / 2;
 
   final Geost geost;
 
@@ -146,13 +146,13 @@ public class AllowedArea extends InternalConstraint {
       if (c[i] + constrainedBox.origin[i] < origin[i]) {
         // beginning of other box is before beginning of area
         // point is before area, outbox covers all up to the area limit
-        outbox.origin[i] = -half_max + origin[i] - constrainedBox.origin[i];
+        outbox.origin[i] = -HALF_MAX + origin[i] - constrainedBox.origin[i];
         /*
          * this +1 is needed because of the definition of an outbox: the lexicographcally smallest
          * point of the outbox is not feasible (but the largest is)
          */
 
-        outbox.length[i] = half_max;
+        outbox.length[i] = HALF_MAX;
       } else if (c[i] + constrainedBox.length[i] + constrainedBox.origin[i]
           <= origin[i] + length[i]) {
         // point is inside area
@@ -161,7 +161,7 @@ public class AllowedArea extends InternalConstraint {
         inCount++;
 
         // outbox covers everything
-        outbox.origin[i] = origin[i] - half_max;
+        outbox.origin[i] = origin[i] - HALF_MAX;
         outbox.length[i] = Integer.MAX_VALUE;
       } else {
         // point is after area, outbox covers everything from area boundary
@@ -171,13 +171,13 @@ public class AllowedArea extends InternalConstraint {
                 - constrainedBox.length[i]
                 - constrainedBox.origin[i]
                 + 1; // +1 for same reason as before
-        outbox.length[i] = half_max;
+        outbox.length[i] = HALF_MAX;
       }
     }
 
     // the allowed area is the same at any time, thus the box covers the whole space in that
     // dimension
-    outbox.origin[dimension] = -half_max;
+    outbox.origin[dimension] = -HALF_MAX;
     outbox.length[dimension] = Integer.MAX_VALUE;
 
     if (inCount == dimension) {
@@ -198,10 +198,10 @@ public class AllowedArea extends InternalConstraint {
 
     switch (minlex) {
       case PRUNEMAX:
-        Arrays.fill(dataBox.origin, IntDomain.MaxInt);
+        Arrays.fill(dataBox.origin, IntDomain.MAX_INT);
         break;
       case PRUNEMIN:
-        Arrays.fill(dataBox.origin, IntDomain.MinInt);
+        Arrays.fill(dataBox.origin, IntDomain.MIN_INT);
         break;
       default:
         break;

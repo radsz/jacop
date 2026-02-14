@@ -683,7 +683,7 @@ public final class SatWrapper extends Constraint
     this.store = store;
 
     // make solver quiet, if not debug
-    if (!Store.debug) {
+    if (!Store.DEBUG) {
       core.verbosity = 0;
     }
 

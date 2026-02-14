@@ -161,7 +161,7 @@ public class Diet extends ExampleFd {
 
     IntVar[] sums = new IntVar[n];
     for (int i = 0; i < n; i++) {
-      sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
+      sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MAX_INT);
 
       store.impose(new LinearInt(x, matrix[i], "==", sums[i]));
       store.impose(new XgteqC(sums[i], limits[i]));
@@ -191,7 +191,7 @@ public class Diet extends ExampleFd {
     cost = new IntVar(store, "cost", 0, 120);
 
     for (int i = 0; i < n; i++) {
-      IntVar minReq = new IntVar(store, "limit" + i, limits[i], IntDomain.MaxInt);
+      IntVar minReq = new IntVar(store, "limit" + i, limits[i], IntDomain.MAX_INT);
       if (i != 1) {
         store.impose(
             Knapsack.builder()

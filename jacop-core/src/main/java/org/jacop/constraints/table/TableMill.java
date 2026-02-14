@@ -43,7 +43,7 @@ import org.jacop.core.ValueEnumeration;
  */
 public class TableMill {
 
-  static final int tableMaxSize = 50_000;
+  static final int TABLE_MAX_SIZE = 50_000;
 
   private TableMill() {}
 
@@ -90,7 +90,7 @@ public class TableMill {
         int[] a = new int[assignment.length];
         System.arraycopy(assignment, 0, a, 0, assignment.length);
         support.add(a);
-        if (support.size() > tableMaxSize) {
+        if (support.size() > TABLE_MAX_SIZE) {
           return null;
         }
       }
@@ -126,7 +126,7 @@ public class TableMill {
       if (valDom.contains(listEl)) {
         support.add(new int[] {e, listEl});
       }
-      if (support.size() > tableMaxSize) {
+      if (support.size() > TABLE_MAX_SIZE) {
         return null;
       }
     }

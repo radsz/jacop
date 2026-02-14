@@ -51,12 +51,12 @@ public abstract class FloatDomain extends Domain {
   /*
    * It specifies the minimum element in the domain.
    */
-  public static final double MinFloat = -Double.MAX_VALUE; // -1e150;
+  public static final double MIN_FLOAT = -Double.MAX_VALUE; // -1e150;
 
   /*
    * It specifies the maximum element in the domain.
    */
-  public static final double MaxFloat = Double.MAX_VALUE; // 1e150;
+  public static final double MAX_FLOAT = Double.MAX_VALUE; // 1e150;
   /*
    * It specifies the constant pi, as defined in java.lang.Math package.
    */
@@ -82,10 +82,10 @@ public abstract class FloatDomain extends Domain {
   public static final int ANY = 2;
 
   /** Unique identifier for an interval domain type. */
-  public static final int FloatIntervalDomainID = 0;
+  public static final int FLOAT_INTERVAL_DOMAIN_ID = 0;
 
   /** Unique identifier for an interval domain type. */
-  public static final int IntervalDomainID = 0;
+  public static final int INTERVAL_DOMAIN_ID = 0;
 
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
@@ -547,20 +547,20 @@ public abstract class FloatDomain extends Domain {
         return new FloatIntervalDomain(min, max); // .subtract(0.0);
       } else if (P0_2) { // P1 /\ P0
         min = down(a / d);
-        return new FloatIntervalDomain(min, FloatDomain.MaxFloat); // .subtract(0.0);
+        return new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT); // .subtract(0.0);
       } else if (M_2) { // P1 /\ M
         min = down(a / d);
         max = up(a / c);
         return (FloatIntervalDomain)
-            new FloatIntervalDomain(FloatDomain.MinFloat, max)
-                .union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); // .subtract(0.0)
+            new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max)
+                .union(new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT)); // .subtract(0.0)
       } else if (N1_2) { // P1 /\ N1
         min = down(b / d);
         max = up(a / c);
         return new FloatIntervalDomain(min, max); // .subtract(0.0);
       } else if (N0_2) { // P1 /\ N0
         max = up(a / c);
-        return new FloatIntervalDomain(FloatDomain.MinFloat, max); // .subtract(0.0);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max); // .subtract(0.0);
       } else { // P1 /\ Z
         throw Store.failException;
       }
@@ -574,7 +574,7 @@ public abstract class FloatDomain extends Domain {
         max = 0.0;
         return new FloatIntervalDomain(min, max);
       } else { // P0 /\ {M \/ Z \/ P0 \/ N0}}
-        return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       }
     } else if (M_1) {
       if (P1_2) { // M /\ P
@@ -586,7 +586,7 @@ public abstract class FloatDomain extends Domain {
         max = up(a / d);
         return new FloatIntervalDomain(min, max);
       } else {
-        return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       }
     } else if (N1_1) {
       if (P1_2) { // N1 /\ P1
@@ -595,21 +595,21 @@ public abstract class FloatDomain extends Domain {
         return new FloatIntervalDomain(min, max); // .subtract(0.0);
       } else if (P0_2) { // N1 /\ P0
         max = up(b / d);
-        return new FloatIntervalDomain(FloatDomain.MinFloat, max); // .subtract(0.0);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max); // .subtract(0.0);
       } else if (M_2) {
         min = down(b / c);
         max = up(b / d);
 
         return (FloatIntervalDomain)
-            new FloatIntervalDomain(FloatDomain.MinFloat, max)
-                .union(new FloatIntervalDomain(min, FloatDomain.MaxFloat)); // .subtract(0.0)
+            new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max)
+                .union(new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT)); // .subtract(0.0)
       } else if (N1_2) { // N1 /\ N1
         min = down(b / c);
         max = up(a / d);
         return new FloatIntervalDomain(min, max); // .subtract(0.0);
       } else if (N0_2) { // N1 /\ N0
         min = down(b / c);
-        return new FloatIntervalDomain(min, FloatDomain.MaxFloat); // .subtract(0.0);
+        return new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT); // .subtract(0.0);
       } else { // N1 /\ Z
         throw Store.failException;
       }
@@ -623,7 +623,7 @@ public abstract class FloatDomain extends Domain {
         max = up(a / d);
         return new FloatIntervalDomain(min, max);
       } else { // N0 /\ {M \/ Z \/ P0 \/ N0}}
-        return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       }
     } else if (Z_1) {
       if (P1_2 || N1_2) {
@@ -631,7 +631,7 @@ public abstract class FloatDomain extends Domain {
         max = 0.0;
         return new FloatIntervalDomain(min, max);
       } else {
-        return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       }
     }
 

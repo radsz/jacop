@@ -99,7 +99,7 @@ public class Loan {
       R = new FloatVar(store, "R", r, r);
       IO.println("R = " + r);
     } else {
-      R = new FloatVar(store, "R", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+      R = new FloatVar(store, "R", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       IO.println("R = ?");
     }
 
@@ -108,7 +108,7 @@ public class Loan {
       P = new FloatVar(store, "P", p, p);
       IO.println("P = " + p);
     } else {
-      P = new FloatVar(store, "P", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+      P = new FloatVar(store, "P", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       IO.println("P = ?");
     }
 
@@ -116,44 +116,47 @@ public class Loan {
 
     FloatVar B1 =
         new FloatVar(
-            store, "B1", FloatDomain.MinFloat, FloatDomain.MaxFloat); // balance after one quarter
+            store, "B1", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT); // balance after one quarter
 
     FloatVar B4; //  balance owing at end
     if (b4 >= 0.0) {
       B4 = new FloatVar(store, "B4", b4, b4);
       IO.println("B4 = " + b4);
     } else {
-      B4 = new FloatVar(store, "B4", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+      B4 = new FloatVar(store, "B4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       IO.println("B4 = ?");
     }
 
     FloatVar t1 = new FloatVar(store, "t1", 1.0, 2.0);
     store.impose(new PplusQeqR(one, I, t1));
-    FloatVar t2 = new FloatVar(store, "t2", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar t2 = new FloatVar(store, "t2", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     store.impose(new PmulQeqR(P, t1, t2));
-    FloatVar negR = new FloatVar(store, "negR", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar negR = new FloatVar(store, "negR", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0);
     store.impose(new PplusQeqR(R, negR, zero));
     store.impose(new PplusQeqR(t2, negR, B1));
 
-    FloatVar t3 = new FloatVar(store, "t3", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar t3 = new FloatVar(store, "t3", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     store.impose(new PmulQeqR(B1, t1, t3));
     FloatVar B2 =
         new FloatVar(
-            store, "B2", FloatDomain.MinFloat, FloatDomain.MaxFloat); // balance after two quarters
+            store,
+            "B2",
+            FloatDomain.MIN_FLOAT,
+            FloatDomain.MAX_FLOAT); // balance after two quarters
     store.impose(new PplusQeqR(t3, negR, B2));
 
-    FloatVar t4 = new FloatVar(store, "t4", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar t4 = new FloatVar(store, "t4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     store.impose(new PmulQeqR(B2, t1, t4));
     FloatVar B3 =
         new FloatVar(
             store,
             "B3",
-            FloatDomain.MinFloat,
-            FloatDomain.MaxFloat); // balance after three quarters
+            FloatDomain.MIN_FLOAT,
+            FloatDomain.MAX_FLOAT); // balance after three quarters
     store.impose(new PplusQeqR(t4, negR, B3));
 
-    FloatVar t5 = new FloatVar(store, "t5", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar t5 = new FloatVar(store, "t5", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     store.impose(new PmulQeqR(B3, t1, t5));
     store.impose(new PplusQeqR(t5, negR, B4));
 

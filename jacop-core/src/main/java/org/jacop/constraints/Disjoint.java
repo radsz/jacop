@@ -304,7 +304,7 @@ public class Disjoint extends Diff {
     int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
-      startMin[i] = IntDomain.MaxInt;
+      startMin[i] = IntDomain.MAX_INT;
       stopMax[i] = 0;
       minLength[i] = rLengthDom.min();
 

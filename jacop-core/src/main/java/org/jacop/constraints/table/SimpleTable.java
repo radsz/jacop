@@ -291,7 +291,7 @@ public class SimpleTable extends AbstractTable implements SatisfiedPresent {
 
     StringBuilder s = toStringBase("simpleTable");
 
-    if (debug) {
+    if (DEBUG) {
       s.append("\n0:").append("0x%08X".formatted(words.value()));
 
       s.append("\nsupports: [");

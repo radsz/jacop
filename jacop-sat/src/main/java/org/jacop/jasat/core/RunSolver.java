@@ -56,7 +56,7 @@ import org.jacop.jasat.utils.structures.IntVec;
 public final class RunSolver {
 
   private static final OptParse<Config> parser = new OptParse<>();
-  private static final String helpString = "usage : RunSolver [option [option...]] <filename>";
+  private static final String HELP_STRING = "usage : RunSolver [option [option...]] <filename>";
   // set the verbosity
   private static final OptHandler<Config> verboseHandler =
       new OptHandler<>() {
@@ -125,7 +125,7 @@ public final class RunSolver {
   private static String filename;
 
   static {
-    parser.setHelp(helpString);
+    parser.setHelp(HELP_STRING);
     parser.addHandler(helpHandler);
     parser.addHandler(verboseHandler);
     parser.addHandler(timeoutHandler);

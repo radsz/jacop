@@ -81,17 +81,17 @@ public class XeqP extends Constraint implements SatisfiedPresent {
 
       // domain consistency
       int xMin;
-      if (Math.abs(p.min()) < (double) IntDomain.MaxInt) {
+      if (Math.abs(p.min()) < (double) IntDomain.MAX_INT) {
         xMin = (int) (Math.round(Math.ceil(p.min())));
       } else {
-        xMin = IntDomain.MinInt;
+        xMin = IntDomain.MIN_INT;
       }
 
       int xMax;
-      if (Math.abs(p.max()) < (double) IntDomain.MaxInt) {
+      if (Math.abs(p.max()) < (double) IntDomain.MAX_INT) {
         xMax = (int) (Math.round(Math.floor(p.max())));
       } else {
-        xMax = IntDomain.MaxInt;
+        xMax = IntDomain.MAX_INT;
       }
 
       if (xMin > xMax) {

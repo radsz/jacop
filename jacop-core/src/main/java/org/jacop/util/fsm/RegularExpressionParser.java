@@ -50,19 +50,19 @@ import org.jacop.core.IntervalDomain;
 public class RegularExpressionParser {
 
   /** Constant denoting an expression. */
-  public static final int Expression = 0;
+  public static final int EXPRESSION = 0;
 
   /** The constant denoting simple literal. */
-  public static final int Literal = 1;
+  public static final int LITERAL = 1;
 
   /** The constant denoting concatenation expression. */
-  public static final int Concatenation = 2;
+  public static final int CONCATENATION = 2;
 
   /** The constant denoting star expression. */
-  public static final int Star = 3;
+  public static final int STAR = 3;
 
   /** The constant denoting sum expression. */
-  public static final int Sum = 4;
+  public static final int SUM = 4;
 
   private final LexicalAnalyzer lexer; // lexical analyzer that parser uses
   private int token;
@@ -80,7 +80,7 @@ public class RegularExpressionParser {
 
     if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
       // print error message and throw SyntaxException
-      expect(LexicalAnalyzer.Beginning);
+      expect(LexicalAnalyzer.BEGINNING);
     }
   }
 
@@ -104,38 +104,38 @@ public class RegularExpressionParser {
           lexer.nextToken();
           if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
             // print error message and throw SyntaxException
-            expect(LexicalAnalyzer.Beginning);
+            expect(LexicalAnalyzer.BEGINNING);
           } // if
           Expression c2 = parse(false);
-          if (c.getType() == Sum && c2.getType() == Sum) {
+          if (c.getType() == SUM && c2.getType() == SUM) {
             ((Sum) c).addSum((Sum) c2);
           }
 
-          if (c.getType() == Sum && c2.getType() != Sum) {
+          if (c.getType() == SUM && c2.getType() != SUM) {
             ((Sum) c).addExp(c2);
           }
 
-          if (c.getType() != Sum && c2.getType() == Sum) {
+          if (c.getType() != SUM && c2.getType() == SUM) {
             ((Sum) c2).addExp(c);
             c = c2;
           }
 
-          if (c.getType() != Sum && c2.getType() != Sum) {
+          if (c.getType() != SUM && c2.getType() != SUM) {
             c = new Sum(c, c2);
           }
 
           break;
 
-        case LexicalAnalyzer.Dot:
+        case LexicalAnalyzer.DOT:
           lexer.nextToken();
           if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
             // print error message and throw SyntaxException
-            expect(LexicalAnalyzer.Beginning);
+            expect(LexicalAnalyzer.BEGINNING);
           } // if
 
           Expression c3 = parse(true);
           c = new Concatenation(c, c3);
-          while (token == LexicalAnalyzer.Dot) {
+          while (token == LexicalAnalyzer.DOT) {
             lexer.nextToken();
             c3 = parse(true);
             c = new Concatenation(c, c3);
@@ -168,11 +168,11 @@ public class RegularExpressionParser {
           c = new Literal(lexer.getString());
           lexer.nextToken();
           if (token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF) {
-            if (token != LexicalAnalyzer.Dot
+            if (token != LexicalAnalyzer.DOT
                 && token != LexicalAnalyzer.STAR
                 && token != LexicalAnalyzer.PLUS) {
               // print error message and throw SyntaxException
-              expect(LexicalAnalyzer.Operator);
+              expect(LexicalAnalyzer.OPERATOR);
             } // if
             contin = true;
           }
@@ -188,7 +188,7 @@ public class RegularExpressionParser {
       }
     }
 
-    if (Regular.debugAll) {
+    if (Regular.DEBUG_ALL) {
       log.debug("Successful parsing of {}", c);
     }
 
@@ -217,8 +217,8 @@ public class RegularExpressionParser {
       case LexicalAnalyzer.LEFT_PAREN -> "(";
       case LexicalAnalyzer.RIGHT_PAREN -> ")";
       case LexicalAnalyzer.EOF -> "end of file";
-      case LexicalAnalyzer.Beginning -> "literal or right parenthesis";
-      case LexicalAnalyzer.Operator -> "operator . or *";
+      case LexicalAnalyzer.BEGINNING -> "literal or right parenthesis";
+      case LexicalAnalyzer.OPERATOR -> "operator . or *";
       default -> "???";
     };
   }
@@ -287,7 +287,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return Concatenation;
+      return CONCATENATION;
     }
 
     @Override
@@ -312,7 +312,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return Star;
+      return STAR;
     }
 
     @Override
@@ -348,7 +348,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return Sum;
+      return SUM;
     }
 
     @Override
@@ -388,10 +388,10 @@ public class RegularExpressionParser {
         if (first) {
           tmp = e.parseToFsm();
           first = false;
-          if (e.getType() != Literal) {
+          if (e.getType() != LITERAL) {
             isSimple = false;
           }
-        } else if (e.getType() == Literal && isSimple) {
+        } else if (e.getType() == LITERAL && isSimple) {
 
           IntDomain dom = tmp.initState.transitions.iterator().next().domain;
           int val = Integer.parseInt(((Literal) e).lit);
@@ -425,7 +425,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return Literal;
+      return LITERAL;
     }
 
     @Override

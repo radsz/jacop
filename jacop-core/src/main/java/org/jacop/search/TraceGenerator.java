@@ -662,7 +662,7 @@ public class TraceGenerator<T extends Var>
   }
 
   private int minValue(List<Var> vars) {
-    int min = IntDomain.MaxInt;
+    int min = IntDomain.MAX_INT;
     if (vars.getFirst() instanceof IntVar) {
       for (Var v : vars) {
         min = Math.min(min, ((IntVar) v).min());
@@ -673,7 +673,7 @@ public class TraceGenerator<T extends Var>
   }
 
   private int maxValue(List<Var> vars) {
-    int max = IntDomain.MinInt;
+    int max = IntDomain.MIN_INT;
     if (vars.getFirst() instanceof IntVar) {
       for (Var v : vars) {
         max = Math.max(max, ((IntVar) v).max());

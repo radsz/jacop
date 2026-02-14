@@ -69,7 +69,7 @@ public class RandomSelect<T extends Var> extends AbstractSelect<T> {
 
     assert index < searchVariables.length;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("index = {}", index);
 
       StringBuilder vars = new StringBuilder();
@@ -96,7 +96,7 @@ public class RandomSelect<T extends Var> extends AbstractSelect<T> {
     } else {
       currentIndex = index;
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("selected {}", currentVariable);
       }
 

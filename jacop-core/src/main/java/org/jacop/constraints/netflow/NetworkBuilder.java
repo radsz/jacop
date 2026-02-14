@@ -386,7 +386,7 @@ public class NetworkBuilder {
       } else if (out.size() == 1) {
         sumC(result, store, in, out.getFirst());
       } else {
-        IntVar sum = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+        IntVar sum = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
         sumC(result, store, in, sum);
         sumC(result, store, out, sum);
       }
@@ -424,7 +424,7 @@ public class NetworkBuilder {
     boolean simpleSum = true;
     for (Arc arc : arcList) {
       if (arc.getCompanion().wVar != null) {
-        IntVar var = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+        IntVar var = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
         result.add(new XmulYeqZ(arc.getCompanion().xVar, arc.getCompanion().wVar, var));
         vars.add(var);
         weights.add(1);

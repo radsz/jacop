@@ -285,7 +285,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   boolean after(Task l, List<Task> tasks) {
 
-    int startS = IntDomain.MaxInt;
+    int startS = IntDomain.MAX_INT;
     long a = 0;
     boolean afterS = true;
 
@@ -308,7 +308,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private boolean before(Task l, List<Task> tasks) {
-    int completionS = IntDomain.MinInt;
+    int completionS = IntDomain.MIN_INT;
     long a = 0;
     boolean beforeS = true;
 
@@ -332,8 +332,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   boolean between(Task l, List<Task> tasks) {
-    int completionS = IntDomain.MinInt;
-    int startS = IntDomain.MaxInt;
+    int completionS = IntDomain.MIN_INT;
+    int startS = IntDomain.MAX_INT;
     long a = 0;
     long larea;
     boolean betweenS = true;
@@ -468,8 +468,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         final int limitMax = limit.max();
         // Checking if l can be between and after S
 
-        int startOfS = IntDomain.MaxInt;
-        int completionOfS = IntDomain.MinInt;
+        int startOfS = IntDomain.MAX_INT;
+        int completionOfS = IntDomain.MIN_INT;
         long area1 = 0;
         long area2 = 0;
         if (debugEnabled) {
@@ -538,7 +538,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                   log.debug(
                       ">>> Cumulative EF <<< 2. Narrowed {} in {}..{}",
                       l.start(),
-                      IntDomain.MinInt,
+                      IntDomain.MIN_INT,
                       newStartl);
                 }
 
@@ -580,7 +580,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                       l,
                       S,
                       l.start(),
-                      IntDomain.MinInt,
+                      IntDomain.MIN_INT,
                       finish);
                 }
 
@@ -651,8 +651,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         final int limitMax = limit.max();
         // Checking if l can be between and before S
 
-        int completionOfS = IntDomain.MinInt;
-        int startOfS = IntDomain.MaxInt;
+        int completionOfS = IntDomain.MIN_INT;
+        int startOfS = IntDomain.MAX_INT;
         long area1 = 0;
         long area2 = 0;
         if (debugEnabled) {
@@ -717,7 +717,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               j++;
             }
 
-            int newStartl = IntDomain.MinInt;
+            int newStartl = IntDomain.MIN_INT;
             int startl = lEst;
             if (slack < 0 && tasksLength != 0) {
               Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
@@ -739,7 +739,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                     ">>> Cumulative EF <<< 0. Narrowed {} in {}..{}",
                     l.start(),
                     startl,
-                    IntDomain.MaxInt);
+                    IntDomain.MAX_INT);
               }
 
               l.start().domain.inMin(store.level, l.start(), newStartl);
@@ -775,7 +775,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                       S,
                       l.start(),
                       start,
-                      IntDomain.MaxInt);
+                      IntDomain.MAX_INT);
                 }
                 l.start().domain.inMin(store.level, l.start(), start);
               }
@@ -789,7 +789,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private int est(List<Task> tasks) {
-    int estS = IntDomain.MaxInt;
+    int estS = IntDomain.MAX_INT;
 
     for (Task t : tasks) {
       int tEst = t.est();
@@ -802,9 +802,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private boolean fitTasksAfter(List<Task> s, int est0) {
     int areaS = 0;
-    int lctOfS = IntDomain.MinInt;
-    int minDur = IntDomain.MaxInt;
-    int minRes = IntDomain.MaxInt;
+    int lctOfS = IntDomain.MIN_INT;
+    int minDur = IntDomain.MAX_INT;
+    int minRes = IntDomain.MAX_INT;
     boolean FitAfter;
 
     for (Task t : s) {
@@ -833,9 +833,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private boolean fitTasksBefore(List<Task> s, int lct0) {
     int areaS = 0;
-    int estOfS = IntDomain.MaxInt;
-    int minDur = IntDomain.MaxInt;
-    int minRes = IntDomain.MaxInt;
+    int estOfS = IntDomain.MAX_INT;
+    int minDur = IntDomain.MAX_INT;
+    int minRes = IntDomain.MAX_INT;
     boolean FitBefore;
 
     for (Task t : s) {
@@ -877,7 +877,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private int lct(List<Task> tasks) {
-    int lctS = IntDomain.MinInt;
+    int lctS = IntDomain.MIN_INT;
 
     for (Task t : tasks) {
       lctS = Math.max(lctS, t.lct());
@@ -948,8 +948,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private void notFirst(Store store, Task s, List<Task> tasks) {
     int sEst = s.est(); // sLct = s.LCT();
-    int completionS = IntDomain.MinInt;
-    int newStartl = IntDomain.MinInt;
+    int completionS = IntDomain.MIN_INT;
+    int newStartl = IntDomain.MIN_INT;
     int startl = sEst;
     long a = 0;
     long slack;
@@ -1009,7 +1009,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}",
                 s.start(),
                 startl,
-                IntDomain.MaxInt);
+                IntDomain.MAX_INT);
           }
 
           s.start().domain.inMin(store.level, s.start(), newStartl);
@@ -1022,7 +1022,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int sLct = s.lct();
     int compl = sLct;
 
-    int startS = IntDomain.MaxInt;
+    int startS = IntDomain.MAX_INT;
     int newCompl;
     int newStartl;
     long a = 0;
@@ -1084,7 +1084,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             log.debug(
                 ">>> Cumulative EF <<< 5. Narrowed {} in {}..{}",
                 s.start(),
-                IntDomain.MinInt,
+                IntDomain.MIN_INT,
                 newStartl);
           }
 

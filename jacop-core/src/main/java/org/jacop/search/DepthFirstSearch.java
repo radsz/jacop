@@ -58,8 +58,8 @@ import org.jacop.core.Var;
 @Slf4j
 public class DepthFirstSearch<T extends Var> implements Search<T> {
 
-  // @todo make debugAll be used in printing statements.
-  static final boolean debugAll = true;
+  // @todo make DEBUG_ALL be used in printing statements.
+  static final boolean DEBUG_ALL = true;
   static final AtomicInteger no = new AtomicInteger(0);
 
   /** It specifies if for setVar based search the left branch should impose EinA constraint. */
@@ -690,7 +690,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         Object[] args = {depth, fdv, val};
 
-        if (SwitchesPruningLogging.traceSearchTree) {
+        if (SwitchesPruningLogging.TRACE_SEARCH_TREE) {
           SwitchesPruningLogging.log(
               choice == null,
               DepthFirstSearch.class,

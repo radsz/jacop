@@ -42,10 +42,10 @@ import java.util.List;
 public abstract class Filter {
 
   /** It denotes the identifier of the addition. */
-  public static final int addId = 1;
+  public static final int ADD_ID = 1;
 
   /** It specifies the identifier of the multiplication. */
-  public static final int mulId = 2;
+  public static final int MUL_ID = 2;
 
   /** It denotes the delay of the addition. */
   public int addDel = 1;
@@ -102,10 +102,10 @@ public abstract class Filter {
     int[] delays = new int[ids.length];
 
     for (int i = 0; i < delays.length; i++) {
-      if (ids[i] == addId) {
+      if (ids[i] == ADD_ID) {
         delays[i] = addDel;
       }
-      if (ids[i] == mulId) {
+      if (ids[i] == MUL_ID) {
         delays[i] = mulDel;
       }
     }
@@ -140,7 +140,7 @@ public abstract class Filter {
   public int noAdd() {
     int plusOp = 0;
     for (int id : ids) {
-      if (id == addId) {
+      if (id == ADD_ID) {
         plusOp++;
       }
     }
@@ -155,7 +155,7 @@ public abstract class Filter {
   public int noMul() {
     int mulOp = 0;
     for (int id : ids) {
-      if (id == mulId) {
+      if (id == MUL_ID) {
         mulOp++;
       }
     }
@@ -186,7 +186,7 @@ public abstract class Filter {
    * @return the id of the addition operation.
    */
   public int addId() {
-    return addId;
+    return ADD_ID;
   }
 
   /**
@@ -195,7 +195,7 @@ public abstract class Filter {
    * @return the id of the multiplication operation.
    */
   public int mulId() {
-    return mulId;
+    return MUL_ID;
   }
 
   /**
@@ -218,7 +218,7 @@ public abstract class Filter {
   public List<String> names() {
     List<String> names = new ArrayList<>(ids.length);
     for (int i = 0; i < ids.length; i++) {
-      names.add((ids[i] == addId ? "+" : "*") + (i + 1));
+      names.add((ids[i] == ADD_ID ? "+" : "*") + (i + 1));
     }
     return names;
   }

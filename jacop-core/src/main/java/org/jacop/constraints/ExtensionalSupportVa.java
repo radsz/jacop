@@ -50,7 +50,7 @@ import org.jacop.core.Var;
 @Slf4j
 public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
-  static final boolean debugPruning = false;
+  static final boolean DEBUG_PRUNING = false;
 
   /** It specifies the id of the constraint. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -109,7 +109,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   @Override
   public void consistency(Store store) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Begin {}", this);
     }
 
@@ -138,7 +138,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
     pruneUnsupported(store);
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("End {}", this);
     }
   }
@@ -156,7 +156,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Var {} {}", var, ((IntVar) var).recentDomainPruning());
     }
 
@@ -175,7 +175,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   @Override
   public int[] seekSupportVa(int varPosition, int value) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
@@ -244,7 +244,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
    */
   public int[] findFirstAllowed(int varPosition, int value, int[] t) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("variable {} position {} value {}", list[varPosition], varPosition, value);
     }
 

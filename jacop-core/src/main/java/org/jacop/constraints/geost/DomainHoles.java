@@ -53,7 +53,7 @@ import org.jacop.core.Var;
 @Slf4j
 public class DomainHoles extends InternalConstraint {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   final GeostObject object;
 
@@ -220,7 +220,7 @@ public class DomainHoles extends InternalConstraint {
           assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
               : "current point not located in a domain hole";
 
-          if (debug) {
+          if (DEBUG) {
             log.debug("{} is in a hole of {}", Arrays.toString(c), o.coords[d]);
           }
 
@@ -238,7 +238,7 @@ public class DomainHoles extends InternalConstraint {
             }
           }
 
-          if (debug) {
+          if (DEBUG) {
             log.debug("forbidden domain: {}", forbiddenRegion);
           }
 
@@ -248,7 +248,7 @@ public class DomainHoles extends InternalConstraint {
 
           return forbiddenRegion;
         }
-        if (debug) {
+        if (DEBUG) {
           log.debug("{} is not in a hole of {}", Arrays.toString(c), o.coords[d]);
         }
       }

@@ -85,8 +85,8 @@ public class Max extends AbstractMinMax {
       IntVar var;
       IntDomain vDom;
 
-      int minValue = IntDomain.MinInt;
-      int maxValue = IntDomain.MinInt;
+      int minValue = IntDomain.MIN_INT;
+      int maxValue = IntDomain.MIN_INT;
 
       int maxMax = max.max();
       int minMax = max.min();

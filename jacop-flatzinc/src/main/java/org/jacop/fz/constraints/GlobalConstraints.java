@@ -491,7 +491,7 @@ class GlobalConstraints implements ParserTreeConstants {
     HashSet<IntVar> varSet = new HashSet<>();
     for (int i = 0; i < x.length; i++) {
       if (varSet.contains(x[i])) {
-        IntVar tmp = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+        IntVar tmp = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
         tmp.domain.in(store.level, tmp, s);
         support.pose(new XeqY(x[i], tmp));
         xs[i] = tmp;

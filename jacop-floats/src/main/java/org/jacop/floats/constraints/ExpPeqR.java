@@ -95,7 +95,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
           pMin = FloatDomain.down(pMin);
         } else // q.min() <= 0
         if (q.max() > 0) {
-          pMin = FloatDomain.MinFloat;
+          pMin = FloatDomain.MIN_FLOAT;
         } else {
           throw Store.failException;
         }

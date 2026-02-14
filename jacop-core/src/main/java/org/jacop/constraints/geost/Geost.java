@@ -847,7 +847,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + (d != dimension ? o.coords[d] : o.start);
       return c[d]; // the check for sweep advance is done later by the consistency function
     } else {
-      return IntDomain.MaxInt;
+      return IntDomain.MAX_INT;
     }
   }
 
@@ -956,7 +956,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + (d != dimension ? o.coords[d] : o.end);
       return c[d]; // the check for sweep advance is done later by the consistency function
     } else {
-      return IntDomain.MinInt;
+      return IntDomain.MIN_INT;
     }
   }
 
@@ -989,7 +989,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // if there are holes in the domain, consider these first
     DomainHoles holeConstraint = domainHolesConstraints[o.no];
 
-    if (DomainHoles.debug) {
+    if (DomainHoles.DEBUG) {
       log.debug("checking for holes of object {}", o);
       log.debug("associated constraint: {}", holeConstraint);
     }
@@ -1166,9 +1166,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           if (needPruning) {
 
             // It specifies the lowest lower bound found for the origin across multiple shapes.
-            int minLowerBound = IntDomain.MaxInt;
+            int minLowerBound = IntDomain.MAX_INT;
             // It specifies the highest upper bound for for the origin across multiple shapes.
-            int maxUpperBound = IntDomain.MinInt;
+            int maxUpperBound = IntDomain.MIN_INT;
 
             int lastSidIndex = 0;
             boolean bestShapeIDFound = false;
@@ -1195,8 +1195,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               lastSidIndex--;
             }
 
-            int bestLowerBound = IntDomain.MaxInt;
-            int bestUpperBound = IntDomain.MinInt;
+            int bestLowerBound = IntDomain.MAX_INT;
+            int bestUpperBound = IntDomain.MIN_INT;
 
             for (int i = 0; i <= lastSidIndex; i++) {
 
@@ -1217,9 +1217,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                       sid,
                       d,
                       //                     internalConstraintsToUse,
-                      fullSweep ? IntDomain.MaxInt : minLowerBound);
+                      fullSweep ? IntDomain.MAX_INT : minLowerBound);
 
-              if (lowerBound >= IntDomain.MaxInt) {
+              if (lowerBound >= IntDomain.MAX_INT) {
 
                 // remove shape ID, it is infeasible
                 if (DEBUG_DOUBLE_LAYER) {
@@ -1250,9 +1250,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                         sid,
                         d,
                         //                       internalConstraintsToUse,
-                        fullSweep ? IntDomain.MinInt : maxUpperBound);
+                        fullSweep ? IntDomain.MIN_INT : maxUpperBound);
 
-                if (upperBound <= IntDomain.MinInt) {
+                if (upperBound <= IntDomain.MIN_INT) {
 
                   // remove shape ID, it is infeasible
                   if (DEBUG_DOUBLE_LAYER) {
@@ -1280,10 +1280,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               }
             }
 
-            assert minLowerBound > IntDomain.MinInt;
-            assert maxUpperBound < IntDomain.MaxInt;
+            assert minLowerBound > IntDomain.MIN_INT;
+            assert maxUpperBound < IntDomain.MAX_INT;
 
-            if (minLowerBound < IntDomain.MaxInt) {
+            if (minLowerBound < IntDomain.MAX_INT) {
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.start;
 
@@ -1306,7 +1306,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               inconsistent = true;
             }
 
-            if (!inconsistent && maxUpperBound > IntDomain.MinInt) {
+            if (!inconsistent && maxUpperBound > IntDomain.MIN_INT) {
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.end;
 
@@ -1405,8 +1405,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
       // TODO: cache the results of the computation above and recompute upon object change.
 
-      domainBoxOriginShifted[dimension] = IntDomain.MinInt;
-      domainBoxLengthShifted[dimension] = IntDomain.MaxInt * 2;
+      domainBoxOriginShifted[dimension] = IntDomain.MIN_INT;
+      domainBoxLengthShifted[dimension] = IntDomain.MAX_INT * 2;
 
       // it finds the box within which the constraint can propagate.
       Dbox constraintBox = Dbox.newBox(dimension + 1);

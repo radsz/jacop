@@ -51,7 +51,7 @@ import org.jacop.core.Var;
  */
 public abstract class AbstractTable extends Constraint implements UsesQueueVariable, Stateful {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   /** Variables within the scope of table constraint. */
   public final IntVar[] x;

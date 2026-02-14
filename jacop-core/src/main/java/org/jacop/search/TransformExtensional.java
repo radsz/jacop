@@ -54,7 +54,7 @@ import org.jacop.core.Var;
 @Slf4j
 public class TransformExtensional implements InitializeListener {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   /**
    * It contains all the information which will become variables in the scope of the extensional
@@ -153,7 +153,7 @@ public class TransformExtensional implements InitializeListener {
           new ExtensionalSupportVa(vars, solutions);
       store.impose(transformationIntoExtensionalConstraint);
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("{}", transformationIntoExtensionalConstraint);
       }
     }

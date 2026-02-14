@@ -87,8 +87,8 @@ public class Min extends AbstractMinMax {
       // only check for other support if that smallest value is no longer part
       // of the variable domain.
 
-      int minValue = IntDomain.MaxInt;
-      int maxValue = IntDomain.MaxInt;
+      int minValue = IntDomain.MAX_INT;
+      int maxValue = IntDomain.MAX_INT;
 
       int minMin = min.min();
       int maxMin = min.max();

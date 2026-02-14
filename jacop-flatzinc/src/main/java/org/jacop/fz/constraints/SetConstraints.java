@@ -273,8 +273,8 @@ class SetConstraints implements ParserTreeConstants {
     SetVar v2 = support.getSetVariable(node, 1);
     SetVar v3 = support.getSetVariable(node, 2);
 
-    SetVar t1 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
-    SetVar t2 = new SetVar(store, new BoundSetDomain(SetDomain.MinElement, SetDomain.MaxElement));
+    SetVar t1 = new SetVar(store, new BoundSetDomain(SetDomain.MIN_ELEMENT, SetDomain.MAX_ELEMENT));
+    SetVar t2 = new SetVar(store, new BoundSetDomain(SetDomain.MIN_ELEMENT, SetDomain.MAX_ELEMENT));
 
     support.pose(new AdiffBeqC(v1, v2, t1));
 

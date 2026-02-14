@@ -72,7 +72,7 @@ public class Knapsack extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
   /** It specifies if any debugging information should be printed. */
-  public static final boolean debugAll = false;
+  public static final boolean DEBUG_ALL = false;
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -261,7 +261,7 @@ public class Knapsack extends Constraint
 
     countRemoveLevel++;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
 
       /*
        It specifies how many removeLevel functions must be executed before the information about
@@ -403,7 +403,7 @@ public class Knapsack extends Constraint
         tree.alreadyUsedCapacity,
         tree.alreadyUsedCapacity + tree.root.getWSum());
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Capacity after potential update : {}", knapsackCapacity);
     }
 
@@ -432,7 +432,7 @@ public class Knapsack extends Constraint
         tree.alreadyObtainedProfit,
         tree.alreadyObtainedProfit + (int) Math.ceil(tree.optimalProfit));
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Profit after potential update : {}", knapsackProfit);
     }
   }
@@ -450,7 +450,7 @@ public class Knapsack extends Constraint
       throw Store.failException;
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Entering consistency {}", this);
     }
 
@@ -466,13 +466,13 @@ public class Knapsack extends Constraint
      constraint is being printed out.
     */
     int consistencyInfoFrom = 0;
-    if (debugAll && countConsistency >= consistencyInfoFrom) {
+    if (DEBUG_ALL && countConsistency >= consistencyInfoFrom) {
       log.debug("{}", displayQuantitiesInEfficiencyOrder());
     }
 
     assert sliceInvariant();
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Tree root \n{}", tree.root);
     }
 
@@ -489,11 +489,11 @@ public class Knapsack extends Constraint
       assert sliceInvariant();
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("After single item restrictions {}", this);
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Tree root \n{}", tree.root);
     }
 
@@ -523,7 +523,7 @@ public class Knapsack extends Constraint
     needMandatory = false;
     needForbidden = false;
 
-    if (debugAll && countConsistency >= consistencyInfoFrom) {
+    if (DEBUG_ALL && countConsistency >= consistencyInfoFrom) {
       log.debug("{}", displayQuantitiesInEfficiencyOrder());
     }
 
@@ -580,7 +580,7 @@ public class Knapsack extends Constraint
         needUpdate = true;
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Forbidden check for {} finished. Intrusion weight = {}", leaf, intrusionWeight);
       }
 
@@ -644,7 +644,7 @@ public class Knapsack extends Constraint
         needUpdate = true;
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Mandatory check for {} finished. MaxWeight = {}", leaf, replacableWeight);
       }
 
@@ -698,7 +698,7 @@ public class Knapsack extends Constraint
       impositionFailure = true;
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
 
       if (!impositionFailure) {
         log.debug("The impose function is completed. ");
@@ -722,7 +722,7 @@ public class Knapsack extends Constraint
 
     countQueueVariable++;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       /*
        It specifies how many queueVariable functions must be executed before the information about
        the constraint is being printed out.

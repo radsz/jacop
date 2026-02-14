@@ -84,7 +84,7 @@ public class AleB extends AbstractAleqB {
           b,
           new IntervalDomain(
               a.domain.lub().min(),
-              IntDomain.MaxInt)); // any b with cardinalirty > 0 is fine since a = {}
+              IntDomain.MAX_INT)); // any b with cardinalirty > 0 is fine since a = {}
     } else {
       return; // any b with cardinalirty > 0 is fine since a = {}
     }

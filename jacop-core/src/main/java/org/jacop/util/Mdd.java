@@ -64,7 +64,7 @@ public class Mdd {
   /** The initial size of the array representing an Mdd. */
   public static final int START_SIZE = 1000;
 
-  private static final boolean debugAll = false;
+  private static final boolean DEBUG_ALL = false;
 
   /** The ordered list of variables participating in Mdd. */
   public IntVar[] vars;
@@ -491,7 +491,7 @@ public class Mdd {
 
     int position = (left + right) >> 1;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Looking for {}", value);
       for (int v : values) {
         log.debug("val {}", v);
@@ -500,7 +500,7 @@ public class Mdd {
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("left {} right {} position {}", left, right, position);
       }
 
@@ -538,7 +538,7 @@ public class Mdd {
 
     int position = (left + right) >> 1;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Looking for {}", value);
       for (int v : values) {
         log.debug("val {}", v);
@@ -547,7 +547,7 @@ public class Mdd {
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("left {} right {} position {}", left, right, position);
       }
 

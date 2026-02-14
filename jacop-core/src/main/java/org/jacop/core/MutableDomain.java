@@ -42,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MutableDomain implements MutableVar {
 
   /** It specifies if debugging info should be printed out. */
-  public static final boolean debug = false;
+  public static final boolean DEBUG = false;
 
   final int index;
 
@@ -122,18 +122,18 @@ public class MutableDomain implements MutableVar {
 
     if (value.stamp == store.level) {
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("1. Level: {}, IN {}, New {}", store.level, value, val);
       }
 
       value.setValue(((MutableDomainValue) val).domain);
 
-      if (debug) {
+      if (DEBUG) {
         log.debug(", OUT {}", value);
       }
 
     } else if (value.stamp < store.level) {
-      if (debug) {
+      if (DEBUG) {
         log.debug("2. Level: {}, IN {}, New {}", store.level, this, val);
       }
 
@@ -142,7 +142,7 @@ public class MutableDomain implements MutableVar {
 
       value = (MutableDomainValue) val;
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("=> OUT {} OLD {}", this, value().previous());
       }
     }

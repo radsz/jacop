@@ -70,7 +70,7 @@ public class SmallDenseDomainTest {
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(testedDomain.complement().toString())
-        .isEqualTo("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}");
+        .isEqualTo("{" + IntDomain.MIN_INT + "..0, 4, 8..11, 19.." + IntDomain.MAX_INT + "}");
   }
 
   @ParameterizedTest

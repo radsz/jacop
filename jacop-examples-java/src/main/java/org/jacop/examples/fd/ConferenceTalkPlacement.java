@@ -263,7 +263,7 @@ public class ConferenceTalkPlacement {
       }
     }
 
-    cost = new IntVar(store, "cost", 0, IntDomain.MaxInt);
+    cost = new IntVar(store, "cost", 0, IntDomain.MAX_INT);
 
     store.impose(new SumInt(pairCosts, "==", cost));
 

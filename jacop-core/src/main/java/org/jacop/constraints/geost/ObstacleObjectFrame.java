@@ -583,8 +583,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     } else {
       // time is not included in the dimensions, thus the outbox covers the whole space
-      timeSizeOrigin = IntDomain.MinInt;
-      timeSizeMax = IntDomain.MaxInt;
+      timeSizeOrigin = IntDomain.MIN_INT;
+      timeSizeMax = IntDomain.MAX_INT;
       return true;
     }
   }
@@ -630,8 +630,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
         outDimOrigin = frameBoundingBox.origin[i] - (otherBb.length[i] - 1) - otherBb.origin[i];
       } else {
         // the dimension is not relevant, outbox covers the whole space
-        outDimOrigin = IntDomain.MinInt;
-        outDimLength = IntDomain.MaxInt - IntDomain.MinInt;
+        outDimOrigin = IntDomain.MIN_INT;
+        outDimLength = IntDomain.MAX_INT - IntDomain.MIN_INT;
       }
 
       if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) {
@@ -672,8 +672,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
           } else {
             // the dimension is not relevant, outbox covers the whole space
-            outOrigin[i] = IntDomain.MinInt;
-            outLength[i] = IntDomain.MaxInt - IntDomain.MinInt;
+            outOrigin[i] = IntDomain.MIN_INT;
+            outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
           }
         }
 

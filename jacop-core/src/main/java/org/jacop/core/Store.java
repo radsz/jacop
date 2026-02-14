@@ -63,7 +63,7 @@ public class Store {
   public static final FailException failException = new FailException();
 
   /** It specifies if some debugging information is printed. */
-  public static final boolean debug = true;
+  public static final boolean DEBUG = true;
 
   /** It specifies the seed for random number generators. */
   static long seed;

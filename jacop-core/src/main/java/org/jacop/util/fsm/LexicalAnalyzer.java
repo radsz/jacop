@@ -46,14 +46,14 @@ class LexicalAnalyzer {
   static final int INVALID_CHAR = -1; // unexpected character found.
   static final int NO_TOKEN = 0; // No tokens recognized yet.
   static final int PLUS = 3;
-  static final int Dot = 4;
+  static final int DOT = 4;
   static final int WORD = 5;
   static final int LEFT_PAREN = 6;
   static final int RIGHT_PAREN = 7;
   static final int STAR = 8;
   static final int EOF = 9;
-  static final int Operator = 10;
-  static final int Beginning = 11;
+  static final int OPERATOR = 10;
+  static final int BEGINNING = 11;
   private final StreamTokenizer input;
 
   /**
@@ -97,7 +97,7 @@ class LexicalAnalyzer {
             case ')' -> RIGHT_PAREN;
             case '*' -> STAR;
             case '+' -> PLUS;
-            case '.' -> Dot;
+            case '.' -> DOT;
             default -> INVALID_CHAR;
           }; // switch
     } catch (IOException _) {

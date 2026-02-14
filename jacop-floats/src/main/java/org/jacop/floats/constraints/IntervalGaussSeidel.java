@@ -45,7 +45,7 @@ import org.jacop.floats.util.Matrix;
  */
 public class IntervalGaussSeidel {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   final int MaxIterations = 100;
 
@@ -174,7 +174,7 @@ public class IntervalGaussSeidel {
       }
     }
 
-    if (debug) {
+    if (DEBUG) {
       IO.println("dominant = " + true + " ===================================");
       for (FloatInterval[] floatIntervals : A) {
         for (FloatInterval floatInterval : floatIntervals) {
@@ -210,7 +210,7 @@ public class IntervalGaussSeidel {
         x[i] = new FloatInterval(w.min(), w.max());
       }
 
-      if (debug) {
+      if (DEBUG) {
         IO.print("iteration " + N + ": {");
         for (int i = 0; i < x.length; i++) {
           if (i == x.length - 1) {
@@ -257,7 +257,7 @@ public class IntervalGaussSeidel {
 
   void precondition(FloatInterval[][] aa, double[] bb) {
 
-    if (debug) {
+    if (DEBUG) {
       IO.println("Before preconditioning\n" + this);
     }
 
@@ -292,7 +292,7 @@ public class IntervalGaussSeidel {
     }
     b = newB;
 
-    if (debug) {
+    if (DEBUG) {
       IO.println("After preconditioning\n" + this);
     }
   }

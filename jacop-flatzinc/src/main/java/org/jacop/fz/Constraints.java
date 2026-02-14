@@ -44,12 +44,12 @@ import org.jacop.satwrapper.SatTranslation;
  */
 public class Constraints implements ParserTreeConstants {
 
-  static final int eq = 0;
-  static final int ne = 1;
-  static final int lt = 2;
-  static final int gt = 3;
-  static final int le = 4;
-  static final int ge = 5;
+  static final int EQ = 0;
+  static final int NE = 1;
+  static final int LT = 2;
+  static final int GT = 3;
+  static final int LE = 4;
+  static final int GE = 5;
   final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
   final Tables dictionary;
   final Store store;

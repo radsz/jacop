@@ -53,7 +53,7 @@ import org.jacop.api.Stateful;
 @Slf4j
 public class TimeStamp<T> implements Stateful {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   @Getter(AccessLevel.PACKAGE)
   final int index;
@@ -174,13 +174,13 @@ public class TimeStamp<T> implements Stateful {
         : "Error - Timestamp" + this + "has greater level than store " + "- missing remove";
 
     if (stamps[pointer4Last] == store.level) {
-      if (debug) {
+      if (DEBUG) {
         log.debug("1. Level: {}, In {}, New value {} replaces old", store.level, this, val);
       }
 
       values[pointer4Last] = val;
     } else if (stamps[pointer4Last] < store.level) {
-      if (debug) {
+      if (DEBUG) {
         log.debug("2. Level: {}, IN {}, New value {}", store.level, this, val);
       }
 

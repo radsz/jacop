@@ -259,7 +259,7 @@ public class LinearIntDom extends LinearInt {
     long lb = b - sumMax + currentDom.max() * w;
     long ub = b - sumMin + currentDom.min() * w;
 
-    if (currentDom.domainId() == IntDomain.IntervalDomainID) {
+    if (currentDom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       int n = ((IntervalDomain) currentDom).size;
 
       outerloop:
@@ -347,7 +347,7 @@ public class LinearIntDom extends LinearInt {
     long lb = b - sumMax + currentDom.min() * w;
     long ub = b - sumMin + currentDom.max() * w;
 
-    if (currentDom.domainId() == IntDomain.IntervalDomainID) {
+    if (currentDom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       int n = ((IntervalDomain) currentDom).size;
 
       outerloop:

@@ -106,7 +106,7 @@ class ElementConstraints implements ParserTreeConstants {
 
   void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
 
-    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
     int newP2Length = p1.max() - p1.min() + 1;
     int listLength = Math.min(p2.length, newP2Length);
@@ -136,7 +136,7 @@ class ElementConstraints implements ParserTreeConstants {
     int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
     int newP2Length = p1.max() - p1.min() + 1;
     int listLength = Math.min(p2.length, newP2Length);
@@ -172,7 +172,7 @@ class ElementConstraints implements ParserTreeConstants {
 
       poseElementInteger(p1, p2int, p3);
     } else {
-      p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+      p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
       int newP2Length = p1.max() - p1.min() + 1;
       int listLength = Math.min(p2var.length, newP2Length);
@@ -258,7 +258,7 @@ class ElementConstraints implements ParserTreeConstants {
 
   void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
 
-    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
     int newP2Length = p1.max() - p1.min() + 1;
     int listLength = Math.min(p2.length, newP2Length);

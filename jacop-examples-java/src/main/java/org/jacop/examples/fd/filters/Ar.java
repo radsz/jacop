@@ -72,9 +72,11 @@ public class Ar extends Filter {
 
     this.ids =
         new int[] {
-          mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId,
-          addId, mulId, mulId, mulId, mulId, addId, addId, mulId, mulId, mulId, mulId, addId, addId,
-          addId, addId
+          MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID,
+              ADD_ID, ADD_ID,
+          ADD_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID,
+              ADD_ID, ADD_ID,
+          ADD_ID, ADD_ID
         };
 
     this.last = new int[] {12, 13, 26, 27};

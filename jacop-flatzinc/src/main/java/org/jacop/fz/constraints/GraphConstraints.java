@@ -293,7 +293,7 @@ class GraphConstraints implements ParserTreeConstants {
     int[] type = new int[c.length];
     Arrays.fill(type, 1);
 
-    IntVar cost = new IntVar(store, 0, IntDomain.MaxInt);
+    IntVar cost = new IntVar(store, 0, IntDomain.MAX_INT);
 
     // // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
     // // support.poseDc(ctr);

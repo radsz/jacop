@@ -49,13 +49,13 @@ import org.jacop.core.Var;
 public abstract class SetDomain extends Domain {
 
   /** It specifies the minimum element in the set domain. */
-  public static final int MinElement = Math.max(Integer.MIN_VALUE / 2 + 1, IntDomain.MinInt);
+  public static final int MIN_ELEMENT = Math.max(Integer.MIN_VALUE / 2 + 1, IntDomain.MIN_INT);
 
   /** It specifies the maximum element in the set domain. */
-  public static final int MaxElement = Math.min(Integer.MAX_VALUE / 2 - 1, IntDomain.MaxInt);
+  public static final int MAX_ELEMENT = Math.min(Integer.MAX_VALUE / 2 - 1, IntDomain.MAX_INT);
 
   /** It specifies an unique ID for the domain. */
-  public static final int SetDomainID = 3;
+  public static final int SET_DOMAIN_ID = 3;
 
   /** It specifies event that Set variable became singleton. */
   public static final int GROUND = 0;
@@ -707,7 +707,7 @@ public abstract class SetDomain extends Domain {
 
     SetDomain domain = this;
 
-    while (domain.domainId() == SetDomainID) {
+    while (domain.domainId() == SET_DOMAIN_ID) {
 
       if (domain.previousDomain != null) {
         domain = domain.previousDomain;

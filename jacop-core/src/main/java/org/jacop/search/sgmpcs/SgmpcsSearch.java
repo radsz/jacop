@@ -61,9 +61,9 @@ import org.jacop.search.SimpleSelect;
 public class SgmpcsSearch {
 
   // strategy to get limit l on fails
-  public static final int luby = 1;
-  public static final int poly = 2;
-  static final double precision = 1e-12;
+  public static final int LUBY = 1;
+  public static final int POLY = 2;
+  static final double PRECISION = 1e-12;
   public final Store store;
 
   /** Variables for search. */
@@ -100,7 +100,7 @@ public class SgmpcsSearch {
 
   // l- current fail limit
   int l;
-  int strategy = poly;
+  int strategy = POLY;
   // number of consequtive fails when searching for a solution
   int numberConsecutiveFails;
   // index fro computing Luby number
@@ -152,7 +152,7 @@ public class SgmpcsSearch {
    */
   public boolean search() {
 
-    l = strategy == luby ? getLuby(1) : 32;
+    l = strategy == LUBY ? getLuby(1) : 32;
 
     findEliteSolutions();
 
@@ -376,7 +376,7 @@ public class SgmpcsSearch {
 
   void updateFailLimit(boolean fail) {
 
-    if (strategy == poly) {
+    if (strategy == POLY) {
       if (fail) {
         l += 32;
       } else {
@@ -405,7 +405,7 @@ public class SgmpcsSearch {
 
     double k = Math.log(i + 1) / Math.log(2d);
 
-    if (Math.abs(k - Math.floor(k + 0.5)) < precision) { // k == Math.floor(k + 0.5)
+    if (Math.abs(k - Math.floor(k + 0.5)) < PRECISION) { // k == Math.floor(k + 0.5)
       return (int) Math.pow(2, k - 1);
     } else {
       k = Math.floor(k);
@@ -417,7 +417,7 @@ public class SgmpcsSearch {
    * Finds a solution with minimal cost
    */
   int bestCostSolution() {
-    int currentCost = IntDomain.MaxInt;
+    int currentCost = IntDomain.MAX_INT;
     int solution = -1;
 
     for (int i = 0; i < elite.length; i++) {
@@ -434,7 +434,7 @@ public class SgmpcsSearch {
    * Finds a solution with maximal cost
    */
   int worstCostSolution() {
-    int currentCost = IntDomain.MinInt;
+    int currentCost = IntDomain.MIN_INT;
     int solution = -1;
 
     for (int i = 0; i < elite.length; i++) {
@@ -505,17 +505,17 @@ public class SgmpcsSearch {
   }
 
   /**
-   * Sets the fail limit strategy. Must be either {@link #luby} or {@link #poly}.
+   * Sets the fail limit strategy. Must be either {@link #LUBY} or {@link #POLY}.
    *
    * @param strategy the fail limit strategy to use.
    */
   public void setFailStrategy(int strategy) {
-    if (strategy == poly || strategy == luby) {
+    if (strategy == POLY || strategy == LUBY) {
       this.strategy = strategy;
     } else {
-      log.warn("Wrong fail strategy limit; assumed poly");
+      log.warn("Wrong fail strategy limit; assumed POLY");
 
-      this.strategy = poly;
+      this.strategy = POLY;
     }
   }
 

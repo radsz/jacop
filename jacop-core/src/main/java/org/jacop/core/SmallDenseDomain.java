@@ -245,7 +245,7 @@ public class SmallDenseDomain extends IntDomain {
       return false;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -260,7 +260,7 @@ public class SmallDenseDomain extends IntDomain {
     }
 
     /* TODO: implement special code,
-       if (domain.domainId() == IntervalDomainID) {
+       if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
        IntervalDomain input = (IntervalDomain) domain;
 
@@ -316,14 +316,14 @@ public class SmallDenseDomain extends IntDomain {
       return false;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       return input.minBound == this.minBound && input.bits == this.bits;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -738,7 +738,7 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -764,7 +764,7 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1118,7 +1118,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1146,7 +1146,7 @@ public class SmallDenseDomain extends IntDomain {
 
     // TODO: create proper assert check for this case.
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1281,7 +1281,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain intersect(IntDomain domain) {
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1314,7 +1314,7 @@ public class SmallDenseDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1325,7 +1325,7 @@ public class SmallDenseDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       IntervalDomain input = new IntervalDomain(domain.min(), domain.max());
 
@@ -1356,7 +1356,7 @@ public class SmallDenseDomain extends IntDomain {
 
     // TODO: do a bit more testing, although code has been derived from in function.
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1424,7 +1424,7 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1456,7 +1456,7 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       // TODO: test this special case.
       BoundDomain input = (BoundDomain) domain;
@@ -1541,7 +1541,7 @@ public class SmallDenseDomain extends IntDomain {
       return false;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1759,14 +1759,14 @@ public class SmallDenseDomain extends IntDomain {
 
     IntDomain previous = this.previousDomain;
     while (previous.stamp > storeLevel) {
-      if (previous.domainId() == SmallDenseDomainID) {
+      if (previous.domainId() == SMALL_DENSE_DOMAIN_ID) {
         previous = previous.previousDomain;
-      } else if (previous.domainId() == IntervalDomainID) {
+      } else if (previous.domainId() == INTERVAL_DOMAIN_ID) {
         previous = previous.previousDomain;
       }
     }
 
-    if (previous.domainId() == SmallDenseDomainID) {
+    if (previous.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain _previous = (SmallDenseDomain) previous;
       long result = _previous.bits;
@@ -1795,7 +1795,7 @@ public class SmallDenseDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain smallDomain = (SmallDenseDomain) domain;
 
@@ -1884,7 +1884,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -2038,7 +2038,7 @@ public class SmallDenseDomain extends IntDomain {
 
     // TODO: test it.
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -2202,7 +2202,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int domainId() {
 
-    return SmallDenseDomainID;
+    return SMALL_DENSE_DOMAIN_ID;
   }
 
   @Override
@@ -2257,7 +2257,7 @@ public class SmallDenseDomain extends IntDomain {
 
     IntDomain domain = this;
 
-    while (domain.domainId() == SmallDenseDomainID) {
+    while (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain dom = (SmallDenseDomain) domain;
 
@@ -2268,7 +2268,7 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];

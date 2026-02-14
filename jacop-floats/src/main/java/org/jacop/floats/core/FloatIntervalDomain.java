@@ -95,10 +95,10 @@ public class FloatIntervalDomain extends FloatDomain {
   public FloatIntervalDomain(double min, double max) {
 
     if (Double.isNaN(min)) {
-      min = FloatDomain.MinFloat;
+      min = FloatDomain.MIN_FLOAT;
     }
     if (Double.isNaN(max)) {
-      max = FloatDomain.MaxFloat;
+      max = FloatDomain.MAX_FLOAT;
     }
 
     assert (min <= max) : "Min value " + min + " can not be greater than max value " + max;
@@ -115,7 +115,7 @@ public class FloatIntervalDomain extends FloatDomain {
   /** It returns an unique identifier of the domain. */
   @Override
   public int domainId() {
-    return FloatIntervalDomainID;
+    return FLOAT_INTERVAL_DOMAIN_ID;
   }
 
   /** {@inheritDoc} */
@@ -549,15 +549,15 @@ public class FloatIntervalDomain extends FloatDomain {
   public FloatDomain complement() {
 
     if (size == 0) {
-      return new FloatIntervalDomain(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+      return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     }
 
     assert checkInvariants() == null : checkInvariants();
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
-    if (min() != FloatDomain.MinFloat) {
-      result.unionAdapt(new FloatInterval(FloatDomain.MinFloat, previous(intervals[0].min())));
+    if (min() != FloatDomain.MIN_FLOAT) {
+      result.unionAdapt(new FloatInterval(FloatDomain.MIN_FLOAT, previous(intervals[0].min())));
     }
 
     for (int i = 0; i < size - 1; i++) {
@@ -565,8 +565,8 @@ public class FloatIntervalDomain extends FloatDomain {
           new FloatInterval(next(intervals[i].max()), previous(intervals[i + 1].min())));
     }
 
-    if (max() != FloatDomain.MaxFloat) {
-      result.unionAdapt(new FloatInterval(next(max()), FloatDomain.MaxFloat));
+    if (max() != FloatDomain.MAX_FLOAT) {
+      result.unionAdapt(new FloatInterval(next(max()), FloatDomain.MAX_FLOAT));
     }
 
     assert result.checkInvariants() == null : result.checkInvariants();

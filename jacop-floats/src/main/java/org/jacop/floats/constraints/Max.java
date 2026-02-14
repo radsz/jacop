@@ -102,8 +102,8 @@ public class Max extends Constraint implements SatisfiedPresent {
       // @todo, optimize, if there is no change on min.min() then
       // the below inMin does not have to be executed.
 
-      double minValue = FloatDomain.MinFloat;
-      double maxValue = FloatDomain.MinFloat;
+      double minValue = FloatDomain.MIN_FLOAT;
+      double maxValue = FloatDomain.MIN_FLOAT;
 
       double maxMax = max.max();
       for (FloatVar floatVar : list) {

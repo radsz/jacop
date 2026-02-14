@@ -64,7 +64,8 @@ public class Fft extends Filter {
     this.dependencies =
         new int[][] {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};
 
-    this.ids = new int[] {mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId};
+    this.ids =
+        new int[] {MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID};
 
     this.last = new int[] {6, 7, 8, 9};
   }

@@ -183,7 +183,7 @@ Understanding these concepts is essential for working with JaCoP:
 - If intentionally ignoring an exception, keep it explicit and safe.
 - Prefer structured logging through existing SLF4J/Lombok patterns (`@Slf4j` annotation).
 - Preserve existing failure semantics in search/constraint propagation code.
-- The `debug` flag pattern is common: `if (debug) { log.debug(...); }` for expensive debug output.
+- The `DEBUG` flag pattern is common: `if (DEBUG) { log.debug(...); }` for expensive debug output.
 
 ## Constraint categories
 Constraints are organized by type in `org.jacop.constraints`:
@@ -211,11 +211,11 @@ Key constraint interfaces:
 - Always check `checkInvariants()` in debug assertions after domain modifications
 - Use domain ID checks for type-specific optimizations:
   ```java
-  if (domain.domainId() == SmallDenseDomainID) {
+  if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
       // optimized path for SmallDenseDomain
   }
   ```
-- Subclasses of `IntDomain` can access constants directly: `GROUND`, `BOUND`, `ANY`, `NONE`, `MinInt`, `MaxInt`
+- Subclasses of `IntDomain` can access constants directly: `GROUND`, `BOUND`, `ANY`, `NONE`, `MIN_INT`, `MAX_INT`
 
 ### Constraint implementation
 - Call `store.addChanged(var, event, ...)` when a variable's domain changes

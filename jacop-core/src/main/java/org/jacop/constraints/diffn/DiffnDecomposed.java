@@ -206,8 +206,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     // add cumulative in x direction
     IntVar[] ey = new IntVar[y.length];
-    int yMin = IntDomain.MaxInt;
-    int yMax = IntDomain.MinInt;
+    int yMin = IntDomain.MAX_INT;
+    int yMax = IntDomain.MIN_INT;
     for (int i = 0; i < x.length; i++) {
       yMin = Math.min(yMin, y[i].min());
       yMax = Math.max(yMax, y[i].max() + ly[i].max());
@@ -230,8 +230,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     // add cumulative in y direction
     IntVar[] ex = new IntVar[x.length];
-    int xMin = IntDomain.MaxInt;
-    int xMax = IntDomain.MinInt;
+    int xMin = IntDomain.MAX_INT;
+    int xMax = IntDomain.MIN_INT;
     for (int i = 0; i < x.length; i++) {
       xMin = Math.min(xMin, x[i].min());
       xMax = Math.max(xMax, x[i].max() + lx[i].max());

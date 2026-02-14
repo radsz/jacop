@@ -67,7 +67,7 @@ import org.jacop.core.Var;
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debug = false;
+  private static final boolean DEBUG = false;
 
   /** It specifies variables x whose values are counted. */
   public final IntVar[] x;
@@ -328,7 +328,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (var.singleton()
             && xNodesHash.containsKey(var)
             && xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
-          if (debug) {
+          if (DEBUG) {
             log.debug(" in xVariableToChange: {}", var);
           }
           if (stamp.value() > 0) {
@@ -340,7 +340,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("XNodes");
         for (int i = 0; i < xSize; i++) {
           log.debug("{}", x[i]);
@@ -350,7 +350,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       stampValue = stamp.value();
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("stamp after {}", stampValue);
         log.debug("Xdomain");
       }
@@ -361,11 +361,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
             findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
 
         xDomain[i].twin = x[i];
-        if (debug) {
+        if (DEBUG) {
           log.debug("{}", xDomain[i]);
         }
       }
-      if (debug) {
+      if (DEBUG) {
         log.debug("YDomain");
       }
 
@@ -374,12 +374,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         yDomain[0][i] = counters[i].min();
         yDomain[1][i] = counters[i].max();
 
-        if (debug) {
+        if (DEBUG) {
           log.debug("{}", yDomain[i]);
         }
       }
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("take out singleton xNodes");
       }
 
@@ -399,7 +399,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         }
       }
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("pass in consistency");
         log.debug("YDomain");
         for (int i = 0; i < ySize; i++) {
@@ -423,7 +423,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         int cutMin = xDomain[j].min();
         int cutMax = xDomain[j].max();
 
-        if (debug) {
+        if (DEBUG) {
           log.debug("cutmax {}", cutMax);
         }
 
@@ -437,7 +437,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         int id = xNodesHash.get(xDomain[j].twin);
 
-        if (debug) {
+        if (DEBUG) {
           log.debug("do pruning [{},{}] => [{},{}]", x[id].min(), x[id].max(), cutMin, cutMax);
         }
 
@@ -455,7 +455,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           int value = findPosition(x[i].value(), domainHash);
           yDomain[1][value]--;
           if (yDomain[1][value] < 0) {
-            if (debug) {
+            if (DEBUG) {
               log.debug("failure in putting back yNodes domain");
             }
             throw Store.failException;
@@ -549,7 +549,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (debug) {
+    if (DEBUG) {
       log.debug("in queue variable {} level {}", var, level);
     }
     this.changedVariables.add((IntVar) var);
@@ -610,7 +610,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     Arrays.fill(nbOfMatchPerY, 0);
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("Xdomain");
       for (int i = 0; i < stampValue; i++) {
         log.debug("{} [{}-{}]", i, xDomain[i].min(), xDomain[i].max());
@@ -693,7 +693,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match1xOrderIndex++;
 
         if (xDomain[top].max() < i) {
-          if (debug) {
+          if (DEBUG) {
             log.debug("failure first pass");
           }
 
@@ -709,14 +709,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // otherwise the element in the queue can be used by the next yNode.
     if (!pFirst.isEmpty()) {
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("failure the queue is not empty");
       }
 
       throw Store.failException;
     }
 
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("match1Xorder : ");
       for (int aMatch1XOrder : match1xOrder) {
         sb.append(aMatch1XOrder).append(" ");
@@ -753,7 +753,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       for (int l = 0; l < minY; l++) {
         if (pSecond.isEmpty()) {
           // failure need to be expressed
-          if (debug) {
+          if (DEBUG) {
             log.debug("failure second pass");
           }
 
@@ -779,7 +779,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("match2Xorder : ");
       for (int aMatch2XOrder : match2xOrder) {
         sb.append(aMatch2XOrder).append(" ");
@@ -831,7 +831,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         e--;
       }
     }
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("match3 : ");
       for (int aMatch3 : match3) {
         sb.append(aMatch3).append(" ");
@@ -858,7 +858,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     sccNb = sccsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
     // now compReaches(Left, Right) and compOfY contain the left and right most y per comp and to
     // which comp a y belong
-    if (debug) {
+    if (DEBUG) {
       log.debug("sccNb : {}", sccNb);
       StringBuilder sb = new StringBuilder("compReachesLeft ");
       for (int aCompReachesLeft : compReachesLeft) {
@@ -972,7 +972,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("compOfY after S ");
       for (int aCompOfY : compOfY) {
         sb.append(aCompOfY).append(" ");
@@ -1087,7 +1087,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       yreachesLeft[i] = Math.min(yreachesLeft[i], xDomain[j].min());
       yreachesRight[i] = Math.max(yreachesRight[i], xDomain[j].max());
     }
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("yreachesLeft ");
       for (i = 0; i < yreachesLeft.length; i++) {
         sb.append(yreachesLeft[i]).append(" ");
@@ -1129,7 +1129,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     upperCount(max_u);
     lowerCount(min_l);
 
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("max_u ");
       for (int aMax_u : max_u) {
         sb.append(aMax_u).append(" ");
@@ -1143,7 +1143,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       log.debug("{}", sb);
     }
     for (int i = 0; i < ySize; i++) {
-      if (debug) {
+      if (DEBUG) {
         log.debug(
             "do pruning [{},{}] => [{},{}]",
             counters[i].min(),
@@ -1158,7 +1158,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
     // add the rest of nodes not treated in this pass that was already singleton
-    if (debug) {
+    if (DEBUG) {
       log.debug("increase yDomain with xNodes singleton");
     }
 
@@ -1171,7 +1171,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("set yNodes");
     }
 
@@ -1261,7 +1261,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     int position = (left + right) >> 1;
 
-    if (debug) {
+    if (DEBUG) {
       StringBuilder sb = new StringBuilder("Looking for ").append(value);
       for (int v : values) {
         sb.append(" val ").append(v);
@@ -1271,7 +1271,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     while (!(left + 1 >= right)) {
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("left {} right {} position {}", left, right, position);
       }
 

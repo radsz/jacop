@@ -201,7 +201,7 @@ public class Cryptogram extends ExampleFd {
       for (int j = 0; j < noWords; j++) {
 
         String currentWord = words.get(currentLine).get(j);
-        fdv4words[j] = new IntVar(store, currentWord, 0, IntDomain.MaxInt);
+        fdv4words[j] = new IntVar(store, currentWord, 0, IntDomain.MAX_INT);
 
         // stores fdvs corresponding to all but the last one in the
         // separate

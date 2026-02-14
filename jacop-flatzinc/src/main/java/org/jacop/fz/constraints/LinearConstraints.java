@@ -115,59 +115,59 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   void gen_int_lin_eq(SimpleNode node) {
-    int_lin_relation(Support.eq, node);
+    int_lin_relation(Support.EQ, node);
   }
 
   void gen_int_lin_eq_reif(SimpleNode node) {
-    int_lin_relation_reif(Support.eq, node);
+    int_lin_relation_reif(Support.EQ, node);
   }
 
   void gen_int_lin_eq_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.eq, node);
+    int_lin_relation_imp(Support.EQ, node);
   }
 
   void gen_int_lin_ne(SimpleNode node) {
-    int_lin_relation(Support.ne, node);
+    int_lin_relation(Support.NE, node);
   }
 
   void gen_int_lin_ne_reif(SimpleNode node) {
-    int_lin_relation_reif(Support.ne, node);
+    int_lin_relation_reif(Support.NE, node);
   }
 
   void gen_int_lin_ne_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.ne, node);
+    int_lin_relation_imp(Support.NE, node);
   }
 
   void gen_int_lin_lt(SimpleNode node) {
-    int_lin_relation(Support.lt, node);
+    int_lin_relation(Support.LT, node);
   }
 
   void gen_int_lin_lt_reif(SimpleNode node) {
-    int_lin_relation_reif(Support.lt, node);
+    int_lin_relation_reif(Support.LT, node);
   }
 
   void gen_int_lin_lt_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.lt, node);
+    int_lin_relation_imp(Support.LT, node);
   }
 
   void gen_int_lin_le(SimpleNode node) {
-    int_lin_relation(Support.le, node);
+    int_lin_relation(Support.LE, node);
   }
 
   void gen_int_lin_le_reif(SimpleNode node) {
-    int_lin_relation_reif(Support.le, node);
+    int_lin_relation_reif(Support.LE, node);
   }
 
   void gen_int_lin_le_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.le, node);
+    int_lin_relation_imp(Support.LE, node);
   }
 
   void gen_int_lin_gt_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.gt, node);
+    int_lin_relation_imp(Support.GT, node);
   }
 
   void gen_int_lin_ge_imp(SimpleNode node) {
-    int_lin_relation_imp(Support.ge, node);
+    int_lin_relation_imp(Support.GE, node);
   }
 
   void int_lin_relation_reif(int operation, SimpleNode node) throws FailException {
@@ -192,7 +192,7 @@ class LinearConstraints implements ParserTreeConstants {
 
     IntVar t;
     switch (operation) {
-      case Support.eq:
+      case Support.EQ:
         if (p2Fixed) {
           if (s == p3) {
             p4.domain.inValue(store.level, p4, 1);
@@ -271,7 +271,7 @@ class LinearConstraints implements ParserTreeConstants {
           }
         }
         break;
-      case Support.ne:
+      case Support.NE:
         if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
             if (binaryVar(p2[0]) && binaryVar(p2[1])) {
@@ -340,11 +340,11 @@ class LinearConstraints implements ParserTreeConstants {
           support.pose(new Reified(new LinearInt(p2, p1, "!=", p3), p4));
         }
         break;
-      case Support.lt:
+      case Support.LT:
         support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
         break;
       // gt not present in the newest flatzinc version
-      case Support.le:
+      case Support.LE:
         if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
             support.pose(new Reified(new XlteqY(p2[0], p2[1]), p4));
@@ -471,7 +471,7 @@ class LinearConstraints implements ParserTreeConstants {
 
     IntVar t;
     switch (operation) {
-      case Support.eq:
+      case Support.EQ:
         if (p2Fixed) {
           if (s != p3) {
             p4.domain.inValue(store.level, p4, 0);
@@ -528,7 +528,7 @@ class LinearConstraints implements ParserTreeConstants {
           }
         }
         break;
-      case Support.ne:
+      case Support.NE:
         if (p1.length == 1 && p1[0] == 1) {
           support.pose(support.fzXneqCimplied(p2[0], p3, p4));
         } else if (p1.length == 1 && p1[0] == -1) {
@@ -579,16 +579,16 @@ class LinearConstraints implements ParserTreeConstants {
           support.pose(new Implies(p4, new LinearInt(p2, p1, "!=", p3)));
         }
         break;
-      case Support.lt:
+      case Support.LT:
         support.pose(new Implies(p4, new LinearInt(p2, p1, "<", p3)));
         break;
-      case Support.gt:
+      case Support.GT:
         support.pose(new Implies(p4, new LinearInt(p2, p1, ">", p3)));
         break;
-      case Support.ge:
+      case Support.GE:
         support.pose(new Implies(p4, new LinearInt(p2, p1, ">=", p3)));
         break;
-      case Support.le:
+      case Support.LE:
         if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
             support.pose(new Implies(p4, new XlteqY(p2[0], p2[1])));
@@ -691,7 +691,7 @@ class LinearConstraints implements ParserTreeConstants {
 
     IntVar t;
     switch (operation) {
-      case Support.eq:
+      case Support.EQ:
         if (p2Fixed) {
           if (s == p3) {
             return;
@@ -747,7 +747,7 @@ class LinearConstraints implements ParserTreeConstants {
               if (p3 == 0) {
                 support.pose(new SumBool(vect, "==", p2[pos]));
               } else {
-                IntVar tmp = new IntVar(store, 0, IntDomain.MaxInt);
+                IntVar tmp = new IntVar(store, 0, IntDomain.MAX_INT);
                 support.pose(new SumBool(vect, "==", tmp));
                 support.pose(new XplusCeqZ(p2[pos], p3, tmp));
               }
@@ -859,7 +859,7 @@ class LinearConstraints implements ParserTreeConstants {
           }
         }
         break;
-      case Support.ne:
+      case Support.NE:
         if (p2Fixed) {
           if (s != p3) {
             return;
@@ -904,7 +904,7 @@ class LinearConstraints implements ParserTreeConstants {
           }
         }
         break;
-      case Support.lt:
+      case Support.LT:
         if (p2Fixed) {
           if (s < p3) {
             return;
@@ -951,7 +951,7 @@ class LinearConstraints implements ParserTreeConstants {
           }
         }
         break;
-      case Support.le:
+      case Support.LE:
         if (p2Fixed) {
           if (s <= p3) {
             return;

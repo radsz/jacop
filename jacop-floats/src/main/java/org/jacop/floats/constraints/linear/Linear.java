@@ -276,9 +276,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         BinaryNode parent;
 
         if (nodes.length == 2) {
-          parent = new RootBnode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+          parent = new RootBnode(store, FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
         } else {
-          parent = new Bnode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+          parent = new Bnode(store, FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
         }
 
         parent.left = nodes[i];

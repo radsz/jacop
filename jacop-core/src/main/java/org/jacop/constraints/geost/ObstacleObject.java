@@ -211,8 +211,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
       } else {
         // the dimension is not relevant, outbox covers the whole space
-        outDimOrigin = IntDomain.MinInt;
-        outDimLength = IntDomain.MaxInt - IntDomain.MinInt;
+        outDimOrigin = IntDomain.MIN_INT;
+        outDimLength = IntDomain.MAX_INT - IntDomain.MIN_INT;
       }
 
       if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) {
@@ -263,8 +263,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
           } else {
             // the dimension is not relevant, outbox covers the whole space
-            outOrigin[i] = IntDomain.MinInt;
-            outLength[i] = IntDomain.MaxInt - IntDomain.MinInt;
+            outOrigin[i] = IntDomain.MIN_INT;
+            outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
           }
         }
 
@@ -318,8 +318,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
         lowerAbsInsfeasible[i] = obstacle.coords[i].max() + bb.origin[i];
       }
 
-      upperAbsInsfeasible[obstacle.dimension] = IntDomain.MaxInt;
-      lowerAbsInsfeasible[obstacle.dimension] = IntDomain.MinInt;
+      upperAbsInsfeasible[obstacle.dimension] = IntDomain.MAX_INT;
+      lowerAbsInsfeasible[obstacle.dimension] = IntDomain.MIN_INT;
 
     } else {
       frameExists = true;

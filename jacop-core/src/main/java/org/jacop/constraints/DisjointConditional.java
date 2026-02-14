@@ -439,7 +439,7 @@ public class DisjointConditional extends Diff {
     int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
-      startMin[i] = IntDomain.MaxInt;
+      startMin[i] = IntDomain.MAX_INT;
       stopMax[i] = 0;
       minLength[i] = rLengthDom.min();
 
@@ -677,7 +677,7 @@ public class DisjointConditional extends Diff {
         s = ir.origins[i];
 
         consideredRect.clear();
-        int minI = IntDomain.MaxInt;
+        int minI = IntDomain.MAX_INT;
         long rectSize = 0;
         for (IntRectangle t : usedRectArray) {
           int tempMin = t.origins[i] + t.lengths[i];
@@ -710,8 +710,8 @@ public class DisjointConditional extends Diff {
               if (exclude.max() != -1) {
                 int min = exclude.min() - r.length[i].min();
                 if (min + 1 < exclude.max()) {
-                  IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, min);
-                  Update.unionAdapt(exclude.max(), IntDomain.MaxInt);
+                  IntervalDomain Update = new IntervalDomain(IntDomain.MIN_INT, min);
+                  Update.unionAdapt(exclude.max(), IntDomain.MAX_INT);
 
                   if (traceNarrOn) {
                     log.debug(
@@ -775,7 +775,7 @@ public class DisjointConditional extends Diff {
               log.debug(
                   "9. Obligatory rectangles Narrow {} in {}..{}",
                   r.length[i],
-                  IntDomain.MinInt,
+                  IntDomain.MIN_INT,
                   maxLength);
             }
             r.length[i].domain.inMax(currentStore.level, r.length[i], maxLength);
@@ -909,8 +909,8 @@ public class DisjointConditional extends Diff {
           int updateMin = p.min - dur + 1;
           int updateMax = p.max - 1;
           if (!(updateMin > startDom.max() || updateMax < startDom.min())) {
-            IntervalDomain update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
-            update.unionAdapt(p.max, IntDomain.MaxInt);
+            IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+            update.unionAdapt(p.max, IntDomain.MAX_INT);
 
             if (traceNarrOn) {
               log.debug(

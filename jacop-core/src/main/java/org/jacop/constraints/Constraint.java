@@ -73,7 +73,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final boolean isIncreaseWeightEnabled = true;
 
-  public boolean traceEnabled = SwitchesPruningLogging.traceConstraint;
+  public boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
 
   /**
    * It specifies the number id for a given constraint. All constraints within the same type have

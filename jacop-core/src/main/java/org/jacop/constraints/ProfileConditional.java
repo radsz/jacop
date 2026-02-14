@@ -44,7 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class ProfileConditional extends ArrayList<ProfileItemCondition> {
 
-  static final boolean traceEnabled = false;
+  static final boolean TRACE_ENABLED = false;
   @Serial private static final long serialVersionUID = 8683452581100000010L;
   int MaxProfile;
 
@@ -55,13 +55,13 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     int i = 0;
     boolean notFound = true;
 
-    if (traceEnabled) {
+    if (TRACE_ENABLED) {
       log.debug("{}  --------------------------", index);
       log.debug("{}", exList);
     }
 
     if (size() == 0) {
-      if (traceEnabled) {
+      if (TRACE_ENABLED) {
         log.debug("1. Add [{}..{})={} at position 0", a, b, val);
       }
       int[] r = {index, val};
@@ -75,7 +75,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
         if (b <= p.min) {
           if (a != b) {
             if (b == p.min && val == p.value) {
-              if (traceEnabled) {
+              if (TRACE_ENABLED) {
                 log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
               }
               // !!!! b==p.Min
@@ -88,7 +88,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 int[] r = {index, val}; // OK
                 add(i, new ProfileItemCondition(a, b, val, r));
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
                 }
                 int[] r = {index, val}; // OK
@@ -106,7 +106,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
           if (p.max <= a) {
             if (i == size() - 1) {
               if (a != b) {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("3. Add [{}..{})={} at position {}", a, b, val, i + 1);
                 }
                 int[] r = {index, val}; // OK
@@ -124,12 +124,12 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             ProfileItemCondition new3 = new ProfileItemCondition();
             int[] r = {index, val};
 
-            if (traceEnabled) {
+            if (TRACE_ENABLED) {
               log.debug("Overlap of [{}..{})={}, [{}]  and {}", a, b, val, index, p);
             }
 
             p.overlap(new ProfileItemCondition(a, b, val, r), new1, new2, new3, exList, r);
-            if (traceEnabled) {
+            if (TRACE_ENABLED) {
               log.debug("Result = {}, {}, {}", new1, new2, new3);
             }
 
@@ -143,13 +143,13 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 previous = new ProfileItemCondition();
               }
               if (previous.max == new1.min && previous.value == new1.value) {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug(
                       "4a. Change [{}..{})={} at position {}", previous.min, new1.max, val, i);
                 }
                 add(i, new1);
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("4b. Adding {}", new1);
                 }
                 // !!!
@@ -170,12 +170,12 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 previous = new ProfileItemCondition();
               }
               if (previous.max == new2.min && previous.value == new2.value) {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("5a. Change [{}..{})={} at position {}", new2.min, new2.max, val, i);
                 }
                 add(i, new2);
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("5b. Adding {}", new2);
                 }
                 // !!!
@@ -203,7 +203,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
         }
       }
     }
-    if (traceEnabled) {
+    if (TRACE_ENABLED) {
       log.debug("########\n{}", this);
     }
   }

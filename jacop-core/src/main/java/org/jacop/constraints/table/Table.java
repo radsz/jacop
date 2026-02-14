@@ -301,7 +301,7 @@ public class Table extends AbstractTable {
 
     StringBuilder s = toStringBase("table");
 
-    if (debug) {
+    if (DEBUG) {
       s.append("\n").append(rbs);
 
       s.append("\nsupports: [");

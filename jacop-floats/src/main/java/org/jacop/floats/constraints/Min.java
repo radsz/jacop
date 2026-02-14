@@ -104,8 +104,8 @@ public class Min extends Constraint implements SatisfiedPresent {
       // @todo, optimize, if there is no change on min.min() then
       // the below inMin does not have to be executed.
 
-      double minValue = FloatDomain.MaxFloat;
-      double maxValue = FloatDomain.MaxFloat;
+      double minValue = FloatDomain.MAX_FLOAT;
+      double maxValue = FloatDomain.MAX_FLOAT;
 
       double minMin = min.min();
       for (FloatVar floatVar : list) {

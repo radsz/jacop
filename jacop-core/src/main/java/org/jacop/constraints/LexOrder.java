@@ -62,7 +62,7 @@ import org.jacop.core.Var;
 public class LexOrder extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Two vectors that have to be lexicographically ordered. */
@@ -334,7 +334,7 @@ public class LexOrder extends Constraint
       a++;
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("INIT entry: a = {}", a);
     }
 
@@ -363,7 +363,7 @@ public class LexOrder extends Constraint
 
       if (!lexLt) {
         if (i == n) {
-          b = n + 1; // IntDomain.MaxInt;
+          b = n + 1; // IntDomain.MAX_INT;
         } else if (b == -1) {
           b = i;
         }
@@ -382,7 +382,7 @@ public class LexOrder extends Constraint
       reestablishGac(a);
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("INIT exit: a = {}, b = {}", a, b);
     }
   }
@@ -392,7 +392,7 @@ public class LexOrder extends Constraint
     int a = alphaValue;
     int b = betaValue;
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("reestablishGac entry for {}, alpha = {}, beta = {}", i, a, b);
       log.debug("{}", this);
     }
@@ -417,7 +417,7 @@ public class LexOrder extends Constraint
       updateBeta(i - 1);
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("reestablishGac exit for {}, alpha = {}, beta = {}", i, a, b);
       log.debug("{}", this);
     }
@@ -429,7 +429,7 @@ public class LexOrder extends Constraint
     int a = alphaValue + 1;
     int b = betaValue;
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("updateAlpha entry: a = {}, b = {}", a, b);
     }
 
@@ -454,7 +454,7 @@ public class LexOrder extends Constraint
       updateAlpha();
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("updateAlfa exit: a = {}, b = {}", a, b);
     }
   }
@@ -470,7 +470,7 @@ public class LexOrder extends Constraint
     int b = i + 1;
     betaValue = b;
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("updateBeta entry: a = {}, b = {}", a, b);
     }
 
@@ -485,7 +485,7 @@ public class LexOrder extends Constraint
       updateBeta(i - 1);
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("updateBeta exit: a = {}, b = {}", a, b);
     }
   }

@@ -208,7 +208,7 @@ public class PrintSchedule {
   }
 
   int findMinR() {
-    int m = IntDomain.MaxInt;
+    int m = IntDomain.MAX_INT;
     for (IntVar intVar : r) {
       if (m > intVar.min()) {
         m = intVar.min();

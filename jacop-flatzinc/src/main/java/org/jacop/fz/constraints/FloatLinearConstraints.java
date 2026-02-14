@@ -58,42 +58,42 @@ class FloatLinearConstraints implements ParserTreeConstants {
 
   void gen_float_lin_eq(SimpleNode node) {
     reified = false;
-    float_lin_relation(Support.eq, node);
+    float_lin_relation(Support.EQ, node);
   }
 
   void gen_float_lin_eq_reif(SimpleNode node) {
     reified = true;
-    float_lin_relation(Support.eq, node);
+    float_lin_relation(Support.EQ, node);
   }
 
   void gen_float_lin_le(SimpleNode node) {
     reified = false;
-    float_lin_relation(Support.le, node);
+    float_lin_relation(Support.LE, node);
   }
 
   void gen_float_lin_le_reif(SimpleNode node) {
     reified = true;
-    float_lin_relation(Support.le, node);
+    float_lin_relation(Support.LE, node);
   }
 
   void gen_float_lin_lt(SimpleNode node) {
     reified = false;
-    float_lin_relation(Support.lt, node);
+    float_lin_relation(Support.LT, node);
   }
 
   void gen_float_lin_lt_reif(SimpleNode node) {
     reified = true;
-    float_lin_relation(Support.lt, node);
+    float_lin_relation(Support.LT, node);
   }
 
   void gen_float_lin_ne(SimpleNode node) {
     reified = false;
-    float_lin_relation(Support.ne, node);
+    float_lin_relation(Support.NE, node);
   }
 
   void gen_float_lin_ne_reif(SimpleNode node) {
     reified = true;
-    float_lin_relation(Support.ne, node);
+    float_lin_relation(Support.NE, node);
   }
 
   void float_lin_relation(int operation, SimpleNode node) throws FailException {
@@ -108,16 +108,16 @@ class FloatLinearConstraints implements ParserTreeConstants {
       IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
       switch (operation) {
-        case Support.eq:
+        case Support.EQ:
           support.pose(new Reified(new LinearFloat(p2, p1, "==", p3), p4));
           break;
-        case Support.ne:
+        case Support.NE:
           support.pose(new Reified(new LinearFloat(p2, p1, "!=", p3), p4));
           break;
-        case Support.lt:
+        case Support.LT:
           support.pose(new Reified(new LinearFloat(p2, p1, "<", p3), p4));
           break;
-        case Support.le:
+        case Support.LE:
           support.pose(new Reified(new LinearFloat(p2, p1, "<=", p3), p4));
           break;
         default:
@@ -126,7 +126,7 @@ class FloatLinearConstraints implements ParserTreeConstants {
       }
     } else { // non reified
       switch (operation) {
-        case Support.eq:
+        case Support.EQ:
           if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
             if (p3 != 0) {
               support.pose(new PplusCeqR(p2[1], p3, p2[0]));
@@ -145,10 +145,10 @@ class FloatLinearConstraints implements ParserTreeConstants {
             support.pose(new LinearFloat(p2, p1, "==", p3));
           }
           break;
-        case Support.ne:
+        case Support.NE:
           support.pose(new LinearFloat(p2, p1, "!=", p3));
           break;
-        case Support.lt:
+        case Support.LT:
           if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
             support.pose(new PltQ(p2[0], p2[1]));
           } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
@@ -157,7 +157,7 @@ class FloatLinearConstraints implements ParserTreeConstants {
             support.pose(new LinearFloat(p2, p1, "<", p3));
           }
           break;
-        case Support.le:
+        case Support.LE:
           if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
             support.pose(new PlteqQ(p2[0], p2[1]));
           } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {

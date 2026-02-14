@@ -61,7 +61,7 @@ import org.jacop.util.TupleUtils;
 public abstract class AbstractExtensionalVa extends Constraint
     implements UsesQueueVariable, Stateful {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** It stores variables within this extensional constraint, order does matter. */
   public final IntVar[] list;
@@ -113,7 +113,7 @@ public abstract class AbstractExtensionalVa extends Constraint
    * @param store the constraint store
    */
   protected void filterAndIndexTuples(Store store) {
-    if (debugAll) {
+    if (DEBUG_ALL) {
       for (Var var : list) {
         log.debug("Variable {}", var);
       }
@@ -127,7 +127,7 @@ public abstract class AbstractExtensionalVa extends Constraint
       stillValid[i] = true;
       int j = 0;
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("tuple for analysis{}", Arrays.toString(t));
       }
 
@@ -143,14 +143,14 @@ public abstract class AbstractExtensionalVa extends Constraint
         noValid++;
       }
 
-      if (debugAll && !stillValid[i]) {
+      if (DEBUG_ALL && !stillValid[i]) {
         log.debug("Not valid {}", Arrays.toString(t));
       }
 
       i++;
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("No. still valid {}", noValid);
     }
 
@@ -163,7 +163,7 @@ public abstract class AbstractExtensionalVa extends Constraint
         temp4Shrinking[i] = t;
         i++;
 
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug("Still valid {}", Arrays.toString(t));
         }
       }
@@ -186,13 +186,13 @@ public abstract class AbstractExtensionalVa extends Constraint
         val.merge(value, 1, Integer::sum);
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("values {}", val.keySet());
       }
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("Sorted val size {}", sortedVal.size());
       }
 
@@ -200,13 +200,13 @@ public abstract class AbstractExtensionalVa extends Constraint
       supportCount[i] = new int[sortedVal.size()];
       this.tuples[i] = new int[sortedVal.size()][][];
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("values length {}", values[i].length);
       }
 
       for (int j = 0; j < values[i].length; j++) {
 
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug("sortedVal {}", sortedVal);
         }
 
@@ -244,12 +244,12 @@ public abstract class AbstractExtensionalVa extends Constraint
 
           int value = enumer.nextElement();
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("Seeking support for {} and value {}", list[varPosition], value);
           }
           int[] t = seekSupportVa(varPosition, value);
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("Found support? {}", t != null);
           }
 

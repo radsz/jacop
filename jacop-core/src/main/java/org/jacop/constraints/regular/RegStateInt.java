@@ -111,7 +111,7 @@ public class RegStateInt extends RegState {
 
     if (pos < outDegree) {
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug(
             "remove the SUC arc q_{}%{} -> q_{}%{}",
             level, id, this.successors[pos].level, this.successors[pos].id);

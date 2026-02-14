@@ -69,7 +69,7 @@ public class TanExample {
     FloatDomain.intervalPrint(false);
 
     FloatVar p = new FloatVar(store, "p", -4 * FloatDomain.PI, 4 * FloatDomain.PI);
-    FloatVar q = new FloatVar(store, "q", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar q = new FloatVar(store, "q", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
 
     store.impose(new TanPeqR(p, q));
     store.impose(new PplusQeqR(p, q, new FloatVar(store, 0.0, 0.0)));

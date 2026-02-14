@@ -56,7 +56,7 @@ import org.jacop.core.Var;
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
 
   /** It specifies if the debugging information should be printed. */
-  private static final boolean debug = false;
+  private static final boolean DEBUG = false;
 
   /**
    * It is executed right after consistency of the current search node. The return code specifies if
@@ -433,7 +433,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     while (!(left + 1 >= right)) {
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("left {} right {} middle {}", left, right, middle);
       }
 

@@ -55,15 +55,15 @@ import org.jacop.core.TimeStamp;
 @Slf4j
 class CumulativePrimary extends Constraint {
 
-  private static final boolean debug = false;
-  private static final boolean debugNarr = false;
+  private static final boolean DEBUG = false;
+  private static final boolean DEBUG_NARR = false;
   // event type
-  private static final int profile = 0;
-  private static final int pruneStart = 1;
-  private static final int pruneEnd = 2;
+  private static final int PROFILE = 0;
+  private static final int PRUNE_START = 1;
+  private static final int PRUNE_END = 2;
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   /*
-   * It specifies the limit of the profile of cumulative use of resources.
+   * It specifies the limit of the PROFILE of cumulative use of resources.
    */
   public final IntVar limit;
   /*
@@ -199,7 +199,7 @@ class CumulativePrimary extends Constraint {
     return result.toString();
   }
 
-  // Sweep algorithm for profile
+  // Sweep algorithm for PROFILE
   void sweepPruning(Store store) {
 
     Event[] es = new Event[4 * start.length];
@@ -212,12 +212,12 @@ class CumulativePrimary extends Constraint {
     for (int i = first; i < start.length; i++) {
       int k = activeMap[i];
 
-      // mandatory task parts to create profile
+      // mandatory task parts to create PROFILE
       int min = start[k].max(); // t.lst()
       int max = start[k].min() + dur[k]; // t.ect()
       if (min < max) {
-        es[j++] = new Event(profile, k, min, res[k]);
-        es[j++] = new Event(profile, k, max, -res[k]);
+        es[j++] = new Event(PROFILE, k, min, res[k]);
+        es[j++] = new Event(PROFILE, k, max, -res[k]);
         minProfile = Math.min(min, minProfile);
         maxProfile = Math.max(max, maxProfile);
       }
@@ -235,8 +235,8 @@ class CumulativePrimary extends Constraint {
         int min = start[k].min(); // t.est();
         int max = start[k].max() + dur[k]; // t.lct();
         if (!(min > maxProfile || max < minProfile)) {
-          es[j++] = new Event(pruneStart, k, min, 0); // res[i]);
-          es[j++] = new Event(pruneEnd, k, max, 0); // -res[i]);
+          es[j++] = new Event(PRUNE_START, k, min, 0); // res[i]);
+          es[j++] = new Event(PRUNE_END, k, max, 0); // -res[i]);
         }
       }
     }
@@ -244,7 +244,7 @@ class CumulativePrimary extends Constraint {
     int N = j;
     Arrays.sort(es, 0, N, eventComparator);
 
-    if (debugNarr) {
+    if (DEBUG_NARR) {
       log.debug("{}", Arrays.asList(es));
       log.debug("limit.max() = {}", limitMax);
       log.debug("===========================");
@@ -253,7 +253,7 @@ class CumulativePrimary extends Constraint {
     BitSet tasksToPrune = new BitSet(start.length);
     boolean[] inProfile = new boolean[start.length];
 
-    // current value of the profile for mandatory parts
+    // current value of the PROFILE for mandatory parts
     int curProfile = 0;
 
     // used for start variable pruning
@@ -269,14 +269,14 @@ class CumulativePrimary extends Constraint {
       }
 
       switch (e.type()) {
-        case profile: // =========== profile event ===========
+        case PROFILE: // =========== PROFILE event ===========
           curProfile += e.value();
           inProfile[e.index] = e.value() > 0;
 
-          if (ne == null || ne.type() != profile || e.date < ne.date()) {
-            // check the tasks for pruning only at the end of all profile events
+          if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
+            // check the tasks for pruning only at the end of all PROFILE events
 
-            if (debug) {
+            if (DEBUG) {
               log.debug("Profile at {}: {}", e.date(), curProfile);
             }
 
@@ -299,7 +299,7 @@ class CumulativePrimary extends Constraint {
               if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
                 // end of excluded interval
 
-                if (debugNarr) {
+                if (DEBUG_NARR) {
                   log.debug(
                       ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
                       start[ti],
@@ -309,7 +309,7 @@ class CumulativePrimary extends Constraint {
                 start[ti].domain.inComplement(
                     store.level, start[ti], startExcluded[ti], e.date() - 1);
 
-                if (debugNarr) {
+                if (DEBUG_NARR) {
                   log.debug(" => {}", start[ti]);
                 }
 
@@ -320,7 +320,7 @@ class CumulativePrimary extends Constraint {
 
           break;
 
-        case pruneStart: // =========== start of a task ===========
+        case PRUNE_START: // =========== start of a task ===========
           int ti = e.index;
 
           // ========= for start pruning
@@ -332,14 +332,14 @@ class CumulativePrimary extends Constraint {
           tasksToPrune.set(ti);
           break;
 
-        case pruneEnd: // =========== end of a task ===========
+        case PRUNE_END: // =========== end of a task ===========
           ti = e.index;
 
           // ========= pruning start variable
           if (startConsidered[ti]) {
             // task ends and we remove forbidden area
 
-            if (debugNarr) {
+            if (DEBUG_NARR) {
               log.debug(
                   ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
                   start[ti],
@@ -367,7 +367,7 @@ class CumulativePrimary extends Constraint {
 
   private void removeNotUsedProfleTasks() {
 
-    // remove ground tasks that make profile but do not contribute
+    // remove ground tasks that make PROFILE but do not contribute
     // to pruning of other tasks; they are located outside the
     // range of tasks
     int minPrune = Integer.MAX_VALUE;
@@ -414,7 +414,8 @@ class CumulativePrimary extends Constraint {
     @Override
     public String toString() {
       String result = "(";
-      result += type == profile ? "profile, " : type == pruneStart ? "pruneStart, " : "pruneEnd, ";
+      result +=
+          type == PROFILE ? "PROFILE, " : type == PRUNE_START ? "PRUNE_START, " : "PRUNE_END, ";
       result += index + ", " + date + ", " + value + ")\n";
       return result;
     }

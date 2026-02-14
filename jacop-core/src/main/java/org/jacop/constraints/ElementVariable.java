@@ -205,8 +205,8 @@ public class ElementVariable extends Constraint
         }
       }
 
-      int valMin = IntDomain.MaxInt;
-      int valMax = IntDomain.MinInt;
+      int valMin = IntDomain.MAX_INT;
+      int valMax = IntDomain.MIN_INT;
       for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
         int position = e.nextElement() - 1 - indexOffset;
         int min = list[position].domain.min();

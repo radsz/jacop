@@ -200,8 +200,8 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
       } else if (sort == detect) {
 
-        int min = IntDomain.MaxInt;
-        int max = IntDomain.MinInt;
+        int min = IntDomain.MAX_INT;
+        int max = IntDomain.MIN_INT;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
         boolean asc = true;
         boolean desc = true;
@@ -250,8 +250,8 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
         }
       } else { // sort == none
 
-        int min = IntDomain.MaxInt;
-        int max = IntDomain.MinInt;
+        int min = IntDomain.MAX_INT;
+        int max = IntDomain.MIN_INT;
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
           int position = e.nextElement() - 1 - indexOffset;

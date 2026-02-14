@@ -57,7 +57,7 @@ import org.jacop.util.BipartiteGraphMatching;
 public class Values extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debug = false;
+  private static final boolean DEBUG = false;
 
   /** It specifies a list of variables which are counted. */
   protected final IntVar[] list;
@@ -106,7 +106,7 @@ public class Values extends Constraint implements SatisfiedPresent {
 
       Arrays.sort(list, minFdv);
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("Sorted : \n{}", this);
       }
 
@@ -159,16 +159,16 @@ public class Values extends Constraint implements SatisfiedPresent {
           new BipartiteGraphMatching(adj, list.length, valueMap.size());
       int maxNumberDifferent = matcher.hopcroftKarp();
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("Minimum number of different values = {}", minNumberDifferent);
       }
-      if (debug) {
+      if (DEBUG) {
         log.debug("Maximum number of different values = {}", maxNumberDifferent);
       }
 
       count.domain.in(store.level, count, minNumberDifferent, maxNumberDifferent);
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("Number singleton values = {} Values = {}", numberSingleton, singletonValues);
       }
 

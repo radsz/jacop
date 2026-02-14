@@ -54,7 +54,7 @@ public class ProfileItem {
   /** It specifies the amount by which this profile item contributes in the profile. */
   @Getter @Setter public int value = -1;
 
-  @Setter short type = Profile.cumul;
+  @Setter short type = Profile.CUMUL;
 
   /**
    * It constructs a profile item which spans over interval (a, b) with a given amount specified by
@@ -111,7 +111,7 @@ public class ProfileItem {
       if (a.max < max) {
         if (min != a.max) {
           int v =
-              type == Profile.cumul
+              type == Profile.CUMUL
                   ? a.value + value // cumulative
                   // is sum
                   : Math.max(a.value, value); // diff2
@@ -123,7 +123,7 @@ public class ProfileItem {
       } else {
         // Max <= a.Max
         int v =
-            type == Profile.cumul
+            type == Profile.CUMUL
                 ? a.value + value // cumulative is
                 // sum
                 : Math.max(a.value, value); // diff2 is
@@ -138,7 +138,7 @@ public class ProfileItem {
         left.set(a.min, min, a.value);
         if (a.max == max) {
           int v =
-              type == Profile.cumul
+              type == Profile.CUMUL
                   ? a.value + value // cumulative
                   // is sum
                   : Math.max(a.value, value); // diff2
@@ -150,7 +150,7 @@ public class ProfileItem {
           if (a.max < max) {
             if (min != a.max) {
               int v =
-                  type == Profile.cumul
+                  type == Profile.CUMUL
                       ? a.value + value // cumulative
                       // is
                       // sum
@@ -163,7 +163,7 @@ public class ProfileItem {
           } else {
             // Max <= a.Max
             int v =
-                type == Profile.cumul
+                type == Profile.CUMUL
                     ? a.value + value // cumulative
                     // is
                     // sum
@@ -181,7 +181,7 @@ public class ProfileItem {
         left.set(min, a.min, value);
         if (a.max == max) {
           int v =
-              type == Profile.cumul
+              type == Profile.CUMUL
                   ? a.value + value // cumulative
                   // is sum
                   : Math.max(a.value, value); // diff2
@@ -192,7 +192,7 @@ public class ProfileItem {
         } else {
           if (a.max < max) {
             int v =
-                type == Profile.cumul
+                type == Profile.CUMUL
                     ? a.value + value // cumulative
                     // is
                     // sum
@@ -204,7 +204,7 @@ public class ProfileItem {
           } else {
             // Max <= a.Max
             int v =
-                type == Profile.cumul
+                type == Profile.CUMUL
                     ? a.value + value // cumulative
                     // is
                     // sum

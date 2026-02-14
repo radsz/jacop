@@ -51,7 +51,7 @@ import org.jacop.core.Var;
 public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
   static final boolean DEBUG_ALL = false;
-  static boolean debugAllLocal = DEBUG_ALL;
+  static boolean DEBUG_ALLLocal = DEBUG_ALL;
 
   static final boolean DEBUG_PRUNING = false;
   static boolean debugPruning = DEBUG_PRUNING;
@@ -105,7 +105,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   @Override
   public int[] seekSupportVa(int varPosition, int value) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
@@ -249,7 +249,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
    */
   public int isDisallowed(int varPosition, int value, int[] t) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("variable {} position {} value {}", list[varPosition], varPosition, value);
     }
 
@@ -305,7 +305,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   @Override
   public void consistency(Store store) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Begin {}", this);
     }
 
@@ -315,7 +315,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
     pruneUnsupported(store);
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("End {}", this);
     }
   }
@@ -394,7 +394,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Var {} {}", var, ((IntVar) var).recentDomainPruning());
     }
 

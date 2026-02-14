@@ -106,8 +106,8 @@ public class ArgMin extends AbstractArgMinMax {
 
       store.propagationHasOccurred = false;
 
-      int lb = IntDomain.MaxInt;
-      int ub = IntDomain.MaxInt;
+      int lb = IntDomain.MAX_INT;
+      int ub = IntDomain.MAX_INT;
       int pos = -1;
 
       // find lower/upper bounds for elements on list
@@ -149,7 +149,7 @@ public class ArgMin extends AbstractArgMinMax {
       }
 
       // find min value for variables indexed by index variable
-      lb = IntDomain.MaxInt;
+      lb = IntDomain.MAX_INT;
       pos = -1;
       for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int i = e.nextElement() - 1 - indexOffset;

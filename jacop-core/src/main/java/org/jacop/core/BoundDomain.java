@@ -192,22 +192,22 @@ class BoundDomain extends IntDomain {
   @Override
   public IntDomain complement() {
 
-    if (minBound == MinInt) {
+    if (minBound == MIN_INT) {
 
-      if (maxBound == MaxInt) {
+      if (maxBound == MAX_INT) {
         return new BoundDomain();
       }
 
-      return new BoundDomain(maxBound + 1, MaxInt);
+      return new BoundDomain(maxBound + 1, MAX_INT);
     }
 
-    if (maxBound == MaxInt) {
-      return new BoundDomain(MinInt, minBound - 1);
+    if (maxBound == MAX_INT) {
+      return new BoundDomain(MIN_INT, minBound - 1);
     }
 
     IntervalDomain complement = new IntervalDomain();
-    complement.unionAdapt(MinInt, minBound - 1);
-    complement.unionAdapt(maxBound + 1, MaxInt);
+    complement.unionAdapt(MIN_INT, minBound - 1);
+    complement.unionAdapt(maxBound + 1, MAX_INT);
 
     return complement;
   }
@@ -255,7 +255,7 @@ class BoundDomain extends IntDomain {
 
   @Override
   public int domainId() {
-    return BoundDomainID;
+    return BOUND_DOMAIN_ID;
   }
 
   public boolean eq(IntDomain domain) {
@@ -813,7 +813,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       BoundDomain boundDomain = (BoundDomain) domain;
 
@@ -850,7 +850,7 @@ class BoundDomain extends IntDomain {
 
     IntDomain domain = this;
 
-    while (domain.domainId() == BoundDomainID) {
+    while (domain.domainId() == BOUND_DOMAIN_ID) {
 
       BoundDomain dom = (BoundDomain) domain;
 
@@ -861,7 +861,7 @@ class BoundDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];
@@ -917,12 +917,12 @@ class BoundDomain extends IntDomain {
         result.append(searchConstraint);
       }
 
-      if (domain.domainId() == IntervalDomainID) {
+      if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
         IntervalDomain dom = (IntervalDomain) domain;
         domain = dom.previousDomain;
 
-      } else if (domain.domainId() == BoundDomainID) {
+      } else if (domain.domainId() == BOUND_DOMAIN_ID) {
 
         BoundDomain dom = (BoundDomain) domain;
         domain = dom.previousDomain;

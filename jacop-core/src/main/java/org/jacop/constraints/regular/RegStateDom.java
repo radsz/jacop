@@ -77,7 +77,7 @@ public class RegStateDom extends RegState {
   public void removeTransition(int pos) {
 
     if (pos < outDegree) {
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug(
             "remove the SUC arc q_{}{} -> q_{}{}",
             level,
@@ -100,7 +100,7 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.error("State q_{}{}: Successors on position {} is already removed", level, id, pos);
     }
 

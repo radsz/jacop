@@ -59,7 +59,7 @@ import org.jacop.core.Var;
 public class NoGood extends Constraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debug = false;
+  private static final boolean DEBUG = false;
 
   /** It specifies a list of variables in no-good constraint. */
   protected IntVar[] listOfVars;
@@ -119,7 +119,7 @@ public class NoGood extends Constraint {
   @Override
   public void consistency(Store store) {
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("Start {}", this);
     }
 
@@ -128,7 +128,7 @@ public class NoGood extends Constraint {
       // or there was no two not singleton variables to be
       // watched.
 
-      if (debug) {
+      if (DEBUG) {
         log.debug("Special cases of noGood constraints have occured");
       }
 
@@ -196,7 +196,7 @@ public class NoGood extends Constraint {
 
         secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
 
-        if (debug) {
+        if (DEBUG) {
           log.debug("{}", secondWatch);
         }
 
@@ -228,13 +228,13 @@ public class NoGood extends Constraint {
 
         firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
 
-        if (debug) {
+        if (DEBUG) {
           log.debug("{}", firstWatch);
         }
       }
     }
 
-    if (debug) {
+    if (DEBUG) {
       log.debug("End{}", this);
     }
   }

@@ -1348,7 +1348,7 @@ package object scala {
     */
   def maximize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-    val costN = new IntVar("newCost", org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    val costN = new IntVar("newCost", org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     costN #= -cost
 
     minimize(select, costN, printSolutions: _*)
@@ -1364,7 +1364,7 @@ package object scala {
     */
   def maximize[T <: org.jacop.core.Var](select: SelectChoicePoint[T], cost: FloatVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-    val costN = new FloatVar("newCost", org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    val costN = new FloatVar("newCost", org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     costN #= -cost
 
     minimize(select, costN, printSolutions: _*)
@@ -1505,7 +1505,7 @@ package object scala {
     */
   def maximize_seq[T <: org.jacop.core.Var](select: List[SelectChoicePoint[T]], cost: IntVar, printSolutions: (() => Unit)*)(implicit m: ClassTag[T]): Boolean = {
 
-    val costN = new IntVar("newCost", org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    val costN = new IntVar("newCost", org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     costN #= -cost
 
     minimize_seq(select, costN, printSolutions: _*)

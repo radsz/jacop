@@ -45,7 +45,7 @@ public record FloatInterval(double min, double max) {
 
   /** It creates the largest possible interval. */
   public FloatInterval() {
-    this(FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    this(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
   }
 
   /**

@@ -85,7 +85,7 @@ import org.jacop.set.search.IndomainSetMin;
  */
 public class Solve<T extends Var> implements ParserTreeConstants {
 
-  static final String p = System.getProperty("fz_system_timer");
+  static final String P = System.getProperty("fz_system_timer");
   final Store store;
   final boolean debug = false;
   final boolean print_search_info = false;
@@ -473,7 +473,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   store,
                   "-" + cost.id(),
                   -((IntVar) cost).max(),
-                  -((IntVar) cost).min()); // IntDomain.MinInt, IntDomain.MaxInt);
+                  -((IntVar) cost).min()); // IntDomain.MIN_INT, IntDomain.MAX_INT);
           pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
           costVariable = max_cost;
         }
@@ -1388,7 +1388,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
           cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
           if (cost != null) { // maximize
-            max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MinInt, IntDomain.MaxInt);
+            max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MIN_INT, IntDomain.MAX_INT);
             pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
           } else {
             cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
@@ -2095,7 +2095,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   void credit_search(DepthFirstSearch<T> label, int creditValue, int bbsValue) {
 
-    int maxDepth = 1000; // IntDomain.MaxInt;
+    int maxDepth = 1000; // IntDomain.MAX_INT;
     CreditCalculator<T> credit = new CreditCalculator<>(creditValue, bbsValue, maxDepth);
 
     if (label.getConsistencyListener() == null) {
@@ -2155,7 +2155,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Starts the CPU timer for measuring search time. */
   void startTimer() {
 
-    if ("true".equals(p)) {
+    if ("true".equals(P)) {
       timer = new SystemTimer();
     } else {
       timer = new ThreadTimer();

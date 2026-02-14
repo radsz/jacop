@@ -87,8 +87,8 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(final Store store) {
 
-    int resultMin = IntDomain.MinInt;
-    int resultMax = IntDomain.MaxInt;
+    int resultMin = IntDomain.MIN_INT;
+    int resultMax = IntDomain.MAX_INT;
 
     y.domain.inComplement(store.level, y, 0);
 

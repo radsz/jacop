@@ -45,7 +45,7 @@ import org.jacop.core.Var;
 @SuppressWarnings("unchecked")
 public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint<T> {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** The search variables managed by this selector. */
   public final T[] searchVariables;

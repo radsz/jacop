@@ -57,7 +57,7 @@ import org.jacop.util.SparseSet;
 public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresent {
 
   /** It specifies if the debugging information is printed. */
-  public static final boolean debugAll = false;
+  public static final boolean DEBUG_ALL = false;
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

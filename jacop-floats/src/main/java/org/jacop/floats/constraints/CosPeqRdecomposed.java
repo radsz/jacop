@@ -100,7 +100,7 @@ public class CosPeqRdecomposed extends DecomposedConstraint<Constraint> {
 
     constraints = new ArrayList<>();
 
-    FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar pPlus = new FloatVar(store, FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     Constraint c1 = new PplusCeqR(p, FloatDomain.PI / 2, pPlus);
     Constraint c2 = new SinPeqR(pPlus, q);
 

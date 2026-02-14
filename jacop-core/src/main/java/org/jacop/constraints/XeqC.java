@@ -57,7 +57,7 @@ public class XeqC extends AbstractXcompC {
 
     super(idNumber, x, c);
 
-    if (c < IntDomain.MinInt || c > IntDomain.MaxInt) {
+    if (c < IntDomain.MIN_INT || c > IntDomain.MAX_INT) {
       throw new IllegalArgumentException(
           "Constraint XeqC has a  constant c " + c + " that is not in the allowed range.");
     }

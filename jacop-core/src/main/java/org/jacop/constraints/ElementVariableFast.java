@@ -177,8 +177,8 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
       return;
     }
 
-    int min = IntDomain.MaxInt;
-    int max = IntDomain.MinInt;
+    int min = IntDomain.MAX_INT;
+    int max = IntDomain.MIN_INT;
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     boolean indexDomNonEmpty = false;
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {

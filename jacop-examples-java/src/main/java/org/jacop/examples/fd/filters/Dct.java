@@ -78,10 +78,13 @@ public class Dct extends Filter {
 
     this.ids =
         new int[] {
-          addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
-          addId, addId, addId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
-          mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId,
-          addId, addId, addId, addId, addId, addId, addId, addId, addId
+          ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID,
+              ADD_ID, ADD_ID,
+          ADD_ID, ADD_ID, ADD_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID,
+              MUL_ID, MUL_ID,
+          MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID,
+              ADD_ID, ADD_ID,
+          ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID
         };
 
     this.last = new int[] {40, 41, 42, 43, 44, 45, 46, 47};

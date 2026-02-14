@@ -52,9 +52,9 @@ import org.jacop.core.Store;
 public class ProfileOptional {
 
   // event type
-  private static final int profile = 0;
-  private static final int pruneStart = 1;
-  private static final int pruneEnd = 2;
+  private static final int PROFILE = 0;
+  private static final int PRUNE_START = 1;
+  private static final int PRUNE_END = 2;
 
   /*
    * All tasks of the constraint
@@ -63,7 +63,7 @@ public class ProfileOptional {
   final boolean debugNarr = false;
   final boolean debug = false;
 
-  /** It specifies the limit of the profile of cumulative use of resources. */
+  /** It specifies the limit of the PROFILE of cumulative use of resources. */
   private final IntVar limit;
 
   private final Comparator<Event> eventComparator =
@@ -75,7 +75,7 @@ public class ProfileOptional {
   boolean existsOpt = true;
 
   /**
-   * It creates a profile for optional tasks.
+   * It creates a PROFILE for optional tasks.
    *
    * @param limit the overall limit of resources which has to be used.
    */
@@ -132,7 +132,7 @@ public class ProfileOptional {
     return min;
   }
 
-  // Sweep algorithm for profile
+  // Sweep algorithm for PROFILE
   void sweepPruning(Store store, TaskView[] tn, IntVar[] opt) {
 
     utilizationProfile = new ArrayList<>();
@@ -154,13 +154,13 @@ public class ProfileOptional {
       TaskView t = ts[i];
       t.index = i;
 
-      // mandatory task parts to create profile
+      // mandatory task parts to create PROFILE
       int min = t.lst();
       int max = t.ect();
       int tResMin = t.res.min();
       if (min < max && tResMin > 0) {
-        es[j++] = new Event(profile, t, min, tResMin);
-        es[j++] = new Event(profile, t, max, -tResMin);
+        es[j++] = new Event(PROFILE, t, min, tResMin);
+        es[j++] = new Event(PROFILE, t, max, -tResMin);
         minProfile = Math.min(min, minProfile);
         maxProfile = Math.max(max, maxProfile);
       }
@@ -176,8 +176,8 @@ public class ProfileOptional {
       int max = t.lct();
       if (t.maxNonZero()
           && !(min > maxProfile || max < minProfile)) { // t.dur.max() > 0 && t.res.max() > 0
-        es[j++] = new Event(pruneStart, t, min, 0);
-        es[j++] = new Event(pruneEnd, t, max, 0);
+        es[j++] = new Event(PRUNE_START, t, min, 0);
+        es[j++] = new Event(PRUNE_END, t, max, 0);
       }
     }
 
@@ -210,7 +210,7 @@ public class ProfileOptional {
 
     int profilePointer = 0;
     if (existsOpt) {
-      utilizationProfile.add(new Event(profile, null, optMin, 0));
+      utilizationProfile.add(new Event(PROFILE, null, optMin, 0));
     }
     int curProfile = 0;
     for (int i = 0; i < N; i++) {
@@ -222,9 +222,9 @@ public class ProfileOptional {
       }
 
       switch (e.type()) {
-        case profile: // =========== profile event ===========
+        case PROFILE: // =========== PROFILE event ===========
 
-          // ====> profile to be used by optional tasks
+          // ====> PROFILE to be used by optional tasks
           if (existsOpt) {
 
             Event ce = utilizationProfile.get(profilePointer);
@@ -236,17 +236,17 @@ public class ProfileOptional {
                 utilizationProfile.remove(profilePointer--);
               }
             } else {
-              utilizationProfile.add(new Event(profile, null, e.date(), ce.value() + e.value()));
+              utilizationProfile.add(new Event(PROFILE, null, e.date(), ce.value() + e.value()));
               profilePointer++;
             }
           }
-          // <==== profile to be used by optional tasks
+          // <==== PROFILE to be used by optional tasks
 
           curProfile += e.value();
           inProfile[e.task().index] = e.value() > 0;
 
-          if (ne == null || ne.type() != profile || e.date < ne.date()) {
-            // check the tasks for pruning only at the end of all profile events
+          if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
+            // check the tasks for pruning only at the end of all PROFILE events
 
             if (debug) {
               log.debug("Profile at {}: {}", e.date(), curProfile);
@@ -313,7 +313,7 @@ public class ProfileOptional {
 
               // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date()
               // < t.ect())
-              // since tasks with res = 0 are not in the profile :(
+              // since tasks with res = 0 are not in the PROFILE :(
               if (limitMax - profileValue < t.res.max()
                   && t.lst() <= e.date()
                   && e.date() < t.ect()) {
@@ -324,7 +324,7 @@ public class ProfileOptional {
 
           break;
 
-        case pruneStart: // =========== start of a task ===========
+        case PRUNE_START: // =========== start of a task ===========
           int profileValue = curProfile;
           TaskView t = e.task();
           int ti = t.index;
@@ -357,7 +357,7 @@ public class ProfileOptional {
           tasksToPrune.set(ti);
           break;
 
-        case pruneEnd: // =========== end of a task ===========
+        case PRUNE_END: // =========== end of a task ===========
           profileValue = curProfile;
           t = e.task();
           ti = t.index;
@@ -496,7 +496,8 @@ public class ProfileOptional {
     @Override
     public String toString() {
       String result = "(";
-      result += type == profile ? "profile, " : type == pruneStart ? "pruneStart, " : "pruneEnd, ";
+      result +=
+          type == PROFILE ? "PROFILE, " : type == PRUNE_START ? "PRUNE_START, " : "PRUNE_END, ";
       result += t + ", " + date + ", " + value + ")";
       return result;
     }

@@ -73,7 +73,7 @@ import org.jacop.util.fsm.FsmTransition;
 public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
   /** It specifies if debugging information should be printed out. */
-  public static final boolean debugAll = false;
+  public static final boolean DEBUG_ALL = false;
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -322,7 +322,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
             activeLevelsTemp[level] = index;
 
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug(
                   "Create new state q_{}{} with in degree : {} and out degree : {}",
                   level,
@@ -348,7 +348,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
                 activeLevelsTemp[level + 1] = nextLevelIndex;
 
-                if (debugAll) {
+                if (DEBUG_ALL) {
                   log.debug(
                       "Create new state q_{}{} with in degree : {} and out degree : {}",
                       level + 1,
@@ -360,7 +360,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
               s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
 
-              if (debugAll) {
+              if (DEBUG_ALL) {
                 log.debug(
                     "--  state q_{}{} with in degree : {} and out degree : {}",
                     level,
@@ -369,7 +369,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     s.outDegree);
               }
 
-              if (debugAll) {
+              if (DEBUG_ALL) {
                 log.debug(
                     "--  state q_{}{} with in degree : {} and out degree : {}",
                     level + 1,
@@ -560,7 +560,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     for (state = preThisLevelStateNb - 1; state >= 0; state--) {
 
       s = stateLevels[varIndex][state];
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("{}: watch state q_{}{}", state, varIndex, s.id);
       }
 
@@ -570,7 +570,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         // If this transition must be removes because it is not in var's domain
         if (!s.intersects(domVar, i)) {
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug(
                 "must remove transition q_{}{} -{}-> q_{}{}",
                 varIndex,
@@ -592,7 +592,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             alreadyTouched = true;
           }
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug(
                 "--  state q_{}{} with in degree : {} and out degree : {}",
                 s.level,
@@ -610,7 +610,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert s.outDegree >= 0;
 
           if (s.outDegree == 0) {
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
             }
             assert s.level == varIndex;
@@ -620,7 +620,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert suc.inDegree >= 0;
 
           if (suc.inDegree == 0) {
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
             assert suc.level == varIndex + 1;
@@ -736,7 +736,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           suc = s.successors[i];
           suc.inDegree--;
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug(
                 "watch transition q_{}{} -{}-> q_{}{}",
                 s.level,
@@ -749,7 +749,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert suc.inDegree >= 0 : "Negative indegree of successor state" + suc.level + suc.id;
 
           if (suc.inDegree == 0) {
-            if (debugAll) {
+            if (DEBUG_ALL) {
               log.debug("> Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
             // changed to directl disableState(int, int).
@@ -867,7 +867,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       }
     }
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("..next prunning");
     }
 
@@ -946,7 +946,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               state.add(varDom, i);
             }
           }
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug(
                 ">>> Variable x_{} had domain {} and now its {}",
                 level,
@@ -1058,7 +1058,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             }
           }
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug(
                 ">>> Variable x_{} had domain {} and now its {}",
                 level,
@@ -1201,7 +1201,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     constraints.add(new In(q[q.length - 1], finalQ));
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       for (int[] tuple : tuples) {
         StringBuilder sb = new StringBuilder();
         for (int val : tuple) {

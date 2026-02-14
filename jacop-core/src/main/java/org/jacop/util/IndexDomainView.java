@@ -45,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
 @Slf4j
 public class IndexDomainView {
 
-  private static final boolean debugAll = false;
+  private static final boolean DEBUG_ALL = false;
 
   /** It specifies mapping of the index value onto value in the domain of the variable. */
   public final int[] indexToValue;
@@ -237,7 +237,7 @@ public class IndexDomainView {
 
     int position = (left + right) >> 1;
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       log.debug("Looking for {}", value);
       for (int v : indexToValue) {
         log.debug("val {}", v);
@@ -246,7 +246,7 @@ public class IndexDomainView {
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("left {} right {} position {}", left, right, position);
       }
 

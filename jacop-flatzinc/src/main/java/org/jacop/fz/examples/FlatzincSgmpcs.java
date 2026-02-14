@@ -91,7 +91,7 @@ public class FlatzincSgmpcs {
     IntVar cost = (IntVar) fl.getCost();
 
     SgmpcsSearch label = new SgmpcsSearch(store, vars, cost);
-    label.setFailStrategy(SgmpcsSearch.luby); // luby or poly
+    label.setFailStrategy(SgmpcsSearch.LUBY); // luby or poly
     label.setProbability(0.25); // limit for probability of selecting search from empty
     label.setEliteSize(4); // size of the set of reference solutions
     label.setTimeOut(timeOut); // time-out in seconds

@@ -69,8 +69,9 @@ public class Fir extends Filter {
 
     this.ids =
         new int[] {
-          addId, mulId, addId, addId, addId, addId, addId, addId, addId, addId, mulId, addId, mulId,
-          addId, mulId, addId, mulId, addId, mulId, addId, mulId, addId, mulId
+          ADD_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, MUL_ID,
+          ADD_ID, MUL_ID, ADD_ID, MUL_ID, ADD_ID, MUL_ID, ADD_ID, MUL_ID, ADD_ID, MUL_ID, ADD_ID,
+          MUL_ID
         };
 
     this.last = new int[] {8};

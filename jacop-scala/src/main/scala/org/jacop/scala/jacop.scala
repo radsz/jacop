@@ -218,7 +218,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     *
     */
   def unary_~ : IntSet = {
-    val tmp = new IntSet(org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    val tmp = new IntSet(org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     for (i <- 0 until this.size)
       tmp.subtractAdapt(intervals(i).min, intervals(i).max)
     tmp
@@ -264,7 +264,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     * @param name variable's identifier.
     */
   def this(name: String) = {
-    this(name, org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    this(name, org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     getModel.n += 1
   }
 
@@ -275,7 +275,7 @@ class IntVar(name: String, min: Int, max: Int) extends org.jacop.core.IntVar(get
     *              values in the domain defined by org.jacop.
     */
   def this() = {
-    this(org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    this(org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     getModel.n += 1
   }
 
@@ -1122,7 +1122,7 @@ class SetVar(name: String, glb: Int, lub: Int) extends org.jacop.set.core.SetVar
     * @constructor Creates a new finite domain integer variable.
     */
   def this() = {
-    this("_$" + getModel.n, org.jacop.core.IntDomain.MinInt, org.jacop.core.IntDomain.MaxInt)
+    this("_$" + getModel.n, org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     getModel.n += 1
   }
 

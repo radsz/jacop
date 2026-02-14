@@ -58,7 +58,7 @@ import org.jacop.util.TupleUtils;
 @Slf4j
 public class ExtensionalSupportStr extends Constraint implements UsesQueueVariable, Stateful {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It stores variables within this extensional constraint, order does matter. */
@@ -308,7 +308,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
         int j = 0;
 
-        if (debugAll) {
+        if (DEBUG_ALL) {
           log.debug("support for analysis{}", Arrays.toString(t));
         }
 
@@ -333,14 +333,14 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
           }
         }
 
-        if (debugAll && !stillSupport[i]) {
+        if (DEBUG_ALL && !stillSupport[i]) {
           log.debug("Not support {}", Arrays.toString(t));
         }
 
         i++;
       }
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("No. still supports {}", noSupports);
       }
 
@@ -355,7 +355,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
           temp4Shrinking[i] = t;
           i++;
 
-          if (debugAll) {
+          if (DEBUG_ALL) {
             log.debug("Still support {}", Arrays.toString(t));
           }
         }
@@ -536,7 +536,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
     varToIndex = Var.positionMapping(list, false, this.getClass());
 
-    if (debugAll) {
+    if (DEBUG_ALL) {
       for (Var var : list) {
         log.debug("Variable {}", var);
       }

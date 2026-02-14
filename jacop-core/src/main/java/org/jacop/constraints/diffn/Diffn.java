@@ -61,12 +61,12 @@ import org.jacop.core.Var;
 public class Diffn extends Nooverlap {
 
   // event type
-  static final int profileSubtract = 0;
-  static final int profileAdd = 1;
-  static final int pruneStart = 2;
-  static final int pruneEnd = 3;
-  private static final boolean debug = false;
-  private static final boolean debugNarr = false;
+  static final int PROFILE_SUBTRACT = 0;
+  static final int PROFILE_ADD = 1;
+  static final int PRUNE_START = 2;
+  static final int PRUNE_END = 3;
+  private static final boolean DEBUG = false;
+  private static final boolean DEBUG_NARR = false;
   protected final List<Var> auxVar = new ArrayList<>();
   final Comparator<Event> eventComparator =
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
@@ -249,8 +249,8 @@ public class Diffn extends Nooverlap {
           }
           commonArea += partialCommonArea;
         }
-        if (commonArea + r.length(x).min() * r.length(y).min()
-            > (r.lct(x) - r.est(x)) * (r.lct(y) - r.est(y))) {
+        if (commonArea + r.length(X).min() * r.length(Y).min()
+            > (r.lct(X) - r.est(X)) * (r.lct(Y) - r.est(Y))) {
           throw Store.failException;
         }
       }
@@ -298,11 +298,11 @@ public class Diffn extends Nooverlap {
           int oMax = rr.ect(oDim);
           if (oMin < oMax) {
             Interval block = new Interval(oMin, oMax);
-            es[j++] = new Event(profileAdd, rr, min, lMin, block);
-            es[j++] = new Event(profileSubtract, rr, max, -lMin, block);
+            es[j++] = new Event(PROFILE_ADD, rr, min, lMin, block);
+            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
           } else {
-            es[j++] = new Event(profileAdd, rr, min, lMin, null);
-            es[j++] = new Event(profileSubtract, rr, max, -lMin, null);
+            es[j++] = new Event(PROFILE_ADD, rr, min, lMin, null);
+            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, null);
           }
           minLimit = Math.min(rr.est(oDim), minLimit);
           maxLimit = Math.max(rr.lct(oDim), maxLimit);
@@ -312,8 +312,8 @@ public class Diffn extends Nooverlap {
           int oMax = rr.ect(oDim);
           if (oMin < oMax) {
             Interval block = new Interval(oMin, oMax);
-            es[j++] = new Event(profileAdd, rr, min, 0, block);
-            es[j++] = new Event(profileSubtract, rr, max, 0, block);
+            es[j++] = new Event(PROFILE_ADD, rr, min, 0, block);
+            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, 0, block);
             mandatoryExists = true;
           }
         }
@@ -329,13 +329,13 @@ public class Diffn extends Nooverlap {
     // from start to end
     int min = r.est(dim);
     int max = r.lct(dim);
-    es[j++] = new Event(pruneStart, r, min, 0, null);
-    es[j++] = new Event(pruneEnd, r, max, 0, null);
+    es[j++] = new Event(PRUNE_START, r, min, 0, null);
+    es[j++] = new Event(PRUNE_END, r, max, 0, null);
 
     int N = j;
     Arrays.sort(es, 0, N, eventComparator);
 
-    if (debugNarr) {
+    if (DEBUG_NARR) {
       log.debug("===========================");
       log.debug("Profile in dimension {}", dim);
       log.debug("{}", Arrays.asList(es));
@@ -367,8 +367,8 @@ public class Diffn extends Nooverlap {
       }
 
       switch (e.type()) {
-        case profileSubtract: // =========== profileSubtract event ===========
-        case profileAdd: // =========== profileAdd event ===========
+        case PROFILE_SUBTRACT: // =========== PROFILE_SUBTRACT event ===========
+        case PROFILE_ADD: // =========== PROFILE_ADD event ===========
           curProfile += e.value();
           inProfile[e.rect().index] = e.value() > 0;
 
@@ -377,11 +377,11 @@ public class Diffn extends Nooverlap {
           }
 
           if (ne == null
-              || ne.type() > profileAdd
+              || ne.type() > PROFILE_ADD
               || e.date < ne.date()) { // check the tasks for pruning only at the end of all profile
             // events
 
-            if (debug) {
+            if (DEBUG) {
               log.debug("Profile at {}: {}", e.date(), curProfile);
             }
 
@@ -418,7 +418,7 @@ public class Diffn extends Nooverlap {
 
                   if (startExcluded <= r.lst(dim)) {
 
-                    if (debugNarr) {
+                    if (DEBUG_NARR) {
                       log.debug(
                           ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
                           dim,
@@ -426,11 +426,12 @@ public class Diffn extends Nooverlap {
                           new IntervalDomain(startExcluded, e.date() - 1));
                     }
 
-                    IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded - 1);
-                    update.unionAdapt(e.date(), IntDomain.MaxInt);
+                    IntervalDomain update =
+                        new IntervalDomain(IntDomain.MIN_INT, startExcluded - 1);
+                    update.unionAdapt(e.date(), IntDomain.MAX_INT);
                     r.origin(dim).domain.in(store.level, r.origin(dim), update);
 
-                    if (debugNarr) {
+                    if (DEBUG_NARR) {
                       log.debug(" => {}", r.origin(dim));
                     }
                   }
@@ -456,7 +457,7 @@ public class Diffn extends Nooverlap {
 
           break;
 
-        case pruneStart: // =========== start of a task ===========
+        case PRUNE_START: // =========== start of a task ===========
           int profileValue = curProfile;
           Rectangle rr = e.rect();
           int ri = rr.index;
@@ -487,7 +488,7 @@ public class Diffn extends Nooverlap {
 
           break;
 
-        case pruneEnd: // =========== end of a task ===========
+        case PRUNE_END: // =========== end of a task ===========
           profileValue = curProfile;
           rr = e.rect();
           ri = rr.index;
@@ -504,7 +505,7 @@ public class Diffn extends Nooverlap {
               && startExcluded - 1
                   <= rr.lst(dim)) { // (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
             // task ends and we remove forbidden area
-            if (debugNarr) {
+            if (DEBUG_NARR) {
               log.debug(
                   ">>> Diffn Profile 2. Narrowed {} \\ {}",
                   rr.origin(dim),
@@ -513,7 +514,7 @@ public class Diffn extends Nooverlap {
 
             rr.origin(dim).domain.inMax(store.level, rr.origin(dim), startExcluded - 1);
 
-            if (debugNarr) {
+            if (DEBUG_NARR) {
               log.debug(" => {}", rr.origin(dim));
             }
           }
@@ -531,7 +532,7 @@ public class Diffn extends Nooverlap {
           int maxDuration = IntDomain.subtractInt(lastBarier, rr.origin(dim).min());
 
           if (maxDuration < rr.length(dim).max()) {
-            if (debugNarr) {
+            if (DEBUG_NARR) {
               log.debug(
                   ">>> {}, lastBarier = {}, e.date() = {}", rr.origin(dim), lastBarier, e.date());
               log.debug(
@@ -540,7 +541,7 @@ public class Diffn extends Nooverlap {
 
             rr.length(dim).domain.inMax(store.level, rr.length(dim), maxDuration);
 
-            if (debugNarr) {
+            if (DEBUG_NARR) {
               log.debug(" => {}", rr.length(dim));
             }
           }
@@ -561,8 +562,8 @@ public class Diffn extends Nooverlap {
       return;
     }
 
-    if (e.type() == profileAdd) { // add
-      Interval previous = new Interval(IntDomain.MinInt, IntDomain.MinInt);
+    if (e.type() == PROFILE_ADD) { // add
+      Interval previous = new Interval(IntDomain.MIN_INT, IntDomain.MIN_INT);
       for (int i = 0; i < sweepLine.size(); i++) {
         Interval sweepLineElement = sweepLine.get(i);
         if ((eBlock.max() > sweepLineElement.min() && eBlock.max() <= sweepLineElement.max())
@@ -580,7 +581,7 @@ public class Diffn extends Nooverlap {
       if (sweepLine.getLast().max() <= eBlock.min()) {
         sweepLine.add(eBlock);
       }
-    } else { // e.type() == profileSubtract; remove
+    } else { // e.type() == PROFILE_SUBTRACT; remove
       for (int i = 0; i < sweepLine.size(); i++) {
         Interval sweepLineElement = sweepLine.get(i);
         if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == eBlock.max()) {
@@ -653,8 +654,8 @@ public class Diffn extends Nooverlap {
 
     // add cumulative in x direction
     IntVar[] ey = new IntVar[y.length];
-    int yMin = IntDomain.MaxInt;
-    int yMax = IntDomain.MinInt;
+    int yMin = IntDomain.MAX_INT;
+    int yMax = IntDomain.MIN_INT;
     for (int i = 0; i < x.length; i++) {
       yMin = Math.min(yMin, y[i].min());
       yMax = Math.max(yMax, y[i].max() + ly[i].max());
@@ -677,8 +678,8 @@ public class Diffn extends Nooverlap {
 
     // add cumulative in y direction
     IntVar[] ex = new IntVar[x.length];
-    int xMin = IntDomain.MaxInt;
-    int xMax = IntDomain.MinInt;
+    int xMin = IntDomain.MAX_INT;
+    int xMax = IntDomain.MIN_INT;
     for (int i = 0; i < x.length; i++) {
       xMin = Math.min(xMin, x[i].min());
       xMax = Math.max(xMax, x[i].max() + lx[i].max());
@@ -735,17 +736,17 @@ public class Diffn extends Nooverlap {
     public String toString() {
       String result = "(";
       switch (type) {
-        case profileSubtract:
-          result += "profileSubtract, ";
+        case PROFILE_SUBTRACT:
+          result += "PROFILE_SUBTRACT, ";
           break;
-        case profileAdd:
-          result += "profileAdd, ";
+        case PROFILE_ADD:
+          result += "PROFILE_ADD, ";
           break;
-        case pruneStart:
-          result += "pruneStart, ";
+        case PRUNE_START:
+          result += "PRUNE_START, ";
           break;
-        case pruneEnd:
-          result += "pruneEnd, ";
+        case PRUNE_END:
+          result += "PRUNE_END, ";
           break;
         default:
           result += "--";

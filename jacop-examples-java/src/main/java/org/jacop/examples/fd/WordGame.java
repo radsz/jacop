@@ -62,7 +62,7 @@ import org.jacop.util.Mdd;
  */
 public class WordGame {
 
-  public static final String defaultDictionary =
+  public static final String DEFAULT_DICTIONARY =
       "src/main/java/org/jacop/examples/fd/crosswords/words";
 
   private WordGame() {}
@@ -78,7 +78,7 @@ public class WordGame {
     }
 
     store.impose(
-        new ExtensionalSupportMdd(readDictionaryFor5LetterWords(defaultDictionary, unknownWord)));
+        new ExtensionalSupportMdd(readDictionaryFor5LetterWords(DEFAULT_DICTIONARY, unknownWord)));
 
     for (int attempt = 1; attempt <= 8; attempt++) {
       IO.println("Attempt " + attempt);

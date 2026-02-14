@@ -57,7 +57,7 @@ public class PneqC extends AbstractPcompC {
 
     super(idNumber, p, c);
 
-    if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt)) {
+    if (!(c >= IntDomain.MIN_INT && c <= IntDomain.MAX_INT)) {
       throw new IllegalArgumentException(
           "PneqC constraint has constant c " + c + " in the not allowed range.");
     }

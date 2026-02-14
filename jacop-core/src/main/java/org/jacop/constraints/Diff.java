@@ -294,7 +294,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int[] r_min = new int[dim];
     int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
-      startMin[i] = IntDomain.MaxInt;
+      startMin[i] = IntDomain.MAX_INT;
       stopMax[i] = 0;
       minLength[i] = r.length[i].min();
 
@@ -515,14 +515,14 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     final int rLengthiMin = r.length[i].min();
 
     durMax = new ArrayList<>();
-    durMax.add(IntDomain.MaxInt);
+    durMax.add(IntDomain.MAX_INT);
 
     if (!profileCandidates.isEmpty() && doProfile) {
       profileNarrowing(i, r, profileCandidates);
     }
 
     durMax = new ArrayList<>();
-    durMax.add(IntDomain.MaxInt);
+    durMax.add(IntDomain.MAX_INT);
 
     if (!usedRect.isEmpty()) {
 
@@ -587,8 +587,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
             if (exclude.max != -1) {
               IntervalDomain Update =
-                  new IntervalDomain(IntDomain.MinInt, exclude.min - r.length[i].min());
-              Update.unionAdapt(exclude.max, IntDomain.MaxInt);
+                  new IntervalDomain(IntDomain.MIN_INT, exclude.min - r.length[i].min());
+              Update.unionAdapt(exclude.max, IntDomain.MAX_INT);
 
               if (traceNarrOn) {
                 log.debug(
@@ -629,7 +629,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
 
-    int dMax = IntDomain.MaxInt;
+    int dMax = IntDomain.MAX_INT;
 
     for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements(); ) {
       Interval i = ie.nextElement();
@@ -644,7 +644,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
 
     if (start.dom().contains(excludeMax)) {
-      durMax.add(IntDomain.MaxInt);
+      durMax.add(IntDomain.MAX_INT);
     }
 
     if (traceOn) {
@@ -710,7 +710,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   private boolean notFit(
       int i, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
-    Profile barrier = new Profile((short) Profile.diffn);
+    Profile barrier = new Profile((short) Profile.DIFFN);
     int minimalAfter = 0;
     int j = 0;
     boolean excludedState = true;
@@ -771,7 +771,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             barrier.addToProfile(v.min(), v.max(), minimalAfter);
           }
 
-          int minSizeAfterBarier = IntDomain.MaxInt;
+          int minSizeAfterBarier = IntDomain.MAX_INT;
           for (ProfileItem p : barrier) {
             if (p.value < minSizeAfterBarier) {
               if (p.value == minimalAfter && p.max - p.min >= durJ) {
@@ -818,8 +818,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
           if (!(updateMin > startDom.max() || updateMax < startDom.min())) {
 
-            IntervalDomain update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
-            update.unionAdapt(p.max, IntDomain.MaxInt);
+            IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+            update.unionAdapt(p.max, IntDomain.MAX_INT);
 
             if (traceNarrOn) {
               log.debug("6. Profile Narrowed {} \\ {} => {}", start, update, start);

@@ -61,7 +61,7 @@ import org.jacop.search.restart.Calculator;
 @SuppressWarnings("serial")
 public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   int n; // length of priority variables and sub-vectors
   T[] priority;

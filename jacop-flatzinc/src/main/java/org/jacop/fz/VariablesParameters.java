@@ -63,12 +63,12 @@ public class VariablesParameters implements ParserTreeConstants {
   // for variables
   public static final double MAX_FLOAT = 1e150;
   // if they are not in interval
-  // IntDomain.MinInt..IntDomainMaxInt raise Arithmetic
+  // IntDomain.MIN_INT..IntDomainMaxInt raise Arithmetic
   // exception
-  public static final int MIN_INT = IntDomain.MinInt;
-  public static final int MAX_INT = IntDomain.MaxInt;
-  static final boolean interval = false; // selection of interval or dense, if possible, domain
-  static final boolean checkBounds = false; // whether to check bounds of IntVar before creation;
+  public static final int MIN_INT = IntDomain.MIN_INT;
+  public static final int MAX_INT = IntDomain.MAX_INT;
+  static final boolean INTERVAL = false; // selection of interval or dense, if possible, domain
+  static final boolean CHECK_BOUNDS = false; // whether to check bounds of IntVar before creation;
   Tables dictionary;
   int lowInterval;
   int highInterval;
@@ -197,8 +197,8 @@ public class VariablesParameters implements ParserTreeConstants {
           throw Store.failException;
         }
 
-        if (checkBounds) {
-          if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
+        if (CHECK_BOUNDS) {
+          if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
             throw new ArithmeticException(
                 "Bounds for "
                     + ident
@@ -210,7 +210,7 @@ public class VariablesParameters implements ParserTreeConstants {
           }
         }
 
-        if (interval) {
+        if (INTERVAL) {
           varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
         } else {
           varInt = new IntVar(store, ident, lowInterval, highInterval);
@@ -239,8 +239,8 @@ public class VariablesParameters implements ParserTreeConstants {
         for (Integer e : intList) {
           int element = e;
 
-          if (checkBounds) {
-            if (element < IntDomain.MinInt || element > IntDomain.MaxInt) {
+          if (CHECK_BOUNDS) {
+            if (element < IntDomain.MIN_INT || element > IntDomain.MAX_INT) {
               throw new ArithmeticException(
                   "Domain value for " + ident + " is too high/low (" + element + ")");
             }
@@ -600,7 +600,7 @@ public class VariablesParameters implements ParserTreeConstants {
           varArrayInt = new IntVar[size];
 
           for (int i = 0; i < size; i++) {
-            if (interval) {
+            if (INTERVAL) {
               varArrayInt[i] =
                   new IntVar(
                       store, ident + "[" + i + "]", new IntervalDomain(lowInterval, highInterval));
@@ -856,8 +856,8 @@ public class VariablesParameters implements ParserTreeConstants {
         case 1: // int interval
           lowInterval = ((ASTIntTiExprTail) child).getLow();
           highInterval = ((ASTIntTiExprTail) child).getHigh();
-          if (checkBounds) {
-            if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
+          if (CHECK_BOUNDS) {
+            if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
               throw new ArithmeticException(
                   "Too large bounds on intervals " + lowInterval + ".." + highInterval);
             }
@@ -866,9 +866,9 @@ public class VariablesParameters implements ParserTreeConstants {
         case 2: // int list
           SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
           intList = ((ASTIntLiterals) grand_child).getList();
-          if (checkBounds) {
+          if (CHECK_BOUNDS) {
             for (Integer e : intList) {
-              if (e < IntDomain.MinInt || e > IntDomain.MaxInt) {
+              if (e < IntDomain.MIN_INT || e > IntDomain.MAX_INT) {
                 throw new ArithmeticException("Too large element in set " + e);
               }
             }
@@ -891,8 +891,8 @@ public class VariablesParameters implements ParserTreeConstants {
           case 1: // int interval
             lowInterval = ((ASTIntTiExprTail) grand_child).getLow();
             highInterval = ((ASTIntTiExprTail) grand_child).getHigh();
-            if (checkBounds) {
-              if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
+            if (CHECK_BOUNDS) {
+              if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
                 throw new ArithmeticException(
                     "Too large bounds on intervals " + lowInterval + ".." + highInterval);
               }
@@ -901,9 +901,9 @@ public class VariablesParameters implements ParserTreeConstants {
           case 2: // int list
             SimpleNode grand_grand_child = (SimpleNode) grand_child.jjtGetChild(0);
             intList = ((ASTIntLiterals) grand_grand_child).getList();
-            if (checkBounds) {
+            if (CHECK_BOUNDS) {
               for (Integer e : intList) {
-                if (e < IntDomain.MinInt || e > IntDomain.MaxInt) {
+                if (e < IntDomain.MIN_INT || e > IntDomain.MAX_INT) {
                   throw new ArithmeticException("Too large element in set " + e);
                 }
               }

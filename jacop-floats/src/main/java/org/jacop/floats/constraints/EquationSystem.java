@@ -47,7 +47,7 @@ import org.jacop.floats.core.FloatVar;
  */
 public class EquationSystem extends Constraint {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   // variables defining eqations
   final FloatVar[] f;
@@ -85,7 +85,7 @@ public class EquationSystem extends Constraint {
 
     if (xs != null) {
       for (int i = 0; i < xs.length; i++) {
-        if (debug) {
+        if (DEBUG) {
           if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max()) {
             IO.println("*** " + x[i] + " in " + xs[i]);
           }

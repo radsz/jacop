@@ -49,10 +49,10 @@ public abstract class IntDomain extends Domain {
   // it will allow new IntDomain to quickly be employed within a solver.
 
   /** It specifies the minimum element in the domain. */
-  public static final int MinInt = -536_870_910; // Integer.MIN_VALUE/4 + 2
+  public static final int MIN_INT = -536_870_910; // Integer.MIN_VALUE/4 + 2
 
   /** It specifies the maximum element in the domain. */
-  public static final int MaxInt = 536_870_909; // Integer.MAX_VALUE/4 - 2
+  public static final int MAX_INT = 536_870_909; // Integer.MAX_VALUE/4 - 2
 
   /**
    * It specifies the constant for GROUND event. It has to be smaller than the constant for events
@@ -70,13 +70,13 @@ public abstract class IntDomain extends Domain {
   public static final int ANY = 2;
 
   /** Unique identifier for an interval domain type. */
-  public static final int IntervalDomainID = 0;
+  public static final int INTERVAL_DOMAIN_ID = 0;
 
   /** Unique identifier for a bound domain type. */
-  public static final int BoundDomainID = 1;
+  public static final int BOUND_DOMAIN_ID = 1;
 
   /** Unique identifier for a small dense domain type. */
-  public static final int SmallDenseDomainID = 2;
+  public static final int SMALL_DENSE_DOMAIN_ID = 2;
 
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
@@ -179,8 +179,8 @@ public abstract class IntDomain extends Domain {
     Interval result;
 
     if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = MinInt;
-      max = MaxInt;
+      min = MIN_INT;
+      max = MAX_INT;
       result = new Interval(min, max);
     } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
@@ -225,8 +225,8 @@ public abstract class IntDomain extends Domain {
     Interval result;
 
     if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = MinInt;
-      max = MaxInt;
+      min = MIN_INT;
+      max = MAX_INT;
       result = new Interval(min, max);
     } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
@@ -340,49 +340,50 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
-   * Returns the product of the arguments, if the result overflows MaxInt or MinInt is returned.
+   * Returns the product of the arguments, if the result overflows MAX_INT or MIN_INT is returned.
    *
    * @param x the first value
    * @param y the second value
-   * @return the result or MaxInt/MinInt if result causes overflow
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
    */
   public static int multiplyInt(int x, int y) {
     long r = (long) x * (long) y;
     if ((int) r != r) {
-      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
+      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
     return (int) r;
   }
 
   /**
-   * Returns the sum of its arguments, if the result overflows MaxInt or MinInt is returned.
+   * Returns the sum of its arguments, if the result overflows MAX_INT or MIN_INT is returned.
    *
    * @param x the first value
    * @param y the second value
-   * @return the result or MaxInt/MinInt if result causes overflow
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
    */
   public static int addInt(int x, int y) {
     int r = x + y;
     // HD 2-12 Overflow iff both arguments have the opposite sign of the result
     if (((x ^ r) & (y ^ r)) < 0) {
-      return (long) x + (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
+      return (long) x + (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
     return r;
   }
 
   /**
-   * Returns the difference of the arguments, if the result overflows MaxInt or MinInt is returned.
+   * Returns the difference of the arguments, if the result overflows MAX_INT or MIN_INT is
+   * returned.
    *
    * @param x the first value
    * @param y the second value to subtract from the first
-   * @return the result or MaxInt/MinInt if result causes overflow
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
    */
   public static int subtractInt(int x, int y) {
     int r = x - y;
     // HD 2-12 Overflow iff the arguments have different signs and
     // the sign of the result is different than the sign of x
     if (((x ^ y) & (x ^ r)) < 0) {
-      return (long) x - (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
+      return (long) x - (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
     return r;
   }

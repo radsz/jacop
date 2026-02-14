@@ -46,7 +46,7 @@ import org.jacop.core.Var;
  */
 public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position;

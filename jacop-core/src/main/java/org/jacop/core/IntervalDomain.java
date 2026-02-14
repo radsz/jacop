@@ -362,7 +362,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void addDom(IntDomain domain) {
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain d = (IntervalDomain) domain;
 
@@ -388,7 +388,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -399,7 +399,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
 
@@ -439,7 +439,7 @@ public class IntervalDomain extends IntDomain {
       return false;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -480,14 +480,14 @@ public class IntervalDomain extends IntDomain {
       return false;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       assert checkInvariants() == null : checkInvariants();
 
       return max() >= domain.min() && domain.max() >= min();
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -655,7 +655,7 @@ public class IntervalDomain extends IntDomain {
       return true;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain dom2 = (IntervalDomain) domain;
 
@@ -700,7 +700,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       int i = 0;
       int min = domain.min();
@@ -817,22 +817,22 @@ public class IntervalDomain extends IntDomain {
   public IntDomain complement() {
 
     if (size == 0) {
-      return new IntervalDomain(MinInt, MaxInt);
+      return new IntervalDomain(MIN_INT, MAX_INT);
     }
 
     assert checkInvariants() == null : checkInvariants();
 
     IntervalDomain result = new IntervalDomain(size + 1);
-    if (min() != MinInt) {
-      result.unionAdapt(new Interval(MinInt, intervals[0].min() - 1));
+    if (min() != MIN_INT) {
+      result.unionAdapt(new Interval(MIN_INT, intervals[0].min() - 1));
     }
 
     for (int i = 0; i < size - 1; i++) {
       result.unionAdapt(new Interval(intervals[i].max() + 1, intervals[i + 1].min() - 1));
     }
 
-    if (max() != MaxInt) {
-      result.unionAdapt(new Interval(max() + 1, MaxInt));
+    if (max() != MAX_INT) {
+      result.unionAdapt(new Interval(max() + 1, MAX_INT));
     }
 
     assert result.checkInvariants() == null : result.checkInvariants();
@@ -878,7 +878,7 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -899,7 +899,7 @@ public class IntervalDomain extends IntDomain {
       return equal;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       if (size == 0 && domain.isEmpty()) {
         return true;
@@ -912,7 +912,7 @@ public class IntervalDomain extends IntDomain {
       return intervals[0].min() == domain.min() && intervals[0].max() == domain.max();
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       // TODO: CRUCIAL, create special code for SmallDenseDomain.
 
@@ -981,7 +981,7 @@ public class IntervalDomain extends IntDomain {
       return emptyDomain;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1076,7 +1076,7 @@ public class IntervalDomain extends IntDomain {
       return temp;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       int min = domain.min();
       int max = domain.max();
@@ -1142,7 +1142,7 @@ public class IntervalDomain extends IntDomain {
       return temp;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       // TODO: CRUCIAL implement proper SmallDenseDomain case.
 
@@ -1416,7 +1416,7 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -1429,7 +1429,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       size = 1;
 
@@ -1543,7 +1543,7 @@ public class IntervalDomain extends IntDomain {
       return EMPTY;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -1698,7 +1698,7 @@ public class IntervalDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       if (domain.isEmpty()) {
         return cloneLight();
@@ -2038,7 +2038,7 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -2186,7 +2186,7 @@ public class IntervalDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       if (domain.isEmpty()) {
         return cloneLight();
@@ -2635,7 +2635,7 @@ public class IntervalDomain extends IntDomain {
         result.append(searchConstraint);
       }
 
-      if (domain.domainId() == IntervalDomainID) {
+      if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
         IntervalDomain dom = (IntervalDomain) domain;
         domain = dom.previousDomain;
@@ -2816,7 +2816,7 @@ public class IntervalDomain extends IntDomain {
 
     assert this.stamp <= storeLevel;
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -2982,7 +2982,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       if (domain.isEmpty()) {
         throw failException;
@@ -2996,7 +2996,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     // TODO: test special code for SmallDenseDomain.
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -3785,7 +3785,7 @@ public class IntervalDomain extends IntDomain {
     assert checkInvariants() == null : checkInvariants();
     assert this.stamp <= storeLevel;
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -3956,7 +3956,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       if (domain.isEmpty()) {
         throw failException;
@@ -3967,7 +3967,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     // TODO: Test SmallDenseDomain input.
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -4161,7 +4161,7 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public int domainId() {
-    return IntervalDomainID;
+    return INTERVAL_DOMAIN_ID;
   }
 
   @Override
@@ -4225,7 +4225,7 @@ public class IntervalDomain extends IntDomain {
   public int sizeConstraintsOriginal() {
     IntDomain domain = this;
 
-    while (domain.domainId() == IntervalDomainID) {
+    while (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain dom = (IntervalDomain) domain;
 
@@ -4236,7 +4236,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];
@@ -4484,7 +4484,7 @@ public class IntervalDomain extends IntDomain {
       return NONE;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -4645,7 +4645,7 @@ public class IntervalDomain extends IntDomain {
       return returnedEvent;
     }
 
-    if (domain.domainId() == SmallDenseDomainID) {
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -4805,7 +4805,7 @@ public class IntervalDomain extends IntDomain {
       return 0;
     }
 
-    if (domain.domainId() == IntervalDomainID) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -4893,7 +4893,7 @@ public class IntervalDomain extends IntDomain {
       return temp;
     }
 
-    if (domain.domainId() == BoundDomainID) {
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       int min = domain.min();
       int max = domain.max();

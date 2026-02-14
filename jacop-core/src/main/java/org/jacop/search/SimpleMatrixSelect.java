@@ -53,7 +53,7 @@ import org.jacop.core.Var;
 public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
   /// TODO: implement subListSize functionality or remove it from the description.
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position = Var.createEmptyPositioning();

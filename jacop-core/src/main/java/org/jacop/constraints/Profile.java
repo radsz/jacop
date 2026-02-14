@@ -45,13 +45,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Profile extends ArrayList<ProfileItem> {
 
-  static final boolean traceEnabled = false;
-  static final int cumul = 0;
-  static final int diffn = 1;
+  static final boolean TRACE_ENABLED = false;
+  static final int CUMUL = 0;
+  static final int DIFFN = 1;
   @Serial private static final long serialVersionUID = 8683452581100000012L;
   protected int maxProfileItemHeight;
 
-  short type = cumul;
+  short type = CUMUL;
 
   /** It constructs the prophet file. */
   public Profile() {}
@@ -59,7 +59,7 @@ public class Profile extends ArrayList<ProfileItem> {
   /**
    * It constructs the profile of a given type (e.g. for cumulative).
    *
-   * @param type type of the profile (cumul=0, diffn=1)
+   * @param type type of the profile (CUMUL=0, DIFFN=1)
    */
   public Profile(short type) {
     this.type = type;
@@ -78,7 +78,7 @@ public class Profile extends ArrayList<ProfileItem> {
     boolean notFound = true;
 
     if (size() == 0) {
-      if (traceEnabled) {
+      if (TRACE_ENABLED) {
         log.debug("1. Add [{}..{})={} at position 0", a, b, val);
       }
       add(new ProfileItem(type, a, b, val));
@@ -91,7 +91,7 @@ public class Profile extends ArrayList<ProfileItem> {
         if (b <= p.min) {
           if (a != b) {
             if (b == p.min && val == p.value) {
-              if (traceEnabled) {
+              if (TRACE_ENABLED) {
                 log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
               }
               p.min = a;
@@ -112,7 +112,7 @@ public class Profile extends ArrayList<ProfileItem> {
                   add(i, new ProfileItem(type, a, b, val));
                 }
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
                 }
                 add(i, new ProfileItem(type, a, b, val));
@@ -129,12 +129,12 @@ public class Profile extends ArrayList<ProfileItem> {
             if (i == size() - 1) {
               if (a != b) {
                 if (p.max == a && val == p.value) {
-                  if (traceEnabled) {
+                  if (TRACE_ENABLED) {
                     log.debug("3a. Change [{}..{})={} at position {}", p.min, b, val, i);
                   }
                   p.max = b;
                 } else {
-                  if (traceEnabled) {
+                  if (TRACE_ENABLED) {
                     log.debug("3b. Add [{}..{})={} at position {}", a, b, val, i + 1);
                   }
                   add(i + 1, new ProfileItem(type, a, b, val));
@@ -154,7 +154,7 @@ public class Profile extends ArrayList<ProfileItem> {
             ProfileItem new3 = new ProfileItem(type);
             p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
 
-            if (traceEnabled) {
+            if (TRACE_ENABLED) {
               log.debug(
                   "Overlap of [{}..{})={} and {}\nResult = {}, {}, {}",
                   a,
@@ -176,13 +176,13 @@ public class Profile extends ArrayList<ProfileItem> {
                 previous = new ProfileItem(type);
               }
               if (previous.max == new1.min && previous.value == new1.value) {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug(
                       "4a. Change [{}..{})={} at position {}", previous.min, new1.max, val, i);
                 }
                 previous.setMax(new1.max);
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("4b. Adding {}", new1);
                 }
                 add(i, new1);
@@ -201,13 +201,13 @@ public class Profile extends ArrayList<ProfileItem> {
                 previous = new ProfileItem(type);
               }
               if (previous.max == new2.min && previous.value == new2.value) {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug(
                       "5a. Change [{}..{})={} at position {}", previous.min, new2.max, val, i);
                 }
                 previous.setMax(new2.max);
               } else {
-                if (traceEnabled) {
+                if (TRACE_ENABLED) {
                   log.debug("5b. Adding {}", new2);
                 }
                 add(i, new2);

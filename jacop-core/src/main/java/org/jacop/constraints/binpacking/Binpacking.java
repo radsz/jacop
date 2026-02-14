@@ -413,7 +413,7 @@ public class Binpacking extends Constraint
   }
 
   private int getNumberBins(BinItem[] item) {
-    int min = IntDomain.MaxInt;
+    int min = IntDomain.MAX_INT;
     int max = 0;
     for (BinItem anItem : item) {
       IntVar bin = anItem.bin();

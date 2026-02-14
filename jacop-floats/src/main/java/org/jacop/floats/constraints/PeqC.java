@@ -58,7 +58,7 @@ public class PeqC extends AbstractPcompC {
     super(idNumber, p, c);
 
     // TODO: BUG? why Integer constants used here?
-    assert c >= IntDomain.MinInt && c <= IntDomain.MaxInt
+    assert c >= IntDomain.MIN_INT && c <= IntDomain.MAX_INT
         : "Constant c " + c + " is not in the allowed range ";
   }
 

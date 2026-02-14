@@ -60,7 +60,7 @@ public class VarWeightNode extends VariableNode {
     weight = w;
 
     bound.value.setValue(
-        FloatDomain.MinFloat, FloatDomain.MaxFloat, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT, FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
   }
 
   void propagate() {

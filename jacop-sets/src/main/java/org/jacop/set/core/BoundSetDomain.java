@@ -283,7 +283,7 @@ public class BoundSetDomain extends SetDomain {
    */
   @Override
   public int domainId() {
-    return SetDomainID;
+    return SET_DOMAIN_ID;
   }
 
   /**
@@ -1071,7 +1071,7 @@ public class BoundSetDomain extends SetDomain {
 
       int event;
 
-      // IntDomain.IntervalDomainID) {
+      // IntDomain.INTERVAL_DOMAIN_ID) {
       //       event = replacement.intersectAdapt(lub);
       //       lubDomain = replacement;
       event = lubDomain.intersectAdapt(intersect);

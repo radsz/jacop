@@ -266,8 +266,8 @@ public class ElementInteger extends Constraint
         valueHasChanged = false;
       } else { // bound consistency for large index domains
         // values of index for duplicated values within list are already taken care of above.
-        int min = IntDomain.MaxInt;
-        int max = IntDomain.MinInt;
+        int min = IntDomain.MAX_INT;
+        int max = IntDomain.MIN_INT;
         for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
           int valueOfElement = list[e.nextElement() - 1 - indexOffset];
 

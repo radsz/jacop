@@ -187,7 +187,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
       return;
     }
 
-    IntDomain glb = new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
+    IntDomain glb = new IntervalDomain(IntDomain.MIN_INT, IntDomain.MAX_INT);
     IntDomain lub = new IntervalDomain();
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {

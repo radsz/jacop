@@ -63,7 +63,9 @@ public class Dfq extends Filter {
         new int[][] {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
 
     this.ids =
-        new int[] {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
+        new int[] {
+          MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID
+        };
 
     this.last = new int[] {7, 8, 10};
   }

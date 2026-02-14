@@ -54,7 +54,7 @@ import org.jacop.floats.core.FloatVar;
  */
 public class MultivariateIntervalNewton {
 
-  static final boolean debug = false;
+  static final boolean DEBUG = false;
 
   final FloatVar[] f;
   final FloatVar[] x;
@@ -88,13 +88,13 @@ public class MultivariateIntervalNewton {
     for (int i = 0; i < f.length; i++) {
       for (int j = 0; j < x.length; j++) {
 
-        if (debug) {
+        if (DEBUG) {
           IO.println("Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
         }
 
         fprime[i][j] = Derivative.getDerivative(store, f[i], vars, x[j]);
 
-        if (debug) {
+        if (DEBUG) {
           IO.println("\t derivate = " + fprime[i][j]);
         }
       }
@@ -123,7 +123,7 @@ public class MultivariateIntervalNewton {
 
     b = values();
 
-    if (debug) {
+    if (DEBUG) {
       IO.println("Middle values for x");
       for (double value : xInit) {
         IO.print(value + " ");
@@ -139,7 +139,7 @@ public class MultivariateIntervalNewton {
 
     IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
 
-    if (debug) {
+    if (DEBUG) {
       IO.println(igs);
     }
 

@@ -69,7 +69,9 @@ public class Dot extends Filter {
         };
 
     this.ids =
-        new int[] {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
+        new int[] {
+          MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID
+        };
 
     this.last = new int[] {10};
   }

@@ -65,42 +65,42 @@ class FloatComparisonConstraints implements ParserTreeConstants {
 
   void gen_float_eq(SimpleNode node) {
     reified = false;
-    float_comparison(Support.eq, node);
+    float_comparison(Support.EQ, node);
   }
 
   void gen_float_eq_reif(SimpleNode node) {
     reified = true;
-    float_comparison(Support.eq, node);
+    float_comparison(Support.EQ, node);
   }
 
   void gen_float_ne(SimpleNode node) {
     reified = false;
-    float_comparison(Support.ne, node);
+    float_comparison(Support.NE, node);
   }
 
   void gen_float_ne_reif(SimpleNode node) {
     reified = true;
-    float_comparison(Support.ne, node);
+    float_comparison(Support.NE, node);
   }
 
   void gen_float_le(SimpleNode node) {
     reified = false;
-    float_comparison(Support.le, node);
+    float_comparison(Support.LE, node);
   }
 
   void gen_float_le_reif(SimpleNode node) {
     reified = true;
-    float_comparison(Support.le, node);
+    float_comparison(Support.LE, node);
   }
 
   void gen_float_lt(SimpleNode node) {
     reified = false;
-    float_comparison(Support.lt, node);
+    float_comparison(Support.LT, node);
   }
 
   void gen_float_lt_reif(SimpleNode node) {
     reified = true;
-    float_comparison(Support.lt, node);
+    float_comparison(Support.LT, node);
   }
 
   void float_comparison(int operation, SimpleNode node) {
@@ -119,7 +119,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
 
         double i2 = support.getFloat(p2);
         switch (operation) {
-          case Support.eq:
+          case Support.EQ:
             if (v1.min() > i2 || v1.max() < i2) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
@@ -137,7 +137,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             }
             break;
 
-          case Support.ne:
+          case Support.NE:
             if (v1.min() > i2 || v1.max() < i2) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -154,7 +154,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
               c = new PneqC(v1, i2);
             }
             break;
-          case Support.lt:
+          case Support.LT:
             if (v1.max() < i2) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -165,7 +165,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
               c = new PltC(v1, i2);
             }
             break;
-          case Support.le:
+          case Support.LE:
             if (v1.max() <= i2) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -184,7 +184,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
         double i1 = support.getFloat(p1);
 
         switch (operation) {
-          case Support.eq:
+          case Support.EQ:
             if (v2.min() > i1 || v2.max() < i1) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
@@ -202,7 +202,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             }
             break;
 
-          case Support.ne:
+          case Support.NE:
             if (v2.min() > i1 || v2.max() < i1) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -213,7 +213,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
               c = new PneqC(v2, i1);
             }
             break;
-          case Support.lt:
+          case Support.LT:
             if (i1 < v2.min()) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -224,7 +224,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
               c = new PgtC(v2, i1);
             }
             break;
-          case Support.le:
+          case Support.LE:
             if (i1 <= v2.min()) {
               v3.domain.in(store.level, v3, 1, 1);
               return;
@@ -244,10 +244,10 @@ class FloatComparisonConstraints implements ParserTreeConstants {
 
         c =
             switch (operation) {
-              case Support.eq -> new PeqQ(v1, v2);
-              case Support.ne -> new PneqQ(v1, v2);
-              case Support.lt -> new PltQ(v1, v2);
-              case Support.le -> new PlteqQ(v1, v2);
+              case Support.EQ -> new PeqQ(v1, v2);
+              case Support.NE -> new PneqQ(v1, v2);
+              case Support.LT -> new PltQ(v1, v2);
+              case Support.LE -> new PlteqQ(v1, v2);
               default -> throw new RuntimeException("Internal error in " + getClass().getName());
             };
       }
@@ -262,22 +262,22 @@ class FloatComparisonConstraints implements ParserTreeConstants {
           double i1 = support.getFloat(p1);
           double i2 = support.getFloat(p2);
           switch (operation) {
-            case Support.eq:
+            case Support.EQ:
               if (i1 != i2) {
                 throw Store.failException;
               }
               break;
-            case Support.ne:
+            case Support.NE:
               if (i1 == i2) {
                 throw Store.failException;
               }
               break;
-            case Support.lt:
+            case Support.LT:
               if (i1 >= i2) {
                 throw Store.failException;
               }
               break;
-            case Support.le:
+            case Support.LE:
               if (i1 > i2) {
                 throw Store.failException;
               }
@@ -291,16 +291,16 @@ class FloatComparisonConstraints implements ParserTreeConstants {
           FloatVar v2 = support.getFloatVariable(p2);
 
           switch (operation) {
-            case Support.eq:
+            case Support.EQ:
               v2.domain.in(store.level, v2, i1, i1);
               break;
-            case Support.ne:
+            case Support.NE:
               v2.domain.inComplement(store.level, v2, i1);
               break;
-            case Support.lt:
+            case Support.LT:
               v2.domain.in(store.level, v2, FloatDomain.next(i1), VariablesParameters.MAX_FLOAT);
               break;
-            case Support.le:
+            case Support.LE:
               v2.domain.in(store.level, v2, i1, VariablesParameters.MAX_FLOAT);
               break;
             default:
@@ -314,17 +314,17 @@ class FloatComparisonConstraints implements ParserTreeConstants {
           double i2 = support.getFloat(p2);
 
           switch (operation) {
-            case Support.eq:
+            case Support.EQ:
               v1.domain.in(store.level, v1, i2, i2);
               break;
-            case Support.ne:
+            case Support.NE:
               v1.domain.inComplement(store.level, v1, i2);
               break;
-            case Support.lt:
+            case Support.LT:
               v1.domain.in(
                   store.level, v1, VariablesParameters.MIN_FLOAT, FloatDomain.previous(i2));
               break;
-            case Support.le:
+            case Support.LE:
               v1.domain.in(store.level, v1, VariablesParameters.MIN_FLOAT, i2);
               break;
             default:
@@ -337,16 +337,16 @@ class FloatComparisonConstraints implements ParserTreeConstants {
           FloatVar v2 = support.getFloatVariable(p2);
 
           switch (operation) {
-            case Support.eq:
+            case Support.EQ:
               support.pose(new PeqQ(v1, v2));
               break;
-            case Support.ne:
+            case Support.NE:
               support.pose(new PneqQ(v1, v2));
               break;
-            case Support.lt:
+            case Support.LT:
               support.pose(new PltQ(v1, v2));
               break;
-            case Support.le:
+            case Support.LE:
               support.pose(new PlteqQ(v1, v2));
               break;
             default:

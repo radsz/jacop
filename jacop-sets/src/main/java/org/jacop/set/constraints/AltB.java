@@ -79,7 +79,7 @@ public class AltB extends AbstractAleqB {
   @Override
   public void consistency(Store store) {
 
-    b.domain.inCardinality(store.level, b, 1, IntDomain.MaxInt);
+    b.domain.inCardinality(store.level, b, 1, IntDomain.MAX_INT);
 
     if (a.domain.card().min() > 0) {
       b.domain.inLub(
@@ -87,7 +87,7 @@ public class AltB extends AbstractAleqB {
           b,
           new IntervalDomain(
               a.domain.lub().min(),
-              IntDomain.MaxInt)); // any b with cardinalirty > 0 is fine since a = {}
+              IntDomain.MAX_INT)); // any b with cardinalirty > 0 is fine since a = {}
     } else {
       return; // any b with cardinalirty > 0 is fine since a = {}
     }

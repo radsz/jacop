@@ -72,9 +72,11 @@ public class Ewf extends Filter {
 
     this.ids =
         new int[] {
-          addId, addId, addId, addId, addId, mulId, mulId, addId, addId, addId, addId, addId, mulId,
-          addId, mulId, addId, addId, addId, addId, addId, addId, mulId, addId, addId, mulId, mulId,
-          mulId, addId, addId, addId, addId, addId, addId, addId
+          ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, MUL_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID,
+              ADD_ID, MUL_ID,
+          ADD_ID, MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, MUL_ID, ADD_ID, ADD_ID,
+              MUL_ID, MUL_ID,
+          MUL_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID, ADD_ID
         };
 
     this.last = new int[] {13, 24, 28, 29, 30, 31, 32, 33};

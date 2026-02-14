@@ -185,8 +185,8 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
       return;
     }
 
-    double min = FloatDomain.MaxFloat;
-    double max = FloatDomain.MinFloat;
+    double min = FloatDomain.MAX_FLOAT;
+    double max = FloatDomain.MIN_FLOAT;
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;

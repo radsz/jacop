@@ -60,7 +60,7 @@ import org.jacop.search.SmallestDomain;
  */
 public class FurnitureMoving extends ExampleFd {
 
-  private static final boolean generateAll = true;
+  private static final boolean GENERATE_ALL = true;
 
   IntVar[] starts;
   IntVar[] endTimes;
@@ -130,7 +130,7 @@ public class FurnitureMoving extends ExampleFd {
 
     store.impose(new Cumulative(starts, durations, resources, numPersons));
 
-    if (generateAll) {
+    if (GENERATE_ALL) {
       // generate all optimal solutions
       store.impose(new XeqC(numPersons, 3));
     }
@@ -162,7 +162,7 @@ public class FurnitureMoving extends ExampleFd {
     searchLabel.getSolutionListener().recordSolutions(true);
 
     boolean result;
-    if (generateAll) {
+    if (GENERATE_ALL) {
       // Generate all optimal solutions.
       // Note: Gives null pointer exception when searchAll(true)
       result = searchLabel.labeling(store, select);

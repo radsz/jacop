@@ -129,7 +129,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMin = FloatDomain.down(qMin);
               qMax = FloatDomain.up(qMax);
               if (qMax < 0) {
-                qMax = FloatDomain.MaxFloat;
+                qMax = FloatDomain.MAX_FLOAT;
               }
               break;
             default:
@@ -146,9 +146,9 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMax = FloatDomain.up(qMax);
               if (qMin > qMax) {
                 if (qMax > 0) {
-                  qMin = -FloatDomain.MaxFloat;
+                  qMin = -FloatDomain.MAX_FLOAT;
                 } else if (qMin < 0) {
-                  qMax = FloatDomain.MaxFloat;
+                  qMax = FloatDomain.MAX_FLOAT;
                 }
               }
               break;
@@ -165,7 +165,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMin = FloatDomain.down(qMin);
               qMax = FloatDomain.up(qMax);
               if (qMin > 0) {
-                qMin = -FloatDomain.MaxFloat;
+                qMin = -FloatDomain.MAX_FLOAT;
               }
               break;
             default:

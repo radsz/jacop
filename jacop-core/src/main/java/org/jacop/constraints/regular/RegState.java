@@ -43,7 +43,7 @@ import org.jacop.core.TimeStamp;
  */
 public abstract class RegState {
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** It specifies the list of successor states for this state. */
   public RegState[] successors;
