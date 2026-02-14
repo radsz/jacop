@@ -241,7 +241,7 @@ public class NetworkFlow extends Constraint
       }
 
       // compute cost and throw failure on overflow
-      int cost = (int) network.cost(costVariable.max() + 1);
+      int cost = (int) network.cost((long) costVariable.max() + 1);
       if (cost > costVariable.max()) {
         throw Store.failException;
       }
@@ -263,7 +263,7 @@ public class NetworkFlow extends Constraint
     }
 
     // compute cost and throw failure on overflow
-    int cost = (int) network.cost(costVariable.max() + 1);
+    int cost = (int) network.cost((long) costVariable.max() + 1);
     if (cost > costVariable.max()) {
       throw Store.failException;
     }

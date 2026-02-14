@@ -135,6 +135,6 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
       ominNext = IntDomain.MAX_INT;
     }
 
-    return ominNext - omin;
+    return (double) ominNext - omin;
   }
 }

@@ -273,16 +273,16 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
     }
 
     if (left != right) {
-      if (equal(t, tuplesForGivenVariableValuePair[left])) {
+      if (arraysEqual(t, tuplesForGivenVariableValuePair[left])) {
         return left;
       }
 
-      if (equal(t, tuplesForGivenVariableValuePair[right])) {
+      if (arraysEqual(t, tuplesForGivenVariableValuePair[right])) {
         return right;
       }
     } else {
 
-      if (equal(t, tuplesForGivenVariableValuePair[left])) {
+      if (arraysEqual(t, tuplesForGivenVariableValuePair[left])) {
         return left;
       }
     }
@@ -380,7 +380,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
         }
       }
 
-      if (!equal(is[l + 1], t)) {
+      if (!arraysEqual(is[l + 1], t)) {
         return l;
       } else {
 

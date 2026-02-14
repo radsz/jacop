@@ -109,8 +109,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       dfs[i].setMasterSearch(this);
       search.set(2 * i, dfs[i]);
-      if (!"org.jacop.search.PrioritySearch".equals(dfs[i].getClass().getName())
-          && dfs[i].heuristic == null) {
+      if (!(dfs[i] instanceof PrioritySearch) && dfs[i].heuristic == null) {
         throw new RuntimeException("heuristic in depth first search must be set");
       }
 

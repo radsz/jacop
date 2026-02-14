@@ -305,7 +305,7 @@ public abstract class AbstractExtensionalVa extends Constraint
    * @param tuple2 the second tuple
    * @return true if tuples are equal, false otherwise
    */
-  boolean equal(int[] tuple1, int[] tuple2) {
+  boolean arraysEqual(int[] tuple1, int[] tuple2) {
     return tuplesEqual(tuple1, tuple2);
   }
 

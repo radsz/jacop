@@ -44,7 +44,7 @@ public class TrivialSolution extends RuntimeException {
 
   /** {@inheritDoc} */
   @Override
-  public Throwable fillInStackTrace() {
+  public synchronized Throwable fillInStackTrace() {
     return this;
   }
 }

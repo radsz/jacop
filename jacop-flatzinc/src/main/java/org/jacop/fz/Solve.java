@@ -887,7 +887,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println(
           "%%%mzn-stat: variables="
               + nf.format(
-                  store.size()
+                  (long) store.size()
                       + dictionary.getNumberBoolVariables()
                       - dictionary.constantTable.size())
               // + "\n%%%mzn-stat: boolVariables="+
@@ -895,7 +895,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
               // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
               + "\n%%%mzn-stat: propagators="
-              + nf.format(initNumberConstraints - 1)
+              + nf.format((long) initNumberConstraints - 1)
               + "\n\n%%%mzn-stat: initTime="
               + nf.format(getInitTime_ms() / 1000.0)
               + "\n%%%mzn-stat: solveTime="
@@ -1559,7 +1559,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println(
           "%%%mzn-stat: variables="
               + nf.format(
-                  store.size()
+                  (long) store.size()
                       + dictionary.getNumberBoolVariables()
                       - dictionary.constantTable.size())
               // + "\n%%%mzn-stat: boolVariables="+
@@ -1567,7 +1567,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
               // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
               + "\n%%%mzn-stat: propagators="
-              + nf.format(initNumberConstraints - 1)
+              + nf.format((long) initNumberConstraints - 1)
               + "\n\n%%%mzn-stat: initTime="
               + nf.format(getInitTime_ms() / 1000.0)
               + "\n%%%mzn-stat: solveTime="

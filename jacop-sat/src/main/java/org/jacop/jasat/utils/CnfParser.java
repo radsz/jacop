@@ -34,6 +34,7 @@ package org.jacop.jasat.utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import org.jacop.jasat.utils.structures.IntVec;
 
 /**
@@ -230,7 +231,9 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    * @return the next clause
    */
   public IntVec next() {
-    assert nextClause != null;
+    if (nextClause == null) {
+      throw new NoSuchElementException();
+    }
 
     IntVec answer = nextClause;
     // prepare next clause
@@ -243,10 +246,13 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     throw new UnsupportedOperationException();
   }
 
-  /** Returns an iterator; should be called only once. */
+  /**
+   * Returns an iterator over parsed clauses. This parser is single-pass and does not support
+   * multiple traversals; calling this method a second time throws {@link IllegalStateException}.
+   */
   public Iterator<IntVec> iterator() {
     if (hasGivenIterator) {
-      throw new AssertionError("should only iterate once on Parser");
+      throw new IllegalStateException("CnfParser supports only a single traversal");
     }
     hasGivenIterator = true;
     return this;

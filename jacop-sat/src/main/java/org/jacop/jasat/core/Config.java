@@ -122,7 +122,7 @@ public class Config extends Properties {
   }
 
   @Override
-  public String toString() {
+  public synchronized String toString() {
     StringBuilder sb = new StringBuilder();
 
     // TODO: enhance

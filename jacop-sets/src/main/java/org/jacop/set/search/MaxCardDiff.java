@@ -80,6 +80,6 @@ public class MaxCardDiff<T extends SetVar> implements ComparatorVariable<T> {
   /** Returns the metric(Cardinality difference) of the variable. */
   public double metric(T v) {
     SetDomain dom = v.dom();
-    return dom.lub().getSize() - dom.glb().getSize();
+    return (double) dom.lub().getSize() - dom.glb().getSize();
   }
 }

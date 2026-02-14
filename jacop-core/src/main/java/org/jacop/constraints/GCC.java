@@ -202,7 +202,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         };
     pFirst = new PriorityQueue<>(10, sortPriorityMinOrder);
     pSecond = new PriorityQueue<>(10, sortPriorityMinOrder);
-    Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
+    Comparator<Integer> sortPriorityMaxOrder = Comparator.reverseOrder();
     pCount = new PriorityQueue<>(10, sortPriorityMaxOrder);
 
     xNodesHash = Var.createEmptyPositioning();

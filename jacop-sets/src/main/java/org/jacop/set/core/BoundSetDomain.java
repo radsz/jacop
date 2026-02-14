@@ -299,7 +299,7 @@ public class BoundSetDomain extends SetDomain {
   /** Returns the number of elements in the domain. */
   @Override
   public int getSize() {
-    return (int) Math.pow(2, lubDomain.getSize() - glbDomain.getSize());
+    return (int) Math.pow(2, (double) lubDomain.getSize() - glbDomain.getSize());
   }
 
   /**

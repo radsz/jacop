@@ -45,7 +45,7 @@ public final class FailException extends RuntimeException {
   FailException() {}
 
   @Override
-  public Throwable fillInStackTrace() {
+  public synchronized Throwable fillInStackTrace() {
     return this;
   }
 }

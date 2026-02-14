@@ -953,7 +953,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int startl = sEst;
     long a = 0;
     long slack;
-    long maxuse = limit.max() - s.res().min();
+    long maxuse = (long) limit.max() - s.res().min();
 
     if (tasks.size() > 1) {
 
@@ -1027,7 +1027,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int newStartl;
     long a = 0;
     long slack;
-    long maxuse = limit.max() - s.res().min();
+    long maxuse = (long) limit.max() - s.res().min();
 
     if (tasks.size() > 1) {
 

@@ -403,7 +403,7 @@ public class SgmpcsSearch {
       return 1;
     }
 
-    double k = Math.log(i + 1) / Math.log(2d);
+    double k = Math.log((double) i + 1) / Math.log(2d);
 
     if (Math.abs(k - Math.floor(k + 0.5)) < PRECISION) { // k == Math.floor(k + 0.5)
       return (int) Math.pow(2, k - 1);

@@ -34,6 +34,7 @@ package org.jacop.jasat.utils.structures;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -402,7 +403,7 @@ public final class IntHashMap<E> {
 
     public Integer next() {
       if (!hasNext) {
-        return null;
+        throw new NoSuchElementException();
       }
       // the next int
       int answer = current;
@@ -459,7 +460,7 @@ public final class IntHashMap<E> {
 
     public Map.Entry<Integer, E> next() {
       if (!hasNext) {
-        return null;
+        throw new NoSuchElementException();
       }
       // the next int
       Map.Entry<Integer, E> answer =

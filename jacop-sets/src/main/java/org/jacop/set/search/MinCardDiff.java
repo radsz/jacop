@@ -80,6 +80,6 @@ public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
   public double metric(T v) {
 
     SetDomain setDom = v.dom();
-    return setDom.lub().getSize() - setDom.glb().getSize();
+    return (double) setDom.lub().getSize() - setDom.glb().getSize();
   }
 }

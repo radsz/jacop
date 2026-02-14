@@ -198,13 +198,9 @@ public class PartitionSet extends Constraint {
     AunionBeqC[] union = unionConstraints();
     List<AdisjointB> intersect = disjointConstraints();
 
-    constraints =
-        new ArrayList<>() {
-          {
-            addAll(Arrays.asList(union));
-            addAll(intersect);
-          }
-        };
+    constraints = new ArrayList<>();
+    constraints.addAll(Arrays.asList(union));
+    constraints.addAll(intersect);
 
     return constraints;
   }

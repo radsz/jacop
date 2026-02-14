@@ -180,12 +180,8 @@ public class WhoKilledAgatha extends ExampleFd {
     // "No one hates everyone. "
     for (int i = 0; i < n; i++) {
       // MiniZinc: sum(j in r) (hates[i,j]) <= 2
-      IntVar[] a = new IntVar[n];
-      for (int j = 0; j < n; j++) {
-        a[j] = hates[i][j];
-      }
       IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
-      store.impose(new SumInt(a, "==", a_sum));
+      store.impose(new SumInt(hates[i], "==", a_sum));
       store.impose(new XlteqC(a_sum, 2));
       vars.add(a_sum);
     }

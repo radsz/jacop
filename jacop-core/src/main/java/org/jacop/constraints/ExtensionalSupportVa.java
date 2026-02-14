@@ -255,7 +255,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
     int right = tuplesForGivenVariableValuePair.length - 1;
 
     if (!(smaller(t, tuplesForGivenVariableValuePair[right])
-        || equal(t, tuplesForGivenVariableValuePair[right]))) {
+        || arraysEqual(t, tuplesForGivenVariableValuePair[right]))) {
       return null;
     }
 
@@ -273,7 +273,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
     }
 
     if (smaller(t, tuplesForGivenVariableValuePair[left])
-        || equal(t, tuplesForGivenVariableValuePair[left])) {
+        || arraysEqual(t, tuplesForGivenVariableValuePair[left])) {
       System.arraycopy(tuplesForGivenVariableValuePair[left], 0, t, 0, list.length);
       return t;
     } else {

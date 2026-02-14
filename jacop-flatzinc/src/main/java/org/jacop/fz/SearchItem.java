@@ -355,7 +355,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       case "credit" -> {
         explore = "credit";
         if (expr4.jjtGetNumChildren() == 2) {
-          if (((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId() == "$expr") {
+          if ("$expr".equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
             ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
             if (cp.jjtGetNumChildren() == 1) {
               creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
@@ -381,7 +381,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         explore = "lds";
 
         if (expr4.jjtGetNumChildren() == 1) {
-          if (((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId() == "$expr") {
+          if ("$expr".equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
             if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
               ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
               if (ae.jjtGetNumChildren() == 1) {

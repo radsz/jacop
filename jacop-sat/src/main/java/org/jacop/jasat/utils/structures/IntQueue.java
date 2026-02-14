@@ -32,6 +32,7 @@
 package org.jacop.jasat.utils.structures;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import org.jacop.jasat.utils.MemoryPool;
 
 /**
@@ -201,6 +202,9 @@ public final class IntQueue implements Iterable<Integer> {
     }
 
     public Integer next() {
+      if (!hasNext) {
+        throw new NoSuchElementException();
+      }
       int answer = array[index];
       findNext();
       return answer;
