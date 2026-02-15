@@ -196,65 +196,57 @@ public class DomainHoles extends InternalConstraint {
     }
     Dbox forbiddenRegion = Dbox.getAllocatedInstance(o.dimension + 1);
 
-    int[] forbiddenOrigin = forbiddenRegion.origin;
-    int[] forbiddenLength = forbiddenRegion.length;
-
-    // TODO: make sure which dimension ordering is the best
-    /*
-     * give an outbox that advances the sweep most in its current dimension,
-     * in other words, begin with the less significant dimension.
-     * The forbidden domain may be seen again, but for a more significant dimension
-     * only.
-     * This still needs to be discussed.
-     */
     for (int i = 0; i < o.dimension + 1; i++) {
-
       int d = order.dimensionAt(i);
-      if (d != o.dimension) {
-        IntDomain dom = o.coords[d].domain;
-        if (dom.noIntervals() == 1) {
-          continue; // there are no domain holes in this dimension
-        }
-        if (!dom.contains(c[d])) {
-
-          assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
-              : "current point not located in a domain hole";
-
-          if (DEBUG) {
-            log.debug("{} is in a hole of {}", Arrays.toString(c), o.coords[d]);
-          }
-
-          /*
-           * we found a hole, the infeasible slice is the whole domain, except in the
-           * dimension of the hole
-           */
-          for (int j = 0; j < o.dimension + 1; j++) {
-            if (j == d) {
-              forbiddenOrigin[j] = dom.previousValue(c[d]) + 1; // min bound not feasible
-              forbiddenLength[j] = dom.nextValue(c[d]) - forbiddenOrigin[j]; // max bound feasible
-            } else {
-              forbiddenOrigin[j] = Integer.MIN_VALUE / 2;
-              forbiddenLength[j] = Integer.MAX_VALUE;
-            }
-          }
-
-          if (DEBUG) {
-            log.debug("forbidden domain: {}", forbiddenRegion);
-          }
-
-          assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
-
-          assert forbiddenRegion.containsPoint(c) : "bad forbidden region, c is not contained";
-
-          return forbiddenRegion;
-        }
-        if (DEBUG) {
-          log.debug("{} is not in a hole of {}", Arrays.toString(c), o.coords[d]);
-        }
+      if (d == o.dimension) {
+        continue;
+      }
+      if (fillForbiddenRegionIfInHole(o, c, d, forbiddenRegion)) {
+        return forbiddenRegion;
       }
     }
 
     return null;
+  }
+
+  private boolean fillForbiddenRegionIfInHole(GeostObject o, int[] c, int d, Dbox forbiddenRegion) {
+    IntDomain dom = o.coords[d].domain;
+    if (dom.noIntervals() == 1) {
+      return false; // there are no domain holes in this dimension
+    }
+    if (dom.contains(c[d])) {
+      if (DEBUG) {
+        log.debug("{} is not in a hole of {}", Arrays.toString(c), o.coords[d]);
+      }
+      return false;
+    }
+
+    assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
+        : "current point not located in a domain hole";
+
+    if (DEBUG) {
+      log.debug("{} is in a hole of {}", Arrays.toString(c), o.coords[d]);
+    }
+
+    int[] forbiddenOrigin = forbiddenRegion.origin;
+    int[] forbiddenLength = forbiddenRegion.length;
+    for (int j = 0; j < o.dimension + 1; j++) {
+      if (j == d) {
+        forbiddenOrigin[j] = dom.previousValue(c[d]) + 1; // min bound not feasible
+        forbiddenLength[j] = dom.nextValue(c[d]) - forbiddenOrigin[j]; // max bound feasible
+      } else {
+        forbiddenOrigin[j] = Integer.MIN_VALUE / 2;
+        forbiddenLength[j] = Integer.MAX_VALUE;
+      }
+    }
+
+    if (DEBUG) {
+      log.debug("forbidden domain: {}", forbiddenRegion);
+    }
+
+    assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
+    assert forbiddenRegion.containsPoint(c) : "bad forbidden region, c is not contained";
+    return true;
   }
 
   @Override

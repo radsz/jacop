@@ -300,72 +300,81 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
       super(new IntVar(store, "Zero-cost", 0, 0));
 
-      // copy equations
+      int[][] eqns = copyEquations();
+      Node root = addNode("source/sink", -sum[0]);
+      flip(sum);
+      Node[] nodes = createEquationNodes(eqns);
+
+      for (int i = 0; i < nodes.length; i++) {
+        addArcsForEquation(eqns, sum, root, nodes, i);
+      }
+
+      assertEquationsBalanced(eqns, sum);
+    }
+
+    private int[][] copyEquations() {
       int size = Arithmetic.this.eqns.size();
       int[][] eqns = new int[size][];
       for (int i = 0; i < size; i++) {
         int[] eqn = Arithmetic.this.eqns.get(i);
         eqns[i] = Arrays.copyOf(eqn, eqn.length);
       }
+      return eqns;
+    }
 
-      // create nodes
-      Node root = addNode("source/sink", -sum[0]);
+    private Node[] createEquationNodes(int[][] eqns) {
       Node[] nodes = new Node[eqns.length];
-      flip(sum);
-
       for (int i = 0; i < nodes.length; i++) {
         nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
       }
+      return nodes;
+    }
 
-      // create arcs
-      for (int i = 0; i < nodes.length; i++) {
-        int[] eqn = eqns[i];
-
-        for (int varIdx = 1; varIdx < eqn.length; varIdx++) {
-          if (eqn[varIdx] == 0) {
-            continue;
-          }
-
-          int found = -1;
-          for (int j = 1; j < nodes.length; j++) {
-            int k = (i + j) % nodes.length;
-            int[] eqn2 = eqns[k];
-            if (varIdx >= eqn2.length) {
-              continue;
-            }
-
-            if (eqn[varIdx] > 0 && eqn[varIdx] <= -eqn2[varIdx]) {
-              found = k;
-              break;
-            }
-            if (eqn[varIdx] < 0 && -eqn[varIdx] <= eqn2[varIdx]) {
-              found = k;
-              break;
-            }
-          }
-
-          int[] eqn2 = found == -1 ? sum : eqns[found];
-          Node n1 = nodes[i];
-          Node n2 = found == -1 ? root : nodes[found];
-
-          if (eqn[varIdx] > 0) {
-            // TODO: use variable-view instead
-            for (int cnt = eqn[varIdx]; cnt-- > 0; ) {
-              addArc(n2, n1, 0, vars.get(varIdx));
-            }
-          } else {
-            // TODO: use variable-view instead
-            for (int cnt = -eqn[varIdx]; cnt-- > 0; ) {
-              addArc(n1, n2, 0, vars.get(varIdx));
-            }
-          }
-
-          eqn2[varIdx] += eqn[varIdx];
-          eqn[varIdx] = 0;
+    private int findMatchingEquation(int[][] eqns, int eqnIdx, int varIdx, int coeff) {
+      for (int j = 1; j < eqns.length; j++) {
+        int k = (eqnIdx + j) % eqns.length;
+        int[] eqn2 = eqns[k];
+        if (varIdx >= eqn2.length) {
+          continue;
+        }
+        if (coeff > 0 && coeff <= -eqn2[varIdx]) {
+          return k;
+        }
+        if (coeff < 0 && -coeff <= eqn2[varIdx]) {
+          return k;
         }
       }
+      return -1;
+    }
 
-      // Assertions
+    private void addArcsForEquation(int[][] eqns, int[] sum, Node root, Node[] nodes, int i) {
+      int[] eqn = eqns[i];
+      for (int varIdx = 1; varIdx < eqn.length; varIdx++) {
+        if (eqn[varIdx] == 0) {
+          continue;
+        }
+        int coeff = eqn[varIdx];
+        int found = findMatchingEquation(eqns, i, varIdx, coeff);
+        int[] eqn2 = found == -1 ? sum : eqns[found];
+        Node n1 = nodes[i];
+        Node n2 = found == -1 ? root : nodes[found];
+
+        if (coeff > 0) {
+          for (int cnt = coeff; cnt-- > 0; ) {
+            addArc(n2, n1, 0, vars.get(varIdx));
+          }
+        } else {
+          for (int cnt = -coeff; cnt-- > 0; ) {
+            addArc(n1, n2, 0, vars.get(varIdx));
+          }
+        }
+
+        eqn2[varIdx] += coeff;
+        eqn[varIdx] = 0;
+      }
+    }
+
+    private void assertEquationsBalanced(int[][] eqns, int[] sum) {
       for (int[] eqn : eqns) {
         for (int i = 1; i < eqn.length; i++) {
           if (eqn[i] != 0) {
@@ -373,7 +382,6 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
           }
         }
       }
-
       for (int i = 1; i < sum.length; i++) {
         if (sum[i] != 0) {
           throw new AssertionError(Arrays.toString(sum));

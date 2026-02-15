@@ -338,66 +338,72 @@ public class NetworkBuilder {
 
     List<Constraint> result = new ArrayList<>();
 
-    // @TODO: fix it? Check the remark above.
     for (Node node : nodeList) {
-      List<IntVar> in = new ArrayList<>();
-      List<IntVar> out = new ArrayList<>();
+      addFlowBalanceConstraintsForNode(store, result, node);
+    }
 
-      for (Arc arc : arcList) {
+    addDomainStructureConstraints(store, result);
 
-        // This code replaces, the one below to handle
-        if (arc.head == node || arc.tail() == node) {
+    addCostConstraints(store, result);
 
-          if (arc.getCompanion() == null) {
-            // the above condition is satisfied sometimes.
-            arc.companion = new ArcCompanion(arc, 0);
-          }
+    return result;
+  }
 
-          IntVar v = arc.getCompanion().xVar;
-          if (v == null) {
-            v =
-                new IntVar(
-                    store,
-                    arc.getCompanion().flowOffset,
-                    arc.getCompanion().flowOffset + arc.capacity + arc.sister.capacity);
-          }
-          if (arc.head == node) {
-            in.add(v);
-          }
-          if (arc.tail() == node) {
-            out.add(v);
-          }
-          arc.getCompanion().xVar = v;
+  private void addFlowBalanceConstraintsForNode(Store store, List<Constraint> result, Node node) {
+    List<IntVar> in = new ArrayList<>();
+    List<IntVar> out = new ArrayList<>();
+
+    for (Arc arc : arcList) {
+      if (arc.head == node || arc.tail() == node) {
+        ensureCompanionXVar(store, arc);
+        IntVar v = arc.getCompanion().xVar;
+        if (arc.head == node) {
+          in.add(v);
         }
-      }
-
-      if (node.balance != 0) {
-        IntVar balance = new IntVar(store, node.balance, node.balance);
-        in.add(balance);
-      }
-
-      // added.
-      if (in.isEmpty() || out.isEmpty()) {
-        continue;
-      }
-
-      if (in.size() == 1) {
-        sumC(result, store, out, in.getFirst());
-      } else if (out.size() == 1) {
-        sumC(result, store, in, out.getFirst());
-      } else {
-        IntVar sum = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
-        sumC(result, store, in, sum);
-        sumC(result, store, out, sum);
+        if (arc.tail() == node) {
+          out.add(v);
+        }
+        arc.getCompanion().xVar = v;
       }
     }
 
+    if (node.balance != 0) {
+      IntVar balance = new IntVar(store, node.balance, node.balance);
+      in.add(balance);
+    }
+
+    if (in.isEmpty() || out.isEmpty()) {
+      return;
+    }
+
+    if (in.size() == 1) {
+      sumC(result, store, out, in.getFirst());
+    } else if (out.size() == 1) {
+      sumC(result, store, in, out.getFirst());
+    } else {
+      IntVar sum = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
+      sumC(result, store, in, sum);
+      sumC(result, store, out, sum);
+    }
+  }
+
+  private void ensureCompanionXVar(Store store, Arc arc) {
+    if (arc.getCompanion() == null) {
+      arc.companion = new ArcCompanion(arc, 0);
+    }
+    if (arc.getCompanion().xVar == null) {
+      arc.getCompanion().xVar =
+          new IntVar(
+              store,
+              arc.getCompanion().flowOffset,
+              arc.getCompanion().flowOffset + arc.capacity + arc.sister.capacity);
+    }
+  }
+
+  private void addDomainStructureConstraints(Store store, List<Constraint> result) {
     for (VarHandler handler : handlerList) {
-
       if (handler instanceof DomainStructure structure) {
-
         for (int i = 0; i < structure.arcs.length; i++) {
-
           Arc arc = structure.arcs[i];
           IntDomain dom = structure.domains[i];
 
@@ -417,45 +423,43 @@ public class NetworkBuilder {
         }
       }
     }
+  }
 
-    List<IntVar> vars = new ArrayList<>();
-    List<Integer> weights = new ArrayList<>();
-
+  private void addCostConstraints(Store store, List<Constraint> result) {
+    List<IntVar> costVars = new ArrayList<>();
+    List<Integer> costWeights = new ArrayList<>();
     boolean simpleSum = true;
+
     for (Arc arc : arcList) {
       if (arc.getCompanion().wVar != null) {
         IntVar v = new IntVar(store, IntDomain.MIN_INT, IntDomain.MAX_INT);
         result.add(new XmulYeqZ(arc.getCompanion().xVar, arc.getCompanion().wVar, v));
-        vars.add(v);
-        weights.add(1);
+        costVars.add(v);
+        costWeights.add(1);
       } else if (arc.cost == 1) {
-        vars.add(arc.getCompanion().xVar);
-        weights.add(1);
+        costVars.add(arc.getCompanion().xVar);
+        costWeights.add(1);
       } else if (arc.cost != 0) {
-
         simpleSum = false;
-        vars.add(arc.getCompanion().xVar);
-        weights.add(arc.cost);
+        costVars.add(arc.getCompanion().xVar);
+        costWeights.add(arc.cost);
       }
     }
 
-    // @TODO: SumWeight could be used instead of Sum and auxiliary variables weight above.
     if (simpleSum) {
-      sumC(result, store, vars, costVariable);
+      sumC(result, store, costVars, costVariable);
     } else {
-      int n = vars.size();
+      int n = costVars.size();
       IntVar[] vs = new IntVar[n + 1];
       int[] ws = new int[n + 1];
       for (int i = 0; i < n; i++) {
-        vs[i] = vars.get(i);
-        ws[i] = weights.get(i);
+        vs[i] = costVars.get(i);
+        ws[i] = costWeights.get(i);
       }
       vs[n] = costVariable;
       ws[n] = -1;
       result.add(new LinearInt(vs, ws, "==", 0));
-      // result.add(new SumWeight(vars, weights, costVariable)); deprecated
     }
-    return result;
   }
 
   private void sumC(List<Constraint> list, Store store, List<IntVar> vars, IntVar result) {

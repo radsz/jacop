@@ -383,44 +383,46 @@ public class TraceGenerator<T extends Var>
       consistent = code;
     }
 
-    if (!consistent) {
-      SearchNode sn = searchStack.peek();
-      if (sn.id != 0) { // not root node
-        if (sn.c == null) {
-          if (sn.equal) { // fail x == val
-            generateFailNode(sn.id, sn.previous, sn.v.id(), sn.v.dom().getSize(), sn.val);
-          } else { // fail x != val
-            generateFailcNode(sn.id, sn.previous, sn.v.id(), sn.dom.getSize(), sn.dom);
-          }
-        } else if (sn.equal) { // fail x == val
-          generateFailcNode(sn.id, sn.previous, sn.c);
-        } else { // fail x != val
-          generateFailcNode(sn.id, sn.previous, new Not(sn.c));
-        }
+    SearchNode sn = searchStack.peek();
+    if (sn.id != 0) {
+      if (!consistent) {
+        generateFailTrace(sn);
         generateVisualizationNode(currentSearchNode.id, false);
-      }
-    } else {
-      SearchNode sn = searchStack.peek();
-      if (sn.id != 0) { // not root node
-        if (sn.c == null) {
-          if (sn.equal) { // try x == val
-            generateTryNode(sn.id, sn.previous, sn.v.id(), sn.v.dom().getSize(), sn.val);
-          } else { // try x != val
-            generateTrycNode(sn.id, sn.previous, sn.v.id(), sn.dom.getSize(), sn.dom);
-          }
-        } else {
-
-          if (sn.equal) { // try x == val
-            generateTrycNode(sn.id, sn.previous, sn.c);
-          } else { // try x != val
-            generateTrycNode(sn.id, sn.previous, new Not(sn.c));
-          }
-        }
+      } else {
+        generateTryTrace(sn);
         generateVisualizationNode(currentSearchNode.id, true);
       }
     }
 
     return consistent;
+  }
+
+  private void generateFailTrace(SearchNode sn) {
+    if (sn.c == null) {
+      if (sn.equal) {
+        generateFailNode(sn.id, sn.previous, sn.v.id(), sn.v.dom().getSize(), sn.val);
+      } else {
+        generateFailcNode(sn.id, sn.previous, sn.v.id(), sn.dom.getSize(), sn.dom);
+      }
+    } else if (sn.equal) {
+      generateFailcNode(sn.id, sn.previous, sn.c);
+    } else {
+      generateFailcNode(sn.id, sn.previous, new Not(sn.c));
+    }
+  }
+
+  private void generateTryTrace(SearchNode sn) {
+    if (sn.c == null) {
+      if (sn.equal) {
+        generateTryNode(sn.id, sn.previous, sn.v.id(), sn.v.dom().getSize(), sn.val);
+      } else {
+        generateTrycNode(sn.id, sn.previous, sn.v.id(), sn.dom.getSize(), sn.dom);
+      }
+    } else if (sn.equal) {
+      generateTrycNode(sn.id, sn.previous, sn.c);
+    } else {
+      generateTrycNode(sn.id, sn.previous, new Not(sn.c));
+    }
   }
 
   // =================================================================
@@ -429,50 +431,55 @@ public class TraceGenerator<T extends Var>
   /** {@inheritDoc} */
   public boolean leftChild(T v, int value, boolean status) {
 
-    boolean returnCode = true;
-
-    if (exitChildListeners != null) {
-      boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(v, value, status);
-      }
-      returnCode = code;
-    }
+    boolean returnCode = applyExitChildListenersLeftChild(v, value, status);
 
     currentSearchNode = searchStack.pop();
     SearchNode previousSearchNode = currentSearchNode;
 
     if (!status && returnCode) {
-
-      currentSearchNode = new SearchNode();
-      currentSearchNode.v = v;
-
-      if (previousSearchNode.dom instanceof IntDomain domain) {
-        currentSearchNode.dom = domain.subtract(value);
-      } else {
-        // Handle SetDomain using reflection to avoid import
-        try {
-          Class<?> setDomainClass = Class.forName(SET_DOMAIN_CLASS_NAME);
-          if (setDomainClass.isInstance(previousSearchNode.dom)) {
-            java.lang.reflect.Method subtractMethod =
-                setDomainClass.getMethod("subtract", int.class, int.class);
-            currentSearchNode.dom =
-                (Domain) subtractMethod.invoke(previousSearchNode.dom, value, value);
-          }
-        } catch (Exception ignored) {
-          // SetDomain not available - skip this operation
-        }
-      }
-
-      currentSearchNode.val = value;
-      currentSearchNode.id = searchNodeId++;
-      currentSearchNode.equal = false;
-      currentSearchNode.previous = searchStack.peek().id;
-
-      searchStack.push(currentSearchNode);
+      pushSearchNodeAfterLeftFail(v, value, previousSearchNode);
     }
 
     return returnCode;
+  }
+
+  private boolean applyExitChildListenersLeftChild(T v, int value, boolean status) {
+    if (exitChildListeners == null) {
+      return true;
+    }
+    boolean code = false;
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      code |= exitChildListener.leftChild(v, value, status);
+    }
+    return code;
+  }
+
+  private void pushSearchNodeAfterLeftFail(T v, int value, SearchNode previousSearchNode) {
+    currentSearchNode = new SearchNode();
+    currentSearchNode.v = v;
+    currentSearchNode.dom = subtractValueFromDomain(previousSearchNode.dom, value);
+    currentSearchNode.val = value;
+    currentSearchNode.id = searchNodeId++;
+    currentSearchNode.equal = false;
+    currentSearchNode.previous = searchStack.peek().id;
+    searchStack.push(currentSearchNode);
+  }
+
+  private Domain subtractValueFromDomain(Domain dom, int value) {
+    if (dom instanceof IntDomain domain) {
+      return domain.subtract(value);
+    }
+    try {
+      Class<?> setDomainClass = Class.forName(SET_DOMAIN_CLASS_NAME);
+      if (setDomainClass.isInstance(dom)) {
+        java.lang.reflect.Method subtractMethod =
+            setDomainClass.getMethod("subtract", int.class, int.class);
+        return (Domain) subtractMethod.invoke(dom, value, value);
+      }
+    } catch (Exception ignored) {
+      // SetDomain not available - skip this operation
+    }
+    return null;
   }
 
   /** {@inheritDoc} */

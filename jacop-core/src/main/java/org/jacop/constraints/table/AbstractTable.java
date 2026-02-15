@@ -82,37 +82,40 @@ public abstract class AbstractTable extends Constraint implements UsesQueueVaria
 
     this.x = Arrays.copyOf(list, list.length);
     this.varMap = Var.positionMapping(list, false, this.getClass());
-
-    if (reuseTuplesArgument) {
-      this.tuple = tuples;
-    } else {
-      // create tuples for the constraint; remove non feasible tuples
-      int size = list.length;
-      boolean[] tuplesToRemove = new boolean[tuples.length];
-      int n = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        for (int j = 0; j < size; j++) {
-          if (!list[j].domain.contains(tuples[i][j])) {
-            tuplesToRemove[i] = true;
-          }
-        }
-        if (tuplesToRemove[i]) {
-          n++;
-        }
-      }
-      int k = tuples.length - n;
-      this.tuple = new int[k][size];
-      int m = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        if (!tuplesToRemove[i]) {
-          this.tuple[m] = Arrays.copyOf(tuples[i], size);
-          m++;
-        }
-      }
-    }
-
+    this.tuple = reuseTuplesArgument ? tuples : filterInfeasibleTuples(list, tuples);
     this.queueIndex = 1;
     setScope(list);
+  }
+
+  private static int[][] filterInfeasibleTuples(IntVar[] list, int[][] tuples) {
+    int size = list.length;
+    boolean[] tuplesToRemove = new boolean[tuples.length];
+    int n = 0;
+    for (int i = 0; i < tuples.length; i++) {
+      if (tupleInfeasible(list, size, tuples[i])) {
+        tuplesToRemove[i] = true;
+        n++;
+      }
+    }
+    int k = tuples.length - n;
+    int[][] result = new int[k][size];
+    int m = 0;
+    for (int i = 0; i < tuples.length; i++) {
+      if (!tuplesToRemove[i]) {
+        result[m] = Arrays.copyOf(tuples[i], size);
+        m++;
+      }
+    }
+    return result;
+  }
+
+  private static boolean tupleInfeasible(IntVar[] list, int size, int[] tupleRow) {
+    for (int j = 0; j < size; j++) {
+      if (!list[j].domain.contains(tupleRow[j])) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

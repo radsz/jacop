@@ -124,118 +124,103 @@ public class NoGood extends Constraint {
     }
 
     if (firstWatch == secondWatch) {
-      // Special case, when NoGood was one variable no-good
-      // or there was no two not singleton variables to be
-      // watched.
-
-      if (DEBUG) {
-        log.debug("Special cases of noGood constraints have occured");
-      }
-
-      if (listOfVars.length != 1) {
-        // check if it still active no-good
-        for (int i = 0; i < listOfVars.length; i++) {
-          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {
-            return;
-          }
-        }
-
-        // if variable is not singleton (even if it was at imposition
-        // time)
-        // sanity check, just in case, but if this code is executed than
-        // mostly improper use of no-goods has been performed.
-        for (IntVar listOfVar : listOfVars) {
-          if (listOfVar.getSize() != 1 && listOfVar != firstWatch) {
-            throw new IllegalStateException(
-                "The NoGood learnt for one model is used in different model (model created across many store levels)");
-          }
-        }
-      }
-      firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
+      handleSameWatchSpecialCase(store);
       return;
     }
 
-    // no good satisfied
-    if (firstWatch.getSize() == 1 && firstWatch.value() != firstValue) {
+    if (isNoGoodSatisfiedByFirstOrSecondWatch()) {
       return;
     }
 
-    // no good satisfied
-    if (secondWatch.getSize() == 1 && secondWatch.value() != secondValue) {
+    if (oneWatchIsSingletonAndSomeVarDisagrees()) {
       return;
-    }
-
-    if (firstWatch.getSize() == 1 || secondWatch.getSize() == 1) {
-      for (int i = 0; i < listOfVars.length; i++) {
-        if (listOfVars[i].singleton() && !listOfVars[i].singleton(listOfValues[i])) {
-          return;
-        }
-      }
     }
 
     if (firstWatch.getSize() == 1) {
-
-      boolean found = false;
-      // new watched variable needs to be found
-      for (int i = 0; i < listOfVars.length; i++) {
-        if (listOfVars[i] != secondWatch && listOfVars[i].getSize() != 1) {
-
-          store.deregisterWatchedLiteralConstraint(firstWatch, this);
-
-          firstWatch = listOfVars[i];
-          firstValue = listOfValues[i];
-
-          store.registerWatchedLiteralConstraint(firstWatch, this);
-
-          found = true;
-        }
-      }
-
-      if (!found) {
-        // no new watch found, can propagate.
-
-        secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
-
-        if (DEBUG) {
-          log.debug("{}", secondWatch);
-        }
-
-        return;
-      }
+      tryReplaceFirstWatch(store);
+      return;
     }
 
     if (secondWatch.getSize() == 1) {
-      // new watched variable needs to be found
-
-      boolean found = false;
-
-      for (int i = 0; i < listOfVars.length; i++) {
-        if (listOfVars[i] != firstWatch && listOfVars[i].getSize() != 1) {
-
-          store.deregisterWatchedLiteralConstraint(secondWatch, this);
-
-          secondWatch = listOfVars[i];
-          secondValue = listOfValues[i];
-
-          store.registerWatchedLiteralConstraint(secondWatch, this);
-
-          found = true;
-        }
-      }
-
-      if (!found) {
-        // no new watch found, can propagate.
-
-        firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
-
-        if (DEBUG) {
-          log.debug("{}", firstWatch);
-        }
-      }
+      tryReplaceSecondWatch(store);
     }
 
     if (DEBUG) {
       log.debug("End{}", this);
+    }
+  }
+
+  private void handleSameWatchSpecialCase(Store store) {
+    if (DEBUG) {
+      log.debug("Special cases of noGood constraints have occured");
+    }
+    if (listOfVars.length != 1) {
+      for (int i = 0; i < listOfVars.length; i++) {
+        if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {
+          return;
+        }
+      }
+      for (IntVar listOfVar : listOfVars) {
+        if (listOfVar.getSize() != 1 && listOfVar != firstWatch) {
+          throw new IllegalStateException(
+              "The NoGood learnt for one model is used in different model (model created across many store levels)");
+        }
+      }
+    }
+    firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
+  }
+
+  private boolean isNoGoodSatisfiedByFirstOrSecondWatch() {
+    if (firstWatch.getSize() == 1 && firstWatch.value() != firstValue) {
+      return true;
+    }
+    if (secondWatch.getSize() == 1 && secondWatch.value() != secondValue) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean oneWatchIsSingletonAndSomeVarDisagrees() {
+    if (firstWatch.getSize() != 1 && secondWatch.getSize() != 1) {
+      return false;
+    }
+    for (int i = 0; i < listOfVars.length; i++) {
+      if (listOfVars[i].singleton() && !listOfVars[i].singleton(listOfValues[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void tryReplaceFirstWatch(Store store) {
+    for (int i = 0; i < listOfVars.length; i++) {
+      if (listOfVars[i] != secondWatch && listOfVars[i].getSize() != 1) {
+        store.deregisterWatchedLiteralConstraint(firstWatch, this);
+        firstWatch = listOfVars[i];
+        firstValue = listOfValues[i];
+        store.registerWatchedLiteralConstraint(firstWatch, this);
+        return;
+      }
+    }
+    secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
+    if (DEBUG) {
+      log.debug("{}", secondWatch);
+    }
+  }
+
+  private void tryReplaceSecondWatch(Store store) {
+    for (int i = 0; i < listOfVars.length; i++) {
+      if (listOfVars[i] != firstWatch && listOfVars[i].getSize() != 1) {
+        store.deregisterWatchedLiteralConstraint(secondWatch, this);
+        secondWatch = listOfVars[i];
+        secondValue = listOfValues[i];
+        store.registerWatchedLiteralConstraint(secondWatch, this);
+        return;
+      }
+    }
+    firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
+    if (DEBUG) {
+      log.debug("{}", firstWatch);
     }
   }
 
@@ -254,58 +239,57 @@ public class NoGood extends Constraint {
     }
 
     if (listOfVars.length == 1) {
+      imposeSingleVariableNoGood(store);
+      return;
+    }
 
-      // No good is of form XneqC.
-      firstWatch = secondWatch = listOfVars[0];
-      firstValue = listOfValues[0];
-      store.registerWatchedLiteralConstraint(firstWatch, this);
-
-      // To obtain immediate pruning when consistency is called
-      store.addChanged(this);
+    int watchCount = findFirstTwoNonSingletonWatches();
+    if (watchCount < 2) {
+      imposeAsOneVariableNoGoodWhenFewWatches(store, watchCount);
     } else {
+      store.registerWatchedLiteralConstraint(firstWatch, this);
+      store.registerWatchedLiteralConstraint(secondWatch, this);
+    }
+  }
 
-      int i = 0;
-      // Find any two variables and attach a no-good to it.
-      for (int j = 0; j < listOfVars.length; j++) {
-        IntVar v = listOfVars[j];
-        if (v.getSize() != 1 && i < 2) {
-          if (i == 0) {
-            firstWatch = v;
-            firstValue = listOfValues[j];
-          } else {
-            secondWatch = v;
-            secondValue = listOfValues[j];
-          }
-          i++;
+  private void imposeSingleVariableNoGood(Store store) {
+    firstWatch = secondWatch = listOfVars[0];
+    firstValue = listOfValues[0];
+    store.registerWatchedLiteralConstraint(firstWatch, this);
+    store.addChanged(this);
+  }
+
+  private int findFirstTwoNonSingletonWatches() {
+    int i = 0;
+    for (int j = 0; j < listOfVars.length; j++) {
+      IntVar v = listOfVars[j];
+      if (v.getSize() != 1 && i < 2) {
+        if (i == 0) {
+          firstWatch = v;
+          firstValue = listOfValues[j];
+        } else {
+          secondWatch = v;
+          secondValue = listOfValues[j];
         }
-      }
-
-      if (i < 2) {
-        // No good is of form XneqC, as there are no two variables which
-        // are not singletons.
-
-        secondWatch = firstWatch;
-        secondValue = firstValue;
-
-        // No good is already satisfied and it is ignored.
-        for (IntVar _ : listOfVars) {
-          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {
-            return;
-          }
-        }
-
-        // All values match, so no good is at the moment equivalent to
-        // one-variable no-good.
-
-        store.registerWatchedLiteralConstraint(firstWatch, this);
-
-        // To obtain immediate pruning when consistency is called
-        store.addChanged(this);
-      } else {
-        store.registerWatchedLiteralConstraint(firstWatch, this);
-        store.registerWatchedLiteralConstraint(secondWatch, this);
+        i++;
       }
     }
+    return i;
+  }
+
+  private void imposeAsOneVariableNoGoodWhenFewWatches(Store store, int watchCount) {
+    secondWatch = firstWatch;
+    secondValue = firstValue;
+
+    for (IntVar _ : listOfVars) {
+      if (listOfVars[watchCount].getSize() == 1
+          && listOfVars[watchCount].value() != listOfValues[watchCount]) {
+        return;
+      }
+    }
+
+    store.registerWatchedLiteralConstraint(firstWatch, this);
+    store.addChanged(this);
   }
 
   /**

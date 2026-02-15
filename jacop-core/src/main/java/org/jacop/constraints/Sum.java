@@ -104,83 +104,88 @@ public class Sum extends Constraint implements SatisfiedPresent {
     long sumGroundedLocal = sumGrounded.value();
 
     do {
-
       store.propagationHasOccurred = false;
+      long[] result = collectGroundedAndBounds(pointer, sumGroundedLocal);
+      pointer = (int) result[0];
+      sumGroundedLocal = result[1];
+      long lMin = result[2];
+      long lMax = result[3];
 
-      long lMin = sumGroundedLocal;
-      long lMax = lMin;
-
-      long sumJustGrounded = 0;
-
-      for (int i = pointer; i < list.length; i++) {
-        IntDomain currentDomain = list[i].domain;
-
-        if (currentDomain.singleton()) {
-
-          if (pointer < i) {
-            IntVar grounded = list[i];
-            list[i] = list[pointer];
-            list[pointer] = grounded;
-          }
-
-          pointer++;
-          sumJustGrounded += currentDomain.min();
-          continue;
-        }
-
-        lMin += currentDomain.min();
-        lMax += currentDomain.max();
-      }
-
-      sumGroundedLocal += sumJustGrounded;
-
-      lMin += sumJustGrounded;
-      lMax += sumJustGrounded;
-
-      boolean needAdaptMin = false;
-      boolean needAdaptMax = false;
-
-      if (sum.min() > lMin) {
-        needAdaptMin = true;
-      }
-
-      if (sum.max() < lMax) {
-        needAdaptMax = true;
-      }
-
-      sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
-
-      store.propagationHasOccurred = false;
-
-      if (needAdaptMin && !needAdaptMax) {
-        for (int i = pointer; i < list.length; i++) {
-          IntVar v = list[i];
-          v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
-        }
-      }
-
-      if (!needAdaptMin && needAdaptMax) {
-        for (int i = pointer; i < list.length; i++) {
-          IntVar v = list[i];
-          v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
-        }
-      }
-
-      if (needAdaptMin && needAdaptMax) {
-        for (int i = pointer; i < list.length; i++) {
-          IntVar v = list[i];
-          v.domain.in(
-              store.level,
-              v,
-              long2int(sum.min() - lMax + v.max()),
-              long2int(sum.max() - lMin + v.min()));
-        }
-      }
-
+      applySumDomainAndPropagateToVariables(store, pointer, lMin, lMax);
     } while (store.propagationHasOccurred);
 
     nextGroundedPosition.update(pointer);
     sumGrounded.update(long2int(sumGroundedLocal));
+  }
+
+  private long[] collectGroundedAndBounds(int pointer, long sumGroundedLocal) {
+    long lMin = sumGroundedLocal;
+    long lMax = lMin;
+    long sumJustGrounded = 0;
+
+    for (int i = pointer; i < list.length; i++) {
+      IntDomain currentDomain = list[i].domain;
+      if (currentDomain.singleton()) {
+        if (pointer < i) {
+          IntVar grounded = list[i];
+          list[i] = list[pointer];
+          list[pointer] = grounded;
+        }
+        pointer++;
+        sumJustGrounded += currentDomain.min();
+        continue;
+      }
+      lMin += currentDomain.min();
+      lMax += currentDomain.max();
+    }
+
+    sumGroundedLocal += sumJustGrounded;
+    lMin += sumJustGrounded;
+    lMax += sumJustGrounded;
+
+    return new long[] {pointer, sumGroundedLocal, lMin, lMax};
+  }
+
+  private void applySumDomainAndPropagateToVariables(
+      Store store, int pointer, long lMin, long lMax) {
+    boolean needAdaptMin = sum.min() > lMin;
+    boolean needAdaptMax = sum.max() < lMax;
+
+    sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
+    store.propagationHasOccurred = false;
+
+    if (needAdaptMin && !needAdaptMax) {
+      propagateMinToVariables(store, pointer, lMax);
+    } else if (!needAdaptMin && needAdaptMax) {
+      propagateMaxToVariables(store, pointer, lMin);
+    } else if (needAdaptMin && needAdaptMax) {
+      propagateMinMaxToVariables(store, pointer, lMin, lMax);
+    }
+  }
+
+  private void propagateMinToVariables(Store store, int pointer, long lMax) {
+    for (int i = pointer; i < list.length; i++) {
+      IntVar v = list[i];
+      v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
+    }
+  }
+
+  private void propagateMaxToVariables(Store store, int pointer, long lMin) {
+    for (int i = pointer; i < list.length; i++) {
+      IntVar v = list[i];
+      v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
+    }
+  }
+
+  private void propagateMinMaxToVariables(Store store, int pointer, long lMin, long lMax) {
+    for (int i = pointer; i < list.length; i++) {
+      IntVar v = list[i];
+      v.domain.in(
+          store.level,
+          v,
+          long2int(sum.min() - lMax + v.max()),
+          long2int(sum.max() - lMin + v.min()));
+    }
   }
 
   @Override

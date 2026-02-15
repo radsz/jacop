@@ -97,30 +97,33 @@ public class Stretch extends DecomposedConstraint<Constraint> {
     }
 
     Fsm fsm = new Fsm();
-
     fsm.initState = new FsmState();
-
     fsm.allStates.add(fsm.initState);
 
     FsmState[] oneStep = new FsmState[this.values.length];
+    buildOneStepStates(fsm, oneStep);
+    addCrossTransitionsFromOneStep(oneStep);
+    buildChainsForEachValue(fsm, oneStep);
 
+    fsm.resize();
+
+    return List.of(new Regular(fsm, x));
+  }
+
+  private void buildOneStepStates(Fsm fsm, FsmState[] oneStep) {
     for (int k = 0; k < this.values.length; k++) {
-
       IntDomain d = new IntervalDomain(this.values[k], this.values[k]);
-
       FsmState current = new FsmState();
-
       fsm.initState.addTransition(new FsmTransition(d, current));
-
       fsm.allStates.add(current);
-
       oneStep[k] = current;
-
       if (min[k] <= 1) {
         fsm.finalStates.add(current);
       }
     }
+  }
 
+  private void addCrossTransitionsFromOneStep(FsmState[] oneStep) {
     for (int vk = 0; vk < this.values.length; vk++) {
       if (min[vk] <= 1) {
         for (int other = 0; other < this.values.length; other++) {
@@ -132,38 +135,32 @@ public class Stretch extends DecomposedConstraint<Constraint> {
         }
       }
     }
+  }
 
-    FsmState prev;
-
+  private void buildChainsForEachValue(Fsm fsm, FsmState[] oneStep) {
     for (int vk = 0; vk < this.values.length; vk++) {
-      prev = oneStep[vk];
+      FsmState prev = oneStep[vk];
       IntDomain d = new IntervalDomain(this.values[vk], this.values[vk]);
       for (int step = 2; step <= max[vk]; step++) {
-
         FsmState cur1 = new FsmState();
-
         prev.addTransition(new FsmTransition(d, cur1));
-
         fsm.allStates.add(cur1);
-
         if (step >= min[vk]) {
-
           fsm.finalStates.add(cur1);
-          for (int other = 0; other < this.values.length; other++) {
-            if (other != vk) {
-              cur1.addTransition(
-                  new FsmTransition(
-                      new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
-            }
-          }
+          addTransitionsToOtherOneSteps(cur1, oneStep, vk);
         }
-
         prev = cur1;
       }
     }
+  }
 
-    fsm.resize();
-
-    return List.of(new Regular(fsm, x));
+  private void addTransitionsToOtherOneSteps(FsmState from, FsmState[] oneStep, int excludeVk) {
+    for (int other = 0; other < this.values.length; other++) {
+      if (other != excludeVk) {
+        from.addTransition(
+            new FsmTransition(
+                new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
+      }
+    }
   }
 }

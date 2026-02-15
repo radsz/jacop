@@ -159,124 +159,101 @@ public class ObstacleObject extends ObstacleObjectFrame {
       int currentShape,
       int[] c) {
 
-    // TODO: Does it make sense from efficiency point of view to work on polymorphism?
     assert obstacle.shapeId.singleton()
         : "no support for polymorphism. Use ObstacleObjectFrame instead.";
 
     if (frameExists) {
       return super.isFeasible(min, order, o, currentShape, c);
     }
-
-    // an object can overlap with itself
     if (o == obstacle) {
       return null;
     }
-
     if (!timeOnlyCheck(min, order, o, currentShape, c)) {
       return null;
     }
+    if (!boundingBoxContainsPoint(c, currentShape)) {
+      return null;
+    }
 
-    // intermediate check: use bounding boxes to skip test quickly
+    Dbox outBox = Dbox.getAllocatedInstance(obstacle.dimension + 1);
+    outBox.origin[obstacle.dimension] = timeSizeOrigin;
+    outBox.length[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
+
+    return findOverlappingOutbox(c, currentShape, outBox);
+  }
+
+  private boolean boundingBoxContainsPoint(int[] c, int currentShape) {
     Dbox obstacleBb = geost.getShape(shapeId).boundingBox;
     Dbox otherBb = geost.getShape(currentShape).boundingBox;
-    int outDimOrigin;
-    int outDimLength;
     int selectedDimIndex = 0;
     for (int i = 0; i < obstacle.dimension; i++) {
+      int outDimOrigin;
+      int outDimLength;
       if (selectedDimIndex < selectedDimensions.length
           && selectedDimensions[selectedDimIndex] == i) {
-
-        // the dimension is relevant
         selectedDimIndex++;
-
-        // shift origin
         outDimOrigin =
             obstacleBb.origin[i]
                 + obstacle.coords[i].max()
                 - otherBb.origin[i]
                 - otherBb.length[i]
                 + 1;
-
         final int max =
             obstacleBb.origin[i]
                 + obstacleBb.length[i]
                 + obstacle.coords[i].min()
                 - otherBb.origin[i];
-
         outDimLength = max - outDimOrigin;
-
         if (outDimLength <= 0) {
-          return null;
+          return false;
         }
-
       } else {
-        // the dimension is not relevant, outbox covers the whole space
         outDimOrigin = IntDomain.MIN_INT;
         outDimLength = IntDomain.MAX_INT - IntDomain.MIN_INT;
       }
-
       if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) {
-        return null;
+        return false;
       }
     }
+    return true;
+  }
 
-    /*
-     * for now, simply check against each component of the frame one after the other
-     * TODO improve this: get the actual maximal forbidden domain (hard), or sort the frame boxes
-     */
-
-    // avoid allocating new object if possible
-    Dbox outBox = Dbox.getAllocatedInstance(obstacle.dimension + 1);
+  private Dbox findOverlappingOutbox(int[] c, int currentShape, Dbox outBox) {
     int[] outOrigin = outBox.origin;
     int[] outLength = outBox.length;
-
-    // we already know the size in the time dimension
-    outOrigin[obstacle.dimension] = timeSizeOrigin;
-    outLength[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
-
     for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
       for (Dbox preshift : preshiftedElems) {
-
-        boolean useless = false;
-
-        selectedDimIndex = 0;
-
-        // TODO: precompute elem.origin[i] + obstacle.coords[i].max() and elem.origin[i] +
-        // elem.length[i] + obstacle.coords[i].min()
-        // and update whenever the object gets updated
-
-        for (int i = 0; i < obstacle.dimension; i++) {
-          if (selectedDimIndex < selectedDimensions.length
-              && selectedDimensions[selectedDimIndex] == i) {
-
-            // the dimension is relevant
-            selectedDimIndex++;
-            outOrigin[i] =
-                preshift.origin[i] - constrainedPiece.origin[i] - constrainedPiece.length[i] + 1;
-
-            final int max = preshift.length[i] - constrainedPiece.origin[i];
-            outLength[i] = max - outOrigin[i];
-
-            if (outLength[i] <= 0) {
-              useless = true;
-            }
-
-          } else {
-            // the dimension is not relevant, outbox covers the whole space
-            outOrigin[i] = IntDomain.MIN_INT;
-            outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
-          }
-        }
-
+        boolean useless = fillOutBoxForPiecePair(outOrigin, outLength, constrainedPiece, preshift);
         assert useless || outBox.checkInvariants() == null : outBox.checkInvariants();
-
         if (!useless && outBox.containsPoint(c)) {
           return outBox;
         }
       }
     }
-
     return null;
+  }
+
+  private boolean fillOutBoxForPiecePair(
+      int[] outOrigin, int[] outLength, Dbox constrainedPiece, Dbox preshift) {
+    int selectedDimIndex = 0;
+    boolean useless = false;
+    for (int i = 0; i < obstacle.dimension; i++) {
+      if (selectedDimIndex < selectedDimensions.length
+          && selectedDimensions[selectedDimIndex] == i) {
+        selectedDimIndex++;
+        outOrigin[i] =
+            preshift.origin[i] - constrainedPiece.origin[i] - constrainedPiece.length[i] + 1;
+        final int max = preshift.length[i] - constrainedPiece.origin[i];
+        outLength[i] = max - outOrigin[i];
+        if (outLength[i] <= 0) {
+          useless = true;
+        }
+      } else {
+        outOrigin[i] = IntDomain.MIN_INT;
+        outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
+      }
+    }
+    return useless;
   }
 
   @Override

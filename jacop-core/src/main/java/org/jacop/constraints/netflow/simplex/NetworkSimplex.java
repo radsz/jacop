@@ -159,36 +159,39 @@ public class NetworkSimplex {
     assert node != root;
 
     node.degree--;
-    // build adjacency list
     if (node.degree == 2) {
-      int i = 0;
-      for (Arc arc : allArcs) {
-        if (arc.index != DELETED_ARC && (arc.head == node || arc.tail() == node)) {
-          assert i < 2 : node + " has extra arc " + arc;
-          node.adjacencyList[i++] = arc;
-        }
-      }
-      assert i == 2;
+      rebuildAdjacencyListForDegree2(node);
     }
-    // update adjacency list
     if (node.degree < 2) {
-
-      Arc arc = node.adjacencyList[0];
-      if (arc != null && arc.index == DELETED_ARC) {
-        node.adjacencyList[0] = node.adjacencyList[1];
-        node.adjacencyList[1] = null;
-      }
-
-      arc = node.adjacencyList[1];
-      if (arc != null && arc.index == DELETED_ARC) {
-        node.adjacencyList[1] = null;
-      }
-
+      removeDeletedArcsFromAdjacencyList(node);
       assert (node.degree == 1 && (node.adjacencyList[0] == null) ^ (node.adjacencyList[1] == null))
               || (node.degree == 0
                   && (node.adjacencyList[0] == null)
                   && (node.adjacencyList[1] == null))
           : node + "\n" + node.degree + ": " + Arrays.toString(node.adjacencyList);
+    }
+  }
+
+  private void rebuildAdjacencyListForDegree2(Node node) {
+    int i = 0;
+    for (Arc arc : allArcs) {
+      if (arc.index != DELETED_ARC && (arc.head == node || arc.tail() == node)) {
+        assert i < 2 : node + " has extra arc " + arc;
+        node.adjacencyList[i++] = arc;
+      }
+    }
+    assert i == 2;
+  }
+
+  private void removeDeletedArcsFromAdjacencyList(Node node) {
+    Arc arc = node.adjacencyList[0];
+    if (arc != null && arc.index == DELETED_ARC) {
+      node.adjacencyList[0] = node.adjacencyList[1];
+      node.adjacencyList[1] = null;
+    }
+    arc = node.adjacencyList[1];
+    if (arc != null && arc.index == DELETED_ARC) {
+      node.adjacencyList[1] = null;
     }
   }
 
@@ -285,13 +288,35 @@ public class NetworkSimplex {
     assert checkFlow(this);
     assert checkStructure(this);
 
-    // initialize artificial arcs
+    initializeArtificialArcs();
+    root.computePotentials();
+    assert checkInfeasibleNodes(this);
+
+    int pivots = runPivotLoop(maxPivots);
+
+    boolean failure = clearArtificialArcs();
+
+    root.computePotentials();
+
+    assert checkFlow(this);
+    assert checkStructure(this);
+    assert pivots == -1 || failure || checkOptimality(this);
+
+    if (DEBUG) {
+      logNetworkSimplexResult(pivots, maxPivots, failure);
+    }
+    if (failure && pivots != -1) {
+      pivots = -2;
+    }
+    return pivots;
+  }
+
+  private void initializeArtificialArcs() {
     Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
       int delta = node.deltaBalance;
       if (delta > 0) {
-        // supply node
         Arc arc = node.artificial;
         arc.sister.set(-LARGE_COST, delta);
         assert arc.index != DELETED_ARC;
@@ -299,7 +324,6 @@ public class NetworkSimplex {
           lower[arc.index] = arc.sister;
         }
       } else if (delta < 0) {
-        // demand node
         Arc arc = node.artificial;
         arc.set(-LARGE_COST, -delta);
         assert arc.index != DELETED_ARC;
@@ -310,45 +334,37 @@ public class NetworkSimplex {
         it.remove();
       }
     }
-    root.computePotentials();
-    assert checkInfeasibleNodes(this);
+  }
 
-    // Add violating arcs to the tree
+  private int runPivotLoop(int maxPivots) {
     pivotRule.reset();
     int pivots = 0;
     Arc entering;
     while ((entering = pivotRule.next()) != null) {
-      // stop when limit is reached
       if (pivots >= maxPivots) {
-        pivots = -1;
-        break;
+        return -1;
       }
-
-      // perform primal step
       primalStep(entering);
       pivots++;
     }
+    return pivots;
+  }
 
-    // clear artificial arcs
+  private boolean clearArtificialArcs() {
     boolean failure = false;
-    it = infeasibleNodes.iterator();
+    Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
-
-      // Determine feasibility
       Arc arc = node.artificial;
       int delta = node.deltaBalance;
       int infeasibleFlow;
       if (delta > 0) {
-        // supply node
         infeasibleFlow = arc.sister.capacity;
       } else {
-        // demand node
         infeasibleFlow = -arc.capacity;
         assert delta != 0;
       }
 
-      // update node
       arc.clear();
       node.balance += delta - infeasibleFlow;
       node.deltaBalance = infeasibleFlow;
@@ -358,26 +374,17 @@ public class NetworkSimplex {
         it.remove();
       }
     }
+    return failure;
+  }
 
-    root.computePotentials();
-
-    assert checkFlow(this);
-    assert checkStructure(this);
-    assert pivots == -1 || failure || checkOptimality(this);
-
-    if (DEBUG) {
-      if (pivots == -1) {
-        log.debug("Abort after {} iterations", maxPivots);
-      } else if (failure) {
-        log.debug("Failure after {} iterations", pivots);
-      } else {
-        log.debug("{} iterations ({} arcs)", pivots, numArcs);
-      }
+  private void logNetworkSimplexResult(int pivots, int maxPivots, boolean failure) {
+    if (pivots == -1) {
+      log.debug("Abort after {} iterations", maxPivots);
+    } else if (failure) {
+      log.debug("Failure after {} iterations", pivots);
+    } else {
+      log.debug("{} iterations ({} arcs)", pivots, numArcs);
     }
-    if (failure && pivots != -1) {
-      pivots = -2;
-    }
-    return pivots;
   }
 
   /**

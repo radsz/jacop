@@ -77,14 +77,6 @@ public class TransformExtensional implements InitializeListener {
    */
   public void executedAtInitialize(Store store) {
 
-    // @todo methods to suggest the interesting scope of the transformation.
-    // Search for all solutions given set of variables V
-    // Set of variables V should be chosen in such a way that
-    // a) the set of solutions is not huge
-    // b) many constraints scope falls within set V
-    // c) constraints are not well communicating/propagating on its own
-    //    but are rather tight together.
-
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             variablesTransformationScope.toArray(new IntVar[1]),
@@ -92,71 +84,61 @@ public class TransformExtensional implements InitializeListener {
             new IndomainMin<>());
 
     Search<IntVar> search = new DepthFirstSearch<>();
-
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
     search.getSolutionListener().setSolutionLimit(solutionLimit);
     search.setAssignSolution(false);
 
     boolean searchResult = search.labeling(store, select);
-
-    // If solution limit has been reached then no transformation.
     searchResult &= !search.getSolutionListener().solutionLimitReached();
 
-    // Create for all solutions an extensional constraints
     if (searchResult) {
-
-      // All constraint which have scope within set V are removed
-
-      for (Var v : variablesTransformationScope) {
-
-        Constraint[][] varConstraints = v.dom().modelConstraints;
-        int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
-
-        Set<Constraint> constraintsInQuestion = new HashSet<>();
-
-        for (int i = 0; i < toEvaluate.length; i++) {
-          constraintsInQuestion.addAll(Arrays.asList(varConstraints[i]).subList(0, toEvaluate[i]));
-        }
-
-        for (Constraint checkConstraint : constraintsInQuestion) {
-
-          boolean toBeRemoved = true;
-
-          for (Var m : checkConstraint.arguments()) {
-            if (!variablesTransformationScope.contains(m)) {
-              toBeRemoved = false;
-              break;
-            }
-          }
-
-          if (toBeRemoved) {
-            checkConstraint.removeConstraint();
-          }
-        }
-      }
-
-      // Obtaining all solutions and creating an extensional constraint.
-
-      int[][] solutions = new int[search.getSolutionListener().solutionsNo()][];
-      for (int i = 1; i <= solutions.length; i++) {
-        Domain[] currentSolution = search.getSolution(i);
-        solutions[i - 1] = new int[currentSolution.length];
-        for (int j = 0; j < currentSolution.length; j++) {
-          solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
-        }
-      }
-
+      removeConstraintsInScope();
+      int[][] solutions = buildSolutionsArray(search);
       IntVar[] vars = search.getSolutionListener().getVariables();
-
       ExtensionalSupportVa transformationIntoExtensionalConstraint =
           new ExtensionalSupportVa(vars, solutions);
       store.impose(transformationIntoExtensionalConstraint);
-
       if (DEBUG) {
         log.debug("{}", transformationIntoExtensionalConstraint);
       }
     }
+  }
+
+  private void removeConstraintsInScope() {
+    for (Var v : variablesTransformationScope) {
+      Constraint[][] varConstraints = v.dom().modelConstraints;
+      int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
+      Set<Constraint> constraintsInQuestion = new HashSet<>();
+      for (int i = 0; i < toEvaluate.length; i++) {
+        constraintsInQuestion.addAll(Arrays.asList(varConstraints[i]).subList(0, toEvaluate[i]));
+      }
+      for (Constraint checkConstraint : constraintsInQuestion) {
+        boolean toBeRemoved = true;
+        for (Var m : checkConstraint.arguments()) {
+          if (!variablesTransformationScope.contains(m)) {
+            toBeRemoved = false;
+            break;
+          }
+        }
+        if (toBeRemoved) {
+          checkConstraint.removeConstraint();
+        }
+      }
+    }
+  }
+
+  private static int[][] buildSolutionsArray(Search<IntVar> search) {
+    int numSolutions = search.getSolutionListener().solutionsNo();
+    int[][] solutions = new int[numSolutions][];
+    for (int i = 1; i <= numSolutions; i++) {
+      Domain[] currentSolution = search.getSolution(i);
+      solutions[i - 1] = new int[currentSolution.length];
+      for (int j = 0; j < currentSolution.length; j++) {
+        solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
+      }
+    }
+    return solutions;
   }
 
   /**

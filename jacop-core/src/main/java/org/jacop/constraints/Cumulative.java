@@ -955,150 +955,190 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void notFirst(Store store, Task s, List<Task> tasks) {
-    int sEst = s.est(); // sLct = s.LCT();
-    int completionS = IntDomain.MIN_INT;
-    int newStartl = IntDomain.MIN_INT;
-    int startl = sEst;
-    long a = 0;
-    long slack;
+    if (tasks.size() <= 1) {
+      return;
+    }
+
+    int sEst = s.est();
     long maxuse = (long) limit.max() - s.res().min();
+    long slack = computeNotFirstSlack(s, tasks, sEst);
 
-    if (tasks.size() > 1) {
+    if (debugEnabled) {
+      log.debug("Not first {} in {}", s, tasks);
+    }
+    int completionS = computeNotFirstCompletionS(s, tasks);
+    long a = computeNotFirstArea(s, tasks);
+    if (debugEnabled) {
+      boolean notBeforeS = slack < 0;
+      log.debug(
+          "s(l)= {},  c(S')= {},  a(S)= {},  notBeforeS= {}", sEst, completionS, a, notBeforeS);
+    }
 
-      if (debugEnabled) {
-        log.debug("Not first {} in {}", s, tasks);
+    Task[] taskArray = new Task[tasks.size() - 1];
+    long[] slackHolder = new long[] {slack};
+    int tasksLength = fillNotFirstTaskArray(tasks, s, sEst, maxuse, taskArray, slackHolder);
+
+    if (slackHolder[0] < 0 && tasksLength != 0) {
+      propagateNotFirstMinStart(store, s, sEst, taskArray, tasksLength, slackHolder[0]);
+    }
+  }
+
+  private int computeNotFirstCompletionS(Task s, List<Task> tasks) {
+    int completionS = IntDomain.MIN_INT;
+    for (Task t : tasks) {
+      if (t != s) {
+        completionS = Math.max(completionS, t.lct());
       }
-      for (Task t : tasks) {
-        if (t != s) {
-          completionS = Math.max(completionS, t.lct());
-          a += t.areaMin();
+    }
+    return completionS;
+  }
+
+  private long computeNotFirstArea(Task s, List<Task> tasks) {
+    long a = 0;
+    for (Task t : tasks) {
+      if (t != s) {
+        a += t.areaMin();
+      }
+    }
+    return a;
+  }
+
+  private long computeNotFirstSlack(Task s, List<Task> tasks, int sEst) {
+    int completionS = computeNotFirstCompletionS(s, tasks);
+    long a = computeNotFirstArea(s, tasks);
+    return (long) (completionS - sEst) * limit.max() - a - s.areaMin();
+  }
+
+  private int fillNotFirstTaskArray(
+      List<Task> tasks, Task s, int sEst, long maxuse, Task[] taskArray, long[] slackHolder) {
+    int tasksLength = 0;
+    int j = 0;
+    while (slackHolder[0] < 0 && j < tasks.size()) {
+      Task t = tasks.get(j);
+      if (t != s) {
+        if (t.res().min() <= maxuse || sEst >= t.ect()) {
+          slackHolder[0] += t.areaMin();
+        } else {
+          taskArray[tasksLength++] = t;
         }
       }
-      slack = (long) (completionS - sEst) * limit.max() - a - s.areaMin();
-      if (debugEnabled) {
-        boolean notBeforeS = slack < 0;
+      j++;
+    }
+    return tasksLength;
+  }
+
+  private void propagateNotFirstMinStart(
+      Store store, Task s, int sEst, Task[] taskArray, int tasksLength, long slack) {
+    Arrays.sort(taskArray, 0, tasksLength, taskAscEctComparator);
+    int j = 0;
+    int limitMin = limit.min();
+    int startl = sEst;
+    int newStartl = IntDomain.MIN_INT;
+    while (slack < 0 && j < tasksLength) {
+      Task t = taskArray[j];
+      j++;
+      newStartl = t.ect();
+      slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
+      startl = newStartl;
+    }
+    if (newStartl > sEst) {
+      if (debugNarrEnabled) {
         log.debug(
-            "s(l)= {},  c(S')= {},  a(S)= {},  notBeforeS= {}", sEst, completionS, a, notBeforeS);
+            ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}", s.start(), startl, IntDomain.MAX_INT);
       }
-
-      // Upadate LB for task s
-
-      int j = 0;
-      Task[] taskArray = new Task[tasks.size() - 1];
-      int tasksLength = 0;
-      while (slack < 0 && j < tasks.size()) {
-        Task t = tasks.get(j);
-
-        if (t != s) {
-          if (t.res().min() <= maxuse || sEst >= t.ect()) {
-            slack += t.areaMin();
-          } else {
-            taskArray[tasksLength++] = t;
-          }
-        }
-        j++;
-      }
-
-      if (slack < 0 && tasksLength != 0) {
-        Arrays.sort(taskArray, 0, tasksLength, taskAscEctComparator);
-        j = 0;
-        int limitMin = limit.min();
-        while (slack < 0 && j < tasksLength) {
-          Task t = taskArray[j];
-          j++;
-          newStartl = t.ect();
-          slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
-          startl = newStartl;
-        }
-
-        if (newStartl > sEst) {
-          if (debugNarrEnabled) {
-            log.debug(
-                ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}",
-                s.start(),
-                startl,
-                IntDomain.MAX_INT);
-          }
-
-          s.start().domain.inMin(store.level, s.start(), newStartl);
-        }
-      }
+      s.start().domain.inMin(store.level, s.start(), newStartl);
     }
   }
 
   private void notLast(Store store, Task s, List<Task> tasks) {
+    if (tasks.size() <= 1) {
+      return;
+    }
+
     int sLct = s.lct();
-    int compl = sLct;
-
-    int startS = IntDomain.MAX_INT;
-    int newCompl;
-    int newStartl;
-    long a = 0;
-    long slack;
     long maxuse = (long) limit.max() - s.res().min();
+    int startS = computeNotLastStartS(s, tasks);
+    long a = computeNotLastArea(s, tasks);
+    long slack = (long) (sLct - startS) * limit.max() - a - s.areaMin();
 
-    if (tasks.size() > 1) {
+    if (debugEnabled) {
+      log.debug("Not last {} in {}", s, tasks);
+    }
+    if (debugEnabled) {
+      boolean notLastInS = slack < 0;
+      log.debug("s(S')= {},  c(l)= {},  a(S)= {},  notLastInS= {}", startS, sLct, a, notLastInS);
+    }
 
-      if (debugEnabled) {
-        log.debug("Not last {} in {}", s, tasks);
+    Task[] taskArray = new Task[tasks.size() - 1];
+    long[] slackHolder = new long[] {slack};
+    int tasksLength = fillNotLastTaskArray(tasks, s, sLct, maxuse, taskArray, slackHolder);
+
+    if (slackHolder[0] < 0 && tasksLength != 0) {
+      propagateNotLastMaxStart(store, s, sLct, taskArray, tasksLength, slackHolder[0]);
+    }
+  }
+
+  private int computeNotLastStartS(Task s, List<Task> tasks) {
+    int startS = IntDomain.MAX_INT;
+    for (Task t : tasks) {
+      if (t != s) {
+        startS = Math.min(startS, t.est());
       }
-      for (Task t : tasks) {
-        if (t != s) {
-          startS = Math.min(startS, t.est());
-          a += t.areaMin();
+    }
+    return startS;
+  }
+
+  private long computeNotLastArea(Task s, List<Task> tasks) {
+    long a = 0;
+    for (Task t : tasks) {
+      if (t != s) {
+        a += t.areaMin();
+      }
+    }
+    return a;
+  }
+
+  private int fillNotLastTaskArray(
+      List<Task> tasks, Task s, int sLct, long maxuse, Task[] taskArray, long[] slackHolder) {
+    int tasksLength = 0;
+    int j = 0;
+    while (slackHolder[0] < 0 && j < tasks.size()) {
+      Task t = tasks.get(j);
+      if (t != s) {
+        if (t.res().min() <= maxuse || sLct <= t.lst()) {
+          slackHolder[0] += t.areaMin();
+        } else {
+          taskArray[tasksLength++] = t;
         }
       }
-      slack = (long) (sLct - startS) * limit.max() - a - s.areaMin();
+      j++;
+    }
+    return tasksLength;
+  }
 
-      if (debugEnabled) {
-        boolean notLastInS = slack < 0;
-        log.debug("s(S')= {},  c(l)= {},  a(S)= {},  notLastInS= {}", startS, sLct, a, notLastInS);
+  private void propagateNotLastMaxStart(
+      Store store, Task s, int sLct, Task[] taskArray, int tasksLength, long slack) {
+    Arrays.sort(taskArray, 0, tasksLength, taskDescLstComparator);
+    int j = 0;
+    int limitMin = limit.min();
+    int compl = sLct;
+    while (slack < 0 && j < tasksLength) {
+      Task t = taskArray[j];
+      j++;
+      int newCompl = t.lst();
+      slack = slack - (long) (compl - newCompl) * limitMin + t.areaMin();
+      compl = newCompl;
+    }
+    int newStartl = compl - s.dur().min();
+    if (newStartl < s.start().max()) {
+      if (debugNarrEnabled) {
+        log.debug(
+            ">>> Cumulative EF <<< 5. Narrowed {} in {}..{}",
+            s.start(),
+            IntDomain.MIN_INT,
+            newStartl);
       }
-
-      // Upadate UB for task s
-
-      int j = 0;
-      Task[] taskArray = new Task[tasks.size() - 1];
-      int tasksLength = 0;
-      while (slack < 0 && j < tasks.size()) {
-        Task t = tasks.get(j);
-        if (t != s) {
-
-          if (t.res().min() <= maxuse || sLct <= t.lst()) {
-            slack += t.areaMin();
-          } else {
-            taskArray[tasksLength++] = t;
-          }
-        }
-        j++;
-      }
-
-      if (slack < 0 && tasksLength != 0) {
-        Arrays.sort(taskArray, 0, tasksLength, taskDescLstComparator);
-
-        j = 0;
-        int limitMin = limit.min();
-        while (slack < 0 && j < tasksLength) {
-          Task t = taskArray[j];
-          j++;
-          newCompl = t.lst();
-          slack = slack - (long) (compl - newCompl) * limitMin + t.areaMin();
-          compl = newCompl;
-        }
-
-        newStartl = compl - s.dur().min();
-        if (newStartl < s.start().max()) {
-          if (debugNarrEnabled) {
-            log.debug(
-                ">>> Cumulative EF <<< 5. Narrowed {} in {}..{}",
-                s.start(),
-                IntDomain.MIN_INT,
-                newStartl);
-          }
-
-          s.start().domain.inMax(store.level, s.start(), newStartl);
-        }
-      }
+      s.start().domain.inMax(store.level, s.start(), newStartl);
     }
   }
 

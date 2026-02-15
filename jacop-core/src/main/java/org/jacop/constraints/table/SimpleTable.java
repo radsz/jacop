@@ -144,45 +144,47 @@ public class SimpleTable extends AbstractTable implements SatisfiedPresent {
       IntDomain rp = (IntDomain) deltaResult[1];
       IntDomain cd = v.dom();
 
-      mask = 0; // clear mask
+      mask = 0;
       int xIndex = varMap.get(v);
-
       Map<Integer, Long> xSupport = supports[xIndex];
-      if (delta < cd.getSize()) { // incremental update
-        ValueEnumeration e = rp.valueEnumeration();
+      updateMaskSimpleTable(delta, rp, cd, xSupport);
+
+      boolean empty = intersectWithMask();
+      if (empty) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  private void updateMaskSimpleTable(
+      int delta, IntDomain rp, IntDomain cd, Map<Integer, Long> xSupport) {
+    if (delta < cd.getSize()) {
+      ValueEnumeration e = rp.valueEnumeration();
+      while (e.hasMoreElements()) {
+        Long bs = xSupport.get(e.nextElement());
+        if (bs != null) {
+          mask |= bs;
+        }
+      }
+      mask = ~mask;
+    } else {
+      Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+      if (cd.getSize() < xsEntry.size()) {
+        ValueEnumeration e = cd.valueEnumeration();
         while (e.hasMoreElements()) {
           Long bs = xSupport.get(e.nextElement());
           if (bs != null) {
             mask |= bs;
           }
         }
-        mask = ~mask;
-      } else { // reset-based update
-        Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
-        if (cd.getSize() < xsEntry.size()) {
-          // update based on the variable
-          ValueEnumeration e = cd.valueEnumeration();
-          while (e.hasMoreElements()) {
-            Long bs = xSupport.get(e.nextElement());
-            if (bs != null) {
-              mask |= bs;
-            }
-          }
-        } else {
-          // updates based on table values
-          for (Map.Entry<Integer, Long> e : xsEntry) {
-            Integer val = e.getKey();
-            Long bits = e.getValue();
-            if (cd.contains(val)) {
-              mask |= bits;
-            }
+      } else {
+        for (Map.Entry<Integer, Long> e : xsEntry) {
+          Integer val = e.getKey();
+          Long bits = e.getValue();
+          if (cd.contains(val)) {
+            mask |= bits;
           }
         }
-      }
-
-      boolean empty = intersectWithMask();
-      if (empty) {
-        throw Store.failException;
       }
     }
   }
@@ -212,41 +214,38 @@ public class SimpleTable extends AbstractTable implements SatisfiedPresent {
         noNoGround++;
       }
 
-      // check only for not assign variables and variables that become single value at this store
-      // level
       if (!xiSingleton || xi.dom().stamp() == store.level) {
+        filterDomainSimpleTable(i, xi, wrds);
+      }
+    }
+  }
 
-        Map<Integer, Long> xSupport = supports[i];
-
-        Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
-        if (xi.dom().getSize() <= xsEntry.size()) {
-          // filter based on the variable
-          ValueEnumeration e = xi.dom().valueEnumeration();
-          while (e.hasMoreElements()) {
-            int el = e.nextElement();
-
-            Long bs = xSupport.get(el);
-            if (bs != null) {
-              if ((wrds & bs) == 0L) {
-                xi.domain.inComplement(store.level, xi, el);
-              }
-            } else {
-              xi.domain.inComplement(store.level, xi, el);
-            }
+  private void filterDomainSimpleTable(int i, IntVar xi, long wrds) {
+    Map<Integer, Long> xSupport = supports[i];
+    Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+    if (xi.dom().getSize() <= xsEntry.size()) {
+      ValueEnumeration e = xi.dom().valueEnumeration();
+      while (e.hasMoreElements()) {
+        int el = e.nextElement();
+        Long bs = xSupport.get(el);
+        if (bs != null) {
+          if ((wrds & bs) == 0L) {
+            xi.domain.inComplement(store.level, xi, el);
           }
         } else {
-          // filter based on the table values
-          IntDomain xDom = new IntervalDomain();
-          for (Map.Entry<Integer, Long> e : xsEntry) {
-            Integer val = e.getKey();
-            Long bits = e.getValue();
-            if (xi.domain.contains(val) && (wrds & bits) != 0L) {
-              xDom.unionAdapt(val);
-            }
-          }
-          xi.domain.in(store.level, xi, xDom);
+          xi.domain.inComplement(store.level, xi, el);
         }
       }
+    } else {
+      IntDomain xDom = new IntervalDomain();
+      for (Map.Entry<Integer, Long> e : xsEntry) {
+        Integer val = e.getKey();
+        Long bits = e.getValue();
+        if (xi.domain.contains(val) && (wrds & bits) != 0L) {
+          xDom.unionAdapt(val);
+        }
+      }
+      xi.domain.in(store.level, xi, xDom);
     }
   }
 

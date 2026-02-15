@@ -445,52 +445,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     objectQueue = new LinkedHashSet<>(objects.length);
     objectQueue.addAll(Arrays.asList(objects));
 
-    Map<Integer, Shape> idShapeMap = new HashMap<>();
-
-    // add all shapes to the register
-    for (Shape s : shapes) {
-      if (s.no < 0) {
-        throw new IllegalArgumentException("shape ID has to be positive");
-      }
-      idShapeMap.put(s.no, s);
-    }
-
-    // make sure that all objects have the same dimension
-    // make sure that IDs are unique
-    // make sure that the shapes used are defined
-    Set<Integer> objectIds = new HashSet<>();
-    int dim = -1;
-    int idMax = 0;
-
-    for (GeostObject o : objects) {
-
-      if (objectIds.contains(o.no)) {
-        throw new IllegalArgumentException("all objects must have a different ID");
-      } else if (o.no < 0) {
-        throw new IllegalArgumentException("object ID has to be positive");
-      } else {
-        objectIds.add(o.no);
-        idMax = Math.max(o.no, idMax);
-      }
-
-      if (dim == -1) {
-        dim = o.dimension;
-      } else if (dim != o.dimension) {
-        throw new IllegalArgumentException("all objects must have the same number of dimensions");
-      }
-
-      // make sure that the shapes used are defined
-      ValueEnumeration shapeIdVals = o.shapeId.domain.valueEnumeration();
-      while (shapeIdVals.hasMoreElements()) {
-        int sid = shapeIdVals.nextElement();
-        if (!idShapeMap.containsKey(sid)) {
-          throw new IllegalArgumentException(
-              "shape id " + sid + " does not correspond to any shape");
-        }
-      }
-    }
-
-    dimension = dim;
+    Map<Integer, Shape> idShapeMap = buildIdShapeMap(shapes);
+    int[] dimAndIdMax = validateObjectsAndGetDimension(objects, idShapeMap);
+    dimension = dimAndIdMax[0];
+    int idMax = dimAndIdMax[1];
 
     objectConstraints = new Set[idMax + 1];
     domainHolesConstraints = new DomainHoles[idMax + 1];
@@ -602,6 +560,50 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     setScope(variableObjectMap.keySet());
 
     // boxDisplay = new BoxDisplay(20, "inside");
+  }
+
+  private static Map<Integer, Shape> buildIdShapeMap(Shape[] shapes) {
+    Map<Integer, Shape> idShapeMap = new HashMap<>();
+    for (Shape s : shapes) {
+      if (s.no < 0) {
+        throw new IllegalArgumentException("shape ID has to be positive");
+      }
+      idShapeMap.put(s.no, s);
+    }
+    return idShapeMap;
+  }
+
+  private static int[] validateObjectsAndGetDimension(
+      GeostObject[] objects, Map<Integer, Shape> idShapeMap) {
+    Set<Integer> objectIds = new HashSet<>();
+    int dim = -1;
+    int idMax = 0;
+    for (GeostObject o : objects) {
+      if (objectIds.contains(o.no)) {
+        throw new IllegalArgumentException("all objects must have a different ID");
+      }
+      if (o.no < 0) {
+        throw new IllegalArgumentException("object ID has to be positive");
+      }
+      objectIds.add(o.no);
+      idMax = Math.max(o.no, idMax);
+
+      if (dim == -1) {
+        dim = o.dimension;
+      } else if (dim != o.dimension) {
+        throw new IllegalArgumentException("all objects must have the same number of dimensions");
+      }
+
+      ValueEnumeration shapeIdVals = o.shapeId.domain.valueEnumeration();
+      while (shapeIdVals.hasMoreElements()) {
+        int sid = shapeIdVals.nextElement();
+        if (!idShapeMap.containsKey(sid)) {
+          throw new IllegalArgumentException(
+              "shape id " + sid + " does not correspond to any shape");
+        }
+      }
+    }
+    return new int[] {dim, idMax};
   }
 
   /**
@@ -765,22 +767,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     order.setMostSignificantDimension(d);
-
-    // c is initialized with the lower bound of the object's domain, n with the upper bound+1
-    final int size = o.dimension;
-    for (int i = 0; i < size; i++) {
-      c[i] = o.coords[i].min();
-      n[i] = o.coords[i].max() + 1;
-    }
-
-    c[dimension] = o.start.min();
-    n[dimension] = o.start.max() + 1;
+    initializePruneMinBounds(o);
 
     if (DEBUG_MAIN) {
       log.debug("shape ID in pruneMin: {}", currentShape);
-    }
-
-    if (DEBUG_MAIN) {
       log.debug("inital, c and n:");
       log.debug("c:{}", Arrays.toString(c));
       log.debug("n:{}", Arrays.toString(n));
@@ -794,38 +784,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 
       assert f.containsPoint(c) : "bad forbidden region, c is not contained";
-
-      // update n
-      final int size1 = o.dimension + 1;
-      for (int i = 0; i < size1; i++) {
-
-        n[i] = Math.min(n[i], f.origin[i] + f.length[i]);
-        assert n[i] > c[i] : "n is not larger than c in pruneMin";
-      }
-
-      feasiblePointFound = false;
-      // sweep in each dimension, from the less significant to the most
-
-      for (int i = o.dimension; i >= 0; i--) {
-
-        int lexI = order.dimensionAt(i);
-
-        final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.start.min();
-        final int domainMax = lexI != dimension ? o.coords[lexI].max() : o.start.max();
-
-        c[lexI] = n[lexI];
-        n[lexI] = domainMax + 1;
-
-        if (c[lexI] <= domainMax) {
-          feasiblePointFound = true;
-          break;
-        } else {
-          c[lexI] = domainMin;
-        }
-      }
+      updateNFromForbiddenBoxPruneMin(o, f);
+      feasiblePointFound = advanceToNextFeasiblePointPruneMin(o, d);
 
       if (c[d] >= limit) {
-        // we were asked to stop searching here
         return limit;
       }
 
@@ -842,10 +804,43 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + c[d]
               + " is outside domain "
               + (d != dimension ? o.coords[d] : o.start);
-      return c[d]; // the check for sweep advance is done later by the consistency function
+      return c[d];
     } else {
       return IntDomain.MAX_INT;
     }
+  }
+
+  private void initializePruneMinBounds(GeostObject o) {
+    final int size = o.dimension;
+    for (int i = 0; i < size; i++) {
+      c[i] = o.coords[i].min();
+      n[i] = o.coords[i].max() + 1;
+    }
+    c[dimension] = o.start.min();
+    n[dimension] = o.start.max() + 1;
+  }
+
+  private void updateNFromForbiddenBoxPruneMin(GeostObject o, Dbox f) {
+    final int size1 = o.dimension + 1;
+    for (int i = 0; i < size1; i++) {
+      n[i] = Math.min(n[i], f.origin[i] + f.length[i]);
+      assert n[i] > c[i] : "n is not larger than c in pruneMin";
+    }
+  }
+
+  private boolean advanceToNextFeasiblePointPruneMin(GeostObject o, int d) {
+    for (int i = o.dimension; i >= 0; i--) {
+      int lexI = order.dimensionAt(i);
+      final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.start.min();
+      final int domainMax = lexI != dimension ? o.coords[lexI].max() : o.start.max();
+      c[lexI] = n[lexI];
+      n[lexI] = domainMax + 1;
+      if (c[lexI] <= domainMax) {
+        return true;
+      }
+      c[lexI] = domainMin;
+    }
+    return false;
   }
 
   /**
@@ -875,22 +870,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     order.setMostSignificantDimension(d);
-
-    // c is initialized with the upper bound of the object's domain, n with the lower bound-1
-    final int size2 = o.dimension;
-    for (int i = 0; i < size2; i++) {
-      c[i] = o.coords[i].max();
-      n[i] = o.coords[i].min() - 1;
-    }
-    // when considering time, pruneMax will try to reduce the upper bound of the domain
-    // (start+duration)
-    c[dimension] = o.end.max();
-    n[dimension] = o.end.min() - 1;
+    initializePruneMaxBounds(o);
 
     if (DEBUG_MAIN) {
       log.debug("shape ID in pruneMax: {}", currentShape);
-    }
-    if (DEBUG_MAIN) {
       log.debug("initial c and n:");
       log.debug("c:{}", Arrays.toString(c));
       log.debug("n:{}", Arrays.toString(n));
@@ -903,38 +886,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 
       assert f.containsPoint(c) : "bad forbidden region, c is not contained";
+      updateNFromForbiddenBoxPruneMax(o, f);
+      feasiblePointFound = advanceToNextFeasiblePointPruneMax(o, d);
 
-      // update n
-      final int size3 = o.dimension + 1;
-      for (int i = 0; i < size3; i++) {
-        /*
-         * need to subtract 1 to the origin of the outbox because we want
-         * the next feasible point, and the outbox origin is still infeasible
-         */
-        n[i] = Math.max(n[i], f.origin[i] - 1);
-
-        assert n[i] < c[i] : "n is not smaller than c in pruneMax";
-      }
-
-      feasiblePointFound = false;
-      // sweep in each dimension, from the less significant to the most
-      for (int i = o.dimension; i >= 0; i--) {
-        int lexI = order.dimensionAt(i);
-        final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.end.min();
-        final int domainMax = lexI != dimension ? o.coords[lexI].max() : o.end.max();
-
-        c[lexI] = n[lexI];
-        n[lexI] = domainMin - 1;
-
-        if (c[lexI] >= domainMin) {
-          feasiblePointFound = true;
-          break;
-        } else {
-          c[lexI] = domainMax;
-        }
-      }
       if (c[d] <= limit) {
-        // we were asked to stop searching here
         return limit;
       }
 
@@ -951,10 +906,43 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + c[d]
               + " is outside domain "
               + (d != dimension ? o.coords[d] : o.end);
-      return c[d]; // the check for sweep advance is done later by the consistency function
+      return c[d];
     } else {
       return IntDomain.MIN_INT;
     }
+  }
+
+  private void initializePruneMaxBounds(GeostObject o) {
+    final int size2 = o.dimension;
+    for (int i = 0; i < size2; i++) {
+      c[i] = o.coords[i].max();
+      n[i] = o.coords[i].min() - 1;
+    }
+    c[dimension] = o.end.max();
+    n[dimension] = o.end.min() - 1;
+  }
+
+  private void updateNFromForbiddenBoxPruneMax(GeostObject o, Dbox f) {
+    final int size3 = o.dimension + 1;
+    for (int i = 0; i < size3; i++) {
+      n[i] = Math.max(n[i], f.origin[i] - 1);
+      assert n[i] < c[i] : "n is not smaller than c in pruneMax";
+    }
+  }
+
+  private boolean advanceToNextFeasiblePointPruneMax(GeostObject o, int d) {
+    for (int i = o.dimension; i >= 0; i--) {
+      int lexI = order.dimensionAt(i);
+      final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.end.min();
+      final int domainMax = lexI != dimension ? o.coords[lexI].max() : o.end.max();
+      c[lexI] = n[lexI];
+      n[lexI] = domainMin - 1;
+      if (c[lexI] >= domainMin) {
+        return true;
+      }
+      c[lexI] = domainMax;
+    }
+    return false;
   }
 
   /**
@@ -1378,81 +1366,73 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   protected void updateInternalConstraintsGeneratingOutboxes(GeostObject o) {
 
     if (filterUseless) {
-
-      // maximal possible size of the object
-      workingList.clear();
-      ValueEnumeration sids = o.shapeId.domain.valueEnumeration();
-
-      while (sids.hasMoreElements()) {
-        workingList.add(getShape(sids.nextElement()).boundingBox);
-      }
-
-      // bb - boundingBox over all shapes.
-      Dbox bb = Dbox.boundingBox(workingList).copyInto(Dbox.newBox(dimension));
-
-      // bounds of the domain and the bounding box over all possible shapes counted above.
-      Dbox domainBox = Dbox.newBox(dimension + 1);
-      int[] domainBoxOriginShifted = domainBox.origin;
-      int[] domainBoxLengthShifted = domainBox.length;
-
-      for (int i = 0; i < dimension; i++) {
-        domainBoxOriginShifted[i] = o.coords[i].min() + bb.origin[i];
-        domainBoxLengthShifted[i] =
-            o.coords[i].max() + bb.origin[i] + bb.length[i] - domainBoxOriginShifted[i];
-      }
-      // TODO: cache the results of the computation above and recompute upon object change.
-
-      domainBoxOriginShifted[dimension] = IntDomain.MIN_INT;
-      domainBoxLengthShifted[dimension] = IntDomain.MAX_INT * 2;
-
-      // it finds the box within which the constraint can propagate.
-      Dbox constraintBox = Dbox.newBox(dimension + 1);
-      int[] constraintBoxOrigin = constraintBox.origin;
-      int[] constraintBoxLength = constraintBox.length;
-
-      lastConstraintToCheck = 0;
-      for (InternalConstraint c : objectConstraints[o.no]) {
-        if (c.cardInfeasible() > 0) {
-
-          // increase size by one unit because intersection is empty if of size zero
-          int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
-          for (int i = 0; i < dimension + 1; i++) {
-            constraintBoxOrigin[i] = lowerBound[i] - 1;
-          }
-
-          // note: need to to them one after the other because of array reuse in absInfeasible
-          int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
-          for (int i = 0; i < dimension + 1; i++) {
-            constraintBoxLength[i] = upperBound[i] - constraintBoxOrigin[i] + 2;
-          }
-
-          // if the constraint can propagate within current domains then the internal
-          // constraint can be useful and can not be filtered out, otherwise the constraint
-          // is not added to the list of useful constraints.
-          if (domainBox.intersectWith(constraintBox) != null) {
-            stillUsefulInternalConstraints[lastConstraintToCheck] = c;
-            lastConstraintToCheck++;
-          }
-        }
-      }
-
-      Dbox.dispatchBox(bb);
-      Dbox.dispatchBox(constraintBox);
-      Dbox.dispatchBox(domainBox);
-
+      filterUsefulConstraintsWithDomainBox(o);
     } else {
+      collectAllConstraintsWithCardInfeasible(o);
+    }
 
-      lastConstraintToCheck = 0;
-      for (InternalConstraint c : objectConstraints[o.no]) {
-        if (c.cardInfeasible() > 0) {
+    if (DEBUG_REORDER) {
+      log.debug("changed pruning object");
+    }
+  }
+
+  private void filterUsefulConstraintsWithDomainBox(GeostObject o) {
+    workingList.clear();
+    ValueEnumeration sids = o.shapeId.domain.valueEnumeration();
+    while (sids.hasMoreElements()) {
+      workingList.add(getShape(sids.nextElement()).boundingBox);
+    }
+    Dbox bb = Dbox.boundingBox(workingList).copyInto(Dbox.newBox(dimension));
+
+    Dbox domainBox = buildDomainBoxForObject(o, bb);
+    Dbox constraintBox = Dbox.newBox(dimension + 1);
+    int[] constraintBoxOrigin = constraintBox.origin;
+    int[] constraintBoxLength = constraintBox.length;
+
+    lastConstraintToCheck = 0;
+    for (InternalConstraint c : objectConstraints[o.no]) {
+      if (c.cardInfeasible() > 0) {
+        int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
+        for (int i = 0; i < dimension + 1; i++) {
+          constraintBoxOrigin[i] = lowerBound[i] - 1;
+        }
+        int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
+        for (int i = 0; i < dimension + 1; i++) {
+          constraintBoxLength[i] = upperBound[i] - constraintBoxOrigin[i] + 2;
+        }
+        if (domainBox.intersectWith(constraintBox) != null) {
           stillUsefulInternalConstraints[lastConstraintToCheck] = c;
           lastConstraintToCheck++;
         }
       }
     }
 
-    if (DEBUG_REORDER) {
-      log.debug("changed pruning object");
+    Dbox.dispatchBox(bb);
+    Dbox.dispatchBox(constraintBox);
+    Dbox.dispatchBox(domainBox);
+  }
+
+  private Dbox buildDomainBoxForObject(GeostObject o, Dbox bb) {
+    Dbox domainBox = Dbox.newBox(dimension + 1);
+    int[] domainBoxOriginShifted = domainBox.origin;
+    int[] domainBoxLengthShifted = domainBox.length;
+    for (int i = 0; i < dimension; i++) {
+      domainBoxOriginShifted[i] = o.coords[i].min() + bb.origin[i];
+      domainBoxLengthShifted[i] =
+          o.coords[i].max() + bb.origin[i] + bb.length[i] - domainBoxOriginShifted[i];
+    }
+    domainBoxOriginShifted[dimension] = IntDomain.MIN_INT;
+    domainBoxLengthShifted[dimension] = IntDomain.MAX_INT * 2;
+    return domainBox;
+  }
+
+  private void collectAllConstraintsWithCardInfeasible(GeostObject o) {
+    lastConstraintToCheck = 0;
+    for (InternalConstraint c : objectConstraints[o.no]) {
+      if (c.cardInfeasible() > 0) {
+        stillUsefulInternalConstraints[lastConstraintToCheck] = c;
+        lastConstraintToCheck++;
+      }
     }
   }
 
@@ -1544,10 +1524,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       ec.onObjectUpdate(o);
     }
 
-    // no need to queue objects if backtracking
     if (!backtracking) {
-
-      // add object to the set of this level
       updatedObjectSet.add(o);
 
       if (DEBUG_BACKTRACK) {
@@ -1555,27 +1532,29 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       if (allLinked) {
-        // executing the else part would end up in the same result
-        for (GeostObject lo : objects) {
-          queueObject(lo);
-        }
-
+        queueAllObjectsWhenLinked();
       } else {
+        queueObjectAndPrunableFromConstraints(o);
+      }
+    }
+  }
 
-        queueObject(o); // needed because if dimension 1 was pruned, dimension 0 might now be pruned
+  private void queueAllObjectsWhenLinked() {
+    for (GeostObject lo : objects) {
+      queueObject(lo);
+    }
+  }
 
-        temporaryObjectSet.clear();
-
-        for (ExternalConstraint ec : externalConstraints) {
-
-          ec.addPrunableObjects(o, temporaryObjectSet);
-          while (!temporaryObjectSet.isEmpty()) {
-            Iterator<GeostObject> it = temporaryObjectSet.iterator();
-            GeostObject next = it.next();
-            it.remove();
-            queueObject(next);
-          }
-        }
+  private void queueObjectAndPrunableFromConstraints(GeostObject o) {
+    queueObject(o);
+    temporaryObjectSet.clear();
+    for (ExternalConstraint ec : externalConstraints) {
+      ec.addPrunableObjects(o, temporaryObjectSet);
+      while (!temporaryObjectSet.isEmpty()) {
+        Iterator<GeostObject> it = temporaryObjectSet.iterator();
+        GeostObject next = it.next();
+        it.remove();
+        queueObject(next);
       }
     }
   }

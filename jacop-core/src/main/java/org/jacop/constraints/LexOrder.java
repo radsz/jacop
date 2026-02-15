@@ -327,64 +327,72 @@ public class LexOrder extends Constraint
   protected void establishGacInit() {
 
     satisfied = false;
-    int a = 0;
-    int b;
-
-    while (a < n && eqSingletons(x[a], y[a])) {
-      a++;
-    }
+    int a = findAlphaIndex();
 
     if (DEBUG) {
       log.debug("INIT entry: a = {}", a);
     }
 
     if (a == n) {
-      if (!lexLt) {
-        satisfied = true;
-        removeConstraint();
-        return; // satisfied already for le
-      } else {
-        throw Store.failException; // fail for lt;
-      }
-    } else {
-      int i = a;
-      b = -1;
-      while (i != n && x[i].min() <= y[i].max()) {
-        if (x[i].min() == y[i].max()) {
-          if (b == -1) {
-            b = i;
-          }
-        } else {
-          b = -1;
-        }
-
-        i++;
-      }
-
-      if (!lexLt) {
-        if (i == n) {
-          b = n + 1;
-        } else if (b == -1) {
-          b = i;
-        }
-      } else if (b == -1) {
-        b = i;
-      }
-
-      if (a >= b) {
-        throw Store.failException; // fail
-      }
-      alpha.update(a);
-      beta.update(b);
-      alphaValue = a;
-      betaValue = b;
-
-      reestablishGac(a);
+      handleAllEqualCase();
+      return;
     }
+
+    int b = computeInitialBeta(a);
+    if (a >= b) {
+      throw Store.failException; // fail
+    }
+    alpha.update(a);
+    beta.update(b);
+    alphaValue = a;
+    betaValue = b;
+    reestablishGac(a);
 
     if (DEBUG) {
       log.debug("INIT exit: a = {}, b = {}", a, b);
     }
+  }
+
+  private int findAlphaIndex() {
+    int a = 0;
+    while (a < n && eqSingletons(x[a], y[a])) {
+      a++;
+    }
+    return a;
+  }
+
+  private void handleAllEqualCase() {
+    if (!lexLt) {
+      satisfied = true;
+      removeConstraint();
+    } else {
+      throw Store.failException; // fail for lt
+    }
+  }
+
+  private int computeInitialBeta(int a) {
+    int i = a;
+    int b = -1;
+    while (i != n && x[i].min() <= y[i].max()) {
+      if (x[i].min() == y[i].max()) {
+        if (b == -1) {
+          b = i;
+        }
+      } else {
+        b = -1;
+      }
+      i++;
+    }
+    if (!lexLt) {
+      if (i == n) {
+        b = n + 1;
+      } else if (b == -1) {
+        b = i;
+      }
+    } else if (b == -1) {
+      b = i;
+    }
+    return b;
   }
 
   void reestablishGac(int i) {

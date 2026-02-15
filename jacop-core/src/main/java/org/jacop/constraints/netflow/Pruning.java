@@ -226,77 +226,80 @@ public class Pruning extends Network {
     // It should work on fixpoint principle, so there is propagation in the chain of 2-degree nodes.
     for (Node node : nodes) {
       if (node.degree == 1) {
-        Arc arc = node.adjacencyList[0];
-
-        ArcCompanion companion = arc.companion;
-        if (companion != null && companion.xVar != null) {
-
-          int flow = companion.flowOffset + arc.sister.capacity;
-          if (arc.head == node) {
-            assert arc.sister.capacity == -node.balance : "\n" + node + "\n" + arc;
-          } else {
-            assert arc.sister.capacity == node.balance : "\n" + node + "\n" + arc;
-          }
-          nvarIn(companion, flow, flow);
-        }
+        pruneDegree1Node(node);
       } else if (node.degree == 2) {
-
-        Arc arc1 = node.adjacencyList[0];
-        Arc arc2 = node.adjacencyList[1];
-
-        ArcCompanion companion1 = arc1.companion;
-        ArcCompanion companion2 = arc2.companion;
-        if (companion1 != null
-            && companion1.xVar != null
-            && companion2 != null
-            && companion2.xVar != null) {
-
-          boolean differentDir;
-          int shift = -companion1.flowOffset;
-
-          if (arc1.head == node) {
-            differentDir = arc2.head != node;
-            shift += node.balance;
-          } else {
-            differentDir = arc2.head == node;
-            shift -= node.balance;
-          }
-
-          if (differentDir) {
-            shift += companion2.flowOffset;
-          } else {
-            shift -= companion2.flowOffset;
-          }
-
-          IntVar xVar1 = companion1.xVar;
-          IntVar xVar2 = companion2.xVar;
-          if (differentDir) {
-            nvarInShift(companion1, xVar2.domain, -shift);
-            nvarInShift(companion2, xVar1.domain, shift);
-          } else {
-            // TODO: Double test this code.
-
-            IntDomain xDom = xVar1.dom();
-            IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
-            for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
-              yDomIn.unionAdapt(
-                  new Interval(-shift - xDom.rightElement(i), -shift - xDom.leftElement(i)));
-            }
-
-            nvarInShift(companion2, yDomIn, 0);
-
-            IntDomain yDom = xVar2.domain;
-            IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
-            for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
-              xDomIn.unionAdapt(
-                  new Interval(-shift - yDom.rightElement(i), -shift - yDom.leftElement(i)));
-            }
-
-            nvarInShift(companion1, xDomIn, 0);
-          }
-        }
+        pruneDegree2Node(node);
       }
     }
+  }
+
+  private void pruneDegree1Node(Node node) {
+    Arc arc = node.adjacencyList[0];
+    ArcCompanion companion = arc.companion;
+    if (companion == null || companion.xVar == null) {
+      return;
+    }
+    int flow = companion.flowOffset + arc.sister.capacity;
+    if (arc.head == node) {
+      assert arc.sister.capacity == -node.balance : "\n" + node + "\n" + arc;
+    } else {
+      assert arc.sister.capacity == node.balance : "\n" + node + "\n" + arc;
+    }
+    nvarIn(companion, flow, flow);
+  }
+
+  private void pruneDegree2Node(Node node) {
+    Arc arc1 = node.adjacencyList[0];
+    Arc arc2 = node.adjacencyList[1];
+    ArcCompanion companion1 = arc1.companion;
+    ArcCompanion companion2 = arc2.companion;
+    if (companion1 == null
+        || companion1.xVar == null
+        || companion2 == null
+        || companion2.xVar == null) {
+      return;
+    }
+
+    boolean differentDir;
+    int shift = -companion1.flowOffset;
+    if (arc1.head == node) {
+      differentDir = arc2.head != node;
+      shift += node.balance;
+    } else {
+      differentDir = arc2.head == node;
+      shift -= node.balance;
+    }
+    if (differentDir) {
+      shift += companion2.flowOffset;
+    } else {
+      shift -= companion2.flowOffset;
+    }
+
+    IntVar xVar1 = companion1.xVar;
+    IntVar xVar2 = companion2.xVar;
+    if (differentDir) {
+      nvarInShift(companion1, xVar2.domain, -shift);
+      nvarInShift(companion2, xVar1.domain, shift);
+    } else {
+      pruneDegree2NodeSameDir(companion1, companion2, xVar1, xVar2, shift);
+    }
+  }
+
+  private void pruneDegree2NodeSameDir(
+      ArcCompanion companion1, ArcCompanion companion2, IntVar xVar1, IntVar xVar2, int shift) {
+    IntDomain xDom = xVar1.dom();
+    IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
+    for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
+      yDomIn.unionAdapt(new Interval(-shift - xDom.rightElement(i), -shift - xDom.leftElement(i)));
+    }
+    nvarInShift(companion2, yDomIn, 0);
+
+    IntDomain yDom = xVar2.domain;
+    IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
+    for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
+      xDomIn.unionAdapt(new Interval(-shift - yDom.rightElement(i), -shift - yDom.leftElement(i)));
+    }
+    nvarInShift(companion1, xDomIn, 0);
   }
 
   /**
@@ -306,36 +309,16 @@ public class Pruning extends Network {
    */
   public void analyze(int costLimit) {
 
-    ArcCompanion companion;
     ArcCompanion prev = null;
     strategy.init();
-
-    companion = strategy.next();
+    ArcCompanion companion = strategy.next();
 
     if (DO_INSTRUMENTATION && companion != null) {
-      statistics.Xvars.maxScoreSum += companion.pruningScore;
-      statistics.Wvars.maxScoreSum += companion.pruningScore;
-      statistics.Svars.maxScoreSum += companion.pruningScore;
+      recordInstrumentationMax(companion);
     }
 
     while (companion != null) {
-
-      Arc arc1 = companion.arc;
-      Arc arc2 = arc1.sister;
-      int residual1 = arc1.capacity;
-      int residual2 = arc2.capacity;
-
-      if (residual1 == 0) {
-        analyzeArcHelper(arc2, costLimit);
-      } else if (residual2 == 0) {
-        analyzeArcHelper(arc1, costLimit);
-      } else if (residual1 < residual2) {
-        analyzeArcHelper(arc1, costLimit);
-        analyzeArcHelper(arc2, costLimit);
-      } else {
-        analyzeArcHelper(arc2, costLimit);
-        analyzeArcHelper(arc1, costLimit);
-      }
+      analyzeCompanionArcs(companion, costLimit);
 
       if (companion.wVar != null && companion.flowOffset > 0) {
         int maxCost = companion.wVar.min() + (costLimit / companion.flowOffset);
@@ -346,11 +329,40 @@ public class Pruning extends Network {
       companion = strategy.next();
     }
     if (DO_INSTRUMENTATION && prev != null) {
-      statistics.Xvars.minScoreSum += prev.pruningScore;
-      statistics.Wvars.minScoreSum += prev.pruningScore;
-      statistics.Svars.minScoreSum += prev.pruningScore;
+      recordInstrumentationMin(prev);
     }
     strategy.close();
+  }
+
+  private void recordInstrumentationMax(ArcCompanion companion) {
+    statistics.Xvars.maxScoreSum += companion.pruningScore;
+    statistics.Wvars.maxScoreSum += companion.pruningScore;
+    statistics.Svars.maxScoreSum += companion.pruningScore;
+  }
+
+  private void recordInstrumentationMin(ArcCompanion prev) {
+    statistics.Xvars.minScoreSum += prev.pruningScore;
+    statistics.Wvars.minScoreSum += prev.pruningScore;
+    statistics.Svars.minScoreSum += prev.pruningScore;
+  }
+
+  private void analyzeCompanionArcs(ArcCompanion companion, int costLimit) {
+    Arc arc1 = companion.arc;
+    Arc arc2 = arc1.sister;
+    int residual1 = arc1.capacity;
+    int residual2 = arc2.capacity;
+
+    if (residual1 == 0) {
+      analyzeArcHelper(arc2, costLimit);
+    } else if (residual2 == 0) {
+      analyzeArcHelper(arc1, costLimit);
+    } else if (residual1 < residual2) {
+      analyzeArcHelper(arc1, costLimit);
+      analyzeArcHelper(arc2, costLimit);
+    } else {
+      analyzeArcHelper(arc2, costLimit);
+      analyzeArcHelper(arc1, costLimit);
+    }
   }
 
   private void analyzeArcHelper(Arc arc, int costLimit) {

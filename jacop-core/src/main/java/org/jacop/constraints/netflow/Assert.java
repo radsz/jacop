@@ -72,105 +72,127 @@ public class Assert {
     assert g.root.balance == 0 : "root balance != 0";
 
     for (Node n : g.nodes) {
-      int del_out = 0;
-      int del_in = 0;
-      int out = 0;
-      int in = 0;
+      FlowCounts counts = computeFlowCountsForNode(n, allArcsForDebug);
+      assertNodeBalance(n, counts);
+    }
 
-      for (Arc a : allArcsForDebug) {
-        if (!a.forward) {
-          a = a.sister;
-        }
+    assertRootBalance(g, allArcsForDebug);
 
-        if (a.companion != null) {
-          // lower capacity
-          if (a.head == n) {
-            del_in += a.companion.flowOffset;
-          } else if (a.tail() == n) {
-            del_out += a.companion.flowOffset;
-          }
-        }
+    return true;
+  }
 
-        if (a.index == -3) {
-          // deleted arc
-          if (a.head == n) {
-            del_in += a.sister.capacity;
-          } else if (a.tail() == n) {
-            del_out += a.sister.capacity;
-          }
-        } else {
-          // available arc
-          if (a.head == n) {
-            in += a.sister.capacity;
-          } else if (a.tail() == n) {
-            out += a.sister.capacity;
-          }
+  private static void assertNodeBalance(Node n, FlowCounts counts) {
+    assert n.balance == counts.out - counts.in
+        : "Balance on node\n"
+            + "out = "
+            + counts.out
+            + ", in = "
+            + counts.in
+            + BALANCE_EQUALS
+            + n.balance
+            + "\n"
+            + n
+            + "\n";
+
+    assert n.initialBalance - n.balance - n.deltaBalance == counts.delOut - counts.delIn
+        : "Balance on deleted node\n"
+            + "out = "
+            + counts.delOut
+            + ", in = "
+            + counts.delIn
+            + BALANCE_EQUALS
+            + n.balance
+            + ", delta = "
+            + n.deltaBalance
+            + ", initial = "
+            + n.initialBalance
+            + "\n"
+            + "  out-in = "
+            + (counts.delOut - counts.delIn)
+            + ", initial-balance-delta = "
+            + (n.initialBalance - n.balance - n.deltaBalance)
+            + "\n"
+            + n
+            + "\n";
+  }
+
+  private static FlowCounts computeFlowCountsForNode(Node n, List<Arc> allArcsForDebug) {
+    int delOut = 0;
+    int delIn = 0;
+    int out = 0;
+    int in = 0;
+
+    for (Arc a : allArcsForDebug) {
+      if (!a.forward) {
+        a = a.sister;
+      }
+
+      if (a.companion != null) {
+        if (a.head == n) {
+          delIn += a.companion.flowOffset;
+        } else if (a.tail() == n) {
+          delOut += a.companion.flowOffset;
         }
       }
 
-      assert n.balance == out - in
-          : "Balance on node\n"
-              + "out = "
-              + out
-              + ", in = "
-              + in
-              + BALANCE_EQUALS
-              + n.balance
-              + "\n"
-              + n
-              + "\n";
-
-      assert n.initialBalance - n.balance - n.deltaBalance == del_out - del_in
-          : "Balance on deleted node\n"
-              + "out = "
-              + del_out
-              + ", in = "
-              + del_in
-              + BALANCE_EQUALS
-              + n.balance
-              + ", delta = "
-              + n.deltaBalance
-              + ", initial = "
-              + n.initialBalance
-              + "\n"
-              + "  out-in = "
-              + (del_out - del_in)
-              + ", initial-balance-delta = "
-              + (n.initialBalance - n.balance - n.deltaBalance)
-              + "\n"
-              + n
-              + "\n";
-    }
-
-    {
-      int out = 0;
-      int in = 0;
-      for (Arc a : allArcsForDebug) {
-        if (!a.forward) {
-          a = a.sister;
+      if (a.index == -3) {
+        if (a.head == n) {
+          delIn += a.sister.capacity;
+        } else if (a.tail() == n) {
+          delOut += a.sister.capacity;
         }
-        if (a.head == g.root) {
+      } else {
+        if (a.head == n) {
           in += a.sister.capacity;
-        }
-        if (a.tail() == g.root) {
+        } else if (a.tail() == n) {
           out += a.sister.capacity;
         }
       }
-
-      assert 0 == out - in
-          : "Balance on node (root)\n"
-              + "in = "
-              + out
-              + ", out = "
-              + in
-              + BALANCE_EQUALS
-              + 0
-              + "\n"
-              + g.root
-              + "\n";
     }
 
-    return true;
+    return new FlowCounts(delOut, delIn, out, in);
+  }
+
+  private static void assertRootBalance(NetworkSimplex g, List<Arc> allArcsForDebug) {
+    int out = 0;
+    int in = 0;
+    for (Arc a : allArcsForDebug) {
+      if (!a.forward) {
+        a = a.sister;
+      }
+      if (a.head == g.root) {
+        in += a.sister.capacity;
+      }
+      if (a.tail() == g.root) {
+        out += a.sister.capacity;
+      }
+    }
+
+    assert 0 == out - in
+        : "Balance on node (root)\n"
+            + "in = "
+            + out
+            + ", out = "
+            + in
+            + BALANCE_EQUALS
+            + 0
+            + "\n"
+            + g.root
+            + "\n";
+  }
+
+  private static final class FlowCounts {
+    final int delOut;
+    final int delIn;
+    final int out;
+    final int in;
+
+    FlowCounts(int delOut, int delIn, int out, int in) {
+      this.delOut = delOut;
+      this.delIn = delIn;
+      this.out = out;
+      this.in = in;
+    }
   }
 
   /**
@@ -207,66 +229,89 @@ public class Assert {
     List<Arc> allArcsForDebug = allArcsForDebug(g);
     List<Arc> tree = new ArrayList<>();
 
-    long del_cost = 0L;
-    int N = g.nodes.length + 1;
-    for (Arc arc : allArcsForDebug) {
+    long delCost = collectArcsAndValidate(g, allArcsForDebug, tree);
+    int n = g.nodes.length + 1;
+    assert n - 1 == tree.size();
+    assert n - 1 == allArcsForDebug.size() - g.lower.length;
+    assert ((Network) g).costOffset == delCost;
 
-      // tree arc
+    assertLowerArcsCapacityZero(g);
+    assertRootInvariants(g);
+    assertThreadAndTreeConsistency(g, tree, n);
+
+    for (Node node : g.nodes) {
+      assertNodeDegreeConsistent(node, allArcsForDebug);
+    }
+
+    return true;
+  }
+
+  private static long collectArcsAndValidate(
+      NetworkSimplex g, List<Arc> allArcsForDebug, List<Arc> tree) {
+    long delCost = 0L;
+    for (Arc arc : allArcsForDebug) {
       if (arc.index == -1) {
         tree.add(arc);
-
-        Node j = arc.head;
-        Node i = arc.sister.head;
-
-        if (i.toParent == arc) {
-          assert j == i.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
-        } else {
-          assert arc.sister == j.toParent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
-          assert i == j.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
-        }
-      } else if (arc.index != -3) { // non-tree arc
-
-        assert arc.index == arc.sister.index;
-        assert 0 <= arc.index && arc.index < g.numArcs : g.numArcs + ", " + arc;
-
-        if (arc.capacity > 0) {
-          assert 0 == arc.sister.capacity : "\n" + arc;
-          assert arc == g.lower[arc.index] : "\n" + arc;
-        } else if (arc.sister.capacity > 0) {
-          assert 0 == arc.capacity;
-          assert arc.sister == g.lower[arc.index];
-        } else {
-          // degenerate arc
-          assert arc.capacity == 0;
-          assert arc.sister.capacity == 0;
-          boolean b1 = arc.sister == g.lower[arc.index];
-          boolean b2 = arc == g.lower[arc.index];
-          assert b1 ^ b2;
-        }
-      } else { // deleted arc
-        del_cost += arc.longCost();
+        assertTreeArcParentConsistency(arc);
+      } else if (arc.index != -3) {
+        assertNonTreeArcConsistency(g, arc);
+      } else {
+        delCost += arc.longCost();
       }
     }
-    assert N - 1 == tree.size();
-    assert N - 1 == allArcsForDebug.size() - g.lower.length;
-    assert ((Network) g).costOffset == del_cost;
+    return delCost;
+  }
 
+  private static void assertTreeArcParentConsistency(Arc arc) {
+    Node j = arc.head;
+    Node i = arc.sister.head;
+    if (i.toParent == arc) {
+      assert j == i.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+    } else {
+      assert arc.sister == j.toParent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+      assert i == j.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+    }
+  }
+
+  private static void assertNonTreeArcConsistency(NetworkSimplex g, Arc arc) {
+    assert arc.index == arc.sister.index;
+    assert 0 <= arc.index && arc.index < g.numArcs : g.numArcs + ", " + arc;
+    if (arc.capacity > 0) {
+      assert 0 == arc.sister.capacity : "\n" + arc;
+      assert arc == g.lower[arc.index] : "\n" + arc;
+    } else if (arc.sister.capacity > 0) {
+      assert 0 == arc.capacity;
+      assert arc.sister == g.lower[arc.index];
+    } else {
+      assert arc.capacity == 0;
+      assert arc.sister.capacity == 0;
+      boolean b1 = arc.sister == g.lower[arc.index];
+      boolean b2 = arc == g.lower[arc.index];
+      assert b1 ^ b2;
+    }
+  }
+
+  private static void assertLowerArcsCapacityZero(NetworkSimplex g) {
     for (int i = 0; i < g.numArcs; i++) {
       Arc arc = g.lower[i];
       assert arc.sister.capacity == 0;
     }
+  }
 
+  private static void assertRootInvariants(NetworkSimplex g) {
     assert g.root.parent == null;
     assert g.root.toParent == null;
     assert 0 == g.root.balance;
     assert 0 == g.root.potential;
     assert 0 == g.root.depth;
+  }
+
+  private static void assertThreadAndTreeConsistency(
+      NetworkSimplex g, List<Arc> tree, int expectedCount) {
     int x = 1;
     for (Node i = g.root.thread; i != g.root; i = i.thread) {
       x++;
-
       Node p = i.parent;
-
       assert p.depth + 1 == i.depth : MSG_I + i + MSG_P + p + "\n";
       assert i == i.toParent.sister.head : MSG_I + i + MSG_P + p + "\n";
       assert p == i.toParent.head : MSG_I + i + MSG_P + p + "\n";
@@ -275,36 +320,28 @@ public class Assert {
       boolean b2 = tree.contains(i.toParent.sister);
       assert b1 ^ b2 : MSG_I + i + MSG_P + p + "\n";
     }
+    assert expectedCount == x;
+  }
 
-    assert N == x;
-
-    for (Node node : g.nodes) {
-      List<Arc> adjArcs = new ArrayList<>();
-      int count = -1;
-      for (Arc arc : allArcsForDebug) {
-        if (arc.index != NetworkSimplex.DELETED_ARC && (arc.head == node || arc.tail() == node)) {
-          count++;
-          adjArcs.add(arc);
-        }
-      }
-      assert /*node.toString() + "\n" + adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
-          == node.degree;
-      if (node.degree <= 2) {
-        int count2 = 0;
-        for (Arc arc : node.adjacencyList) {
-          if (arc != null) {
-            // TODO: CRUCIAL, BUG?, assert removed.
-            assert (arc.head == node) ^ (arc.tail() == node);
-            assert arc.index != NetworkSimplex.DELETED_ARC;
-            count2++;
-          }
-        }
-        assert /*node.toString() + "\n" +adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
-            == count2;
+  private static void assertNodeDegreeConsistent(Node node, List<Arc> allArcsForDebug) {
+    int count = -1;
+    for (Arc arc : allArcsForDebug) {
+      if (arc.index != NetworkSimplex.DELETED_ARC && (arc.head == node || arc.tail() == node)) {
+        count++;
       }
     }
-
-    return true;
+    assert count == node.degree;
+    if (node.degree <= 2) {
+      int count2 = 0;
+      for (Arc arc : node.adjacencyList) {
+        if (arc != null) {
+          assert (arc.head == node) ^ (arc.tail() == node);
+          assert arc.index != NetworkSimplex.DELETED_ARC;
+          count2++;
+        }
+      }
+      assert count == count2;
+    }
   }
 
   /**

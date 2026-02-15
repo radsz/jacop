@@ -313,53 +313,69 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     private void buildState0Transitions(int i, int j, FsmState terminate) {
       if (i != state.length - 1) {
-        if (addState[i].length != 0) {
-          if (j == 0) {
-            state[i][j][0].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
-
-            for (int s = 1; s < addState[i].length; s++) {
-              addState[i][s - 1].transitions.add(
-                  new FsmTransition(new IntervalDomain(0, 1), addState[i][s]));
-            }
-            addState[i][addState[i].length - 1].transitions.add(
-                new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
-          } else {
-            if (isLe) {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
-            } else {
-              if (j != state[i].length - 1) {
-                state[i][j][0].transitions.add(
-                    new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
-              } else {
-                state[i][j][0].transitions.add(
-                    new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-              }
-            }
-          }
-
-          if (isLe) {
-            state[i][j][0].transitions.add(
-                new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-          } else {
-            if (j != state[i].length - 1) {
-              state[i][j][0].transitions.add(
-                  new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-            }
-          }
-        } else {
-          if (!isLe) {
-            state[i][j][0].transitions.add(
-                new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-          }
-        }
+        state0TransitionsNonLastRow(i, j, terminate);
       } else {
-        state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
-        if (isLe) {
-          state[i][j][0].transitions.add(
-              new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-        }
+        state0TransitionsLastRow(i, j, terminate);
+      }
+    }
+
+    private void state0TransitionsNonLastRow(int i, int j, FsmState terminate) {
+      if (addState[i].length != 0) {
+        state0TransitionsAddStateNonEmpty(i, j, terminate);
+      } else {
+        state0TransitionsAddStateEmpty(i, j, terminate);
+      }
+    }
+
+    private void state0TransitionsAddStateNonEmpty(int i, int j, FsmState terminate) {
+      if (j == 0) {
+        state0TransitionsJZero(i, terminate);
+      } else {
+        state0TransitionsJNonZero(i, j, terminate);
+      }
+      state0AddZeroTransitionToState1(i, j);
+    }
+
+    private void state0TransitionsJZero(int i, FsmState terminate) {
+      state[i][0][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
+      for (int s = 1; s < addState[i].length; s++) {
+        addState[i][s - 1].transitions.add(
+            new FsmTransition(new IntervalDomain(0, 1), addState[i][s]));
+      }
+      addState[i][addState[i].length - 1].transitions.add(
+          new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
+    }
+
+    private void state0TransitionsJNonZero(int i, int j, FsmState terminate) {
+      if (isLe) {
+        state[i][j][0].transitions.add(
+            new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+      } else if (j != state[i].length - 1) {
+        state[i][j][0].transitions.add(
+            new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+      } else {
+        state[i][j][0].transitions.add(
+            new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+      }
+    }
+
+    private void state0AddZeroTransitionToState1(int i, int j) {
+      if (isLe || j != state[i].length - 1) {
+        state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
+      }
+    }
+
+    private void state0TransitionsAddStateEmpty(int i, int j, FsmState terminate) {
+      if (!isLe) {
+        state[i][j][0].transitions.add(
+            new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+      }
+    }
+
+    private void state0TransitionsLastRow(int i, int j, FsmState terminate) {
+      state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
+      if (isLe) {
+        state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
       }
     }
 
