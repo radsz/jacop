@@ -386,13 +386,7 @@ public class Knapsack extends Constraint
 
     // It computes based on the minimum required profit a minimum required weight to get that
     // profit.
-    if (knapsackProfit.min() > tree.alreadyObtainedProfit) {
-      int minWeight = tree.computeMinWeight(knapsackProfit.min() - tree.alreadyObtainedProfit);
-
-      if (knapsackCapacity.min() < minWeight) {
-        knapsackCapacity.domain.inMin(currentLevel, knapsackCapacity, minWeight);
-      }
-    }
+    applyMinWeightFromProfit();
 
     // It makes sure that knapsack capacity is within limits of already used capacity and the
     // maximal
@@ -434,6 +428,16 @@ public class Knapsack extends Constraint
 
     if (DEBUG_ALL) {
       log.debug("Profit after potential update : {}", knapsackProfit);
+    }
+  }
+
+  private void applyMinWeightFromProfit() {
+    if (knapsackProfit.min() > tree.alreadyObtainedProfit) {
+      int minWeight = tree.computeMinWeight(knapsackProfit.min() - tree.alreadyObtainedProfit);
+
+      if (knapsackCapacity.min() < minWeight) {
+        knapsackCapacity.domain.inMin(currentLevel, knapsackCapacity, minWeight);
+      }
     }
   }
 

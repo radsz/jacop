@@ -119,22 +119,27 @@ class ThetaLambdaUnaryTree extends ThetaTree {
         node.responsiblePlambda = r.responsiblePlambda;
       }
 
-      if (plus(l.ectLambda, r.p) > plus(r.pLambda, l.ect)) {
-        if (plus(l.ectLambda, r.p) > r.ectLambda) {
-          node.ectLambda = plus(l.ectLambda, r.p);
-          node.responsibleEctLambda = l.responsibleEctLambda;
-        } else {
-          node.ectLambda = r.ectLambda;
-          node.responsibleEctLambda = r.responsibleEctLambda;
-        }
+      computeEctLambda(node, l, r);
+    }
+  }
+
+  private void computeEctLambda(
+      ThetaLambdaUnaryNode node, ThetaLambdaUnaryNode l, ThetaLambdaUnaryNode r) {
+    if (plus(l.ectLambda, r.p) > plus(r.pLambda, l.ect)) {
+      if (plus(l.ectLambda, r.p) > r.ectLambda) {
+        node.ectLambda = plus(l.ectLambda, r.p);
+        node.responsibleEctLambda = l.responsibleEctLambda;
       } else {
-        if (plus(r.pLambda, l.ect) > r.ectLambda) {
-          node.ectLambda = plus(r.pLambda, l.ect);
-          node.responsibleEctLambda = r.responsiblePlambda;
-        } else {
-          node.ectLambda = r.ectLambda;
-          node.responsibleEctLambda = r.responsibleEctLambda;
-        }
+        node.ectLambda = r.ectLambda;
+        node.responsibleEctLambda = r.responsibleEctLambda;
+      }
+    } else {
+      if (plus(r.pLambda, l.ect) > r.ectLambda) {
+        node.ectLambda = plus(r.pLambda, l.ect);
+        node.responsibleEctLambda = r.responsiblePlambda;
+      } else {
+        node.ectLambda = r.ectLambda;
+        node.responsibleEctLambda = r.responsibleEctLambda;
       }
     }
   }

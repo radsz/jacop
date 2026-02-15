@@ -98,26 +98,14 @@ public class AndBoolVector extends AbstractBoolVector {
 
     boolean allForced = negated ? result.max() == 0 : result.min() == 1;
     if (allForced) {
-      for (int i = start; i < l; i++) {
-        list[i].domain.inValue(store.level, list[i], 1);
-      }
+      forceAllToListToTrue(store, start);
       return;
     }
 
-    for (int i = start; i < l; i++) {
-      if (list[i].min() == 1) {
-        swap(start, i);
-        start++;
-      } else if (list[i].max() == 0) {
-        result.domain.inValue(store.level, result, foundFalseVal);
-        if (!negated) {
-          removeConstraint();
-        }
-        return;
-      }
+    if (propagateLoopFindsFalse(store, foundFalseVal, negated, start)) {
+      return;
     }
-    position.update(start);
-
+    start = position.value();
     if (start == l) {
       result.domain.inValue(store.level, result, allTrueVal);
       return;
@@ -130,6 +118,36 @@ public class AndBoolVector extends AbstractBoolVector {
     if ((l - start) < 3) {
       queueIndex = 0;
     }
+  }
+
+  private void forceAllToListToTrue(Store store, int start) {
+
+    for (int i = start; i < l; i++) {
+      list[i].domain.inValue(store.level, list[i], 1);
+    }
+  }
+
+  /**
+   * Scans list from start for a false (max==0); if found, sets result and optionally removes
+   * constraint and returns true. Otherwise updates position with new start and returns false.
+   */
+  private boolean propagateLoopFindsFalse(
+      Store store, int foundFalseVal, boolean negated, int start) {
+
+    for (int i = start; i < l; i++) {
+      if (list[i].min() == 1) {
+        swap(start, i);
+        start++;
+      } else if (list[i].max() == 0) {
+        result.domain.inValue(store.level, result, foundFalseVal);
+        if (!negated) {
+          removeConstraint();
+        }
+        return true;
+      }
+    }
+    position.update(start);
+    return false;
   }
 
   @Override
@@ -152,29 +170,40 @@ public class AndBoolVector extends AbstractBoolVector {
     boolean checkAnyZero = negated ? result.min() == 1 : result.max() == 0;
 
     if (checkAllOnes) {
-      for (int i = start; i < l; i++) {
-        if (list[i].min() != 1) {
-          return false;
-        } else {
-          swap(start, i);
-          start++;
-          position.update(start);
-        }
-      }
-      return true;
-    } else if (checkAnyZero) {
-      for (int i = start; i < l; i++) {
-        if (list[i].max() == 0) {
-          return true;
-        } else if (list[i].min() == 1) {
-          swap(start, i);
-          start++;
-          position.update(start);
-        }
-      }
-      return false;
+      return checkAllOnesSatisfied(start);
+    }
+    if (checkAnyZero) {
+      return checkAnyZeroSatisfied(start);
     }
 
+    return false;
+  }
+
+  private boolean checkAllOnesSatisfied(int start) {
+
+    for (int i = start; i < l; i++) {
+      if (list[i].min() != 1) {
+        return false;
+      }
+      swap(start, i);
+      start++;
+      position.update(start);
+    }
+    return true;
+  }
+
+  private boolean checkAnyZeroSatisfied(int start) {
+
+    for (int i = start; i < l; i++) {
+      if (list[i].max() == 0) {
+        return true;
+      }
+      if (list[i].min() == 1) {
+        swap(start, i);
+        start++;
+        position.update(start);
+      }
+    }
     return false;
   }
 

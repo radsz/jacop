@@ -127,22 +127,26 @@ class ThetaLambdaTree extends Tree {
         node.responsibleElambda = r.responsibleElambda;
       }
 
-      if (plus(l.envLambda, r.e) > plus(l.env, r.eLambda)) {
-        if (plus(l.envLambda, r.e) > r.envLambda) {
-          node.envLambda = plus(l.envLambda, r.e);
-          node.responsibleEnvLambda = l.responsibleEnvLambda;
-        } else {
-          node.envLambda = r.envLambda;
-          node.responsibleEnvLambda = r.responsibleEnvLambda;
-        }
+      computeEnvLambda(node, l, r);
+    }
+  }
+
+  private void computeEnvLambda(ThetaLambdaNode node, ThetaLambdaNode l, ThetaLambdaNode r) {
+    if (plus(l.envLambda, r.e) > plus(l.env, r.eLambda)) {
+      if (plus(l.envLambda, r.e) > r.envLambda) {
+        node.envLambda = plus(l.envLambda, r.e);
+        node.responsibleEnvLambda = l.responsibleEnvLambda;
       } else {
-        if (plus(l.env, r.eLambda) > r.envLambda) {
-          node.envLambda = plus(l.env, r.eLambda);
-          node.responsibleEnvLambda = r.responsibleElambda;
-        } else {
-          node.envLambda = r.envLambda;
-          node.responsibleEnvLambda = r.responsibleEnvLambda;
-        }
+        node.envLambda = r.envLambda;
+        node.responsibleEnvLambda = r.responsibleEnvLambda;
+      }
+    } else {
+      if (plus(l.env, r.eLambda) > r.envLambda) {
+        node.envLambda = plus(l.env, r.eLambda);
+        node.responsibleEnvLambda = r.responsibleElambda;
+      } else {
+        node.envLambda = r.envLambda;
+        node.responsibleEnvLambda = r.responsibleEnvLambda;
       }
     }
   }

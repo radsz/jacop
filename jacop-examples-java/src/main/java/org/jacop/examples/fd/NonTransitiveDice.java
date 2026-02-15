@@ -95,74 +95,40 @@ public class NonTransitiveDice extends ExampleFd {
    */
   public int currentBest = 16;
 
-  /**
-   * It executes the program solving non transitive dice problem using two different methods. The
-   * second method employs constraint guided shaving.
-   *
-   * @param args the first argument specifies number of dices, the second argument specifies the
-   *     number of sides of each dice.
-   */
-  static void main(String[] args) {
-
+  /** Parses noDices and noSides from args; returns initial currentBest for first phase. */
+  private static int runFirstPhase(int noDices, int noSides) {
+    int noSidesSq = noSides * noSides;
+    int currentBest = (noSidesSq % 2 == 0) ? noSidesSq / 2 - 1 : noSidesSq / 2;
     boolean firstSolutionFound = false;
-
-    int noDices = 4;
-    if (args.length > 0) {
-      noDices = Integer.parseInt(args[0]);
-    }
-
-    int noSides = 7;
-    if (args.length > 1) {
-      noSides = Integer.parseInt(args[1]);
-    }
-
-    int currentBest;
-
-    if (noSides * noSides % 2 == 0) {
-      currentBest = noSides * noSides / 2 - 1;
-    } else {
-      currentBest = noSides * noSides / 2;
-    }
-
     while (true) {
-
       NonTransitiveDice example = new NonTransitiveDice();
-
       example.noDices = noDices;
       example.noSides = noSides;
       example.currentBest = currentBest;
-
       example.model();
-
       boolean result = example.searchSpecial();
-
       currentBest--;
-
       if (result) {
         firstSolutionFound = true;
-        //       sols++;
       }
-
       if (!result && firstSolutionFound) {
         break;
       }
     }
+    return noSidesSq / 2;
+  }
 
-    firstSolutionFound = false;
-    currentBest = noSides * noSides / 2;
-
+  /** Runs second phase (shaving search) and prints stats until no solution. */
+  private static void runSecondPhase(int noDices, int noSides, int initialCurrentBest) {
+    boolean firstSolutionFound = false;
+    int currentBest = initialCurrentBest;
     while (true) {
-
       NonTransitiveDice example = new NonTransitiveDice();
-
       example.noDices = noDices;
       example.noSides = noSides;
       example.currentBest = currentBest;
-
       example.model();
-
       boolean result = example.shavingSearch(example.shavingConstraints, false);
-
       IO.print(noDices + "\t");
       IO.print(noSides + "\t");
       IO.print(currentBest + "\t");
@@ -172,18 +138,30 @@ public class NonTransitiveDice extends ExampleFd {
       IO.print(example.searchLabel.getWrongDecisions() + "\t");
       IO.print(example.searchLabel.getBacktracks() + "\t");
       IO.println(example.searchLabel.getMaximumDepth() + "\t");
-
       currentBest--;
-
       if (result) {
         firstSolutionFound = true;
-        //       sols++;
       }
-
       if (!result && firstSolutionFound) {
         break;
       }
     }
+  }
+
+  /**
+   * It executes the program solving non transitive dice problem using two different methods. The
+   * second method employs constraint guided shaving.
+   *
+   * @param args the first argument specifies number of dices, the second argument specifies the
+   *     number of sides of each dice.
+   */
+  static void main(String[] args) {
+
+    int noDices = (args.length > 0) ? Integer.parseInt(args[0]) : 4;
+    int noSides = (args.length > 1) ? Integer.parseInt(args[1]) : 7;
+
+    int initialCurrentBest = runFirstPhase(noDices, noSides);
+    runSecondPhase(noDices, noSides, initialCurrentBest);
   }
 
   @Override

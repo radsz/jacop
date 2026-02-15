@@ -197,6 +197,22 @@ public class Nonogram extends ExampleFd {
     }
   }
 
+  /** Parses a space-separated line into an int array, ignoring parse errors. */
+  private static int[] parseIntSequence(String line) {
+    Pattern pat = Pattern.compile(" ");
+    String[] result = pat.split(line);
+    int[] sequence = new int[result.length];
+    int current = 0;
+    for (String s : result) {
+      try {
+        sequence[current++] = Integer.parseInt(s);
+      } catch (Exception _) {
+        // Ignore parsing errors
+      }
+    }
+    return sequence;
+  }
+
   /**
    * Reads a nonogram problem definition from a file.
    *
@@ -205,40 +221,30 @@ public class Nonogram extends ExampleFd {
   public void readFromFile(String filename) {
 
     String[] lines = new String[100];
-
     int[] dimensions = new int[2];
 
-    /* read from file args[0] or qcp.txt */
     try (BufferedReader in =
         new BufferedReader(
             new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
 
-      String str;
-
-      str = in.readLine();
-
+      String str = in.readLine();
       Pattern pat = Pattern.compile(" ");
-      String[] result = pat.split(str);
-
+      String[] result = pat.split(str != null ? str : "");
       int current = 0;
       for (String s : result) {
         try {
-          int currentNo = Integer.parseInt(s);
-          dimensions[current++] = currentNo;
+          dimensions[current++] = Integer.parseInt(s);
         } catch (Exception _) {
           // Ignore parsing errors
         }
       }
 
       lines = new String[dimensions[0] + dimensions[1]];
-
       int n = 0;
-
       while ((str = in.readLine()) != null && n < lines.length) {
         lines[n] = str;
         n++;
       }
-      // in.close(); not needed; auto close
     } catch (FileNotFoundException _) {
       System.err.println("I can not find file " + filename);
     } catch (IOException _) {
@@ -248,23 +254,8 @@ public class Nonogram extends ExampleFd {
     row_rules = new int[dimensions[1]][];
     col_rules = new int[dimensions[0]][];
 
-    // Transforms strings into ints
     for (int i = 0; i < lines.length; i++) {
-
-      Pattern pat = Pattern.compile(" ");
-      String[] result = pat.split(lines[i]);
-
-      int[] sequence = new int[result.length];
-
-      int current = 0;
-      for (String s : result) {
-        try {
-          sequence[current++] = Integer.parseInt(s);
-        } catch (Exception _) {
-          // Ignore parsing errors
-        }
-      }
-
+      int[] sequence = parseIntSequence(lines[i]);
       if (i < row_rules.length) {
         row_rules[i] = sequence;
       } else {

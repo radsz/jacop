@@ -143,24 +143,28 @@ public class LengauerTarjan {
         dom[v] = semi[u] < semi[v] ? u : parent[w];
       }
     }
-    // step_4:
-    for (int i = 1; i < n; i++) {
-      int w = vertex[i];
-      if (dom[w] != vertex[semi[w]]) {
-        dom[w] = dom[dom[w]];
-      }
 
-      // add arc to domination tree
-      if (dom[w] != w) {
-        domTreeSucc[dom[w]].set(w);
-      }
-    }
+    completeDominators();
 
     dom[r] = r;
 
     transitiveClosure(root, domClosure[root]);
 
     return true;
+  }
+
+  private void completeDominators() {
+
+    for (int i = 1; i < n; i++) {
+      int w = vertex[i];
+      if (dom[w] != vertex[semi[w]]) {
+        dom[w] = dom[dom[w]];
+      }
+
+      if (dom[w] != w) {
+        domTreeSucc[dom[w]].set(w);
+      }
+    }
   }
 
   private void dfs(int v) {

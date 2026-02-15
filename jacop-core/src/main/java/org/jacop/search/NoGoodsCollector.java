@@ -92,23 +92,27 @@ public class NoGoodsCollector<T extends IntVar>
         noGood.add(value);
       }
 
-      if (exitChildListeners != null) {
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(v, value, status);
-        }
-      }
-
+      notifyExitChildListenersLeft(v, value, status);
       return false;
-    } else {
-      if (exitChildListeners == null) {
-        return true;
-      } else {
-        boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(v, value, status);
-        }
-        return code;
-      }
+    }
+
+    if (exitChildListeners == null) {
+      return true;
+    }
+    boolean code = false;
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      code |= exitChildListener.leftChild(v, value, status);
+    }
+    return code;
+  }
+
+  private void notifyExitChildListenersLeft(T v, int value, boolean status) {
+
+    if (exitChildListeners == null) {
+      return;
+    }
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      exitChildListener.leftChild(v, value, status);
     }
   }
 

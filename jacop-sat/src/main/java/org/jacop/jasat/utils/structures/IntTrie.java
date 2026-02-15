@@ -61,26 +61,10 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     this.root = root;
   }
 
-  /**
-   * Add i to the Trie.
-   *
-   * @param i the int to add to the Trie
-   * @return the node corresponding to i
-   */
-  public final N add(int i) {
-    // is it >= 0 ?
-    int j = i;
-    boolean isPos = true;
-    if (j < 0) {
-      isPos = false;
-      j = -j;
-    }
-
-    // go down the Trie
+  /** Traverses or creates path for |j|; returns the leaf node. */
+  private N traverseToLeaf(int j) {
     N current = root;
     while (j != 0) {
-
-      // least significant bit
       int lsb = j & 1;
       if (lsb == 0) {
         if (current.son0 == null) {
@@ -93,10 +77,22 @@ public class IntTrie<N extends IntTrie.Node<N>> {
         }
         current = current.son1;
       }
-      j = j >> 1; // shift right
+      j = j >> 1;
     }
+    return current;
+  }
 
-    // we have arrived to the leaf node
+  /**
+   * Add i to the Trie.
+   *
+   * @param i the int to add to the Trie
+   * @return the node corresponding to i
+   */
+  public final N add(int i) {
+    boolean isPos = i >= 0;
+    int j = isPos ? i : -i;
+    N current = traverseToLeaf(j);
+
     if (isPos) {
       if (!current.posMember) {
         size++;

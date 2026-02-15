@@ -399,14 +399,26 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /** Returns true if variable domains are considered sparse (density <= 0.5). */
+  private static boolean isSparseDomains(IntVar[] v) {
+    float q = 0;
+    int n = 0;
+    for (IntVar intVar : v) {
+      if (!intVar.singleton()) {
+        q += (float) intVar.getSize() / (float) (intVar.max() - intVar.min() + 1);
+        n++;
+      }
+    }
+    return n > 0 && (q / (float) n) <= 0.5;
+  }
+
   void gen_jacop_alldiff(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    if (v.length == 0) {
+    if (v.length == 0 || v.length == 1) {
       return;
-    } else if (v.length == 1) {
-      return;
-    } else if (v.length == 2) {
+    }
+    if (v.length == 2) {
       support.pose(new XneqY(v[0], v[1]));
       return;
     }
@@ -417,31 +429,16 @@ class GlobalConstraints implements ParserTreeConstants {
     for (IntVar vv : v) {
       dom = (IntervalDomain) dom.union(vv.dom());
     }
-    if (v.length <= 100) { // && v.length == dom.getSize()) {
-      // we do not not pose Alldistinct directly because of possible inconsistency with its
-      // intiallization; we collect all vectors and pose it at the end when all constraints are
-      // posed
-
-      // if domains of variables are sparse => use alldistinct
-      // instead of alldiff (heuristic)
-      float q = 0;
-      int n = 0;
-      for (IntVar intVar : v) {
-        if (!intVar.singleton()) {
-          q += (float) intVar.getSize() / (float) (intVar.max() - intVar.min() + 1);
-          n++;
-        }
-      }
-      q = q / (float) n;
-      boolean sparse = q <= 0.5;
-
-      if ((support.boundsConsistency || support.options.getBoundConsistency()) && !sparse) {
-        support.pose(new Alldiff(v));
-      } else { // domain consistency
-        support.parameterListForAlldistincts.add(v);
-      }
-    } else {
+    if (v.length > 100) {
       support.pose(new Alldiff(v));
+      return;
+    }
+    boolean useAlldiff =
+        (support.boundsConsistency || support.options.getBoundConsistency()) && !isSparseDomains(v);
+    if (useAlldiff) {
+      support.pose(new Alldiff(v));
+    } else {
+      support.parameterListForAlldistincts.add(v);
     }
   }
 

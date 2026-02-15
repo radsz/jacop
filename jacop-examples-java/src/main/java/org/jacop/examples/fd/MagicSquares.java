@@ -114,6 +114,14 @@ public class MagicSquares extends ExampleFd {
     runModelAndDual(args);
   }
 
+  /** Imposes a constraint and optionally adds it to guiding shaving list. */
+  private void imposeAndMaybeCollect(Constraint cx, boolean collectForShaving) {
+    store.impose(cx);
+    if (collectForShaving) {
+      guidingShaving.add(cx);
+    }
+  }
+
   /**
    * Builds the core magic square model; optionally collects row/column/diagonal constraints for
    * shaving.
@@ -151,11 +159,7 @@ public class MagicSquares extends ExampleFd {
 
     for (int i = 0; i < number; i++) {
       System.arraycopy(squares, i * number, row, 0, number);
-      Constraint cx = new SumInt(row, "==", k);
-      store.impose(cx);
-      if (collectForShaving) {
-        guidingShaving.add(cx);
-      }
+      imposeAndMaybeCollect(new SumInt(row, "==", k), collectForShaving);
     }
 
     IntVar[] column = new IntVar[number];
@@ -164,11 +168,7 @@ public class MagicSquares extends ExampleFd {
       for (int i = 0; i < number; i++) {
         column[i] = squares[i * number + j];
       }
-      Constraint cx = new SumInt(column, "==", k);
-      store.impose(cx);
-      if (collectForShaving) {
-        guidingShaving.add(cx);
-      }
+      imposeAndMaybeCollect(new SumInt(column, "==", k), collectForShaving);
     }
 
     IntVar[] diagonal = new IntVar[number];
@@ -177,11 +177,7 @@ public class MagicSquares extends ExampleFd {
       diagonal[i] = squares[i * number + i];
     }
 
-    Constraint cx = new SumInt(diagonal, "==", k);
-    store.impose(cx);
-    if (collectForShaving) {
-      guidingShaving.add(cx);
-    }
+    imposeAndMaybeCollect(new SumInt(diagonal, "==", k), collectForShaving);
 
     for (int i = number; i > 0; i--) {
       diagonal[i - 1] = squares[(i - 1) * number + (number - i)];

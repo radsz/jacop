@@ -129,60 +129,40 @@ public final class SearchModule
     mustStop = true;
   }
 
+  /** Handles conflict state: restart or backjump. Returns new current level. */
+  private int handleConflict(int currentLevel) {
+    assert core.currentLevel > 0;
+    if (restartH.shouldRestart) {
+      core.restart();
+      assert core.currentLevel == 0;
+      return core.currentLevel;
+    }
+    int bjLevel = core.getLevelToBackjump();
+    assert bjLevel < currentLevel;
+    core.backjumpToLevel(bjLevel);
+    core.triggerIdleEvent();
+    if (clauseToLearn != null) {
+      core.triggerLearnEvent(clauseToLearn);
+      clauseToLearn = null;
+    }
+    return core.currentLevel;
+  }
+
   /** Main search loop. */
   private void search() {
     int currentLevel = 0;
 
-    // loop until a solution is found or timeout occurs
     while (!mustStop) {
-
-      // if conflict, backtrack or restart
       if (core.currentState == SolverState.CONFLICT) {
-        assert core.currentLevel > 0; // else, should have solution
-
-        /*
-         * restarts may be proposed by the restart module. Otherwise,
-         * just perform a backjump.
-         */
-        if (restartH.shouldRestart) {
-          // restart
-
-          core.restart();
-          currentLevel = core.currentLevel;
-          assert currentLevel == 0;
-
-        } else {
-          // backjump
-
-          int bjLevel = core.getLevelToBackjump();
-          assert bjLevel < currentLevel;
-          core.backjumpToLevel(bjLevel);
-          core.triggerIdleEvent();
-
-          if (clauseToLearn != null) {
-            core.triggerLearnEvent(clauseToLearn);
-            clauseToLearn = null;
-          }
-
-          currentLevel = core.currentLevel;
-        }
-
+        currentLevel = handleConflict(currentLevel);
       } else {
-        // no conflict, one search step
-
         currentLevel++;
-
-        // find literal (if not possible, return unsatisfiable)
         int nextLiteral = assertionH.findNextVar();
-
         if (nextLiteral == 0) {
-          // if no literal is available, solver must be SAT
           assert core.hasSolution();
-
           break;
-        } else {
-          core.assertLiteral(nextLiteral, currentLevel);
         }
+        core.assertLiteral(nextLiteral, currentLevel);
       }
     }
   }

@@ -1497,60 +1497,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> createPrioritySubSearch(SearchItem<T> s) {
+    return switch (s.search_type) {
+      case INT_SEARCH, BOOL_SEARCH -> int_search(s);
+      case SET_SEARCH -> set_search(s);
+      case FLOAT_SEARCH -> float_search(s);
+      case SEQ_SEARCH -> {
+        DepthFirstSearch<T> sub = sub_search(s, null, false);
+        DepthFirstSearch<T> ns = sub;
+        do {
+          ns.setPrintInfo(false);
+          ns = ns.childSearches == null ? null : (DepthFirstSearch<T>) ns.childSearches[0];
+        } while (ns != null);
+        yield sub;
+      }
+      case PRIORITY_SEARCH -> priority_search(s);
+      default ->
+          throw new RuntimeException(
+              "Error: Not supported search type "
+                  + s.search_type
+                  + "in priority_search; execution aborted");
+    };
+  }
+
+  @SuppressWarnings("unchecked")
   DepthFirstSearch<T> priority_search(SearchItem<T> si) {
 
     ArrayList<SearchItem<T>> dfs_s = si.getSearchItems();
     DepthFirstSearch<T>[] searches = new DepthFirstSearch[dfs_s.size()];
     int i = 0;
     for (SearchItem<T> s : dfs_s) {
-
-      DepthFirstSearch<T> subSearch;
-      switch (s.search_type) {
-        case INT_SEARCH, BOOL_SEARCH -> {
-          subSearch = int_search(s);
-          subSearch.setSelectChoicePoint(variable_selection);
-          subSearch.setPrintInfo(false);
-          searches[i++] = subSearch;
-        }
-        case SET_SEARCH -> {
-          subSearch = set_search(s);
-          subSearch.setSelectChoicePoint(variable_selection);
-          subSearch.setPrintInfo(false);
-          searches[i++] = subSearch;
-        }
-        case FLOAT_SEARCH -> {
-          subSearch = float_search(s);
-          subSearch.setSelectChoicePoint(variable_selection);
-          subSearch.setPrintInfo(false);
-          searches[i++] = subSearch;
-        }
-        case SEQ_SEARCH -> {
-          subSearch = sub_search(s, null, false);
-
-          DepthFirstSearch<T> ns = subSearch;
-          do {
-            ns.setPrintInfo(false);
-            // find next search
-            if (ns.childSearches == null) {
-              ns = null;
-            } else {
-              ns = (DepthFirstSearch) ns.childSearches[0];
-            }
-          } while (ns != null);
-
-          searches[i++] = subSearch;
-        }
-        case PRIORITY_SEARCH -> {
-          subSearch = priority_search(s);
-          subSearch.setPrintInfo(false);
-          searches[i++] = subSearch;
-        }
-        default ->
-            throw new RuntimeException(
-                "Error: Not supported search type "
-                    + s.search_type
-                    + "in priority_search; execution aborted");
-      }
+      DepthFirstSearch<T> subSearch = createPrioritySubSearch(s);
+      subSearch.setSelectChoicePoint(variable_selection);
+      subSearch.setPrintInfo(false);
+      searches[i++] = subSearch;
     }
 
     SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
@@ -1586,6 +1566,45 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   @SuppressWarnings("unchecked")
+  private void appendVariableOutput(StringBuffer printBuffer, Var v) {
+    if (v instanceof BooleanVar var1) {
+      printBuffer.append(v.id()).append(" = ");
+      if (v.singleton()) {
+        switch (var1.value()) {
+          case 0 -> printBuffer.append("false");
+          case 1 -> printBuffer.append("true");
+          default -> printBuffer.append(v.dom());
+        }
+      } else {
+        printBuffer.append("false..true");
+      }
+      printBuffer.append(";\n");
+    } else if (v instanceof SetVar setVar) {
+      printBuffer.append(v.id()).append(" = ");
+      if (v.singleton()) {
+        IntDomain glb = setVar.dom().glb();
+        if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+          printBuffer.append(glb.min()).append("..").append(glb.max());
+        } else {
+          printBuffer.append("{");
+          for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+            printBuffer.append(e.nextElement());
+            if (e.hasMoreElements()) {
+              printBuffer.append(", ");
+            }
+          }
+          printBuffer.append("}");
+        }
+      } else {
+        printBuffer.append(v.dom().toString());
+      }
+      printBuffer.append(";\n");
+    } else {
+      printBuffer.append(v).append(";\n");
+    }
+  }
+
+  @SuppressWarnings("unchecked")
   void printSolution() {
 
     StringBuffer printBuffer = new StringBuffer();
@@ -1593,53 +1612,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (!dictionary.outputVariables.isEmpty()) {
       for (int i = 0; i < dictionary.outputVariables.size(); i++) {
-        Var v = dictionary.outputVariables.get(i);
-
-        if (v instanceof BooleanVar var1) {
-          // print boolean variables
-          printBuffer.append(v.id()).append(" = ");
-          if (v.singleton()) {
-            switch (var1.value()) {
-              case 0:
-                printBuffer.append("false");
-                break;
-              case 1:
-                printBuffer.append("true");
-                break;
-              default:
-                printBuffer.append(v.dom());
-            }
-          } else {
-            printBuffer.append("false..true");
-          }
-
-          printBuffer.append(";\n");
-        } else if (v instanceof SetVar setVar) {
-          // print set variables
-          printBuffer.append(v.id()).append(" = ");
-          if (v.singleton()) {
-            IntDomain glb = setVar.dom().glb();
-            if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
-              printBuffer.append(glb.min()).append("..").append(glb.max());
-            } else {
-              printBuffer.append("{");
-              for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                int element = e.nextElement();
-                printBuffer.append(element);
-                if (e.hasMoreElements()) {
-                  printBuffer.append(", ");
-                }
-              }
-              printBuffer.append("}");
-            }
-          } else {
-            printBuffer.append(v.dom().toString());
-          }
-
-          printBuffer.append(";\n");
-        } else {
-          printBuffer.append(v).append(";\n");
-        }
+        appendVariableOutput(printBuffer, dictionary.outputVariables.get(i));
       }
     }
 
@@ -1719,35 +1692,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  private IntVar getCostFromIdent(String ident) {
+    IntVar cost = dictionary.getVariable(ident);
+    if (cost != null) {
+      return cost;
+    }
+    Integer costInt = dictionary.checkInt(ident);
+    return costInt != null ? new IntVar(store, costInt, costInt) : null;
+  }
+
+  private IntVar getCostFromArrayAccess(String ident, int index) {
+    IntVar[] a = dictionary.getVariableArray(ident);
+    if (a != null) {
+      return a[index];
+    }
+    int[] costInt = dictionary.getIntArray(ident);
+    if (costInt != null) {
+      return new IntVar(store, costInt[index], costInt[index]);
+    }
+    return null;
+  }
+
   IntVar getCost(ASTSolveExpr node) {
 
     if (node.getType() == 0) { // ident
-      IntVar cost = dictionary.getVariable(node.getIdent());
-      if (cost != null) {
-        return cost;
-      } else { // cost is constant ?
-        Integer costInt = dictionary.checkInt(node.getIdent());
-        if (costInt != null) {
-          return new IntVar(store, costInt, costInt);
-        } else {
-          return null;
-        }
-      }
-    } else if (node.getType() == 1) { // array access
-      IntVar[] a = dictionary.getVariableArray(node.getIdent());
-      if (a != null) {
-        return a[node.getIndex()];
-      } else { // cost is constant ?
-        int[] costInt = dictionary.getIntArray(node.getIdent());
-        if (costInt != null) {
-          return new IntVar(store, costInt[node.getIndex()], costInt[node.getIndex()]);
-        } else {
-          return null;
-        }
-      }
-    } else {
-      throw new IllegalArgumentException("Wrong cost function specification " + node);
+      return getCostFromIdent(node.getIdent());
     }
+    if (node.getType() == 1) { // array access
+      return getCostFromArrayAccess(node.getIdent(), node.getIndex());
+    }
+    throw new IllegalArgumentException("Wrong cost function specification " + node);
   }
 
   FloatVar getCostFloat(ASTSolveExpr node) {

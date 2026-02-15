@@ -68,16 +68,8 @@ public class QueueForward<T extends Constraint> {
       forwardMap.put(v, new ArrayList<>());
       for (T constraint : constraints) {
 
-        if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
-
-          try {
-            // We assume that all constraint needing queueVariable declare this method, even for
-            // the ones that inherit from other constraints.
-            constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-            forwardMap.get(v).add(constraint);
-          } catch (NoSuchMethodException ignored) {
-            // constraint may use empty queueVariable provided by abstract class Constraint
-          }
+        if (constraintUsesQueueVariable(constraint, v)) {
+          forwardMap.get(v).add(constraint);
         }
       }
     }
@@ -96,6 +88,22 @@ public class QueueForward<T extends Constraint> {
     }
 
     isEmpty = forwardMap.isEmpty();
+  }
+
+  private boolean constraintUsesQueueVariable(T constraint, Var v) {
+
+    if (!(constraint instanceof UsesQueueVariable) || !constraint.arguments().contains(v)) {
+      return false;
+    }
+    try {
+      // We assume that all constraint needing queueVariable declare this method, even for
+      // the ones that inherit from other constraints.
+      constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
+      return true;
+    } catch (NoSuchMethodException ignored) {
+      // constraint may use empty queueVariable provided by abstract class Constraint
+      return false;
+    }
   }
 
   /**

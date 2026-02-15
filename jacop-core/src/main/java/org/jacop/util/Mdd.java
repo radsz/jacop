@@ -632,24 +632,12 @@ public class Mdd {
       }
     }
 
-    if (same[level][numberOfChildren] != null) {
-      for (int j = same[level][numberOfChildren].size() - 1; j >= 0; j--) {
-        int[] currentNode = same[level][numberOfChildren].get(j);
-        boolean equal = true;
-        for (int i = currentNode.length - 1; i >= 0; i--) {
-          if (currentNode[i] != nodeChildren[i]) {
-            equal = false;
-            break;
-          }
-        }
-        if (equal) {
-          reducedNodes.put(node, domainLimits[level]);
-          memorySavings += domainLimits[level];
-          return id[level][numberOfChildren].get(j);
-        }
-      }
-    } else {
+    Integer existingId = findEqualNode(level, numberOfChildren, nodeChildren, node);
+    if (existingId != null) {
+      return existingId;
+    }
 
+    if (same[level][numberOfChildren] == null) {
       same[level][numberOfChildren] = new ArrayList<>();
       id[level][numberOfChildren] = new ArrayList<>();
     }
@@ -658,6 +646,29 @@ public class Mdd {
     same[level][numberOfChildren].add(nodeChildren);
 
     return node;
+  }
+
+  private Integer findEqualNode(int level, int numberOfChildren, int[] nodeChildren, int node) {
+
+    if (same[level][numberOfChildren] == null) {
+      return null;
+    }
+    for (int j = same[level][numberOfChildren].size() - 1; j >= 0; j--) {
+      int[] currentNode = same[level][numberOfChildren].get(j);
+      boolean equal = true;
+      for (int i = currentNode.length - 1; i >= 0; i--) {
+        if (currentNode[i] != nodeChildren[i]) {
+          equal = false;
+          break;
+        }
+      }
+      if (equal) {
+        reducedNodes.put(node, domainLimits[level]);
+        memorySavings += domainLimits[level];
+        return id[level][numberOfChildren].get(j);
+      }
+    }
+    return null;
   }
 
   /**

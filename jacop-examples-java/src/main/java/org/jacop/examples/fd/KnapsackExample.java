@@ -220,6 +220,32 @@ public class KnapsackExample extends ExampleFd {
     store.impose(new LinearInt(v.quantity, data.profits, "==", v.profit));
   }
 
+  /** Computes total number of items from args (weight, profit, maxQty, name per group). */
+  private static int countItemsFromArgs(String[] args) {
+    int noItems = 0;
+    for (int i = 3; i < args.length; i += 4) {
+      noItems += Integer.parseInt(args[i]);
+    }
+    return noItems;
+  }
+
+  /**
+   * Fills weights, profits, names from args; arrays must be allocated with length from
+   * countItemsFromArgs.
+   */
+  private static void fillItemsFromArgs(
+      String[] args, int[] weights, int[] profits, String[] names) {
+    int currentItem = 0;
+    for (int i = 1; i < args.length; i += 4) {
+      for (int j = Integer.parseInt(args[i + 2]); j > 0; j--) {
+        weights[currentItem] = Integer.parseInt(args[i]);
+        profits[currentItem] = Integer.parseInt(args[i + 1]);
+        names[currentItem] = args[i + 3] + "_" + j;
+        currentItem++;
+      }
+    }
+  }
+
   /**
    * It creates a model where quantity variable is allowed only to be between 0 and 1, so if the
    * original description allows n items n copies of that items must be created.
@@ -249,26 +275,15 @@ public class KnapsackExample extends ExampleFd {
       "cigarets_4"
     };
 
-    // It is possible to supply the program
-    // with the volume size and items (weight, profit, maximumQuantity, name)
+    // It is possible to supply the program with volume size and items (weight, profit, maxQty,
+    // name)
     if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
       volume = Integer.parseInt(args[0]);
-      noItems = 0;
-      for (int i = 3; i < args.length; i += 4) {
-        noItems += Integer.parseInt(args[i]);
-      }
+      noItems = countItemsFromArgs(args);
       weights = new int[noItems];
       profits = new int[noItems];
       names = new String[noItems];
-      int currentItem = 0;
-      for (int i = 1; i < args.length; i += 4) {
-        for (int j = Integer.parseInt(args[i + 2]); j > 0; j--) {
-          weights[currentItem] = Integer.parseInt(args[i]);
-          profits[currentItem] = Integer.parseInt(args[i + 1]);
-          names[currentItem] = args[i + 3] + "_" + j;
-          currentItem++;
-        }
-      }
+      fillItemsFromArgs(args, weights, profits, names);
     }
 
     // Creating constraint store

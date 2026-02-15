@@ -89,6 +89,29 @@ public class IntervalGaussSeidel {
     return Math.max(vMax, vMin);
   }
 
+  /** Applies the computed row permutation to A and b. */
+  private void applyRestructuring(int[] row) {
+    FloatInterval[][] tempA = new FloatInterval[A.length][A.length];
+    double[] tempb = new double[A.length];
+    for (int i = 0; i < A.length; i++) {
+      tempb[i] = b[row[i]];
+      System.arraycopy(A[row[i]], 0, tempA[i], 0, A[i].length);
+    }
+    A = tempA;
+    b = tempb;
+  }
+
+  /** Returns true if row index i is suitable for currentRow (diagonal dominance). */
+  private boolean isDiagonallyDominant(int i, int currentRow) {
+    double sumMax = 0;
+    for (int j = 0; j < A.length; j++) {
+      if (j != currentRow) {
+        sumMax += maxAbs(A[i][j]);
+      }
+    }
+    return minAbs(A[i][currentRow]) > sumMax;
+  }
+
   /**
    * Restructures the matrix to achieve diagonal dominance if possible.
    *
@@ -100,42 +123,20 @@ public class IntervalGaussSeidel {
   public boolean restructure(int currentRow, boolean[] done, int[] row) {
 
     if (currentRow == A.length) {
-      FloatInterval[][] tempA = new FloatInterval[A.length][A.length];
-      double[] tempb = new double[A.length];
-      for (int i = 0; i < A.length; i++) {
-        tempb[i] = b[row[i]];
-        System.arraycopy(A[row[i]], 0, tempA[i], 0, A[i].length);
-      }
-
-      A = tempA;
-      b = tempb;
-
+      applyRestructuring(row);
       return true;
     }
 
     for (int i = 0; i < A.length; i++) {
-      if (done[i]) {
+      if (done[i] || !isDiagonallyDominant(i, currentRow)) {
         continue;
       }
-
-      double sumMax = 0;
-
-      for (int j = 0; j < A.length; j++) {
-        if (j != currentRow) {
-          sumMax += maxAbs(A[i][j]);
-        }
+      done[i] = true;
+      row[currentRow] = i;
+      if (restructure(currentRow + 1, done, row)) {
+        return true;
       }
-
-      if (minAbs(A[i][currentRow]) > sumMax) { // interval version of diagonal dominance
-        done[i] = true;
-        row[currentRow] = i;
-
-        if (restructure(currentRow + 1, done, row)) {
-          return true;
-        }
-
-        done[i] = false;
-      }
+      done[i] = false;
     }
     return false;
   }

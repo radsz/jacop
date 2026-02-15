@@ -826,6 +826,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         e--;
       }
     }
+    logMatch3Debug();
+  }
+
+  private void logMatch3Debug() {
     if (DEBUG) {
       StringBuilder sb = new StringBuilder("match3 : ");
       for (int aMatch3 : match3) {
@@ -1124,33 +1128,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     upperCount(max_u);
     lowerCount(min_l);
 
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("max_u ");
-      for (int aMax_u : max_u) {
-        sb.append(aMax_u).append(" ");
-      }
-      log.debug("{}", sb);
-
-      sb = new StringBuilder("min_l ");
-      for (int aMin_l : min_l) {
-        sb.append(aMin_l).append(" ");
-      }
-      log.debug("{}", sb);
-    }
+    logMaxUAndMinLDebug(max_u, min_l);
     for (int i = 0; i < ySize; i++) {
-      if (DEBUG) {
-        log.debug(
-            "do pruning [{},{}] => [{},{}]",
-            counters[i].min(),
-            counters[i].max(),
-            min_l[i],
-            max_u[i]);
-      }
-
-      if (yDomain[1][i] != max_u[i] || yDomain[0][i] != min_l[i]) {
-        yDomain[0][i] = min_l[i];
-        yDomain[1][i] = max_u[i];
-      }
+      applyYDomainPruningForI(i, max_u, min_l);
     }
     // add the rest of nodes not treated in this pass that was already singleton
     if (DEBUG) {
@@ -1172,6 +1152,34 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     for (int i = 0; i < ySize; i++) {
       counters[i].domain.in(store.level, counters[i], yDomain[0][i], yDomain[1][i]);
+    }
+  }
+
+  private void logMaxUAndMinLDebug(int[] maxU, int[] minL) {
+    if (DEBUG) {
+      StringBuilder sb = new StringBuilder("max_u ");
+      for (int aMax_u : maxU) {
+        sb.append(aMax_u).append(" ");
+      }
+      log.debug("{}", sb);
+
+      sb = new StringBuilder("min_l ");
+      for (int aMin_l : minL) {
+        sb.append(aMin_l).append(" ");
+      }
+      log.debug("{}", sb);
+    }
+  }
+
+  private void applyYDomainPruningForI(int i, int[] maxU, int[] minL) {
+    if (DEBUG) {
+      log.debug(
+          "do pruning [{},{}] => [{},{}]", counters[i].min(), counters[i].max(), minL[i], maxU[i]);
+    }
+
+    if (yDomain[1][i] != maxU[i] || yDomain[0][i] != minL[i]) {
+      yDomain[0][i] = minL[i];
+      yDomain[1][i] = maxU[i];
     }
   }
 

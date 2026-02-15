@@ -180,11 +180,7 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
         // have all values been signaled as already supported
         // notSupportYet is empty for all variables level..vars.length
 
-        int j = level;
-        while (j < views.length && views[j].isSupported()) {
-          j++;
-        }
-        if (j == views.length) {
+        if (allIndexesSupportedFrom(level)) {
           break;
         }
       }
@@ -197,6 +193,14 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
     }
 
     return result;
+  }
+
+  private boolean allIndexesSupportedFrom(int level) {
+    int j = level;
+    while (j < views.length && views[j].isSupported()) {
+      j++;
+    }
+    return j == views.length;
   }
 
   @Override

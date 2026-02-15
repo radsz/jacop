@@ -251,18 +251,7 @@ public class LinearIntDom extends LinearInt {
       int valInt = (int) val;
       if (rest == 0 && valInt == val && x[index].domain.contains(valInt)) {
         assignments[index] = valInt;
-
-        // store assignments
-        for (int i = 0; i < l; i++) {
-          int a = assignments[i];
-          if (support[i] == null) {
-            support[i] = new IntervalDomain(a, a);
-          } else if (support[i].max() < a) {
-            support[i].addLastElement(a);
-          } else if (support[i].max() > a) {
-            support[i].unionAdapt(a, a);
-          }
-        }
+        storeAssignmentsToSupport();
       }
       return;
     }
@@ -286,6 +275,19 @@ public class LinearIntDom extends LinearInt {
       processIntervalDomain(currentDom, index, newIndex, w, lb, ub, partialSum, positive);
     } else {
       processValueEnumeration(currentDom, index, newIndex, w, lb, ub, partialSum, positive);
+    }
+  }
+
+  private void storeAssignmentsToSupport() {
+    for (int i = 0; i < l; i++) {
+      int a = assignments[i];
+      if (support[i] == null) {
+        support[i] = new IntervalDomain(a, a);
+      } else if (support[i].max() < a) {
+        support[i].addLastElement(a);
+      } else if (support[i].max() > a) {
+        support[i].unionAdapt(a, a);
+      }
     }
   }
 

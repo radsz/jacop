@@ -265,25 +265,30 @@ public class Lex extends DecomposedConstraint<Constraint> {
       int k = 0;
       for (int i = 0; i < lt.length; i++) {
         for (int j = 0; j < lt[i].length; j++) {
-          vars[k++] = lt[i][j];
-          if (isLe) {
-            vars[k++] = eq[i][j];
-            fsm.allStates.add(state[i][j][0]);
-            fsm.allStates.add(state[i][j][1]);
-          } else {
-            if (j < eq[i].length) {
-              vars[k++] = eq[i][j];
-            }
-            fsm.allStates.add(state[i][j][0]);
-            if (j < eq[i].length) {
-              fsm.allStates.add(state[i][j][1]);
-            }
-          }
+          k = addVarsAndStatesFor(i, j, k);
         }
       }
       for (FsmState[] fsmStates : addState) {
         fsm.allStates.addAll(Arrays.asList(fsmStates));
       }
+    }
+
+    private int addVarsAndStatesFor(int i, int j, int k) {
+      vars[k++] = lt[i][j];
+      if (isLe) {
+        vars[k++] = eq[i][j];
+        fsm.allStates.add(state[i][j][0]);
+        fsm.allStates.add(state[i][j][1]);
+      } else {
+        if (j < eq[i].length) {
+          vars[k++] = eq[i][j];
+        }
+        fsm.allStates.add(state[i][j][0]);
+        if (j < eq[i].length) {
+          fsm.allStates.add(state[i][j][1]);
+        }
+      }
+      return k;
     }
 
     private void initializeFsm() {

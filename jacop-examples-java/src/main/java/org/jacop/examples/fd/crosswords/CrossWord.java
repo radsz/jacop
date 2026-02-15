@@ -224,6 +224,14 @@ public class CrossWord extends ExampleFd {
     }
   }
 
+  /** Returns true if the line should be skipped (comment or wrong length). */
+  private static boolean skipDictionaryLine(String line, int wordSize) {
+    if (line.startsWith("#") || line.startsWith("%")) {
+      return true;
+    }
+    return line.length() != wordSize;
+  }
+
   /**
    * It reads a dictionary. For every word length specified it reads a dictionary and creates an Mdd
    * representation of it for use by an extensional constraint.
@@ -236,10 +244,8 @@ public class CrossWord extends ExampleFd {
     for (int wordSize : wordSizes) {
 
       int wordCount = 0;
-
       IntVar[] list = new IntVar[wordSize];
       Arrays.fill(list, blank);
-
       int[] tupleForGivenWord = new int[wordSize];
       Mdd resultForWordSize = new Mdd(list);
 
@@ -249,29 +255,16 @@ public class CrossWord extends ExampleFd {
 
         String str;
         while ((str = inr.readLine()) != null && !str.isEmpty()) {
-
           str = str.trim();
-
-          // ignore comments
-          // starting with either # or %
-          if (str.startsWith("#") || str.startsWith("%")) {
+          if (skipDictionaryLine(str, wordSize)) {
             continue;
           }
-
-          if (str.length() != wordSize) {
-            continue;
-          }
-
           for (int i = 0; i < wordSize; i++) {
             tupleForGivenWord[i] = str.charAt(i);
           }
-
           wordCount++;
           resultForWordSize.addTuple(tupleForGivenWord);
-
-          //           lineCount++;
-
-        } // end while
+        }
 
       } catch (IOException e) {
         IO.println(e);

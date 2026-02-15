@@ -817,34 +817,30 @@ public class FloatIntervalDomain extends FloatDomain {
     assert checkInvariants() == null : checkInvariants();
 
     FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
-
-    int pointer1 = 0;
-    int pointer2 = 0;
-
     int size2 = intervalDomain.size;
 
     if (size == 0 || size2 == 0) {
       return false;
     }
 
-    FloatInterval interval1 = intervals[pointer1];
-    FloatInterval interval2 = intervalDomain.intervals[pointer2];
+    int p1 = 0;
+    int p2 = 0;
+    FloatInterval interval1 = intervals[p1];
+    FloatInterval interval2 = intervalDomain.intervals[p2];
 
     while (true) {
       if (interval1.max() < interval2.min()) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-        } else {
+        p1++;
+        if (p1 >= size) {
           break;
         }
+        interval1 = intervals[p1];
       } else if (interval2.max() < interval1.min()) {
-        pointer2++;
-        if (pointer2 < size2) {
-          interval2 = intervalDomain.intervals[pointer2];
-        } else {
+        p2++;
+        if (p2 >= size2) {
           break;
         }
+        interval2 = intervalDomain.intervals[p2];
       } else {
         return true;
       }

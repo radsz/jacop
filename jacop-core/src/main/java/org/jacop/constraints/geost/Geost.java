@@ -1747,34 +1747,51 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       return;
     }
 
-    if (lastLevelLastVar.value() < removeLimit) {
-      for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
-
-        Var v = groundedVars.remove(i);
-        assert v != null;
-
-        if (DEBUG_OBJECT_GROUNDING) {
-          log.debug("The variable {} is being ungrounded", v);
-        }
-
-        // no need to check for null as only not null variables are put in groundedVars.
-        variableObjectMap.get(v).onUnGround(v);
-      }
-    }
+    ungroundVariablesAboveRemoveLimit();
 
     backtracking = true;
 
-    if (!updatedObjectSet.isEmpty()) {
-      for (GeostObject o : updatedObjectSet) {
+    restoreUpdatedObjects();
+    updatedObjectSet.clear();
 
-        onObjectUpdate(o);
-        if (DEBUG_BACKTRACK) {
-          log.debug("restored object {}", o);
-        }
+    restoreObjectsFromList();
+
+    backtracking = false;
+  }
+
+  private void ungroundVariablesAboveRemoveLimit() {
+
+    if (lastLevelLastVar.value() >= removeLimit) {
+      return;
+    }
+    for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
+
+      Var v = groundedVars.remove(i);
+      assert v != null;
+
+      if (DEBUG_OBJECT_GROUNDING) {
+        log.debug("The variable {} is being ungrounded", v);
+      }
+
+      variableObjectMap.get(v).onUnGround(v);
+    }
+  }
+
+  private void restoreUpdatedObjects() {
+
+    if (updatedObjectSet.isEmpty()) {
+      return;
+    }
+    for (GeostObject o : updatedObjectSet) {
+
+      onObjectUpdate(o);
+      if (DEBUG_BACKTRACK) {
+        log.debug("restored object {}", o);
       }
     }
+  }
 
-    updatedObjectSet.clear();
+  private void restoreObjectsFromList() {
 
     int lowerBound = setStart.value();
     for (int i = objectList.size() - 1; i >= lowerBound; i--) {
@@ -1783,15 +1800,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       assert o != null;
 
-      //   // else it was already updated
       onObjectUpdate(o);
 
       if (DEBUG_BACKTRACK) {
         log.debug("restored object {}", o);
       }
     }
-
-    backtracking = false;
   }
 
   @Override

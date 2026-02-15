@@ -1569,18 +1569,30 @@ public class SmallDenseDomain extends IntDomain {
         temp = temp << 8;
         shift += 8;
       } else {
-        for (int i = 7; i >= 0; i--) {
-          if (temp < 0) {
-            return minBound + shift;
-          } else {
-            temp = temp << 1;
-            shift++;
-          }
-        }
-
-        assert false : "It should not be here.";
+        return nextValueInByte(temp, shift);
       }
     }
+  }
+
+  /**
+   * Scans the high 8 bits of temp for the next set bit and returns the corresponding value.
+   *
+   * @param temp the shifted bit vector (high 8 bits are scanned).
+   * @param shift current shift amount (0-based position from minBound).
+   * @return minBound + shift for the first set bit in the high byte.
+   */
+  private int nextValueInByte(long temp, int shift) {
+
+    for (int i = 7; i >= 0; i--) {
+      if (temp < 0) {
+        return minBound + shift;
+      }
+      temp = temp << 1;
+      shift++;
+    }
+
+    assert false : "It should not be here.";
+    return minBound + shift;
   }
 
   @Override

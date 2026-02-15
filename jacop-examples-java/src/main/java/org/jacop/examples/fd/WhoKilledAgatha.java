@@ -91,6 +91,17 @@ public class WhoKilledAgatha extends ExampleFd {
     }
   } // end main
 
+  /** Imposes richer symmetry: if i is richer than j then j is not richer than i. */
+  private void imposeRicherSymmetry(IntVar[][] richer, int n) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (i != j) {
+          store.impose(new Eq(new XeqC(richer[i][j], 1), new XeqC(richer[j][i], 0)));
+        }
+      }
+    }
+  }
+
   /** Creates the constraint model for the "Who Killed Agatha" logic puzzle. */
   @Override
   public void model() {
@@ -115,71 +126,44 @@ public class WhoKilledAgatha extends ExampleFd {
 
     vars = new ArrayList<>();
 
-    // """
-    // Agatha, the butler, and Charles live in Dreadsbury Mansion, and
-    // are the only ones to live there.
-    // """
-
     // "A killer always hates, and is no richer than his victim."
     for (int i = 0; i < n; i++) {
       store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(hates[i][agatha], 1)));
-
       store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(richer[i][agatha], 0)));
     }
 
-    // define the concept of richer:
-    //   a) no one is richer than him-/herself
     for (int i = 0; i < n; i++) {
       store.impose(new XeqC(richer[i][i], 0));
     }
 
-    // (contd...)
-    //   b) if i is richer than j then j is not richer than i
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (i != j) {
-          // MiniZinc: richer[i,j] == 1 <-> richer[j,i] == 0
-          store.impose(new Eq(new XeqC(richer[i][j], 1), new XeqC(richer[j][i], 0)));
-        }
-      }
-    }
+    imposeRicherSymmetry(richer, n);
 
     // "Agatha hates everybody except the butler. "
     store.impose(new XeqC(hates[agatha][charles], 1));
     store.impose(new XeqC(hates[agatha][agatha], 1));
     store.impose(new XeqC(hates[agatha][butler], 0));
 
-    // "Charles hates no one that Agatha hates."
     for (int i = 0; i < n; i++) {
-      // MiniZinc: hates[agatha, i] = 1 -> hates[charles, i] = 0
       store.impose(new IfThen(new XeqC(hates[agatha][i], 1), new XeqC(hates[charles][i], 0)));
     }
 
-    // "The butler hates everyone not richer than Aunt Agatha. "
     for (int i = 0; i < n; i++) {
-      // MiniZinc: richer[i, agatha] = 0 -> hates[butler, i] = 1
       store.impose(new IfThen(new XeqC(richer[i][agatha], 0), new XeqC(hates[butler][i], 1)));
     }
 
-    // "The butler hates everyone whom Agatha hates."
     for (int i = 0; i < n; i++) {
-      // MiniZinc: hates[agatha, i] = 1 -> hates[butler, i] = 1
       store.impose(new IfThen(new XeqC(hates[agatha][i], 1), new XeqC(hates[butler][i], 1)));
     }
 
     vars.add(the_killer);
-
     for (int i = 0; i < n; i++) {
       vars.addAll(Arrays.asList(hates[i]).subList(0, n));
     }
-
     for (int i = 0; i < n; i++) {
       vars.addAll(Arrays.asList(richer[i]).subList(0, n));
     }
 
-    // "No one hates everyone. "
     for (int i = 0; i < n; i++) {
-      // MiniZinc: sum(j in r) (hates[i,j]) <= 2
       IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
       store.impose(new SumInt(hates[i], "==", a_sum));
       store.impose(new XlteqC(a_sum, 2));

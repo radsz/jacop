@@ -292,13 +292,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         log.debug("and detauch those who are not intersecting the future dom");
       }
 
-      for (i = yGround; i < listOfY.length; i++) {
-        y = listOfY[i];
-        if (y.domain.isIntersecting(futureDom)) {
-          y.domain.in(store.level, y, y.domain.intersect(futureDom));
-        } else {
-          y.removeConstraint(this);
-        }
+      pruneOrDetachYToFutureDom(store, futureDom, yGround);
+    }
+  }
+
+  private void pruneOrDetachYToFutureDom(Store store, IntDomain futureDom, int yGround) {
+
+    for (int i = yGround; i < listOfY.length; i++) {
+      IntVar y = listOfY[i];
+      if (y.domain.isIntersecting(futureDom)) {
+        y.domain.in(store.level, y, y.domain.intersect(futureDom));
+      } else {
+        y.removeConstraint(this);
       }
     }
   }

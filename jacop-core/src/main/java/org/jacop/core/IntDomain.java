@@ -238,22 +238,26 @@ public abstract class IntDomain extends Domain {
       result = divIntBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
 
     } else if (c <= d) { // case 5
-      double ac = (double) a / c;
-      double ad = (double) a / d;
-      double bc = (double) b / c;
-      double bd = (double) b / d;
-      double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-      double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-      min = (int) Math.round(Math.ceil(low));
-      max = (int) Math.round(Math.floor(high));
-      if (min > max) {
-        throw Store.failException;
-      }
-      result = new Interval(min, max);
+      result = divIntBoundsCase5(a, b, c, d);
     } else {
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
     }
     return result;
+  }
+
+  private static Interval divIntBoundsCase5(int a, int b, int c, int d) {
+    double ac = (double) a / c;
+    double ad = (double) a / d;
+    double bc = (double) b / c;
+    double bd = (double) b / d;
+    double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+    double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+    int min = (int) Math.round(Math.ceil(low));
+    int max = (int) Math.round(Math.floor(high));
+    if (min > max) {
+      throw Store.failException;
+    }
+    return new Interval(min, max);
   }
 
   /**
