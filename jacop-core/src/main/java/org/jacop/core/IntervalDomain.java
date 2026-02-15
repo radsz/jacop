@@ -118,6 +118,23 @@ public class IntervalDomain extends IntDomain {
     return ANY;
   }
 
+  private IntDomain intersectFromSparse(IntDomain domain) {
+    IntDomain temp = null;
+    try {
+      temp = domain.getClass().getConstructor().newInstance();
+    } catch (Exception ex) {
+      log.error("{}", ex.getMessage());
+    }
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      if (this.contains(next)) {
+        temp.unionAdapt(next, next);
+      }
+    }
+    return temp;
+  }
+
   /** Ensures the intervals array can hold at least one more element beyond current size. */
   private void ensureCapacity() {
     if (size >= intervals.length) {
@@ -422,6 +439,12 @@ public class IntervalDomain extends IntDomain {
     }
   }
 
+  private void addDomForBoundDomain(IntDomain domain) {
+    assert checkInvariants() == null : checkInvariants();
+    unionAdapt(domain.min(), domain.max());
+    assert checkInvariants() == null : checkInvariants();
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -436,9 +459,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-      assert checkInvariants() == null : checkInvariants();
-      unionAdapt(domain.min(), domain.max());
-      assert checkInvariants() == null : checkInvariants();
+      addDomForBoundDomain(domain);
       return;
     }
 
@@ -452,6 +473,27 @@ public class IntervalDomain extends IntDomain {
     } else {
       addDomFromIntervalEnumeration(domain);
     }
+  }
+
+  private boolean isIntersectingSmallDense(SmallDenseDomain input) {
+    ValueEnumeration enumer = input.valueEnumeration();
+    int i = 0;
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      while (i < size && intervals[i].max() < next) {
+        i++;
+      }
+      if (i == size) {
+        assert !isIntersecting(input.toIntervalDomain()) : IS_INTERSECTING_NOT_IMPLEMENTED;
+        return false;
+      }
+      if (next >= intervals[i].min()) {
+        assert isIntersecting(input.toIntervalDomain()) : IS_INTERSECTING_NOT_IMPLEMENTED;
+        return true;
+      }
+    }
+    assert !isIntersecting(input.toIntervalDomain()) : IS_INTERSECTING_NOT_IMPLEMENTED;
+    return false;
   }
 
   @Override
@@ -526,37 +568,7 @@ public class IntervalDomain extends IntDomain {
       }
 
       if (input.getSize() <= 8) {
-
-        ValueEnumeration enumer = input.valueEnumeration();
-
-        int i = 0;
-        while (enumer.hasMoreElements()) {
-
-          int next = enumer.nextElement();
-
-          while (i < size && intervals[i].max() < next) {
-            i++;
-          }
-
-          if (i == size) {
-            assert !isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-                : IS_INTERSECTING_NOT_IMPLEMENTED;
-            return false;
-          }
-
-          if (next >= intervals[i].min()) {
-            assert isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-                : IS_INTERSECTING_NOT_IMPLEMENTED;
-
-            return true;
-          }
-        }
-
-        assert !isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-            : IS_INTERSECTING_NOT_IMPLEMENTED;
-
-        return false;
-
+        return isIntersectingSmallDense(input);
       } else {
         return isIntersecting(((SmallDenseDomain) domain).toIntervalDomain());
       }
@@ -828,6 +840,20 @@ public class IntervalDomain extends IntDomain {
     return new IntervalDomainIntervalEnumeration(this);
   }
 
+  private boolean eqSparse(IntDomain domain) {
+    if (this.getSize() != domain.getSize()) {
+      return false;
+    }
+    ValueEnumeration enumer1 = domain.valueEnumeration();
+    ValueEnumeration enumer2 = this.valueEnumeration();
+    while (enumer1.hasMoreElements()) {
+      if (enumer1.nextElement() != enumer2.nextElement()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public boolean eq(IntDomain domain) {
 
@@ -844,23 +870,7 @@ public class IntervalDomain extends IntDomain {
     // efficiently as possible.
 
     if (domain.isSparseRepresentation()) {
-
-      boolean equal = true;
-
-      if (this.getSize() == domain.getSize()) {
-
-        ValueEnumeration enumer1 = domain.valueEnumeration();
-        ValueEnumeration enumer2 = this.valueEnumeration();
-
-        while (equal && enumer1.hasMoreElements()) {
-          equal = enumer1.nextElement() == enumer2.nextElement();
-        }
-      } else {
-        equal = false;
-      }
-
-      return equal;
-
+      return eqSparse(domain);
     } else {
 
       int n = domain.noIntervals();
@@ -913,28 +923,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.isSparseRepresentation()) {
-
-      IntDomain temp = null;
-
-      try {
-        temp = domain.getClass().getConstructor().newInstance();
-      } catch (Exception ex) {
-        log.error("{}", ex.getMessage());
-      }
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        int next = enumer.nextElement();
-
-        if (this.contains(next)) {
-          temp.unionAdapt(next, next);
-        }
-      }
-
-      return temp;
-
+      return intersectFromSparse(domain);
     } else {
 
       // TODO: check correctness.
@@ -1295,6 +1284,19 @@ public class IntervalDomain extends IntDomain {
     return result;
   }
 
+  private IntDomain subtractFromSparse(IntDomain domain) {
+    IntDomain result = this.cloneLight();
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      result.subtractAdapt(next);
+    }
+    assert !(domain instanceof SmallDenseDomain denseDomain)
+            || result.eq(this.subtract(denseDomain.toIntervalDomain()))
+        : "Subtract function is not working" + this + "d:" + domain + "r:" + result;
+    return result;
+  }
+
   @Override
   public IntDomain subtract(IntDomain domain) {
 
@@ -1312,24 +1314,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.isSparseRepresentation()) {
-
-      IntDomain result = this.cloneLight();
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        int next = enumer.nextElement();
-        result.subtractAdapt(next);
-      }
-
-      // TODO: remove later, or move to other place, SmallDenseDomain section.
-      assert !(domain instanceof SmallDenseDomain denseDomain)
-              || result.eq(this.subtract(denseDomain.toIntervalDomain()))
-          : "Subtract function is not working" + this + "d:" + domain + "r:" + result;
-
-      return result;
-
+      return subtractFromSparse(domain);
     } else {
 
       // TODO: Check.
@@ -1579,6 +1564,19 @@ public class IntervalDomain extends IntDomain {
     return result;
   }
 
+  private IntervalDomain unionFromSparse(IntDomain domain) {
+    IntervalDomain result = this.cloneLight();
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      result.unionAdapt(next, next);
+    }
+    assert !(domain instanceof SmallDenseDomain denseDomain)
+            || result.eq(this.union(denseDomain.toIntervalDomain()))
+        : "Basic union function not working properly " + this + "d: " + domain + "r:" + result;
+    return result;
+  }
+
   @Override
   public IntDomain union(IntDomain domain) {
 
@@ -1592,22 +1590,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.isSparseRepresentation()) {
-
-      IntervalDomain result = this.cloneLight();
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-        int next = enumer.nextElement();
-        result.unionAdapt(next, next);
-      }
-
-      assert !(domain instanceof SmallDenseDomain denseDomain)
-              || result.eq(this.union(denseDomain.toIntervalDomain()))
-          : "Basic union function not working properly " + this + "d: " + domain + "r:" + result;
-
-      return result;
-
+      return unionFromSparse(domain);
     } else {
       // TODO: work with dense domain
 
@@ -4077,6 +4060,17 @@ public class IntervalDomain extends IntDomain {
     return result.singleton() ? GROUND : BOUND;
   }
 
+  private int sizeOfIntersectionSparse(IntDomain domain) {
+    int count = 0;
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      if (this.contains(enumer.nextElement())) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 
@@ -4087,22 +4081,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.isSparseRepresentation()) {
-
-      int temp = 0;
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        int next = enumer.nextElement();
-
-        if (this.contains(next)) {
-          temp++;
-        }
-      }
-
-      return temp;
-
+      return sizeOfIntersectionSparse(domain);
     } else {
 
       int temp = 0;

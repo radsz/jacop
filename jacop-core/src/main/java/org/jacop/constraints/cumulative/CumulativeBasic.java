@@ -329,140 +329,58 @@ public class CumulativeBasic extends Constraint {
 
       int eventType = getEventType(e);
       switch (eventType) {
-        case PROFILE: // =========== PROFILE event ===========
-
-          // Profile update callback for optional tasks
-          if (profileUpdateCallback != null) {
-            profileUpdateCallback.onProfileEvent(e, curProfile);
-          }
-
-          curProfile += getEventValue(e);
-          inProfile[getEventTask(e).index] = getEventValue(e) > 0;
-
-          if (ne == null || getEventType(ne) != PROFILE || getEventDate(e) < getEventDate(ne)) {
-            // check the tasks for pruning only at the end of all PROFILE events
-
-            if (debug) {
-              log.debug("Profile at {}: {}", getEventDate(e), curProfile);
-            }
-
-            // prune limit variable
-            if (curProfile > limitVar.min()) {
-              limitVar.domain.inMin(store.level, limitVar, curProfile);
-            }
-
-            processProfileTasksToPrune(
-                store,
-                e,
-                curProfile,
-                limitMax,
-                tasks,
-                tasksToPrune,
-                inProfile,
-                startExcluded,
-                startConsidered,
-                maxDuration,
-                lastStart,
-                lastFree,
-                barier,
-                debugNarr);
-          }
-
+        case PROFILE:
+          curProfile =
+              handleProfileEvent(
+                  store,
+                  e,
+                  ne,
+                  curProfile,
+                  limitVar,
+                  limitMax,
+                  tasks,
+                  tasksToPrune,
+                  inProfile,
+                  startExcluded,
+                  startConsidered,
+                  maxDuration,
+                  lastStart,
+                  lastFree,
+                  barier,
+                  debug,
+                  debugNarr,
+                  profileUpdateCallback);
           break;
 
-        case PRUNE_START: // =========== start of a task ===========
-          int profileValue = curProfile;
-          TaskView t = getEventTask(e);
-          int ti = t.index;
-
-          if (inProfile[ti]) {
-            profileValue -= t.res.min();
-          }
-          boolean noSpace = limitMax - profileValue < t.res.min();
-
-          // ========= for start pruning
-          if (t.exists() && noSpace) { // t.res.min() > 0 && t.dur.min() > 0
-            startExcluded[ti] = getEventDate(e);
-            startConsidered[ti] = true;
-          }
-
-          // ========= for duration pruning
-          if (noSpace) {
-            barier[ti] = true;
-          } else {
-            lastStart[ti] = t.start.min();
-            lastFree[ti] = t.start.min();
-            barier[ti] = false;
-          }
-
-          // ========= resource pruning
-          if (limitMax - profileValue < t.res.max()
-              && t.lst() <= getEventDate(e)
-              && getEventDate(e) < t.ect()) {
-            t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
-          }
-
-          tasksToPrune.set(ti);
+        case PRUNE_START:
+          handlePruneStartEvent(
+              store,
+              e,
+              curProfile,
+              limitMax,
+              inProfile,
+              startExcluded,
+              startConsidered,
+              barier,
+              lastStart,
+              lastFree,
+              tasksToPrune);
           break;
 
-        case PRUNE_END: // =========== end of a task ===========
-          profileValue = curProfile;
-          t = getEventTask(e);
-          ti = t.index;
-
-          if (inProfile[ti]) {
-            profileValue -= t.res.min();
-          }
-
-          // ========= pruning start variable
-          if (t.exists() && startConsidered[ti]) {
-            // task ends and we remove forbidden area
-
-            if (debugNarr) {
-              log.debug(
-                  ">>> CumulativeBasic Profile 2. Narrowed {} inMax {}",
-                  t.start,
-                  startExcluded[ti] - 1);
-            }
-
-            t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
-
-            if (debugNarr) {
-              log.debug(" => {}", t.start);
-            }
-          }
-
-          startConsidered[ti] = false;
-
-          // ========= resource pruning
-          if (limitMax - profileValue < t.res.max()
-              && t.lst() <= getEventDate(e)
-              && getEventDate(e) < t.ect()) {
-            t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
-          }
-
-          // ========= duration pruning
-          if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min()) {
-            maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastStart[ti]);
-          }
-
-          if (lastStart[ti] == Integer.MAX_VALUE) { // no room for the task; must have 0 duration
-            maxDuration[ti] = 0;
-          }
-
-          if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
-            if (debugNarr) {
-              log.debug(
-                  ">>> CumulativeBasic Profile 3. Narrowed {} in 0..{} => {}",
-                  t.dur,
-                  maxDuration[ti],
-                  t.dur);
-            }
-
-            t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
-          }
-
-          tasksToPrune.set(ti, false);
+        case PRUNE_END:
+          handlePruneEndEvent(
+              store,
+              e,
+              curProfile,
+              limitMax,
+              inProfile,
+              startExcluded,
+              startConsidered,
+              maxDuration,
+              lastStart,
+              lastFree,
+              tasksToPrune,
+              debugNarr);
           break;
 
         default:
@@ -473,6 +391,169 @@ public class CumulativeBasic extends Constraint {
     if (postProcessCallback != null) {
       postProcessCallback.run();
     }
+  }
+
+  private static <E> int handleProfileEvent(
+      Store store,
+      E e,
+      E ne,
+      int curProfile,
+      IntVar limitVar,
+      int limitMax,
+      TaskView[] tasks,
+      BitSet tasksToPrune,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered,
+      int[] maxDuration,
+      int[] lastStart,
+      int[] lastFree,
+      boolean[] barier,
+      boolean debug,
+      boolean debugNarr,
+      ProfileUpdateCallback<E> profileUpdateCallback) {
+    if (profileUpdateCallback != null) {
+      profileUpdateCallback.onProfileEvent(e, curProfile);
+    }
+
+    curProfile += getEventValue(e);
+    inProfile[getEventTask(e).index] = getEventValue(e) > 0;
+
+    if (ne == null || getEventType(ne) != PROFILE || getEventDate(e) < getEventDate(ne)) {
+      if (debug) {
+        log.debug("Profile at {}: {}", getEventDate(e), curProfile);
+      }
+
+      if (curProfile > limitVar.min()) {
+        limitVar.domain.inMin(store.level, limitVar, curProfile);
+      }
+
+      processProfileTasksToPrune(
+          store,
+          e,
+          curProfile,
+          limitMax,
+          tasks,
+          tasksToPrune,
+          inProfile,
+          startExcluded,
+          startConsidered,
+          maxDuration,
+          lastStart,
+          lastFree,
+          barier,
+          debugNarr);
+    }
+
+    return curProfile;
+  }
+
+  private static <E> void handlePruneStartEvent(
+      Store store,
+      E e,
+      int curProfile,
+      int limitMax,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered,
+      boolean[] barier,
+      int[] lastStart,
+      int[] lastFree,
+      BitSet tasksToPrune) {
+    int profileValue = curProfile;
+    TaskView t = getEventTask(e);
+    int ti = t.index;
+
+    if (inProfile[ti]) {
+      profileValue -= t.res.min();
+    }
+    boolean noSpace = limitMax - profileValue < t.res.min();
+
+    if (t.exists() && noSpace) {
+      startExcluded[ti] = getEventDate(e);
+      startConsidered[ti] = true;
+    }
+
+    if (noSpace) {
+      barier[ti] = true;
+    } else {
+      lastStart[ti] = t.start.min();
+      lastFree[ti] = t.start.min();
+      barier[ti] = false;
+    }
+
+    if (limitMax - profileValue < t.res.max()
+        && t.lst() <= getEventDate(e)
+        && getEventDate(e) < t.ect()) {
+      t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+    }
+
+    tasksToPrune.set(ti);
+  }
+
+  private static <E> void handlePruneEndEvent(
+      Store store,
+      E e,
+      int curProfile,
+      int limitMax,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered,
+      int[] maxDuration,
+      int[] lastStart,
+      int[] lastFree,
+      BitSet tasksToPrune,
+      boolean debugNarr) {
+    int profileValue = curProfile;
+    TaskView t = getEventTask(e);
+    int ti = t.index;
+
+    if (inProfile[ti]) {
+      profileValue -= t.res.min();
+    }
+
+    if (t.exists() && startConsidered[ti]) {
+      if (debugNarr) {
+        log.debug(
+            ">>> CumulativeBasic Profile 2. Narrowed {} inMax {}", t.start, startExcluded[ti] - 1);
+      }
+
+      t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
+
+      if (debugNarr) {
+        log.debug(" => {}", t.start);
+      }
+    }
+
+    startConsidered[ti] = false;
+
+    if (limitMax - profileValue < t.res.max()
+        && t.lst() <= getEventDate(e)
+        && getEventDate(e) < t.ect()) {
+      t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+    }
+
+    if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min()) {
+      maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastStart[ti]);
+    }
+
+    if (lastStart[ti] == Integer.MAX_VALUE) {
+      maxDuration[ti] = 0;
+    }
+
+    if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
+      if (debugNarr) {
+        log.debug(
+            ">>> CumulativeBasic Profile 3. Narrowed {} in 0..{} => {}",
+            t.dur,
+            maxDuration[ti],
+            t.dur);
+      }
+
+      t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
+    }
+
+    tasksToPrune.set(ti, false);
   }
 
   private static <E> void processProfileTasksToPrune(

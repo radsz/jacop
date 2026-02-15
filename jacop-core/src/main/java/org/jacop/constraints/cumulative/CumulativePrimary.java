@@ -202,53 +202,18 @@ class CumulativePrimary extends Constraint {
   // Sweep algorithm for PROFILE
   void sweepPruning(Store store) {
 
-    Event[] es = new Event[4 * start.length];
-    final int limitMax = limit.max();
-
-    int j = 0;
-    int minProfile = Integer.MAX_VALUE;
-    int maxProfile = Integer.MIN_VALUE;
-    int first = activePnt.value();
-    for (int i = first; i < start.length; i++) {
-      int k = activeMap[i];
-
-      // mandatory task parts to create PROFILE
-      int min = start[k].max(); // t.lst()
-      int max = start[k].min() + dur[k]; // t.ect()
-      if (min < max) {
-        es[j++] = new Event(PROFILE, k, min, res[k]);
-        es[j++] = new Event(PROFILE, k, max, -res[k]);
-        minProfile = Math.min(min, minProfile);
-        maxProfile = Math.max(max, maxProfile);
-      }
-    }
-    if (j == 0) { // no mandatory parts
+    SweepEventArray sea = buildSweepEventArray();
+    if (sea.count() == 0) {
       return;
     }
 
-    for (int i = first; i < start.length; i++) {
-      // overlapping tasks for pruning
-      // from start to end
-      int k = activeMap[i];
+    Event[] es = sea.events();
+    int N = sea.count();
+    final int limitMax = limit.max();
 
-      if (!start[k].singleton()) { // task that are ground are considered for manadatory tasks
-        int min = start[k].min(); // t.est();
-        int max = start[k].max() + dur[k]; // t.lct();
-        if (!(min > maxProfile || max < minProfile)) {
-          es[j++] = new Event(PRUNE_START, k, min, 0); // res[i]);
-          es[j++] = new Event(PRUNE_END, k, max, 0); // -res[i]);
-        }
-      }
-    }
-
-    int N = j;
     Arrays.sort(es, 0, N, eventComparator);
 
-    if (DEBUG_NARR) {
-      log.debug("{}", Arrays.asList(es));
-      log.debug("limit.max() = {}", limitMax);
-      log.debug("===========================");
-    }
+    logDebugNarrIfEnabled(es, limitMax);
 
     BitSet tasksToPrune = new BitSet(start.length);
     boolean[] inProfile = new boolean[start.length];
@@ -298,6 +263,51 @@ class CumulativePrimary extends Constraint {
 
     if (!store.propagationHasOccurred) {
       removeNotUsedProfleTasks();
+    }
+  }
+
+  private record SweepEventArray(Event[] events, int count) {}
+
+  private SweepEventArray buildSweepEventArray() {
+    Event[] es = new Event[4 * start.length];
+    int j = 0;
+    int minProfile = Integer.MAX_VALUE;
+    int maxProfile = Integer.MIN_VALUE;
+    int first = activePnt.value();
+    for (int i = first; i < start.length; i++) {
+      int k = activeMap[i];
+
+      int min = start[k].max();
+      int max = start[k].min() + dur[k];
+      if (min < max) {
+        es[j++] = new Event(PROFILE, k, min, res[k]);
+        es[j++] = new Event(PROFILE, k, max, -res[k]);
+        minProfile = Math.min(min, minProfile);
+        maxProfile = Math.max(max, maxProfile);
+      }
+    }
+
+    for (int i = first; i < start.length; i++) {
+      int k = activeMap[i];
+
+      if (!start[k].singleton()) {
+        int min = start[k].min();
+        int max = start[k].max() + dur[k];
+        if (!(min > maxProfile || max < minProfile)) {
+          es[j++] = new Event(PRUNE_START, k, min, 0);
+          es[j++] = new Event(PRUNE_END, k, max, 0);
+        }
+      }
+    }
+
+    return new SweepEventArray(es, j);
+  }
+
+  private static void logDebugNarrIfEnabled(Event[] es, int limitMax) {
+    if (DEBUG_NARR) {
+      log.debug("{}", Arrays.asList(es));
+      log.debug("limit.max() = {}", limitMax);
+      log.debug("===========================");
     }
   }
 
