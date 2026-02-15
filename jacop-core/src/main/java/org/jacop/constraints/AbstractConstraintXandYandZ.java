@@ -1,5 +1,5 @@
 /*
- * AbstractArithmeticConstraint.java
+ * AbstractConstraintXandYandZ.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -30,34 +30,45 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntVar;
 
 /**
- * Abstract base class for arithmetic constraints that use bound consistency. Provides default
- * implementations for pruning event methods that all return {@link IntDomain#BOUND}.
+ * Abstract base class for primitive constraints that operate on three integer variables x, y, and
+ * z. Provides shared field declarations and constructor logic.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractArithmeticConstraint extends PrimitiveConstraint {
+public abstract class AbstractConstraintXandYandZ extends PrimitiveConstraint {
 
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
+  /** It specifies variable x. */
+  protected final IntVar x;
 
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
+  /** It specifies variable y. */
+  protected final IntVar y;
 
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
+  /** It specifies variable z. */
+  protected final IntVar z;
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+  /**
+   * Constructs a three-variable primitive constraint.
+   *
+   * @param idNum the id counter for the concrete subclass.
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  protected AbstractConstraintXandYandZ(AtomicInteger idNum, IntVar x, IntVar y, IntVar z) {
+
+    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
+
+    numberId = idNum.incrementAndGet();
+
+    this.x = x;
+    this.y = y;
+    this.z = z;
+
+    setScope(x, y, z);
   }
 }

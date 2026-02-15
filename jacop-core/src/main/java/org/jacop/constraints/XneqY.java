@@ -43,15 +43,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XneqY extends PrimitiveConstraint {
+public class XneqY extends AbstractConstraintXandY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in the constraint x != y. */
-  private final IntVar x;
-
-  /** It specifies variable y in the constraint x != y. */
-  private final IntVar y;
 
   /**
    * It constructs X != Y constraint.
@@ -61,14 +55,7 @@ public class XneqY extends PrimitiveConstraint {
    */
   public XneqY(IntVar x, IntVar y) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-
-    setScope(x, y);
+    super(idNumber, x, y);
   }
 
   @Override

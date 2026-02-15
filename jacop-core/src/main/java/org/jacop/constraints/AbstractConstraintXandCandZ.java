@@ -1,5 +1,5 @@
 /*
- * AbstractXcompY.java
+ * AbstractConstraintXandCandZ.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -31,48 +31,44 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
- * Abstract base for two-variable integer comparison constraints (XgtY, XltY, XgteqY, XlteqY).
- * Provides shared fields and constructor logic, with pruning event configuration that returns
- * {@link IntDomain#BOUND} for all pruning events.
+ * Abstract base class for primitive constraints that operate on two integer variables x and z, and
+ * an integer constant c. Provides shared field declarations and constructor logic.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractXcompY extends AbstractConstraintXandY {
+public abstract class AbstractConstraintXandCandZ extends PrimitiveConstraint {
+
+  /** It specifies variable x. */
+  protected final IntVar x;
+
+  /** It specifies constant c. */
+  protected final int c;
+
+  /** It specifies variable z. */
+  protected final IntVar z;
 
   /**
-   * Constructs a comparison constraint between two integer variables.
+   * Constructs a primitive constraint with two integer variables and one constant.
    *
    * @param idNum the id counter for the concrete subclass.
    * @param x variable x.
-   * @param y variable y.
+   * @param c constant c.
+   * @param z variable z.
    */
-  protected AbstractXcompY(AtomicInteger idNum, IntVar x, IntVar y) {
+  protected AbstractConstraintXandCandZ(AtomicInteger idNum, IntVar x, int c, IntVar z) {
 
-    super(idNum, x, y);
-  }
+    checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
+    numberId = idNum.incrementAndGet();
 
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
+    this.x = x;
+    this.c = c;
+    this.z = z;
 
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    setScope(x, z);
   }
 }

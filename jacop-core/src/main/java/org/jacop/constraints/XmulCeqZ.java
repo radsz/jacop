@@ -45,18 +45,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulCeqZ extends PrimitiveConstraint {
+public class XmulCeqZ extends AbstractConstraintXandCandZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x * c = z. */
-  private final IntVar x;
-
-  /** It specifies constant c in constraint x * c = z. */
-  private final int c;
-
-  /** It specifies variable x in constraint x * c = z. */
-  private final IntVar z;
 
   /**
    * It constructs a constraint X * C = Z.
@@ -67,15 +58,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
    */
   public XmulCeqZ(IntVar x, int c, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.c = c;
-    this.z = z;
-
-    setScope(x, z);
+    super(idNumber, x, c, z);
   }
 
   @Override

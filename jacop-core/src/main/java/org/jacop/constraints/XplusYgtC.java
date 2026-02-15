@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -40,15 +41,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusYgtC extends AbstractArithmeticConstraint {
+public class XplusYgtC extends AbstractConstraintXandY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x + y{@literal >} c. */
-  private final IntVar x;
-
-  /** It specifies variable y in constraint x + y{@literal >} c. */
-  private final IntVar y;
 
   /** It specifies constant c in constraint x + y{@literal >} c. */
   private final int c;
@@ -62,21 +57,35 @@ public class XplusYgtC extends AbstractArithmeticConstraint {
    */
   public XplusYgtC(IntVar x, IntVar y, int c) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    super(idNumber, x, y);
 
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
     this.c = c;
 
     checkForOverflow();
-
-    setScope(x, y);
   }
 
   void checkForOverflow() {
     checkSumOverflow(x.min(), x.max(), y.min(), y.max(), c, c);
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
   @Override

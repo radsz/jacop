@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -46,18 +45,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulYeqZ extends Constraint implements SatisfiedPresent {
+public class XmulYeqZ extends AbstractXopYeqZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x * y = z. */
-  private final IntVar x;
-
-  /** It specifies variable y in constraint x * y = z. */
-  private final IntVar y;
-
-  /** It specifies variable z in constraint x * y = z. */
-  private final IntVar z;
 
   private final boolean xSquare;
 
@@ -73,21 +63,14 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
    */
   public XmulYeqZ(IntVar x, IntVar y, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
+    super(idNumber, x, y, z);
 
     xSquare = x == y;
 
-    this.x = x;
-    this.y = y;
-    this.z = z;
     this.queueIndex = 1;
 
     xEqz = new XeqY(x, z);
     yEqz = new XeqY(y, z);
-
-    setScope(x, y, z);
   }
 
   @Override

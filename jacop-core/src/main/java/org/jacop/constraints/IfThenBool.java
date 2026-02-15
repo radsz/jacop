@@ -42,7 +42,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IfThenBool extends PrimitiveConstraint {
+public class IfThenBool extends AbstractConstraintXandYandZ {
 
   /*
    * X | Y | Z
@@ -54,15 +54,6 @@ public class IfThenBool extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  private final IntVar x;
-
-  /** It specifies variable y in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  private final IntVar y;
-
-  /** It specifies variable z in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  private final IntVar z;
-
   /**
    * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
    *
@@ -72,15 +63,7 @@ public class IfThenBool extends PrimitiveConstraint {
    */
   public IfThenBool(IntVar x, IntVar y, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
-
-    setScope(x, y, z);
+    super(idNumber, x, y, z);
 
     assert checkInvariants() == null : checkInvariants();
   }

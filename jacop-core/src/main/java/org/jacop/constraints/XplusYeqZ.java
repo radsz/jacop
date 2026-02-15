@@ -43,18 +43,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusYeqZ extends PrimitiveConstraint {
+public class XplusYeqZ extends AbstractConstraintXandYandZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x+y=z. */
-  private final IntVar x;
-
-  /** It specifies variable x in constraint x+y=z. */
-  private final IntVar y;
-
-  /** It specifies variable x in constraint x+y=z. */
-  private final IntVar z;
 
   /**
    * It constructs constraint X+Y=Z.
@@ -65,17 +56,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
    */
   public XplusYeqZ(IntVar x, IntVar y, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    super(idNumber, x, y, z);
 
     checkForOverflow();
-
-    setScope(x, y, z);
   }
 
   @Override

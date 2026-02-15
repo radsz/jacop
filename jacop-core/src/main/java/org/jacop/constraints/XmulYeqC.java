@@ -45,15 +45,9 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class XmulYeqC extends PrimitiveConstraint {
+public class XmulYeqC extends AbstractConstraintXandY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x * y = c. */
-  private final IntVar x;
-
-  /** It specifies variable y in constraint x * y = c. */
-  private final IntVar y;
 
   /** It specifies constant c in constraint x * y = c. */
   private final int c;
@@ -70,17 +64,11 @@ public class XmulYeqC extends PrimitiveConstraint {
    */
   public XmulYeqC(IntVar x, IntVar y, int c) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNumber.incrementAndGet();
+    super(idNumber, x, y);
 
     xSquare = x == y;
 
-    this.x = x;
-    this.y = y;
     this.c = c;
-
-    setScope(x, y);
   }
 
   @Override

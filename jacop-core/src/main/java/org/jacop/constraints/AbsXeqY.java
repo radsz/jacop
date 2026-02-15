@@ -50,17 +50,11 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class AbsXeqY extends PrimitiveConstraint implements Stateful {
+public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   static final boolean DEBUG_ALL = false;
-
-  /** It contains variable x. */
-  private final IntVar x;
-
-  /** It contains variable y. */
-  private final IntVar y;
 
   boolean firstConsistencyCheck = true;
   boolean domainConsistent;
@@ -74,15 +68,9 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
    */
   public AbsXeqY(IntVar x, IntVar y) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNumber.incrementAndGet();
+    super(idNumber, x, y);
 
     this.queueIndex = 0;
-    this.x = x;
-    this.y = y;
-
-    setScope(x, y);
   }
 
   /**

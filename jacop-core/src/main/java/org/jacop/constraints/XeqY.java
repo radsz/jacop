@@ -43,15 +43,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XeqY extends PrimitiveConstraint {
+public class XeqY extends AbstractConstraintXandY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies a left hand variable in equality constraint. */
-  private final IntVar x;
-
-  /** It specifies a right hand variable in equality constraint. */
-  private final IntVar y;
 
   /**
    * It constructs constraint X = Y.
@@ -61,14 +55,7 @@ public class XeqY extends PrimitiveConstraint {
    */
   public XeqY(IntVar x, IntVar y) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-
-    setScope(x, y);
+    super(idNumber, x, y);
   }
 
   @Override

@@ -44,18 +44,9 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Distance extends PrimitiveConstraint implements Stateful {
+public class Distance extends AbstractConstraintXandYandZ implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifes variable x in constraint |x-y|=z. */
-  private final IntVar x;
-
-  /** It specifes variable y in constraint |x-y|=z. */
-  private final IntVar y;
-
-  /** It specifes variable z in constraint |x-y|=z. */
-  private final IntVar z;
 
   boolean firstConsistencyCheck;
   int firstConsistencyLevel;
@@ -69,14 +60,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
    */
   public Distance(IntVar x, IntVar y, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
-
-    setScope(x, y, z);
+    super(idNumber, x, y, z);
   }
 
   @Override

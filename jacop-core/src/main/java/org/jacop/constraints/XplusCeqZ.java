@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -39,16 +41,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusCeqZ extends AbstractXplusYeq {
+public class XplusCeqZ extends AbstractConstraintXandCandZ {
 
-  /** It specifies variable x in constraint x+c=z. */
-  private final IntVar x;
-
-  /** It specifies constant c in constraint x+c=z. */
-  private final int c;
-
-  /** It specifies variable z in constraint x+c=z. */
-  private final IntVar z;
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It constructs a constraint x+c=z.
@@ -59,22 +54,23 @@ public class XplusCeqZ extends AbstractXplusYeq {
    */
   public XplusCeqZ(IntVar x, int c, IntVar z) {
 
-    checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
-
-    numberId = AbstractXplusYeq.idNumber.incrementAndGet();
-
-    this.x = x;
-    this.c = c;
-    this.z = z;
+    super(idNumber, x, c, z);
 
     checkForOverflow();
+  }
 
-    setScope(x, z);
+  void checkForOverflow() {
+    checkSumOverflow(x.min(), x.max(), c, c, z.min(), z.max());
   }
 
   @Override
-  protected void checkForOverflow() {
-    checkSumOverflow(x.min(), x.max(), c, c, z.min(), z.max());
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
   }
 
   @Override
