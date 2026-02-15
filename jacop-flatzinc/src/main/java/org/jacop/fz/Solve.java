@@ -801,32 +801,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void printResultStatusWhenSolutionFound(
       boolean interrupted, boolean timeoutOccurred, boolean isComplete) {
     if (!optimization && options.getAll()) {
-      if (!interrupted) {
-        if (isComplete
-            && !timeoutOccurred
-            && (options.getNumberSolutions() == -1
-                || options.getNumberSolutions() > numberSolutions)
-            && relaxVars == null) {
-          IO.println(SEPARATOR_LINE);
-        } else if (timeoutOccurred) {
-          IO.println(TIME_OUT_MSG);
-        }
-      }
+      printAllSolutionsResult(interrupted, timeoutOccurred, isComplete);
       return;
     }
     if (optimization) {
-      if (!interrupted
-          && isComplete
-          && !timeoutOccurred
-          && (options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions)
-          && relaxVars == null) {
-        IO.println(SEPARATOR_LINE);
-      } else if (!interrupted && timeoutOccurred) {
-        IO.println(TIME_OUT_MSG);
-      } else if (timeoutOccurred) {
-        IO.println(TIME_OUT_MSG);
-      }
+      printOptimizationResult(interrupted, timeoutOccurred, isComplete);
     }
+  }
+
+  private void printAllSolutionsResult(
+      boolean interrupted, boolean timeoutOccurred, boolean isComplete) {
+    if (interrupted) {
+      return;
+    }
+    if (isComplete && isSearchComplete() && relaxVars == null) {
+      IO.println(SEPARATOR_LINE);
+    } else if (timeoutOccurred) {
+      IO.println(TIME_OUT_MSG);
+    }
+  }
+
+  private void printOptimizationResult(
+      boolean interrupted, boolean timeoutOccurred, boolean isComplete) {
+    if (!interrupted && isComplete && !timeoutOccurred && isSearchComplete() && relaxVars == null) {
+      IO.println(SEPARATOR_LINE);
+    } else if (timeoutOccurred) {
+      IO.println(TIME_OUT_MSG);
+    }
+  }
+
+  private boolean isSearchComplete() {
+    return options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions;
   }
 
   private void writeUnsatToOutputFile() {
@@ -1201,16 +1206,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       String solveType;
       switch (solveKind) {
         case 0: // satisfy
-          solveType = "satisfy";
+          solveType = SATISFY;
           break;
         case 1: // minimize
-          solveType = "minimize";
+          solveType = MINIMIZE;
           for (Search<T> list_seq_searche : list_seq_searches) {
             list_seq_searche.setOptimize(true);
           }
           break;
         case 2: // maximize
-          solveType = "maximize";
+          solveType = MAXIMIZE;
           for (Search<T> list_seq_searche : list_seq_searches) {
             list_seq_searche.setOptimize(true);
           }

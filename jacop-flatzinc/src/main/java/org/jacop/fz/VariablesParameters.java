@@ -69,6 +69,7 @@ public class VariablesParameters implements ParserTreeConstants {
   public static final int MAX_INT = IntDomain.MAX_INT;
   static final boolean INTERVAL = false; // selection of interval or dense, if possible, domain
   static final boolean CHECK_BOUNDS = false; // whether to check bounds of IntVar before creation;
+  private static final String OUTPUT_ARRAY = "output_array";
   Tables dictionary;
   int lowInterval;
   int highInterval;
@@ -479,7 +480,7 @@ public class VariablesParameters implements ParserTreeConstants {
     int type = getType(node);
     int initChild = getArrayAnnotations(node, 1);
     String ident = ((ASTVarDeclItem) node).getIdent();
-    boolean outputArray = annotations.contains("output_array");
+    boolean outputArray = annotations.contains(OUTPUT_ARRAY);
     OutputArrayAnnotation outArrayAnn =
         outputArray ? new OutputArrayAnnotation(ident, indexBounds) : null;
 
@@ -1010,7 +1011,7 @@ public class VariablesParameters implements ParserTreeConstants {
       while (j < count && child.getId() == JJTANNOTATION) {
         String id = ((ASTAnnotation) child).getAnnId();
 
-        if ("output_array".equals(id)) {
+        if (OUTPUT_ARRAY.equals(id)) {
           processOutputArrayAnnotation(child);
         } else {
           annotations.add(parseAnnExpr((SimpleNode) child.jjtGetChild(0), 0));
@@ -1026,7 +1027,7 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private void processOutputArrayAnnotation(SimpleNode child) {
-    annotations.add("output_array");
+    annotations.add(OUTPUT_ARRAY);
     child = (SimpleNode) child.jjtGetChild(0);
     int noAnnotations = child.jjtGetNumChildren();
     for (int nc = 0; nc < noAnnotations; nc++) {
@@ -1034,7 +1035,9 @@ public class VariablesParameters implements ParserTreeConstants {
       int no = nchild.jjtGetNumChildren();
       if (no > 1 || ((SimpleNode) nchild.jjtGetChild(0)).getId() != JJTANNEXPR) {
         throw new IllegalArgumentException(
-            "More than one annotation expression in output_array annotation; execution aborted");
+            "More than one annotation expression in "
+                + OUTPUT_ARRAY
+                + " annotation; execution aborted");
       }
       addIndexBoundsFromAnnotation((SimpleNode) nchild.jjtGetChild(0));
     }
@@ -1048,7 +1051,7 @@ public class VariablesParameters implements ParserTreeConstants {
     SimpleNode setLiteral = (SimpleNode) grandchild.jjtGetChild(0);
     if (setLiteral.getId() != JJTSETLITERAL) {
       throw new IllegalArgumentException(
-          "Wrong expression in output_array annotation; execution aborted");
+          "Wrong expression in " + OUTPUT_ARRAY + " annotation; execution aborted");
     }
     if (((ASTSetLiteral) setLiteral).getType() == 0) {
       indexBounds.add(parseSetLiteralInterval(setLiteral));
@@ -1056,7 +1059,7 @@ public class VariablesParameters implements ParserTreeConstants {
       indexBounds.add(parseSetLiteralList(setLiteral));
     } else {
       throw new IllegalArgumentException(
-          "Unexpected set literal in output_array annotation; execution aborted");
+          "Unexpected set literal in " + OUTPUT_ARRAY + " annotation; execution aborted");
     }
   }
 
@@ -1064,7 +1067,7 @@ public class VariablesParameters implements ParserTreeConstants {
     int s_n = setLiteral.jjtGetNumChildren();
     if (s_n != 2) {
       throw new IllegalArgumentException(
-          "Unexpected set literal in output_array annotation; execution aborted");
+          "Unexpected set literal in " + OUTPUT_ARRAY + " annotation; execution aborted");
     }
     int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
     int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
@@ -1424,44 +1427,54 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private IntDomain getSetLiteralFromSetLiteralNode(ASTSetLiteral child) {
-    switch (child.getType()) {
-      case 0: // interval
-        SimpleNode grand_child_1 = (SimpleNode) child.jjtGetChild(0);
-        SimpleNode grand_child_2 = (SimpleNode) child.jjtGetChild(1);
-        if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
-          int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
-          int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
-          return i1 > i2 ? new IntervalDomain() : new IntervalDomain(i1, i2);
-        }
-        break;
-      case 1: // list
-        IntDomain s = new IntervalDomain();
-        int count = child.jjtGetNumChildren();
-        for (int i = 0; i < count; i++) {
-          s.unionAdapt(getScalarFlatExpr(child, i));
-        }
-        return s;
-      case 2: // range
-        IntDomain d = new IntervalDomain();
-        int n = child.jjtGetNumChildren();
-        for (int i = 0; i < n; i++) {
-          SimpleNode setElement = (SimpleNode) child.jjtGetChild(i);
-          if (setElement.getId() == JJTSETELEMENT) {
-            SimpleNode e1 = (SimpleNode) setElement.jjtGetChild(0);
-            if (e1.getId() == JJTSCALARFLATEXPR) {
-              d.unionAdapt(((ASTScalarFlatExpr) e1).getInt());
-            } else if (e1.getId() == JJTINTFLATEXPR) {
-              SimpleNode e2 = (SimpleNode) setElement.jjtGetChild(1);
-              d.unionAdapt(
-                  new Interval(((ASTIntFlatExpr) e1).getInt(), ((ASTIntFlatExpr) e2).getInt()));
-            }
-          }
-        }
-        return d;
-      default:
-        throw new IllegalArgumentException("Set type not supported; compilation aborted.");
+    return switch (child.getType()) {
+      case 0 -> getSetLiteralInterval(child);
+      case 1 -> getSetLiteralList(child);
+      case 2 -> getSetLiteralRange(child);
+      default -> throw new IllegalArgumentException("Set type not supported; compilation aborted.");
+    };
+  }
+
+  private IntDomain getSetLiteralInterval(ASTSetLiteral child) {
+    SimpleNode grand_child_1 = (SimpleNode) child.jjtGetChild(0);
+    SimpleNode grand_child_2 = (SimpleNode) child.jjtGetChild(1);
+    if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
+      int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
+      int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
+      return i1 > i2 ? new IntervalDomain() : new IntervalDomain(i1, i2);
     }
     return new IntervalDomain();
+  }
+
+  private IntDomain getSetLiteralList(ASTSetLiteral child) {
+    IntDomain s = new IntervalDomain();
+    int count = child.jjtGetNumChildren();
+    for (int i = 0; i < count; i++) {
+      s.unionAdapt(getScalarFlatExpr(child, i));
+    }
+    return s;
+  }
+
+  private IntDomain getSetLiteralRange(ASTSetLiteral child) {
+    IntDomain d = new IntervalDomain();
+    int n = child.jjtGetNumChildren();
+    for (int i = 0; i < n; i++) {
+      SimpleNode setElement = (SimpleNode) child.jjtGetChild(i);
+      if (setElement.getId() == JJTSETELEMENT) {
+        appendSetElementToDomain(d, setElement);
+      }
+    }
+    return d;
+  }
+
+  private void appendSetElementToDomain(IntDomain d, SimpleNode setElement) {
+    SimpleNode e1 = (SimpleNode) setElement.jjtGetChild(0);
+    if (e1.getId() == JJTSCALARFLATEXPR) {
+      d.unionAdapt(((ASTScalarFlatExpr) e1).getInt());
+    } else if (e1.getId() == JJTINTFLATEXPR) {
+      SimpleNode e2 = (SimpleNode) setElement.jjtGetChild(1);
+      d.unionAdapt(new Interval(((ASTIntFlatExpr) e1).getInt(), ((ASTIntFlatExpr) e2).getInt()));
+    }
   }
 
   private IntDomain getSetLiteralFromScalarExpr(ASTScalarFlatExpr child) {

@@ -45,7 +45,9 @@ import org.jacop.set.core.SetVar;
 public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
 
   /** It constructs a minimum cardinality, of the greatest lowest bound, variable comparator. */
-  public MinGlbCard() {}
+  public MinGlbCard() {
+    // No-op: comparator does not require initialization.
+  }
 
   /** Compares the cardinality of the variables glb to the float value. */
   public int compare(double left, T v) {

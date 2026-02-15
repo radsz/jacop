@@ -46,7 +46,9 @@ public class IndomainSetMin<T extends SetVar> implements Indomain<T> {
   /**
    * It creates Indomain heuristic, which will choose the minimal value from the variable domain.
    */
-  public IndomainSetMin() {}
+  public IndomainSetMin() {
+    // No-op: heuristic does not require initialization.
+  }
 
   /**
    * Selects the minimal value from the set variable's domain.

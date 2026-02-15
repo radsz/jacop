@@ -300,7 +300,25 @@ public class Fsm {
 
     // Forward pass: compute reachable states and transition domains
     reachable.add(this.initState);
+    level =
+        doForwardPass(outarc, vars, levels, stateNumber, array, reachable, tmp, finalStates, level);
 
+    // Backward pass: prune paths that don't reach an accepting state
+    doBackwardPass(outarc, stateNumber, array, reachable, tmp, level);
+
+    return outarc;
+  }
+
+  private int doForwardPass(
+      IntervalDomain[][][] outarc,
+      IntVar[] vars,
+      int levels,
+      int stateNumber,
+      FsmState[] array,
+      Set<FsmState> reachable,
+      Set<FsmState> tmp,
+      Set<FsmState> finalStates,
+      int level) {
     while (level < levels) {
       tmp.clear();
       for (FsmState s : reachable) {
@@ -321,8 +339,16 @@ public class Fsm {
       reachable.addAll(tmp);
       level++;
     }
+    return level;
+  }
 
-    // Backward pass: prune paths that don't reach an accepting state
+  private void doBackwardPass(
+      IntervalDomain[][][] outarc,
+      int stateNumber,
+      FsmState[] array,
+      Set<FsmState> reachable,
+      Set<FsmState> tmp,
+      int level) {
     while (level > 0) {
       tmp.clear();
 
@@ -342,8 +368,6 @@ public class Fsm {
       reachable.addAll(tmp);
       level--;
     }
-
-    return outarc;
   }
 
   /**

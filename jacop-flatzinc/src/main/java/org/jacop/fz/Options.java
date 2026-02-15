@@ -82,202 +82,250 @@ public class Options {
       IO.println("fz2jacop: use --help for more information.");
       System.exit(0);
     } else if (args.length == 1) {
-      String arg = args[0];
-      if ("-h".equals(arg) || "--help".equals(arg)) {
-        IO.println(
-            """
-            Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn
-            Options:
-                -h, --help
-                    Print this message.
-                -a, --all, --all-solutions
-                -v, --verbose
-                -t <value>, --time-out <value>
-                    <value> - time in milisecond.
-                -s, --statistics
-                -n <value>, --num-solutions <value>
-                    <value> - limit on solution number.
-                -f free search; no need to follow search annotations.
-                -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
-                -b, --bound - use bounds consistency whenever possible;
-                    overrides annotation ":: domain" and selects constraints
-                    implementing bounds consistency (default false).
-                -sat use SAT solver for boolean constraints.
-                -cs, --complementary-search - gathers all model, non-defined
-                     variables to create the final search
-                -i, --interval print intervals instead of values for floating variables
-                --precision <value> defines precision for floating operations
-                    overrides precision definition in search annotation.
-                --format <value> defines print-out format (uses precision method)
-                    for floating-point variables.
-                -o, --outputfile defines file for solver output
-                -d, --decay decay factor for accumulated failure count (afc)
-                     and activity-based variable selection heuristic
-                --step <value> distance step for cost function for floating-point optimization
-                --restart <value> defines restart search; one of "none", "constant", "linear", "luby", "geometric"
-                --restart-base <value> base for geomteric restart search
-                --restart-scale <value> scale for restart search
-                --restart-limit <value> limits number of restarts in restart search
-            """);
-        System.exit(0);
-      } else { // input file
-        fileName = args[0];
-      }
-    } else { // args.length > 1
-      int i = 0;
-      while (i < args.length - 1) {
-        // decode options
-        switch (args[i]) {
-          case "-a", "--all-solutions", "--all" -> {
-            all = true;
-            if (number_solutions == -1) {
-              number_solutions = Integer.MAX_VALUE;
-            } else {
-              System.err.println(
-                  "%% Option -a ignored since number of solutions has been specified by option -n");
-            }
-            i++;
-          }
-          case "-t", "--time-out" -> {
-            time_out = Integer.parseInt(args[++i]);
-            i++;
-          }
-          case "-s", "--statistics" -> {
-            statistics = true;
-            i++;
-          }
-          case "-f", "--free-search" -> {
-            freeSearch = true;
-            i++;
-          }
-          case "-sat" -> {
-            use_sat = true;
-            i++;
-          }
-          case "-n", "--num-solutions" -> {
-            if (number_solutions == Integer.MAX_VALUE) {
-              System.err.println(
-                  "%% Option -a ignored since number of solutions has been specified by option -n");
-            }
-            number_solutions = Integer.parseInt(args[++i]);
-            if (number_solutions > 1) {
-              all = true;
-            }
-            i++;
-          }
-          case "-v", "--verbose" -> {
-            verbose = true;
-            i++;
-          }
-          case "-i", "--interval" -> {
-            interval = true;
-            i++;
-          }
-          case "--precision" -> {
-            precisionDefined = true;
-            precision = Double.parseDouble(args[++i]);
-            if (precision >= 0) {
-              FloatDomain.setPrecision(precision);
-            } else {
-              precision = FloatDomain.precision();
-              System.err.println(
-                  "%% Precisison parameter not correct; using default precision " + precision);
-            }
-            i++;
-          }
-          case "--format" -> {
-            format = Double.parseDouble(args[++i]);
-            if (format >= 0) {
-              FloatDomain.setFormat(format);
-            } else {
-              format = Double.MAX_VALUE;
-              System.err.println("%% Format parameter not correct;");
-            }
-            i++;
-          }
-          case "-b", "--bound" -> {
-            boundConsistency = true;
-            i++;
-          }
-          case "-cs", "--complementary-search" -> {
-            complementary_search = true;
-            i++;
-          }
-          case "-debug" -> {
-            debug = true;
-            i++;
-          }
-          case "-o", "--outputfile" -> {
-            outputFilename = args[++i];
-            i++;
-          }
-          case "-d", "--decay" -> {
-            decay = Float.parseFloat(args[++i]);
-            if (decay < 0.0f || decay > 1.0f) {
-              System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
-            }
-            i++;
-          }
-          case "--step" -> {
-            step = Double.parseDouble(args[++i]);
-            if (step < 0.0f) {
-              System.err.println(
-                  "%% Step for floating-point optimization is incorrect; assumed default step");
-              step = 0.0d;
-            }
-            FloatDomain.setStep(step);
-            i++;
-          }
-          case "-r", "--random-seed" -> {
-            long seed = Long.parseLong(args[++i]);
-            Store.setSeed(seed);
-            i++;
-          }
-          case "--restart" -> {
-            String type = args[++i];
-            switch (type) {
-              case "none":
-                restartType = RestartType.NONE;
-                break;
-              case "constant":
-                restartType = RestartType.CONSTANT;
-                break;
-              case "linear":
-                restartType = RestartType.LINEAR;
-                break;
-              case "luby":
-                restartType = RestartType.LUBY;
-                break;
-              case "geometric":
-                restartType = RestartType.GEOMETRIC;
-                break;
-              default:
-                throw new IllegalArgumentException(
-                    "Wrong argument " + type + " for option \"-restart\"");
-            }
-            i++;
-          }
-          case "--restart-base" -> {
-            base = Double.parseDouble(args[++i]);
-            i++;
-          }
-          case "--restart-scale" -> {
-            scale = Integer.parseInt(args[++i]);
-            i++;
-          }
-          case "--restart-limit" -> {
-            restartLimit = Integer.parseInt(args[++i]);
-            i++;
-          }
-          default -> {
-            IO.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
-            i++;
-          }
-        }
-      }
-
-      fileName = args[args.length - 1];
+      parseSingleArg(args[0]);
+    } else {
+      parseMultipleArgs(args);
     }
+  }
+
+  private void parseSingleArg(String arg) {
+    if ("-h".equals(arg) || "--help".equals(arg)) {
+      printHelpAndExit();
+    }
+    fileName = arg;
+  }
+
+  private void printHelpAndExit() {
+    IO.println(
+        """
+        Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn
+        Options:
+            -h, --help
+                Print this message.
+            -a, --all, --all-solutions
+            -v, --verbose
+            -t <value>, --time-out <value>
+                <value> - time in milisecond.
+            -s, --statistics
+            -n <value>, --num-solutions <value>
+                <value> - limit on solution number.
+            -f free search; no need to follow search annotations.
+            -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
+            -b, --bound - use bounds consistency whenever possible;
+                overrides annotation ":: domain" and selects constraints
+                implementing bounds consistency (default false).
+            -sat use SAT solver for boolean constraints.
+            -cs, --complementary-search - gathers all model, non-defined
+                 variables to create the final search
+            -i, --interval print intervals instead of values for floating variables
+            --precision <value> defines precision for floating operations
+                overrides precision definition in search annotation.
+            --format <value> defines print-out format (uses precision method)
+                for floating-point variables.
+            -o, --outputfile defines file for solver output
+            -d, --decay decay factor for accumulated failure count (afc)
+                 and activity-based variable selection heuristic
+            --step <value> distance step for cost function for floating-point optimization
+            --restart <value> defines restart search; one of "none", "constant", "linear", "luby", "geometric"
+            --restart-base <value> base for geomteric restart search
+            --restart-scale <value> scale for restart search
+            --restart-limit <value> limits number of restarts in restart search
+        """);
+    System.exit(0);
+  }
+
+  private void parseMultipleArgs(String[] args) {
+    int i = 0;
+    while (i < args.length - 1) {
+      i = parseOption(args, i);
+    }
+    fileName = args[args.length - 1];
+  }
+
+  private int parseOption(String[] args, int i) {
+    String opt = args[i];
+    switch (opt) {
+      case "-a", "--all-solutions", "--all" -> i = handleAllSolutions(i);
+      case "-t", "--time-out" -> i = handleTimeOut(args, i);
+      case "-s", "--statistics" -> i = handleStatistics(i);
+      case "-f", "--free-search" -> i = handleFreeSearch(i);
+      case "-sat" -> i = handleSat(i);
+      case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
+      case "-v", "--verbose" -> i = handleVerbose(i);
+      case "-i", "--interval" -> i = handleInterval(i);
+      case "--precision" -> i = handlePrecision(args, i);
+      case "--format" -> i = handleFormat(args, i);
+      case "-b", "--bound" -> i = handleBound(i);
+      case "-cs", "--complementary-search" -> i = handleComplementarySearch(i);
+      case "-debug" -> i = handleDebug(i);
+      case "-o", "--outputfile" -> i = handleOutputFile(args, i);
+      case "-d", "--decay" -> i = handleDecay(args, i);
+      case "--step" -> i = handleStep(args, i);
+      case "-r", "--random-seed" -> i = handleRandomSeed(args, i);
+      case "--restart" -> i = handleRestart(args, i);
+      case "--restart-base" -> i = handleRestartBase(args, i);
+      case "--restart-scale" -> i = handleRestartScale(args, i);
+      case "--restart-limit" -> i = handleRestartLimit(args, i);
+      default -> {
+        IO.println("%% fz2jacop: not recognized option " + opt + "; ignored");
+        i++;
+      }
+    }
+    return i;
+  }
+
+  private int handleAllSolutions(int i) {
+    all = true;
+    if (number_solutions == -1) {
+      number_solutions = Integer.MAX_VALUE;
+    } else {
+      System.err.println(
+          "%% Option -a ignored since number of solutions has been specified by option -n");
+    }
+    return i + 1;
+  }
+
+  private int handleTimeOut(String[] args, int i) {
+    time_out = Integer.parseInt(args[++i]);
+    return i + 1;
+  }
+
+  private int handleStatistics(int i) {
+    statistics = true;
+    return i + 1;
+  }
+
+  private int handleFreeSearch(int i) {
+    freeSearch = true;
+    return i + 1;
+  }
+
+  private int handleSat(int i) {
+    use_sat = true;
+    return i + 1;
+  }
+
+  private int handleNumSolutions(String[] args, int i) {
+    if (number_solutions == Integer.MAX_VALUE) {
+      System.err.println(
+          "%% Option -a ignored since number of solutions has been specified by option -n");
+    }
+    number_solutions = Integer.parseInt(args[++i]);
+    if (number_solutions > 1) {
+      all = true;
+    }
+    return i + 1;
+  }
+
+  private int handleVerbose(int i) {
+    verbose = true;
+    return i + 1;
+  }
+
+  private int handleInterval(int i) {
+    interval = true;
+    return i + 1;
+  }
+
+  private int handlePrecision(String[] args, int i) {
+    precisionDefined = true;
+    precision = Double.parseDouble(args[++i]);
+    if (precision >= 0) {
+      FloatDomain.setPrecision(precision);
+    } else {
+      precision = FloatDomain.precision();
+      System.err.println(
+          "%% Precisison parameter not correct; using default precision " + precision);
+    }
+    return i + 1;
+  }
+
+  private int handleFormat(String[] args, int i) {
+    format = Double.parseDouble(args[++i]);
+    if (format >= 0) {
+      FloatDomain.setFormat(format);
+    } else {
+      format = Double.MAX_VALUE;
+      System.err.println("%% Format parameter not correct;");
+    }
+    return i + 1;
+  }
+
+  private int handleBound(int i) {
+    boundConsistency = true;
+    return i + 1;
+  }
+
+  private int handleComplementarySearch(int i) {
+    complementary_search = true;
+    return i + 1;
+  }
+
+  private int handleDebug(int i) {
+    debug = true;
+    return i + 1;
+  }
+
+  private int handleOutputFile(String[] args, int i) {
+    outputFilename = args[++i];
+    return i + 1;
+  }
+
+  private int handleDecay(String[] args, int i) {
+    decay = Float.parseFloat(args[++i]);
+    if (decay < 0.0f || decay > 1.0f) {
+      System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+    }
+    return i + 1;
+  }
+
+  private int handleStep(String[] args, int i) {
+    step = Double.parseDouble(args[++i]);
+    if (step < 0.0f) {
+      System.err.println(
+          "%% Step for floating-point optimization is incorrect; assumed default step");
+      step = 0.0d;
+    }
+    FloatDomain.setStep(step);
+    return i + 1;
+  }
+
+  private int handleRandomSeed(String[] args, int i) {
+    long seed = Long.parseLong(args[++i]);
+    Store.setSeed(seed);
+    return i + 1;
+  }
+
+  private int handleRestart(String[] args, int i) {
+    restartType = parseRestartType(args[++i]);
+    return i + 1;
+  }
+
+  private RestartType parseRestartType(String type) {
+    return switch (type) {
+      case "none" -> RestartType.NONE;
+      case "constant" -> RestartType.CONSTANT;
+      case "linear" -> RestartType.LINEAR;
+      case "luby" -> RestartType.LUBY;
+      case "geometric" -> RestartType.GEOMETRIC;
+      default ->
+          throw new IllegalArgumentException("Wrong argument " + type + " for option \"-restart\"");
+    };
+  }
+
+  private int handleRestartBase(String[] args, int i) {
+    base = Double.parseDouble(args[++i]);
+    return i + 1;
+  }
+
+  private int handleRestartScale(String[] args, int i) {
+    scale = Integer.parseInt(args[++i]);
+    return i + 1;
+  }
+
+  private int handleRestartLimit(String[] args, int i) {
+    restartLimit = Integer.parseInt(args[++i]);
+    return i + 1;
   }
 
   /**

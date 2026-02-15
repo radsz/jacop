@@ -93,44 +93,47 @@ public class AintersectBeqC extends AbstractSetOpBeqC {
     }
 
     if (performCardinalityReasoning) {
-
-      int sizeOf4 = a.domain.glb().subtract(b.domain.lub()).getSize();
-      a.domain.inCardinality(store.level, a, sizeOf4 + c.domain.card().min(), Integer.MAX_VALUE);
-
-      int sizeOf_6_7 = a.domain.lub().intersect(b.domain.glb()).getSize();
-      if (sizeOf_6_7 > c.domain.card().max()) {
-        int reserved = sizeOf_6_7 - c.domain.card().max();
-        a.domain.inCardinality(
-            store.level, a, Integer.MIN_VALUE, a.domain.lub().getSize() - reserved);
-      }
-
-      int sizeOf8 = b.domain.glb().subtract(a.domain.lub()).getSize();
-      b.domain.inCardinality(store.level, b, sizeOf8 + c.domain.card().min(), Integer.MAX_VALUE);
-
-      int sizeOf_5_6 = b.domain.lub().intersect(a.domain.glb()).getSize();
-      if (sizeOf_5_6 > c.domain.card().max()) {
-        int reserved = sizeOf_5_6 - c.domain.card().max();
-        b.domain.inCardinality(
-            store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - reserved);
-      }
-
-      int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
-      int sizeOf3_8 = b.domain.lub().subtract(a.domain.lub()).getSize();
-      int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
-      int sizeOf2_5_6_7 = a.domain.lub().intersect(b.domain.lub()).getSize();
-
-      int max =
-          Math.max(a.domain.card().min() - sizeOf1_4, 0)
-              + Math.max(b.domain.card().min() - sizeOf3_8, 0);
-
-      max -= sizeOf6 + sizeOf2_5_6_7;
-      if (max > 0) {
-        c.domain.inCardinality(store.level, c, sizeOf6 + max, Integer.MAX_VALUE);
-      }
-
-      c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, a.domain.card().max() - sizeOf4);
-      c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, b.domain.card().max() - sizeOf8);
+      propagateIntersectCardinality(store);
     }
+  }
+
+  private void propagateIntersectCardinality(Store store) {
+    int sizeOf4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+    a.domain.inCardinality(store.level, a, sizeOf4 + c.domain.card().min(), Integer.MAX_VALUE);
+
+    int sizeOf_6_7 = a.domain.lub().intersect(b.domain.glb()).getSize();
+    if (sizeOf_6_7 > c.domain.card().max()) {
+      int reserved = sizeOf_6_7 - c.domain.card().max();
+      a.domain.inCardinality(
+          store.level, a, Integer.MIN_VALUE, a.domain.lub().getSize() - reserved);
+    }
+
+    int sizeOf8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+    b.domain.inCardinality(store.level, b, sizeOf8 + c.domain.card().min(), Integer.MAX_VALUE);
+
+    int sizeOf_5_6 = b.domain.lub().intersect(a.domain.glb()).getSize();
+    if (sizeOf_5_6 > c.domain.card().max()) {
+      int reserved = sizeOf_5_6 - c.domain.card().max();
+      b.domain.inCardinality(
+          store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - reserved);
+    }
+
+    int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
+    int sizeOf3_8 = b.domain.lub().subtract(a.domain.lub()).getSize();
+    int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
+    int sizeOf2_5_6_7 = a.domain.lub().intersect(b.domain.lub()).getSize();
+
+    int max =
+        Math.max(a.domain.card().min() - sizeOf1_4, 0)
+            + Math.max(b.domain.card().min() - sizeOf3_8, 0);
+
+    max -= sizeOf6 + sizeOf2_5_6_7;
+    if (max > 0) {
+      c.domain.inCardinality(store.level, c, sizeOf6 + max, Integer.MAX_VALUE);
+    }
+
+    c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, a.domain.card().max() - sizeOf4);
+    c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, b.domain.card().max() - sizeOf8);
   }
 
   @Override

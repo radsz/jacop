@@ -83,40 +83,50 @@ public class Steiner extends ExampleSet {
     int r = n % 6;
 
     if (r == 1 || r == 3) {
+      createSteinerModel(t);
+    }
+  }
 
-      store = new Store();
+  private void createSteinerModel(int t) {
+    store = new Store();
 
-      vars = new ArrayList<>();
-      SetVar[] s = new SetVar[t];
+    vars = new ArrayList<>();
+    SetVar[] s = new SetVar[t];
 
-      for (int i = 0; i < t; i++) {
-        s[i] = new SetVar(store, "s" + i, new BoundSetDomain(1, n));
-        vars.add(s[i]);
-        store.impose(new CardA(s[i], 3));
+    for (int i = 0; i < t; i++) {
+      s[i] = new SetVar(store, "s" + i, new BoundSetDomain(1, n));
+      vars.add(s[i]);
+      store.impose(new CardA(s[i], 3));
+    }
+
+    imposeIntersectionConstraints(t, s);
+
+    for (int i = 0; i < s.length - 1; i++) {
+      store.impose(new AltB(s[i], s[i + 1]));
+    }
+
+    imposeImpliedConstraints(t, s);
+  }
+
+  private void imposeIntersectionConstraints(int t, SetVar[] s) {
+    for (int i = 0; i < t; i++) {
+      for (int j = i + 1; j < t; j++) {
+        SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
+        store.impose(new AintersectBeqC(s[i], s[j], temp));
+        store.impose(new CardA(temp, 0, 1));
       }
+    }
+  }
 
-      for (int i = 0; i < t; i++) {
-        for (int j = i + 1; j < t; j++) {
-          SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
-          store.impose(new AintersectBeqC(s[i], s[j], temp));
-          store.impose(new CardA(temp, 0, 1));
-        }
+  private void imposeImpliedConstraints(int t, SetVar[] s) {
+    for (int i = 1; i <= n; i++) {
+      IntVar[] b = new IntVar[t];
+      for (int j = 0; j < t; j++) {
+        b[j] = new IntVar(store, "b" + i + "," + j, 0, 1);
+        store.impose(new Reified(new EinA(i, s[j]), b[j]));
       }
-
-      for (int i = 0; i < s.length - 1; i++) {
-        store.impose(new AltB(s[i], s[i + 1]));
-      }
-
-      // implied constraints to get better pruning
-      for (int i = 1; i <= n; i++) {
-        IntVar[] b = new IntVar[t];
-        for (int j = 0; j < t; j++) {
-          b[j] = new IntVar(store, "b" + i + "," + j, 0, 1);
-          store.impose(new Reified(new EinA(i, s[j]), b[j]));
-        }
-        IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
-        store.impose(new SumInt(b, "==", sum));
-      }
+      IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
+      store.impose(new SumInt(b, "==", sum));
     }
   }
 

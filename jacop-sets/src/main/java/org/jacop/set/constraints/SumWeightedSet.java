@@ -144,94 +144,22 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     while (true) {
-
-      int glbSum = 0;
-      int lubSum;
-
       IntDomain glbA = a.domain.glb();
       IntDomain lubA = a.domain.lub();
       IntDomain potentialEl = lubA.subtract(glbA);
 
-      ValueEnumeration enumer = glbA.valueEnumeration();
-      while (enumer.hasMoreElements()) {
-        glbSum += elementWeights.get(enumer.nextElement());
-      }
+      int glbSum = computeGlbSum(glbA, potentialEl);
+      int weightOfLastRequiredEl = computeWeightOfLastRequiredEl(potentialEl);
 
-      lubSum = glbSum;
-
-      int noOfRequiredEl = a.domain.card().min() - glbA.getSize();
-      int weightOfLastRequiredEl = 0;
-
-      if (increasingCosts) {
-        if (noOfRequiredEl > 0) {
-          enumer = potentialEl.valueEnumeration();
-          while (noOfRequiredEl > 1) {
-            glbSum += elementWeights.get(enumer.nextElement());
-            noOfRequiredEl--;
-          }
-          weightOfLastRequiredEl = elementWeights.get(enumer.nextElement());
-        }
-      }
-
-      enumer = potentialEl.valueEnumeration();
-
-      int el;
-      int weight;
-      boolean change = false;
-      while (enumer.hasMoreElements()) {
-
-        el = enumer.nextElement();
-        weight = elementWeights.get(el);
-
-        if (totalWeight.max() < glbSum + weight) {
-          a.domain.inLubComplement(store.level, a, el);
-          change = true;
-        }
-      }
-
-      // inLUB above can change GLB due to cardinality constraints. Need to recompute.
-      if (change) {
+      if (pruneLubByWeight(store, potentialEl, glbSum)) {
         continue;
       }
 
-      int noOfSkippedEl = a.domain.lub().getSize() - a.domain.card().max();
-      int weightOfLastSkippedItem = 0;
+      int[] lubResult = computeLubSum(potentialEl);
+      int lubSum = lubResult[0];
+      int weightOfLastSkippedItem = lubResult[1];
 
-      enumer = potentialEl.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        el = enumer.nextElement();
-        weight = elementWeights.get(el);
-
-        if (increasingCosts) {
-          if (noOfSkippedEl == 0) {
-            lubSum += weight;
-          } else {
-            if (noOfSkippedEl == 1) {
-              weightOfLastSkippedItem = weight;
-            }
-            noOfSkippedEl--;
-          }
-        } else {
-          lubSum += weight;
-        }
-      }
-
-      enumer = potentialEl.valueEnumeration();
-      while (enumer.hasMoreElements()) {
-
-        el = enumer.nextElement();
-        weight = elementWeights.get(el);
-
-        if (totalWeight.min() > lubSum + weightOfLastSkippedItem - weight) {
-          a.domain.inGlb(store.level, a, el);
-          change = true;
-        }
-      }
-
-      // inGLB above can change LUB due to cardinality constraints. Need to recompute.
-      if (change) {
+      if (pruneGlbByWeight(store, potentialEl, lubSum, weightOfLastSkippedItem)) {
         continue;
       }
 
@@ -243,6 +171,101 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
       return;
     }
+  }
+
+  private int computeGlbSum(IntDomain glbA, IntDomain potentialEl) {
+    int glbSum = 0;
+    ValueEnumeration enumer = glbA.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      glbSum += elementWeights.get(enumer.nextElement());
+    }
+
+    int noOfRequiredEl = a.domain.card().min() - glbA.getSize();
+    if (increasingCosts && noOfRequiredEl > 0) {
+      enumer = potentialEl.valueEnumeration();
+      while (noOfRequiredEl > 1) {
+        glbSum += elementWeights.get(enumer.nextElement());
+        noOfRequiredEl--;
+      }
+    }
+    return glbSum;
+  }
+
+  private int computeWeightOfLastRequiredEl(IntDomain potentialEl) {
+    int weightOfLastRequiredEl = 0;
+    int noOfRequiredEl = a.domain.card().min() - a.domain.glb().getSize();
+    if (increasingCosts && noOfRequiredEl > 0) {
+      ValueEnumeration enumer = potentialEl.valueEnumeration();
+      for (int i = 0; i < noOfRequiredEl - 1 && enumer.hasMoreElements(); i++) {
+        enumer.nextElement();
+      }
+      if (enumer.hasMoreElements()) {
+        weightOfLastRequiredEl = elementWeights.get(enumer.nextElement());
+      }
+    }
+    return weightOfLastRequiredEl;
+  }
+
+  /** Returns true if LUB was pruned (caller should continue the fixpoint loop). */
+  private boolean pruneLubByWeight(Store store, IntDomain potentialEl, int glbSum) {
+    boolean change = false;
+    ValueEnumeration enumer = potentialEl.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int el = enumer.nextElement();
+      int weight = elementWeights.get(el);
+      if (totalWeight.max() < glbSum + weight) {
+        a.domain.inLubComplement(store.level, a, el);
+        change = true;
+      }
+    }
+    return change;
+  }
+
+  /** Returns {lubSum, weightOfLastSkippedItem}. */
+  private int[] computeLubSum(IntDomain potentialEl) {
+    int glbSum = 0;
+    ValueEnumeration enumer = a.domain.glb().valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      glbSum += elementWeights.get(enumer.nextElement());
+    }
+    int lubSum = glbSum;
+    int noOfSkippedEl = a.domain.lub().getSize() - a.domain.card().max();
+    int weightOfLastSkippedItem = 0;
+
+    enumer = potentialEl.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int el = enumer.nextElement();
+      int weight = elementWeights.get(el);
+      if (increasingCosts) {
+        if (noOfSkippedEl == 0) {
+          lubSum += weight;
+        } else {
+          if (noOfSkippedEl == 1) {
+            weightOfLastSkippedItem = weight;
+          }
+          noOfSkippedEl--;
+        }
+      } else {
+        lubSum += weight;
+      }
+    }
+    return new int[] {lubSum, weightOfLastSkippedItem};
+  }
+
+  /** Returns true if GLB was extended (caller should continue the fixpoint loop). */
+  private boolean pruneGlbByWeight(
+      Store store, IntDomain potentialEl, int lubSum, int weightOfLastSkippedItem) {
+    boolean change = false;
+    ValueEnumeration enumer = potentialEl.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int el = enumer.nextElement();
+      int weight = elementWeights.get(el);
+      if (totalWeight.min() > lubSum + weightOfLastSkippedItem - weight) {
+        a.domain.inGlb(store.level, a, el);
+        change = true;
+      }
+    }
+    return change;
   }
 
   @Override

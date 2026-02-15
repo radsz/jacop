@@ -168,7 +168,9 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   }
 
   /** Clear everything (no more propagations or ignored literals). */
-  private void clear() {}
+  private void clear() {
+    // No-op: nothing to clear for this database.
+  }
 
   /**
    * To get a real clause to resolve with, we seek for the clause at the origin of the propagation.

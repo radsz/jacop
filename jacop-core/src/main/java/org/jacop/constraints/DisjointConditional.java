@@ -904,7 +904,6 @@ public class DisjointConditional extends Diff {
       int minVal,
       int maxVal,
       IntVar resources) {
-
     int dur = duration.min();
     int intervalEnd = maxVal + dur;
     for (ProfileItem p : profile) {
@@ -912,28 +911,38 @@ public class DisjointConditional extends Diff {
         log.debug("Comparing [{} {}] with profile item {}", minVal, maxVal, p);
       }
       if (intervalOverlap(minVal, intervalEnd, p.min, p.max)) {
-        IntDomain startDom = start.dom();
-        if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
-          IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
-          update.unionAdapt(p.max, IntDomain.MAX_INT);
-
-          if (traceNarrOn) {
-            log.debug(
-                "6. Profile Narrowed {} \\ {}; duration={}; resources={}, limit={}\n{}\n => {}",
-                start,
-                update,
-                duration,
-                resources,
-                limit,
-                profile,
-                start);
-          }
-
-          start.domain.in(store.level, start, update);
-        } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
-          narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
-        }
+        applyDisjointProfilePruning(store, profile, limit, start, duration, p, dur, resources);
       }
+    }
+  }
+
+  private void applyDisjointProfilePruning(
+      Store store,
+      DisjointConditionalProfile profile,
+      int limit,
+      IntVar start,
+      IntVar duration,
+      ProfileItem p,
+      int dur,
+      IntVar resources) {
+    IntDomain startDom = start.dom();
+    if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+      IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+      update.unionAdapt(p.max, IntDomain.MAX_INT);
+      if (traceNarrOn) {
+        log.debug(
+            "6. Profile Narrowed {} \\ {}; duration={}; resources={}, limit={}\n{}\n => {}",
+            start,
+            update,
+            duration,
+            resources,
+            limit,
+            profile,
+            start);
+      }
+      start.domain.in(store.level, start, update);
+    } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+      narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
     }
   }
 

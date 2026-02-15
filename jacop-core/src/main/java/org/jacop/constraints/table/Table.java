@@ -182,31 +182,37 @@ public class Table extends AbstractTable {
   private void updateMaskTable(
       int delta, IntDomain rp, IntDomain cd, Map<Integer, long[]> xSupport) {
     if (delta < cd.getSize()) {
-      ValueEnumeration e = rp.valueEnumeration();
+      updateMaskTableFromRp(rp, xSupport);
+      rbs.reverseMask();
+    } else {
+      updateMaskTableFromSupport(cd, xSupport);
+    }
+  }
+
+  private void updateMaskTableFromRp(IntDomain rp, Map<Integer, long[]> xSupport) {
+    ValueEnumeration e = rp.valueEnumeration();
+    while (e.hasMoreElements()) {
+      long[] bs = xSupport.get(e.nextElement());
+      if (bs != null) {
+        rbs.addToMask(bs);
+      }
+    }
+  }
+
+  private void updateMaskTableFromSupport(IntDomain cd, Map<Integer, long[]> xSupport) {
+    Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
+    if (cd.getSize() < xsEntry.size()) {
+      ValueEnumeration e = cd.valueEnumeration();
       while (e.hasMoreElements()) {
         long[] bs = xSupport.get(e.nextElement());
         if (bs != null) {
           rbs.addToMask(bs);
         }
       }
-      rbs.reverseMask();
     } else {
-      Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
-      if (cd.getSize() < xsEntry.size()) {
-        ValueEnumeration e = cd.valueEnumeration();
-        while (e.hasMoreElements()) {
-          long[] bs = xSupport.get(e.nextElement());
-          if (bs != null) {
-            rbs.addToMask(bs);
-          }
-        }
-      } else {
-        for (Map.Entry<Integer, long[]> e : xsEntry) {
-          Integer val = e.getKey();
-          long[] bits = e.getValue();
-          if (cd.contains(val)) {
-            rbs.addToMask(bits);
-          }
+      for (Map.Entry<Integer, long[]> entry : xsEntry) {
+        if (cd.contains(entry.getKey())) {
+          rbs.addToMask(entry.getValue());
         }
       }
     }

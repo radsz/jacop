@@ -45,7 +45,9 @@ import org.jacop.set.core.SetVar;
 public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
 
   /** It constructs a maximum cardinality, of the least upper bound, variable comparator. */
-  public MaxLubCard() {}
+  public MaxLubCard() {
+    // No-op: comparator does not require initialization.
+  }
 
   /** Compares the cardinality of the variables lub to the float value. */
   public int compare(double left, T v) {

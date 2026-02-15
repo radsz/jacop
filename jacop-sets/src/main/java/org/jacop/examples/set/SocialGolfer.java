@@ -125,15 +125,7 @@ public class SocialGolfer extends ExampleSet {
 
     final int N = groups * players;
 
-    int[] weights = new int[players];
-
-    int base = Math.max(10, players + 1); // at least players + 1
-
-    weights[players - 1] = 1;
-
-    for (int i = players - 2; i >= 0; i--) {
-      weights[i] = weights[i + 1] * base;
-    }
+    int[] weights = computeWeights(players);
 
     IO.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
 
@@ -143,14 +135,40 @@ public class SocialGolfer extends ExampleSet {
 
     vars = new ArrayList<>();
 
+    imposeGroupCardinalityConstraints(N);
+
+    imposeDisjointConstraints();
+
+    imposeUnionConstraints(N);
+
+    imposeIntersectionConstraints(N);
+
+    imposeMatchAndOrderingConstraints(N, weights);
+  }
+
+  private int[] computeWeights(int playerCount) {
+    int[] weights = new int[playerCount];
+    int base = Math.max(10, playerCount + 1); // at least players + 1
+
+    weights[playerCount - 1] = 1;
+
+    for (int i = playerCount - 2; i >= 0; i--) {
+      weights[i] = weights[i + 1] * base;
+    }
+    return weights;
+  }
+
+  private void imposeGroupCardinalityConstraints(int n) {
     for (int i = 0; i < weeks; i++) {
       for (int j = 0; j < groups; j++) {
-        golferGroup[i][j] = new SetVar(store, "g_" + i + "_" + j, new BoundSetDomain(1, N));
+        golferGroup[i][j] = new SetVar(store, "g_" + i + "_" + j, new BoundSetDomain(1, n));
         vars.add(golferGroup[i][j]);
         store.impose(new CardA(golferGroup[i][j], players));
       }
     }
+  }
 
+  private void imposeDisjointConstraints() {
     for (int i = 0; i < weeks; i++) {
       for (int j = 0; j < groups; j++) {
         for (int k = j + 1; k < groups; k++) {
@@ -158,52 +176,55 @@ public class SocialGolfer extends ExampleSet {
         }
       }
     }
+  }
 
+  private void imposeUnionConstraints(int n) {
     for (int i = 0; i < weeks; i++) {
-
       SetVar t = golferGroup[i][0];
 
       for (int j = 1; j < groups; j++) {
-        SetVar r = new SetVar(store, "r-" + i + "-" + j, new BoundSetDomain(1, N));
+        SetVar r = new SetVar(store, "r-" + i + "-" + j, new BoundSetDomain(1, n));
         store.impose(new AunionBeqC(t, golferGroup[i][j], r));
         t = r;
       }
 
-      store.impose(new AeqS(t, new IntervalDomain(1, N)));
+      store.impose(new AeqS(t, new IntervalDomain(1, n)));
     }
+  }
 
+  private void imposeIntersectionConstraints(int n) {
     for (int i = 0; i < weeks; i++) {
       for (int j = i + 1; j < weeks; j++) {
-        if (i != j) {
-          for (int k = 0; k < groups; k++) {
-            for (int l = 0; l < groups; l++) {
-              SetVar result =
-                  new SetVar(
-                      store, "res" + i + "-" + j + "-" + k + "-" + l, new BoundSetDomain(1, N));
-              store.impose(new AintersectBeqC(golferGroup[i][k], golferGroup[j][l], result));
-              store.impose(new CardA(result, 0, 1));
-            }
+        for (int k = 0; k < groups; k++) {
+          for (int l = 0; l < groups; l++) {
+            SetVar result =
+                new SetVar(
+                    store, "res" + i + "-" + j + "-" + k + "-" + l, new BoundSetDomain(1, n));
+            store.impose(new AintersectBeqC(golferGroup[i][k], golferGroup[j][l], result));
+            store.impose(new CardA(result, 0, 1));
           }
         }
       }
     }
+  }
 
+  private void imposeMatchAndOrderingConstraints(int n, int[] weights) {
     IntVar[] v = new IntVar[weeks];
     IntVar[][] var = new IntVar[weeks][players];
     for (int i = 0; i < weeks; i++) {
       v[i] = new IntVar(store, "v" + i, 0, 100000000);
       for (int j = 0; j < players; j++) {
-        var[i][j] = new IntVar(store, "var" + i + "-" + j, 1, N);
+        var[i][j] = new IntVar(store, "var" + i + "-" + j, 1, n);
       }
       store.impose(new Match(golferGroup[i][0], var[i]));
 
-      int n = var[i].length;
-      IntVar[] vs = new IntVar[n + 1];
-      int[] ws = new int[n + 1];
-      System.arraycopy(var[i], 0, vs, 0, n);
-      System.arraycopy(weights, 0, ws, 0, n);
-      vs[n] = v[i];
-      ws[n] = -1;
+      int varLen = var[i].length;
+      IntVar[] vs = new IntVar[varLen + 1];
+      int[] ws = new int[varLen + 1];
+      System.arraycopy(var[i], 0, vs, 0, varLen);
+      System.arraycopy(weights, 0, ws, 0, varLen);
+      vs[varLen] = v[i];
+      ws[varLen] = -1;
       store.impose(new LinearInt(vs, ws, "==", 0));
     }
 

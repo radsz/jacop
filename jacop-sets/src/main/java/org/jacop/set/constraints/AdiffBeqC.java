@@ -79,76 +79,88 @@ public class AdiffBeqC extends AbstractSetOpBeqC {
       c.domain.inLub(store.level, c, a.domain.lub().subtract(b.domain.glb()));
     }
 
-    // FIXME, TODO, implement cardinality based reasoning.
     if (performCardinalityReasoning) {
-
-      // TODO: check the code below, so that is can fire and propagate properly.
-
-      int aMinCard = a.domain.card().min();
-      if (aMinCard > 0) {
-        int sizeOf4 = a.domain.glb().subtract(b.domain.lub()).getSize();
-
-        if (aMinCard - sizeOf4 > 0) {
-          int sizeOf8 = b.domain.glb().getSize();
-          if (sizeOf8 > 0) {
-            sizeOf8 = b.domain.glb().subtract(a.domain.lub()).getSize();
-          }
-          int sizeOf2_7 =
-              a.domain.lub().intersect(b.domain.lub()).subtract(a.domain.glb()).getSize();
-          int min = b.domain.card().max() - sizeOf8;
-          if (min > sizeOf2_7) {
-            min = sizeOf2_7;
-          }
-          int max = aMinCard - sizeOf4 - min;
-          if (max > 0) {
-            c.domain.inCardinality(store.level, c, sizeOf4 + max, Integer.MAX_VALUE);
-          }
-        }
-      }
-
-      int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
-      int minLeft = a.domain.card().max() - sizeOf6;
-      int minRight = a.domain.lub().subtract(b.domain.glb()).getSize();
-      int max = b.domain.card().min();
-      if (max > 0) {
-        int sizeOf6_7_8 = b.domain.glb().getSize();
-        max -= sizeOf6_7_8;
-        if (max > 0) {
-          int sizeOf3 = b.domain.lub().subtract(a.domain.lub()).subtract(b.domain.glb()).getSize();
-          max -= sizeOf3;
-          if (max > 0) {
-            minRight -= max;
-          }
-        }
-      }
-      c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, Math.min(minLeft, minRight));
-
-      int sizeOf_4_5 = a.domain.glb().subtract(b.domain.glb()).getSize();
-      minLeft = b.domain.glb().getSize() + Math.max(0, sizeOf_4_5 - c.domain.card().max());
-      minRight = a.domain.card().max() - c.domain.card().max();
-      if (minLeft < minRight) {
-        minLeft = minRight;
-      }
-
-      b.domain.inCardinality(store.level, c, b.domain.glb().getSize() + minLeft, Integer.MAX_VALUE);
-
-      int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
-      int min = c.domain.card().min() - sizeOf1_4;
-
-      if (min > 0) {
-        b.domain.inCardinality(store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - min);
-      }
-
-      min = c.domain.card().min() + b.domain.glb().intersect(a.domain.glb()).getSize();
-      if (b.domain.lub().getSize() - a.domain.lub().getSize() < b.domain.card().min()) {
-        min =
-            min
-                + Math.max(
-                    0, b.domain.card().min() - b.domain.lub().subtract(a.domain.glb()).getSize());
-      }
-
-      a.domain.inCardinality(store.level, a, min, Integer.MAX_VALUE);
+      propagateAdiffCardinality(store);
     }
+  }
+
+  private void propagateAdiffCardinality(Store store) {
+    propagateAdiffCardinalityAMinCard(store);
+    propagateAdiffCardinalityC(store);
+    propagateAdiffCardinalityB(store);
+    propagateAdiffCardinalityA(store);
+  }
+
+  private void propagateAdiffCardinalityAMinCard(Store store) {
+    int aMinCard = a.domain.card().min();
+    if (aMinCard <= 0) {
+      return;
+    }
+    int sizeOf4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+    if (aMinCard - sizeOf4 <= 0) {
+      return;
+    }
+    int sizeOf8 = b.domain.glb().getSize();
+    if (sizeOf8 > 0) {
+      sizeOf8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+    }
+    int sizeOf2_7 = a.domain.lub().intersect(b.domain.lub()).subtract(a.domain.glb()).getSize();
+    int min = b.domain.card().max() - sizeOf8;
+    if (min > sizeOf2_7) {
+      min = sizeOf2_7;
+    }
+    int max = aMinCard - sizeOf4 - min;
+    if (max > 0) {
+      c.domain.inCardinality(store.level, c, sizeOf4 + max, Integer.MAX_VALUE);
+    }
+  }
+
+  private void propagateAdiffCardinalityC(Store store) {
+    int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
+    int minLeft = a.domain.card().max() - sizeOf6;
+    int minRight = a.domain.lub().subtract(b.domain.glb()).getSize();
+    int max = b.domain.card().min();
+    if (max > 0) {
+      int sizeOf6_7_8 = b.domain.glb().getSize();
+      max -= sizeOf6_7_8;
+      if (max > 0) {
+        int sizeOf3 = b.domain.lub().subtract(a.domain.lub()).subtract(b.domain.glb()).getSize();
+        max -= sizeOf3;
+        if (max > 0) {
+          minRight -= max;
+        }
+      }
+    }
+    c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, Math.min(minLeft, minRight));
+  }
+
+  private void propagateAdiffCardinalityB(Store store) {
+    int sizeOf_4_5 = a.domain.glb().subtract(b.domain.glb()).getSize();
+    int minLeft = b.domain.glb().getSize() + Math.max(0, sizeOf_4_5 - c.domain.card().max());
+    int minRight = a.domain.card().max() - c.domain.card().max();
+    if (minLeft < minRight) {
+      minLeft = minRight;
+    }
+
+    b.domain.inCardinality(store.level, c, b.domain.glb().getSize() + minLeft, Integer.MAX_VALUE);
+
+    int min = c.domain.card().min() - a.domain.lub().subtract(b.domain.lub()).getSize();
+
+    if (min > 0) {
+      b.domain.inCardinality(store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - min);
+    }
+  }
+
+  private void propagateAdiffCardinalityA(Store store) {
+    int min = c.domain.card().min() + b.domain.glb().intersect(a.domain.glb()).getSize();
+    if (b.domain.lub().getSize() - a.domain.lub().getSize() < b.domain.card().min()) {
+      min =
+          min
+              + Math.max(
+                  0, b.domain.card().min() - b.domain.lub().subtract(a.domain.glb()).getSize());
+    }
+
+    a.domain.inCardinality(store.level, a, min, Integer.MAX_VALUE);
   }
 
   @Override

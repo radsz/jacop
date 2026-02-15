@@ -150,35 +150,46 @@ public class Values extends Constraint implements SatisfiedPresent {
 
     for (int i = 0; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.singleton()) {
-        state.numberSingleton++;
-        state.singletonValues.unionAdapt(v.min(), v.min());
-      }
-      if (v.min() > minimumMax) {
-        state.minNumberDifferent++;
-        minimumMax = v.max();
-      }
-      if (v.max() < minimumMax) {
-        minimumMax = v.max();
-      }
-      adj[i + 1] = new int[v.dom().getSize()];
-      int j = 0;
-      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int el = e.nextElement();
-        Integer elIndex = valueMap.get(el);
-        if (elIndex == null) {
-          valueMap.put(el, valueIndex);
-          adj[i + 1][j] = valueIndex + 1;
-          valueIndex++;
-        } else {
-          adj[i + 1][j] = elIndex + 1;
-        }
-        j++;
-      }
+      minimumMax = updateStateForVariable(state, v, minimumMax);
+      valueIndex = fillAdjRowFromVariable(adj, i + 1, v, valueMap, valueIndex);
     }
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
     state.maxNumberDifferent = matcher.hopcroftKarp();
     return state;
+  }
+
+  private int updateStateForVariable(ValuesConsistencyState state, IntVar v, int minimumMax) {
+    if (v.singleton()) {
+      state.numberSingleton++;
+      state.singletonValues.unionAdapt(v.min(), v.min());
+    }
+    if (v.min() > minimumMax) {
+      state.minNumberDifferent++;
+      minimumMax = v.max();
+    }
+    if (v.max() < minimumMax) {
+      minimumMax = v.max();
+    }
+    return minimumMax;
+  }
+
+  private int fillAdjRowFromVariable(
+      int[][] adj, int rowIndex, IntVar v, Map<Integer, Integer> valueMap, int valueIndex) {
+    adj[rowIndex] = new int[v.dom().getSize()];
+    int j = 0;
+    for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int el = e.nextElement();
+      Integer elIndex = valueMap.get(el);
+      if (elIndex == null) {
+        valueMap.put(el, valueIndex);
+        adj[rowIndex][j] = valueIndex + 1;
+        valueIndex++;
+      } else {
+        adj[rowIndex][j] = elIndex + 1;
+      }
+      j++;
+    }
+    return valueIndex;
   }
 
   private void applyCountPruning(Store store, ValuesConsistencyState state) {

@@ -188,35 +188,45 @@ public class Assignment extends Constraint
     rangeX = new IntervalDomain(shiftX, x.length - 1 + shiftX);
     rangeD = new IntervalDomain(shiftD, x.length - 1 + shiftD);
 
+    propagateInitialFromX(store);
+    propagateInitialFromD(store);
+  }
+
+  private void propagateInitialFromX(Store store) {
     for (int i = 0; i < x.length; i++) {
       IntDomain alreadyRemoved = rangeD.subtract(x[i].domain);
       x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
-      if (!alreadyRemoved.isEmpty()) {
-        for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
-            enumer.hasMoreElements(); ) {
-          int xValue = enumer.nextElement();
-          d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
-        }
-      }
+      propagateComplementFromRemoved(store, alreadyRemoved, i, true);
       if (x[i].singleton()) {
         int position = x[i].value() - shiftD;
         d[position].domain.in(store.level, d[position], i + shiftX, i + shiftX);
       }
     }
+  }
 
+  private void propagateInitialFromD(Store store) {
     for (int i = 0; i < d.length; i++) {
       IntDomain alreadyRemoved = rangeX.subtract(d[i].domain);
       d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
-      if (!alreadyRemoved.isEmpty()) {
-        for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
-            enumer.hasMoreElements(); ) {
-          int dValue = enumer.nextElement();
-          x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
-        }
-      }
+      propagateComplementFromRemoved(store, alreadyRemoved, i, false);
       if (d[i].singleton()) {
         x[d[i].value() - shiftX].domain.in(
             store.level, x[d[i].value() - shiftX], i + shiftD, i + shiftD);
+      }
+    }
+  }
+
+  private void propagateComplementFromRemoved(
+      Store store, IntDomain alreadyRemoved, int index, boolean fromX) {
+    if (alreadyRemoved.isEmpty()) {
+      return;
+    }
+    for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int value = enumer.nextElement();
+      if (fromX) {
+        d[value - shiftD].domain.inComplement(store.level, d[value - shiftD], index + shiftX);
+      } else {
+        x[value - shiftX].domain.inComplement(store.level, x[value - shiftX], index + shiftD);
       }
     }
   }

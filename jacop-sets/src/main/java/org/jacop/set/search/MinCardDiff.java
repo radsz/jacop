@@ -46,7 +46,9 @@ import org.jacop.set.core.SetVar;
 public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
 
   /** It constructs a minimum cardinality difference variable comparator. */
-  public MinCardDiff() {}
+  public MinCardDiff() {
+    // No-op: comparator does not require initialization.
+  }
 
   /** Compares the cardinality difference of the variable to the float value. */
   public int compare(double left, T v) {

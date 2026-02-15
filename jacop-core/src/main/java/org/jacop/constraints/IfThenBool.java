@@ -116,33 +116,47 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
   private void propagateIfThenBoolNegated(Store store) {
     do {
       store.propagationHasOccurred = false;
-      if (x.singleton()) {
-        if (x.max() == 0) {
-          z.domain.inValue(store.level, z, 0);
-        }
-        if (x.min() == 1) {
-          if (y.singleton()) {
-            z.domain.inComplement(store.level, z, y.value());
-          }
-          if (z.singleton()) {
-            y.domain.inComplement(store.level, y, z.value());
-          }
-        }
-      }
-      if (y.singleton()) {
-        if (y.max() == 0) {
-          z.domain.in(store.level, z, x.domain);
-          x.domain.in(store.level, x, z.domain);
-        }
-        if (y.min() == 1) {
-          z.domain.inValue(store.level, z, 0);
-        }
-      }
-      if (z.min() == 1) {
-        x.domain.inValue(store.level, x, 1);
-        y.domain.inValue(store.level, y, 0);
-      }
+      propagateNegatedFromX(store);
+      propagateNegatedFromY(store);
+      propagateNegatedFromZ(store);
     } while (store.propagationHasOccurred);
+  }
+
+  private void propagateNegatedFromX(Store store) {
+    if (!x.singleton()) {
+      return;
+    }
+    if (x.max() == 0) {
+      z.domain.inValue(store.level, z, 0);
+    }
+    if (x.min() == 1) {
+      if (y.singleton()) {
+        z.domain.inComplement(store.level, z, y.value());
+      }
+      if (z.singleton()) {
+        y.domain.inComplement(store.level, y, z.value());
+      }
+    }
+  }
+
+  private void propagateNegatedFromY(Store store) {
+    if (!y.singleton()) {
+      return;
+    }
+    if (y.max() == 0) {
+      z.domain.in(store.level, z, x.domain);
+      x.domain.in(store.level, x, z.domain);
+    }
+    if (y.min() == 1) {
+      z.domain.inValue(store.level, z, 0);
+    }
+  }
+
+  private void propagateNegatedFromZ(Store store) {
+    if (z.min() == 1) {
+      x.domain.inValue(store.level, x, 1);
+      y.domain.inValue(store.level, y, 0);
+    }
   }
 
   private void propagateIfThenBoolNonNegated(Store store) {

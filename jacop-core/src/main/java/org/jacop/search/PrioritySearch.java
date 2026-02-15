@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntVar;
@@ -825,9 +826,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @SuppressWarnings("unchecked")
     private boolean labelingWithCost(int index) {
       if (master.childSearches != null) {
-        Boolean earlyReturn = runChildSearchesWithCost(index);
-        if (earlyReturn != null) {
-          return earlyReturn;
+        Optional<Boolean> earlyReturn = runChildSearchesWithCost(index);
+        if (earlyReturn.isPresent()) {
+          return earlyReturn.get();
         }
         noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
         constraineCostFromChild(lastChildSearchRun);
@@ -839,7 +840,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private Boolean runChildSearchesWithCost(int index) {
+    private Optional<Boolean> runChildSearchesWithCost(int index) {
       lastChildSearchRun = null;
       for (Search<? extends Var> childObj : master.childSearches) {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
@@ -860,14 +861,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           }
           master.solutionListener.executeAfterSolution(this, null);
           visited.set(index, false);
-          return false;
+          return Optional.of(Boolean.FALSE);
         }
       }
-      return null;
+      return Optional.empty();
     }
 
     @SuppressWarnings("unchecked")
-    private Boolean runChildSearchesNoCost(int index) {
+    private Optional<Boolean> runChildSearchesNoCost(int index) {
       lastChildSearchRun = null;
       for (Search<? extends Var> childObj : master.childSearches) {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
@@ -886,10 +887,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           }
           master.solutionListener.executeAfterSolution(this, null);
           visited.set(index, false);
-          return false;
+          return Optional.of(Boolean.FALSE);
         }
       }
-      return null;
+      return Optional.empty();
     }
 
     private boolean finishLabelingAfterSolution(int index) {
@@ -903,9 +904,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     @SuppressWarnings("unchecked")
     private boolean labelingNoCostWithChildSearches(int index) {
-      Boolean earlyReturn = runChildSearchesNoCost(index);
-      if (earlyReturn != null) {
-        return earlyReturn;
+      Optional<Boolean> earlyReturn = runChildSearchesNoCost(index);
+      if (earlyReturn.isPresent()) {
+        return earlyReturn.get();
       }
       noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
       if (noSolutions >= solutionsLimit) {

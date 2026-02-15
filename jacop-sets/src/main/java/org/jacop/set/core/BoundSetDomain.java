@@ -442,115 +442,113 @@ public class BoundSetDomain extends SetDomain {
    */
   public void in(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
 
-    // FIXME, this check should be done outside if it can be violated.
     if (!inLub.contains(inGlb)) {
       throw Store.failException;
     }
 
-    // FIXME, do we need to do this expensive check in this manner, or at all here?
     if (glbDomain.contains(inGlb) && inLub.contains(lubDomain)) {
-      // New domain is the same or "larger" than the old one; do nothing,
       return;
     }
 
     if (stamp == storeLevel) {
-
-      int eventGlb = glbDomain.unionAdapt(inGlb);
-      int eventLub = lubDomain.intersectAdapt(inLub);
-
-      if (lubDomain.eq(glbDomain)) {
-        cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
-        if (cardDomain.isEmpty()) {
-          throw Store.failException;
-        }
-        v.domainHasChanged(IntDomain.GROUND);
-      } else {
-        int min = glbDomain.getSize();
-        int max = lubDomain.getSize();
-        if (min > max) {
-          throw Store.failException;
-        }
-
-        int eventCardinality = cardDomain.intersectAdapt(min, max);
-
-        if (cardDomain.isEmpty()) {
-          throw Store.failException;
-        }
-
-        if (eventCardinality != Domain.NONE) {
-
-          if (cardDomain.min() == lubDomain.getSize()) {
-            glbDomain = lubDomain;
-            cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          if (cardDomain.max() == glbDomain.getSize()) {
-            lubDomain = glbDomain;
-            cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-        }
-
-        if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
-          v.domainHasChanged(SetDomain.ANY);
-        } else if (eventGlb != Domain.NONE) {
-          v.domainHasChanged(SetDomain.GLB_EVENT);
-        } else if (eventLub != Domain.NONE) {
-          v.domainHasChanged(SetDomain.LUB_EVENT);
-        }
-      }
-
+      applyInAtSameLevel(storeLevel, v, inGlb, inLub);
     } else {
+      applyInAtNewLevel(storeLevel, v, inGlb, inLub);
+    }
+  }
 
-      assert stamp < storeLevel;
+  private void applyInAtSameLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
+    int eventGlb = glbDomain.unionAdapt(inGlb);
+    int eventLub = lubDomain.intersectAdapt(inLub);
 
-      IntDomain resultGlb = glbDomain.cloneLight();
-      int eventGlb = resultGlb.unionAdapt(inGlb);
-
-      IntDomain resultLub = lubDomain.cloneLight();
-      int eventLub = resultLub.intersectAdapt(inLub);
-
-      IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), lubDomain.getSize());
-      if (resultCardinality.isEmpty()) {
+    if (lubDomain.eq(glbDomain)) {
+      cardDomain.intersectAdapt(glbDomain.getSize(), lubDomain.getSize());
+      if (cardDomain.isEmpty()) {
         throw Store.failException;
       }
+      v.domainHasChanged(IntDomain.GROUND);
+      return;
+    }
 
-      if (!resultCardinality.eq(cardDomain)) {
+    int min = glbDomain.getSize();
+    int max = lubDomain.getSize();
+    if (min > max) {
+      throw Store.failException;
+    }
 
-        if (cardDomain.min() == lubDomain.getSize()) {
-          resultGlb = lubDomain;
-          eventGlb = SetDomain.GLB_EVENT;
-          resultCardinality.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-        }
+    int eventCardinality = cardDomain.intersectAdapt(min, max);
+    if (cardDomain.isEmpty()) {
+      throw Store.failException;
+    }
 
-        if (cardDomain.max() == glbDomain.getSize()) {
-          resultLub = glbDomain;
-          eventLub = SetDomain.LUB_EVENT;
-          resultCardinality.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-        }
+    if (eventCardinality != Domain.NONE) {
+      if (cardDomain.min() == lubDomain.getSize()) {
+        glbDomain = lubDomain;
+        cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
+        v.domainHasChanged(IntDomain.GROUND);
+        return;
       }
+      if (cardDomain.max() == glbDomain.getSize()) {
+        lubDomain = glbDomain;
+        cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
+        v.domainHasChanged(IntDomain.GROUND);
+        return;
+      }
+    }
 
-      BoundSetDomain result = new BoundSetDomain();
-      result.glbDomain = resultGlb;
-      result.lubDomain = resultLub;
-      result.cardDomain = resultCardinality;
+    if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
+      v.domainHasChanged(SetDomain.ANY);
+    } else if (eventGlb != Domain.NONE) {
+      v.domainHasChanged(SetDomain.GLB_EVENT);
+    } else if (eventLub != Domain.NONE) {
+      v.domainHasChanged(SetDomain.LUB_EVENT);
+    }
+  }
 
-      copyCommonFieldsToResult(result, storeLevel);
-      v.domain = result;
+  private void applyInAtNewLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
+    assert stamp < storeLevel;
 
-      if (result.singleton()) {
-        v.domainHasChanged(SetDomain.GROUND);
-      } else {
-        if (eventGlb == SetDomain.GLB_EVENT && eventLub == SetDomain.LUB_EVENT) {
-          v.domainHasChanged(SetDomain.BOUND);
-        } else if (eventGlb != Domain.NONE) {
-          v.domainHasChanged(SetDomain.GLB_EVENT);
-        } else if (eventLub != Domain.NONE) {
-          v.domainHasChanged(SetDomain.LUB_EVENT);
-        }
+    IntDomain resultGlb = glbDomain.cloneLight();
+    int eventGlb = resultGlb.unionAdapt(inGlb);
+
+    IntDomain resultLub = lubDomain.cloneLight();
+    int eventLub = resultLub.intersectAdapt(inLub);
+
+    IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), lubDomain.getSize());
+    if (resultCardinality.isEmpty()) {
+      throw Store.failException;
+    }
+
+    if (!resultCardinality.eq(cardDomain)) {
+      if (cardDomain.min() == lubDomain.getSize()) {
+        resultGlb = lubDomain;
+        eventGlb = SetDomain.GLB_EVENT;
+        resultCardinality.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
+      }
+      if (cardDomain.max() == glbDomain.getSize()) {
+        resultLub = glbDomain;
+        eventLub = SetDomain.LUB_EVENT;
+        resultCardinality.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
+      }
+    }
+
+    BoundSetDomain result = new BoundSetDomain();
+    result.glbDomain = resultGlb;
+    result.lubDomain = resultLub;
+    result.cardDomain = resultCardinality;
+
+    copyCommonFieldsToResult(result, storeLevel);
+    v.domain = result;
+
+    if (result.singleton()) {
+      v.domainHasChanged(SetDomain.GROUND);
+    } else {
+      if (eventGlb == SetDomain.GLB_EVENT && eventLub == SetDomain.LUB_EVENT) {
+        v.domainHasChanged(SetDomain.BOUND);
+      } else if (eventGlb != Domain.NONE) {
+        v.domainHasChanged(SetDomain.GLB_EVENT);
+      } else if (eventLub != Domain.NONE) {
+        v.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
   }
@@ -1112,58 +1110,67 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public void inCardinality(int level, SetVar v, int min, int max) {
 
-    // it is needed to make sure that this function is only executed when something is being
-    // changed.
     if (min <= cardDomain.min() && cardDomain.max() <= max) {
       return;
     }
 
-    if (stamp == level) {
+    boolean earlyReturn =
+        stamp == level
+            ? applyInCardinalityAtSameLevel(level, v, min, max)
+            : applyInCardinalityAtNewLevel(level, v, min, max);
 
-      IntDomain cardDom = v.domain.card();
+    if (!earlyReturn) {
+      v.domainHasChanged(SetDomain.CARDINALITY_EVENT);
+    }
+  }
 
-      cardDom.intersectAdapt(min, max);
+  /** Returns true if inValue was called (caller should skip CARDINALITY_EVENT). */
+  private boolean applyInCardinalityAtSameLevel(int level, SetVar v, int min, int max) {
+    IntDomain cardDom = v.domain.card();
 
-      if (v.domain.card().isEmpty()) {
-        throw Store.failException;
-      }
+    cardDom.intersectAdapt(min, max);
 
-      if (cardDom.max() == glbDomain.getSize()) {
-        this.inValue(level, v, glbDomain);
-        return;
-      }
-
-      if (cardDom.min() == lubDomain.getSize()) {
-        this.inValue(level, v, lubDomain);
-        return;
-      }
-
-    } else {
-
-      assert stamp < level;
-
-      IntDomain resultCardinality = cardDomain.intersect(min, max);
-
-      if (resultCardinality.isEmpty()) {
-        throw Store.failException;
-      }
-
-      if (resultCardinality.max() == glbDomain.getSize()) {
-        this.inValue(level, v, glbDomain);
-        return;
-      }
-      if (resultCardinality.min() == lubDomain.getSize()) {
-        this.inValue(level, v, lubDomain);
-        return;
-      }
-
-      BoundSetDomain result = new BoundSetDomain(glbDomain, lubDomain);
-      result.cardDomain = resultCardinality;
-
-      copyCommonFieldsToResult(result, level);
-      v.domain = result;
+    if (v.domain.card().isEmpty()) {
+      throw Store.failException;
     }
 
-    v.domainHasChanged(SetDomain.CARDINALITY_EVENT);
+    if (cardDom.max() == glbDomain.getSize()) {
+      this.inValue(level, v, glbDomain);
+      return true;
+    }
+
+    if (cardDom.min() == lubDomain.getSize()) {
+      this.inValue(level, v, lubDomain);
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Returns true if inValue was called (caller should skip CARDINALITY_EVENT). */
+  private boolean applyInCardinalityAtNewLevel(int level, SetVar v, int min, int max) {
+    assert stamp < level;
+
+    IntDomain resultCardinality = cardDomain.intersect(min, max);
+
+    if (resultCardinality.isEmpty()) {
+      throw Store.failException;
+    }
+
+    if (resultCardinality.max() == glbDomain.getSize()) {
+      this.inValue(level, v, glbDomain);
+      return true;
+    }
+    if (resultCardinality.min() == lubDomain.getSize()) {
+      this.inValue(level, v, lubDomain);
+      return true;
+    }
+
+    BoundSetDomain result = new BoundSetDomain(glbDomain, lubDomain);
+    result.cardDomain = resultCardinality;
+
+    copyCommonFieldsToResult(result, level);
+    v.domain = result;
+    return false;
   }
 }

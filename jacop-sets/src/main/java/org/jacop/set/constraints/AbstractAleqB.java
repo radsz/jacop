@@ -136,35 +136,44 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
    * @param store the constraint store
    */
   protected void consistencyCommonPrefix(Store store) {
-    if (b.domain.glb().getSize() > 0) {
-      ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
-      ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
-      int be = bGlbEnum.nextElement();
-      int ae;
-      do {
-        if (aLubEnum.hasMoreElements()) {
-          ae = aLubEnum.nextElement();
+    if (b.domain.glb().getSize() <= 0) {
+      return;
+    }
+    ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
+    ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
+    int be = bGlbEnum.nextElement();
+    compareCommonPrefixLoop(store, aLubEnum, bGlbEnum, be);
+  }
 
-          if (ae == be) {
-            if (bGlbEnum.hasMoreElements()) {
-              be = bGlbEnum.nextElement();
-              if (!aLubEnum.hasMoreElements()) {
-                return; // b has more elements than a
-              }
-            } else {
-              afterCommonPrefix(store, a, b, aLubEnum, ae);
-              return;
-            }
-          } else if (ae < be) {
-            return; // b already greater
-          } else { // ae > be
-            throw Store.failException;
+  /**
+   * Compares elements in the common prefix of a's lub and b's glb. Returns when comparison
+   * determines ordering; throws Store.failException if incompatible.
+   */
+  private void compareCommonPrefixLoop(
+      Store store, ValueEnumeration aLubEnum, ValueEnumeration bGlbEnum, int be) {
+    int ae;
+    do {
+      if (!aLubEnum.hasMoreElements()) {
+        return; // b has more elements and up to now all equal
+      }
+      ae = aLubEnum.nextElement();
+
+      if (ae == be) {
+        if (bGlbEnum.hasMoreElements()) {
+          be = bGlbEnum.nextElement();
+          if (!aLubEnum.hasMoreElements()) {
+            return; // b has more elements than a
           }
-        } else { // b has more elements and up to now all equal
+        } else {
+          afterCommonPrefix(store, a, b, aLubEnum, ae);
           return;
         }
-      } while (true);
-    }
+      } else if (ae < be) {
+        return; // b already greater
+      } else {
+        throw Store.failException;
+      }
+    } while (true);
   }
 
   /**

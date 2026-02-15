@@ -103,18 +103,25 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      for (int i = 0; i < ni; i++) {
-        x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
-      }
-
-      for (int i = 0; i < ns; i++) {
-        s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
-      }
-
+      doFirstConsistencyCheck(store);
       firstConsistencyCheck = false;
     }
 
-    // check array of integer variables first
+    propagateFromIntVariables(store);
+    propagateFromSetVariables(store);
+  }
+
+  private void doFirstConsistencyCheck(Store store) {
+    for (int i = 0; i < ni; i++) {
+      x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+    }
+
+    for (int i = 0; i < ns; i++) {
+      s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+    }
+  }
+
+  private void propagateFromIntVariables(Store store) {
     for (int i = 0; i < ni; i++) {
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
@@ -131,8 +138,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
         s[x[i].value() - offsetInt].dom().inGlb(store.level, s[x[i].value() - offsetInt], glb);
       }
     }
+  }
 
-    // check array of set variables
+  private void propagateFromSetVariables(Store store) {
     for (int i = 0; i < ns; i++) {
       IntDomain lub = s[i].dom().lub();
       IntDomain vs = new IntervalDomain(5);

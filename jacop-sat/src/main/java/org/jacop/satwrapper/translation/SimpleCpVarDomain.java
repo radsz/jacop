@@ -156,72 +156,68 @@ public class SimpleCpVarDomain extends SatCpBridge {
     }
 
     if (isEquality) {
-      // ok, this is an assertion of 'x=value' to true or false
       if (literal > 0) {
-        // 'x=value' is true
-
-        // set false all other equality literals
-        for (int i = getMin(); i <= getMax(); i++) {
-          if (i == value) {
-            continue;
-          }
-          clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
-        }
-        // set false all 'x<=d' for d < value (ie x>d)
-        for (int i = getMin(); i < value; i++) {
-          clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
-        }
-        // set true all 'x<=d' for d >= value
-        for (int i = value; i <= getMax(); i++) {
-          clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
-        }
+        propagateEqualityTrue(value, literal);
       } else {
-        // assertion 'x!=value'
-
-        if (value == getMin()) { // 'x!=min' => 'x>min'
-          clauseDatabase.propagate(-cpValueToBoolVar(value, false), literal);
-        }
-        if (value == getMax()) { // 'x!=max' => 'x<= max-1'
-          clauseDatabase.propagate(cpValueToBoolVar(value - 1, false), literal);
-        }
-
-        // if there were 2 values, and one is falsified, assert the other
-        if (getMax() - getMin() == 1 && value == getMax()) {
-          clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
-        }
-        if (getMax() - getMin() == 1 && value == getMin()) {
-          clauseDatabase.propagate(cpValueToBoolVar(getMax(), true), literal);
-        }
-        if (value == getMin() + 1) {
-          clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
-        }
+        propagateEqualityFalse(value, literal);
       }
     } else {
-      // we just asserted 'x<=value' to true or false
-
       if (literal > 0) {
-        // assertion 'x<=value'
-
-        // set false all 'x=d' for d > value
-        for (int i = value + 1; i <= getMax(); i++) {
-          clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
-        }
-        // set true all 'x<=d' for d > value
-        for (int i = value + 1; i <= getMax(); i++) {
-          clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
-        }
+        propagateLeqTrue(value, literal);
       } else {
-        // assertion 'x>value'
-
-        // set false all 'x=d' for d <= value
-        for (int i = getMin(); i <= value; i++) {
-          clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
-        }
-        // set false all 'x<=d' for d <= value
-        for (int i = getMin(); i <= value; i++) {
-          clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
-        }
+        propagateLeqFalse(value, literal);
       }
+    }
+  }
+
+  private void propagateEqualityTrue(int value, int literal) {
+    for (int i = getMin(); i <= getMax(); i++) {
+      if (i == value) {
+        continue;
+      }
+      clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
+    }
+    for (int i = getMin(); i < value; i++) {
+      clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
+    }
+    for (int i = value; i <= getMax(); i++) {
+      clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
+    }
+  }
+
+  private void propagateEqualityFalse(int value, int literal) {
+    if (value == getMin()) {
+      clauseDatabase.propagate(-cpValueToBoolVar(value, false), literal);
+    }
+    if (value == getMax()) {
+      clauseDatabase.propagate(cpValueToBoolVar(value - 1, false), literal);
+    }
+    if (getMax() - getMin() == 1 && value == getMax()) {
+      clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
+    }
+    if (getMax() - getMin() == 1 && value == getMin()) {
+      clauseDatabase.propagate(cpValueToBoolVar(getMax(), true), literal);
+    }
+    if (value == getMin() + 1) {
+      clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
+    }
+  }
+
+  private void propagateLeqTrue(int value, int literal) {
+    for (int i = value + 1; i <= getMax(); i++) {
+      clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
+    }
+    for (int i = value + 1; i <= getMax(); i++) {
+      clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
+    }
+  }
+
+  private void propagateLeqFalse(int value, int literal) {
+    for (int i = getMin(); i <= value; i++) {
+      clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
+    }
+    for (int i = getMin(); i <= value; i++) {
+      clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
     }
   }
 

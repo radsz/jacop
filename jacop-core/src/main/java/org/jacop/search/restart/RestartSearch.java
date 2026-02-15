@@ -30,6 +30,7 @@
 
 package org.jacop.search.restart;
 
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
@@ -161,11 +162,11 @@ public class RestartSearch<T extends Var> {
 
       atLeastOneSolution |= result;
 
-      Boolean exit = checkRestartExitConditions();
-      if (exit != null) {
+      Optional<Boolean> exit = checkRestartExitConditions();
+      if (exit.isPresent()) {
         store.removeLevel(store.level);
         store.setLevel(store.level - 1);
-        return exit;
+        return exit.get();
       }
 
       result = computeNextResult(result);
@@ -203,18 +204,18 @@ public class RestartSearch<T extends Var> {
     }
   }
 
-  /** Returns true to indicate exit with success, false for failure, null to continue. */
-  private Boolean checkRestartExitConditions() {
+  /** Returns Optional.of(true) for success, Optional.of(false) for failure, empty to continue. */
+  private Optional<Boolean> checkRestartExitConditions() {
     int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
     if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
-      return false;
+      return Optional.of(Boolean.FALSE);
     }
     if (timeOutCheck && System.currentTimeMillis() > timeOut) {
       search.timeOutOccured = true;
       log.info("%% =====TIME-OUT=====");
-      return false;
+      return Optional.of(Boolean.FALSE);
     }
-    return null;
+    return Optional.empty();
   }
 
   private boolean computeNextResult(boolean result) {

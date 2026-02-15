@@ -105,22 +105,32 @@ public class XmodYeqZ extends AbstractXopYeqZ {
   private int resultMaxFromLastPropagate;
 
   private int[] computeReminderBounds() {
-    int reminderMin;
-    int reminderMax;
     if (x.min() >= 0) {
-      reminderMin = 0;
-      reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
-      reminderMax = Math.min(reminderMax, x.max());
-    } else if (x.max() < 0) {
-      reminderMax = 0;
-      reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-      reminderMin = Math.max(reminderMin, x.min());
-    } else {
-      reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
-      reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
-      reminderMin = Math.max(reminderMin, x.min());
-      reminderMax = Math.min(reminderMax, x.max());
+      return computeReminderBoundsXNonNegative();
     }
+    if (x.max() < 0) {
+      return computeReminderBoundsXNegative();
+    }
+    return computeReminderBoundsXMixed();
+  }
+
+  private int[] computeReminderBoundsXNonNegative() {
+    int reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
+    reminderMax = Math.min(reminderMax, x.max());
+    return new int[] {0, reminderMax};
+  }
+
+  private int[] computeReminderBoundsXNegative() {
+    int reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
+    reminderMin = Math.max(reminderMin, x.min());
+    return new int[] {reminderMin, 0};
+  }
+
+  private int[] computeReminderBoundsXMixed() {
+    int reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
+    int reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
+    reminderMin = Math.max(reminderMin, x.min());
+    reminderMax = Math.min(reminderMax, x.max());
     return new int[] {reminderMin, reminderMax};
   }
 

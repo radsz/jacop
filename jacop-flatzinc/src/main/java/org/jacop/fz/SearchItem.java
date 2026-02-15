@@ -405,45 +405,76 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   private void handleCreditExploration(ASTAnnotation expr4) {
     explore = "credit";
-    if (expr4.jjtGetNumChildren() == 2) {
-      if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
-        ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
-        if (cp.jjtGetNumChildren() == 1) {
-          creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
-        }
-      }
-      ASTAnnotation bbs = (ASTAnnotation) expr4.jjtGetChild(1);
-      if (bbs.getId() == JJTANNOTATION && "bbs".equals(bbs.getAnnId())) {
-        if (bbs.jjtGetChild(0).jjtGetNumChildren() == 1) {
-          if (((SimpleNode) bbs.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
-            ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0).jjtGetChild(0);
-            if (bv.jjtGetNumChildren() == 1) {
-              bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
-              return;
-            }
-          }
-        }
-      }
+    parseCreditValue(expr4);
+    if (parseBbsValue(expr4)) {
+      return;
     }
     explore = COMPLETE;
     System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
   }
 
+  private void parseCreditValue(ASTAnnotation expr4) {
+    if (expr4.jjtGetNumChildren() < 2) {
+      return;
+    }
+    if (!ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+      return;
+    }
+    ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
+    if (cp.jjtGetNumChildren() == 1) {
+      creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
+    }
+  }
+
+  private boolean parseBbsValue(ASTAnnotation expr4) {
+    if (expr4.jjtGetNumChildren() < 2) {
+      return false;
+    }
+    ASTAnnotation bbs = (ASTAnnotation) expr4.jjtGetChild(1);
+    if (bbs.getId() != JJTANNOTATION || !"bbs".equals(bbs.getAnnId())) {
+      return false;
+    }
+    if (bbs.jjtGetChild(0).jjtGetNumChildren() != 1) {
+      return false;
+    }
+    SimpleNode child = (SimpleNode) bbs.jjtGetChild(0).jjtGetChild(0);
+    if (child.getId() != JJTANNEXPR) {
+      return false;
+    }
+    ASTAnnExpr bv = (ASTAnnExpr) child;
+    if (bv.jjtGetNumChildren() == 1) {
+      bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
+      return true;
+    }
+    return false;
+  }
+
   private void handleLdsExploration(ASTAnnotation expr4) {
     explore = "lds";
-    if (expr4.jjtGetNumChildren() == 1) {
-      if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
-        if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
-          ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
-          if (ae.jjtGetNumChildren() == 1) {
-            ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
-            return;
-          }
-        }
-      }
+    if (parseLdsValue(expr4)) {
+      return;
     }
     explore = COMPLETE;
     System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
+  }
+
+  private boolean parseLdsValue(ASTAnnotation expr4) {
+    if (expr4.jjtGetNumChildren() != 1) {
+      return false;
+    }
+    if (!ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+      return false;
+    }
+    SimpleNode child = (SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0);
+    if (child.getId() != JJTANNEXPR) {
+      return false;
+    }
+    ASTAnnExpr ae = (ASTAnnExpr) child;
+    if (ae.jjtGetNumChildren() == 1) {
+      ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -591,42 +622,63 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     ComparatorVariable<FloatVar> var_sel = vs.getVarSel();
     ComparatorVariable<FloatVar> tieBreaking =
         tieBreakingFloat == null ? vs.getTieSel() : tieBreakingFloat;
+    FloatVar[] searchVars = copyToFloatVarArray();
+
+    return createFloatSelectForIndomain(searchVars, var_sel, tieBreaking);
+  }
+
+  private FloatVar[] copyToFloatVarArray() {
     FloatVar[] searchVars = new FloatVar[search_variables.length];
     for (int i = 0; i < search_variables.length; i++) {
       searchVars[i] = (FloatVar) search_variables[i];
     }
+    return searchVars;
+  }
 
-    switch (indomain) {
-      case "indomain_split" -> {
-        if (tieBreaking == null) {
-          return new SplitSelectFloat<>(store, searchVars, var_sel);
-        } else {
-          return new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
-        }
-      }
-      case "indomain_split_random" -> {
-        if (tieBreaking == null) {
-          return new SplitRandomSelectFloat<>(store, searchVars, var_sel);
-        } else {
-          return new SplitRandomSelectFloat<>(store, searchVars, var_sel, tieBreaking);
-        }
-      }
-      case "indomain_reverse_split" -> {
-        if (tieBreaking == null) {
-          SplitSelectFloat<FloatVar> sel = new SplitSelectFloat<>(store, searchVars, var_sel);
-          sel.leftFirst = false;
-          return sel;
-        } else {
-          SplitSelectFloat<FloatVar> sel =
-              new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
-          sel.leftFirst = false;
-          return sel;
-        }
-      }
+  private SelectChoicePoint<FloatVar> createFloatSelectForIndomain(
+      FloatVar[] searchVars,
+      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> tieBreaking) {
+    return switch (indomain) {
+      case "indomain_split" -> createSplitSelectFloat(searchVars, var_sel, tieBreaking);
+      case "indomain_split_random" ->
+          createSplitRandomSelectFloat(searchVars, var_sel, tieBreaking);
+      case "indomain_reverse_split" ->
+          createReverseSplitSelectFloat(searchVars, var_sel, tieBreaking);
       case null, default ->
           throw new IllegalArgumentException(
               "Wrong parameters for float_search. Only indomain_split, indomain_reverse_split or indomain_split_random are allowed.");
-    }
+    };
+  }
+
+  private SelectChoicePoint<FloatVar> createSplitSelectFloat(
+      FloatVar[] searchVars,
+      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> tieBreaking) {
+    return tieBreaking == null
+        ? new SplitSelectFloat<>(store, searchVars, var_sel)
+        : new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+  }
+
+  private SelectChoicePoint<FloatVar> createSplitRandomSelectFloat(
+      FloatVar[] searchVars,
+      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> tieBreaking) {
+    return tieBreaking == null
+        ? new SplitRandomSelectFloat<>(store, searchVars, var_sel)
+        : new SplitRandomSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+  }
+
+  private SelectChoicePoint<FloatVar> createReverseSplitSelectFloat(
+      FloatVar[] searchVars,
+      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> tieBreaking) {
+    SplitSelectFloat<FloatVar> sel =
+        tieBreaking == null
+            ? new SplitSelectFloat<>(store, searchVars, var_sel)
+            : new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+    sel.leftFirst = false;
+    return sel;
   }
 
   /**

@@ -46,7 +46,9 @@ public class IndomainSetMax<T extends SetVar> implements Indomain<T> {
   /**
    * It creates indomain heuristic, which will choose the maximal value from the variable domain.
    */
-  public IndomainSetMax() {}
+  public IndomainSetMax() {
+    // No-op: heuristic does not require initialization.
+  }
 
   /**
    * Selects the maximal value from the set variable's domain.

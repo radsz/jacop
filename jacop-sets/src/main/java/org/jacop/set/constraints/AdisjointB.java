@@ -96,63 +96,57 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
     }
 
     if (performCardinalityReasoning) {
-      // TODO: implement cardinality reasoning.
-      int maxSizeOfIntersection = -1;
-
-      int elementsReservedForB = b.domain.card().min();
-
-      if (elementsReservedForB > 0) {
-        // how many still do we need to reserve after removing what is already within B.
-        elementsReservedForB -= b.domain.glb().getSize();
-
-        if (elementsReservedForB > 0) {
-          maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
-          assert (maxSizeOfIntersection == a.domain.lub().intersect(b.domain.lub()).getSize())
-              : "sizeOfIntersection not properly implemented";
-
-          // how many elements can be added to B without affecting the cardinality of A = #(3).
-          // subtract from elementsReservedForB
-          elementsReservedForB -=
-              b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection;
-
-          // now elementsReservedForB hold number of elements required for B from aLUB /\ bLUB
-
-          // TODO: check if that actually does any propagation, under what conditions?
-          a.domain.inCardinality(
-              store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
-        }
-      }
-
-      int elementsReservedForA = a.domain.card().min();
-
-      if (elementsReservedForA > 0) {
-        // how many still do we need to reserve after removing what is already within B.
-        elementsReservedForA -= a.domain.glb().getSize();
-
-        if (elementsReservedForA > 0) {
-
-          if (maxSizeOfIntersection == -1) {
-            maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
-            assert (maxSizeOfIntersection == b.domain.lub().intersect(a.domain.lub()).getSize())
-                : "sizeOfIntersection not properly implemented";
-          }
-
-          // how many elements can be added to A without affecting the cardinality of B = #(1).
-          // subtract from elementsReservedForA
-          elementsReservedForA -=
-              a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection;
-
-          // now elementsReservedForA hold number of elements required for A from aLUB /\ bLUB
-
-          // TODO: check if that actually does any propagation, under what conditions?
-          b.domain.inCardinality(
-              store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
-        }
-      }
+      performCardinalityPropagation(store);
     }
 
     aHasChanged = false;
     bHasChanged = false;
+  }
+
+  private void performCardinalityPropagation(Store store) {
+    int maxSizeOfIntersection = propagateCardinalityForB(store);
+
+    int elementsReservedForA = a.domain.card().min();
+    if (elementsReservedForA <= 0) {
+      return;
+    }
+    elementsReservedForA -= a.domain.glb().getSize();
+    if (elementsReservedForA <= 0) {
+      return;
+    }
+
+    if (maxSizeOfIntersection == -1) {
+      maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
+      assert maxSizeOfIntersection == b.domain.lub().intersect(a.domain.lub()).getSize()
+          : "sizeOfIntersection not properly implemented";
+    }
+
+    elementsReservedForA -=
+        a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection;
+
+    b.domain.inCardinality(store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
+  }
+
+  private int propagateCardinalityForB(Store store) {
+    int maxSizeOfIntersection = -1;
+    int elementsReservedForB = b.domain.card().min();
+    if (elementsReservedForB <= 0) {
+      return maxSizeOfIntersection;
+    }
+    elementsReservedForB -= b.domain.glb().getSize();
+    if (elementsReservedForB <= 0) {
+      return maxSizeOfIntersection;
+    }
+
+    maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
+    assert maxSizeOfIntersection == a.domain.lub().intersect(b.domain.lub()).getSize()
+        : "sizeOfIntersection not properly implemented";
+
+    elementsReservedForB -=
+        b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection;
+
+    a.domain.inCardinality(store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
+    return maxSizeOfIntersection;
   }
 
   @Override

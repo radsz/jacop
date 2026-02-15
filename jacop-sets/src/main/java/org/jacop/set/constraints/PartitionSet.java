@@ -95,58 +95,64 @@ public class PartitionSet extends Constraint {
   public void consistency(Store store) throws FailException {
 
     if (firstConsistencyCheck) {
-
       for (int i = 0; i < n; i++) {
         s[i].domain.inLub(store.level, s[i], u);
       }
-
       firstConsistencyCheck = false;
     }
 
-    // check union constraint
     for (int i = 0; i < n; i++) {
-      IntDomain ub = u.cloneLight();
-      IntDomain lb = u.cloneLight();
-      int cardMin = u.getSize();
-      int cardMax = u.getSize();
+      propagateUnionConstraintForIndex(store, i);
+    }
+  }
 
-      for (int j = 0; j < n; j++) {
-        if (i != j) {
-          ub = ub.subtract(s[j].dom().lub());
-          lb = lb.subtract(s[j].dom().glb());
+  private void propagateUnionConstraintForIndex(Store store, int i) throws FailException {
+    IntDomain ub = u.cloneLight();
+    IntDomain lb = u.cloneLight();
+    int cardMin = u.getSize();
+    int cardMax = u.getSize();
 
-          cardMin -= s[j].dom().card().max();
-          cardMax -= s[j].dom().card().min();
-        }
+    for (int j = 0; j < n; j++) {
+      if (i != j) {
+        ub = ub.subtract(s[j].dom().lub());
+        lb = lb.subtract(s[j].dom().glb());
+
+        cardMin -= s[j].dom().card().max();
+        cardMax -= s[j].dom().card().min();
       }
+    }
 
-      s[i].dom().inLub(store.level, s[i], lb);
-      s[i].dom().inGlb(store.level, s[i], ub);
+    s[i].dom().inLub(store.level, s[i], lb);
+    s[i].dom().inGlb(store.level, s[i], ub);
 
-      if (cardMax < cardMin || cardMax < 0) {
-        throw Store.failException;
-      }
-      if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax) {
-        throw Store.failException;
-      }
-      if (cardMin > s[i].dom().card().min()) {
-        s[i].domain.inCardinality(store.level, s[i], cardMin, Integer.MAX_VALUE);
-      }
-      if (cardMax < s[i].dom().card().max()) {
-        s[i].dom().inCardinality(store.level, s[i], s[i].dom().card().min(), cardMax);
-      }
+    if (cardMax < cardMin || cardMax < 0) {
+      throw Store.failException;
+    }
+    if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax) {
+      throw Store.failException;
+    }
+    if (cardMin > s[i].dom().card().min()) {
+      s[i].domain.inCardinality(store.level, s[i], cardMin, Integer.MAX_VALUE);
+    }
+    if (cardMax < s[i].dom().card().max()) {
+      s[i].dom().inCardinality(store.level, s[i], s[i].dom().card().min(), cardMax);
+    }
 
-      if (!s[i].singleton()) {
-        if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
-          IO.println("% 1" + s[i] + " in " + s[i].dom().glb());
+    propagateSingletonCases(store, i);
+  }
 
-          s[i].domain.inLub(store.level, s[i], s[i].dom().glb());
-        } else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
-          IO.println("% 2");
+  private void propagateSingletonCases(Store store, int i) {
+    if (s[i].singleton()) {
+      return;
+    }
+    if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
+      IO.println("% 1" + s[i] + " in " + s[i].dom().glb());
 
-          s[i].domain.inGlb(store.level, s[i], s[i].dom().lub());
-        }
-      }
+      s[i].domain.inLub(store.level, s[i], s[i].dom().glb());
+    } else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
+      IO.println("% 2");
+
+      s[i].domain.inGlb(store.level, s[i], s[i].dom().lub());
     }
   }
 

@@ -51,42 +51,47 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
   ProfileConditional() {}
 
   void addToProfile(int index, int a, int b, int val, ExclusiveList exList) {
-    ProfileItemCondition p;
-    int i = 0;
-    boolean notFound = true;
-
     if (TRACE_ENABLED) {
       log.debug("{}  --------------------------", index);
       log.debug("{}", exList);
     }
-
     if (size() == 0) {
-      if (TRACE_ENABLED) {
-        log.debug("1. Add [{}..{})={} at position 0", a, b, val);
-      }
-      int[] r = {index, val};
-      add(new ProfileItemCondition(a, b, val, r));
-      if (MaxProfile < val) {
-        MaxProfile = val;
-      }
+      addToEmptyProfileConditional(index, a, b, val);
     } else {
-      while (i < size() && notFound) {
-        p = get(i);
-        if (b <= p.min) {
-          i = handleInsertBeforeCurrent(index, a, b, val, i, p);
-          notFound = false;
-        } else if (p.max <= a) {
-          InsertResult res = handleInsertAfterCurrent(index, a, b, val, i);
-          i = res.newI();
-          notFound = res.notFound();
-        } else {
-          i = handleOverlapAt(i, index, a, b, val, p, exList);
-          notFound = false;
-        }
-      }
+      addToNonEmptyProfile(index, a, b, val, exList);
     }
     if (TRACE_ENABLED) {
       log.debug("########\n{}", this);
+    }
+  }
+
+  private void addToEmptyProfileConditional(int index, int a, int b, int val) {
+    if (TRACE_ENABLED) {
+      log.debug("1. Add [{}..{})={} at position 0", a, b, val);
+    }
+    int[] r = {index, val};
+    add(new ProfileItemCondition(a, b, val, r));
+    if (MaxProfile < val) {
+      MaxProfile = val;
+    }
+  }
+
+  private void addToNonEmptyProfile(int index, int a, int b, int val, ExclusiveList exList) {
+    int i = 0;
+    boolean notFound = true;
+    while (i < size() && notFound) {
+      ProfileItemCondition p = get(i);
+      if (b <= p.min) {
+        i = handleInsertBeforeCurrent(index, a, b, val, i, p);
+        notFound = false;
+      } else if (p.max <= a) {
+        InsertResult res = handleInsertAfterCurrent(index, a, b, val, i);
+        i = res.newI();
+        notFound = res.notFound();
+      } else {
+        i = handleOverlapAt(i, index, a, b, val, p, exList);
+        notFound = false;
+      }
     }
   }
 

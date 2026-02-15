@@ -73,88 +73,101 @@ public class Profile extends ArrayList<ProfileItem> {
    * @param val the amount by which the profiles is updated.
    */
   public void addToProfile(int a, int b, int val) {
-    ProfileItem p;
+    if (size() == 0) {
+      addToEmptyProfile(a, b, val);
+      return;
+    }
     int i = 0;
     boolean notFound = true;
-
-    if (size() == 0) {
-      if (TRACE_ENABLED) {
-        log.debug("1. Add [{}..{})={} at position 0", a, b, val);
+    while (i < size() && notFound) {
+      ProfileItem p = get(i);
+      if (b <= p.min) {
+        notFound = false;
+        i = handleBeforeCurrent(a, b, val, i, p);
+      } else if (p.max <= a) {
+        int[] result = handleAfterCurrent(a, b, val, i, p);
+        i = result[0];
+        notFound = result[1] != 0;
+      } else {
+        handleOverlapAt(i, a, b, val, p);
+        notFound = false;
       }
-      add(new ProfileItem(type, a, b, val));
+    }
+  }
+
+  private void addToEmptyProfile(int a, int b, int val) {
+    if (TRACE_ENABLED) {
+      log.debug("1. Add [{}..{})={} at position 0", a, b, val);
+    }
+    add(new ProfileItem(type, a, b, val));
+    if (maxProfileItemHeight < val) {
+      maxProfileItemHeight = val;
+    }
+  }
+
+  private int handleBeforeCurrent(int a, int b, int val, int i, ProfileItem p) {
+    if (a == b) {
+      i++;
       if (maxProfileItemHeight < val) {
         maxProfileItemHeight = val;
       }
-    } else {
-      while (i < size() && notFound) {
-        p = get(i);
-        if (b <= p.min) {
-          if (a != b) {
-            if (b == p.min && val == p.value) {
-              if (TRACE_ENABLED) {
-                log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
-              }
-              p.min = a;
-              if (i > 0) {
-                ProfileItem previousP = get(i - 1);
-                if (a == previousP.max && previousP.value == val) {
-                  p.min = previousP.min;
-                  remove(i - 1);
-                  i--;
-                }
-              }
-            } else {
-              if (i > 0) {
-                p = get(i - 1);
-                if (a == p.max && val == p.value) {
-                  p.max = b;
-                } else {
-                  add(i, new ProfileItem(type, a, b, val));
-                }
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
-                }
-                add(i, new ProfileItem(type, a, b, val));
-              }
-            }
-          }
-          notFound = false;
-          i++;
-          if (maxProfileItemHeight < val) {
-            maxProfileItemHeight = val;
-          }
-        } else {
-          if (p.max <= a) {
-            if (i == size() - 1) {
-              if (a != b) {
-                if (p.max == a && val == p.value) {
-                  if (TRACE_ENABLED) {
-                    log.debug("3a. Change [{}..{})={} at position {}", p.min, b, val, i);
-                  }
-                  p.max = b;
-                } else {
-                  if (TRACE_ENABLED) {
-                    log.debug("3b. Add [{}..{})={} at position {}", a, b, val, i + 1);
-                  }
-                  add(i + 1, new ProfileItem(type, a, b, val));
-                }
-                if (maxProfileItemHeight < val) {
-                  maxProfileItemHeight = val;
-                }
-              }
-              i++;
-              notFound = false;
-            } else {
-              i++;
-            }
-          } else {
-            handleOverlapAt(i, a, b, val, p);
-            notFound = false;
-          }
+      return i;
+    }
+    if (b == p.min && val == p.value) {
+      if (TRACE_ENABLED) {
+        log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
+      }
+      p.min = a;
+      if (i > 0) {
+        ProfileItem previousP = get(i - 1);
+        if (a == previousP.max && previousP.value == val) {
+          p.min = previousP.min;
+          remove(i - 1);
+          i--;
         }
       }
+    } else if (i > 0) {
+      ProfileItem prev = get(i - 1);
+      if (a == prev.max && val == prev.value) {
+        prev.max = b;
+      } else {
+        add(i, new ProfileItem(type, a, b, val));
+      }
+    } else {
+      if (TRACE_ENABLED) {
+        log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
+      }
+      add(i, new ProfileItem(type, a, b, val));
     }
+    i++;
+    if (maxProfileItemHeight < val) {
+      maxProfileItemHeight = val;
+    }
+    return i;
+  }
+
+  private int[] handleAfterCurrent(int a, int b, int val, int i, ProfileItem p) {
+    if (i != size() - 1) {
+      return new int[] {i + 1, 1};
+    }
+    if (a == b) {
+      return new int[] {i + 1, 0};
+    }
+    if (p.max == a && val == p.value) {
+      if (TRACE_ENABLED) {
+        log.debug("3a. Change [{}..{})={} at position {}", p.min, b, val, i);
+      }
+      p.max = b;
+    } else {
+      if (TRACE_ENABLED) {
+        log.debug("3b. Add [{}..{})={} at position {}", a, b, val, i + 1);
+      }
+      add(i + 1, new ProfileItem(type, a, b, val));
+    }
+    if (maxProfileItemHeight < val) {
+      maxProfileItemHeight = val;
+    }
+    return new int[] {i + 1, 0};
   }
 
   private void handleOverlapAt(int i, int a, int b, int val, ProfileItem p) {

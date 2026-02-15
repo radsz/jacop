@@ -239,26 +239,39 @@ public class SurvoPuzzle extends ExampleFd {
       String[] row = str.split("\\s+");
       IO.println(str);
       if (lineCount == 0) {
-        c = row.length;
-        colsums = new int[c];
+        parseHeaderRow(row);
       } else {
-        if (row.length == c) {
-          colsums = new int[row.length];
-          for (int j = 0; j < row.length; j++) {
-            colsums[j] = Integer.parseInt(row[j]);
-          }
-          IO.println();
-        } else {
-          List<Integer> thisRow = new ArrayList<>();
-          for (String s : row) {
-            thisRow.add("*".equals(s) ? 0 : Integer.parseInt(s));
-          }
-          matrixI.add(thisRow);
-        }
+        parseDataRow(row, matrixI);
       }
       lineCount++;
     }
     return matrixI;
+  }
+
+  private void parseHeaderRow(String[] row) {
+    c = row.length;
+    colsums = new int[c];
+  }
+
+  private void parseDataRow(String[] row, List<List<Integer>> matrixI) {
+    if (row.length == c) {
+      colsums = new int[row.length];
+      for (int j = 0; j < row.length; j++) {
+        colsums[j] = Integer.parseInt(row[j]);
+      }
+      IO.println();
+    } else {
+      List<Integer> thisRow = parseRowValues(row);
+      matrixI.add(thisRow);
+    }
+  }
+
+  private List<Integer> parseRowValues(String[] row) {
+    List<Integer> thisRow = new ArrayList<>();
+    for (String s : row) {
+      thisRow.add("*".equals(s) ? 0 : Integer.parseInt(s));
+    }
+    return thisRow;
   }
 
   private void buildMatrixAndSums(List<List<Integer>> matrixI) {

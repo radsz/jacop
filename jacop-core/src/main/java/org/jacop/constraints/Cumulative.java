@@ -890,47 +890,24 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private long minOverlap(Task t, int est, int lct) {
+    int tDurMin = computeMinOverlapDuration(t, est, lct);
+    return (long) tDurMin * t.res().min();
+  }
 
-    int tDur_min;
+  private int computeMinOverlapDuration(Task t, int est, int lct) {
     int tdur = t.dur().min();
     int tect = t.ect();
     int tlst = t.lst();
-
     if (est <= tlst) {
-      if (tect >= lct) {
-        // |---t----|
-        // |--------------|
-        // est lct
-        int temp2 = lct - tlst;
-        tDur_min = Math.min(temp2, tdur);
-      } else {
-        // tect < lct
-        // |---t----|
-        // |--------------|
-        // est lct
-        tDur_min = tdur;
-      }
-    } else
-    // est > tlst
-    if (tect > est) {
-      if (tect <= lct) {
-        // |---t----|
-        // |--------------|
-        // est lct
-        int temp1 = tect - est;
-        tDur_min = Math.min(temp1, tdur);
-      } else {
-        // tect > lct
-        // |--------t---------|
-        // |--------------|
-        // est lct
-        tDur_min = Math.min(lct - est, tdur);
-      }
-    } else {
-      // tect <= est
-      tDur_min = 0;
+      return tect >= lct ? Math.min(lct - tlst, tdur) : tdur;
     }
-    return (long) tDur_min * t.res().min();
+    if (tect <= est) {
+      return 0;
+    }
+    if (tect <= lct) {
+      return Math.min(tect - est, tdur);
+    }
+    return Math.min(lct - est, tdur);
   }
 
   private void notFirst(Store store, Task s, List<Task> tasks) {

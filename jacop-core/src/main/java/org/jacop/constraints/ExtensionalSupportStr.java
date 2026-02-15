@@ -310,19 +310,23 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     int i = 0;
     for (int[] t : tuples) {
       stillSupport[i] = isTupleSupported(t);
-      if (DEBUG_ALL) {
-        log.debug("support for analysis{}", Arrays.toString(t));
-      }
+      logMarkSupportDebug(t, stillSupport[i]);
       if (stillSupport[i]) {
         noSupports++;
         addTupleToValuesInFocus(t);
       }
-      if (DEBUG_ALL && !stillSupport[i]) {
-        log.debug("Not support {}", Arrays.toString(t));
-      }
       i++;
     }
     return noSupports;
+  }
+
+  private void logMarkSupportDebug(int[] t, boolean supported) {
+    if (DEBUG_ALL) {
+      log.debug("support for analysis{}", Arrays.toString(t));
+      if (!supported) {
+        log.debug("Not support {}", Arrays.toString(t));
+      }
+    }
   }
 
   private boolean isTupleSupported(int[] t) {

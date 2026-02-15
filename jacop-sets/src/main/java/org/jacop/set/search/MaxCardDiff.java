@@ -46,7 +46,9 @@ import org.jacop.set.core.SetVar;
 public class MaxCardDiff<T extends SetVar> implements ComparatorVariable<T> {
 
   /** It constructs a maximum cardinality difference variable comparator. */
-  public MaxCardDiff() {}
+  public MaxCardDiff() {
+    // No-op: comparator does not require initialization.
+  }
 
   /** Compares the cardinality difference of the variable to the float value. */
   public int compare(double left, T v) {

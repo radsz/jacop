@@ -91,73 +91,78 @@ public class Match extends Constraint implements SatisfiedPresent {
     a.domain.inCardinality(store.level, a, list.length, list.length);
 
     if (a.domain.glb().getSize() == list.length) {
-
-      ValueEnumeration ve = a.domain.glb().valueEnumeration();
-      int el;
-      for (IntVar intVar : list) {
-        el = ve.nextElement();
-        intVar.domain.in(store.level, intVar, el, el);
-      }
-      a.domain.inLub(store.level, a, a.domain.glb());
-
+      propagateWhenGlbFull(store);
     } else if (a.domain.lub().getSize() == list.length) {
-
-      ValueEnumeration ve = a.domain.lub().valueEnumeration();
-      int el;
-      for (IntVar intVar : list) {
-        el = ve.nextElement();
-        intVar.domain.in(store.level, intVar, el, el);
-      }
-      a.domain.inGlb(store.level, a, a.domain.lub());
-
+      propagateWhenLubFull(store);
     } else {
-
-      IntDomain glbA = a.domain.glb();
-      IntDomain lubA = a.domain.lub();
-
-      int sizeOfaGlb = glbA.getSize();
-      int sizeOfaLub = lubA.getSize();
-
-      // glbA, lubA => list[i]
-      for (int i = 0; i < list.length; i++) {
-
-        list[i].domain.in(store.level, list[i], lubA);
-
-        int minValue = lubA.getElementAt(i);
-
-        if (i >= list.length - sizeOfaGlb) {
-          // -1 since indexing of arrays starts from 0.
-          int minValueFromGlb = glbA.getElementAt(sizeOfaGlb - list.length + i);
-          if (minValueFromGlb > minValue) {
-            minValue = minValueFromGlb;
-          }
-        }
-
-        list[i].domain.inMin(store.level, list[i], minValue);
-
-        int maxValue = lubA.getElementAt(sizeOfaLub - list.length + i);
-
-        if (i < sizeOfaGlb) {
-          int maxValueFromGlb = glbA.getElementAt(i);
-          if (maxValueFromGlb < maxValue) {
-            maxValue = maxValueFromGlb;
-          }
-        }
-
-        list[i].domain.inMax(store.level, list[i], maxValue);
-      }
-
-      IntDomain lubFromList = list[0].domain.cloneLight();
-      for (int i = 0; i < list.length; i++) {
-        if (list[i].singleton()) {
-          a.domain.inGlb(store.level, a, list[i].value());
-        }
-        if (i > 0) {
-          lubFromList.unionAdapt(list[i].domain);
-        }
-      }
-      a.domain.inLub(store.level, a, lubFromList);
+      propagateGeneralCase(store);
     }
+  }
+
+  private void propagateWhenGlbFull(Store store) {
+    ValueEnumeration ve = a.domain.glb().valueEnumeration();
+    int el;
+    for (IntVar intVar : list) {
+      el = ve.nextElement();
+      intVar.domain.in(store.level, intVar, el, el);
+    }
+    a.domain.inLub(store.level, a, a.domain.glb());
+  }
+
+  private void propagateWhenLubFull(Store store) {
+    ValueEnumeration ve = a.domain.lub().valueEnumeration();
+    int el;
+    for (IntVar intVar : list) {
+      el = ve.nextElement();
+      intVar.domain.in(store.level, intVar, el, el);
+    }
+    a.domain.inGlb(store.level, a, a.domain.lub());
+  }
+
+  private void propagateGeneralCase(Store store) {
+    IntDomain glbA = a.domain.glb();
+    IntDomain lubA = a.domain.lub();
+
+    int sizeOfaGlb = glbA.getSize();
+    int sizeOfaLub = lubA.getSize();
+
+    for (int i = 0; i < list.length; i++) {
+      propagateListElementFromLub(store, glbA, lubA, sizeOfaGlb, sizeOfaLub, i);
+    }
+
+    IntDomain lubFromList = list[0].domain.cloneLight();
+    for (int i = 0; i < list.length; i++) {
+      if (list[i].singleton()) {
+        a.domain.inGlb(store.level, a, list[i].value());
+      }
+      if (i > 0) {
+        lubFromList.unionAdapt(list[i].domain);
+      }
+    }
+    a.domain.inLub(store.level, a, lubFromList);
+  }
+
+  private void propagateListElementFromLub(
+      Store store, IntDomain glbA, IntDomain lubA, int sizeOfaGlb, int sizeOfaLub, int i) {
+    list[i].domain.in(store.level, list[i], lubA);
+
+    int minValue = lubA.getElementAt(i);
+    if (i >= list.length - sizeOfaGlb) {
+      int minValueFromGlb = glbA.getElementAt(sizeOfaGlb - list.length + i);
+      if (minValueFromGlb > minValue) {
+        minValue = minValueFromGlb;
+      }
+    }
+    list[i].domain.inMin(store.level, list[i], minValue);
+
+    int maxValue = lubA.getElementAt(sizeOfaLub - list.length + i);
+    if (i < sizeOfaGlb) {
+      int maxValueFromGlb = glbA.getElementAt(i);
+      if (maxValueFromGlb < maxValue) {
+        maxValue = maxValueFromGlb;
+      }
+    }
+    list[i].domain.inMax(store.level, list[i], maxValue);
   }
 
   @Override

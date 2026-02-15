@@ -164,6 +164,69 @@ public class NonTransitiveDice extends ExampleFd {
     runSecondPhase(noDices, noSides, initialCurrentBest);
   }
 
+  private IntVar[] createFaces(int noNumbers) {
+    IntVar[] faces = new IntVar[noDices * noSides];
+    for (int i = 0; i < faces.length; i++) {
+      faces[i] = new IntVar(store, "d" + (i / noSides + 1) + "f" + (i % noSides + 1), 1, noNumbers);
+    }
+    return faces;
+  }
+
+  private void imposeLexOrderOnFaces(IntVar[] faces) {
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides - 1; j++) {
+        store.impose(new XltY(faces[i * noSides + j], faces[i * noSides + j + 1]));
+      }
+    }
+  }
+
+  private IntVar[][][] createWins() {
+    IntVar[][][] wins = new IntVar[noDices][noSides][noSides];
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
+          wins[i][j][m] =
+              new BooleanVar(
+                  store, "win_D" + (i + 1) + "->" + ((i + 2) % noDices) + "F" + j + m, 0, 1);
+        }
+      }
+    }
+    return wins;
+  }
+
+  private void imposeWinningConstraints(IntVar[] faces, IntVar[][][] wins) {
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
+          store.impose(
+              new Reified(
+                  new XgtY(faces[noSides * i + j], faces[noSides * ((i + 1) % noDices) + m]),
+                  wins[i][j][m]));
+        }
+      }
+    }
+  }
+
+  private IntVar[] createWinningSums(IntVar[][][] wins) {
+    IntVar[] winningSum = new IntVar[noDices];
+    for (int i = 0; i < noDices; i++) {
+      winningSum[i] =
+          new IntVar(
+              store,
+              "noWins-d" + (i + 1) + "->d" + ((i + 2) % noDices),
+              noSides * noSides / 2 + 1,
+              noSides * noSides);
+
+      IntVar[] matrix = new IntVar[noSides * noSides];
+      for (int j = 0; j < noSides; j++) {
+        System.arraycopy(wins[i][j], 0, matrix, j * noSides, noSides);
+      }
+
+      store.impose(new SumInt(matrix, "==", winningSum[i]));
+    }
+    return winningSum;
+  }
+
   /** Imposes implied constraints that fix wins[i][j][m] to 1 when probability is high enough. */
   private void imposeImpliedWinConstraints(IntVar[][][] wins, int noDices, int noSides) {
     int threshold = currentBest != noSides * noSides ? currentBest - 1 : (noSides * noSides) / 2;
@@ -184,72 +247,13 @@ public class NonTransitiveDice extends ExampleFd {
     store = new Store();
     int noNumbers = noDices * noSides;
 
-    IntVar[] faces = new IntVar[noDices * noSides];
-
-    for (int i = 0; i < faces.length; i++) {
-      // Create FDV for each face
-      faces[i] =
-          new IntVar(
-              store,
-              "d" + (i / noSides + 1) + "f" + (i % noSides + 1),
-              // minimal value
-              1,
-              // maximal value
-              noNumbers);
-    }
-
-    // Faces are lexigraphically ordered
-    for (int i = 0; i < noDices; i++) {
-      for (int j = 0; j < noSides - 1; j++) {
-        // Impose constraints that each consequtive face
-        // is smaller than the previous one
-        store.impose(new XltY(faces[i * noSides + j], faces[i * noSides + j + 1]));
-      }
-    }
-
-    IntVar[][][] wins = new IntVar[noDices][noSides][noSides];
-
-    for (int i = 0; i < noDices; i++) {
-      for (int j = 0; j < noSides; j++) {
-        for (int m = 0; m < noSides; m++) {
-          wins[i][j][m] =
-              new BooleanVar(
-                  store, "win_D" + (i + 1) + "->" + ((i + 2) % noDices) + "F" + j + m, 0, 1);
-        }
-      }
-    }
-
-    // Winning constraints if Fj from ith dice is larger than Fm from
-    // ith+1 dice than wins[i][j][m] is equal to 1.
-    for (int i = 0; i < noDices; i++) {
-      for (int j = 0; j < noSides; j++) {
-        for (int m = 0; m < noSides; m++) {
-          store.impose(
-              new Reified(
-                  new XgtY(faces[noSides * i + j], faces[noSides * ((i + 1) % noDices) + m]),
-                  wins[i][j][m]));
-        }
-      }
-    }
-
+    IntVar[] faces = createFaces(noNumbers);
+    imposeLexOrderOnFaces(faces);
+    IntVar[][][] wins = createWins();
+    imposeWinningConstraints(faces, wins);
     imposeImpliedWinConstraints(wins, noDices, noSides);
 
-    IntVar[] winningSum = new IntVar[noDices];
-    for (int i = 0; i < noDices; i++) {
-      winningSum[i] =
-          new IntVar(
-              store,
-              "noWins-d" + (i + 1) + "->d" + ((i + 2) % noDices),
-              noSides * noSides / 2 + 1,
-              noSides * noSides);
-
-      IntVar[] matrix = new IntVar[noSides * noSides];
-      for (int j = 0; j < noSides; j++) {
-        System.arraycopy(wins[i][j], 0, matrix, j * noSides, noSides);
-      }
-
-      store.impose(new SumInt(matrix, "==", winningSum[i]));
-    }
+    IntVar[] winningSum = createWinningSums(wins);
 
     IntVar minimumWinning = new IntVar(store, "MinDominance", 0, noSides * noSides);
 

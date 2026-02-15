@@ -426,28 +426,27 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   }
 
   private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
-
-    int dMax = IntDomain.MAX_INT;
-
-    for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements(); ) {
-      Interval i = ie.nextElement();
-
-      if (excludeMax >= i.min() && excludeMin <= i.max()) {
-        dMax = excludeMin - i.min();
-        break;
-      }
-    }
+    int dMax = findMaxDurationFromIntervals(start, excludeMin, excludeMax);
     if (dMax < durMax.getLast()) {
       durMax.set(durMax.size() - 1, dMax);
     }
-
     if (start.dom().contains(excludeMax)) {
       durMax.add(IntDomain.MAX_INT);
     }
-
     if (traceOn) {
       log.debug("+++ {}", durMax);
     }
+  }
+
+  private int findMaxDurationFromIntervals(IntVar start, int excludeMin, int excludeMax) {
+    int dMax = IntDomain.MAX_INT;
+    for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements(); ) {
+      Interval i = ie.nextElement();
+      if (excludeMax >= i.min() && excludeMin <= i.max()) {
+        return excludeMin - i.min();
+      }
+    }
+    return dMax;
   }
 
   void narrowRectangle(
@@ -628,23 +627,32 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       int imin,
       int imax,
       IntVar resources) {
-
     int dur = duration.min();
     int intervalEnd = imax + dur;
     for (ProfileItem p : profile) {
       if (traceOn) {
         log.debug("Comparing [{}, {}] with profile item {}", imin, imax, p);
       }
-
       if (!intervalOverlap(imin, intervalEnd, p.min, p.max)) {
         continue;
       }
-      IntDomain startDom = start.dom();
-      if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
-        applyStartNarrowing(store, start, duration, p);
-      } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
-        narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
-      }
+      applyProfilePruningForOverlap(store, limit, start, duration, p, dur, resources);
+    }
+  }
+
+  private void applyProfilePruningForOverlap(
+      Store store,
+      int limit,
+      IntVar start,
+      IntVar duration,
+      ProfileItem p,
+      int dur,
+      IntVar resources) {
+    IntDomain startDom = start.dom();
+    if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+      applyStartNarrowing(store, start, duration, p);
+    } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+      narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
     }
   }
 

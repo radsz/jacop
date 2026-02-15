@@ -172,22 +172,30 @@ public class EqBool extends PrimitiveConstraint {
   private void applyResultPositivePropagation(
       Store store, boolean negated, int x0, int x1, int index01) {
     if (negated) {
-      if (x0 == 0 && x1 == list.length - 1) {
-        list[index01].domain.inValue(store.level, list[index01], 0);
-      }
-      if (x1 == 0 && x0 == list.length - 1) {
-        list[index01].domain.inValue(store.level, list[index01], 1);
-      }
+      applyResultPositivePropagationNegated(store, x0, x1, index01);
     } else {
-      if (x0 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 0);
-        }
+      applyResultPositivePropagationNonNegated(store, x0, x1);
+    }
+  }
+
+  private void applyResultPositivePropagationNegated(Store store, int x0, int x1, int index01) {
+    if (x0 == 0 && x1 == list.length - 1) {
+      list[index01].domain.inValue(store.level, list[index01], 0);
+    }
+    if (x1 == 0 && x0 == list.length - 1) {
+      list[index01].domain.inValue(store.level, list[index01], 1);
+    }
+  }
+
+  private void applyResultPositivePropagationNonNegated(Store store, int x0, int x1) {
+    if (x0 > 0) {
+      for (IntVar intVar : list) {
+        intVar.domain.inValue(store.level, intVar, 0);
       }
-      if (x1 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 1);
-        }
+    }
+    if (x1 > 0) {
+      for (IntVar intVar : list) {
+        intVar.domain.inValue(store.level, intVar, 1);
       }
     }
   }
@@ -195,23 +203,31 @@ public class EqBool extends PrimitiveConstraint {
   private void applyResultNegativePropagation(
       Store store, boolean negated, int x0, int x1, int index01) {
     if (negated) {
-      if (x0 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 0);
-        }
-      }
-      if (x1 > 0) {
-        for (IntVar intVar : list) {
-          intVar.domain.inValue(store.level, intVar, 1);
-        }
-      }
+      applyResultNegativePropagationNegated(store, x0, x1);
     } else {
-      if (x0 == 0 && x1 == list.length - 1) {
-        list[index01].domain.inValue(store.level, list[index01], 0);
+      applyResultNegativePropagationNonNegated(store, x0, x1, index01);
+    }
+  }
+
+  private void applyResultNegativePropagationNegated(Store store, int x0, int x1) {
+    if (x0 > 0) {
+      for (IntVar intVar : list) {
+        intVar.domain.inValue(store.level, intVar, 0);
       }
-      if (x1 == 0 && x0 == list.length - 1) {
-        list[index01].domain.inValue(store.level, list[index01], 1);
+    }
+    if (x1 > 0) {
+      for (IntVar intVar : list) {
+        intVar.domain.inValue(store.level, intVar, 1);
       }
+    }
+  }
+
+  private void applyResultNegativePropagationNonNegated(Store store, int x0, int x1, int index01) {
+    if (x0 == 0 && x1 == list.length - 1) {
+      list[index01].domain.inValue(store.level, list[index01], 0);
+    }
+    if (x1 == 0 && x0 == list.length - 1) {
+      list[index01].domain.inValue(store.level, list[index01], 1);
     }
   }
 

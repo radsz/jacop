@@ -65,24 +65,12 @@ public class AunionBeqC extends AbstractSetOpBeqC {
     SetDomain bDom = b.dom();
     SetDomain cDom = c.dom();
 
-    if ((cHasChanged || bHasChanged) && cDom.lub().getSize() > 0) {
-      IntDomain glbA = cDom.glb().subtract(bDom.lub());
-      if (glbA.getSize() > 0) {
-        a.domain.inGlb(store.level, a, glbA);
-      }
-    }
-
+    propagateUnionGlbA(store, aDom, bDom, cDom, bHasChanged, cHasChanged);
     if (cHasChanged) {
       a.domain.inLub(store.level, a, cDom.lub());
     }
 
-    if ((aHasChanged || cHasChanged) && cDom.lub().getSize() > 0) {
-      IntDomain glbB = cDom.glb().subtract(aDom.lub());
-      if (glbB.getSize() > 0) {
-        b.domain.inGlb(store.level, b, glbB);
-      }
-    }
-
+    propagateUnionGlbB(store, aDom, bDom, cDom, aHasChanged, cHasChanged);
     if (cHasChanged) {
       b.domain.inLub(store.level, b, cDom.lub());
     }
@@ -98,30 +86,61 @@ public class AunionBeqC extends AbstractSetOpBeqC {
     }
 
     if (performCardinalityReasoning) {
-      int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
-      int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
-      int maxLeft = a.domain.card().min() - sizeOf_4;
-      int maxRight = b.domain.card().min() - sizeOf_8;
-
-      c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
-
-      int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
-
-      c.domain.inCardinality(
-          store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
-
-      int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
-
-      a.domain.inCardinality(
-          store.level, a, c.domain.card().min() - sizeOf_2_3_7_8, c.domain.card().max() - sizeOf_8);
-
-      int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
-
-      b.domain.inCardinality(
-          store.level, b, c.domain.card().min() - sizeOf_1_2_4_5, c.domain.card().max() - sizeOf_4);
-
-      // FIXME, implement the cardinality based reasoning.
+      propagateUnionCardinality(store);
     }
+  }
+
+  private void propagateUnionGlbA(
+      Store store,
+      SetDomain aDom,
+      SetDomain bDom,
+      SetDomain cDom,
+      boolean bHasChanged,
+      boolean cHasChanged) {
+    if ((cHasChanged || bHasChanged) && cDom.lub().getSize() > 0) {
+      IntDomain glbA = cDom.glb().subtract(bDom.lub());
+      if (glbA.getSize() > 0) {
+        a.domain.inGlb(store.level, a, glbA);
+      }
+    }
+  }
+
+  private void propagateUnionGlbB(
+      Store store,
+      SetDomain aDom,
+      SetDomain bDom,
+      SetDomain cDom,
+      boolean aHasChanged,
+      boolean cHasChanged) {
+    if ((aHasChanged || cHasChanged) && cDom.lub().getSize() > 0) {
+      IntDomain glbB = cDom.glb().subtract(aDom.lub());
+      if (glbB.getSize() > 0) {
+        b.domain.inGlb(store.level, b, glbB);
+      }
+    }
+  }
+
+  private void propagateUnionCardinality(Store store) {
+    int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+    int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+    int maxLeft = a.domain.card().min() - sizeOf_4;
+    int maxRight = b.domain.card().min() - sizeOf_8;
+
+    c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
+
+    int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
+
+    c.domain.inCardinality(store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
+
+    int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
+
+    a.domain.inCardinality(
+        store.level, a, c.domain.card().min() - sizeOf_2_3_7_8, c.domain.card().max() - sizeOf_8);
+
+    int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
+
+    b.domain.inCardinality(
+        store.level, b, c.domain.card().min() - sizeOf_1_2_4_5, c.domain.card().max() - sizeOf_4);
   }
 
   @Override
