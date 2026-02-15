@@ -35,7 +35,9 @@ import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -152,6 +154,72 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
     } else {
       return false;
     }
+  }
+
+  /**
+   * Updates the p variable domain based on q bounds using the inverse trigonometric function.
+   *
+   * @param store the constraint store
+   * @param qMin the minimum value of q
+   * @param qMax the maximum value of q
+   * @param inverseFunc the inverse trigonometric function (e.g., Math::acos, Math::asin)
+   * @param nanMin the value to use for pMin when inverseFunc returns NaN
+   * @param nanMax the value to use for pMax when inverseFunc returns NaN
+   */
+  protected void updatePDomain(
+      Store store,
+      double qMin,
+      double qMax,
+      DoubleUnaryOperator inverseFunc,
+      double nanMin,
+      double nanMax) {
+    // p update
+    double pMin = inverseFunc.applyAsDouble(qMax);
+    double pMax = inverseFunc.applyAsDouble(qMin);
+
+    pMin = FloatDomain.down(pMin);
+    pMax = FloatDomain.up(pMax);
+    if (java.lang.Double.isNaN(pMin)) {
+      pMin = nanMin;
+    }
+    if (java.lang.Double.isNaN(pMax)) {
+      pMax = nanMax;
+    }
+
+    double k = Math.floor(p.min() / (2 * FloatDomain.PI));
+    double low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
+    k = Math.ceil(p.max() / (2 * FloatDomain.PI));
+    double high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
+    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
+
+    p.domain.in(store.level, p, pDom);
+  }
+
+  /**
+   * Checks if the p domain spans a full period (2*PI) or more, in which case no propagation is
+   * needed.
+   *
+   * @return true if p domain spans >= 2*PI
+   */
+  protected boolean spansFullPeriod() {
+    return p.max() - p.min() >= 2 * FloatDomain.PI;
+  }
+
+  /**
+   * Normalizes p bounds to [-2*PI, 2*PI] if needed and returns the normalized min and max.
+   *
+   * @return array with [normalizedMin, normalizedMax]
+   */
+  protected double[] getNormalizedBounds() {
+    double min = p.min();
+    double max = p.max();
+    if (p.min() < -2 * FloatDomain.PI || p.max() > 2 * FloatDomain.PI) {
+      // normalize to -2*PI..2*PI
+      FloatInterval normP = normalize(p);
+      min = normP.min();
+      max = normP.max();
+    }
+    return new double[] {min, max};
   }
 
   @Override

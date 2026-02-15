@@ -156,6 +156,103 @@ public class SmallDenseDomain extends IntDomain {
     ((IntVar) v).domain = result;
   }
 
+  /**
+   * Updates domain fields and notifies variable of domain change. Used when stamp == storeLevel.
+   *
+   * @param bitsResult the new bits value
+   * @param newSize the new size
+   * @param v the variable to notify
+   */
+  private void updateDomainInPlace(long bitsResult, int newSize, Var v) {
+    bits = bitsResult;
+    size = newSize;
+    if (newSize == 1) {
+      singleton = true;
+    }
+    assert checkInvariants() == null : checkInvariants();
+    if (singleton) {
+      v.domainHasChanged(GROUND);
+    } else {
+      v.domainHasChanged(BOUND);
+    }
+  }
+
+  /**
+   * Updates domain fields and notifies variable of domain change with event type detection. Used
+   * when stamp == storeLevel.
+   *
+   * @param bitsResult the new bits value
+   * @param newSize the new size
+   * @param previousMin the previous minimum value
+   * @param previousMax the previous maximum value
+   * @param v the variable to notify
+   */
+  private void updateDomainInPlaceWithEvent(
+      long bitsResult, int newSize, int previousMin, int previousMax, Var v) {
+    bits = bitsResult;
+    size = newSize;
+    if (newSize == 1) {
+      singleton = true;
+    }
+    assert checkInvariants() == null : checkInvariants();
+    if (singleton) {
+      v.domainHasChanged(GROUND);
+    } else {
+      if (previousMin != minBound || previousMax != max) {
+        v.domainHasChanged(BOUND);
+      } else {
+        v.domainHasChanged(ANY);
+      }
+    }
+  }
+
+  /**
+   * Creates a new domain result and installs it, then notifies variable. Used when stamp <
+   * storeLevel.
+   *
+   * @param result the new domain result
+   * @param storeLevel the store level
+   * @param v the variable to update
+   */
+  private void installAndNotify(SmallDenseDomain result, int storeLevel, Var v) {
+    assert stamp < storeLevel;
+    installResultDomain(result, storeLevel, v);
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    if (result.singleton()) {
+      v.domainHasChanged(GROUND);
+    } else {
+      v.domainHasChanged(BOUND);
+    }
+  }
+
+  /**
+   * Creates a new domain result and installs it, then notifies variable with event type detection.
+   * Used when stamp < storeLevel.
+   *
+   * @param result the new domain result
+   * @param storeLevel the store level
+   * @param previousMin the previous minimum value
+   * @param previousMax the previous maximum value
+   * @param v the variable to update
+   */
+  private void installAndNotifyWithEvent(
+      SmallDenseDomain result, int storeLevel, int previousMin, int previousMax, Var v) {
+    assert stamp < storeLevel;
+    installResultDomain(result, storeLevel, v);
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    if (result.singleton()) {
+      v.domainHasChanged(GROUND);
+    } else {
+      if (previousMin != result.minBound || previousMax != result.max) {
+        v.domainHasChanged(BOUND);
+      } else {
+        v.domainHasChanged(ANY);
+      }
+    }
+  }
+
   /** It creates an empty domain. */
   public SmallDenseDomain() {
 
@@ -493,8 +590,6 @@ public class SmallDenseDomain extends IntDomain {
 
     } else {
 
-      assert stamp < storeLevel;
-
       SmallDenseDomain result = new SmallDenseDomain();
       result.bits = 1L << 63;
       result.minBound = value;
@@ -502,12 +597,7 @@ public class SmallDenseDomain extends IntDomain {
       result.singleton = true;
       result.size = 1;
 
-      installResultDomain(result, storeLevel, v);
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      v.domainHasChanged(GROUND);
+      installAndNotify(result, storeLevel, v);
     }
   }
 
@@ -628,16 +718,7 @@ public class SmallDenseDomain extends IntDomain {
       assert result.max <= max : "Domain update incorrect.";
       assert result.minBound >= min : "Domain update incorrect.";
 
-      installResultDomain(result, storeLevel, v);
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
+      installAndNotify(result, storeLevel, v);
     }
   }
 
@@ -698,28 +779,12 @@ public class SmallDenseDomain extends IntDomain {
 
     } else {
 
-      assert stamp < storeLevel;
-
       SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
-
-      installResultDomain(result, storeLevel, v);
 
       assert result.max <= previousMax : "Domain update incorrect.";
       assert result.minBound >= previousMin : "Domain update incorrect.";
 
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-
-        if (previousMin != result.minBound || previousMax != result.max) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
+      installAndNotifyWithEvent(result, storeLevel, previousMin, previousMax, v);
     }
   }
 
@@ -867,18 +932,17 @@ public class SmallDenseDomain extends IntDomain {
 
     // Pruning has occurred.
 
+    final int previousMin = minBound;
+    final int previousMax = max;
+    boolean boundEvent = false;
+
     if (stamp == storeLevel) {
 
-      boolean boundEvent = false;
       bits = bitsResult;
       size = newSize;
       if (newSize == 1) {
         singleton = true;
       }
-
-      // TODO: remove asserts which require a local variable to speedup non asserts execution.
-      final int previousMin = minBound;
-      final int previousMax = max;
 
       if (this.minBound == complement) {
         boundEvent = true;
@@ -907,13 +971,8 @@ public class SmallDenseDomain extends IntDomain {
 
     } else {
 
-      assert stamp < storeLevel;
+      SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
-      SmallDenseDomain result;
-
-      result = new SmallDenseDomain(minBound, bitsResult);
-
-      boolean boundEvent = false;
       // 1. Find new min.
       if (this.minBound == complement) {
         result.adaptMin();
@@ -991,18 +1050,17 @@ public class SmallDenseDomain extends IntDomain {
 
     // Pruning has occurred.
 
+    final int previousMin = minBound;
+    final int previousMax = max;
+    boolean boundEvent = false;
+
     if (stamp == storeLevel) {
 
-      boolean boundEvent = false;
       bits = bitsResult;
       size = newSize;
       if (newSize == 1) {
         singleton = true;
       }
-
-      // TODO: remove asserts which require a local variable to speedup non asserts execution.
-      final int previousMin = minBound;
-      final int previousMax = max;
 
       if (this.minBound == minComplement) {
         boundEvent = true;
@@ -1031,13 +1089,7 @@ public class SmallDenseDomain extends IntDomain {
 
     } else {
 
-      assert stamp < storeLevel;
-
-      SmallDenseDomain result;
-
-      boolean boundEvent = false;
-
-      result = new SmallDenseDomain(minBound, bitsResult);
+      SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
       // 1. Find new min.
       if (this.minBound == minComplement) {

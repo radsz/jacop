@@ -176,23 +176,38 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Helper method to get array from node - either from literal or from dictionary by identifier.
+   *
+   * @param node the parse tree node
+   * @param literalExtractor function to extract array from literal node
+   * @param arrayGetter function to get array from dictionary by identifier
+   * @return the array
+   */
+  private <T> T getArrayFromNode(
+      SimpleNode node,
+      java.util.function.Function<SimpleNode, T> literalExtractor,
+      java.util.function.Function<String, T> arrayGetter) {
+    if (node.getId() == JJTARRAYLITERAL) {
+      return literalExtractor.apply(node);
+    } else if (node.getId() == JJTSCALARFLATEXPR) {
+      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
+        return arrayGetter.apply(((ASTScalarFlatExpr) node).getIdent());
+      } else {
+        throw new IllegalArgumentException("Wrong type of array; compilation aborted.");
+      }
+    } else {
+      throw new IllegalArgumentException("Wrong type of array; compilation aborted.");
+    }
+  }
+
+  /**
    * Retrieves an integer array from a parse tree node.
    *
    * @param node the parse tree node
    * @return the integer array
    */
   int[] getIntArray(SimpleNode node) {
-    if (node.getId() == JJTARRAYLITERAL) {
-      return getIntArrayFromLiteral(node);
-    } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        return dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
-      } else {
-        throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
-      }
-    } else {
-      throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
-    }
+    return getArrayFromNode(node, this::getIntArrayFromLiteral, dictionary::getIntArray);
   }
 
   private int[] getIntArrayFromLiteral(SimpleNode node) {
@@ -347,17 +362,7 @@ public class Support implements ParserTreeConstants {
    * @return the float array
    */
   double[] getFloatArray(SimpleNode node) {
-    if (node.getId() == JJTARRAYLITERAL) {
-      return getFloatArrayFromLiteral(node);
-    } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        return dictionary.getFloatArray(((ASTScalarFlatExpr) node).getIdent());
-      } else {
-        throw new IllegalArgumentException("Wrong type of float array; compilation aborted.");
-      }
-    } else {
-      throw new IllegalArgumentException("Wrong type of float array; compilation aborted.");
-    }
+    return getArrayFromNode(node, this::getFloatArrayFromLiteral, dictionary::getFloatArray);
   }
 
   private double[] getFloatArrayFromLiteral(SimpleNode node) {
@@ -386,12 +391,13 @@ public class Support implements ParserTreeConstants {
       return getIntVarArrayFromLiteral(node);
     } else if (node.getId() == JJTSCALARFLATEXPR) {
       if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
+        String ident = ((ASTScalarFlatExpr) node).getIdent();
         // array of var
-        IntVar[] v = dictionary.getVariableArray(((ASTScalarFlatExpr) node).getIdent());
+        IntVar[] v = dictionary.getVariableArray(ident);
         if (v != null) {
           return v;
         } else { // array of int
-          int[] ia = dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
+          int[] ia = dictionary.getIntArray(ident);
           if (ia != null) {
             IntVar[] aa = new IntVar[ia.length];
             for (int i = 0; i < ia.length; i++) {
@@ -400,9 +406,7 @@ public class Support implements ParserTreeConstants {
             return aa;
           } else {
             throw new IllegalArgumentException(
-                "Cannot find array "
-                    + ((ASTScalarFlatExpr) node).getIdent()
-                    + "; compilation aborted.");
+                "Cannot find array " + ident + "; compilation aborted.");
           }
         }
       } else {
@@ -490,19 +494,16 @@ public class Support implements ParserTreeConstants {
   }
 
   SetVar[] getSetVarArray(SimpleNode node) {
-    SetVar[] s;
-
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
-      s = new SetVar[count];
+      SetVar[] s = new SetVar[count];
       for (int i = 0; i < count; i++) {
-        SetVar el = getSetVariable(node, i);
-        s[i] = el;
+        s[i] = getSetVariable(node, i);
       }
       return s;
     } else if (node.getId() == JJTSCALARFLATEXPR) {
       if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
+        SetVar[] s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
         if (s != null) {
           return s;
         } else {

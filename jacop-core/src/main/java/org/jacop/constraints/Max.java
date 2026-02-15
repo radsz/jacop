@@ -115,18 +115,22 @@ public class Max extends AbstractMinMax {
         throw Store.failException;
       }
 
-      if (start
-          == list.length
-              - 1) { // one variable on the list is maximal; its is min > max of all other variables
-        list[start].domain.in(store.level, list[start], max.dom());
-
-        if (max.singleton()) {
-          removeConstraint();
-        }
-      }
+      handleSingleRemainingVariable(store, start);
     } while (store.propagationHasOccurred);
 
     position.update(start);
+  }
+
+  private void handleSingleRemainingVariable(Store store, int start) {
+    if (start
+        == list.length
+            - 1) { // one variable on the list is maximal; its is min > max of all other variables
+      list[start].domain.in(store.level, list[start], max.dom());
+
+      if (max.singleton()) {
+        removeConstraint();
+      }
+    }
   }
 
   @Override

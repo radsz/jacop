@@ -176,38 +176,6 @@ public class SumInt extends AbstractSum {
     } while (store.propagationHasOccurred);
   }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    if (x == null) {
-      return;
-    }
-
-    reified = false;
-
-    super.impose(store);
-  }
-
   private void computeInit() {
     long f = 0;
     long e = 0;

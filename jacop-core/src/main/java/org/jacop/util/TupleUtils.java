@@ -370,4 +370,34 @@ public class TupleUtils {
     }
     return -1;
   }
+
+  /**
+   * Filters tuples to keep only those whose values are all contained in the corresponding variable
+   * domains.
+   *
+   * @param tuples the tuples to filter
+   * @param variables the variables whose domains are checked
+   * @return array of two elements: [0] = boolean array indicating which tuples are valid, [1] =
+   *     count of valid tuples
+   */
+  public static Object[] filterValidTuples(int[][] tuples, IntVar[] variables) {
+    boolean[] valid = new boolean[tuples.length];
+    int validCount = 0;
+
+    for (int i = 0; i < tuples.length; i++) {
+      int[] tuple = tuples[i];
+      valid[i] = true;
+      for (int j = 0; j < tuple.length && j < variables.length; j++) {
+        if (!variables[j].dom().contains(tuple[j])) {
+          valid[i] = false;
+          break;
+        }
+      }
+      if (valid[i]) {
+        validCount++;
+      }
+    }
+
+    return new Object[] {valid, validCount};
+  }
 }

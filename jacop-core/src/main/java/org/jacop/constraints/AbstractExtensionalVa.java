@@ -118,39 +118,22 @@ public abstract class AbstractExtensionalVa extends Constraint
       }
     }
 
-    boolean[] stillValid = new boolean[tuplesFromConstructor.length];
-    int noValid = 0;
+    Object[] filterResult = TupleUtils.filterValidTuples(tuplesFromConstructor, list);
+    @SuppressWarnings("unchecked")
+    boolean[] stillValid = (boolean[]) filterResult[0];
+    int noValid = (Integer) filterResult[1];
+
     int i = 0;
-
-    for (int[] t : tuplesFromConstructor) {
-      stillValid[i] = true;
-      int j = 0;
-
-      if (DEBUG_ALL) {
-        log.debug("tuple for analysis{}", Arrays.toString(t));
-      }
-
-      for (int val : t) {
-        if (!list[j].dom().contains(val)) {
-          stillValid[i] = false;
-          break;
-        }
-        j++;
-      }
-
-      if (stillValid[i]) {
-        noValid++;
-      }
-
-      if (DEBUG_ALL && !stillValid[i]) {
-        log.debug("Not valid {}", Arrays.toString(t));
-      }
-
-      i++;
-    }
-
     if (DEBUG_ALL) {
+      for (int[] t : tuplesFromConstructor) {
+        log.debug("tuple for analysis{}", Arrays.toString(t));
+        if (!stillValid[i]) {
+          log.debug("Not valid {}", Arrays.toString(t));
+        }
+        i++;
+      }
       log.debug("No. still valid {}", noValid);
+      i = 0;
     }
 
     int[][] temp4Shrinking = new int[noValid][];

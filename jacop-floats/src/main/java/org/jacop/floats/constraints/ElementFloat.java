@@ -226,11 +226,33 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   }
 
   boolean disjoint(FloatDomain v1, double v2) {
-    if (v1.min() > v2 || v2 > v1.max()) {
+    return isDisjoint(v1, v2);
+  }
+
+  /**
+   * Checks if a FloatDomain and a double value are disjoint.
+   *
+   * @param domain the domain to check
+   * @param value the value to check
+   * @return true if the domain and value are disjoint
+   */
+  static boolean isDisjoint(FloatDomain domain, double value) {
+    if (domain.min() > value || value > domain.max()) {
       return true;
     } else {
-      return !v1.contains(v2);
+      return !domain.contains(value);
     }
+  }
+
+  /**
+   * Checks if two FloatVar domains are disjoint.
+   *
+   * @param v1 the first variable
+   * @param v2 the second variable
+   * @return true if the domains are disjoint
+   */
+  static boolean isDisjoint(FloatVar v1, FloatVar v2) {
+    return v1.min() > v2.max() || v2.min() > v1.max() || !v1.domain.isIntersecting(v2.domain);
   }
 
   @Override

@@ -274,6 +274,79 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return String.valueOf(getCurrentCostValue());
   }
 
+  /**
+   * Updates cost value from a child search result.
+   *
+   * @param childSearch the child search that found a solution
+   */
+  private void updateCostFromChildSearch(Search<? extends Var> childSearch) {
+    CostVariableHandler costHandler =
+        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+    if (costHandler != null) {
+      double childCostValue = getChildCostValue(childSearch);
+      double currentBestCost = getCurrentCostValue();
+      if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
+        updateCostValue(childCostValue);
+      }
+    } else if (costVariable instanceof IntVar v) {
+      int childCostValue = childSearch.getCostValue();
+      if (childCostValue < costValue) {
+        costValue = childCostValue;
+        cost = new XltC(v, costValue);
+      }
+    }
+  }
+
+  /**
+   * Common setup for labeling methods: handles store level, initializes listeners, runs
+   * consistency.
+   *
+   * @param store the constraint store
+   * @param select the choice point selection heuristic
+   * @return true if consistency check passed
+   */
+  private boolean setupLabeling(Store store, SelectChoicePoint<T> select) {
+    this.store = store;
+
+    if (store.raiseLevelBeforeConsistency) {
+      store.raiseLevelBeforeConsistency = false;
+      store.setLevel(store.level + 1);
+    }
+
+    heuristic = select;
+    depth = store.level;
+
+    if (costVariable == null) {
+      optimize = false;
+    }
+
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
+
+    boolean result = store.consistency();
+    store.setLevel(store.level + 1);
+    depth = store.level;
+
+    return result;
+  }
+
+  /**
+   * Common teardown for labeling methods: removes level, updates depth, calls exit listener.
+   *
+   * @param store the constraint store
+   * @param solutionNoBeforeSearch solution count before search started
+   */
+  private void teardownLabeling(Store store, int solutionNoBeforeSearch) {
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    depth--;
+
+    if (exitListener != null) {
+      exitListener.executedAtExit(store, solutionListener.solutionsNo() - solutionNoBeforeSearch);
+    }
+  }
+
   /** It specifies current child search. */
   public DepthFirstSearch() {
     searchId = "DFS" + no.incrementAndGet();
@@ -587,22 +660,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 CostVariableHandler costHandler =
                     SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
                 if (costHandler != null) {
-                  double childCostValue;
-                  if (costVariable instanceof IntVar) {
-                    childCostValue = childSearches[currentChildSearch].getCostValue();
-                  } else {
-                    childCostValue = childSearches[currentChildSearch].getCostValueFloat();
-                  }
-
-                  double currentBestCost =
-                      costVariable instanceof IntVar ? costValue : costValueFloat;
+                  double childCostValue = getChildCostValue(childSearches[currentChildSearch]);
+                  double currentBestCost = getCurrentCostValue();
                   if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
-                    if (costVariable instanceof IntVar) {
-                      costValue = (int) childCostValue;
-                    } else {
-                      costValueFloat = childCostValue;
-                    }
-                    cost = costHandler.createCostConstraint(costVariable, childCostValue);
+                    updateCostValue(childCostValue);
                   }
 
                   double minCost = costHandler.getMinCostValue(costVariable);
@@ -629,34 +690,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             }
 
             if (childResult && costVariable != null) {
-              CostVariableHandler costHandler =
-                  SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-              if (costHandler != null) {
-                double childCostValue;
-                if (costVariable instanceof IntVar) {
-                  childCostValue = childSearches[currentChildSearch].getCostValue();
-                } else {
-                  childCostValue = childSearches[currentChildSearch].getCostValueFloat();
-                }
-
-                double currentBestCost =
-                    costVariable instanceof IntVar ? costValue : costValueFloat;
-                if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
-                  if (costVariable instanceof IntVar) {
-                    costValue = (int) childCostValue;
-                  } else {
-                    costValueFloat = childCostValue;
-                  }
-                  cost = costHandler.createCostConstraint(costVariable, childCostValue);
-                }
-              } else if (costVariable instanceof IntVar v) {
-                // Fallback for IntVar
-                int childCostValue = childSearches[currentChildSearch].getCostValue();
-                if (childCostValue < costValue) {
-                  costValue = childCostValue;
-                }
-                cost = new XltC(v, costValue);
-              }
+              updateCostFromChildSearch(childSearches[currentChildSearch]);
             }
 
             boolean stopMasterSearch = false;
@@ -981,32 +1015,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   public boolean labeling(Store store, SelectChoicePoint<T> select) {
 
-    this.store = store;
-
-    if (store.raiseLevelBeforeConsistency) {
-      store.raiseLevelBeforeConsistency = false;
-      store.setLevel(store.level + 1);
-    }
-
-    heuristic = select;
-    depth = store.level;
-
-    if (costVariable == null) {
-      optimize = false;
-    }
-
-    if (initializeListener != null) {
-      initializeListener.executedAtInitialize(store);
-    }
-
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = store.consistency();
-    store.setLevel(store.level + 1);
-    depth = store.level;
+    boolean result = setupLabeling(store, select);
 
     if (result) {
       result = label(0);
@@ -1014,13 +1028,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         log.info("Labeling has finished with return value of {}", result);
       }
     }
-    store.removeLevel(store.level);
-    store.setLevel(store.level - 1);
-    depth--;
-
-    if (exitListener != null) {
-      exitListener.executedAtExit(store, solutionListener.solutionsNo() - solutionNoBeforeSearch);
-    }
+    teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
       log.info("Time-out {}s", tOut);
@@ -1067,31 +1075,16 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar) {
 
-    this.store = store;
-
-    if (store.raiseLevelBeforeConsistency) {
-      store.raiseLevelBeforeConsistency = false;
-      store.setLevel(store.level + 1);
-    }
-
-    heuristic = select;
-    depth = store.level;
     costVariable = costVar;
     optimize = true;
     cost = null;
-
-    if (initializeListener != null) {
-      initializeListener.executedAtInitialize(store);
-    }
 
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = store.consistency();
-    store.setLevel(store.level + 1);
-    depth = store.level;
+    boolean result = setupLabeling(store, select);
 
     if (result) {
       result = label(0);
@@ -1099,13 +1092,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         log.info("Labeling has finished with return value of {}", result);
       }
     }
-    store.removeLevel(store.level);
-    store.setLevel(store.level - 1);
-    depth--;
-
-    if (exitListener != null) {
-      exitListener.executedAtExit(store, solutionListener.solutionsNo());
-    }
+    teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
       log.info("Time-out {}s", tOut);

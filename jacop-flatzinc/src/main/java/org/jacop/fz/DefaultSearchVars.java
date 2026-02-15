@@ -72,36 +72,22 @@ public class DefaultSearchVars {
     this.dictionary = dict;
   }
 
-  /** Collects all output variables for search. */
-  void outputVars() {
-
-    // ==== Collect ALL OUTPUT variables ====
-
-    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<>();
-    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<>();
-    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<>();
-    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<>();
-
-    // collect output arrays
-    for (int i = 0; i < dictionary.outputArray.size(); i++) {
-      for (Var v : dictionary.outputArray.get(i).getArray()) {
-        if (v instanceof BooleanVar var3) {
-          if (!v.singleton()) {
-            bool_vars.add(var3);
-          }
-        } else if (v instanceof IntVar var2) {
-          if (!v.singleton()) {
-            int_vars.add(var2);
-          }
-        } else if (v instanceof SetVar var1) {
-          set_vars.add(var1);
-        } else if (v instanceof FloatVar fv) {
-          float_vars.add(fv);
-        }
-      }
-    }
-    // collect output variables
-    for (Var v : dictionary.outputVariables) {
+  /**
+   * Collects variables from an array or collection into type-specific sets.
+   *
+   * @param variables the variables to collect
+   * @param int_vars set to add IntVar instances to
+   * @param bool_vars set to add BooleanVar instances to
+   * @param set_vars set to add SetVar instances to
+   * @param float_vars set to add FloatVar instances to
+   */
+  private void collectVariables(
+      Var[] variables,
+      LinkedHashSet<IntVar> int_vars,
+      LinkedHashSet<BooleanVar> bool_vars,
+      LinkedHashSet<SetVar> set_vars,
+      LinkedHashSet<FloatVar> float_vars) {
+    for (Var v : variables) {
       if (v instanceof BooleanVar var3) {
         if (!v.singleton()) {
           bool_vars.add(var3);
@@ -116,6 +102,58 @@ public class DefaultSearchVars {
         float_vars.add(fv);
       }
     }
+  }
+
+  /**
+   * Collects variables from a collection into type-specific sets.
+   *
+   * @param variables the variables to collect
+   * @param int_vars set to add IntVar instances to
+   * @param bool_vars set to add BooleanVar instances to
+   * @param set_vars set to add SetVar instances to
+   * @param float_vars set to add FloatVar instances to
+   */
+  private void collectVariables(
+      Iterable<Var> variables,
+      LinkedHashSet<IntVar> int_vars,
+      LinkedHashSet<BooleanVar> bool_vars,
+      LinkedHashSet<SetVar> set_vars,
+      LinkedHashSet<FloatVar> float_vars) {
+    for (Var v : variables) {
+      if (v instanceof BooleanVar var3) {
+        if (!v.singleton()) {
+          bool_vars.add(var3);
+        }
+      } else if (v instanceof IntVar var2) {
+        if (!v.singleton()) {
+          int_vars.add(var2);
+        }
+      } else if (v instanceof SetVar var1) {
+        set_vars.add(var1);
+      } else if (v instanceof FloatVar fv) {
+        float_vars.add(fv);
+      }
+    }
+  }
+
+  /** Collects all output variables for search. */
+  void outputVars() {
+
+    // ==== Collect ALL OUTPUT variables ====
+
+    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<>();
+    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<>();
+    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<>();
+    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<>();
+
+    // collect output arrays
+    for (int i = 0; i < dictionary.outputArray.size(); i++) {
+      collectVariables(
+          dictionary.outputArray.get(i).getArray(), int_vars, bool_vars, set_vars, float_vars);
+    }
+    // collect output variables
+    collectVariables(dictionary.outputVariables, int_vars, bool_vars, set_vars, float_vars);
+
     int_search_variables = int_vars.toArray(new IntVar[0]);
     bool_search_variables = bool_vars.toArray(new BooleanVar[0]);
     set_search_variables = set_vars.toArray(new SetVar[0]);

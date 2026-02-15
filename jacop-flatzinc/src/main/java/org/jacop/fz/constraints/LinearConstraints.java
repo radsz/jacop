@@ -276,71 +276,13 @@ class LinearConstraints implements ParserTreeConstants {
         break;
       case Support.NE:
         if (p1.length == 1 && p1[0] == 1) {
-          if (isReified) {
-            if (p2[0].domain.isIntersecting(p3, p3)) {
-              support.pose(support.fzXneqCreified(p2[0], p3, p4));
-            } else {
-              p4.domain.inValue(store.level, p4, 1);
-            }
-          } else {
-            support.pose(support.fzXneqCimplied(p2[0], p3, p4));
-          }
+          handleSingleVarNe(p2[0], p3, p4, isReified);
         } else if (p1.length == 1 && p1[0] == -1) {
-          if (isReified) {
-            if (p2[0].domain.isIntersecting(-p3, -p3)) {
-              support.pose(support.fzXneqCreified(p2[0], -p3, p4));
-            } else {
-              p4.domain.inValue(store.level, p4, 1);
-            }
-          } else {
-            support.pose(support.fzXneqCimplied(p2[0], -p3, p4));
-          }
+          handleSingleVarNe(p2[0], -p3, p4, isReified);
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 == 0) {
-            if (isReified && binaryVar(p2[0]) && binaryVar(p2[1])) {
-              // (x != y) <=> b == x xor y = b
-              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-            } else if (p2[0].singleton()) {
-              if (isReified) {
-                support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
-              } else {
-                support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
-              }
-            } else if (p2[1].singleton()) {
-              if (isReified) {
-                support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
-              } else {
-                support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
-              }
-            } else {
-              poseReifiedOrImplied(new XneqY(p2[0], p2[1]), p4, isReified);
-            }
-          } else {
-            poseReifiedOrImplied(new Not(new XplusCeqZ(p2[1], p3, p2[0])), p4, isReified);
-          }
+          handleTwoVarNe(p2[0], p2[1], p3, p4, isReified, false);
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 == 0) {
-            if (isReified && binaryVar(p2[0]) && binaryVar(p2[1])) {
-              // (x != y) <=> b == x xor y = b
-              support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-            } else if (p2[0].singleton()) {
-              if (isReified) {
-                support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
-              } else {
-                support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
-              }
-            } else if (p2[1].singleton()) {
-              if (isReified) {
-                support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
-              } else {
-                support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
-              }
-            } else {
-              poseReifiedOrImplied(new XneqY(p2[0], p2[1]), p4, isReified);
-            }
-          } else {
-            poseReifiedOrImplied(new Not(new XplusCeqZ(p2[0], p3, p2[1])), p4, isReified);
-          }
+          handleTwoVarNe(p2[1], p2[0], p3, p4, isReified, true);
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
           poseReifiedOrImplied(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4, isReified);
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
@@ -1114,5 +1056,71 @@ class LinearConstraints implements ParserTreeConstants {
       sum += vars[i].min() * weights[i];
     }
     return sum;
+  }
+
+  /**
+   * Handles the two-variable NE case: x - y != c or y - x != c.
+   *
+   * @param x first variable
+   * @param y second variable
+   * @param c constant value
+   * @param boolVar boolean variable for reification/implication
+   * @param isReified true for reified, false for implied
+   * @param swapped true if coefficients are swapped (y - x), false if (x - y)
+   */
+  private void handleTwoVarNe(
+      IntVar x, IntVar y, int c, IntVar boolVar, boolean isReified, boolean swapped) {
+    if (c == 0) {
+      if (isReified && binaryVar(x) && binaryVar(y)) {
+        // (x != y) <=> b == x xor y = b
+        support.pose(new XorBool(new IntVar[] {x, y}, boolVar));
+      } else if (x.singleton()) {
+        poseXneqCReifiedOrImplied(y, x.value(), boolVar, isReified);
+      } else if (y.singleton()) {
+        poseXneqCReifiedOrImplied(x, y.value(), boolVar, isReified);
+      } else {
+        poseReifiedOrImplied(new XneqY(x, y), boolVar, isReified);
+      }
+    } else {
+      IntVar first = swapped ? y : x;
+      IntVar second = swapped ? x : y;
+      poseReifiedOrImplied(new Not(new XplusCeqZ(second, c, first)), boolVar, isReified);
+    }
+  }
+
+  /**
+   * Handles the single-variable NE case: x != c.
+   *
+   * @param var the variable
+   * @param value the constant value
+   * @param boolVar the boolean variable for reification/implication
+   * @param isReified true for reified, false for implied
+   */
+  private void handleSingleVarNe(IntVar var, int value, IntVar boolVar, boolean isReified) {
+    if (isReified) {
+      if (var.domain.isIntersecting(value, value)) {
+        support.pose(support.fzXneqCreified(var, value, boolVar));
+      } else {
+        boolVar.domain.inValue(store.level, boolVar, 1);
+      }
+    } else {
+      support.pose(support.fzXneqCimplied(var, value, boolVar));
+    }
+  }
+
+  /**
+   * Poses XneqC constraint as either reified or implied.
+   *
+   * @param var the variable
+   * @param value the constant value
+   * @param boolVar the boolean variable for reification/implication
+   * @param isReified true to use reified, false to use implied
+   */
+  private void poseXneqCReifiedOrImplied(IntVar var, int value, IntVar boolVar, boolean isReified) {
+    if (isReified) {
+      support.pose(support.fzXneqCreified(var, value, boolVar));
+    } else {
+      support.pose(support.fzXneqCimplied(var, value, boolVar));
+    }
   }
 }

@@ -85,43 +85,7 @@ public class Bnode extends BinaryNode {
     double lb = d.min();
     double ub = d.max();
 
-    double node_min = min();
-    double node_max = max();
-
-    if (min > node_min) {
-      if (max < node_max) {
-
-        if (min > max) {
-          throw Store.failException;
-        }
-
-        updateBounds(min, max, lb, ub);
-
-        parent.propagate();
-
-      } else {
-
-        if (min > node_max) {
-          throw Store.failException;
-        }
-
-        updateBounds(min, node_max, lb, ub);
-
-        parent.propagate();
-      }
-    } else if (max < node_max) {
-
-      if (node_min > max) {
-        throw Store.failException;
-      }
-
-      updateBounds(node_min, max, lb, ub);
-
-      parent.propagate();
-
-    } else { // no change in the domain but it was called since the children have been changed;
-
-    }
+    updateBoundsAndPropagate(min, max, lb, ub, false);
   }
 
   void propagateAndPrune() {
@@ -130,53 +94,39 @@ public class Bnode extends BinaryNode {
     double min = d.min();
     double max = d.max();
 
-    double node_min = min();
-    double node_max = max();
+    double nodeMin = min();
+    double nodeMax = max();
 
     d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
     double lb = d.min();
     double ub = d.max();
 
-    if (min > node_min) {
-      if (max < node_max) {
-
+    if (min > nodeMin) {
+      if (max < nodeMax) {
         if (min > max) {
           throw Store.failException;
         }
-
         updateBounds(min, max, lb, ub);
-
         prune(min, max);
-
         parent.propagateAndPrune();
-
       } else {
-
-        if (min > node_max) {
+        if (min > nodeMax) {
           throw Store.failException;
         }
-
-        updateBounds(min, node_max, lb, ub);
-
-        prune(min, node_max);
-
+        updateBounds(min, nodeMax, lb, ub);
+        prune(min, nodeMax);
         parent.propagateAndPrune();
       }
-    } else if (max < node_max) {
-
-      if (node_min > max) {
+    } else if (max < nodeMax) {
+      if (nodeMin > max) {
         throw Store.failException;
       }
-
-      updateBounds(node_min, max, lb, ub);
-
-      prune(node_min, max);
-
+      updateBounds(nodeMin, max, lb, ub);
+      prune(nodeMin, max);
       parent.propagateAndPrune();
-
-    } else { // no change in the domain but it was called since the children have been changed;
-
-      prune(node_min, node_max);
+    } else {
+      // no change in the domain but it was called since the children have been changed
+      prune(nodeMin, nodeMax);
     }
   }
 

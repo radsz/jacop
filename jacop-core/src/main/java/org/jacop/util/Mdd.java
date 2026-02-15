@@ -304,19 +304,24 @@ public class Mdd {
   }
 
   /**
-   * It allows to add one by one tuple before the reduction of the initial Mdd takes place.
+   * Common logic for adding a tuple to the diagram structure.
    *
-   * @param tuple an allowed tuple being added to Mdd.
+   * @param tuple the tuple to add
+   * @param positions precomputed positions array (can be null, will be computed if needed)
+   * @return the final node position after adding the tuple
    */
-  public void addTuple(int[] tuple) {
-
-    assert extendable : "Mdd can not be extended after shrinking operation was performed";
-
+  private int addTupleToDiagram(int[] tuple, int[] positions) {
     int nodePosition = 0;
     int varNo = 0;
 
-    for (int value : tuple) {
-      int indexOfValue = findPosition(value, views[varNo].indexToValue);
+    for (int i = 0; i < tuple.length; i++) {
+      int value = tuple[i];
+      int indexOfValue;
+      if (positions != null && i < positions.length && positions[i] != -1) {
+        indexOfValue = positions[i];
+      } else {
+        indexOfValue = findPosition(value, views[varNo].indexToValue);
+      }
       assert indexOfValue != -1;
       nodePosition += indexOfValue;
       varNo++;
@@ -336,6 +341,19 @@ public class Mdd {
         nodePosition = diagram[nodePosition];
       }
     }
+    return nodePosition;
+  }
+
+  /**
+   * It allows to add one by one tuple before the reduction of the initial Mdd takes place.
+   *
+   * @param tuple an allowed tuple being added to Mdd.
+   */
+  public void addTuple(int[] tuple) {
+
+    assert extendable : "Mdd can not be extended after shrinking operation was performed";
+
+    addTupleToDiagram(tuple, null);
   }
 
   /**
@@ -430,8 +448,6 @@ public class Mdd {
 
     for (int[] tuple : table) {
 
-      int nodePosition = 0;
-
       assert tuple.length == positions.length : "Tuples have different length.";
 
       boolean badTuple = false;
@@ -447,6 +463,8 @@ public class Mdd {
         continue;
       }
 
+      // Use the common tuple addition logic
+      int nodePosition = 0;
       for (int i = 0; i < tuple.length; i++) {
 
         assert positions[i] != -1

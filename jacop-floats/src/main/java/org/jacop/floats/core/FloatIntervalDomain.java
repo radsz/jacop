@@ -108,6 +108,323 @@ public class FloatIntervalDomain extends FloatDomain {
     return IntDomain.ANY;
   }
 
+  /**
+   * Removes a range of values starting from the specified counter position.
+   *
+   * @param counter the starting index of the interval
+   * @param minValue the minimum value to remove
+   * @param maxValue the maximum value to remove
+   */
+  private void removeRangeFromIntervals(int counter, double minValue, double maxValue) {
+
+    if (minValue <= intervals[counter].min()) {
+
+      if (maxValue < intervals[counter].min()) {
+        return;
+      }
+
+      // Removing will not create more intervals.
+      if (intervals[counter].max() > maxValue) {
+
+        intervals[counter] = new FloatInterval(next(maxValue), intervals[counter].max());
+
+        assert checkInvariants() == null : checkInvariants();
+
+      } else {
+        // At least one complete interval is being removed.
+
+        int maxCurrent = counter;
+        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) {
+          maxCurrent++;
+        }
+
+        if (maxCurrent == size) {
+          size = counter;
+          return;
+        }
+
+        if (maxValue >= intervals[maxCurrent].min()) {
+          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
+        }
+
+        int i = counter;
+        for (; maxCurrent < size; i++, maxCurrent++) {
+          intervals[i] = intervals[maxCurrent];
+        }
+
+        size = i;
+      }
+    } else {
+
+      // minValue > intervals[counter].min
+
+      if (maxValue < intervals[counter].max()) {
+        // One additional interval is being created.
+
+        if (intervals.length == size + 1) {
+          // Not enough space to insert new interval.
+          FloatInterval[] newIntervals = new FloatInterval[intervals.length * 2];
+          System.arraycopy(intervals, 0, newIntervals, 0, size);
+          intervals = newIntervals;
+        }
+
+        for (int i = size; i > counter; i--) {
+          intervals[i] = intervals[i - 1];
+        }
+
+        intervals[counter] = new FloatInterval(intervals[counter].min(), previous(minValue));
+        intervals[counter + 1] = new FloatInterval(next(maxValue), intervals[counter + 1].max());
+
+        size++;
+
+      } else {
+        // minValue > intervals[counter].min
+        // maxValue >= intervals[counter].max
+
+        // At least one complete interval is being removed.
+        intervals[counter] = new FloatInterval(intervals[counter].min(), previous(minValue));
+        counter++;
+
+        int maxCurrent = counter;
+        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) {
+          maxCurrent++;
+        }
+
+        if (maxCurrent == size) {
+          size = counter;
+          return;
+        }
+
+        if (intervals[maxCurrent].min() <= maxValue) {
+          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
+        }
+
+        int i = counter;
+        for (; maxCurrent < size; i++, maxCurrent++) {
+          intervals[i] = intervals[maxCurrent];
+        }
+
+        size = i;
+      }
+    }
+  }
+
+  /**
+   * Removes a value from the interval at the specified counter position.
+   *
+   * @param counter the index of the interval containing the value
+   * @param value the value to remove
+   */
+  private void removeValueFromIntervals(int counter, double value) {
+
+    if (intervals[counter].min() == value) {
+
+      if (intervals[counter].max() != value) {
+
+        intervals[counter] = new FloatInterval(next(value), intervals[counter].max());
+
+        assert checkInvariants() == null : checkInvariants();
+
+      } else {
+        // if domain like this 1..3, 5, 7..10, and 5 being removed.
+
+        for (int i = counter; i < size - 1; i++) {
+          intervals[i] = intervals[i + 1];
+        }
+
+        size--;
+
+        // below size, instead of size-1 as size has been
+        // just decreased, e.g. domain like 1..3, 5, 7..9 and 5
+        // being removed.
+
+      }
+      return;
+    }
+
+    if (intervals[counter].max() == value) {
+
+      // domain like this 1..3, 5, 7..10, and 5 being
+      // removed taken care of above.
+
+      intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
+
+      assert checkInvariants() == null : checkInvariants();
+
+      return;
+    }
+
+    if (size + 1 < intervals.length) {
+      for (int i = size; i > counter + 1; i--) {
+        intervals[i] = intervals[i - 1];
+      }
+    } else {
+      FloatInterval[] updatedIntervals = new FloatInterval[size + 1];
+      System.arraycopy(intervals, 0, updatedIntervals, 0, counter + 1);
+      System.arraycopy(intervals, counter, updatedIntervals, counter + 1, size - counter);
+      intervals = updatedIntervals;
+    }
+
+    double max = intervals[counter].max();
+
+    intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
+    intervals[counter + 1] = new FloatInterval(next(value), max);
+
+    // One interval has been split, size increased by one.
+    size++;
+
+    assert checkInvariants() == null : checkInvariants();
+  }
+
+  /**
+   * Computes intersection of this domain with input intervals, optionally shifted.
+   *
+   * @param inputIntervals the input interval array
+   * @param inputSize the number of intervals in inputIntervals
+   * @param shift the shift to apply to input intervals (0.0 for no shift)
+   * @return the intersection result, or null if no change needed
+   * @throws RuntimeException if intersection is empty (failException)
+   */
+  private FloatIntervalDomain computeIntersection(
+      FloatInterval[] inputIntervals, int inputSize, double shift) {
+
+    int pointer1 = 0;
+    int pointer2 = 0;
+
+    // Chance for no event - skip non-intersecting intervals
+    while (pointer2 < inputSize
+        && inputIntervals[pointer2].max() + shift < intervals[pointer1].min()) {
+      pointer2++;
+    }
+
+    if (pointer2 == inputSize) {
+      throw failException;
+    }
+
+    // Traverse within while loop until certain that change will occur
+    while (intervals[pointer1].min() >= inputIntervals[pointer2].min() + shift
+        && intervals[pointer1].max() <= inputIntervals[pointer2].max() + shift
+        && ++pointer1 < size) {
+
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
+          && ++pointer2 < inputSize) {}
+
+      if (pointer2 == inputSize) {
+        break;
+      }
+    }
+
+    // No change
+    if (pointer1 == size) {
+      return null;
+    }
+
+    FloatIntervalDomain result = new FloatIntervalDomain(this.size);
+    int temp = 0;
+    // Add all common intervals to result as indicated by progress of the previous loop
+    while (temp < pointer1) {
+      result.unionAdapt(intervals[temp++]);
+    }
+
+    pointer2 = 0;
+
+    double interval1Min = intervals[pointer1].min();
+    double interval1Max = intervals[pointer1].max();
+    double interval2Min = inputIntervals[pointer2].min() + shift;
+    double interval2Max = inputIntervals[pointer2].max() + shift;
+
+    while (true) {
+
+      if (interval1Max < interval2Min) {
+        pointer1++;
+        if (pointer1 < size) {
+          interval1Min = intervals[pointer1].min();
+          interval1Max = intervals[pointer1].max();
+        } else {
+          break;
+        }
+      } else if (interval2Max < interval1Min) {
+        pointer2++;
+        if (pointer2 < inputSize) {
+          interval2Min = inputIntervals[pointer2].min() + shift;
+          interval2Max = inputIntervals[pointer2].max() + shift;
+        } else {
+          break;
+        }
+      } else
+      // interval1Max >= interval2Min
+      // interval2Max >= interval1Min
+      if (interval1Min <= interval2Min) {
+
+        if (interval1Max <= interval2Max) {
+          result.unionAdapt(new FloatInterval(interval2Min, interval1Max));
+
+          pointer1++;
+          if (pointer1 < size) {
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
+          } else {
+            break;
+          }
+        } else {
+          result.unionAdapt(
+              new FloatInterval(
+                  inputIntervals[pointer2].min() + shift, inputIntervals[pointer2].max() + shift));
+
+          pointer2++;
+
+          if (pointer2 < inputSize) {
+            interval2Min = inputIntervals[pointer2].min() + shift;
+            interval2Max = inputIntervals[pointer2].max() + shift;
+          } else {
+            break;
+          }
+        }
+
+      } else {
+        // interval1Max >= interval2Min
+        // interval2Max >= interval1Min
+        // interval1Min > interval2Min
+        if (interval2Max <= interval1Max) {
+          result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
+
+          if (interval2Max >= interval1Max) {
+            pointer1++;
+            if (pointer1 < size) {
+              interval1Min = intervals[pointer1].min();
+              interval1Max = intervals[pointer1].max();
+            } else {
+              break;
+            }
+          }
+
+          pointer2++;
+          if (pointer2 < inputSize) {
+            interval2Min = inputIntervals[pointer2].min() + shift;
+            interval2Max = inputIntervals[pointer2].max() + shift;
+          } else {
+            break;
+          }
+        } else {
+          result.unionAdapt(intervals[pointer1]);
+          pointer1++;
+          if (pointer1 < size) {
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    if (result.isEmpty()) {
+      throw failException;
+    }
+
+    return result;
+  }
+
   /** Empty constructor, does not initialize anything. */
   public FloatIntervalDomain() {
     // FIXME, check what is calling it and maybe remove some inappropriate callers.
@@ -1941,137 +2258,10 @@ public class FloatIntervalDomain extends FloatDomain {
 
     assert size != 0;
 
-    int pointer1 = 0;
-    int pointer2 = 0;
+    FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);
 
-    FloatInterval[] inputIntervals = input.intervals;
-    int inputSize = input.size;
-    // Chance for no event
-    while (pointer2 < inputSize && inputIntervals[pointer2].max() < intervals[pointer1].min()) {
-      pointer2++;
-    }
-
-    if (pointer2 == inputSize) {
-      throw failException;
-    }
-
-    // traverse within while loop until certain that change will occur
-    while (intervals[pointer1].min() >= inputIntervals[pointer2].min()
-        && intervals[pointer1].max() <= inputIntervals[pointer2].max()
-        && ++pointer1 < size) {
-
-      while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-          && ++pointer2 < inputSize) {}
-
-      if (pointer2 == inputSize) {
-        break;
-      }
-    }
-
-    // no change
-    if (pointer1 == size) {
+    if (result == null) {
       return;
-    }
-
-    FloatIntervalDomain result = new FloatIntervalDomain(this.size);
-    int temp = 0;
-    // add all common intervals to result as indicated by progress of
-    // the previous loop
-    while (temp < pointer1) {
-      result.unionAdapt(intervals[temp++]);
-    }
-
-    pointer2 = 0;
-
-    double interval1Min = intervals[pointer1].min();
-    double interval1Max = intervals[pointer1].max();
-    double interval2Min = inputIntervals[pointer2].min();
-    double interval2Max = inputIntervals[pointer2].max();
-
-    while (true) {
-
-      if (interval1Max < interval2Min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min();
-          interval1Max = intervals[pointer1].max();
-        } else {
-          break;
-        }
-      } else if (interval2Max < interval1Min) {
-        pointer2++;
-        if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min();
-          interval2Max = inputIntervals[pointer2].max();
-        } else {
-          break;
-        }
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      if (interval1Min <= interval2Min) {
-
-        if (interval1Max <= interval2Max) {
-          result.unionAdapt(new FloatInterval(interval2Min, interval1Max));
-
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(inputIntervals[pointer2]);
-          pointer2++;
-
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min();
-            interval2Max = inputIntervals[pointer2].max();
-          } else {
-            break;
-          }
-        }
-
-      } else {
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        if (interval2Max <= interval1Max) {
-          result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
-
-          if (interval2Max >= interval1Max) {
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = intervals[pointer1].min();
-              interval1Max = intervals[pointer1].max();
-            } else {
-              break;
-            }
-          }
-
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min();
-            interval2Max = inputIntervals[pointer2].max();
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(intervals[pointer1]);
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    if (result.isEmpty()) {
-      throw failException;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -2142,100 +2332,41 @@ public class FloatIntervalDomain extends FloatDomain {
 
     if (storeLevel == stamp) {
 
-      if (intervals[counter].min() == complement) {
+      boolean wasSingleton = singleton(complement);
+      boolean minEquals = intervals[counter].min() == complement;
+      boolean maxEquals = intervals[counter].max() == complement;
+      int originalCounter = counter;
 
-        if (intervals[counter].max() != complement) {
+      if (minEquals && maxEquals && wasSingleton) {
+        throw failException;
+      }
 
-          intervals[counter] = new FloatInterval(next(complement), intervals[counter].max());
+      removeValueFromIntervals(counter, complement);
 
-          assert checkInvariants() == null : checkInvariants();
-
-          if (singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          if (counter == 0) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-        } else {
-          // if domain like this 1..3, 5, 7..10, and 5 being removed.
-
-          if (singleton(complement)) {
-            throw failException;
-          }
-
-          for (int i = counter; i < size - 1; i++) {
-            intervals[i] = intervals[i + 1];
-          }
-
-          size--;
-
-          assert checkInvariants() == null : checkInvariants();
-
-          if (singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          // below size, instead of size-1 as size has been
-          // just decreased, e.g. domain like 1..3, 5 and 5
-          // being removed.
-
-          if (counter == 0 || counter == size) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-        }
+      if (singleton()) {
+        v.domainHasChanged(IntDomain.GROUND);
         return;
       }
 
-      if (intervals[counter].max() == complement) {
-
-        // domain like this 1..3, 5, 7..10, and 5 being
-        // removed taken care of above.
-
-        intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
-
-        assert checkInvariants() == null : checkInvariants();
-
-        if (singleton()) {
-          v.domainHasChanged(IntDomain.GROUND);
-          return;
-        }
-
-        if (counter == size - 1) {
+      // Determine event type based on where the change occurred
+      if (minEquals && !maxEquals) {
+        // Value was at min, interval trimmed
+        if (originalCounter == 0) {
           v.domainHasChanged(IntDomain.BOUND);
         } else {
           v.domainHasChanged(IntDomain.ANY);
         }
-        return;
-      }
-
-      if (size + 1 < intervals.length) {
-        for (int i = size; i > counter + 1; i--) {
-          intervals[i] = intervals[i - 1];
+      } else if (maxEquals) {
+        // Value was at max, interval trimmed
+        if (originalCounter == size - 1) {
+          v.domainHasChanged(IntDomain.BOUND);
+        } else {
+          v.domainHasChanged(IntDomain.ANY);
         }
       } else {
-        FloatInterval[] updatedIntervals = new FloatInterval[size + 1];
-        System.arraycopy(intervals, 0, updatedIntervals, 0, counter + 1);
-        System.arraycopy(intervals, counter, updatedIntervals, counter + 1, size - counter);
-        intervals = updatedIntervals;
+        // Interval was split (value in middle)
+        v.domainHasChanged(IntDomain.ANY);
       }
-
-      double max = intervals[counter].max();
-
-      intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
-
-      intervals[counter + 1] = new FloatInterval(next(complement), max);
-
-      // One interval has been split, size increased by one.
-      size++;
-
-      assert checkInvariants() == null : checkInvariants();
 
     } else {
 
@@ -2383,115 +2514,52 @@ public class FloatIntervalDomain extends FloatDomain {
 
     if (storeLevel == stamp) {
 
-      int noRemoved = 0;
-
-      if (intervals[counter].min() < min) {
-        // intervals[counter].min..min-1
-
-        if (intervals[counter].max() > max) {
-          // max+1..intervals[counter].max
-          if (size < intervals.length) {
-            // copy elements to make one hole for new interval
-
-            for (int i = size; i > counter; i--) {
-              intervals[i] = intervals[i - 1];
-            }
-
-            intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
-            intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
-
-          } else {
-            // create new array and copy
-
-            FloatInterval[] oldIntervals = intervals;
-            intervals = new FloatInterval[oldIntervals.length + 5];
-
-            if (counter > 0) {
-              System.arraycopy(oldIntervals, 0, intervals, 0, counter);
-            }
-
-            System.arraycopy(oldIntervals, counter + 1, intervals, counter + 2, size - counter - 1);
-
-            intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max());
-            intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
+      // Handle special case: range splits a single interval (min < interval.min && max >
+      // interval.max)
+      if (intervals[counter].min() < min && intervals[counter].max() > max) {
+        // Need to split into two intervals
+        if (size < intervals.length) {
+          // Copy elements to make one hole for new interval
+          for (int i = size; i > counter; i--) {
+            intervals[i] = intervals[i - 1];
           }
-          size++;
-          assert checkInvariants() == null : checkInvariants();
-          v.domainHasChanged(IntDomain.ANY);
-        } else {
-          // intervals[counter].max <= max
-          // intervals[counter].min..min-1
-
+          intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
           intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
-
-          int position = ++counter;
-
-          while (position < size && intervals[position].max() <= max) {
-            position++;
-            noRemoved++;
-          }
-
-          if (noRemoved > 0) {
-
-            for (int i = counter; i + noRemoved < size; i++) {
-              intervals[i] = intervals[i + noRemoved];
-            }
-          }
-
-          size -= noRemoved;
-
-          if (counter < size && intervals[counter].min() <= max) {
-            intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
-          }
-
-          assert checkInvariants() == null : checkInvariants();
-
-          if (v.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-          } else if (max() > max) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-        }
-
-      } else {
-        // intervals[counter].min >= min
-        if (intervals[counter].max() > max) {
-          // max+1..intervals[counter].max
-
-          intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
-
         } else {
-          // intervals[counter] is removed
-
-          int position = counter;
-
-          while (position < size && intervals[position].max() <= max) {
-            position++;
-            noRemoved++;
+          // Create new array and copy
+          FloatInterval[] oldIntervals = intervals;
+          intervals = new FloatInterval[oldIntervals.length + 5];
+          if (counter > 0) {
+            System.arraycopy(oldIntervals, 0, intervals, 0, counter);
           }
-
-          for (int i = counter; i + noRemoved < size; i++) {
-            intervals[i] = intervals[i + noRemoved];
-          }
-
-          size -= noRemoved;
-
-          if (counter < size && intervals[counter].min() <= max) {
-            intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
-          }
+          System.arraycopy(oldIntervals, counter + 1, intervals, counter + 2, size - counter - 1);
+          intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max());
+          intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
         }
+        size++;
         assert checkInvariants() == null : checkInvariants();
-        if (singleton()) {
-          v.domainHasChanged(IntDomain.GROUND);
-          return;
-        }
-        if (counter == 0) {
-          v.domainHasChanged(IntDomain.BOUND);
-        } else {
-          v.domainHasChanged(IntDomain.ANY);
-        }
+        v.domainHasChanged(IntDomain.ANY);
+        return;
+      }
+
+      // Use helper for other cases
+      int originalCounter = counter;
+      removeRangeFromIntervals(counter, min, max);
+
+      assert checkInvariants() == null : checkInvariants();
+
+      if (singleton()) {
+        v.domainHasChanged(IntDomain.GROUND);
+        return;
+      }
+
+      // Determine event type
+      if (originalCounter == 0) {
+        v.domainHasChanged(IntDomain.BOUND);
+      } else if (max() > max || min <= min()) {
+        v.domainHasChanged(IntDomain.BOUND);
+      } else {
+        v.domainHasChanged(IntDomain.ANY);
       }
 
     } else {
@@ -2641,144 +2709,10 @@ public class FloatIntervalDomain extends FloatDomain {
 
     assert size != 0;
 
-    int pointer1 = 0;
-    int pointer2 = 0;
-    int inputSize = input.size;
+    FloatIntervalDomain result = computeIntersection(input.intervals, input.size, shift);
 
-    FloatInterval[] inputIntervals = input.intervals;
-
-    // Chance for no event
-    // traverse within while loop until certain that change will occur
-
-    while (pointer2 < inputSize
-        && inputIntervals[pointer2].max() + shift < intervals[pointer1].min()) {
-      pointer2++;
-    }
-
-    if (pointer2 == inputSize) {
-      throw failException;
-    }
-
-    while (intervals[pointer1].min() >= inputIntervals[pointer2].min() + shift
-        && intervals[pointer1].max() <= inputIntervals[pointer2].max() + shift
-        && ++pointer1 < size) {
-
-      while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
-          && ++pointer2 < input.size) {}
-
-      if (pointer2 == input.size) {
-        break;
-      }
-    }
-
-    // no change
-    if (pointer1 == size) {
+    if (result == null) {
       return;
-    }
-
-    FloatIntervalDomain result = new FloatIntervalDomain(size);
-    pointer2 = 0;
-
-    // add all common intervals to result as indicated by progress of
-    // the previous loop
-    while (pointer2 < pointer1) {
-      result.unionAdapt(intervals[pointer2++]);
-    }
-
-    pointer2 = 0;
-
-    double interval1Min = intervals[pointer1].min();
-    double interval1Max = intervals[pointer1].max();
-    double interval2Min = inputIntervals[pointer2].min() + shift;
-    double interval2Max = inputIntervals[pointer2].max() + shift;
-    while (true) {
-
-      if (interval1Max < interval2Min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min();
-          interval1Max = intervals[pointer1].max();
-        } else {
-          break;
-        }
-      } else if (interval2Max < interval1Min) {
-        pointer2++;
-        if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min() + shift;
-          interval2Max = inputIntervals[pointer2].max() + shift;
-        } else {
-          break;
-        }
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      if (interval1Min <= interval2Min) {
-
-        if (interval1Max <= interval2Max) {
-          result.unionAdapt(new FloatInterval(interval2Min, interval1Max));
-
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(
-              new FloatInterval(
-                  inputIntervals[pointer2].min() + shift, inputIntervals[pointer2].max() + shift));
-
-          pointer2++;
-
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min() + shift;
-            interval2Max = inputIntervals[pointer2].max() + shift;
-          } else {
-            break;
-          }
-        }
-
-      } else {
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        if (interval2Max <= interval1Max) {
-          result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
-
-          if (interval2Max >= interval1Max) {
-            pointer1++;
-            if (pointer1 < size) {
-              // shift has been removed.
-              interval1Min = intervals[pointer1].min();
-              interval1Max = intervals[pointer1].max();
-            } else {
-              break;
-            }
-          }
-
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min() + shift;
-            interval2Max = inputIntervals[pointer2].max() + shift;
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(intervals[pointer1]);
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    if (result.isEmpty()) {
-      throw failException;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -3045,62 +2979,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    if (intervals[counter].min() == value) {
-
-      if (intervals[counter].max() != value) {
-
-        intervals[counter] = new FloatInterval(next(value), intervals[counter].max());
-
-        assert checkInvariants() == null : checkInvariants();
-
-      } else {
-        // if domain like this 1..3, 5, 7..10, and 5 being removed.
-
-        for (int i = counter; i < size - 1; i++) {
-          intervals[i] = intervals[i + 1];
-        }
-
-        size--;
-
-        // below size, instead of size-1 as size has been
-        // just decreased, e.g. domain like 1..3, 5, 7..9 and 5
-        // being removed.
-
-      }
-      return;
-    }
-
-    if (intervals[counter].max() == value) {
-
-      // domain like this 1..3, 5, 7..10, and 5 being
-      // removed taken care of above.
-
-      intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
-
-      assert checkInvariants() == null : checkInvariants();
-
-      return;
-    }
-
-    if (size + 1 < intervals.length) {
-      for (int i = size; i > counter + 1; i--) {
-        intervals[i] = intervals[i - 1];
-      }
-    } else {
-      FloatInterval[] updatedIntervals = new FloatInterval[size + 1];
-      System.arraycopy(intervals, 0, updatedIntervals, 0, counter + 1);
-      System.arraycopy(intervals, counter, updatedIntervals, counter + 1, size - counter);
-      intervals = updatedIntervals;
-    }
-
-    double max = intervals[counter].max();
-    intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
-    intervals[counter + 1] = new FloatInterval(next(value), max);
-
-    // One interval has been split, size increased by one.
-    size++;
-
-    assert checkInvariants() == null : checkInvariants();
+    removeValueFromIntervals(counter, value);
   }
 
   @Override
@@ -3115,97 +2994,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    if (minValue <= intervals[current].min()) {
-
-      if (maxValue < intervals[current].min()) {
-        return;
-      }
-
-      // removing will not create more intervals.
-      if (intervals[current].max() > maxValue) {
-
-        intervals[current] = new FloatInterval(next(maxValue), intervals[current].max());
-
-        assert checkInvariants() == null : checkInvariants();
-
-      } else {
-        // at least one complete interval is being removed.
-
-        int maxCurrent = current;
-        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) {
-          maxCurrent++;
-        }
-
-        if (maxCurrent == size) {
-          size = current;
-          return;
-        }
-
-        if (maxValue >= intervals[maxCurrent].min()) {
-          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
-        }
-
-        int i = current;
-        for (; maxCurrent < size; i++, maxCurrent++) {
-          intervals[i] = intervals[maxCurrent];
-        }
-
-        size = i;
-      }
-    } else {
-
-      // minValue > intervals[current].min
-
-      if (maxValue < intervals[current].max()) {
-        // one additional interval is being created.
-
-        if (intervals.length == size + 1) {
-          // not enough space to insert new interval.
-          FloatInterval[] newIntervals = new FloatInterval[intervals.length * 2];
-          System.arraycopy(intervals, 0, newIntervals, 0, size);
-          intervals = newIntervals;
-        }
-
-        for (int i = size; i > current; i--) {
-          intervals[i] = intervals[i - 1];
-        }
-
-        intervals[current] = new FloatInterval(intervals[current].min(), previous(minValue));
-        intervals[current + 1] = new FloatInterval(next(maxValue), intervals[current + 1].max());
-
-        size++;
-
-      } else {
-        // minValue > intervals[current].min
-        // maxValue >= intervals[current].max
-
-        // at least one complete interval is being removed.
-        intervals[current] = new FloatInterval(intervals[current].min(), previous(minValue));
-        current++;
-
-        int maxCurrent = current;
-        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) {
-          maxCurrent++;
-        }
-
-        if (maxCurrent == size) {
-          size = current;
-          return;
-        }
-
-        if (intervals[maxCurrent].min() <= maxValue) {
-          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
-        }
-
-        int i = current;
-        for (; maxCurrent < size; i++, maxCurrent++) {
-          intervals[i] = intervals[maxCurrent];
-          intervals[maxCurrent] = null;
-        }
-
-        size = i;
-      }
-    }
+    removeRangeFromIntervals(current, minValue, maxValue);
   }
 
   @Override
@@ -3226,134 +3015,10 @@ public class FloatIntervalDomain extends FloatDomain {
       return IntDomain.GROUND;
     }
 
-    int pointer1 = 0;
-    int pointer2 = 0;
+    FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);
 
-    FloatInterval[] inputIntervals = input.intervals;
-    int inputSize = input.size;
-    // Chance for no event
-    while (pointer2 < inputSize && inputIntervals[pointer2].max() < intervals[pointer1].min()) {
-      pointer2++;
-    }
-
-    if (pointer2 == inputSize) {
-      size = 0;
-      return IntDomain.GROUND;
-    }
-
-    // traverse within while loop until certain that change will occur
-    while (intervals[pointer1].min() >= inputIntervals[pointer2].min()
-        && intervals[pointer1].max() <= inputIntervals[pointer2].max()
-        && ++pointer1 < size) {
-
-      while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-          && ++pointer2 < inputSize) {}
-
-      if (pointer2 == inputSize) {
-        break;
-      }
-    }
-
-    // no change
-    if (pointer1 == size) {
+    if (result == null) {
       return IntDomain.NONE;
-    }
-
-    FloatIntervalDomain result = new FloatIntervalDomain(this.size);
-    int temp = 0;
-    // add all common intervals to result as indicated by progress of
-    // the previous loop
-    while (temp < pointer1) {
-      result.unionAdapt(intervals[temp++]);
-    }
-
-    pointer2 = 0;
-
-    double interval1Min = intervals[pointer1].min();
-    double interval1Max = intervals[pointer1].max();
-    double interval2Min = inputIntervals[pointer2].min();
-    double interval2Max = inputIntervals[pointer2].max();
-
-    while (true) {
-
-      if (interval1Max < interval2Min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min();
-          interval1Max = intervals[pointer1].max();
-        } else {
-          break;
-        }
-      } else if (interval2Max < interval1Min) {
-        pointer2++;
-        if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min();
-          interval2Max = inputIntervals[pointer2].max();
-        } else {
-          break;
-        }
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      if (interval1Min <= interval2Min) {
-
-        if (interval1Max <= interval2Max) {
-          result.unionAdapt(new FloatInterval(interval2Min, interval1Max));
-
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(inputIntervals[pointer2]);
-          pointer2++;
-
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min();
-            interval2Max = inputIntervals[pointer2].max();
-          } else {
-            break;
-          }
-        }
-
-      } else {
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        if (interval2Max <= interval1Max) {
-          result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
-
-          if (interval2Max >= interval1Max) {
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = intervals[pointer1].min();
-              interval1Max = intervals[pointer1].max();
-            } else {
-              break;
-            }
-          }
-
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min();
-            interval2Max = inputIntervals[pointer2].max();
-          } else {
-            break;
-          }
-        } else {
-          result.unionAdapt(intervals[pointer1]);
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min();
-            interval1Max = intervals[pointer1].max();
-          } else {
-            break;
-          }
-        }
-      }
     }
 
     if (result.isEmpty()) {

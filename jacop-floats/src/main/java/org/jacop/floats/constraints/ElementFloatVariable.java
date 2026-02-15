@@ -166,7 +166,7 @@ public class ElementFloatVariable extends AbstractElement implements SatisfiedPr
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
-      if (disjoint(value, list[position])) {
+      if (ElementFloat.isDisjoint(value, list[position])) {
         if (indexDom.size == 0) {
           indexDom.unionAdapt(position + 1 + indexOffset);
         } else {
@@ -187,10 +187,6 @@ public class ElementFloatVariable extends AbstractElement implements SatisfiedPr
       value.domain.in(store.level, value, lp.domain);
       lp.domain.in(store.level, lp, value.domain);
     }
-  }
-
-  private boolean disjoint(FloatVar v1, FloatVar v2) {
-    return v1.min() > v2.max() || v2.min() > v1.max() || !v1.domain.isIntersecting(v2.domain);
   }
 
   @Override

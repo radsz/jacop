@@ -110,7 +110,7 @@ public class Xor extends PrimitiveConstraint {
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise variants exist.");
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
   }
 
   @Override
@@ -130,7 +130,7 @@ public class Xor extends PrimitiveConstraint {
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise variants exist.");
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
   }
 
   @Override

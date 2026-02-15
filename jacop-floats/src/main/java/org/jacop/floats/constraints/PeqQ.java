@@ -31,9 +31,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -44,15 +42,9 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PeqQ extends PrimitiveConstraint {
+public class PeqQ extends AbstractPeqQ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies a left hand variable in equality constraint. */
-  private final FloatVar p;
-
-  /** It specifies a right hand variable in equality constraint. */
-  private final FloatVar q;
 
   /**
    * It constructs constraint P = Q.
@@ -61,56 +53,27 @@ public class PeqQ extends PrimitiveConstraint {
    * @param q variable q.
    */
   public PeqQ(FloatVar p, FloatVar q) {
-
-    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.queueIndex = 0;
-
-    this.p = p;
-    this.q = q;
-
-    setScope(p, q);
+    super(idNumber, p, q);
   }
 
   @Override
   public void consistency(Store store) {
-
-    do {
-
-      // domain consistency
-      p.domain.in(store.level, p, q.dom()); // min(), q.max());
-
-      store.propagationHasOccurred = false;
-
-      q.domain.in(store.level, q, p.dom()); // min(), p.max());
-
-    } while (store.propagationHasOccurred);
+    domainConsistency(store);
   }
 
   @Override
   public void notConsistency(Store store) {
-
-    if (q.singleton()) {
-      p.domain.inComplement(store.level, p, q.value());
-    }
-
-    if (p.singleton()) {
-      q.domain.inComplement(store.level, q, p.value());
-    }
+    complementConsistency(store);
   }
 
   @Override
   public boolean notSatisfied() {
-    return !p.domain.isIntersecting(q.domain);
+    return satisfiedWhenDisjoint();
   }
 
   @Override
   public boolean satisfied() {
-    return grounded()
-        && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
-        && java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
+    return satisfiedWhenEqual();
   }
 
   @Override

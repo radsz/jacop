@@ -35,8 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.InternalException;
 
@@ -73,7 +71,7 @@ public class SinPeqR extends AbstractTrigConstraint
   @Override
   protected void boundConsistency(Store store) {
 
-    if (p.max() - p.min() >= 2 * FloatDomain.PI) {
+    if (spansFullPeriod()) {
       return;
     }
 
@@ -85,15 +83,9 @@ public class SinPeqR extends AbstractTrigConstraint
         return;
       }
 
-      double min = p.min();
-      double max = p.max();
-      if (p.min() < -2 * FloatDomain.PI || p.max() > 2 * FloatDomain.PI) {
-        // normalize to -2*PI..2*PI
-
-        FloatInterval normP = normalize(p);
-        min = normP.min();
-        max = normP.max();
-      }
+      double[] bounds = getNormalizedBounds();
+      double min = bounds[0];
+      double max = bounds[1];
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
@@ -126,30 +118,9 @@ public class SinPeqR extends AbstractTrigConstraint
 
       q.domain.in(store.level, q, qMin, qMax);
 
-      // p update
-      double pMin = Math.asin(qMin); // range -PI/2..PI/2
-      double pMax = Math.asin(qMax); // range -PI/2..PI/2
-
-      // -PI/2 .. PI/2");
-
-      pMin = FloatDomain.down(pMin);
-      pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) {
-        pMin = -FloatDomain.PI / 2;
-      }
-      if (java.lang.Double.isNaN(pMax)) {
-        pMax = FloatDomain.PI / 2;
-      }
-
-      double low;
-      double high;
-      double k = Math.floor(p.min() / (2 * FloatDomain.PI));
-      low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
-      k = Math.ceil(p.max() / (2 * FloatDomain.PI));
-      high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
-      FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
-
-      p.domain.in(store.level, p, pDom); // .min(), pDom.max());
+      // p update using asin (range -PI/2..PI/2)
+      // asin is increasing, so swap qMin/qMax: pMin = asin(qMin), pMax = asin(qMax)
+      updatePDomain(store, qMax, qMin, Math::asin, -FloatDomain.PI / 2, FloatDomain.PI / 2);
 
     } while (store.propagationHasOccurred);
   }

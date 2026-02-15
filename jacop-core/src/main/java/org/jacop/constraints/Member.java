@@ -135,10 +135,7 @@ public class Member extends PrimitiveConstraint {
       return;
     }
 
-    if (start == l - 1) {
-      x[l - 1].domain.in(store.level, x[l - 1], e.domain);
-      e.domain.in(store.level, e, x[l - 1].domain);
-    }
+    handleSingleRemainingVariable(store, start);
 
     position.update(start);
   }
@@ -172,17 +169,28 @@ public class Member extends PrimitiveConstraint {
         removeConstraint();
       }
 
-      if (start == l - 1) {
-        if (e.singleton()) {
-          x[l - 1].domain.inComplement(store.level, x[l - 1], e.value());
-        } else if (x[l - 1].singleton()) {
-          e.domain.inComplement(store.level, e, x[l - 1].value());
-        }
-      }
+      handleSingleRemainingVariableNotConsistency(store, start);
 
     } while (store.propagationHasOccurred);
 
     position.update(start);
+  }
+
+  private void handleSingleRemainingVariable(Store store, int start) {
+    if (start == l - 1) {
+      x[l - 1].domain.in(store.level, x[l - 1], e.domain);
+      e.domain.in(store.level, e, x[l - 1].domain);
+    }
+  }
+
+  private void handleSingleRemainingVariableNotConsistency(Store store, int start) {
+    if (start == l - 1) {
+      if (e.singleton()) {
+        x[l - 1].domain.inComplement(store.level, x[l - 1], e.value());
+      } else if (x[l - 1].singleton()) {
+        e.domain.inComplement(store.level, e, x[l - 1].value());
+      }
+    }
   }
 
   private void swap(int i, int j) {

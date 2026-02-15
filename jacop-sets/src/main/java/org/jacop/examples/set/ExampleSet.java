@@ -103,6 +103,40 @@ public abstract class ExampleSet {
   }
 
   /**
+   * Creates a SimpleSelect with default variable ordering (input order) and value selection.
+   *
+   * @param varSelector optional variable selector (null for input order)
+   * @return a SelectChoicePoint configured with the default parameters
+   */
+  private SelectChoicePoint<SetVar> createSimpleSelect(
+      org.jacop.search.ComparatorVariable<SetVar> varSelector) {
+    return new SimpleSelect<>(vars.toArray(new SetVar[1]), varSelector, new IndomainSetMin<>());
+  }
+
+  /**
+   * Executes search and prints the store if a solution was found.
+   *
+   * @param select the SelectChoicePoint to use
+   * @param costVar optional cost variable for optimization
+   * @param configureSearch optional callback to configure the search
+   * @param printStats whether to print search statistics
+   * @param printTime whether to print execution time
+   * @return true if a solution was found, false otherwise
+   */
+  private boolean executeSearchAndPrint(
+      SelectChoicePoint<SetVar> select,
+      IntVar costVar,
+      java.util.function.Consumer<DepthFirstSearch<SetVar>> configureSearch,
+      boolean printStats,
+      boolean printTime) {
+    boolean result = executeSearch(select, costVar, configureSearch, printStats, printTime);
+    if (result) {
+      store.print();
+    }
+    return result;
+  }
+
+  /**
    * Template method for executing search with common boilerplate.
    *
    * @param select the SelectChoicePoint to use for variable/value selection
@@ -144,13 +178,7 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean search() {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
-    boolean result = executeSearch(select, null, null, true, true);
-    if (result) {
-      store.print();
-    }
-    return result;
+    return executeSearchAndPrint(createSimpleSelect(null), null, null, true, true);
   }
 
   /**
@@ -160,13 +188,7 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchOptimal() {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
-    boolean result = executeSearch(select, cost, null, false, true);
-    if (result) {
-      store.print();
-    }
-    return result;
+    return executeSearchAndPrint(createSimpleSelect(null), cost, null, false, true);
   }
 
   /**
@@ -175,10 +197,8 @@ public abstract class ExampleSet {
    * @return true if any optimal solution has been found.
    */
   public boolean searchAllOptimal() {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
     return executeSearch(
-        select,
+        createSimpleSelect(null),
         cost,
         search -> {
           search.getSolutionListener().searchAll(true);
@@ -196,10 +216,8 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchSmallestDomain(boolean optimal) {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(
-            vars.toArray(new SetVar[1]), new SmallestDomain<>(), new IndomainSetMin<>());
-    return executeSearch(select, optimal ? cost : null, null, true, true);
+    return executeSearch(
+        createSimpleSelect(new SmallestDomain<>()), optimal ? cost : null, null, true, true);
   }
 
   /**
@@ -216,11 +234,7 @@ public abstract class ExampleSet {
             new WeightedDegree<>(store),
             new SmallestDomain<>(),
             new IndomainSetMin<>());
-    boolean result = executeSearch(select, null, null, true, true);
-    if (result) {
-      store.print();
-    }
-    return result;
+    return executeSearchAndPrint(select, null, null, true, true);
   }
 
   /**
@@ -230,10 +244,8 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchMostConstrainedStatic() {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(
-            vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
-    boolean result = executeSearch(select, null, null, true, false);
+    boolean result =
+        executeSearch(createSimpleSelect(new MostConstrainedStatic<>()), null, null, true, false);
     if (!result) {
       IO.println("**** No Solution ****");
     }
@@ -247,12 +259,9 @@ public abstract class ExampleSet {
    * @return true if there is a solution, false otherwise.
    */
   public boolean searchAllAtOnce() {
-    SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(
-            vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
     boolean result =
         executeSearch(
-            select,
+            createSimpleSelect(new MostConstrainedStatic<>()),
             null,
             search -> {
               search.getSolutionListener().searchAll(true);

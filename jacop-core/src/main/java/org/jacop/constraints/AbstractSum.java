@@ -240,4 +240,36 @@ public abstract class AbstractSum extends PrimitiveConstraint {
   public int getGuideValue() {
     return guideValue;
   }
+
+  @Override
+  public void impose(Store store) {
+
+    if (x == null) {
+      return;
+    }
+
+    reified = false;
+
+    super.impose(store);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 }

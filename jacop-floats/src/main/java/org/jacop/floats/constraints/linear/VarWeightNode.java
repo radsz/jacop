@@ -76,39 +76,7 @@ public class VarWeightNode extends VariableNode {
     double min = mul.min();
     double max = mul.max();
 
-    double node_min = min();
-    double node_max = max();
-
-    if (min > node_min) {
-      if (max < node_max) {
-        updateBounds(min, max, min, max);
-        if (andPrune) {
-          parent.propagateAndPrune();
-        } else {
-          parent.propagate();
-        }
-      } else {
-        if (min > node_max) {
-          throw Store.failException;
-        }
-        updateBounds(min, node_max, min, max);
-        if (andPrune) {
-          parent.propagateAndPrune();
-        } else {
-          parent.propagate();
-        }
-      }
-    } else if (max < node_max) {
-      if (node_min > max) {
-        throw Store.failException;
-      }
-      updateBounds(node_min, max, min, max);
-      if (andPrune) {
-        parent.propagateAndPrune();
-      } else {
-        parent.propagate();
-      }
-    }
+    updateBoundsAndPropagate(min, max, min, max, andPrune);
   }
 
   void prune() {

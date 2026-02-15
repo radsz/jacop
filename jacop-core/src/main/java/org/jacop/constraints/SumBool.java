@@ -226,38 +226,6 @@ public class SumBool extends AbstractSum {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    if (x == null) {
-      return;
-    }
-
-    reified = false;
-
-    super.impose(store);
-  }
-
-  @Override
   public boolean satisfied() {
 
     return entailed(relationType);

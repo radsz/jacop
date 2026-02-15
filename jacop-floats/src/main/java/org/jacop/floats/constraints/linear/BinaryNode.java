@@ -67,6 +67,62 @@ public abstract class BinaryNode {
   abstract void updateBounds(double min, double max, double lb, double ub);
 
   /**
+   * Updates bounds if they have changed and propagates to parent. This helper method extracts the
+   * common pattern of checking if new bounds differ from current bounds, updating them, and
+   * propagating to the parent node.
+   *
+   * @param newMin the new minimum bound
+   * @param newMax the new maximum bound
+   * @param newLb the new lower lookahead bound
+   * @param newUb the new upper lookahead bound
+   * @param andPrune if true, calls propagateAndPrune on parent; otherwise calls propagate
+   * @return true if bounds were updated and propagation occurred
+   */
+  protected boolean updateBoundsAndPropagate(
+      double newMin, double newMax, double newLb, double newUb, boolean andPrune) {
+    double nodeMin = min();
+    double nodeMax = max();
+
+    if (newMin > nodeMin) {
+      if (newMax < nodeMax) {
+        if (newMin > newMax) {
+          throw org.jacop.core.Store.failException;
+        }
+        updateBounds(newMin, newMax, newLb, newUb);
+        if (andPrune) {
+          parent.propagateAndPrune();
+        } else {
+          parent.propagate();
+        }
+        return true;
+      } else {
+        if (newMin > nodeMax) {
+          throw org.jacop.core.Store.failException;
+        }
+        updateBounds(newMin, nodeMax, newLb, newUb);
+        if (andPrune) {
+          parent.propagateAndPrune();
+        } else {
+          parent.propagate();
+        }
+        return true;
+      }
+    } else if (newMax < nodeMax) {
+      if (nodeMin > newMax) {
+        throw org.jacop.core.Store.failException;
+      }
+      updateBounds(nodeMin, newMax, newLb, newUb);
+      if (andPrune) {
+        parent.propagateAndPrune();
+      } else {
+        parent.propagate();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Returns a string representation of this binary node.
    *
    * @return the node's id as a string

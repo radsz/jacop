@@ -800,17 +800,28 @@ public class VariablesParameters implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Helper method to process annotation nodes.
+   *
+   * @param child the annotation node
+   * @return true if annotation was processed, false otherwise
+   */
+  private boolean processAnnotation(SimpleNode child) {
+    SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
+    if (grandchild.getId() == JJTANNEXPR) {
+      annotations.add(parseAnnExpr(grandchild, 0));
+      return true;
+    }
+    return false;
+  }
+
   int getAnnotations(SimpleNode node, int i) {
     int j = i;
     int count = node.jjtGetNumChildren();
     if (j < count) {
       SimpleNode child = (SimpleNode) node.jjtGetChild(j);
       while (j < count && child.getId() == JJTANNOTATION) {
-        SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
-
-        if (grandchild.getId() == JJTANNEXPR) {
-          annotations.add(parseAnnExpr(grandchild, 0));
-        }
+        processAnnotation(child);
 
         j++;
         if (j < count) {

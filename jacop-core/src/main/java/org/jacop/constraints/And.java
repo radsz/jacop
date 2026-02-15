@@ -118,12 +118,12 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise version exists.");
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
   }
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise version exists.");
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
   }
 
   @Override

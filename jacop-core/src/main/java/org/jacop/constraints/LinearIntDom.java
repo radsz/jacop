@@ -283,88 +283,140 @@ public class LinearIntDom extends LinearInt {
     }
 
     if (currentDom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-      int n = ((IntervalDomain) currentDom).size;
-
-      outerloop:
-      for (int k = 0; k < n; k++) {
-        Interval e = ((IntervalDomain) currentDom).intervals[k];
-        int eMin = e.min();
-        int eMax = e.max();
-
-        for (int element = eMin; element <= eMax; element++) {
-
-          long elementValue = (long) element * w;
-          // Loop control differs based on positive/negative phase
-          if (positive) {
-            if (elementValue < lb) {
-              continue; // value too low
-            } else if (elementValue > ub) {
-              break outerloop; // value too large
-            } else {
-              newPartialSum = partialSum + elementValue;
-            }
-          } else {
-            if (elementValue < lb) {
-              break outerloop; // value too low
-            } else if (elementValue > ub) {
-              continue; // value too large
-            } else {
-              newPartialSum = partialSum + elementValue;
-            }
-          }
-
-          assignments[index] = element;
-
-          // Recursion differs based on positive/negative phase
-          if (positive) {
-            if (newIndex < pos) {
-              findSupport(true, newIndex, newPartialSum);
-            } else {
-              findSupport(false, newIndex, newPartialSum);
-            }
-          } else {
-            findSupport(false, newIndex, newPartialSum);
-          }
-        }
-      }
+      processIntervalDomain(currentDom, index, newIndex, w, lb, ub, partialSum, positive);
     } else {
-      for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
-        int element = val.nextElement();
+      processValueEnumeration(currentDom, index, newIndex, w, lb, ub, partialSum, positive);
+    }
+  }
 
-        long elementValue = (long) element * w;
-        // Loop control differs based on positive/negative phase
-        if (positive) {
-          if (elementValue < lb) {
-            continue; // value too low
-          } else if (elementValue > ub) {
-            break; // value too large
-          } else {
-            newPartialSum = partialSum + elementValue;
-          }
-        } else {
-          if (elementValue < lb) {
-            break; // value too low
-          } else if (elementValue > ub) {
-            continue; // value too large
-          } else {
-            newPartialSum = partialSum + elementValue;
-          }
-        }
+  /**
+   * Processes interval domain by iterating over intervals and their values.
+   *
+   * @param currentDom the current domain
+   * @param index current variable index
+   * @param newIndex next variable index
+   * @param w weight coefficient
+   * @param lb lower bound for element value
+   * @param ub upper bound for element value
+   * @param partialSum accumulated sum so far
+   * @param positive true if processing positive coefficients
+   */
+  private void processIntervalDomain(
+      IntDomain currentDom,
+      int index,
+      int newIndex,
+      long w,
+      long lb,
+      long ub,
+      long partialSum,
+      boolean positive) {
+    int n = ((IntervalDomain) currentDom).size;
 
-        assignments[index] = element;
+    outerloop:
+    for (int k = 0; k < n; k++) {
+      Interval e = ((IntervalDomain) currentDom).intervals[k];
+      int eMin = e.min();
+      int eMax = e.max();
 
-        // Recursion differs based on positive/negative phase
-        if (positive) {
-          if (newIndex < pos) {
-            findSupport(true, newIndex, newPartialSum);
-          } else {
-            findSupport(false, newIndex, newPartialSum);
-          }
-        } else {
-          findSupport(false, newIndex, newPartialSum);
+      for (int element = eMin; element <= eMax; element++) {
+        if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex, true)) {
+          break outerloop;
         }
       }
     }
+  }
+
+  /**
+   * Processes domain using value enumeration.
+   *
+   * @param currentDom the current domain
+   * @param index current variable index
+   * @param newIndex next variable index
+   * @param w weight coefficient
+   * @param lb lower bound for element value
+   * @param ub upper bound for element value
+   * @param partialSum accumulated sum so far
+   * @param positive true if processing positive coefficients
+   */
+  private void processValueEnumeration(
+      IntDomain currentDom,
+      int index,
+      int newIndex,
+      long w,
+      long lb,
+      long ub,
+      long partialSum,
+      boolean positive) {
+    for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
+      int element = val.nextElement();
+      if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex, false)) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Processes a single element value, checking bounds and recursing if valid.
+   *
+   * @param element the element value to process
+   * @param w weight coefficient
+   * @param lb lower bound for element value
+   * @param ub upper bound for element value
+   * @param partialSum accumulated sum so far
+   * @param positive true if processing positive coefficients
+   * @param index current variable index
+   * @param newIndex next variable index
+   * @param useOuterLoop true if should break outer loop (for interval domain), false for simple
+   *     break
+   * @return true if should break the loop, false otherwise
+   */
+  private boolean processElement(
+      int element,
+      long w,
+      long lb,
+      long ub,
+      long partialSum,
+      boolean positive,
+      int index,
+      int newIndex,
+      boolean useOuterLoop) {
+    long elementValue = (long) element * w;
+    long newPartialSum;
+    boolean shouldBreak = false;
+
+    // Loop control differs based on positive/negative phase
+    if (positive) {
+      if (elementValue < lb) {
+        return false; // continue
+      } else if (elementValue > ub) {
+        return true; // break
+      } else {
+        newPartialSum = partialSum + elementValue;
+      }
+    } else {
+      if (elementValue < lb) {
+        return true; // break
+      } else if (elementValue > ub) {
+        return false; // continue
+      } else {
+        newPartialSum = partialSum + elementValue;
+      }
+    }
+
+    assignments[index] = element;
+
+    // Recursion differs based on positive/negative phase
+    if (positive) {
+      if (newIndex < pos) {
+        findSupport(true, newIndex, newPartialSum);
+      } else {
+        findSupport(false, newIndex, newPartialSum);
+      }
+    } else {
+      findSupport(false, newIndex, newPartialSum);
+    }
+
+    return false; // continue
   }
 
   @Override

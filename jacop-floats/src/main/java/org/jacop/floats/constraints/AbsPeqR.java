@@ -103,20 +103,10 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
       if (p.min() >= 0) {
         // possible domain consistecny for this case
-        // store.propagationHasOccurred = false;
-
         // bounds consistency
-        p.domain.in(store.level, p, q.min(), q.max());
-
-        store.propagationHasOccurred = false;
-
-        q.domain.in(store.level, q, p.min(), p.max());
+        updateDomains(store, q.min(), q.max(), p.min(), p.max());
       } else if (p.max() < 0) {
-        p.domain.in(store.level, p, -q.max(), -q.min());
-
-        store.propagationHasOccurred = false;
-
-        q.domain.in(store.level, q, -p.max(), -p.min());
+        updateDomains(store, -q.max(), -q.min(), -p.max(), -p.min());
       } else { // p.min() < 0 && p.max() >= 0
         double pBound = q.max(); // q is always >= 0
         p.domain.in(store.level, p, -pBound, pBound);
@@ -127,6 +117,23 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Updates p and q domains with the given bounds and resets the propagation flag.
+   *
+   * @param store the constraint store
+   * @param pMin minimum bound for p
+   * @param pMax maximum bound for p
+   * @param qMin minimum bound for q
+   * @param qMax maximum bound for q
+   */
+  private void updateDomains(Store store, double pMin, double pMax, double qMin, double qMax) {
+    p.domain.in(store.level, p, pMin, pMax);
+
+    store.propagationHasOccurred = false;
+
+    q.domain.in(store.level, q, qMin, qMax);
   }
 
   @Override

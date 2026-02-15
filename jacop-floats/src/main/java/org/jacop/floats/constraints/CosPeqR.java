@@ -35,8 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatInterval;
-import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.InternalException;
 
@@ -67,7 +65,7 @@ public class CosPeqR extends AbstractTrigConstraint
   @Override
   protected void boundConsistency(Store store) {
 
-    if (p.max() - p.min() >= 2 * FloatDomain.PI) {
+    if (spansFullPeriod()) {
       return;
     }
 
@@ -79,15 +77,9 @@ public class CosPeqR extends AbstractTrigConstraint
         return;
       }
 
-      double min = p.min();
-      double max = p.max();
-      if (p.min() < -2 * FloatDomain.PI || p.max() > 2 * FloatDomain.PI) {
-        // normalize to -2*PI..2*PI
-
-        FloatInterval normP = normalize(p);
-        min = normP.min();
-        max = normP.max();
-      }
+      double[] bounds = getNormalizedBounds();
+      double min = bounds[0];
+      double max = bounds[1];
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
@@ -183,30 +175,8 @@ public class CosPeqR extends AbstractTrigConstraint
 
       q.domain.in(store.level, q, qMin, qMax);
 
-      // p update
-      double pMin = Math.acos(qMax); // range 0..PI
-      double pMax = Math.acos(qMin); // range 0..PI
-
-      // 0 .. PI");
-
-      pMin = FloatDomain.down(pMin);
-      pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) {
-        pMin = 0.0;
-      }
-      if (java.lang.Double.isNaN(pMax)) {
-        pMax = FloatDomain.PI;
-      }
-
-      double low;
-      double high;
-      double k = Math.floor(p.min() / (2 * FloatDomain.PI));
-      low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
-      k = Math.ceil(p.max() / (2 * FloatDomain.PI));
-      high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
-      FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
-
-      p.domain.in(store.level, p, pDom);
+      // p update using acos (range 0..PI)
+      updatePDomain(store, qMin, qMax, Math::acos, 0.0, FloatDomain.PI);
 
     } while (store.propagationHasOccurred);
   }

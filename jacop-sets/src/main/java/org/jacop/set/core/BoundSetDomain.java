@@ -63,6 +63,30 @@ public class BoundSetDomain extends SetDomain {
   /** The cardinality of the set. */
   public IntDomain cardDomain;
 
+  /** Initializes common fields for all constructors. */
+  private void initCommonFields() {
+    searchConstraints = null;
+    searchConstraintsToEvaluate = 0;
+    previousDomain = null;
+    searchConstraintsCloned = false;
+  }
+
+  /**
+   * Copies common domain fields (constraints, stamp, etc.) from this domain to a result domain.
+   * This helper method reduces duplication when creating new domain instances during backtracking.
+   *
+   * @param result the domain to copy fields to
+   * @param level the store level for the new domain
+   */
+  private void copyCommonFieldsToResult(BoundSetDomain result, int level) {
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = level;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+  }
+
   /**
    * Creates BoundSetDomain object. It requires glb to be a subset of lubDomain.
    *
@@ -80,10 +104,7 @@ public class BoundSetDomain extends SetDomain {
     this.lubDomain = lub.cloneLight();
     this.cardDomain = cardinality.cloneLight();
 
-    searchConstraints = null;
-    searchConstraintsToEvaluate = 0;
-    previousDomain = null;
-    searchConstraintsCloned = false;
+    initCommonFields();
   }
 
   /**
@@ -105,10 +126,7 @@ public class BoundSetDomain extends SetDomain {
     // TODO: test the replacement of intervaldomain when possible by SmallDenseDomain.
     // this.cardDomain = new SmallDenseDomain(glb.getSize(), lub.getSize());
 
-    searchConstraints = null;
-    searchConstraintsToEvaluate = 0;
-    previousDomain = null;
-    searchConstraintsCloned = false;
+    initCommonFields();
   }
 
   /**
@@ -121,10 +139,7 @@ public class BoundSetDomain extends SetDomain {
     this.lubDomain = new IntervalDomain(0);
     this.cardDomain = new IntervalDomain(0, 0);
 
-    searchConstraints = null;
-    searchConstraintsToEvaluate = 0;
-    previousDomain = null;
-    searchConstraintsCloned = false;
+    initCommonFields();
   }
 
   /**
@@ -145,10 +160,7 @@ public class BoundSetDomain extends SetDomain {
 
     this.cardDomain = new IntervalDomain(0, e2 - e1 + 1);
 
-    searchConstraints = null;
-    searchConstraintsToEvaluate = 0;
-    previousDomain = null;
-    searchConstraintsCloned = false;
+    initCommonFields();
   }
 
   /**
@@ -417,12 +429,7 @@ public class BoundSetDomain extends SetDomain {
       result.lubDomain = resultLub;
       result.cardDomain = resultCardinality;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, storeLevel);
       v.domain = result;
 
       if (result.singleton()) {
@@ -838,12 +845,7 @@ public class BoundSetDomain extends SetDomain {
       }
 
       result.cardDomain = resultCardinality;
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
 
       if (result.singleton()) {
@@ -918,12 +920,7 @@ public class BoundSetDomain extends SetDomain {
 
       result.cardDomain = resultCardinality;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
 
       if (result.singleton()) {
@@ -995,12 +992,7 @@ public class BoundSetDomain extends SetDomain {
 
       result.cardDomain = resultCardinality;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
 
       if (result.singleton()) {
@@ -1044,12 +1036,7 @@ public class BoundSetDomain extends SetDomain {
       BoundSetDomain result = new BoundSetDomain(set, set);
       result.cardDomain = new IntervalDomain(set.getSize(), set.getSize());
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
     }
 
@@ -1129,12 +1116,7 @@ public class BoundSetDomain extends SetDomain {
       result.lubDomain = resultLub;
       result.cardDomain = resultCardinality;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
 
       if (result.singleton()) {
@@ -1177,12 +1159,7 @@ public class BoundSetDomain extends SetDomain {
 
       result.cardDomain = new IntervalDomain(lubDomain.getSize(), lubDomain.getSize());
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
     }
 
@@ -1219,12 +1196,7 @@ public class BoundSetDomain extends SetDomain {
       result.lubDomain = result.glbDomain;
       result.cardDomain = new IntervalDomain(glbDomain.getSize(), glbDomain.getSize());
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
     }
 
@@ -1282,12 +1254,7 @@ public class BoundSetDomain extends SetDomain {
       BoundSetDomain result = new BoundSetDomain(glbDomain, lubDomain);
       result.cardDomain = resultCardinality;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = level;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      copyCommonFieldsToResult(result, level);
       v.domain = result;
     }
 
