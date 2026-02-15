@@ -143,6 +143,76 @@ public class SmallDenseDomain extends IntDomain {
   private int max;
 
   /**
+   * Finds the index of the first interval in the input domain that overlaps with this domain.
+   *
+   * @param input the IntervalDomain to search
+   * @param shift the shift applied to interval boundaries
+   * @return the index of the first overlapping interval, or input.size if none found
+   */
+  private int findFirstOverlappingInterval(IntervalDomain input, int shift) {
+    int i = 0;
+    for (; i < input.size; i++) {
+      if (input.intervals[i].max() + shift >= this.minBound) {
+        break;
+      }
+    }
+    return i;
+  }
+
+  /**
+   * Converts an IntervalDomain into a bit representation aligned with this domain. Assumes the
+   * caller has found the first overlapping interval and computed its length.
+   *
+   * @param input the IntervalDomain to convert
+   * @param shift the shift to apply to interval boundaries
+   * @param startIndex the index of the first overlapping interval
+   * @param length the length of the overlap with the first interval
+   * @return the bit representation of the overlapping intervals
+   */
+  private long convertIntervalsToBits(IntervalDomain input, int shift, int startIndex, int length) {
+    long inBits = SEQ_ARRAY[length];
+
+    int i = startIndex + 1;
+
+    Interval next = null;
+    for (; i < input.size; i++) {
+      next = input.intervals[i];
+      if (next.max() + shift > this.max) {
+        break;
+      }
+      inBits = inBits << (next.max() - input.intervals[i - 1].max());
+      inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
+    }
+
+    inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
+
+    if (i < input.size && next != null && next.min() + shift <= this.max) {
+      inBits = inBits | SEQ_ARRAY[this.max - (next.min() + shift)];
+    }
+
+    inBits = inBits << (this.minBound + 63 - this.max);
+
+    return inBits;
+  }
+
+  /**
+   * Aligns the bits of another SmallDenseDomain to this domain's minBound. This shifts the input
+   * domain's bits so they are positioned relative to this domain's minBound for bitwise operations.
+   *
+   * @param input the other SmallDenseDomain whose bits should be aligned
+   * @return the aligned bits
+   */
+  private long alignBits(SmallDenseDomain input) {
+    if (minBound <= input.minBound) {
+      int shift = input.minBound - minBound;
+      return shift < 64 ? input.bits >>> shift : 0;
+    } else {
+      int shift = minBound - input.minBound;
+      return shift < 64 ? input.bits << shift : 0;
+    }
+  }
+
+  /**
    * Copies metadata from this domain into the result domain and installs it on the variable. Sets
    * previousDomain to this.
    */
@@ -800,23 +870,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
-      long inBits;
-
-      if (minBound <= input.minBound) {
-        int shift = input.minBound - minBound;
-        if (shift < 64) {
-          inBits = input.bits >>> (input.minBound - minBound);
-        } else {
-          inBits = 0;
-        }
-      } else {
-        int shift = minBound - input.minBound;
-        if (shift < 64) {
-          inBits = input.bits << (minBound - input.minBound);
-        } else {
-          inBits = 0;
-        }
-      }
+      long inBits = alignBits(input);
 
       in(storeLevel, v, inBits);
       return;
@@ -826,13 +880,7 @@ public class SmallDenseDomain extends IntDomain {
 
       IntervalDomain input = (IntervalDomain) domain;
 
-      int i = 0;
-
-      for (; i < input.size; i++) {
-        if (input.intervals[i].max() >= this.minBound) {
-          break;
-        }
-      }
+      int i = findFirstOverlappingInterval(input, 0);
 
       if (i == input.size) {
         throw Store.failException;
@@ -849,28 +897,7 @@ public class SmallDenseDomain extends IntDomain {
         throw Store.failException;
       }
 
-      long inBits = SEQ_ARRAY[length];
-
-      i++;
-
-      Interval next = null;
-      for (; i < input.size; i++) {
-        next = input.intervals[i];
-        if (next.max() > this.max) {
-          break;
-        }
-        inBits = inBits << (next.max() - input.intervals[i - 1].max());
-        inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
-      }
-
-      inBits = inBits << Math.max(this.max - input.intervals[i - 1].max(), 0);
-
-      if (i < input.size && next.min() <= this.max) {
-
-        inBits = inBits | SEQ_ARRAY[this.max - next.min()];
-      }
-
-      inBits = inBits << (this.minBound + 63 - this.max);
+      long inBits = convertIntervalsToBits(input, 0, i, length);
 
       in(storeLevel, v, inBits);
 
@@ -1183,15 +1210,7 @@ public class SmallDenseDomain extends IntDomain {
 
       IntervalDomain input = (IntervalDomain) domain;
 
-      long inBits = 0;
-
-      int i = 0;
-
-      for (; i < input.size; i++) {
-        if (input.intervals[i].max() + shift >= this.minBound) {
-          break;
-        }
-      }
+      int i = findFirstOverlappingInterval(input, shift);
 
       if (i == input.size) {
         throw Store.failException;
@@ -1209,28 +1228,7 @@ public class SmallDenseDomain extends IntDomain {
         throw Store.failException;
       }
 
-      inBits = inBits | SEQ_ARRAY[length];
-
-      i++;
-
-      Interval next = null;
-      for (; i < input.size; i++) {
-        next = input.intervals[i];
-        if (next.max() + shift > this.max) {
-          break;
-        }
-        inBits = inBits << (next.max() - input.intervals[i - 1].max());
-        inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
-      }
-
-      inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
-
-      if (i < input.size && next.min() + shift <= this.max) {
-
-        inBits = inBits | SEQ_ARRAY[this.max - (next.min() + shift)];
-      }
-
-      inBits = inBits << (this.minBound + 63 - this.max);
+      long inBits = convertIntervalsToBits(input, shift, i, length);
 
       in(storeLevel, v, inBits);
       return;
@@ -1259,13 +1257,7 @@ public class SmallDenseDomain extends IntDomain {
 
     long inBits = 0;
 
-    int i = 0;
-
-    for (; i < input.size; i++) {
-      if (input.intervals[i].max() + shift >= this.minBound) {
-        break;
-      }
-    }
+    int i = findFirstOverlappingInterval(input, shift);
 
     if (i == input.size) {
       return emptyDomain;
@@ -1283,30 +1275,7 @@ public class SmallDenseDomain extends IntDomain {
       return emptyDomain;
     }
 
-    inBits = inBits | SEQ_ARRAY[length];
-
-    i++;
-
-    Interval next = null;
-    for (; i < input.size; i++) {
-      next = input.intervals[i];
-      if (next.max() + shift > this.max) {
-        break;
-      }
-      inBits = inBits << (next.max() - input.intervals[i - 1].max());
-      inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
-    }
-
-    inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
-
-    if (i < input.size && next.min() + shift <= this.max) {
-
-      inBits = inBits | SEQ_ARRAY[this.max - (next.min() + shift)];
-    }
-
-    inBits = inBits << (this.minBound + 63 - this.max);
-
-    inBits = inBits & bits;
+    inBits = convertIntervalsToBits(input, shift, i, length) & bits;
 
     return new SmallDenseDomain(this.minBound, inBits);
   }
@@ -1322,23 +1291,7 @@ public class SmallDenseDomain extends IntDomain {
         return IntervalDomain.EMPTY;
       }
 
-      long inBits;
-
-      if (minBound <= input.minBound) {
-        int shift = input.minBound - minBound;
-        if (shift < 64) {
-          inBits = input.bits >>> shift;
-        } else {
-          inBits = 0;
-        }
-      } else {
-        int shift = minBound - input.minBound;
-        if (shift < 64) {
-          inBits = input.bits << shift;
-        } else {
-          inBits = 0;
-        }
-      }
+      long inBits = alignBits(input);
 
       SmallDenseDomain result = new SmallDenseDomain(minBound, inBits & bits);
 
@@ -1393,23 +1346,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
-      long inBits;
-
-      if (minBound <= input.minBound) {
-        int shift = input.minBound - minBound;
-        if (shift < 64) {
-          inBits = input.bits >>> shift;
-        } else {
-          inBits = 0;
-        }
-      } else {
-        int shift = minBound - input.minBound;
-        if (shift < 64) {
-          inBits = input.bits << shift;
-        } else {
-          inBits = 0;
-        }
-      }
+      long inBits = alignBits(input);
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -1578,25 +1515,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
-      long inBits;
-
-      if (minBound <= input.minBound) {
-        int shift = input.minBound - minBound;
-        if (shift < 64) {
-          inBits = input.bits >>> shift;
-        } else {
-          inBits = 0;
-        }
-      } else {
-        int shift = minBound - input.minBound;
-        if (shift < 64) {
-          inBits = input.bits << shift;
-        } else {
-          inBits = 0;
-        }
-      }
-
-      inBits = inBits & bits;
+      long inBits = alignBits(input) & bits;
 
       if (inBits != 0) {
         assert super.isIntersecting(domain) : "isIntersecting not properly implemented";

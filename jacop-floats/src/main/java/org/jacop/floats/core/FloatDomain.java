@@ -1420,6 +1420,26 @@ public abstract class FloatDomain extends Domain {
   }
 
   /**
+   * Clones this domain and installs the clone on the given variable, preserving constraints and
+   * metadata.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the cloned domain on
+   * @return the cloned domain
+   */
+  private FloatDomain cloneAndInstall(int storeLevel, Var v) {
+    FloatDomain result = this.cloneLight();
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.prevDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((FloatVar) v).domain = result;
+    return result;
+  }
+
+  /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
    * Variable object. putConstraint function from Variable must make a copy of a vector of
    * constraints if vector was not cloned.
@@ -1428,17 +1448,7 @@ public abstract class FloatDomain extends Domain {
   public void putModelConstraint(int storeLevel, Var v, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
-
-      FloatDomain result = this.cloneLight();
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
-
+      FloatDomain result = cloneAndInstall(storeLevel, v);
       result.putModelConstraint(storeLevel, v, constraint, pruningEvent);
       return;
     }
@@ -1485,17 +1495,7 @@ public abstract class FloatDomain extends Domain {
   public void removeModelConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
-
-      FloatDomain result = this.cloneLight();
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
-
+      FloatDomain result = cloneAndInstall(storeLevel, v);
       result.removeModelConstraint(storeLevel, v, constraint);
       return;
     }

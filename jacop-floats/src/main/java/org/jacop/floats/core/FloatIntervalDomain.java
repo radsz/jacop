@@ -285,6 +285,60 @@ public class FloatIntervalDomain extends FloatDomain {
    * @return the intersection result, or null if no change needed
    * @throws RuntimeException if intersection is empty (failException)
    */
+  /**
+   * Computes the intersection of this domain with the range [min, max]. Assumes the caller has
+   * already verified the range overlaps this domain.
+   *
+   * @param min the minimum value of the range
+   * @param max the maximum value of the range
+   * @return a new domain containing only values within [min, max]
+   */
+  private FloatIntervalDomain computeRangeIntersection(double min, double max) {
+
+    int pointer = 0;
+
+    // pointer is always smaller than size as domains intersect
+    while (intervals[pointer].max() < min) {
+      pointer++;
+    }
+
+    if (intervals[pointer].min() > max) {
+      throw failException;
+    }
+
+    FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
+
+    if (intervals[pointer].min() >= min) {
+      if (intervals[pointer].max() <= max) {
+        result.unionAdapt(intervals[pointer]);
+      } else {
+        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
+      }
+    } else if (intervals[pointer].max() <= max) {
+      result.unionAdapt(new FloatInterval(min, intervals[pointer].max()));
+    } else {
+      result.unionAdapt(new FloatInterval(min, max));
+    }
+
+    pointer++;
+
+    while (pointer < size) {
+      if (intervals[pointer].max() <= max) {
+        result.unionAdapt(intervals[pointer++]);
+      } else {
+        break;
+      }
+    }
+
+    if (pointer < size) {
+      if (intervals[pointer].min() <= max) {
+        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
+      }
+    }
+
+    return result;
+  }
+
   private FloatIntervalDomain computeIntersection(
       FloatInterval[] inputIntervals, int inputSize, double shift) {
 
@@ -2178,47 +2232,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    int pointer = 0;
-
-    // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max() < min) {
-      pointer++;
-    }
-
-    if (intervals[pointer].min() > max) {
-      throw failException;
-    }
-
-    FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
-
-    if (intervals[pointer].min() >= min) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer]);
-
-      } else {
-        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
-      }
-    } else if (intervals[pointer].max() <= max) {
-      result.unionAdapt(new FloatInterval(min, intervals[pointer].max()));
-    } else {
-      result.unionAdapt(new FloatInterval(min, max));
-    }
-
-    pointer++;
-
-    while (pointer < size) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer++]);
-      } else {
-        break;
-      }
-    }
-
-    if (pointer < size) {
-      if (intervals[pointer].min() <= max) {
-        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
-      }
-    }
+    FloatIntervalDomain result = computeRangeIntersection(min, max);
 
     if (stamp == storeLevel) {
       adoptIntervalsFrom(result);
@@ -3060,46 +3074,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return IntDomain.NONE;
     }
 
-    FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
-    int pointer = 0;
-
-    // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max() < min) {
-      pointer++;
-    }
-
-    if (intervals[pointer].min() > max) {
-      size = 0;
-      return IntDomain.GROUND;
-    }
-
-    if (intervals[pointer].min() >= min) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer]);
-      } else {
-        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
-      }
-    } else if (intervals[pointer].max() <= max) {
-      result.unionAdapt(new FloatInterval(min, intervals[pointer].max()));
-    } else {
-      result.unionAdapt(new FloatInterval(min, max));
-    }
-
-    pointer++;
-
-    while (pointer < size) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer++]);
-      } else {
-        break;
-      }
-    }
-
-    if (pointer < size) {
-      if (intervals[pointer].min() <= max) {
-        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
-      }
-    }
+    FloatIntervalDomain result = computeRangeIntersection(min, max);
 
     adoptIntervalsFrom(result);
 

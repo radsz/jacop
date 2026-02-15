@@ -320,6 +320,48 @@ public abstract class SetDomain extends Domain {
   }
 
   /**
+   * Clones this domain and installs the clone on the given variable, preserving constraints and
+   * metadata.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the cloned domain on
+   * @return the cloned domain
+   */
+  private SetDomain cloneAndInstall(int storeLevel, Var v) {
+    SetDomain result = this.cloneLight();
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((SetVar) v).domain = result;
+    return result;
+  }
+
+  /**
+   * Clones this domain for search constraint changes. Copies search constraints list and sets the
+   * cloned flag.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the cloned domain on
+   * @return the cloned domain
+   */
+  private SetDomain cloneAndInstallForSearch(int storeLevel, Var v) {
+    SetDomain result = this.cloneLight();
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints =
+        new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+    result.searchConstraintsCloned = true;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((SetVar) v).domain = result;
+    return result;
+  }
+
+  /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
    * Variable object. putConstraint function from Variable must make a copy of a vector of
    * constraints if vector was not cloned.
@@ -328,17 +370,7 @@ public abstract class SetDomain extends Domain {
   public void putModelConstraint(int storeLevel, Var v, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
-
-      SetDomain result = this.cloneLight();
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) v).domain = result;
-
+      SetDomain result = cloneAndInstall(storeLevel, v);
       result.putModelConstraint(storeLevel, v, constraint, pruningEvent);
       return;
     }
@@ -413,20 +445,7 @@ public abstract class SetDomain extends Domain {
     if (!searchConstraints.contains(constraint)) {
 
       if (stamp < storeLevel) {
-
-        SetDomain result = this.cloneLight();
-
-        result.modelConstraints = modelConstraints;
-
-        result.searchConstraints =
-            new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
-        result.searchConstraintsCloned = true;
-        result.stamp = storeLevel;
-        result.previousDomain = this;
-        result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-        result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-        ((SetVar) v).domain = result;
-
+        SetDomain result = cloneAndInstallForSearch(storeLevel, v);
         result.putSearchConstraint(storeLevel, v, constraint);
         return;
       }
@@ -501,17 +520,7 @@ public abstract class SetDomain extends Domain {
   public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
-
-      SetDomain result = this.cloneLight();
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) v).domain = result;
-
+      SetDomain result = cloneAndInstall(storeLevel, v);
       result.removeSearchConstraint(storeLevel, v, position, constraint);
       return;
     }
@@ -586,17 +595,7 @@ public abstract class SetDomain extends Domain {
   public void removeModelConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
-
-      SetDomain result = this.cloneLight();
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((SetVar) v).domain = result;
-
+      SetDomain result = cloneAndInstall(storeLevel, v);
       result.removeModelConstraint(storeLevel, v, constraint);
       return;
     }
