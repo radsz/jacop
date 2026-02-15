@@ -199,63 +199,52 @@ public class Diffn extends Nooverlap {
     for (int k = 0; k < rectangle.length; k++) {
       Rectangle r = rectangle[k];
       BitSet o = overlapping[k].value();
-
-      if (o.cardinality() > 0) {
-
-        // calculate area within rectangle r possible placement
-        int commonArea = 0;
-        for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
-          int partialCommonArea = 1;
-          Rectangle s = rectangle[j];
-
-          for (int i = 0; i < 2; i++) {
-            int r_min = r.est(i);
-            int r_max = r.lct(i);
-            int sLengthMin = s.getLength(i).min();
-
-            if (s.getOrigin(i).min() <= r_min) {
-              if (s.getOrigin(i).max() + s.getLength(i).min() <= r_max) {
-                int distance1 = s.ect(i) - r_min;
-                sLengthMin = Math.max(distance1, 0);
-              } else {
-                // s.getOrigin(i).max() + slength(i).min()> r_max)
-                int rmax = r.getOrigin(i).max() + r.getLength(i).min();
-
-                int distance1 = s.ect(i) - r_min;
-                int distance2 = -s.getOrigin(i).max() + rmax;
-                distance1 = Math.min(distance1, rmax - r_min);
-                distance2 = Math.min(distance2, rmax - r_min);
-                if (distance1 < distance2) {
-                  sLengthMin = Math.max(distance1, 0);
-                } else if (distance2 > 0) {
-                  if (distance2 < s.getLength(i).min()) {
-                    sLengthMin = distance2;
-                  }
-                } else {
-                  sLengthMin = 0;
-                }
-              }
-            } else // s.getOrigin(i).min() > r_min
-            if (s.getOrigin(i).max() + s.getLength(i).min() > r_max) {
-              int distance2 = -s.getOrigin(i).max() + r.origin[i].max() + r.length[i].min();
-              if (distance2 > 0) {
-                if (distance2 < s.getLength(i).min()) {
-                  sLengthMin = distance2;
-                }
-              } else {
-                sLengthMin = 0;
-              }
-            }
-            partialCommonArea = partialCommonArea * sLengthMin;
-          }
-          commonArea += partialCommonArea;
-        }
-        if (commonArea + r.getLength(X).min() * r.getLength(Y).min()
-            > (r.lct(X) - r.est(X)) * (r.lct(Y) - r.est(Y))) {
-          throw Store.failException;
-        }
+      if (o.cardinality() == 0) {
+        continue;
+      }
+      int commonArea = 0;
+      for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
+        Rectangle s = rectangle[j];
+        int partialCommonArea =
+            areaCheckPartialCommonForRectangle(r, s, 0)
+                * areaCheckPartialCommonForRectangle(r, s, 1);
+        commonArea += partialCommonArea;
+      }
+      if (commonArea + r.getLength(X).min() * r.getLength(Y).min()
+          > (r.lct(X) - r.est(X)) * (r.lct(Y) - r.est(Y))) {
+        throw Store.failException;
       }
     }
+  }
+
+  private int areaCheckPartialCommonForRectangle(Rectangle r, Rectangle s, int dim) {
+    int rMin = r.est(dim);
+    int rMax = r.lct(dim);
+    int sLengthMin = s.getLength(dim).min();
+    if (s.getOrigin(dim).min() <= rMin) {
+      if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rMax) {
+        sLengthMin = Math.max(s.ect(dim) - rMin, 0);
+      } else {
+        int rmax = r.getOrigin(dim).max() + r.getLength(dim).min();
+        int distance1 = Math.min(s.ect(dim) - rMin, rmax - rMin);
+        int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rMin);
+        if (distance1 < distance2) {
+          sLengthMin = Math.max(distance1, 0);
+        } else if (distance2 > 0) {
+          sLengthMin = distance2 < s.getLength(dim).min() ? distance2 : s.getLength(dim).min();
+        } else {
+          sLengthMin = 0;
+        }
+      }
+    } else if (s.getOrigin(dim).max() + s.getLength(dim).min() > rMax) {
+      int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
+      if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
+        sLengthMin = distance2;
+      } else if (distance2 <= 0) {
+        sLengthMin = 0;
+      }
+    }
+    return sLengthMin;
   }
 
   private void profile() {
@@ -278,62 +267,14 @@ public class Diffn extends Nooverlap {
       return;
     }
 
-    Event[] es = new Event[2 * o.cardinality() + 2];
-
-    boolean mandatoryExists = false;
-    int j = 0;
-    int minLimit = r.est(oDim);
-    int maxLimit = r.lct(oDim);
-    for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
-      Rectangle rr = rectangle[i];
-      rr.index = i;
-
-      // mandatory task parts to create profile
-      int min = rr.lst(dim);
-      int max = rr.ect(dim);
-      int lMin = rr.getLength(oDim).min();
-      if (min < max && lMin > 0) {
-        if (rr.est(oDim) >= r.est(oDim) && rr.lct(oDim) <= r.lct(oDim)) {
-          // for profile take only rectangles with their area laying within the considered rectangle
-          int oMin = rr.lst(oDim);
-          int oMax = rr.ect(oDim);
-          if (oMin < oMax) {
-            Interval block = new Interval(oMin, oMax);
-            es[j++] = new Event(PROFILE_ADD, rr, min, lMin, block);
-            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
-          } else {
-            es[j++] = new Event(PROFILE_ADD, rr, min, lMin, null);
-            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, null);
-          }
-          minLimit = Math.min(rr.est(oDim), minLimit);
-          maxLimit = Math.max(rr.lct(oDim), maxLimit);
-          mandatoryExists = true;
-        } else {
-          int oMin = rr.lst(oDim);
-          int oMax = rr.ect(oDim);
-          if (oMin < oMax) {
-            Interval block = new Interval(oMin, oMax);
-            es[j++] = new Event(PROFILE_ADD, rr, min, 0, block);
-            es[j++] = new Event(PROFILE_SUBTRACT, rr, max, 0, block);
-            mandatoryExists = true;
-          }
-        }
-      }
-    }
-    if (!mandatoryExists) {
+    int[] limitOut = new int[1];
+    Event[] es = buildSweepEvents(r, o, dim, oDim, limitOut);
+    if (es == null) {
       return;
     }
 
-    final int limit = maxLimit - minLimit;
-
-    // overlapping rectangle for pruning
-    // from start to end
-    int min = r.est(dim);
-    int max = r.lct(dim);
-    es[j++] = new Event(PRUNE_START, r, min, 0, null);
-    es[j++] = new Event(PRUNE_END, r, max, 0, null);
-
-    int N = j;
+    final int limit = limitOut[0];
+    int N = es.length;
     Arrays.sort(es, 0, N, eventComparator);
 
     if (DEBUG_NARR) {
@@ -344,214 +285,42 @@ public class Diffn extends Nooverlap {
       log.debug("===========================");
     }
 
-    boolean considerR = false;
-
     boolean[] inProfile = new boolean[rectangle.length];
-
-    // current value of the profile for mandatory parts
-    int curProfile = 0;
-    // current value of the sweep line
     List<Interval> sweepLine = new ArrayList<>();
-
-    // used for start variable pruning
-    int startExcluded = Integer.MAX_VALUE;
-
-    // used for duration variable pruning
-    int lastBarier = Integer.MAX_VALUE;
+    int[] curProfile = new int[] {0};
+    int[] startExcluded = new int[] {Integer.MAX_VALUE};
+    int[] lastBarier = new int[] {Integer.MAX_VALUE};
+    boolean[] considerR = new boolean[] {false};
 
     for (int i = 0; i < N; i++) {
-
       Event e = es[i];
-      Event ne = null; // next event
-      if (i < N - 1) {
-        ne = es[i + 1];
-      }
+      Event ne = (i < N - 1) ? es[i + 1] : null;
 
       switch (e.type()) {
-        case PROFILE_SUBTRACT: // =========== PROFILE_SUBTRACT event ===========
-        case PROFILE_ADD: // =========== PROFILE_ADD event ===========
-          curProfile += e.value();
-          inProfile[e.rect().index] = e.value() > 0;
-
-          if (e.block() != null) {
-            updateSweepLine(sweepLine, e);
-          }
-
-          if (ne == null
-              || ne.type() > PROFILE_ADD
-              || e.date < ne.date()) { // check the tasks for pruning only at the end of all profile
-            // events
-
-            if (DEBUG) {
-              log.debug("Profile at {}: {}", e.date(), curProfile);
-            }
-
-            // fail if we go over limit limit variable
-            if (curProfile > limit) {
-              throw Store.failException;
-            }
-
-            if (considerR) {
-
-              int ri = r.index;
-
-              int profileValue = curProfile;
-              if (inProfile[ri]) {
-                profileValue -= r.getLength(oDim).min();
-              }
-
-              boolean blocking =
-                  blocking(
-                      sweepLine,
-                      r.getOrigin(oDim).min(),
-                      r.getOrigin(oDim).max() + r.getLength(oDim).min(),
-                      r.getLength(oDim).min());
-
-              // ========= Pruning start variable
-              if (r.exists()) { // (r.getLength(oDim).min() > 0 && r.getLength(dim).min() > 0)
-                if (startExcluded == Integer.MAX_VALUE) {
-                  if (limit - profileValue < r.getLength(oDim).min() || blocking) {
-                    startExcluded = e.date() - r.getLength(dim).min() + 1;
-                  }
-                } else // startExcluded != Integer.MAX_VALUE
-                if (limit - profileValue >= r.getLength(oDim).min() && !blocking) {
-                  // end of excluded interval
-
-                  if (startExcluded <= r.lst(dim)) {
-
-                    if (DEBUG_NARR) {
-                      log.debug(
-                          ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
-                          dim,
-                          r.getOrigin(dim),
-                          new IntervalDomain(startExcluded, e.date() - 1));
-                    }
-
-                    IntervalDomain update =
-                        new IntervalDomain(IntDomain.MIN_INT, startExcluded - 1);
-                    update.unionAdapt(e.date(), IntDomain.MAX_INT);
-                    r.getOrigin(dim).domain.in(store.level, r.getOrigin(dim), update);
-
-                    if (DEBUG_NARR) {
-                      log.debug(DEBUG_ARROW, r.getOrigin(dim));
-                    }
-                  }
-                  startExcluded = Integer.MAX_VALUE;
-                }
-              }
-
-              // ========= for duration pruning
-              if (lastBarier == Integer.MAX_VALUE
-                  && e.date() >= r.lst(dim)
-                  && (limit - profileValue < r.getLength(oDim).min() || blocking)) {
-                lastBarier = e.date();
-              }
-
-              // ========= resource pruning
-              if (r.lst(dim) <= e.date()
-                  && e.date() < r.ect(dim)
-                  && limit - profileValue < r.getLength(oDim).max()) {
-                r.getLength(oDim)
-                    .domain
-                    .inMax(store.level, r.getLength(oDim), limit - profileValue);
-              }
-            }
-          }
-
+        case PROFILE_SUBTRACT:
+        case PROFILE_ADD:
+          processProfileAddSubtract(
+              e,
+              ne,
+              r,
+              oDim,
+              dim,
+              limit,
+              inProfile,
+              sweepLine,
+              curProfile,
+              startExcluded,
+              lastBarier,
+              considerR[0]);
           break;
-
-        case PRUNE_START: // =========== start of a task ===========
-          int profileValue = curProfile;
-          Rectangle rr = e.rect();
-          int ri = rr.index;
-
-          considerR = true;
-
-          if (inProfile[ri]) {
-            profileValue -= rr.getLength(oDim).min();
-          }
-
-          // ========= for start pruning
-          if (rr.exists() // (rr.getLength(oDim).min() > 0 && rr.getLength(dim).min() > 0)
-              && (limit - profileValue < rr.getLength(oDim).min()
-                  || blocking(
-                      sweepLine,
-                      rr.getOrigin(oDim).min(),
-                      rr.getOrigin(oDim).max() + rr.getLength(oDim).min(),
-                      rr.getLength(oDim).min()))) {
-            startExcluded = e.date();
-          }
-
-          // ========= resource pruning
-          if (rr.lst(dim) <= e.date()
-              && e.date() < rr.ect(dim)
-              && limit - profileValue < rr.getLength(oDim).max()) {
-            rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
-          }
-
+        case PRUNE_START:
+          processPruneStart(e, oDim, dim, limit, inProfile, sweepLine, startExcluded, curProfile);
+          considerR[0] = true;
           break;
-
-        case PRUNE_END: // =========== end of a task ===========
-          profileValue = curProfile;
-          rr = e.rect();
-          ri = rr.index;
-
-          considerR = false;
-
-          if (inProfile[ri]) {
-            profileValue -= rr.getLength(oDim).min();
-          }
-
-          // ========= pruning start variable
-          if (rr.exists()
-              && startExcluded != Integer.MAX_VALUE
-              && startExcluded - 1
-                  <= rr.lst(dim)) { // (rr.getLength(oDim).min() > 0 && rr.getLength(dim).min() > 0)
-            // task ends and we remove forbidden area
-            if (DEBUG_NARR) {
-              log.debug(
-                  ">>> Diffn Profile 2. Narrowed {} \\ {}",
-                  rr.getOrigin(dim),
-                  new IntervalDomain(startExcluded, e.date()));
-            }
-
-            rr.getOrigin(dim).domain.inMax(store.level, rr.getOrigin(dim), startExcluded - 1);
-
-            if (DEBUG_NARR) {
-              log.debug(DEBUG_ARROW, rr.getOrigin(dim));
-            }
-          }
-
-          startExcluded = Integer.MAX_VALUE;
-
-          // ========= resource pruning
-          if (rr.lst(dim) <= e.date()
-              && e.date() < rr.ect(dim)
-              && limit - profileValue < rr.getLength(oDim).max()) {
-            rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
-          }
-
-          // ========= duration pruning
-          int maxDuration = IntDomain.subtractInt(lastBarier, rr.getOrigin(dim).min());
-
-          if (maxDuration < rr.getLength(dim).max()) {
-            if (DEBUG_NARR) {
-              log.debug(
-                  ">>> {}, lastBarier = {}, e.date() = {}",
-                  rr.getOrigin(dim),
-                  lastBarier,
-                  e.date());
-              log.debug(
-                  ">>> Diffn Profile 3. Narrowed {} in -inf..{}", rr.getLength(dim), maxDuration);
-            }
-
-            rr.getLength(dim).domain.inMax(store.level, rr.getLength(dim), maxDuration);
-
-            if (DEBUG_NARR) {
-              log.debug(DEBUG_ARROW, rr.getLength(dim));
-            }
-          }
-
+        case PRUNE_END:
+          processPruneEnd(e, oDim, dim, limit, inProfile, startExcluded, lastBarier, curProfile);
+          startExcluded[0] = Integer.MAX_VALUE;
+          considerR[0] = false;
           break;
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
@@ -559,41 +328,251 @@ public class Diffn extends Nooverlap {
     }
   }
 
+  /** Builds event array; returns null if no mandatory events. Sets limitOut[0] to limit. */
+  private Event[] buildSweepEvents(Rectangle r, BitSet o, int dim, int oDim, int[] limitOut) {
+    Event[] es = new Event[2 * o.cardinality() + 2];
+    boolean mandatoryExists = false;
+    int j = 0;
+    int minLimit = r.est(oDim);
+    int maxLimit = r.lct(oDim);
+    for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
+      Rectangle rr = rectangle[i];
+      rr.index = i;
+      int min = rr.lst(dim);
+      int max = rr.ect(dim);
+      int lMin = rr.getLength(oDim).min();
+      if (min >= max || lMin <= 0) {
+        continue;
+      }
+      int oMin = rr.lst(oDim);
+      int oMax = rr.ect(oDim);
+      boolean withinR = rr.est(oDim) >= r.est(oDim) && rr.lct(oDim) <= r.lct(oDim);
+      int val = withinR ? lMin : 0;
+      if (oMin < oMax) {
+        Interval block = new Interval(oMin, oMax);
+        es[j++] = new Event(PROFILE_ADD, rr, min, val, block);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -val, block);
+      } else {
+        es[j++] = new Event(PROFILE_ADD, rr, min, val, null);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -val, null);
+      }
+      minLimit = Math.min(rr.est(oDim), minLimit);
+      maxLimit = Math.max(rr.lct(oDim), maxLimit);
+      mandatoryExists = true;
+    }
+    if (!mandatoryExists) {
+      return null;
+    }
+    limitOut[0] = maxLimit - minLimit;
+    es[j++] = new Event(PRUNE_START, r, r.est(dim), 0, null);
+    es[j++] = new Event(PRUNE_END, r, r.lct(dim), 0, null);
+    return Arrays.copyOf(es, j);
+  }
+
+  private void processProfileAddSubtract(
+      Event e,
+      Event ne,
+      Rectangle r,
+      int oDim,
+      int dim,
+      int limit,
+      boolean[] inProfile,
+      List<Interval> sweepLine,
+      int[] curProfile,
+      int[] startExcluded,
+      int[] lastBarier,
+      boolean considerR) {
+    curProfile[0] += e.value();
+    inProfile[e.rect().index] = e.value() > 0;
+
+    if (e.block() != null) {
+      updateSweepLine(sweepLine, e);
+    }
+
+    boolean atPrunePoint = ne == null || ne.type() > PROFILE_ADD || e.date() < ne.date();
+    if (!atPrunePoint) {
+      return;
+    }
+
+    if (DEBUG) {
+      log.debug("Profile at {}: {}", e.date(), curProfile[0]);
+    }
+    if (curProfile[0] > limit) {
+      throw Store.failException;
+    }
+
+    if (!considerR) {
+      return;
+    }
+
+    int ri = r.index;
+    int profileValue = curProfile[0];
+    if (inProfile[ri]) {
+      profileValue -= r.getLength(oDim).min();
+    }
+
+    boolean blocking =
+        blocking(
+            sweepLine,
+            r.getOrigin(oDim).min(),
+            r.getOrigin(oDim).max() + r.getLength(oDim).min(),
+            r.getLength(oDim).min());
+
+    if (r.exists()) {
+      if (startExcluded[0] == Integer.MAX_VALUE) {
+        if (limit - profileValue < r.getLength(oDim).min() || blocking) {
+          startExcluded[0] = (int) e.date() - r.getLength(dim).min() + 1;
+        }
+      } else if (limit - profileValue >= r.getLength(oDim).min() && !blocking) {
+        if (startExcluded[0] <= r.lst(dim)) {
+          if (DEBUG_NARR) {
+            log.debug(
+                ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
+                dim,
+                r.getOrigin(dim),
+                new IntervalDomain(startExcluded[0], (int) e.date() - 1));
+          }
+          IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, startExcluded[0] - 1);
+          update.unionAdapt((int) e.date(), IntDomain.MAX_INT);
+          r.getOrigin(dim).domain.in(store.level, r.getOrigin(dim), update);
+          if (DEBUG_NARR) {
+            log.debug(DEBUG_ARROW, r.getOrigin(dim));
+          }
+        }
+        startExcluded[0] = Integer.MAX_VALUE;
+      }
+    }
+
+    if (lastBarier[0] == Integer.MAX_VALUE
+        && (int) e.date() >= r.lst(dim)
+        && (limit - profileValue < r.getLength(oDim).min() || blocking)) {
+      lastBarier[0] = (int) e.date();
+    }
+
+    if (r.lst(dim) <= e.date()
+        && e.date() < r.ect(dim)
+        && limit - profileValue < r.getLength(oDim).max()) {
+      r.getLength(oDim).domain.inMax(store.level, r.getLength(oDim), limit - profileValue);
+    }
+  }
+
+  private void processPruneStart(
+      Event e,
+      int oDim,
+      int dim,
+      int limit,
+      boolean[] inProfile,
+      List<Interval> sweepLine,
+      int[] startExcluded,
+      int[] curProfile) {
+    Rectangle rr = e.rect();
+    int ri = rr.index;
+    int profileValue = curProfile[0];
+    if (inProfile[ri]) {
+      profileValue -= rr.getLength(oDim).min();
+    }
+    if (rr.exists()
+        && (limit - profileValue < rr.getLength(oDim).min()
+            || blocking(
+                sweepLine,
+                rr.getOrigin(oDim).min(),
+                rr.getOrigin(oDim).max() + rr.getLength(oDim).min(),
+                rr.getLength(oDim).min()))) {
+      startExcluded[0] = (int) e.date();
+    }
+    if (rr.lst(dim) <= e.date()
+        && e.date() < rr.ect(dim)
+        && limit - profileValue < rr.getLength(oDim).max()) {
+      rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
+    }
+  }
+
+  private void processPruneEnd(
+      Event e,
+      int oDim,
+      int dim,
+      int limit,
+      boolean[] inProfile,
+      int[] startExcluded,
+      int[] lastBarier,
+      int[] curProfile) {
+    Rectangle rr = e.rect();
+    int ri = rr.index;
+    int profileValue = curProfile[0];
+    if (inProfile[ri]) {
+      profileValue -= rr.getLength(oDim).min();
+    }
+    if (rr.exists()
+        && startExcluded[0] != Integer.MAX_VALUE
+        && startExcluded[0] - 1 <= rr.lst(dim)) {
+      if (DEBUG_NARR) {
+        log.debug(
+            ">>> Diffn Profile 2. Narrowed {} \\ {}",
+            rr.getOrigin(dim),
+            new IntervalDomain(startExcluded[0], (int) e.date()));
+      }
+      rr.getOrigin(dim).domain.inMax(store.level, rr.getOrigin(dim), startExcluded[0] - 1);
+      if (DEBUG_NARR) {
+        log.debug(DEBUG_ARROW, rr.getOrigin(dim));
+      }
+    }
+    if (rr.lst(dim) <= e.date()
+        && e.date() < rr.ect(dim)
+        && limit - profileValue < rr.getLength(oDim).max()) {
+      rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
+    }
+    int maxDuration = IntDomain.subtractInt(lastBarier[0], rr.getOrigin(dim).min());
+    if (maxDuration < rr.getLength(dim).max()) {
+      if (DEBUG_NARR) {
+        log.debug(
+            ">>> {}, lastBarier = {}, e.date() = {}", rr.getOrigin(dim), lastBarier[0], e.date());
+        log.debug(">>> Diffn Profile 3. Narrowed {} in -inf..{}", rr.getLength(dim), maxDuration);
+      }
+      rr.getLength(dim).domain.inMax(store.level, rr.getLength(dim), maxDuration);
+      if (DEBUG_NARR) {
+        log.debug(DEBUG_ARROW, rr.getLength(dim));
+      }
+    }
+  }
+
   private void updateSweepLine(List<Interval> sweepLine, Event e) {
-
     Interval eBlock = e.block();
-
     if (sweepLine.isEmpty()) {
       sweepLine.add(eBlock);
       return;
     }
+    if (e.type() == PROFILE_ADD) {
+      addBlockToSweepLine(sweepLine, eBlock);
+    } else {
+      removeBlockFromSweepLine(sweepLine, eBlock);
+    }
+  }
 
-    if (e.type() == PROFILE_ADD) { // add
-      Interval previous = new Interval(IntDomain.MIN_INT, IntDomain.MIN_INT);
-      for (int i = 0; i < sweepLine.size(); i++) {
-        Interval sweepLineElement = sweepLine.get(i);
-        if ((eBlock.max() > sweepLineElement.min() && eBlock.max() <= sweepLineElement.max())
-            || (eBlock.min() >= sweepLineElement.min() && eBlock.min() < sweepLineElement.max())) {
-          throw Store.failException; // overlap
-        }
-        if (eBlock.max() <= sweepLineElement.min() && eBlock.min() >= previous.max()) {
-          sweepLine.add(i, eBlock);
-          return;
-        }
-        previous = sweepLineElement;
+  private void addBlockToSweepLine(List<Interval> sweepLine, Interval eBlock) {
+    Interval previous = new Interval(IntDomain.MIN_INT, IntDomain.MIN_INT);
+    for (int i = 0; i < sweepLine.size(); i++) {
+      Interval sweepLineElement = sweepLine.get(i);
+      if ((eBlock.max() > sweepLineElement.min() && eBlock.max() <= sweepLineElement.max())
+          || (eBlock.min() >= sweepLineElement.min() && eBlock.min() < sweepLineElement.max())) {
+        throw Store.failException; // overlap
       }
+      if (eBlock.max() <= sweepLineElement.min() && eBlock.min() >= previous.max()) {
+        sweepLine.add(i, eBlock);
+        return;
+      }
+      previous = sweepLineElement;
+    }
+    if (sweepLine.getLast().max() <= eBlock.min()) {
+      sweepLine.add(eBlock);
+    }
+  }
 
-      // add at the end
-      if (sweepLine.getLast().max() <= eBlock.min()) {
-        sweepLine.add(eBlock);
-      }
-    } else { // e.type() == PROFILE_SUBTRACT; remove
-      for (int i = 0; i < sweepLine.size(); i++) {
-        Interval sweepLineElement = sweepLine.get(i);
-        if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == eBlock.max()) {
-          sweepLine.remove(i);
-          return;
-        }
+  private void removeBlockFromSweepLine(List<Interval> sweepLine, Interval eBlock) {
+    for (int i = 0; i < sweepLine.size(); i++) {
+      Interval sweepLineElement = sweepLine.get(i);
+      if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == eBlock.max()) {
+        sweepLine.remove(i);
+        return;
       }
     }
   }

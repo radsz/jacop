@@ -271,199 +271,168 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   @Override
   public void consistency(Store store) {
-
-    // the stamp is here to represent the number of x variable still
-    // not singleton and that need to be pruned (the rest is set and
-    // doesn't need to be pass though the whole calculation of matching
-    // and SCC's). The same trick can not be apply to the y as the order
-    // matter a lot.
-
-    // I take out all the xNodes that are singleton and I put them
-    // after the stamp value
     if (firstConsistencyCheck) {
-
-      if (zeroCounters != null) {
-        for (IntVar zeroCounter : zeroCounters) {
-          zeroCounter.domain.inValue(store.level, zeroCounter, 0);
-        }
-      }
-
-      int k = 0;
-
-      stamp.update(xSize);
-
-      while (k < stamp.value()) {
-        if (x[k].singleton()) {
-          if (stamp.value() > 0) {
-            stamp.update(stamp.value() - 1);
-            putToTheEnd(x, k);
-          }
-        } else {
-          // no incrementation if there is a modification in the
-          // xNodes table. The variable in the i position is no more
-          // the same and need to be check also.
-          k++;
-        }
-      }
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
-
-      assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+      consistencyFirstCheck(store);
     }
-
-    // no need to rerun the consistency function as the reduction on x domains doesn't affect
-    // the matching and the y count is base on the matching and doesn't affect it. So
-    // rerunning the constraint doesn't bring anything new. We can suppose that y counting
-    // achieve bound consistency.
-
     do {
-
       store.propagationHasOccurred = false;
-
-      // Fix suggested by Radek (moved from queueVariable)
-      Set<IntVar> changedVariablesCopy = this.changedVariables;
-      this.changedVariables = new HashSet<>();
-      for (IntVar v : changedVariablesCopy) {
-        // if v is singleton and is an X variable
-        if (v.singleton()
-            && xNodesHash.containsKey(v)
-            && xNodesHash.get(v) < stamp.value()) { // changing '<=' to '<' (KK)
-          if (DEBUG) {
-            log.debug(" in xVariableToChange: {}", v);
-          }
-          if (stamp.value() > 0) {
-            stamp.update(stamp.value() - 1);
-            putToTheEnd(x, xNodesHash.get(v));
-          }
-        }
-      }
-
+      consistencyProcessChangedVariables();
       assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
-
-      if (DEBUG) {
-        log.debug("XNodes");
-        for (int i = 0; i < xSize; i++) {
-          log.debug("{}", x[i]);
-        }
-        log.debug("stamp before {}", stamp.value());
-      }
-
       stampValue = stamp.value();
-
-      if (DEBUG) {
-        log.debug("stamp after {}", stampValue);
-        log.debug("Xdomain");
-      }
-      // put in the xDomain all xNodes that are not singleton
-
-      for (int i = 0; i < stampValue; i++) {
-        xDomain[i].setDomain(
-            findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
-
-        xDomain[i].twin = x[i];
-        if (DEBUG) {
-          log.debug("{}", xDomain[i]);
-        }
-      }
-      if (DEBUG) {
-        log.debug("YDomain");
-      }
-
-      // put all yNodes in yDomain
-      for (int i = 0; i < ySize; i++) {
-        yDomain[0][i] = counters[i].min();
-        yDomain[1][i] = counters[i].max();
-
-        if (DEBUG) {
-          log.debug("{}", yDomain[i]);
-        }
-      }
-
-      if (DEBUG) {
-        log.debug("take out singleton xNodes");
-      }
-
-      // check all xNodes and if singleton change the yDomain value
-      // to count down the xNode already link to this yNode
-      for (int i = 0; i < xSize; i++) {
-        if (x[i].singleton()) {
-          // Change, check.
-          int value = findPosition(x[i].value(), domainHash);
-          if (yDomain[0][value] > 0) {
-            yDomain[0][value]--;
-          }
-          yDomain[1][value]--;
-          if (yDomain[1][value] < 0) {
-            throw Store.failException;
-          }
-        }
-      }
-
-      if (DEBUG) {
-        log.debug("pass in consistency");
-        log.debug("YDomain");
-        for (int i = 0; i < ySize; i++) {
-          log.debug("{}", yDomain[i]);
-        }
-      }
-
+      consistencyLogStampAndXdomain();
+      consistencyUpdateXdomainAndYdomain();
+      consistencyApplySingletonYDomain();
+      consistencyLogYDomain();
       sortXbyDomainMin();
-
       findGeneralizedMatching();
       sccs();
-      // I do the countConcistancy before the x pruning so the
-      // change in x variable doesn't affect the pruning of y variable
       countBoundConsistency(store);
-
-      for (int j = 0; j < stampValue; j++) {
-
-        assert match3[j] >= 0 && match3[j] < ySize;
-        assert compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize;
-
-        int cutMin = xDomain[j].min();
-        int cutMax = xDomain[j].max();
-
-        if (DEBUG) {
-          log.debug("cutmax {}", cutMax);
-        }
-
-        while (compOfY[match3[j]] != compOfY[cutMin]) {
-          cutMin++;
-        }
-
-        while (compOfY[match3[j]] != compOfY[cutMax]) {
-          cutMax--;
-        }
-
-        int id = xNodesHash.get(xDomain[j].twin);
-
-        if (DEBUG) {
-          log.debug("do pruning [{},{}] => [{},{}]", x[id].min(), x[id].max(), cutMin, cutMax);
-        }
-
-        xDomain[j].setDomain(cutMin, cutMax);
-        IntVar v = x[id];
-        v.domain.in(store.level, v, domainHash[cutMin], domainHash[cutMax]);
-      }
-
-      // check if the solution is still valid now the prunning done
-      // useful if max bound reduction lead to a non-existing number and
-      // the prunning is so report to the next upper bound (not necessary fitting)
-      for (int i = 0; i < xSize; i++) {
-        if (x[i].singleton()) {
-          // Change, check.
-          int value = findPosition(x[i].value(), domainHash);
-          yDomain[1][value]--;
-          if (yDomain[1][value] < 0) {
-            if (DEBUG) {
-              log.debug("failure in putting back yNodes domain");
-            }
-            throw Store.failException;
-          }
-        }
-      }
-
+      consistencyPruneXDomains(store);
+      consistencyVerifyYDomainAfterPruning(store);
     } while (store.propagationHasOccurred);
+  }
+
+  private void consistencyFirstCheck(Store store) {
+    if (zeroCounters != null) {
+      for (IntVar zeroCounter : zeroCounters) {
+        zeroCounter.domain.inValue(store.level, zeroCounter, 0);
+      }
+    }
+    stamp.update(xSize);
+    int k = 0;
+    while (k < stamp.value()) {
+      if (x[k].singleton()) {
+        if (stamp.value() > 0) {
+          stamp.update(stamp.value() - 1);
+          putToTheEnd(x, k);
+        }
+      } else {
+        k++;
+      }
+    }
+    firstConsistencyCheck = false;
+    firstConsistencyLevel = store.level;
+    assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+  }
+
+  private void consistencyProcessChangedVariables() {
+    Set<IntVar> changedVariablesCopy = this.changedVariables;
+    this.changedVariables = new HashSet<>();
+    for (IntVar v : changedVariablesCopy) {
+      if (!v.singleton() || !xNodesHash.containsKey(v) || xNodesHash.get(v) >= stamp.value()) {
+        continue;
+      }
+      if (DEBUG) {
+        log.debug(" in xVariableToChange: {}", v);
+      }
+      if (stamp.value() > 0) {
+        stamp.update(stamp.value() - 1);
+        putToTheEnd(x, xNodesHash.get(v));
+      }
+    }
+  }
+
+  private void consistencyLogStampAndXdomain() {
+    if (DEBUG) {
+      log.debug("XNodes");
+      for (int i = 0; i < xSize; i++) {
+        log.debug("{}", x[i]);
+      }
+      log.debug("stamp before {}", stamp.value());
+      log.debug("stamp after {}", stampValue);
+      log.debug("Xdomain");
+    }
+  }
+
+  private void consistencyUpdateXdomainAndYdomain() {
+    for (int i = 0; i < stampValue; i++) {
+      xDomain[i].setDomain(
+          findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
+      xDomain[i].twin = x[i];
+      if (DEBUG) {
+        log.debug("{}", xDomain[i]);
+      }
+    }
+    if (DEBUG) {
+      log.debug("YDomain");
+    }
+    for (int i = 0; i < ySize; i++) {
+      yDomain[0][i] = counters[i].min();
+      yDomain[1][i] = counters[i].max();
+      if (DEBUG) {
+        log.debug("{}", yDomain[i]);
+      }
+    }
+    if (DEBUG) {
+      log.debug("take out singleton xNodes");
+    }
+  }
+
+  private void consistencyApplySingletonYDomain() {
+    for (int i = 0; i < xSize; i++) {
+      if (!x[i].singleton()) {
+        continue;
+      }
+      int value = findPosition(x[i].value(), domainHash);
+      if (yDomain[0][value] > 0) {
+        yDomain[0][value]--;
+      }
+      yDomain[1][value]--;
+      if (yDomain[1][value] < 0) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  private void consistencyLogYDomain() {
+    if (DEBUG) {
+      log.debug("pass in consistency");
+      log.debug("YDomain");
+      for (int i = 0; i < ySize; i++) {
+        log.debug("{}", yDomain[i]);
+      }
+    }
+  }
+
+  private void consistencyPruneXDomains(Store store) {
+    for (int j = 0; j < stampValue; j++) {
+      assert match3[j] >= 0 && match3[j] < ySize;
+      assert compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize;
+      int cutMin = xDomain[j].min();
+      int cutMax = xDomain[j].max();
+      if (DEBUG) {
+        log.debug("cutmax {}", cutMax);
+      }
+      while (compOfY[match3[j]] != compOfY[cutMin]) {
+        cutMin++;
+      }
+      while (compOfY[match3[j]] != compOfY[cutMax]) {
+        cutMax--;
+      }
+      int id = xNodesHash.get(xDomain[j].twin);
+      if (DEBUG) {
+        log.debug("do pruning [{},{}] => [{},{}]", x[id].min(), x[id].max(), cutMin, cutMax);
+      }
+      xDomain[j].setDomain(cutMin, cutMax);
+      IntVar v = x[id];
+      v.domain.in(store.level, v, domainHash[cutMin], domainHash[cutMax]);
+    }
+  }
+
+  private void consistencyVerifyYDomainAfterPruning(Store store) {
+    for (int i = 0; i < xSize; i++) {
+      if (!x[i].singleton()) {
+        continue;
+      }
+      int value = findPosition(x[i].value(), domainHash);
+      yDomain[1][value]--;
+      if (yDomain[1][value] < 0) {
+        if (DEBUG) {
+          log.debug("failure in putting back yNodes domain");
+        }
+        throw Store.failException;
+      }
+    }
   }
 
   /**
@@ -833,141 +802,126 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   // --------------------------------SCCs-------------------------------------//
 
   private void sccs() {
-
-    int sccNb;
-    int maxYreachedFromS;
     int[] compReachesLeft = new int[ySize];
     int[] compReachesRight = new int[ySize];
     int[] yreachesLeft = new int[ySize];
     int[] yreachesRight = new int[ySize];
-
     for (int i = 0; i < ySize; i++) {
       compOfY[i] = i;
     }
-
-    sccNb = sccsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
-    // now compReaches(Left, Right) and compOfY contain the left and right most y per comp and to
-    // which comp a y belong
-    if (DEBUG) {
-      log.debug("sccNb : {}", sccNb);
-      StringBuilder sb = new StringBuilder("compReachesLeft ");
-      for (int aCompReachesLeft : compReachesLeft) {
-        sb.append(aCompReachesLeft).append(" ");
-      }
-      log.debug("{}", sb);
-
-      sb = new StringBuilder("compReachesRight ");
-      for (int aCompReachesRight : compReachesRight) {
-        sb.append(aCompReachesRight).append(" ");
-      }
-      log.debug("{}", sb);
-
-      sb = new StringBuilder("compOfY ");
-      for (int aCompOfY : compOfY) {
-        sb.append(aCompOfY).append(" ");
-      }
-      log.debug("{}", sb);
-    }
+    int sccNb = sccsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
+    sccsLogCompReaches(sccNb, compReachesLeft, compReachesRight);
     boolean[] reachedFromS = new boolean[sccNb];
     boolean[] reachesS = new boolean[sccNb];
-
-    // reachedFromS and reachesS need to contain only value false.
-    // by default satisfied by Java, therefore the two lines below are not needed.
-
-    // init reachedFromS and reachesS
-    int comp;
-    for (int i = 0; i < ySize; i++) {
-      comp = compOfY[i];
-      assert comp >= 0;
-      assert comp <= sccNb;
-
-      // if there are stictly more match to y than the minimum required
-      // an edge exist from s to y
-      if (yDomain[0][i] < nbOfMatchPerY[i]) {
-        reachedFromS[comp] = true;
-      }
-
-      // if there are strictly less match to y than the maximum possible
-      // an edge exist from y to s
-      if (yDomain[1][i] > nbOfMatchPerY[i]) {
-        reachesS[comp] = true;
-      }
-    }
-
-    maxYreachedFromS = -1;
-    int maxYreachesS = -1;
-
-    int C;
-    for (int i = 0; i < ySize; i++) {
-      C = compOfY[i];
-
-      assert C >= 0;
-      assert C <= sccNb;
-
-      // if the max y that can be reached is greater than the current y,
-      // that the comp it belongs to can be reached from s.
-      if (maxYreachedFromS >= i) {
-        reachedFromS[C] = true;
-      }
-
-      // if it's reached we can extand the max y reached to the compReachesRight of the component
-      if (reachedFromS[C]) {
-        maxYreachedFromS = Math.max(maxYreachedFromS, compReachesRight[C]);
-      }
-
-      // same in the other way : if the ReachesLeft of the comp is under the max y that
-      // reaches S this comp reaches S
-      if (compReachesLeft[C] <= maxYreachesS) {
-        reachesS[C] = true;
-      }
-
-      // if it's reachesS we can extand the max Y that reaches it to the current y.
-      if (reachesS[C]) {
-        maxYreachesS = Math.max(maxYreachesS, i);
-      }
-    }
-
-    // same as before but for minimum
-
-    int minYreachedFromS = ySize;
-    int minYreachesS = ySize;
-
-    for (int i = ySize - 1; i >= 0; i--) {
-      C = compOfY[i];
-      assert C >= 0;
-      assert C <= sccNb;
-      if (minYreachedFromS <= i) {
-        reachedFromS[C] = true;
-      }
-
-      if (reachedFromS[C]) {
-        minYreachedFromS = Math.min(minYreachedFromS, compReachesLeft[C]);
-      }
-
-      if (compReachesRight[C] >= minYreachesS) {
-        reachesS[C] = true;
-      }
-
-      if (reachesS[C]) {
-        minYreachesS = Math.min(minYreachesS, i);
-      }
-    }
-
-    // merge all comp that are strongly connected through s and
-    // give this new comp a new number
-
-    for (int i = 0; i < ySize; i++) {
-      if (reachesS[compOfY[i]] && reachedFromS[compOfY[i]]) {
-        compOfY[i] = sccNb;
-      }
-    }
-
+    sccsInitReachedFromS(reachedFromS, reachesS, sccNb);
+    sccsPropagateReachedFromS(compReachesLeft, compReachesRight, reachedFromS, reachesS, sccNb);
+    sccsPropagateReachedFromSReverse(
+        compReachesLeft, compReachesRight, reachedFromS, reachesS, sccNb);
+    sccsMergeComponentsThroughS(sccNb, reachedFromS, reachesS);
     if (DEBUG) {
       StringBuilder sb = new StringBuilder("compOfY after S ");
       for (int aCompOfY : compOfY) {
         sb.append(aCompOfY).append(" ");
       }
       log.debug("{}", sb);
+    }
+  }
+
+  private void sccsLogCompReaches(int sccNb, int[] compReachesLeft, int[] compReachesRight) {
+    if (!DEBUG) {
+      return;
+    }
+    log.debug("sccNb : {}", sccNb);
+    StringBuilder sb = new StringBuilder("compReachesLeft ");
+    for (int aCompReachesLeft : compReachesLeft) {
+      sb.append(aCompReachesLeft).append(" ");
+    }
+    log.debug("{}", sb);
+    sb = new StringBuilder("compReachesRight ");
+    for (int aCompReachesRight : compReachesRight) {
+      sb.append(aCompReachesRight).append(" ");
+    }
+    log.debug("{}", sb);
+    sb = new StringBuilder("compOfY ");
+    for (int aCompOfY : compOfY) {
+      sb.append(aCompOfY).append(" ");
+    }
+    log.debug("{}", sb);
+  }
+
+  private void sccsInitReachedFromS(boolean[] reachedFromS, boolean[] reachesS, int sccNb) {
+    for (int i = 0; i < ySize; i++) {
+      int comp = compOfY[i];
+      assert comp >= 0;
+      assert comp <= sccNb;
+      if (yDomain[0][i] < nbOfMatchPerY[i]) {
+        reachedFromS[comp] = true;
+      }
+      if (yDomain[1][i] > nbOfMatchPerY[i]) {
+        reachesS[comp] = true;
+      }
+    }
+  }
+
+  private void sccsPropagateReachedFromS(
+      int[] compReachesLeft,
+      int[] compReachesRight,
+      boolean[] reachedFromS,
+      boolean[] reachesS,
+      int sccNb) {
+    int maxYreachedFromS = -1;
+    int maxYreachesS = -1;
+    for (int i = 0; i < ySize; i++) {
+      int C = compOfY[i];
+      assert C >= 0;
+      assert C <= sccNb;
+      if (maxYreachedFromS >= i) {
+        reachedFromS[C] = true;
+      }
+      if (reachedFromS[C]) {
+        maxYreachedFromS = Math.max(maxYreachedFromS, compReachesRight[C]);
+      }
+      if (compReachesLeft[C] <= maxYreachesS) {
+        reachesS[C] = true;
+      }
+      if (reachesS[C]) {
+        maxYreachesS = Math.max(maxYreachesS, i);
+      }
+    }
+  }
+
+  private void sccsPropagateReachedFromSReverse(
+      int[] compReachesLeft,
+      int[] compReachesRight,
+      boolean[] reachedFromS,
+      boolean[] reachesS,
+      int sccNb) {
+    int minYreachedFromS = ySize;
+    int minYreachesS = ySize;
+    for (int i = ySize - 1; i >= 0; i--) {
+      int C = compOfY[i];
+      assert C >= 0;
+      assert C <= sccNb;
+      if (minYreachedFromS <= i) {
+        reachedFromS[C] = true;
+      }
+      if (reachedFromS[C]) {
+        minYreachedFromS = Math.min(minYreachedFromS, compReachesLeft[C]);
+      }
+      if (compReachesRight[C] >= minYreachesS) {
+        reachesS[C] = true;
+      }
+      if (reachesS[C]) {
+        minYreachesS = Math.min(minYreachesS, i);
+      }
+    }
+  }
+
+  private void sccsMergeComponentsThroughS(int sccNb, boolean[] reachedFromS, boolean[] reachesS) {
+    for (int i = 0; i < ySize; i++) {
+      if (reachesS[compOfY[i]] && reachedFromS[compOfY[i]]) {
+        compOfY[i] = sccNb;
+      }
     }
   }
 

@@ -351,66 +351,21 @@ public class CumulativeBasic extends Constraint {
               limitVar.domain.inMin(store.level, limitVar, curProfile);
             }
 
-            for (int ti = tasksToPrune.nextSetBit(0);
-                ti >= 0;
-                ti = tasksToPrune.nextSetBit(ti + 1)) {
-              TaskView t = tasks[ti];
-
-              int profileValue = curProfile;
-              if (inProfile[ti]) {
-                profileValue -= t.res.min();
-              }
-              boolean noSpace = limitMax - profileValue < t.res.min();
-
-              // ========= Pruning start variable
-              if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
-                if (!startConsidered[ti]) {
-                  if (noSpace) {
-                    startExcluded[ti] = getEventDate(e) - t.dur.min() + 1;
-                    startConsidered[ti] = true;
-                  }
-                } else // startExcluded[ti] != Integer.MAX_VALUE
-                if (!noSpace) {
-                  // end of excluded interval
-
-                  if (debugNarr) {
-                    log.debug(
-                        ">>> CumulativeBasic Profile 1. Narrowed {} \\ {} => {}",
-                        t.start,
-                        new IntervalDomain(startExcluded[ti], getEventDate(e) - 1),
-                        t.start);
-                  }
-
-                  t.start.domain.inComplement(
-                      store.level, t.start, startExcluded[ti], getEventDate(e) - 1);
-
-                  startConsidered[ti] = false;
-                }
-              }
-
-              // ========= for duration pruning
-              if (noSpace) {
-                maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastFree[ti]);
-                barier[ti] = true;
-              } else if (barier[ti]) { // free to go
-                barier[ti] = false;
-                lastFree[ti] = getEventDate(e);
-                if (getEventDate(e) <= t.start.max()) {
-                  lastStart[ti] = getEventDate(e);
-                }
-              }
-
-              // ========= resource pruning;
-
-              // cannot use more efficient inProfile[ti] (instead of t.lst() <= e.date() && e.date()
-              // < t.ect())
-              // since tasks with res = 0 are not in the PROFILE :(
-              if (limitMax - profileValue < t.res.max()
-                  && t.lst() <= getEventDate(e)
-                  && getEventDate(e) < t.ect()) {
-                t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
-              }
-            }
+            processProfileTasksToPrune(
+                store,
+                e,
+                curProfile,
+                limitMax,
+                tasks,
+                tasksToPrune,
+                inProfile,
+                startExcluded,
+                startConsidered,
+                maxDuration,
+                lastStart,
+                lastFree,
+                barier,
+                debugNarr);
           }
 
           break;
@@ -517,6 +472,64 @@ public class CumulativeBasic extends Constraint {
 
     if (postProcessCallback != null) {
       postProcessCallback.run();
+    }
+  }
+
+  private static <E> void processProfileTasksToPrune(
+      Store store,
+      E e,
+      int curProfile,
+      int limitMax,
+      TaskView[] tasks,
+      BitSet tasksToPrune,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered,
+      int[] maxDuration,
+      int[] lastStart,
+      int[] lastFree,
+      boolean[] barier,
+      boolean debugNarr) {
+    for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
+      TaskView t = tasks[ti];
+      int profileValue = inProfile[ti] ? curProfile - t.res.min() : curProfile;
+      boolean noSpace = limitMax - profileValue < t.res.min();
+
+      if (t.exists()) {
+        if (!startConsidered[ti]) {
+          if (noSpace) {
+            startExcluded[ti] = getEventDate(e) - t.dur.min() + 1;
+            startConsidered[ti] = true;
+          }
+        } else if (!noSpace) {
+          if (debugNarr) {
+            log.debug(
+                ">>> CumulativeBasic Profile 1. Narrowed {} \\ {} => {}",
+                t.start,
+                new IntervalDomain(startExcluded[ti], getEventDate(e) - 1),
+                t.start);
+          }
+          t.start.domain.inComplement(store.level, t.start, startExcluded[ti], getEventDate(e) - 1);
+          startConsidered[ti] = false;
+        }
+      }
+
+      if (noSpace) {
+        maxDuration[ti] = Math.max(maxDuration[ti], getEventDate(e) - lastFree[ti]);
+        barier[ti] = true;
+      } else if (barier[ti]) {
+        barier[ti] = false;
+        lastFree[ti] = getEventDate(e);
+        if (getEventDate(e) <= t.start.max()) {
+          lastStart[ti] = getEventDate(e);
+        }
+      }
+
+      if (limitMax - profileValue < t.res.max()
+          && t.lst() <= getEventDate(e)
+          && getEventDate(e) < t.ect()) {
+        t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+      }
     }
   }
 

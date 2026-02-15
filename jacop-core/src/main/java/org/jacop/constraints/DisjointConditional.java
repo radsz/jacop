@@ -438,138 +438,185 @@ public class DisjointConditional extends Diff {
     }
 
     for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).rects) {
-      boolean overlap = true;
-
-      boolean sChanged =
-          containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
-
-      IntRectangle Use = new IntRectangle(dim);
-      long sArea = 1;
-
-      boolean use = true;
-      boolean minLength0 = false;
-      int s_min;
-      int s_max;
-      int start;
-      int stop;
-      int m = 0;
-      int j = 0;
-      int[] sOriginMin = new int[dim];
-      int[] sOriginMax = new int[dim];
-      int[] sLengthMin = new int[dim];
-
-      while (overlap && m < dim) {
-        // check if domains of r and s overlap
-        IntDomain sOriginIdom = s.origin[m].dom();
-        IntDomain sLengthIdom = s.length[m].dom();
-        final int sLengthiMin = sLengthIdom.min();
-        int sOriginiMax = sOriginIdom.max();
-        s_min = sOriginIdom.min();
-        s_max = sOriginiMax + sLengthIdom.max();
-
-        overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
-
-        // min start, max stop and min length
-        sOriginMin[m] = s_min;
-        sOriginMax[m] = sOriginiMax + sLengthiMin;
-        sLengthMin[m] = sLengthiMin;
-
-        // check if s occupies some space
-        start = sOriginiMax;
-        stop = s_min + sLengthiMin;
-        if (start <= stop) { // we allow length=0 for rectangles
-          // to occupy o length space !!!
-          Use.add(start, stop - start);
-          j++;
-        } else {
-          use = false;
-        }
-
-        // min length == 0
-        minLength0 = minLength0 || (sLengthMin[m] <= 0);
-
-        m++;
-      }
-
-      if (overlap) {
+      FindRectanglesResult one =
+          processOneRectangleForFind(
+              s, r, dim, r_min, r_max, startMin, stopMax, minLength, fdvQueue);
+      if (one.overlap) {
         if (s.condition() == null || s.condition().max() != 0) {
           overlappingRects.add(s);
         }
-
         if (checkRect(s)) {
-          if (use) {
-            usedRect.add(Use);
-            contains = contains || sChanged;
+          if (one.use) {
+            usedRect.add(one.useRect);
+            contains = contains || one.sChanged;
           }
-
-          if (!minLength0) { // profile candiates
-            if (j > 0) {
-              profileCandidates.add(s);
-              contains = contains || sChanged;
-            }
-
-            if (!exclusionList.onList(s.index)) {
-              // simplification - considers only rectangles
-              // which cannot be exclusive !!!
-              checkArea = true;
-              totalNumberOfRectangles++;
-              for (int i = 0; i < dim; i++) {
-                if (sOriginMin[i] < startMin[i]) {
-                  startMin[i] = sOriginMin[i];
-                }
-                if (sOriginMax[i] > stopMax[i]) {
-                  stopMax[i] = sOriginMax[i];
-                }
-                if (minLength[i] > sLengthMin[i]) {
-                  minLength[i] = sLengthMin[i];
-                }
-
-                sArea = sArea * sLengthMin[i];
-              }
-              area += sArea;
-            }
+          if (!one.minLength0 && one.j > 0) {
+            profileCandidates.add(s);
+            contains = contains || one.sChanged;
+          }
+          if (!exclusionList.onList(s.index)) {
+            checkArea = true;
+            totalNumberOfRectangles++;
+            mergeRectangleBounds(
+                dim, one.sOriginMin, one.sOriginMax, one.sLengthMin, startMin, stopMax, minLength);
+            area += one.sArea;
           }
         }
       }
     }
 
-    if (checkArea) { // check whether there is
-      // enough room for all rectangles
-      area += r.minArea();
-      long availArea = 1;
-      long rectNumber = 1;
-      for (int i = 0; i < startMin.length; i++) {
-        IntDomain rOriginIdom = r.origin[i].dom();
-        IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginiMin = rOriginIdom.min();
-        int rOriginiMax = rOriginIdom.max();
-        int rLengthiMin = rLengthIdom.min();
-        if (rOriginiMin < startMin[i]) {
-          startMin[i] = rOriginiMin;
-        }
-        if (rOriginiMax + rLengthiMin > stopMax[i]) {
-          stopMax[i] = rOriginiMax + rLengthiMin;
-        }
-      }
-      boolean minEqZero = false;
-      for (int i = 0; i < startMin.length; i++) {
-        availArea = availArea * (stopMax[i] - startMin[i]);
-        if (minLength[i] == 0) {
-          minEqZero = true;
-        } else {
-          rectNumber = rectNumber * ((stopMax[i] - startMin[i]) / minLength[i]);
-        }
-      }
-      if (minEqZero) {
-        rectNumber = Long.MAX_VALUE;
-      }
-
-      if (availArea < area || rectNumber < (totalNumberOfRectangles + 1)) {
-        throw Store.failException;
-      }
+    if (checkArea) {
+      checkAreaFeasibility(r, dim, startMin, stopMax, minLength, area, totalNumberOfRectangles);
     }
 
     return contains;
+  }
+
+  private FindRectanglesResult processOneRectangleForFind(
+      RectangleWithCondition s,
+      Rectangle r,
+      int dim,
+      int[] rMin,
+      int[] rMax,
+      int[] startMin,
+      int[] stopMax,
+      int[] minLength,
+      Set<IntVar> fdvQueue) {
+    boolean overlap = true;
+    boolean sChanged = containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
+    IntRectangle useRect = new IntRectangle(dim);
+    long sArea = 1;
+    boolean use = true;
+    boolean minLength0 = false;
+    int j = 0;
+    int[] sOriginMin = new int[dim];
+    int[] sOriginMax = new int[dim];
+    int[] sLengthMin = new int[dim];
+
+    for (int m = 0; m < dim && overlap; m++) {
+      IntDomain sOriginIdom = s.origin[m].dom();
+      IntDomain sLengthIdom = s.length[m].dom();
+      final int sLengthiMin = sLengthIdom.min();
+      int sOriginiMax = sOriginIdom.max();
+      int sMin = sOriginIdom.min();
+      int sMax = sOriginiMax + sLengthIdom.max();
+      overlap = intervalOverlap(rMin[m], rMax[m], sMin, sMax);
+
+      sOriginMin[m] = sMin;
+      sOriginMax[m] = sOriginiMax + sLengthiMin;
+      sLengthMin[m] = sLengthiMin;
+
+      int start = sOriginiMax;
+      int stop = sMin + sLengthiMin;
+      if (start <= stop) {
+        useRect.add(start, stop - start);
+        j++;
+      } else {
+        use = false;
+      }
+      minLength0 = minLength0 || (sLengthMin[m] <= 0);
+      sArea *= sLengthMin[m];
+    }
+    return new FindRectanglesResult(
+        overlap, use, useRect, sChanged, minLength0, j, sOriginMin, sOriginMax, sLengthMin, sArea);
+  }
+
+  private void mergeRectangleBounds(
+      int dim,
+      int[] sOriginMin,
+      int[] sOriginMax,
+      int[] sLengthMin,
+      int[] startMin,
+      int[] stopMax,
+      int[] minLength) {
+    for (int i = 0; i < dim; i++) {
+      if (sOriginMin[i] < startMin[i]) {
+        startMin[i] = sOriginMin[i];
+      }
+      if (sOriginMax[i] > stopMax[i]) {
+        stopMax[i] = sOriginMax[i];
+      }
+      if (minLength[i] > sLengthMin[i]) {
+        minLength[i] = sLengthMin[i];
+      }
+    }
+  }
+
+  private void checkAreaFeasibility(
+      Rectangle r,
+      int dim,
+      int[] startMin,
+      int[] stopMax,
+      int[] minLength,
+      long area,
+      int totalNumberOfRectangles) {
+    area += r.minArea();
+    long availArea = 1;
+    long rectNumber = 1;
+    for (int i = 0; i < startMin.length; i++) {
+      IntDomain rOriginIdom = r.origin[i].dom();
+      IntDomain rLengthIdom = r.length[i].dom();
+      int rOriginiMin = rOriginIdom.min();
+      int rOriginiMax = rOriginIdom.max();
+      int rLengthiMin = rLengthIdom.min();
+      if (rOriginiMin < startMin[i]) {
+        startMin[i] = rOriginiMin;
+      }
+      if (rOriginiMax + rLengthiMin > stopMax[i]) {
+        stopMax[i] = rOriginiMax + rLengthiMin;
+      }
+    }
+    boolean minEqZero = false;
+    for (int i = 0; i < startMin.length; i++) {
+      availArea = availArea * (stopMax[i] - startMin[i]);
+      if (minLength[i] == 0) {
+        minEqZero = true;
+      } else {
+        rectNumber = rectNumber * ((stopMax[i] - startMin[i]) / minLength[i]);
+      }
+    }
+    if (minEqZero) {
+      rectNumber = Long.MAX_VALUE;
+    }
+    if (availArea < area || rectNumber < (totalNumberOfRectangles + 1)) {
+      throw Store.failException;
+    }
+  }
+
+  private static final class FindRectanglesResult {
+    final boolean overlap;
+    final boolean use;
+    final IntRectangle useRect;
+    final boolean sChanged;
+    final boolean minLength0;
+    final int j;
+    final int[] sOriginMin;
+    final int[] sOriginMax;
+    final int[] sLengthMin;
+    final long sArea;
+
+    FindRectanglesResult(
+        boolean overlap,
+        boolean use,
+        IntRectangle useRect,
+        boolean sChanged,
+        boolean minLength0,
+        int j,
+        int[] sOriginMin,
+        int[] sOriginMax,
+        int[] sLengthMin,
+        long sArea) {
+      this.overlap = overlap;
+      this.use = use;
+      this.useRect = useRect;
+      this.sChanged = sChanged;
+      this.minLength0 = minLength0;
+      this.j = j;
+      this.sOriginMin = sOriginMin;
+      this.sOriginMax = sOriginMax;
+      this.sLengthMin = sLengthMin;
+      this.sArea = sArea;
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -617,13 +664,10 @@ public class DisjointConditional extends Diff {
       Rectangle r,
       List<IntRectangle> usedRect,
       List<RectangleWithCondition> profileCandidates) {
-    Interval exclude;
-    int s;
     int j = i == 0 ? 1 : 0;
     int rSize = r.origin[j].max() - r.origin[j].min();
     int rLengthjMin = r.length[j].min();
     int rLengthiMin = r.length[i].min();
-    int barierSize = 0;
 
     if (!profileCandidates.isEmpty() && doProfile) {
       profileNarrowingCondition(i, r, profileCandidates);
@@ -654,106 +698,118 @@ public class DisjointConditional extends Diff {
 
       List<IntRectangle> consideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
-        s = ir.origins[i];
-
-        consideredRect.clear();
-        int minI = IntDomain.MAX_INT;
-        long rectSize = 0;
-        for (IntRectangle t : usedRectArray) {
-          int tempMin = t.origins[i] + t.lengths[i];
-
-          if (t.origins[i] - s < rLengthiMin && s < tempMin) {
-            consideredRect.add(t);
-            rectSize += t.lengths[j];
-            // Determine minimum length in direction i
-            // (possibly new start time)
-            if (tempMin < minI) {
-              minI = tempMin;
-            }
-          }
-        }
-
-        if (!consideredRect.isEmpty()
-            && rSize < (rectSize + (long) (rLengthjMin - 1) * consideredRect.size())) {
-
-          IntDomain rOriginDom = r.origin[i].dom();
-          int m = 0;
-          for (; m < rOriginDom.noIntervals(); m++) {
-            if (s >= rOriginDom.leftElement(m) && s <= rOriginDom.rightElement(m)) {
-              exclude = minForbiddenInterval(s, i, r, consideredRect, minI);
-
-              if (exclude.max() != -1) {
-                int min = exclude.min() - r.length[i].min();
-                if (min + 1 < exclude.max()) {
-                  IntervalDomain Update = new IntervalDomain(IntDomain.MIN_INT, min);
-                  Update.unionAdapt(exclude.max(), IntDomain.MAX_INT);
-
-                  if (traceNarrOn) {
-                    log.debug(
-                        "7. Obligatory rectangles Narrow {}\n{}\n{} in {}length={}\n --> {}",
-                        consideredRect,
-                        r,
-                        r.origin[i],
-                        Update,
-                        r.length[i].min(),
-                        r.origin[i]);
-                  }
-
-                  r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
-                }
-              }
-            }
-          }
-        }
+        narrowOriginForStart(
+            ir.origins[i], i, j, r, usedRectArray, consideredRect, rSize, rLengthiMin, rLengthjMin);
       }
 
-      // Update rectangles length in direction i
-      // sort rectangles on increasing origin i
-      List<IntRectangle> consideredRectDur = new ArrayList<>();
-      for (IntRectangle t : usedRectArray) {
-        if (t.overlap(maxRect)) {
-          consideredRectDur.add(t);
-          barierSize += t.lengths[j];
-        }
-      }
+      narrowLengthWithBarrier(i, j, r, usedRectArray, maxRect, rSize, rLengthjMin);
+    }
+  }
 
-      if (!consideredRectDur.isEmpty()
-          && rSize < (barierSize + (rLengthjMin - 1) * consideredRectDur.size())) {
-
-        IntRectangle[] rects = new IntRectangle[consideredRectDur.size()];
-        rects = consideredRectDur.toArray(rects);
-        Arrays.sort(rects, dimIthMinComparator.apply(i));
-
-        Profile barrier = new Profile();
-        boolean lengthOk = true;
-        int newMaxLength = 0;
-        int n = 0;
-        while (n < rects.length && lengthOk) {
-          IntRectangle hinder = rects[n];
-          barrier.addToProfile(hinder.origins[j], hinder.origins[j] + hinder.lengths[j], 1);
-          if (doesNotFit(j, r, barrier)) {
-            lengthOk = false;
-            newMaxLength = hinder.origins[i] - r.origin[i].min();
-          }
-          n++;
-        }
-        if (!lengthOk) {
-          // update length in dimension j
-          int maxLength = findMaxLength(i, newMaxLength, r);
-
-          if (maxLength < r.length[i].max()) {
-            if (traceNarrOn) {
-              log.debug(
-                  "9. Obligatory rectangles Narrow {} in {}..{}",
-                  r.length[i],
-                  IntDomain.MIN_INT,
-                  maxLength);
-            }
-            r.length[i].domain.inMax(currentStore.level, r.length[i], maxLength);
-          }
+  private void narrowOriginForStart(
+      int s,
+      int i,
+      int j,
+      Rectangle r,
+      IntRectangle[] usedRectArray,
+      List<IntRectangle> consideredRect,
+      int rSize,
+      int rLengthiMin,
+      int rLengthjMin) {
+    consideredRect.clear();
+    int minI = IntDomain.MAX_INT;
+    long rectSize = 0;
+    for (IntRectangle t : usedRectArray) {
+      int tempMin = t.origins[i] + t.lengths[i];
+      if (t.origins[i] - s < rLengthiMin && s < tempMin) {
+        consideredRect.add(t);
+        rectSize += t.lengths[j];
+        if (tempMin < minI) {
+          minI = tempMin;
         }
       }
     }
+    if (consideredRect.isEmpty()
+        || rSize >= (rectSize + (long) (rLengthjMin - 1) * consideredRect.size())) {
+      return;
+    }
+    IntDomain rOriginDom = r.origin[i].dom();
+    for (int m = 0; m < rOriginDom.noIntervals(); m++) {
+      if (s < rOriginDom.leftElement(m) || s > rOriginDom.rightElement(m)) {
+        continue;
+      }
+      Interval exclude = minForbiddenInterval(s, i, r, consideredRect, minI);
+      if (exclude.max() == -1) {
+        continue;
+      }
+      int min = exclude.min() - r.length[i].min();
+      if (min + 1 >= exclude.max()) {
+        continue;
+      }
+      IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, min);
+      update.unionAdapt(exclude.max(), IntDomain.MAX_INT);
+      if (traceNarrOn) {
+        log.debug(
+            "7. Obligatory rectangles Narrow {}\n{}\n{} in {}length={}\n --> {}",
+            consideredRect,
+            r,
+            r.origin[i],
+            update,
+            r.length[i].min(),
+            r.origin[i]);
+      }
+      r.origin[i].domain.in(currentStore.level, r.origin[i], update);
+    }
+  }
+
+  private void narrowLengthWithBarrier(
+      int i,
+      int j,
+      Rectangle r,
+      IntRectangle[] usedRectArray,
+      IntRectangle maxRect,
+      int rSize,
+      int rLengthjMin) {
+    List<IntRectangle> consideredRectDur = new ArrayList<>();
+    int barierSize = 0;
+    for (IntRectangle t : usedRectArray) {
+      if (t.overlap(maxRect)) {
+        consideredRectDur.add(t);
+        barierSize += t.lengths[j];
+      }
+    }
+    if (consideredRectDur.isEmpty()
+        || rSize >= (barierSize + (rLengthjMin - 1) * consideredRectDur.size())) {
+      return;
+    }
+    IntRectangle[] rects = consideredRectDur.toArray(new IntRectangle[0]);
+    Arrays.sort(rects, dimIthMinComparator.apply(i));
+    Profile barrier = new Profile();
+    int newMaxLength = 0;
+    boolean lengthOk = true;
+    for (IntRectangle hinder : rects) {
+      barrier.addToProfile(hinder.origins[j], hinder.origins[j] + hinder.lengths[j], 1);
+      if (doesNotFit(j, r, barrier)) {
+        lengthOk = false;
+        newMaxLength = hinder.origins[i] - r.origin[i].min();
+        break;
+      }
+    }
+    if (lengthOk) {
+      return;
+    }
+    int maxLength = findMaxLength(i, newMaxLength, r);
+    if (maxLength >= r.length[i].max()) {
+      return;
+    }
+    if (traceNarrOn) {
+      log.debug(
+          "9. Obligatory rectangles Narrow {} in {}..{}",
+          r.length[i],
+          IntDomain.MIN_INT,
+          maxLength);
+    }
+    r.length[i].domain.inMax(currentStore.level, r.length[i], maxLength);
   }
 
   void narrowRectangleCondition(

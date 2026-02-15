@@ -319,90 +319,67 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   }
 
   private void buildValueBasedDecomposition(Store store, List<Constraint> target) {
-
     if (violationMeasure != ViolationMeasure.VALUE_BASED) {
       throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
     }
-
     List<IntVar> costs = new ArrayList<>(countedValue.length);
-
     for (int i = 0; i < countedValue.length; i++) {
-
       if (hardCounters != null && softLowerBound != null) {
-
-        target.add(new Count(xvars, hardCounters[i], countedValue[i]));
-
-        assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
-            : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-        assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
-            : "UpperBound for " + i + "-th element must be between 0 and number of variables";
-
-        int[][] table = new int[xvars.length + 1][2];
-        for (int j = 0; j <= xvars.length; j++) {
-          table[j][0] = j;
-          table[j][1] = 0;
-          if (j < softLowerBound[i]) {
-            table[j][1] = softLowerBound[i] - j;
-          }
-          if (j > softUpperBound[i]) {
-            table[j][1] = j - softUpperBound[i];
-          }
-        }
-
-        IntVar v = new IntVar(store, 0, xvars.length);
-        costs.add(v);
-
-        IntVar[] list = {hardCounters[i], v};
-        target.add(new ExtensionalSupportVa(list, table));
-
-        continue;
-      }
-
-      if (softCounters != null) {
-
-        IntVar hardCounter;
-
-        if (hardLowerBound != null) {
-          hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
-        } else {
-          hardCounter = hardCounters[i];
-        }
-
-        target.add(new Count(xvars, hardCounter, countedValue[i]));
-
-        List<int[]> tuples = new ArrayList<>();
-
-        for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
-            hard.hasMoreElements(); ) {
-
-          int hardElement = hard.nextElement();
-
-          for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
-              soft.hasMoreElements(); ) {
-
-            int softElement = soft.nextElement();
-            int cost;
-
-            if (hardElement > softElement) {
-              cost = hardElement - softElement;
-            } else {
-              cost = softElement - hardElement;
-            }
-
-            int[] tuple = {hardElement, softElement, cost};
-            tuples.add(tuple);
-          }
-        }
-
-        IntVar v = new IntVar(store, 0, xvars.length);
-        costs.add(v);
-
-        IntVar[] list = {hardCounter, softCounters[i], v};
-        target.add(new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
+        buildValueBasedHardCountersSoftBounds(store, target, costs, i);
+      } else if (softCounters != null) {
+        buildValueBasedSoftCounters(store, target, costs, i);
       }
     }
-
     target.add(new SumInt(costs, "==", costVar));
+  }
+
+  private void buildValueBasedHardCountersSoftBounds(
+      Store store, List<Constraint> target, List<IntVar> costs, int i) {
+    target.add(new Count(xvars, hardCounters[i], countedValue[i]));
+    assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
+        : "LowerBound for " + i + "-th element must be between 0 and number of variables";
+    assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
+        : "UpperBound for " + i + "-th element must be between 0 and number of variables";
+    int[][] table = new int[xvars.length + 1][2];
+    for (int j = 0; j <= xvars.length; j++) {
+      table[j][0] = j;
+      table[j][1] = 0;
+      if (j < softLowerBound[i]) {
+        table[j][1] = softLowerBound[i] - j;
+      }
+      if (j > softUpperBound[i]) {
+        table[j][1] = j - softUpperBound[i];
+      }
+    }
+    IntVar v = new IntVar(store, 0, xvars.length);
+    costs.add(v);
+    target.add(new ExtensionalSupportVa(new IntVar[] {hardCounters[i], v}, table));
+  }
+
+  private void buildValueBasedSoftCounters(
+      Store store, List<Constraint> target, List<IntVar> costs, int i) {
+    IntVar hardCounter =
+        hardLowerBound != null
+            ? new IntVar(store, hardLowerBound[i], hardUpperBound[i])
+            : hardCounters[i];
+    target.add(new Count(xvars, hardCounter, countedValue[i]));
+    List<int[]> tuples = new ArrayList<>();
+    for (ValueEnumeration hard = hardCounter.domain.valueEnumeration(); hard.hasMoreElements(); ) {
+      int hardElement = hard.nextElement();
+      for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
+          soft.hasMoreElements(); ) {
+        int softElement = soft.nextElement();
+        int cost =
+            hardElement > softElement ? hardElement - softElement : softElement - hardElement;
+        tuples.add(new int[] {hardElement, softElement, cost});
+      }
+    }
+    IntVar v = new IntVar(store, 0, xvars.length);
+    costs.add(v);
+    target.add(
+        new ExtensionalSupportVa(
+            new IntVar[] {hardCounter, softCounters[i], v},
+            tuples.toArray(new int[tuples.size()][3])));
   }
 
   @Override
@@ -448,27 +425,39 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
   @Override
   public String toString() {
-
     StringBuilder result = new StringBuilder();
-
     result.append(" : SoftGCC([");
+    toStringAppendXvars(result);
+    result.append("], [");
+    toStringAppendCountedValue(result);
+    result.append("], [");
+    toStringAppendHardBounds(result);
+    result.append("], [");
+    toStringAppendSoftBounds(result);
+    result.append("], ");
+    result.append(costVar).append(", ").append(violationMeasure).append(")");
+    return result.toString();
+  }
 
+  private void toStringAppendXvars(StringBuilder result) {
     for (int i = 0; i < xvars.length; i++) {
       result.append(xvars[i]);
       if (i < xvars.length - 1) {
         result.append(", ");
       }
     }
-    result.append("], [");
+  }
 
+  private void toStringAppendCountedValue(StringBuilder result) {
     for (int i = 0; i < countedValue.length; i++) {
       result.append(countedValue[i]);
       if (i < countedValue.length - 1) {
         result.append(", ");
       }
     }
-    result.append("], [");
+  }
 
+  private void toStringAppendHardBounds(StringBuilder result) {
     if (hardCounters == null) {
       for (int i = 0; i < hardLowerBound.length; i++) {
         result.append(hardLowerBound[i]).append("..").append(hardUpperBound[i]);
@@ -484,8 +473,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    result.append("], [");
+  }
 
+  private void toStringAppendSoftBounds(StringBuilder result) {
     if (softCounters == null) {
       for (int i = 0; i < softLowerBound.length; i++) {
         result.append(softLowerBound[i]).append("..").append(softUpperBound[i]);
@@ -501,107 +491,81 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    result.append("], ");
-
-    result.append(costVar).append(", ").append(violationMeasure).append(")");
-
-    return result.toString();
   }
 
   @SuppressWarnings("checkstyle:AbbreviationAsWordInName") // GCC is standard terminology
   private class SoftGCCBuilder extends NetworkBuilder {
 
     private SoftGCCBuilder(IntDomain all, IntDomain[] doms, ViolationMeasure vm) {
-
       super(costVar);
-
-      if (vm == ViolationMeasure.VALUE_BASED) {
-
-        int n = xvars.length;
-        int m = doms.length;
-
-        Node[] xNodes = new Node[n];
-        Node[] valueNodes = new Node[m];
-        Node[] countNodes = new Node[m];
-
-        for (int i = 0; i < n; i++) {
-          xNodes[i] = addNode(xvars[i].id, 1);
-        }
-
-        for (int i = 0; i < m; i++) {
-          valueNodes[i] = addNode(doms[i].toString(), 0);
-        }
-
-        for (int i = 0; i < m; i++) {
-          countNodes[i] = addNode("c_" + doms[i].toString(), 0);
-        }
-
-        Node s = addNode("source", 0);
-        Node t = addNode("sink", -n);
-
-        addArc(t, s, 0, 0, n * countedValue.length);
-
-        for (int i = 0; i < n; i++) {
-
-          // Arcs between x and d nodes.
-          IntVar v = xvars[i];
-
-          List<Arc> arcs = new ArrayList<>();
-          List<Domain> domains = new ArrayList<>();
-
-          IntDomain vDom = v.domain;
-          for (int j = 0; j < m; j++) {
-            if (vDom.isIntersecting(doms[j])) {
-              arcs.add(addArc(xNodes[i], valueNodes[j], 0, 1));
-              domains.add(doms[j]);
-            }
-            IntDomain notCounted = vDom.subtract(all);
-            if (!notCounted.isEmpty()) {
-              arcs.add(addArc(xNodes[i], t, 0, 1));
-              domains.add(notCounted);
-            }
-          }
-          handlerList.add(new DomainStructure(v, domains, arcs));
-        }
-
-        for (int i = 0; i < doms.length; i++) {
-
-          // shortage flow.
-          if (softLowerBound != null) {
-            addArc(s, countNodes[i], 1, 0, softLowerBound[i]);
-          } else {
-            addArc(s, countNodes[i], 1, 0, softCounters[i].max());
-          }
-
-          if (softUpperBound != null) {
-            if (n - softUpperBound[i] > 0) {
-              // excess flow.
-              addArc(countNodes[i], t, 1, 0, n - softUpperBound[i]);
-            }
-          } else {
-            if (n - softCounters[i].min() > 0) {
-              // excess flow.
-              addArc(countNodes[i], t, 1, 0, n - softCounters[i].min());
-            }
-          }
-
-          // Arcs, from value node to sink using flow equal idNumber.
-          if (hardCounters != null) {
-            addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
-          } else {
-            addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
-          }
-
-          if (softLowerBound != null) {
-            addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
-          } else {
-            addArc(countNodes[i], t, 0, softCounters[i]);
-          }
-        }
-
-      } else {
-
+      if (vm != ViolationMeasure.VALUE_BASED) {
         throw new UnsupportedOperationException("Unknown violation measure : " + vm);
+      }
+      int n = xvars.length;
+      int m = doms.length;
+      Node[] xNodes = new Node[n];
+      Node[] valueNodes = new Node[m];
+      Node[] countNodes = new Node[m];
+      for (int i = 0; i < n; i++) {
+        xNodes[i] = addNode(xvars[i].id, 1);
+      }
+      for (int i = 0; i < m; i++) {
+        valueNodes[i] = addNode(doms[i].toString(), 0);
+      }
+      for (int i = 0; i < m; i++) {
+        countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+      }
+      Node s = addNode("source", 0);
+      Node t = addNode("sink", -n);
+      addArc(t, s, 0, 0, n * countedValue.length);
+      addValueBasedXArcs(all, doms, n, m, xNodes, valueNodes, t);
+      addValueBasedCountArcs(n, s, t, countNodes, valueNodes);
+    }
+
+    private void addValueBasedXArcs(
+        IntDomain all, IntDomain[] doms, int n, int m, Node[] xNodes, Node[] valueNodes, Node t) {
+      for (int i = 0; i < n; i++) {
+        IntVar v = xvars[i];
+        List<Arc> arcs = new ArrayList<>();
+        List<Domain> domains = new ArrayList<>();
+        IntDomain vDom = v.domain;
+        for (int j = 0; j < m; j++) {
+          if (vDom.isIntersecting(doms[j])) {
+            arcs.add(addArc(xNodes[i], valueNodes[j], 0, 1));
+            domains.add(doms[j]);
+          }
+          IntDomain notCounted = vDom.subtract(all);
+          if (!notCounted.isEmpty()) {
+            arcs.add(addArc(xNodes[i], t, 0, 1));
+            domains.add(notCounted);
+          }
+        }
+        handlerList.add(new DomainStructure(v, domains, arcs));
+      }
+    }
+
+    private void addValueBasedCountArcs(
+        int n, Node s, Node t, Node[] countNodes, Node[] valueNodes) {
+      for (int i = 0; i < countNodes.length; i++) {
+        if (softLowerBound != null) {
+          addArc(s, countNodes[i], 1, 0, softLowerBound[i]);
+        } else {
+          addArc(s, countNodes[i], 1, 0, softCounters[i].max());
+        }
+        int excessCap = softUpperBound != null ? n - softUpperBound[i] : n - softCounters[i].min();
+        if (excessCap > 0) {
+          addArc(countNodes[i], t, 1, 0, excessCap);
+        }
+        if (hardCounters != null) {
+          addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
+        } else {
+          addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+        }
+        if (softLowerBound != null) {
+          addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
+        } else {
+          addArc(countNodes[i], t, 0, softCounters[i]);
+        }
       }
     }
   }

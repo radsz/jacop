@@ -97,86 +97,86 @@ class ProfileItemCondition extends ProfileItem {
       int[] r) {
 
     if (a.min == min) {
-      // left = null;
-      if (a.max < max) {
-        if (min != a.max) {
-          int v = computeConditionValue(a.value, exList);
-          overlap.set(min, a.max, value + v, rectangles);
-          int[] rR = {r[0], v};
-          overlap.addRect(rR);
-        }
-        right.set(a.max, max, value, rectangles);
-      } else {
-        // Max <= a.Max
-        int v = computeConditionValue(a.value, exList);
-        overlap.set(min, max, value + v, rectangles);
-        int[] rR = {r[0], v};
-        overlap.addRect(rR);
-        if (max != a.max) {
-          right.set(max, a.max, a.value, r);
-        }
-      }
+      overlapCaseAminEqMin(a, left, overlap, right, exList, r);
+    } else if (a.min < min) {
+      left.set(a.min, min, a.value, r);
+      overlapCaseAminLtMin(a, overlap, right, exList, r);
     } else {
-      // a.Min != Min
-      if (a.min < min) {
-        left.set(a.min, min, a.value, r);
-        if (a.max == max) {
-          int v = computeConditionValue(a.value, exList);
-          overlap.set(min, max, value + v, rectangles);
-          int[] rR = {r[0], v};
-          overlap.addRect(rR);
-          // right = null;
-        } else {
-          if (a.max < max) {
-            if (min != a.max) {
-              int val = exclusiveRectsSize(exList);
-              int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
-              overlap.set(min, a.max, value + v, rectangles);
-              int[] rR = {r[0], v};
-              overlap.addRect(rR);
-            }
-            right.set(a.max, max, value, rectangles);
-          } else {
-            // Max <= a.Max
-            int val = exclusiveRectsSize(exList);
-            int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
-            overlap.set(min, max, value + v, rectangles);
-            int[] rR = {r[0], v};
-            overlap.addRect(rR);
-            if (max != a.max) {
-              right.set(max, a.max, a.value, r);
-            }
-          }
-        }
-      } else {
-        // Min < a.Min
-        left.set(min, a.min, value, rectangles);
-        if (a.max == max) {
-          int v = computeConditionValue(a.value, exList);
-          overlap.set(a.min, a.max, value + v, rectangles);
-          int[] rR = {r[0], v};
-          overlap.addRect(rR);
-          // right = null;
-        } else {
-          if (a.max < max) {
-            int val = exclusiveRectsSize(exList);
-            int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
-            overlap.set(a.min, a.max, value + v, rectangles);
-            int[] rR = {r[0], v};
-            overlap.addRect(rR);
-            right.set(a.max, max, value, rectangles);
-          } else {
-            // Max <= a.Max
-            int val = exclusiveRectsSize(exList);
-            int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
-            overlap.set(a.min, max, value + v, rectangles);
-            int[] rR = {r[0], v};
-            overlap.addRect(rR);
-            if (max != a.max) {
-              right.set(max, a.max, a.value, r);
-            }
-          }
-        }
+      left.set(min, a.min, value, rectangles);
+      overlapCaseAminGtMin(a, overlap, right, exList, r);
+    }
+  }
+
+  private void setOverlapWithRect(
+      ProfileItemCondition overlap, int low, int high, int combinedVal, int rectIndex, int v) {
+    overlap.set(low, high, combinedVal, rectangles);
+    overlap.addRect(new int[] {rectIndex, v});
+  }
+
+  private void overlapCaseAminEqMin(
+      ProfileItemCondition a,
+      ProfileItemCondition left,
+      ProfileItemCondition overlap,
+      ProfileItemCondition right,
+      ExclusiveList exList,
+      int[] r) {
+    if (a.max < max) {
+      if (min != a.max) {
+        int v = computeConditionValue(a.value, exList);
+        setOverlapWithRect(overlap, min, a.max, value + v, r[0], v);
+      }
+      right.set(a.max, max, value, rectangles);
+    } else {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, min, max, value + v, r[0], v);
+      if (max != a.max) {
+        right.set(max, a.max, a.value, r);
+      }
+    }
+  }
+
+  private void overlapCaseAminLtMin(
+      ProfileItemCondition a,
+      ProfileItemCondition overlap,
+      ProfileItemCondition right,
+      ExclusiveList exList,
+      int[] r) {
+    if (a.max == max) {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, min, max, value + v, r[0], v);
+    } else if (a.max < max) {
+      if (min != a.max) {
+        int v = computeConditionValue(a.value, exList);
+        setOverlapWithRect(overlap, min, a.max, value + v, r[0], v);
+      }
+      right.set(a.max, max, value, rectangles);
+    } else {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, min, max, value + v, r[0], v);
+      if (max != a.max) {
+        right.set(max, a.max, a.value, r);
+      }
+    }
+  }
+
+  private void overlapCaseAminGtMin(
+      ProfileItemCondition a,
+      ProfileItemCondition overlap,
+      ProfileItemCondition right,
+      ExclusiveList exList,
+      int[] r) {
+    if (a.max == max) {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, a.min, a.max, value + v, r[0], v);
+    } else if (a.max < max) {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, a.min, a.max, value + v, r[0], v);
+      right.set(a.max, max, value, rectangles);
+    } else {
+      int v = computeConditionValue(a.value, exList);
+      setOverlapWithRect(overlap, a.min, max, value + v, r[0], v);
+      if (max != a.max) {
+        right.set(max, a.max, a.value, r);
       }
     }
   }

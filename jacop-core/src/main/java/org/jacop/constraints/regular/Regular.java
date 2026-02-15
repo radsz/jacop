@@ -197,60 +197,40 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * @param dfa specification of deterministic finite automaton.
    */
   private void initializeArray(Fsm dfa) {
-
     int levels = this.list.length;
     stateNumber = dfa.allStates.size();
-
-    // The array that keep all possible states with arcs and their domains
-    // If the domain is empty then the arc doesn't exist
     final IntDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
     final int[][] outdeg = new int[levels + 1][stateNumber];
-
-    // Reachable region of the graph
     final Set<FsmState> reachable = new HashSet<>();
-    // Temporal variable for reachable region
     final Set<FsmState> tmp = new HashSet<>();
-
-    // Initialization of the future state array
-    // and the time-stamps with the number of active states
     this.stateLevels = new RegState[levels + 1][];
-
     FsmState[] array = new FsmState[stateNumber];
-
     dfa.resize();
     for (FsmState s : dfa.allStates) {
       array[s.id] = s;
     }
+    int level = initializeArrayForwardReachable(dfa, levels, outarc, reachable, tmp);
+    level =
+        initializeArrayBackwardReachable(level, stateNumber, outarc, outdeg, reachable, tmp, array);
+    stateLevels[0] = new RegState[1];
+    this.activeLevelsTemp = new int[this.list.length + 1];
+    initializeArrayCopyToStateLevels(levels, outarc, outdeg);
+  }
 
-    // ----- compute the reachable region of the graph -----
-
-    // Start with initial state
+  private int initializeArrayForwardReachable(
+      Fsm dfa, int levels, IntDomain[][][] outarc, Set<FsmState> reachable, Set<FsmState> tmp) {
     reachable.add(dfa.initState);
-
     int level = 0;
     while (level < levels) {
-      // prepare tmp set of reachable states in the next level
       tmp.clear();
-      // For each state reached until now
       for (FsmState s : reachable) {
-        // watch it's edges
         for (FsmTransition t : s.transitions) {
-          // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(list[level].dom());
-
           if (outarc[level][s.id][t.successor.id] != null) {
             outarc[level][s.id][t.successor.id].addDom(dom);
           } else {
             outarc[level][s.id][t.successor.id] = dom;
           }
-
-          /* If the edge is not empty them add the state to tmp set
-           * check that such states wasn't previously added.
-           *
-           * <p>If the level is the last, then check whether the state
-           * belongs to the set of accepted states
-           */
-
           if (dom.getSize() > 0) {
             if (level < levels - 1) {
               tmp.add(t.successor);
@@ -260,29 +240,26 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
       }
-
-      // copy the tmp set of states into reachable region
       reachable.clear();
       reachable.addAll(tmp);
-      // got to next level
       level++;
     }
+    return level;
+  }
 
-    // initialize the last time-stamp because the counter didn't reach it.
-    /* ----- delete the paths of the graph that doesn't reach the accepted state -----
-     *
-     *
-     *  by calculating the reachable region of the graph starting from the accepted
-     *  states and following the edges in the opposite direction.
-     */
-
+  private int initializeArrayBackwardReachable(
+      int level,
+      int stateNum,
+      IntDomain[][][] outarc,
+      int[][] outdeg,
+      Set<FsmState> reachable,
+      Set<FsmState> tmp,
+      FsmState[] array) {
     while (level > 0) {
       tmp.clear();
-
       stateLevels[level] = new RegState[reachable.size()];
-
-      for (int i = 0; i < stateNumber; i++) {
-        for (int j = 0; j < stateNumber; j++) {
+      for (int i = 0; i < stateNum; i++) {
+        for (int j = 0; j < stateNum; j++) {
           if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
             if (!reachable.contains(array[i])) {
               outarc[level - 1][j][i].clear();
@@ -293,84 +270,65 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
       }
-
       reachable.clear();
       reachable.addAll(tmp);
       level--;
     }
+    return level;
+  }
 
-    stateLevels[0] = new RegState[1];
-    this.activeLevelsTemp = new int[this.list.length + 1];
-
-    // ---- copy the resulting graph into final array ----
-    int index;
+  private void initializeArrayCopyToStateLevels(
+      int levels, IntDomain[][][] outarc, int[][] outdeg) {
     int nextLevelIndex = 0;
-
-    for (level = 0; level < levels; level++) {
-      index = nextLevelIndex;
+    for (int level = 0; level < levels; level++) {
+      int index = nextLevelIndex;
       nextLevelIndex = 0;
-
       for (int i = 0; i < stateNumber; i++) {
-        if (outdeg[level][i] > 0) {
-          // If the outdegree of the sate is not 0 then its should be created
-          RegState s = getState(level, i); // Check if it wasn't already created
-          if (s == null) { // If not -> create the state
-            if (listRepresentation) {
-              s = new RegStateInt(level, i, outdeg[level][i], index);
-            } else {
-              s = new RegStateDom(level, i, outdeg[level][i], index);
-            }
-
-            stateLevels[level][index++] = s; // Add new state to the list of states of this level
-
-            activeLevelsTemp[level] = index;
-
+        if (outdeg[level][i] <= 0) {
+          continue;
+        }
+        RegState s = getState(level, i);
+        if (s == null) {
+          s =
+              listRepresentation
+                  ? new RegStateInt(level, i, outdeg[level][i], index)
+                  : new RegStateDom(level, i, outdeg[level][i], index);
+          stateLevels[level][index++] = s;
+          activeLevelsTemp[level] = index;
+          if (DEBUG_ALL) {
+            log.debug(
+                "Create new state q_{}{} with in degree : {} and out degree : {}",
+                level,
+                i,
+                s.inDegree,
+                s.outDegree);
+          }
+        }
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level][i][j] == null || outarc[level][i][j].getSize() == 0) {
+            continue;
+          }
+          RegState suc = getState(level + 1, j);
+          if (suc == null) {
+            suc =
+                listRepresentation
+                    ? new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex)
+                    : new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
+            stateLevels[level + 1][nextLevelIndex++] = suc;
+            activeLevelsTemp[level + 1] = nextLevelIndex;
             if (DEBUG_ALL) {
               log.debug(
                   "Create new state q_{}{} with in degree : {} and out degree : {}",
-                  level,
-                  i,
-                  s.inDegree,
-                  s.outDegree);
+                  level + 1,
+                  j,
+                  suc.inDegree,
+                  suc.outDegree);
             }
           }
-
-          // For every outgoing arc
-          for (int j = 0; j < stateNumber; j++) {
-            // If transition is active
-            if (outarc[level][i][j] != null && outarc[level][i][j].getSize() > 0) {
-              RegState suc = getState(level + 1, j); // See if such state already exists
-              if (suc == null) {
-                if (listRepresentation) {
-                  suc = new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
-                } else {
-                  suc = new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
-                }
-
-                stateLevels[level + 1][nextLevelIndex++] = suc;
-
-                activeLevelsTemp[level + 1] = nextLevelIndex;
-
-                if (DEBUG_ALL) {
-                  log.debug(
-                      "Create new state q_{}{} with in degree : {} and out degree : {}",
-                      level + 1,
-                      j,
-                      suc.inDegree,
-                      suc.outDegree);
-                }
-              }
-
-              s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
-
-              if (DEBUG_ALL) {
-                log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
-              }
-
-              if (DEBUG_ALL) {
-                log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
-              }
-            }
+          s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
+          if (DEBUG_ALL) {
+            log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
+            log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
           }
         }
       }
@@ -427,79 +385,109 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     currentLevel = 0;
 
     while (currentLevel != -1) {
-
-      if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
-        currentLevel--;
-        if (currentLevel >= 0) {
-          currentOffset[currentLevel]++;
-        }
-        continue;
-      }
-
-      int nextNodePosition =
-          mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
-
-      // no path with a given value from a current node.
-      if (nextNodePosition == Mdd.NOEDGE) {
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      if (nextNodePosition == Mdd.TERMINAL) {
-        currentState[currentLevel].addTransition(
-            currentState[list.length],
-            mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      boolean visited = false;
-
-      RegState s = null;
-      for (RegState state : layeredGraph[currentLevel + 1]) {
-        if (state.id == nextNodePosition) {
-          s = state;
-          visited = true;
-        }
-      }
-
-      if (s == null) {
-        noNeighbours = 0;
-
-        if (currentLevel + 1 < list.length) {
-          for (int j = nextNodePosition;
-              j < nextNodePosition + list[currentLevel + 1].getSize();
-              j++) {
-            if (mdd.diagram[j] != Mdd.NOEDGE) {
-              noNeighbours++;
-            }
-          }
-        }
-
-        s =
-            new RegStateInt(
-                currentLevel + 1,
-                nextNodePosition,
-                noNeighbours,
-                activeLevelsTemp[currentLevel + 1]++);
-        layeredGraph[currentLevel + 1].add(s);
-      }
-
-      currentState[currentLevel].addTransition(
-          s, mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-
-      if (visited) {
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      currentLevel++;
-
-      currentState[currentLevel] = s;
-      currentOffset[currentLevel] = 0;
-      currentPosition[currentLevel] = nextNodePosition;
+      currentLevel =
+          initializeArrayStep(
+              mdd,
+              layeredGraph,
+              currentPosition,
+              currentOffset,
+              currentState,
+              currentLevel,
+              list.length);
     }
 
+    copyLayeredGraphToStateLevels(layeredGraph);
+  }
+
+  /**
+   * Performs one step of the MDD traversal during initialization. Returns the new current level (or
+   * -1 when backtracking past start).
+   */
+  private int initializeArrayStep(
+      Mdd mdd,
+      List<RegState>[] layeredGraph,
+      int[] currentPosition,
+      int[] currentOffset,
+      RegState[] currentState,
+      int currentLevel,
+      int listLen) {
+    if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
+      int nextLevel = currentLevel - 1;
+      if (nextLevel >= 0) {
+        currentOffset[nextLevel]++;
+      }
+      return nextLevel;
+    }
+
+    int nextNodePosition = mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
+
+    if (nextNodePosition == Mdd.NOEDGE) {
+      currentOffset[currentLevel]++;
+      return currentLevel;
+    }
+
+    if (nextNodePosition == Mdd.TERMINAL) {
+      currentState[currentLevel].addTransition(
+          currentState[listLen], mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
+      currentOffset[currentLevel]++;
+      return currentLevel;
+    }
+
+    RegState s = findStateInLayer(layeredGraph[currentLevel + 1], nextNodePosition);
+    boolean visited = (s != null);
+    if (s == null) {
+      s =
+          createAndAddStateToLayeredGraph(
+              mdd, layeredGraph, currentLevel, nextNodePosition, listLen);
+    }
+
+    currentState[currentLevel].addTransition(
+        s, mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
+
+    if (visited) {
+      currentOffset[currentLevel]++;
+      return currentLevel;
+    }
+
+    currentLevel++;
+    currentState[currentLevel] = s;
+    currentOffset[currentLevel] = 0;
+    currentPosition[currentLevel] = nextNodePosition;
+    return currentLevel;
+  }
+
+  private RegState findStateInLayer(List<RegState> layer, int id) {
+    for (RegState state : layer) {
+      if (state.id == id) {
+        return state;
+      }
+    }
+    return null;
+  }
+
+  private RegState createAndAddStateToLayeredGraph(
+      Mdd mdd, List<RegState>[] layeredGraph, int currentLevel, int nextNodePosition, int listLen) {
+    int noNeighbours = countNeighbours(mdd, currentLevel, nextNodePosition, listLen);
+    RegState s =
+        new RegStateInt(
+            currentLevel + 1, nextNodePosition, noNeighbours, activeLevelsTemp[currentLevel + 1]++);
+    layeredGraph[currentLevel + 1].add(s);
+    return s;
+  }
+
+  private int countNeighbours(Mdd mdd, int currentLevel, int nextNodePosition, int listLen) {
+    int noNeighbours = 0;
+    if (currentLevel + 1 < listLen) {
+      for (int j = nextNodePosition; j < nextNodePosition + list[currentLevel + 1].getSize(); j++) {
+        if (mdd.diagram[j] != Mdd.NOEDGE) {
+          noNeighbours++;
+        }
+      }
+    }
+    return noNeighbours;
+  }
+
+  private void copyLayeredGraphToStateLevels(List<RegState>[] layeredGraph) {
     for (int i = 0; i < layeredGraph.length; i++) {
       stateLevels[i] = new RegState[layeredGraph[i].size()];
       int j = 0;
@@ -539,10 +527,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public void pruneArc(int varIndex) {
 
-    int state;
     int preThisLevelStateNb = this.activeLevels[varIndex].value();
-    RegState s;
-    RegState suc;
     int nextVar = varIndex + 1;
     int preNextLevelStateNb = this.activeLevels[nextVar].value();
 
@@ -550,68 +535,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     IntDomain domVar = list[varIndex].domain;
 
-    for (state = preThisLevelStateNb - 1; state >= 0; state--) {
-
-      s = stateLevels[varIndex][state];
+    for (int state = preThisLevelStateNb - 1; state >= 0; state--) {
+      RegState s = stateLevels[varIndex][state];
       if (DEBUG_ALL) {
         log.debug("{}: watch state q_{}{}", state, varIndex, s.id);
       }
-
-      boolean alreadyTouched = false;
-
-      for (int i = s.outDegree - 1; i >= 0; i--) {
-        // If this transition must be removed because it is not in variable's domain
-        if (!s.intersects(domVar, i)) {
-
-          if (DEBUG_ALL) {
-            log.debug(
-                "must remove transition q_{}{} -{}-> q_{}{}",
-                varIndex,
-                s.id,
-                s.sucDomToString(i),
-                varIndex + 1,
-                s.successors[i].id);
-          }
-
-          // we remove this transition (we know its index, so its easy)
-          // This will automatically reduce the out-degree of this state
-          // and reduce in-degree of the successor.
-
-          suc = s.successors[i];
-          s.removeTransition(i);
-
-          if (!alreadyTouched) {
-            addTouchedState(s);
-            alreadyTouched = true;
-          }
-
-          if (DEBUG_ALL) {
-            log.debug(STATE_Q_DEGREES, s.level, s.id, s.inDegree, s.outDegree);
-            log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
-          }
-
-          assert s.outDegree >= 0;
-
-          if (s.outDegree == 0) {
-            if (DEBUG_ALL) {
-              log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
-            }
-            assert s.level == varIndex;
-            disableState(varIndex, s.pos);
-          }
-
-          assert suc.inDegree >= 0;
-
-          if (suc.inDegree == 0) {
-            if (DEBUG_ALL) {
-              log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
-            }
-            assert suc.level == varIndex + 1;
-            disableState(nextVar, suc.pos);
-            levelHadChanged[nextVar] = true;
-          }
-        }
-      }
+      pruneArcForState(s, domVar, varIndex, nextVar);
     }
 
     unreachForwardLoop(preNextLevelStateNb, varIndex + 1);
@@ -627,6 +556,58 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       RegState[] newTouchedStates = new RegState[touchedStates.length * 2];
       System.arraycopy(touchedStates, 0, newTouchedStates, 0, touchedStates.length);
       touchedStates = newTouchedStates;
+    }
+  }
+
+  private void pruneArcForState(RegState s, IntDomain domVar, int varIndex, int nextVar) {
+    boolean alreadyTouched = false;
+    for (int i = s.outDegree - 1; i >= 0; i--) {
+      if (!s.intersects(domVar, i)) {
+        RegState suc = s.successors[i];
+        removeTransitionWithLog(s, i, suc, varIndex);
+        s.removeTransition(i);
+
+        if (!alreadyTouched) {
+          addTouchedState(s);
+          alreadyTouched = true;
+        }
+
+        if (DEBUG_ALL) {
+          log.debug(STATE_Q_DEGREES, s.level, s.id, s.inDegree, s.outDegree);
+          log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
+        }
+
+        assert s.outDegree >= 0;
+        if (s.outDegree == 0) {
+          if (DEBUG_ALL) {
+            log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
+          }
+          assert s.level == varIndex;
+          disableState(varIndex, s.pos);
+        }
+
+        assert suc.inDegree >= 0;
+        if (suc.inDegree == 0) {
+          if (DEBUG_ALL) {
+            log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
+          }
+          assert suc.level == varIndex + 1;
+          disableState(nextVar, suc.pos);
+          levelHadChanged[nextVar] = true;
+        }
+      }
+    }
+  }
+
+  private void removeTransitionWithLog(RegState s, int i, RegState suc, int varIndex) {
+    if (DEBUG_ALL) {
+      log.debug(
+          "must remove transition q_{}{} -{}-> q_{}{}",
+          varIndex,
+          s.id,
+          s.sucDomToString(i),
+          varIndex + 1,
+          suc.id);
     }
   }
 
@@ -801,52 +782,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public void removeLevelLate(int level) {
 
-    RegState curState;
-    int prevVal;
-
     int checkToIndex = touchedIndex.value();
 
     while (currentTouchedIndex > checkToIndex) {
-
-      curState = touchedStates[--currentTouchedIndex];
-
-      RegState[] successors = curState.successors;
-      prevVal = curState.outDegree;
-      curState.outDegree = successors.length;
-
-      for (int i = prevVal; i < curState.outDegree; i++) {
-        if (!(successors[i].isActive(activeLevels)
-            && curState.intersects(list[curState.level].domain, i))) {
-          curState.outDegree = i;
-        } else {
-          successors[i].inDegree++;
-        }
-      }
+      RegState curState = touchedStates[--currentTouchedIndex];
+      recomputeOutDegree(curState, curState.level);
     }
 
-    int stateNb;
-
-    // for every level which has been recorded be in between the levels which have changed
     for (int l = leftPosition; l <= rightPosition; l++) {
-      // for every active state in the level
-      stateNb = this.activeLevels[l].value();
-
+      int stateNb = this.activeLevels[l].value();
       for (int s = lastNumberOfActiveStates[l]; s < stateNb; s++) {
-        // update its out degree by adding the accumulator
-        // by doing this we add some old, possibly inactive edge
-        curState = stateLevels[l][s];
-        RegState[] successors = curState.successors;
-        prevVal = curState.outDegree;
-        curState.outDegree = successors.length;
-        // for every new added edge is active
-        // if it is not, then stop
-        for (int i = prevVal; i < curState.outDegree; i++) {
-          if (!(successors[i].isActive(activeLevels) && curState.intersects(list[l].domain, i))) {
-            curState.outDegree = i;
-          } else {
-            successors[i].inDegree++;
-          }
-        }
+        recomputeOutDegree(stateLevels[l][s], l);
       }
     }
 
@@ -856,6 +802,19 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     leftPosition = list.length;
     rightPosition = 0;
+  }
+
+  private void recomputeOutDegree(RegState curState, int level) {
+    RegState[] successors = curState.successors;
+    int prevVal = curState.outDegree;
+    curState.outDegree = successors.length;
+    for (int i = prevVal; i < curState.outDegree; i++) {
+      if (!(successors[i].isActive(activeLevels) && curState.intersects(list[level].domain, i))) {
+        curState.outDegree = i;
+      } else {
+        successors[i].inDegree++;
+      }
+    }
   }
 
   @Override
@@ -868,87 +827,13 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      RegState state;
-
-      if (oneSupport) {
-
-        for (int level = list.length - 1; level >= 0; level--) {
-
-          // first restrict the domain to the sum of all edges annotations.
-
-          IntervalDomain initial = new IntervalDomain();
-
-          for (Integer value : supports[level].keySet()) {
-            initial.unionAdapt(value, value);
-          }
-
-          this.list[level].domain.in(store.level, list[level], initial);
-
-          ValueEnumeration enumer = list[level].domain.valueEnumeration();
-
-          for (int v; enumer.hasMoreElements(); ) {
-
-            v = enumer.nextElement();
-
-            if (supports[level].get(v) == null) {
-              this.list[level].domain.inComplement(store.level, list[level], v);
-              enumer.domainHasChanged();
-              continue;
-            }
-
-            RegEdge edge = supports[level].get(v);
-            // function check - checks if there is a support, starting from the
-            // current one.
-
-            if (!edge.check(activeLevels)) {
-              boolean stillSuported = false;
-              for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
-                if (stateLevels[level][st].updateSupport(edge, v)) {
-                  stillSuported = true;
-                  break;
-                }
-              }
-
-              if (!stillSuported) {
-                list[level].domain.inComplement(store.level, list[level], v);
-                enumer.domainHasChanged();
-              }
-            }
-          }
-        }
-      } else {
-
-        IntDomain varDom;
-
-        for (int level = this.list.length - 1; level >= 0; level--) {
-          varDom = new IntervalDomain();
-          for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
-            state = this.stateLevels[level][s];
-            for (int i = state.outDegree - 1; i >= 0; i--) {
-              state.add(varDom, i);
-            }
-          }
-          if (DEBUG_ALL) {
-            log.debug(
-                ">>> Variable x_{} had domain {} and now its {}",
-                level,
-                this.list[level].domain,
-                varDom);
-          }
-          this.list[level].domain.in(store.level, list[level], varDom);
-        }
-      }
-
+      doFirstConsistency(store);
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
-
       if (variableQueue.isEmpty()) {
         return;
       }
     }
-
-    RegState state;
 
     Arrays.fill(levelHadChanged, false);
 
@@ -956,17 +841,83 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       pruneArc(mapping.get(v));
     }
 
-    // if two consistency functions executed one after the other
-    // then timestamp may be asked to update to the same value. If that
-    // request does not create new level because value at older level
-    // is equal then here the leftChange and rightChange will not be
-    // updated correctly.
+    updateLeftChangeFromLevelHadChanged(store);
+    updateRightChangeFromLevelHadChanged(store);
 
+    if (oneSupport) {
+      consistencyOneSupportLevels(store);
+    } else {
+      consistencyVarDomLevels(store);
+    }
+
+    touchedIndex.update(this.currentTouchedIndex);
+  }
+
+  private void doFirstConsistency(Store store) {
+    if (oneSupport) {
+      for (int level = list.length - 1; level >= 0; level--) {
+        firstConsistencyOneSupportLevel(store, level);
+      }
+    } else {
+      for (int level = this.list.length - 1; level >= 0; level--) {
+        firstConsistencyVarDomLevel(store, level);
+      }
+    }
+  }
+
+  private void firstConsistencyOneSupportLevel(Store store, int level) {
+    IntervalDomain initial = new IntervalDomain();
+    for (Integer value : supports[level].keySet()) {
+      initial.unionAdapt(value, value);
+    }
+    this.list[level].domain.in(store.level, list[level], initial);
+
+    ValueEnumeration enumer = list[level].domain.valueEnumeration();
+    for (int v; enumer.hasMoreElements(); ) {
+      v = enumer.nextElement();
+      if (supports[level].get(v) == null) {
+        this.list[level].domain.inComplement(store.level, list[level], v);
+        enumer.domainHasChanged();
+        continue;
+      }
+      RegEdge edge = supports[level].get(v);
+      if (!edge.check(activeLevels)) {
+        boolean stillSuported = false;
+        for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
+          if (stateLevels[level][st].updateSupport(edge, v)) {
+            stillSuported = true;
+            break;
+          }
+        }
+        if (!stillSuported) {
+          list[level].domain.inComplement(store.level, list[level], v);
+          enumer.domainHasChanged();
+        }
+      }
+    }
+  }
+
+  private void firstConsistencyVarDomLevel(Store store, int level) {
+    IntDomain varDom = new IntervalDomain();
+    for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
+      RegState state = this.stateLevels[level][s];
+      for (int i = state.outDegree - 1; i >= 0; i--) {
+        state.add(varDom, i);
+      }
+    }
+    if (DEBUG_ALL) {
+      log.debug(
+          ">>> Variable x_{} had domain {} and now its {}", level, this.list[level].domain, varDom);
+    }
+    this.list[level].domain.in(store.level, list[level], varDom);
+  }
+
+  private void updateLeftChangeFromLevelHadChanged(Store store) {
     if (leftChange.stamp() < store.level) {
       for (int i = 0; i < levelHadChanged.length; i++) {
         if (levelHadChanged[i]) {
           leftChange.update(i);
-          break;
+          return;
         }
       }
     } else {
@@ -974,16 +925,18 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       for (int i = 0; i < leftEnd; i++) {
         if (levelHadChanged[i]) {
           leftChange.update(i);
-          break;
+          return;
         }
       }
     }
+  }
 
+  private void updateRightChangeFromLevelHadChanged(Store store) {
     if (rightChange.stamp() < store.level) {
       for (int i = levelHadChanged.length - 1; i >= 0; i--) {
         if (levelHadChanged[i]) {
           rightChange.update(i);
-          break;
+          return;
         }
       }
     } else {
@@ -991,70 +944,56 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       for (int i = levelHadChanged.length - 1; i > rightEnd; i--) {
         if (levelHadChanged[i]) {
           rightChange.update(i);
-          break;
+          return;
         }
       }
     }
+  }
 
-    if (oneSupport) {
-
-      for (int level = this.list.length - 1; level >= 0; level--) {
-        if (levelHadChanged[level]) {
-
-          ValueEnumeration enumer = this.list[level].domain.valueEnumeration();
-
-          for (int v; enumer.hasMoreElements(); ) {
-
-            v = enumer.nextElement();
-            RegEdge edge = supports[level].get(v);
-            // function check - checks if there is a support, starting from the
-            // current one.
-            if (!edge.check(activeLevels)) {
-
-              boolean stillSuported = false;
-
-              for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
-                if (stateLevels[level][st].updateSupport(edge, v)) {
-                  stillSuported = true;
-                  break;
-                }
-              }
-
-              if (!stillSuported) {
-                this.list[level].domain.inComplement(store.level, list[level], v);
-                enumer.domainHasChanged();
-              }
-            }
-          }
-        }
+  private void consistencyOneSupportLevels(Store store) {
+    for (int level = this.list.length - 1; level >= 0; level--) {
+      if (!levelHadChanged[level]) {
+        continue;
       }
-    } else {
-      IntDomain varDom;
-      for (int level = list.length - 1; level >= 0; level--) {
-        if (levelHadChanged[level]) {
-          varDom = new IntervalDomain();
-
-          for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
-            state = stateLevels[level][s];
-            for (int i = state.outDegree - 1; i >= 0; i--) {
-              state.add(varDom, i);
+      ValueEnumeration enumer = this.list[level].domain.valueEnumeration();
+      for (int v; enumer.hasMoreElements(); ) {
+        v = enumer.nextElement();
+        RegEdge edge = supports[level].get(v);
+        if (!edge.check(activeLevels)) {
+          boolean stillSuported = false;
+          for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
+            if (stateLevels[level][st].updateSupport(edge, v)) {
+              stillSuported = true;
+              break;
             }
           }
-
-          if (DEBUG_ALL) {
-            log.debug(
-                ">>> Variable x_{} had domain {} and now its {}",
-                level,
-                list[level].domain,
-                varDom);
+          if (!stillSuported) {
+            this.list[level].domain.inComplement(store.level, list[level], v);
+            enumer.domainHasChanged();
           }
-
-          list[level].domain.in(store.level, list[level], varDom);
         }
       }
     }
+  }
 
-    touchedIndex.update(this.currentTouchedIndex);
+  private void consistencyVarDomLevels(Store store) {
+    for (int level = list.length - 1; level >= 0; level--) {
+      if (!levelHadChanged[level]) {
+        continue;
+      }
+      IntDomain varDom = new IntervalDomain();
+      for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
+        RegState state = stateLevels[level][s];
+        for (int i = state.outDegree - 1; i >= 0; i--) {
+          state.add(varDom, i);
+        }
+      }
+      if (DEBUG_ALL) {
+        log.debug(
+            ">>> Variable x_{} had domain {} and now its {}", level, list[level].domain, varDom);
+      }
+      list[level].domain.in(store.level, list[level], varDom);
+    }
   }
 
   @Override

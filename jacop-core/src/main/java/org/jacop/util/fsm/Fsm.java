@@ -92,34 +92,28 @@ public class Fsm {
    * @return the resulting Fsm.
    */
   public Fsm union(Fsm other) {
-
     Fsm result = new Fsm();
-
     result.initState = new FsmState();
-
     result.allStates.add(result.initState);
-
-    for (FsmTransition t : initState.transitions) {
-
-      FsmState addState = t.successor.deepClone(result.allStates);
-
-      result.initState.addTransition(new FsmTransition(t.domain, addState));
-    }
-
-    for (FsmState f : finalStates) {
-      result.finalStates.add(f.deepClone(result.allStates));
-    }
-
-    for (FsmTransition t : other.initState.transitions) {
-      FsmState addState = t.successor.deepClone(result.allStates);
-      result.initState.addTransition(new FsmTransition(t.domain, addState));
-    }
-
-    for (FsmState f : other.finalStates) {
-      result.finalStates.add(f.deepClone(result.allStates));
-    }
-
+    cloneTransitionsTo(initState, result.initState, result.allStates);
+    cloneFinalStatesTo(finalStates, result.finalStates, result.allStates);
+    cloneTransitionsTo(other.initState, result.initState, result.allStates);
+    cloneFinalStatesTo(other.finalStates, result.finalStates, result.allStates);
     return result;
+  }
+
+  private static void cloneTransitionsTo(FsmState from, FsmState toState, Set<FsmState> allStates) {
+    for (FsmTransition t : from.transitions) {
+      FsmState addState = t.successor.deepClone(allStates);
+      toState.addTransition(new FsmTransition(t.domain, addState));
+    }
+  }
+
+  private static void cloneFinalStatesTo(
+      Set<FsmState> from, Set<FsmState> to, Set<FsmState> allStates) {
+    for (FsmState f : from) {
+      to.add(f.deepClone(allStates));
+    }
   }
 
   /**
@@ -129,47 +123,40 @@ public class Fsm {
    * @return the resulting Fsm.
    */
   public Fsm concatenation(Fsm other) {
-
     Fsm result = new Fsm();
-
     boolean otherIsStar =
         other.finalStates.size() == 1 && other.finalStates.contains(other.initState);
-
     result.initState = initState.deepClone(result.allStates);
 
     for (FsmState f : finalStates) {
-
       FsmState ff = f.deepClone(result.allStates);
-
       for (FsmTransition t : other.initState.transitions) {
-
         FsmState addState = t.successor.deepClone(result.allStates);
         ff.addTransition(new FsmTransition(t.domain, addState));
-
         if (otherIsStar) {
-          for (FsmState s : result.allStates) {
-            for (FsmTransition ts : s.transitions) {
-              if (ts.successor.id == other.initState.id) {
-                ts.successor = ff;
-              }
-            }
-          }
+          redirectSuccessorsTo(result.allStates, other.initState.id, ff);
           result.allStates.remove(other.initState);
         }
       }
     }
 
     if (!otherIsStar) {
-      for (FsmState f : other.finalStates) {
-        result.finalStates.add(f.deepClone(result.allStates));
-      }
+      cloneFinalStatesTo(other.finalStates, result.finalStates, result.allStates);
     } else {
-      for (FsmState f : finalStates) {
-        result.finalStates.add(f.deepClone(result.allStates));
+      cloneFinalStatesTo(finalStates, result.finalStates, result.allStates);
+    }
+    return result;
+  }
+
+  private static void redirectSuccessorsTo(
+      Set<FsmState> states, int targetId, FsmState newSuccessor) {
+    for (FsmState s : states) {
+      for (FsmTransition ts : s.transitions) {
+        if (ts.successor.id == targetId) {
+          ts.successor = newSuccessor;
+        }
       }
     }
-
-    return result;
   }
 
   /**
@@ -496,49 +483,48 @@ public class Fsm {
     // not needed as constructor is already doing it.
     // result.freePosition += vars[0].getSize();
 
-    // Part exploring all tuples and adding one by one to Mdd.
     for (int l = 0; l < vars.length; l++) {
       for (int i = 0; i < stateNumber; i++) {
         for (int j = 0; j < stateNumber; j++) {
-          // for level 0 (first variable in the tuple)
           if (outarc[l][i][j] != null && outarc[l][i][j].getSize() > 0) {
-
-            // There is an arc from state i to state j at level 0.
-            ValueEnumeration enumer = outarc[l][i][j].valueEnumeration();
-
-            while (enumer.hasMoreElements()) {
-
-              int nextElement = enumer.nextElement();
-
-              int indexOfValue = result.findPosition(nextElement, result.views[l].indexToValue);
-
-              if (positions[l * stateNumber + i] == 0 && !(l == 0 && i == initState.id)) {
-                positions[l * stateNumber + i] = result.freePosition;
-                result.freePosition += vars[l].getSize();
-                result.freePosition += result.domainLimits[l];
-              }
-
-              if (positions[(l + 1) * stateNumber + j] == 0) {
-                positions[(l + 1) * stateNumber + j] = result.freePosition;
-                if (l + 1 < vars.length) {
-                  result.freePosition += result.domainLimits[l + 1];
-                }
-              }
-
-              if (l + 1 < vars.length) {
-                result.ensureSize(positions[l * stateNumber + i] + indexOfValue + 1);
-                result.diagram[positions[l * stateNumber + i] + indexOfValue] =
-                    positions[(l + 1) * stateNumber + j];
-              } else {
-                result.ensureSize(positions[l * stateNumber + i] + indexOfValue + 1);
-                result.diagram[positions[l * stateNumber + i] + indexOfValue] = Mdd.TERMINAL;
-              }
-            }
+            addArcToMdd(result, vars, outarc[l][i][j], positions, stateNumber, l, i, j);
           }
         }
       }
     }
-
     return result;
+  }
+
+  private void addArcToMdd(
+      Mdd result,
+      IntVar[] vars,
+      IntervalDomain arcDom,
+      int[] positions,
+      int stateNumber,
+      int level,
+      int fromState,
+      int toState) {
+    ValueEnumeration enumer = arcDom.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int nextElement = enumer.nextElement();
+      int indexOfValue = result.findPosition(nextElement, result.views[level].indexToValue);
+
+      if (positions[level * stateNumber + fromState] == 0
+          && !(level == 0 && fromState == initState.id)) {
+        positions[level * stateNumber + fromState] = result.freePosition;
+        result.freePosition += vars[level].getSize();
+        result.freePosition += result.domainLimits[level];
+      }
+      if (positions[(level + 1) * stateNumber + toState] == 0) {
+        positions[(level + 1) * stateNumber + toState] = result.freePosition;
+        if (level + 1 < vars.length) {
+          result.freePosition += result.domainLimits[level + 1];
+        }
+      }
+      int pos = positions[level * stateNumber + fromState] + indexOfValue;
+      result.ensureSize(pos + 1);
+      result.diagram[pos] =
+          level + 1 < vars.length ? positions[(level + 1) * stateNumber + toState] : Mdd.TERMINAL;
+    }
   }
 }

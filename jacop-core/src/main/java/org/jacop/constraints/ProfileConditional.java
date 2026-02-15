@@ -118,86 +118,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
               i++;
             }
           } else {
-            // b > p.Min && a < p.Max; [a,b) overlaps p
-            ProfileItemCondition new1 = new ProfileItemCondition();
-            ProfileItemCondition new2 = new ProfileItemCondition();
-            ProfileItemCondition new3 = new ProfileItemCondition();
-            int[] r = {index, val};
-
-            if (TRACE_ENABLED) {
-              log.debug("Overlap of [{}..{})={}, [{}]  and {}", a, b, val, index, p);
-            }
-
-            p.overlap(new ProfileItemCondition(a, b, val, r), new1, new2, new3, exList, r);
-            if (TRACE_ENABLED) {
-              log.debug("Result = {}, {}, {}", new1, new2, new3);
-            }
-
-            remove(i);
-            // left
-            if (new1.min != -1) {
-              ProfileItemCondition previous;
-              if (i != 0) {
-                previous = get(i - 1);
-              } else {
-                previous = new ProfileItemCondition();
-              }
-              if (previous.max == new1.min && previous.value == new1.value) {
-                if (TRACE_ENABLED) {
-                  log.debug(
-                      "4a. Change [{}..{})={} at position {}", previous.min, new1.max, val, i);
-                }
-                add(i, new1);
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("4b. Adding {}", new1);
-                }
-                // !!!
-                new1.rectangles = p.rectangles;
-                add(i, new1);
-                if (MaxProfile < new1.value) {
-                  MaxProfile = new1.value;
-                }
-              }
-              i++;
-            }
-            // middle
-            if (new2.min != -1) {
-              ProfileItemCondition previous;
-              if (i != 0) {
-                previous = get(i - 1);
-              } else {
-                previous = new ProfileItemCondition();
-              }
-              if (previous.max == new2.min && previous.value == new2.value) {
-                if (TRACE_ENABLED) {
-                  log.debug("5a. Change [{}..{})={} at position {}", new2.min, new2.max, val, i);
-                }
-                add(i, new2);
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("5b. Adding {}", new2);
-                }
-                // !!!
-                add(i, new2);
-                if (MaxProfile < new2.value) {
-                  MaxProfile = new2.value;
-                }
-              }
-              i++;
-            }
-            // right
-            if (new3.min != -1 && new3.min != new3.max) {
-              if (new3.max == b) {
-                // rest of [a,b)
-                // "+b+")="+val);
-                addToProfile(index, new3.min, new3.max, val, exList);
-              } else {
-                // rest of the old profile
-                add(i, new3);
-              }
-              i++;
-            }
+            i = handleOverlapAt(i, index, a, b, val, p, exList);
             notFound = false;
           }
         }
@@ -206,6 +127,58 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     if (TRACE_ENABLED) {
       log.debug("########\n{}", this);
     }
+  }
+
+  private int handleOverlapAt(
+      int i, int index, int a, int b, int val, ProfileItemCondition p, ExclusiveList exList) {
+    ProfileItemCondition new1 = new ProfileItemCondition();
+    ProfileItemCondition new2 = new ProfileItemCondition();
+    ProfileItemCondition new3 = new ProfileItemCondition();
+    int[] r = {index, val};
+    if (TRACE_ENABLED) {
+      log.debug("Overlap of [{}..{})={}, [{}]  and {}", a, b, val, index, p);
+    }
+    p.overlap(new ProfileItemCondition(a, b, val, r), new1, new2, new3, exList, r);
+    if (TRACE_ENABLED) {
+      log.debug("Result = {}, {}, {}", new1, new2, new3);
+    }
+    remove(i);
+    i = addOverlapPart(i, new1, p, val);
+    i = addOverlapPart(i, new2, null, val);
+    if (new3.min != -1 && new3.min != new3.max) {
+      if (new3.max == b) {
+        addToProfile(index, new3.min, new3.max, val, exList);
+      } else {
+        add(i, new3);
+      }
+      i++;
+    }
+    return i;
+  }
+
+  private int addOverlapPart(int i, ProfileItemCondition part, ProfileItemCondition p, int val) {
+    if (part.min == -1) {
+      return i;
+    }
+    ProfileItemCondition previous = (i != 0) ? get(i - 1) : new ProfileItemCondition();
+    if (previous.max == part.min && previous.value == part.value) {
+      if (TRACE_ENABLED) {
+        log.debug("4a/5a. Change [{}..{})={} at position {}", previous.min, part.max, val, i);
+      }
+      add(i, part);
+    } else {
+      if (TRACE_ENABLED) {
+        log.debug("4b/5b. Adding {}", part);
+      }
+      if (p != null) {
+        part.rectangles = p.rectangles;
+      }
+      add(i, part);
+      if (MaxProfile < part.value) {
+        MaxProfile = part.value;
+      }
+    }
+    return i + 1;
   }
 
   int max() {

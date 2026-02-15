@@ -91,107 +91,97 @@ public class RegularExpressionParser {
    * @return An expression that is the root of the parse tree produced by the parser.
    */
   public Expression parse(boolean parseOneNext) {
-
     Expression c = null;
-
     boolean contin = true;
-
     while (contin) {
       contin = false;
-
       switch (token) {
         case LexicalAnalyzer.PLUS:
-          lexer.nextToken();
-          if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
-            // print error message and throw SyntaxException
-            expect(LexicalAnalyzer.BEGINNING);
-          } // if
-          Expression c2 = parse(false);
-          if (c.getType() == SUM && c2.getType() == SUM) {
-            ((Sum) c).addSum((Sum) c2);
-          }
-
-          if (c.getType() == SUM && c2.getType() != SUM) {
-            ((Sum) c).addExp(c2);
-          }
-
-          if (c.getType() != SUM && c2.getType() == SUM) {
-            ((Sum) c2).addExp(c);
-            c = c2;
-          }
-
-          if (c.getType() != SUM && c2.getType() != SUM) {
-            c = new Sum(c, c2);
-          }
-
+          c = parsePlus(c);
           break;
-
         case LexicalAnalyzer.DOT:
-          lexer.nextToken();
-          if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
-            // print error message and throw SyntaxException
-            expect(LexicalAnalyzer.BEGINNING);
-          } // if
-
-          Expression c3 = parse(true);
-          c = new Concatenation(c, c3);
-          while (token == LexicalAnalyzer.DOT) {
-            lexer.nextToken();
-            c3 = parse(true);
-            c = new Concatenation(c, c3);
-          }
-
-          if (token != LexicalAnalyzer.EOF) {
-            contin = true;
-          }
+          c = parseDot(c);
+          contin = token != LexicalAnalyzer.EOF;
           break;
-
         case LexicalAnalyzer.LEFT_PAREN:
-          lexer.nextToken();
-          c = parse(false);
-          expect(LexicalAnalyzer.RIGHT_PAREN);
-          lexer.nextToken();
-          if (token != LexicalAnalyzer.EOF) {
-            contin = true;
-          }
+          c = parseParen(c);
+          contin = token != LexicalAnalyzer.EOF;
           break;
-
         case LexicalAnalyzer.STAR:
           c = new Star(c);
           lexer.nextToken();
-          if (token != LexicalAnalyzer.EOF) {
-            contin = true;
-          }
+          contin = token != LexicalAnalyzer.EOF;
           break;
-
         case LexicalAnalyzer.WORD:
-          c = new Literal(lexer.getString());
-          lexer.nextToken();
-          if (token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF) {
-            if (token != LexicalAnalyzer.DOT
-                && token != LexicalAnalyzer.STAR
-                && token != LexicalAnalyzer.PLUS) {
-              // print error message and throw SyntaxException
-              expect(LexicalAnalyzer.OPERATOR);
-            } // if
-            contin = true;
-          }
-
+          c = parseWord(c);
+          contin = token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF;
           break;
-
         default:
           break;
       }
-
-      if (parseOneNext && !(token == LexicalAnalyzer.STAR)) {
+      if (parseOneNext && token != LexicalAnalyzer.STAR) {
         contin = false;
       }
     }
-
     if (Regular.DEBUG_ALL) {
       log.debug("Successful parsing of {}", c);
     }
+    return c;
+  }
 
+  private Expression parsePlus(Expression c) {
+    lexer.nextToken();
+    if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
+      expect(LexicalAnalyzer.BEGINNING);
+    }
+    Expression c2 = parse(false);
+    if (c.getType() == SUM && c2.getType() == SUM) {
+      ((Sum) c).addSum((Sum) c2);
+    } else if (c.getType() == SUM && c2.getType() != SUM) {
+      ((Sum) c).addExp(c2);
+    } else if (c.getType() != SUM && c2.getType() == SUM) {
+      ((Sum) c2).addExp(c);
+      c = c2;
+    } else if (c.getType() != SUM && c2.getType() != SUM) {
+      c = new Sum(c, c2);
+    }
+    return c;
+  }
+
+  private Expression parseDot(Expression c) {
+    lexer.nextToken();
+    if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
+      expect(LexicalAnalyzer.BEGINNING);
+    }
+    Expression c3 = parse(true);
+    c = new Concatenation(c, c3);
+    while (token == LexicalAnalyzer.DOT) {
+      lexer.nextToken();
+      c3 = parse(true);
+      c = new Concatenation(c, c3);
+    }
+    return c;
+  }
+
+  private Expression parseParen(Expression c) {
+    lexer.nextToken();
+    c = parse(false);
+    expect(LexicalAnalyzer.RIGHT_PAREN);
+    lexer.nextToken();
+    return c;
+  }
+
+  private Expression parseWord(Expression c) {
+    c = new Literal(lexer.getString());
+    lexer.nextToken();
+    if (token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF) {
+      if (token != LexicalAnalyzer.DOT
+          && token != LexicalAnalyzer.STAR
+          && token != LexicalAnalyzer.PLUS) {
+        expect(LexicalAnalyzer.OPERATOR);
+      }
+      // contin will be set by caller from switch
+    }
     return c;
   }
 

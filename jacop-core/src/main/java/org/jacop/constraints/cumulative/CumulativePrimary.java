@@ -269,92 +269,28 @@ class CumulativePrimary extends Constraint {
       }
 
       switch (e.type()) {
-        case PROFILE: // =========== PROFILE event ===========
+        case PROFILE:
           curProfile += e.value();
           inProfile[e.index] = e.value() > 0;
-
           if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
-            // check the tasks for pruning only at the end of all PROFILE events
-
-            if (DEBUG) {
-              log.debug("Profile at {}: {}", e.date(), curProfile);
-            }
-
-            // prune limit variable
-            if (curProfile > limit.min()) {
-              limit.domain.inMin(store.level, limit, curProfile);
-            }
-
-            for (int ti = tasksToPrune.nextSetBit(0);
-                ti >= 0;
-                ti = tasksToPrune.nextSetBit(ti + 1)) {
-
-              // ========= Pruning start variable
-              if (!startConsidered[ti]) {
-                if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
-                  startExcluded[ti] = e.date() - dur[ti] + 1;
-                  startConsidered[ti] = true;
-                }
-              } else // startExcluded[ti] != Integer.MAX_VALUE
-              if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
-                // end of excluded interval
-
-                if (DEBUG_NARR) {
-                  log.debug(
-                      ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
-                      start[ti],
-                      new IntervalDomain(startExcluded[ti], e.date() - 1));
-                }
-
-                start[ti].domain.inComplement(
-                    store.level, start[ti], startExcluded[ti], e.date() - 1);
-
-                if (DEBUG_NARR) {
-                  log.debug(" => {}", start[ti]);
-                }
-
-                startConsidered[ti] = false;
-              }
-            }
+            sweepPruningHandleProfileEnd(
+                store,
+                e,
+                curProfile,
+                limitMax,
+                tasksToPrune,
+                inProfile,
+                startExcluded,
+                startConsidered);
           }
-
           break;
-
-        case PRUNE_START: // =========== start of a task ===========
-          int ti = e.index;
-
-          // ========= for start pruning
-          if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
-            startExcluded[ti] = e.date();
-            startConsidered[ti] = true;
-          }
-
-          tasksToPrune.set(ti);
+        case PRUNE_START:
+          sweepPruningHandlePruneStart(
+              e, limitMax, curProfile, inProfile, startExcluded, startConsidered, tasksToPrune);
           break;
-
-        case PRUNE_END: // =========== end of a task ===========
-          ti = e.index;
-
-          // ========= pruning start variable
-          if (startConsidered[ti]) {
-            // task ends and we remove forbidden area
-
-            if (DEBUG_NARR) {
-              log.debug(
-                  ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
-                  start[ti],
-                  startExcluded[ti] - 1,
-                  start[ti]);
-            }
-
-            start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
-          }
-
-          startConsidered[ti] = false;
-
-          tasksToPrune.set(ti, false);
+        case PRUNE_END:
+          sweepPruningHandlePruneEnd(store, e, startConsidered, startExcluded, tasksToPrune);
           break;
-
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
       }
@@ -363,6 +299,74 @@ class CumulativePrimary extends Constraint {
     if (!store.propagationHasOccurred) {
       removeNotUsedProfleTasks();
     }
+  }
+
+  private void sweepPruningHandleProfileEnd(
+      Store store,
+      Event e,
+      int curProfile,
+      int limitMax,
+      BitSet tasksToPrune,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered) {
+    if (DEBUG) {
+      log.debug("Profile at {}: {}", e.date(), curProfile);
+    }
+    if (curProfile > limit.min()) {
+      limit.domain.inMin(store.level, limit, curProfile);
+    }
+    for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
+      if (!startConsidered[ti]) {
+        if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
+          startExcluded[ti] = e.date() - dur[ti] + 1;
+          startConsidered[ti] = true;
+        }
+      } else if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
+        if (DEBUG_NARR) {
+          log.debug(
+              ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
+              start[ti],
+              new IntervalDomain(startExcluded[ti], e.date() - 1));
+          log.debug(" => {}", start[ti]);
+        }
+        start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], e.date() - 1);
+        startConsidered[ti] = false;
+      }
+    }
+  }
+
+  private void sweepPruningHandlePruneStart(
+      Event e,
+      int limitMax,
+      int curProfile,
+      boolean[] inProfile,
+      int[] startExcluded,
+      boolean[] startConsidered,
+      BitSet tasksToPrune) {
+    int ti = e.index;
+    if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
+      startExcluded[ti] = e.date();
+      startConsidered[ti] = true;
+    }
+    tasksToPrune.set(ti);
+  }
+
+  private void sweepPruningHandlePruneEnd(
+      Store store, Event e, boolean[] startConsidered, int[] startExcluded, BitSet tasksToPrune) {
+    int ti = e.index;
+    if (startConsidered[ti]) {
+      if (DEBUG_NARR) {
+        log.debug(
+            ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
+            start[ti],
+            startExcluded[ti] - 1,
+            start[ti]);
+      }
+      start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
+    }
+    startConsidered[ti] = false;
+    tasksToPrune.set(ti, false);
   }
 
   private void removeNotUsedProfleTasks() {
