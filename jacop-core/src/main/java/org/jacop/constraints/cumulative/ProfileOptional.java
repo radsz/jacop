@@ -186,43 +186,55 @@ public class ProfileOptional {
 
   void pruneOpt(Store store, TaskView[] tn, IntVar[] opt) {
 
+    for (int i = 0; i < tn.length; i++) {
+      pruneTaskIfInfeasible(store, tn, opt, i);
+    }
+  }
+
+  /**
+   * Prunes opt[i] to 0 if the optional task i cannot be present (infeasible w.r.t. profile).
+   *
+   * @param store the store
+   * @param tn task views
+   * @param opt optional task variables
+   * @param i task index
+   */
+  private void pruneTaskIfInfeasible(Store store, TaskView[] tn, IntVar[] opt, int i) {
+    if (opt[i].singleton()) {
+      return;
+    }
+
     int limit = this.limit.max();
     int n = utilizationProfile.size();
+    int dur = tn[i].dur().min();
+    int res = tn[i].res().min();
+    int sMin = tn[i].start().min();
+    int sMax = tn[i].start().max();
 
-    L1:
-    for (int i = 0; i < tn.length; i++) {
-      if (!opt[i].singleton()) {
-        int dur = tn[i].dur().min();
-        int res = tn[i].res().min();
-        int sMin = tn[i].start().min();
-        int sMax = tn[i].start().max();
+    boolean ok = false;
+    for (int j = 0; j < n; j++) {
+      Event e = utilizationProfile.get(j);
+      int t = e.date();
+      int u = e.value();
 
-        boolean ok = false;
-        for (int j = 0; j < n; j++) {
-          Event e = utilizationProfile.get(j);
-          int t = e.date();
-          int u = e.value();
-
-          if (sMin + dur <= t) {
-            ok = true;
-            break;
-          }
-          if (u + res > limit && j + 1 < n) {
-            sMin = utilizationProfile.get(j + 1).date();
-            if (sMin > sMax) {
-              opt[i].domain.in(store.level, opt[i], 0, 0);
-              continue L1;
-            }
-          }
-        }
-        if (sMax > utilizationProfile.get(n - 1).date()) {
-          continue;
-        }
-
-        if (!ok) {
+      if (sMin + dur <= t) {
+        ok = true;
+        break;
+      }
+      if (u + res > limit && j + 1 < n) {
+        sMin = utilizationProfile.get(j + 1).date();
+        if (sMin > sMax) {
           opt[i].domain.in(store.level, opt[i], 0, 0);
+          return;
         }
       }
+    }
+    if (sMax > utilizationProfile.get(n - 1).date()) {
+      return;
+    }
+
+    if (!ok) {
+      opt[i].domain.in(store.level, opt[i], 0, 0);
     }
   }
 

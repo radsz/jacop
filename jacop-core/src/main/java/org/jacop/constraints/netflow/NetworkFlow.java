@@ -204,6 +204,52 @@ public class NetworkFlow extends Constraint
     }
   }
 
+  /** Performs one simplex iteration: run simplex, check feasibility, prune cost min, analyze. */
+  private void runOneSimplexIteration(Store store) {
+    int result = network.networkSimplex(9999999);
+
+    if (result == -2) {
+      throw Store.failException;
+    }
+
+    int cost = (int) network.cost((long) costVariable.max() + 1);
+    if (cost > costVariable.max()) {
+      throw Store.failException;
+    }
+    if (cost > costVariable.min()) {
+      costVariable.domain.inMin(store.level, costVariable, cost);
+    }
+
+    int costLimit = costVariable.max() - costVariable.min();
+    network.pruneNodesWithSmallDegree();
+    network.analyze(costLimit);
+
+    assert checkFlow(network);
+    assert checkStructure(network);
+  }
+
+  /** Prunes cost minimum from current flow cost, then if all vars are ground, prunes cost max. */
+  private void finishConsistencyCostPruning(Store store) {
+    int cost = (int) network.cost((long) costVariable.max() + 1);
+    if (cost > costVariable.max()) {
+      throw Store.failException;
+    }
+    if (cost > costVariable.min()) {
+      costVariable.domain.inMin(store.level, costVariable, cost);
+    }
+
+    boolean allVarsGround = true;
+    for (IntVar v : map.keySet()) {
+      if (!v.singleton()) {
+        allVarsGround = false;
+        break;
+      }
+    }
+    if (allVarsGround) {
+      costVariable.domain.inMax(store.level, costVariable, cost);
+    }
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -232,61 +278,11 @@ public class NetworkFlow extends Constraint
         log.debug("--------- => Iteration {}", iteration);
       }
 
-      // recompute flow
-      int result = network.networkSimplex(9999999);
-
-      // is flow infeasible ?
-      if (result == -2) {
-        throw Store.failException;
-      }
-
-      // compute cost and throw failure on overflow
-      int cost = (int) network.cost((long) costVariable.max() + 1);
-      if (cost > costVariable.max()) {
-        throw Store.failException;
-      }
-      // prune minimum cost
-      if (cost > costVariable.min()) {
-        costVariable.domain.inMin(store.level, costVariable, cost);
-      }
-
-      // perform domain pruning
-      int costLimit = costVariable.max() - costVariable.min();
-
-      network.pruneNodesWithSmallDegree();
-      network.analyze(costLimit);
-
-      assert checkFlow(network);
-      assert checkStructure(network);
-
+      runOneSimplexIteration(store);
       updateGraph();
     }
 
-    // compute cost and throw failure on overflow
-    int cost = (int) network.cost((long) costVariable.max() + 1);
-    if (cost > costVariable.max()) {
-      throw Store.failException;
-    }
-    // prune minimum cost
-    if (cost > costVariable.min()) {
-      costVariable.domain.inMin(store.level, costVariable, cost);
-    }
-
-    // KKU, 2016-02-08, max value of cost variable is equal min
-    // if all constraint variables are ground.
-    // It is difficult to compute the better upper bound since we have three types of variables
-    // flow, cost weight and structure. Specially structure variables are difficult since
-    // they "dynamically" make arcs active/inactive.
-    boolean allVarsGround = true;
-    for (IntVar v : map.keySet()) {
-      if (!v.singleton()) {
-        allVarsGround = false;
-        break;
-      }
-    }
-    if (allVarsGround) {
-      costVariable.domain.inMax(store.level, costVariable, cost);
-    }
+    finishConsistencyCostPruning(store);
   }
 
   @Override

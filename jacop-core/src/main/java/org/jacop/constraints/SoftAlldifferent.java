@@ -82,54 +82,29 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
    * @return list of constraints representing the primitive decomposition
    */
   public List<Constraint> primitiveDecomposition(Store store) {
-
     if (decomposition == null) {
-
-      decomposition = new ArrayList<>();
-
-      if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
-
-        int n = xVars.length;
-        List<IntVar> costs = new ArrayList<>(n * (n - 1));
-        for (int i = 0; i < n; i++) {
-          for (int j = 0; j < i; j++) {
-            IntVar v;
-            costs.add(v = new BooleanVar(store));
-            decomposition.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
-          }
-        }
-        decomposition.add(new SumInt(costs, "==", costVar));
-
-      } else {
-        throw new UnsupportedOperationException(
-            "Unsupported violation measure " + violationMeasure);
-      }
-
+      decomposition = buildDecompositionBasedConstraints(store);
       return decomposition;
-    } else {
-
-      List<Constraint> result = new ArrayList<>();
-
-      if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
-
-        int n = xVars.length;
-        List<IntVar> costs = new ArrayList<>(n * (n - 1));
-        for (int i = 0; i < n; i++) {
-          for (int j = 0; j < i; j++) {
-            IntVar v;
-            costs.add(v = new BooleanVar(store));
-            result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
-          }
-        }
-        result.add(new SumInt(costs, "==", costVar));
-
-      } else {
-        throw new UnsupportedOperationException(
-            "Unsupported violation measure " + violationMeasure);
-      }
-
-      return result;
     }
+    return buildDecompositionBasedConstraints(store);
+  }
+
+  private List<Constraint> buildDecompositionBasedConstraints(Store store) {
+    if (violationMeasure != ViolationMeasure.DECOMPOSITION_BASED) {
+      throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
+    }
+    int n = xVars.length;
+    List<IntVar> costs = new ArrayList<>(n * (n - 1));
+    List<Constraint> result = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < i; j++) {
+        IntVar v = new BooleanVar(store);
+        costs.add(v);
+        result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
+      }
+    }
+    result.add(new SumInt(costs, "==", costVar));
+    return result;
   }
 
   @Override

@@ -284,58 +284,72 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
    */
   private boolean finalizeSearch(boolean raisedLevel, int exitSolutionCount) {
     getStatistics();
+    notifyExitListener(exitSolutionCount);
+    aggregateTimeoutFromSubSearches();
+    logTimeoutIfOccurred();
+    if (noSolutions > 0) {
+      return finalizeWithSolutionsFound(raisedLevel);
+    }
+    return finalizeWithNoSolutions(raisedLevel);
+  }
 
+  private void notifyExitListener(int exitSolutionCount) {
     if (exitListener != null) {
       exitListener.executedAtExit(store, exitSolutionCount);
     }
+  }
 
+  private void aggregateTimeoutFromSubSearches() {
     for (int i = 0; i < n; i++) {
       timeOutOccured |= search.get(2 * i).timeOutOccured;
     }
+  }
 
+  private void logTimeoutIfOccurred() {
     if (timeOutOccured && printInfo) {
       log.info("Time-out {}s", tOut);
     }
+  }
 
-    if (noSolutions > 0) {
-      if (assignSolution) {
-        assignSolution();
-      }
-
-      if (printInfo && costVariable != null) {
-        CostVariableHandler costHandler =
-            SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-        if (costHandler != null) {
-          double costValue = costHandler.getCostValue(costVariable);
-          log.info(SOLUTION_COST_IS, costValue);
-        } else if (costVariable instanceof IntVar) {
-          log.info(SOLUTION_COST_IS, search.getFirst().costValue);
-        }
-      }
-
-      if (printInfo) {
-        log.info("{}", statistics());
-      }
-
-      if (raisedLevel) {
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-      }
-
-      return true;
-    } else {
-      if (printInfo) {
-        log.info("No solution found.");
-        log.info("{}", statistics());
-      }
-
-      if (raisedLevel) {
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-      }
-
-      return false;
+  private boolean finalizeWithSolutionsFound(boolean raisedLevel) {
+    if (assignSolution) {
+      assignSolution();
     }
+    logSolutionCostIfNeeded();
+    if (printInfo) {
+      log.info("{}", statistics());
+    }
+    restoreStoreLevelIfRaised(raisedLevel);
+    return true;
+  }
+
+  private void logSolutionCostIfNeeded() {
+    if (printInfo && costVariable != null) {
+      CostVariableHandler costHandler =
+          SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+      if (costHandler != null) {
+        double costValue = costHandler.getCostValue(costVariable);
+        log.info(SOLUTION_COST_IS, costValue);
+      } else if (costVariable instanceof IntVar) {
+        log.info(SOLUTION_COST_IS, search.getFirst().costValue);
+      }
+    }
+  }
+
+  private void restoreStoreLevelIfRaised(boolean raisedLevel) {
+    if (raisedLevel) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+  }
+
+  private boolean finalizeWithNoSolutions(boolean raisedLevel) {
+    if (printInfo) {
+      log.info("No solution found.");
+      log.info("{}", statistics());
+    }
+    restoreStoreLevelIfRaised(raisedLevel);
+    return false;
   }
 
   /** {@inheritDoc} */
@@ -419,7 +433,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   public boolean labeling() {
 
     boolean raisedLevel = initializeSearch(allVars.getFirst().getStore());
+    configureCostVariableForLabeling();
+    depth = store.level;
+    cost = null;
 
+    boolean result = executeSubSearchWithResult(true);
+    return labelingPostExecution(raisedLevel, result);
+  }
+
+  private void configureCostVariableForLabeling() {
     if (costVariable != null) {
       for (DepthFirstSearch<T> dfs : search) {
         dfs.setCostVar(costVariable);
@@ -428,74 +450,48 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
       optimize = true;
       cost = null;
-
       if (solutionsLimit == -1) {
         solutionsLimit = Integer.MAX_VALUE;
       }
     }
-
-    depth = store.level;
-    cost = null;
-
     if (costVariable == null) {
       optimize = false;
     }
+  }
 
-    boolean result = executeSubSearchWithResult(true);
-
+  private boolean labelingPostExecution(boolean raisedLevel, boolean result) {
     getStatistics();
-
-    if (exitListener != null) {
-      exitListener.executedAtExit(store, solutionListener.solutionsNo());
-    }
-
-    for (int i = 0; i < n; i++) {
-      timeOutOccured |= search.get(2 * i).timeOutOccured;
-    }
-
-    if (timeOutOccured && printInfo) {
-      log.info("Time-out {}s", tOut);
-    }
-
+    notifyExitListener(solutionListener.solutionsNo());
+    aggregateTimeoutFromSubSearches();
+    logTimeoutIfOccurred();
     if (noSolutions > 0) {
-      // update number solutions in solution listener; otherwise it will be zero :(
-      ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
-
-      if (assignSolution) {
-        assignSolution();
-      }
-
-      if (printInfo && costVariable != null && costVariable instanceof IntVar) {
-        log.info(SOLUTION_COST_IS, costValue);
-      }
-
-      if (printInfo) {
-        log.info("{}", statistics());
-      }
-
-      if (raisedLevel) {
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-      }
-
-      if (masterSearch == null) {
-        return true;
-      } else {
-        return result;
-      }
-    } else {
-      if (printInfo) {
-        log.info("No solution found.");
-        log.info("{}", statistics());
-      }
-
-      if (raisedLevel) {
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-      }
-
-      return false;
+      return labelingWithSolutionsFound(raisedLevel, result);
     }
+    return labelingWithNoSolutions(raisedLevel);
+  }
+
+  private boolean labelingWithSolutionsFound(boolean raisedLevel, boolean result) {
+    ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
+    if (assignSolution) {
+      assignSolution();
+    }
+    if (printInfo && costVariable != null && costVariable instanceof IntVar) {
+      log.info(SOLUTION_COST_IS, costValue);
+    }
+    if (printInfo) {
+      log.info("{}", statistics());
+    }
+    restoreStoreLevelIfRaised(raisedLevel);
+    return masterSearch == null ? true : result;
+  }
+
+  private boolean labelingWithNoSolutions(boolean raisedLevel) {
+    if (printInfo) {
+      log.info("No solution found.");
+      log.info("{}", statistics());
+    }
+    restoreStoreLevelIfRaised(raisedLevel);
+    return false;
   }
 
   @Override

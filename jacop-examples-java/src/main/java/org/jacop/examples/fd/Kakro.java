@@ -82,12 +82,14 @@ public class Kakro extends ExampleFd {
 
     store = new Store();
     vars = new ArrayList<>();
-
     elements = new IntVar[noRows][noColumns];
+    createElementsAndVariables();
+    addRowConstraints();
+    addColumnConstraints();
+  }
 
+  private void createElementsAndVariables() {
     IntVar zero = new IntVar(store, "0", 0, 0);
-
-    // Creating variables.
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         if (rowDescription[i][j] == 1) {
@@ -100,27 +102,26 @@ public class Kakro extends ExampleFd {
         }
       }
     }
+  }
 
-    // Creating constraints for rows.
+  private void addRowConstraints() {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         if (rowDescription[i][j] > 1) {
           IntVar sum =
               new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
-
           List<IntVar> row = new ArrayList<>();
-
           for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++) {
             row.add(elements[i][m]);
           }
-
           store.impose(new SumInt(row, "==", sum));
           store.impose(new Alldiff(row));
         }
       }
     }
+  }
 
-    // Creating constraints for columns.
+  private void addColumnConstraints() {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         if (columnDescription[i][j] < 0) {
@@ -130,13 +131,10 @@ public class Kakro extends ExampleFd {
                   "sumCol" + i + "-" + j,
                   -columnDescription[i][j],
                   -columnDescription[i][j]);
-
           List<IntVar> column = new ArrayList<>();
-
           for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++) {
             column.add(elements[m][j]);
           }
-
           store.impose(new SumInt(column, "==", sum));
           store.impose(new Alldiff(column));
         }

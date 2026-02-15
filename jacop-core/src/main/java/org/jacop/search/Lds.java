@@ -77,45 +77,37 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
   public boolean leftChild(T v, int value, boolean status) {
 
     if (!status) {
-      // we will enter right node if we can, thus increasing the
-      // discrepancy.
-      noDiscrepancies++;
+      return handleLeftChildFailureVar(v, value);
+    }
+    return true;
+  }
 
-      if (noDiscrepancies >= maxNoDiscrepancies) {
-
-        // maximum number of discrepancies reached, returning false
-        // since we do not want to
-        if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(v, value, false);
-          }
-        }
-
+  private boolean handleLeftChildFailureVar(T v, int value) {
+    noDiscrepancies++;
+    if (noDiscrepancies >= maxNoDiscrepancies) {
+      notifyExitChildListenersVar(v, value);
+      noDiscrepancies--;
+      return false;
+    }
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(v, value, false);
+      }
+      if (!code) {
         noDiscrepancies--;
-        return false;
+      }
+      return code;
+    }
+    return true;
+  }
 
-      } else {
-
-        if (exitChildListeners != null) {
-          boolean code = false;
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            code |= exitChildListener.leftChild(v, value, false);
-          }
-
-          // the children listeners disallow entering the right child
-          // so there will be no disrepancy as counted.
-          if (!code) {
-            noDiscrepancies--;
-          }
-          return code;
-        }
-
-        return true;
+  private void notifyExitChildListenersVar(T v, int value) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.leftChild(v, value, false);
       }
     }
-
-    // the search exits with the solution, so no discrepancy is required.
-    return true;
   }
 
   /**
@@ -128,45 +120,37 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
 
     if (!status) {
-      // we will enter right node if we can, thus increasing the
-      // discrepancy.
-      noDiscrepancies++;
+      return handleLeftChildFailureChoice(choice);
+    }
+    return true;
+  }
 
-      if (noDiscrepancies >= maxNoDiscrepancies) {
-
-        // maximum number of discrepancies reached, returning false
-        // since we do not want to
-        if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(choice, false);
-          }
-        }
-
+  private boolean handleLeftChildFailureChoice(PrimitiveConstraint choice) {
+    noDiscrepancies++;
+    if (noDiscrepancies >= maxNoDiscrepancies) {
+      notifyExitChildListenersChoice(choice);
+      noDiscrepancies--;
+      return false;
+    }
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, false);
+      }
+      if (!code) {
         noDiscrepancies--;
-        return false;
+      }
+      return code;
+    }
+    return true;
+  }
 
-      } else {
-
-        if (exitChildListeners != null) {
-          boolean code = false;
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            code |= exitChildListener.leftChild(choice, false);
-          }
-
-          // the children listeners disallow entering the right child
-          // so there will be no disrepancy as counted.
-          if (!code) {
-            noDiscrepancies--;
-          }
-          return code;
-        }
-
-        return true;
+  private void notifyExitChildListenersChoice(PrimitiveConstraint choice) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.leftChild(choice, false);
       }
     }
-
-    // solution was found, no discrepancy calculation needed.
-    return true;
   }
 
   /**

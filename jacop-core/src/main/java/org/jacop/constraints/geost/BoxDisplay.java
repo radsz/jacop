@@ -135,22 +135,28 @@ public class BoxDisplay extends JFrame {
    */
   public void displayState(int domainWidth, boolean groundedOnly, boolean withFrames, Geost geost) {
 
-    Color color;
-
     if (withFrames) {
-      for (InternalConstraint c : geost.internalConstraints) {
-        if (c instanceof ObstacleObjectFrame frame) {
-          Color frameColor = Color.GRAY; // new Color(c.hashCode());
-          for (Dbox fp : frame.frame) {
-            display2dBox(fp, frameColor, true);
-          }
+      displayObstacleFrames(geost);
+    }
+
+    displayObjectsForState(domainWidth, groundedOnly, geost);
+  }
+
+  private void displayObstacleFrames(Geost geost) {
+    for (InternalConstraint c : geost.internalConstraints) {
+      if (c instanceof ObstacleObjectFrame frame) {
+        Color frameColor = Color.GRAY;
+        for (Dbox fp : frame.frame) {
+          display2dBox(fp, frameColor, true);
         }
       }
     }
+  }
 
+  private void displayObjectsForState(int domainWidth, boolean groundedOnly, Geost geost) {
     for (GeostObject o : geost.objects) {
       if (!groundedOnly || o.isGrounded()) {
-        color = new Color(o.hashCode());
+        Color color = new Color(o.hashCode());
         int heightMin = 0;
         int heightMax = 0;
         if (o.coords.length > 2) {
@@ -163,7 +169,6 @@ public class BoxDisplay extends JFrame {
           for (int timeVal = o.start.min(); timeVal < timeMax; timeVal++) {
             xCellsShift = timeVal * (domainWidth + 1);
             yCellsShift = height * (domainWidth + 1);
-
             display3dGeostObjectSlice(geost, o, color, height);
           }
         }
@@ -199,35 +204,38 @@ public class BoxDisplay extends JFrame {
    * @param fill should the object be filled.
    */
   public void display2dBox(Dbox b, Color color, boolean fill) {
-    // a box that has dimension more than 2 should only be drawn if it cuts the plane
-    boolean shouldDraw = true;
-    if (b.origin.length > 2) {
-      for (int i = 2; i < b.origin.length; i++) {
-        if (b.origin[i] > 0 || b.origin[i] + b.length[i] < 0) {
-          shouldDraw = false;
-          break;
-        }
+    if (!dboxCutsPlane(b)) {
+      return;
+    }
+    drawDboxRect(b, color, fill);
+    repaint();
+  }
+
+  /** Returns true if the box (when dim > 2) cuts the z=0 plane, so it should be drawn in 2D. */
+  private boolean dboxCutsPlane(Dbox b) {
+    if (b.origin.length <= 2) {
+      return true;
+    }
+    for (int i = 2; i < b.origin.length; i++) {
+      if (b.origin[i] > 0 || b.origin[i] + b.length[i] < 0) {
+        return false;
       }
     }
-    if (shouldDraw) {
-      Graphics g = bufferImage.getGraphics();
-      int height = this.getContentPane().getHeight() - 10;
-      g.setColor(color);
-      if (fill) {
-        g.fillRect(
-            10 + (xCellsShift + b.origin[0]) * pixelsPerUnit,
-            height - (yCellsShift + b.origin[1] + b.length[1]) * pixelsPerUnit,
-            b.length[0] > 0 ? b.length[0] * pixelsPerUnit - 1 : 1,
-            b.length[1] > 0 ? b.length[1] * pixelsPerUnit - 1 : 1);
-      } else {
-        g.drawRect(
-            10 + (xCellsShift + b.origin[0]) * pixelsPerUnit,
-            height - (yCellsShift + b.origin[1] + b.length[1]) * pixelsPerUnit,
-            b.length[0] > 0 ? b.length[0] * pixelsPerUnit - 1 : 1,
-            b.length[1] > 0 ? b.length[1] * pixelsPerUnit - 1 : 1);
-      }
+    return true;
+  }
 
-      repaint();
+  private void drawDboxRect(Dbox b, Color color, boolean fill) {
+    Graphics g = bufferImage.getGraphics();
+    int height = this.getContentPane().getHeight() - 10;
+    g.setColor(color);
+    int x = 10 + (xCellsShift + b.origin[0]) * pixelsPerUnit;
+    int y = height - (yCellsShift + b.origin[1] + b.length[1]) * pixelsPerUnit;
+    int w = b.length[0] > 0 ? b.length[0] * pixelsPerUnit - 1 : 1;
+    int h = b.length[1] > 0 ? b.length[1] * pixelsPerUnit - 1 : 1;
+    if (fill) {
+      g.fillRect(x, y, w, h);
+    } else {
+      g.drawRect(x, y, w, h);
     }
   }
 

@@ -338,55 +338,46 @@ public class MineSweeper extends ExampleFd {
    */
   public static int[][] readFile(String file) {
 
-    int[][] problem = null; // The problem matrix
-    int r = 0;
-    int c = 0;
-
     IO.println("readFile(" + file + ")");
-    int lineCount = 0;
 
     try (BufferedReader inr =
         new BufferedReader(
             new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-
-      String str;
-      while ((str = inr.readLine()) != null && !str.isEmpty()) {
-
-        str = str.trim();
-
-        // ignore comments
-        if (str.startsWith("#") || str.startsWith("%")) {
-          continue;
-        }
-
-        IO.println(str);
-        if (lineCount == 0) {
-          r = Integer.parseInt(str); // number of rows
-        } else if (lineCount == 1) {
-          c = Integer.parseInt(str); // number of columns
-          problem = new int[r][c];
-        } else {
-          // the problem matrix
-          String[] row = str.split("");
-          for (int j = 1; j <= c; j++) {
-            String s = row[j];
-            if (".".equals(s)) {
-              problem[lineCount - 2][j - 1] = -1;
-            } else {
-              problem[lineCount - 2][j - 1] = Integer.parseInt(s);
-            }
-          }
-        }
-
-        lineCount++;
-      } // end while
-
-      // inr.close(); not needed; auto close
-
+      return parseMineSweeperLines(readNonCommentLines(inr));
     } catch (IOException e) {
       IO.println(e);
+      return null;
     }
+  }
 
+  private static List<String> readNonCommentLines(BufferedReader inr) throws IOException {
+    List<String> lines = new ArrayList<>();
+    String str;
+    while ((str = inr.readLine()) != null && !str.isEmpty()) {
+      str = str.trim();
+      if (str.startsWith("#") || str.startsWith("%")) {
+        continue;
+      }
+      IO.println(str);
+      lines.add(str);
+    }
+    return lines;
+  }
+
+  private static int[][] parseMineSweeperLines(List<String> lines) {
+    if (lines.isEmpty()) {
+      return null;
+    }
+    int r = Integer.parseInt(lines.get(0));
+    int c = Integer.parseInt(lines.get(1));
+    int[][] problem = new int[r][c];
+    for (int lineIndex = 2; lineIndex < lines.size(); lineIndex++) {
+      String[] row = lines.get(lineIndex).split("");
+      for (int j = 1; j <= c; j++) {
+        String s = row[j];
+        problem[lineIndex - 2][j - 1] = ".".equals(s) ? -1 : Integer.parseInt(s);
+      }
+    }
     return problem;
   } // end readFile
 
@@ -452,49 +443,44 @@ public class MineSweeper extends ExampleFd {
     r = problem.length;
     c = problem[0].length;
 
-    // Initialize the constraint variables.
+    initMinesAndGameVariables();
+    addMineSweeperConstraints();
+  } // end model
+
+  private void initMinesAndGameVariables() {
     mines = new IntVar[r][c];
     game = new IntVar[r][c];
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
-
-        // 0: no mine, 1: mine
         mines[i][j] = new BooleanVar(store, "m_" + i + "_" + j);
-
-        // mirrors the problem matrix
         game[i][j] = new IntVar(store, "g_" + i + "_" + j, -1, 8);
       }
     }
+  }
 
-    // Add the constraints
+  private void addMineSweeperConstraints() {
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
-
-        // This is a known value of neighbours
         if (problem[i][j] > X) {
+          imposeCellConstraints(i, j);
+        }
+      }
+    }
+  }
 
-          // mirroring the problem matrix.
-          store.impose(new XeqC(game[i][j], problem[i][j]));
-
-          // This could not be a mine.
-          store.impose(new XeqC(mines[i][j], 0));
-
-          // Sum the number of neighbours: same as game[i][j].
-          // Note: Maybe this could be modelled more elegant
-          // instead of using an ArrayList.
-          List<IntVar> lst = new ArrayList<>();
-          for (int a = -1; a <= 1; a++) {
-            for (int b = -1; b <= 1; b++) {
-              if (i + a >= 0 && j + b >= 0 && i + a < r && j + b < c) {
-                lst.add(mines[i + a][j + b]);
-              }
-            }
-          }
-          store.impose(new SumInt(lst, "==", game[i][j]));
-        } // end if problem[i][j] > X
-      } // end for j
-    } // end for i
-  } // end model
+  private void imposeCellConstraints(int i, int j) {
+    store.impose(new XeqC(game[i][j], problem[i][j]));
+    store.impose(new XeqC(mines[i][j], 0));
+    List<IntVar> lst = new ArrayList<>();
+    for (int a = -1; a <= 1; a++) {
+      for (int b = -1; b <= 1; b++) {
+        if (i + a >= 0 && j + b >= 0 && i + a < r && j + b < c) {
+          lst.add(mines[i + a][j + b]);
+        }
+      }
+    }
+    store.impose(new SumInt(lst, "==", game[i][j]));
+  }
 
   /**
    * It executes special search with solution printing to present the solutions.

@@ -170,51 +170,58 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
       index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
     }
 
-    if (valueHasChanged) {
-      if (value.max() == 0) {
-        index.domain.in(store.level, index, indexAtZero);
-        removeConstraint();
-        return;
-      } else if (value.min() == 1) {
-        index.domain.in(store.level, index, indexAtOne);
-        removeConstraint();
-        return;
-      }
+    if (valueHasChanged && applyValueChange(store)) {
+      return;
     }
 
     if (indexHasChanged) {
-
-      boolean zeros = false;
-      boolean ones = false;
-      ValueEnumeration e = index.domain.valueEnumeration();
-      do {
-        int idx = e.nextElement();
-        int i = idx - 1 - indexOffset;
-        int valueOfElement = list[i];
-
-        if (valueOfElement == 0) {
-          zeros = true;
-        } else if (valueOfElement == 1) {
-          ones = true;
-        }
-      } while (!(zeros && ones) && e.hasMoreElements());
-
-      if (zeros && !ones) {
-        value.domain.inValue(store.level, value, 0);
-        removeConstraint();
-      } else if (!zeros && ones) {
-        value.domain.inValue(store.level, value, 1);
-        removeConstraint();
-      }
-
+      applyIndexChange(store);
       indexHasChanged = false;
       valueHasChanged = false;
+    }
+  }
+
+  private boolean applyValueChange(Store store) {
+    if (value.max() == 0) {
+      index.domain.in(store.level, index, indexAtZero);
+      removeConstraint();
+      return true;
+    }
+    if (value.min() == 1) {
+      index.domain.in(store.level, index, indexAtOne);
+      removeConstraint();
+      return true;
+    }
+    return false;
+  }
+
+  private void applyIndexChange(Store store) {
+    boolean zeros = false;
+    boolean ones = false;
+    ValueEnumeration e = index.domain.valueEnumeration();
+    do {
+      int idx = e.nextElement();
+      int i = idx - 1 - indexOffset;
+      int valueOfElement = list[i];
+
+      if (valueOfElement == 0) {
+        zeros = true;
+      } else if (valueOfElement == 1) {
+        ones = true;
+      }
+    } while (!(zeros && ones) && e.hasMoreElements());
+
+    if (zeros && !ones) {
+      value.domain.inValue(store.level, value, 0);
+      removeConstraint();
+    } else if (!zeros && ones) {
+      value.domain.inValue(store.level, value, 1);
+      removeConstraint();
     }
   }
 

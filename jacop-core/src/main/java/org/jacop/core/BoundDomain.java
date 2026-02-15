@@ -65,6 +65,33 @@ class BoundDomain extends IntDomain {
     ((IntVar) v).domain = result;
   }
 
+  private void notifyDomainChange(Var v, boolean singleton) {
+    if (singleton) {
+      v.domainHasChanged(GROUND);
+    } else {
+      v.domainHasChanged(BOUND);
+    }
+  }
+
+  private void applyInPlace(int min, int max) {
+    if (this.minBound < min) {
+      this.minBound = min;
+    }
+    if (this.maxBound > max) {
+      this.maxBound = max;
+    }
+  }
+
+  private BoundDomain computeInResult(int min, int max) {
+    if (this.minBound < min) {
+      if (this.maxBound > max) {
+        return new BoundDomain(min, max);
+      }
+      return new BoundDomain(min, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, max);
+  }
+
   /**
    * It is a constructor which will create an empty Bound domain. An empty domain has minimum larger
    * than maximum.
@@ -307,45 +334,13 @@ class BoundDomain extends IntDomain {
     }
 
     if (stamp == storeLevel) {
-
-      if (this.minBound < min) {
-        this.minBound = min;
-      }
-
-      if (this.maxBound > max) {
-        this.maxBound = max;
-      }
-
-      if (this.minBound == this.maxBound) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
-
+      applyInPlace(min, max);
+      notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-
       assert stamp < storeLevel;
-
-      BoundDomain result;
-
-      if (this.minBound < min) {
-        if (this.maxBound > max) {
-          result = new BoundDomain(min, max);
-        } else {
-          result = new BoundDomain(min, this.maxBound);
-        }
-      } else {
-        // case this.minBound, this.maxBound means no change which is handled above.
-        result = new BoundDomain(this.minBound, max);
-      }
-
+      BoundDomain result = computeInResult(min, max);
       installResultDomain(result, storeLevel, v);
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
+      notifyDomainChange(v, result.singleton());
     }
   }
 
@@ -382,6 +377,13 @@ class BoundDomain extends IntDomain {
     v.domainHasChanged(GROUND);
   }
 
+  private BoundDomain computeInComplementResult(int complement) {
+    if (this.minBound == complement) {
+      return new BoundDomain(this.minBound + 1, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, this.maxBound - 1);
+  }
+
   @Override
   public void inComplement(int storeLevel, Var v, int complement) {
 
@@ -395,41 +397,26 @@ class BoundDomain extends IntDomain {
     }
 
     if (stamp == storeLevel) {
-
       if (this.minBound == complement) {
         this.minBound++;
       } else {
-        // Assumes that check that complement must be equal to one of the bounds is
-        // done above.
+        // Assumes that check that complement must be equal to one of the bounds is done above.
         this.maxBound--;
       }
-
-      if (this.minBound == this.maxBound) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
-
+      notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-
       assert stamp < storeLevel;
-
-      BoundDomain result;
-
-      if (this.minBound == complement) {
-        result = new BoundDomain(this.minBound + 1, this.maxBound);
-      } else {
-        result = new BoundDomain(this.minBound, this.maxBound - 1);
-      }
-
+      BoundDomain result = computeInComplementResult(complement);
       installResultDomain(result, storeLevel, v);
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
+      notifyDomainChange(v, result.singleton());
     }
+  }
+
+  private BoundDomain computeInComplementResult(int min, int max) {
+    if (max < this.maxBound) {
+      return new BoundDomain(max + 1, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, min - 1);
   }
 
   @Override
@@ -454,38 +441,17 @@ class BoundDomain extends IntDomain {
     }
 
     if (stamp == storeLevel) {
-
       if (max < this.maxBound) {
         this.minBound = max + 1;
       } else {
         this.maxBound = min - 1;
       }
-
-      if (this.minBound == this.maxBound) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
-
+      notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-
       assert stamp < storeLevel;
-
-      BoundDomain result;
-
-      if (max < this.maxBound) {
-        result = new BoundDomain(max + 1, this.maxBound);
-      } else {
-        result = new BoundDomain(this.minBound, min - 1);
-      }
-
+      BoundDomain result = computeInComplementResult(min, max);
       installResultDomain(result, storeLevel, v);
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
+      notifyDomainChange(v, result.singleton());
     }
   }
 

@@ -174,43 +174,47 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
    */
   @Override
   public int[] seekSupportVa(int varPosition, int value) {
-
     if (DEBUG_ALL) {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
-
     int[] t = setFirstValid(varPosition, value);
-    int invalidPosition;
     while (true) {
       t = findFirstAllowed(varPosition, value, t);
       if (t == null) {
         return null;
       }
-      invalidPosition = seekInvalidPosition(t);
+      int invalidPosition = seekInvalidPosition(t);
       if (invalidPosition == -1) {
         return t;
       }
-      for (int i = invalidPosition + 1; i < list.length; i++) {
-        if (i != varPosition) {
-          t[i] = list[i].min();
-        }
-      }
-      boolean cont = false;
-      for (int i = invalidPosition; i >= 0; i--) {
-        if (i != varPosition) {
-          if (t[i] >= list[i].max()) {
-            t[i] = list[i].min();
-          } else {
-            t[i] = list[i].domain.nextValue(t[i]);
-            cont = true;
-            break;
-          }
-        }
-      }
-      if (!cont) {
+      t = advanceToNextTuple(t, invalidPosition, varPosition);
+      if (t == null) {
         return null;
       }
     }
+  }
+
+  /**
+   * Advances tuple t to the next candidate by resetting positions after invalidPosition and
+   * incrementing at or before invalidPosition. Returns null if no next candidate exists.
+   */
+  private int[] advanceToNextTuple(int[] t, int invalidPosition, int varPosition) {
+    for (int i = invalidPosition + 1; i < list.length; i++) {
+      if (i != varPosition) {
+        t[i] = list[i].min();
+      }
+    }
+    for (int i = invalidPosition; i >= 0; i--) {
+      if (i != varPosition) {
+        if (t[i] >= list[i].max()) {
+          t[i] = list[i].min();
+        } else {
+          t[i] = list[i].domain.nextValue(t[i]);
+          return t;
+        }
+      }
+    }
+    return null;
   }
 
   /**

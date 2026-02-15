@@ -178,58 +178,49 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public void recordSolution() {
 
     if (recordSolutions) {
-
-      if (noSolutions >= solutions.length) {
-
-        Domain[][] oldSolutions = solutions;
-        solutions = new Domain[noSolutions * 2][];
-        System.arraycopy(oldSolutions, 0, solutions, 0, noSolutions);
-
-        int[] oldParentSolutionNo = parentSolutionNo;
-        parentSolutionNo = new int[noSolutions * 2];
-        System.arraycopy(oldParentSolutionNo, 0, parentSolutionNo, 0, noSolutions);
-      }
-
+      ensureSolutionCapacity();
       Domain[] currentSolution = new Domain[vars.length];
-
-      for (int i = 0; i < vars.length; i++) {
-        if (!vars[i].singleton()) {
-          throw new RuntimeException("Variable is not grounded in the solution");
-        }
-        currentSolution[i] = vars[i].dom();
-      }
-
+      copyVarsToSolution(currentSolution);
       solutions[noSolutions] = currentSolution;
-
-      // TODO: connection between parent and child search depending if
-      // they are recording solutions.
       noSolutions++;
-      if (parentSolutionListener != null) {
-        parentSolutionNo[noSolutions] = parentSolutionListener.solutionsNo() - 1;
-        // ((SimpleSolutionListener)parentSolutionListener).noSolutions = noSolutions;  //KKU,
-        // 2020-01-09, added to make flatzinc option -n X work properly;
-        // it might create problems when recording solutions in sequential search and therefore it
-        // is commented here :(
-        // BUT flatzinc does not record solutions!
-      }
-
+      updateParentAfterRecordSolution();
     } else {
-
-      for (int i = 0; i < vars.length; i++) {
-        if (!vars[i].singleton()) {
-          throw new RuntimeException("Variable is not grounded in the solution");
-        }
-        solutions[0][i] = vars[i].dom();
-      }
-
-      // TODO: connection between parent and child search depending if
-      // they are recording solutions.
+      copyVarsToSolution(solutions[0]);
       noSolutions++;
-      if (parentSolutionListener != null) {
-        parentSolutionNo[0] = parentSolutionListener.solutionsNo();
-        ((SimpleSolutionListener<?>) parentSolutionListener).noSolutions =
-            noSolutions; // KKU, 2020-01-09, added to make flatzinc option -n X work properly
+      updateParentAfterOverwriteSolution();
+    }
+  }
+
+  private void ensureSolutionCapacity() {
+    if (noSolutions >= solutions.length) {
+      Domain[][] oldSolutions = solutions;
+      solutions = new Domain[noSolutions * 2][];
+      System.arraycopy(oldSolutions, 0, solutions, 0, noSolutions);
+      int[] oldParentSolutionNo = parentSolutionNo;
+      parentSolutionNo = new int[noSolutions * 2];
+      System.arraycopy(oldParentSolutionNo, 0, parentSolutionNo, 0, noSolutions);
+    }
+  }
+
+  private void copyVarsToSolution(Domain[] dest) {
+    for (int i = 0; i < vars.length; i++) {
+      if (!vars[i].singleton()) {
+        throw new RuntimeException("Variable is not grounded in the solution");
       }
+      dest[i] = vars[i].dom();
+    }
+  }
+
+  private void updateParentAfterRecordSolution() {
+    if (parentSolutionListener != null) {
+      parentSolutionNo[noSolutions] = parentSolutionListener.solutionsNo() - 1;
+    }
+  }
+
+  private void updateParentAfterOverwriteSolution() {
+    if (parentSolutionListener != null) {
+      parentSolutionNo[0] = parentSolutionListener.solutionsNo();
+      ((SimpleSolutionListener<?>) parentSolutionListener).noSolutions = noSolutions;
     }
   }
 
@@ -484,40 +475,45 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public void printAllSolutions() {
 
     if (recordSolutions) {
-      log.info("\nAll solutions: \n");
-      log.info("Number of Solutions: {}", noSolutions);
-      StringBuilder varIds = new StringBuilder();
-      for (int i = 0; i < solutions[0].length; i++) {
-        varIds.append(vars[i].id()).append(" ");
-      }
-      log.info("{}", varIds);
-      for (int s = 0; s < noSolutions; s++) {
-        StringBuilder solutionLine = new StringBuilder();
-        for (int i = 0; i < solutions[0].length; i++) {
-          solutionLine.append(solutions[s][i]).append(" ");
-        }
-        log.info("{}", solutionLine);
-      }
+      printRecordedSolutionsContent();
     } else {
-
-      if (noSolutions > 0) {
-        log.info("\nLast recorded solution: \n");
-        log.info("Number of Solutions: {}", noSolutions);
-
-        StringBuilder varIds = new StringBuilder();
-        for (int i = 0; i < solutions[0].length; i++) {
-          varIds.append(vars[i].id()).append(" ");
-        }
-        log.info("{}", varIds);
-        StringBuilder solutionLine = new StringBuilder();
-        for (int i = 0; i < solutions[0].length; i++) {
-          solutionLine.append(solutions[0][i]).append(" ");
-        }
-        log.info("{}", solutionLine);
-      } else {
-        log.info("\nNo solution found. \n");
-      }
+      printLastOrNoSolutionContent();
     }
+  }
+
+  private void printRecordedSolutionsContent() {
+    log.info("\nAll solutions: \n");
+    log.info("Number of Solutions: {}", noSolutions);
+    log.info("{}", appendVarIds(new StringBuilder()));
+    for (int s = 0; s < noSolutions; s++) {
+      StringBuilder solutionLine = new StringBuilder();
+      for (int i = 0; i < solutions[0].length; i++) {
+        solutionLine.append(solutions[s][i]).append(" ");
+      }
+      log.info("{}", solutionLine);
+    }
+  }
+
+  private void printLastOrNoSolutionContent() {
+    if (noSolutions > 0) {
+      log.info("\nLast recorded solution: \n");
+      log.info("Number of Solutions: {}", noSolutions);
+      log.info("{}", appendVarIds(new StringBuilder()));
+      StringBuilder solutionLine = new StringBuilder();
+      for (int i = 0; i < solutions[0].length; i++) {
+        solutionLine.append(solutions[0][i]).append(" ");
+      }
+      log.info("{}", solutionLine);
+    } else {
+      log.info("\nNo solution found. \n");
+    }
+  }
+
+  private StringBuilder appendVarIds(StringBuilder sb) {
+    for (int i = 0; i < solutions[0].length; i++) {
+      sb.append(vars[i].id()).append(" ");
+    }
+    return sb;
   }
 
   /**

@@ -442,81 +442,79 @@ public class CarSequencing extends ExampleFd {
 
     store = new Store();
     vars = new ArrayList<>();
+    IntVar[] cars = createCarVariables();
+    addOptionConstraints(cars);
+    addCountConstraints(cars);
+  }
 
+  private IntVar[] createCarVariables() {
     IntVar[] cars = new IntVar[noCar];
-
     for (int i = 0; i < noCar; i++) {
       cars[i] = new IntVar(store, "car" + (i + 1), 0, noClass);
       vars.add(cars[i]);
     }
+    return cars;
+  }
 
+  private void addOptionConstraints(IntVar[] cars) {
     for (int i = 0; i < noOption; i++) {
-
       IntervalDomain classesWithGivenOption = new IntervalDomain();
       for (int j = 0; j < noClass; j++) {
         if (required[j][i]) {
           classesWithGivenOption.unionAdapt(j, j);
         }
       }
+      imposeOptionConstraint(cars, i, classesWithGivenOption);
+    }
+  }
 
-      // It uses Regular constraint.
-      if (regular) {
-        store.imposeDecomposition(
-            Sequence.builder()
-                .list(cars)
-                .set(classesWithGivenOption)
-                .q(blockSizePerOption[i])
-                .min(0)
-                .max(maxNoOfCarsPerOption[i])
-                .build());
-      }
-
-      // It uses decomposition of Regular into ternary constraints.
-      if (slideDecomposition) {
-        DecomposedConstraint<Constraint> c =
-            Sequence.builder()
-                .list(cars)
-                .set(classesWithGivenOption)
-                .q(blockSizePerOption[i])
-                .min(0)
-                .max(maxNoOfCarsPerOption[i])
-                .build();
-        List<Constraint> decomposition = c.decompose(store);
-
-        for (Constraint regular : decomposition) {
-          store.imposeDecomposition(regular);
-        }
-      }
-
-      // It uses replacement for Regular, namely one extensional support constraint
-      // based on MDDs.
-      if (extensionalMdd) {
-        DecomposedConstraint<Constraint> c =
-            Sequence.builder()
-                .list(cars)
-                .set(classesWithGivenOption)
-                .q(blockSizePerOption[i])
-                .min(0)
-                .max(maxNoOfCarsPerOption[i])
-                .build();
-        List<Constraint> decomposition = c.decompose(store);
-
-        for (Constraint constraint : decomposition) {
-          Regular regular = (Regular) constraint;
-          store.impose(
-              new ExtensionalSupportMdd(regular.fsm.transformDirectlyIntoMdd(regular.list)));
-        }
+  private void imposeOptionConstraint(
+      IntVar[] cars, int optionIndex, IntervalDomain classesWithGivenOption) {
+    if (regular) {
+      store.imposeDecomposition(
+          Sequence.builder()
+              .list(cars)
+              .set(classesWithGivenOption)
+              .q(blockSizePerOption[optionIndex])
+              .min(0)
+              .max(maxNoOfCarsPerOption[optionIndex])
+              .build());
+    }
+    if (slideDecomposition) {
+      DecomposedConstraint<Constraint> c =
+          Sequence.builder()
+              .list(cars)
+              .set(classesWithGivenOption)
+              .q(blockSizePerOption[optionIndex])
+              .min(0)
+              .max(maxNoOfCarsPerOption[optionIndex])
+              .build();
+      List<Constraint> decomposition = c.decompose(store);
+      for (Constraint reg : decomposition) {
+        store.imposeDecomposition(reg);
       }
     }
+    if (extensionalMdd) {
+      DecomposedConstraint<Constraint> c =
+          Sequence.builder()
+              .list(cars)
+              .set(classesWithGivenOption)
+              .q(blockSizePerOption[optionIndex])
+              .min(0)
+              .max(maxNoOfCarsPerOption[optionIndex])
+              .build();
+      List<Constraint> decomposition = c.decompose(store);
+      for (Constraint constraint : decomposition) {
+        Regular reg = (Regular) constraint;
+        store.impose(new ExtensionalSupportMdd(reg.fsm.transformDirectlyIntoMdd(reg.list)));
+      }
+    }
+  }
 
+  private void addCountConstraints(IntVar[] cars) {
     for (int i = 0; i < noClass; i++) {
-
       IntVar counter = new IntVar(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
-
       store.impose(new Count(cars, counter, i));
-
-      // Possible replacement for Count constraint.
-
     }
   }
 }

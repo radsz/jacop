@@ -98,25 +98,7 @@ public class WordGame {
       char[] userGuess = getUserGuess();
       char[] quality = getUserGuessQuality();
 
-      // Add constraints based on the provided quality of the guess
-      for (int i = 0; i < 5; i++) {
-        if (quality[i] == '!') {
-          for (IntVar unknownLetter : unknownWord) {
-            store.impose(new XneqC(unknownLetter, userGuess[i]));
-          }
-        } else if (quality[i] == '+') {
-          store.impose(new XeqC(unknownWord[i], userGuess[i]));
-        } else if (quality[i] == '-') {
-
-          ArrayList<PrimitiveConstraint> constraints = new ArrayList<>();
-          for (int j = 0; j < 5; j++) {
-            if (i != j) {
-              constraints.add(new XeqC(unknownWord[j], userGuess[i]));
-            }
-          }
-          store.impose(new Or(constraints));
-        }
-      }
+      addConstraintsForGuess(store, unknownWord, userGuess, quality);
 
       store.consistency();
 
@@ -126,6 +108,27 @@ public class WordGame {
       if (search.getSolutionListener().solutionsNo() == 1) {
         // Found one and one solution.
         break;
+      }
+    }
+  }
+
+  private static void addConstraintsForGuess(
+      Store store, IntVar[] unknownWord, char[] userGuess, char[] quality) {
+    for (int i = 0; i < 5; i++) {
+      if (quality[i] == '!') {
+        for (IntVar unknownLetter : unknownWord) {
+          store.impose(new XneqC(unknownLetter, userGuess[i]));
+        }
+      } else if (quality[i] == '+') {
+        store.impose(new XeqC(unknownWord[i], userGuess[i]));
+      } else if (quality[i] == '-') {
+        ArrayList<PrimitiveConstraint> constraints = new ArrayList<>();
+        for (int j = 0; j < 5; j++) {
+          if (i != j) {
+            constraints.add(new XeqC(unknownWord[j], userGuess[i]));
+          }
+        }
+        store.impose(new Or(constraints));
       }
     }
   }

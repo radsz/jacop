@@ -290,62 +290,72 @@ public class LinearInt extends PrimitiveConstraint {
    * @param rel the relation type to use for propagation.
    */
   public void propagate(int rel) {
-
     computeInit();
-
     do {
-
       store.propagationHasOccurred = false;
-
-      switch (rel) {
-        case EQ:
-          pruneLtEq(b);
-          pruneGtEq(b);
-
-          break;
-
-        case LE:
-          pruneLtEq(b);
-
-          if (!reified && sumMax <= b) {
-            removeConstraint();
-          }
-          break;
-
-        case LT:
-          pruneLtEq(b - 1L);
-
-          if (!reified && sumMax < b) {
-            removeConstraint();
-          }
-          break;
-        case NE:
-          pruneNeq();
-
-          if (!reified && (sumMin > b || sumMax < b)) {
-            removeConstraint();
-          }
-          break;
-        case GT:
-          pruneGtEq(b + 1L);
-
-          if (!reified && sumMin > b) {
-            removeConstraint();
-          }
-          break;
-        case GE:
-          pruneGtEq(b);
-
-          if (!reified && sumMin >= b) {
-            removeConstraint();
-          }
-
-          break;
-        default:
-          throw new IllegalStateException("Internal error in " + getClass().getName());
-      }
-
+      applyRelation(rel);
     } while (store.propagationHasOccurred);
+  }
+
+  private void applyRelation(int rel) {
+    switch (rel) {
+      case EQ:
+        pruneLtEq(b);
+        pruneGtEq(b);
+        break;
+      case LE:
+        doRelationLe();
+        break;
+      case LT:
+        doRelationLt();
+        break;
+      case NE:
+        doRelationNe();
+        break;
+      case GT:
+        doRelationGt();
+        break;
+      case GE:
+        doRelationGe();
+        break;
+      default:
+        throw new IllegalStateException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void doRelationLe() {
+    pruneLtEq(b);
+    if (!reified && sumMax <= b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationLt() {
+    pruneLtEq(b - 1L);
+    if (!reified && sumMax < b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationNe() {
+    pruneNeq();
+    if (!reified && (sumMin > b || sumMax < b)) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGt() {
+    pruneGtEq(b + 1L);
+    if (!reified && sumMin > b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGe() {
+    pruneGtEq(b);
+    if (!reified && sumMin >= b) {
+      removeConstraint();
+    }
   }
 
   @Override

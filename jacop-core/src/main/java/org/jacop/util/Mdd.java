@@ -450,47 +450,56 @@ public class Mdd {
 
       assert tuple.length == positions.length : "Tuples have different length.";
 
-      boolean badTuple = false;
-      for (int i = 0; i < tuple.length; i++) {
-        positions[i] = findPosition(tuple[i], views[i].indexToValue);
-        if (positions[i] == -1) {
-          badTuple = true;
-          break;
-        }
-      }
-
-      if (badTuple) {
+      if (!fillPositionsForTuple(tuple, positions)) {
         continue;
       }
 
-      // Use the common tuple addition logic
-      int nodePosition = 0;
-      for (int i = 0; i < tuple.length; i++) {
+      addTuplePathToDiagram(positions, tuple);
+    }
+  }
 
-        assert positions[i] != -1
-            : "value specified by tuple "
-                + List.of(tuple)
-                + "for variable no. "
-                + i
-                + "is already outside its initial domain.";
+  /**
+   * Fills positions from tuple; returns false if any value is out of domain (position -1).
+   *
+   * @param tuple the tuple
+   * @param positions array to fill (same length as tuple)
+   * @return true if all positions are valid
+   */
+  private boolean fillPositionsForTuple(int[] tuple, int[] positions) {
+    for (int i = 0; i < tuple.length; i++) {
+      positions[i] = findPosition(tuple[i], views[i].indexToValue);
+      if (positions[i] == -1) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-        nodePosition += positions[i];
+  private void addTuplePathToDiagram(int[] positions, int[] tuple) {
+    int nodePosition = 0;
+    for (int i = 0; i < tuple.length; i++) {
 
-        ensureSize(nodePosition + 1);
+      assert positions[i] != -1
+          : "value specified by tuple "
+              + List.of(tuple)
+              + "for variable no. "
+              + i
+              + "is already outside its initial domain.";
 
-        // it works with i+1 not i value.
-        if (diagram[nodePosition] == NOEDGE) {
-          // new node and path.
-          if (i + 1 == tuple.length) {
-            diagram[nodePosition] = TERMINAL;
-          } else {
-            diagram[nodePosition] = freePosition;
-            freePosition += domainLimits[i + 1];
-            nodePosition = diagram[nodePosition];
-          }
+      nodePosition += positions[i];
+
+      ensureSize(nodePosition + 1);
+
+      if (diagram[nodePosition] == NOEDGE) {
+        if (i + 1 == tuple.length) {
+          diagram[nodePosition] = TERMINAL;
         } else {
+          diagram[nodePosition] = freePosition;
+          freePosition += domainLimits[i + 1];
           nodePosition = diagram[nodePosition];
         }
+      } else {
+        nodePosition = diagram[nodePosition];
       }
     }
   }

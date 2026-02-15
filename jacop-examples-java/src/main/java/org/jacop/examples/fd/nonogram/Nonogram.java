@@ -318,25 +318,28 @@ public class Nonogram extends ExampleFd {
   @Override
   public void model() {
 
-    // Creating constraint store
     store = new Store();
     vars = new ArrayList<>();
+    initBoardAndValues();
+    addZigzagVariableOrdering();
+    IO.println("Size " + vars.size());
+    addRowRules();
+    addColumnRules();
+  }
 
-    // Specifying what values are allowed.
+  private void initBoardAndValues() {
     IntervalDomain values = new IntervalDomain();
     values.unionAdapt(black, black);
     values.unionAdapt(white, white);
-
-    // Specifying the board with allowed values.
     board = new IntVar[row_rules.length][col_rules.length];
-
     for (int i = 0; i < board.length; i++) {
       for (int j = 0; j < board[0].length; j++) {
         board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]", values.copy());
       }
     }
+  }
 
-    // Zigzag based variable ordering.
+  private void addZigzagVariableOrdering() {
     for (int m = 0; m < row_rules.length + col_rules.length - 1; m++) {
       for (int j = 0; j <= m && j < col_rules.length; j++) {
         int i = m - j;
@@ -346,48 +349,35 @@ public class Nonogram extends ExampleFd {
         vars.add(board[i][j]);
       }
     }
+  }
 
-    IO.println("Size " + vars.size());
-
-    // Making sure that rows respect the rules.
+  private void addRowRules() {
     for (int i = 0; i < row_rules.length; i++) {
-
       Fsm result = this.createAutomaton(row_rules[i]);
-
-      if (slideDecomposition) {
-        store.imposeDecomposition(new Regular(result, board[i]));
-      }
-
-      if (regular) {
-        store.impose(new Regular(result, board[i]));
-      }
-
-      if (extensionalMdd) {
-        store.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(board[i])));
-      }
+      imposeRowConstraint(result, board[i]);
     }
+  }
 
-    // Making sure that columns respect the rules.
+  private void imposeRowConstraint(Fsm result, IntVar[] row) {
+    if (slideDecomposition) {
+      store.imposeDecomposition(new Regular(result, row));
+    }
+    if (regular) {
+      store.impose(new Regular(result, row));
+    }
+    if (extensionalMdd) {
+      store.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(row)));
+    }
+  }
+
+  private void addColumnRules() {
     for (int i = 0; i < col_rules.length; i++) {
-
       Fsm result = createAutomaton(col_rules[i]);
       IntVar[] column = new IntVar[row_rules.length];
-
       for (int j = 0; j < column.length; j++) {
         column[j] = board[j][i];
       }
-
-      if (slideDecomposition) {
-        store.imposeDecomposition(new Regular(result, column));
-      }
-
-      if (regular) {
-        store.impose(new Regular(result, column));
-      }
-
-      if (extensionalMdd) {
-        store.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(column)));
-      }
+      imposeRowConstraint(result, column);
     }
   }
 

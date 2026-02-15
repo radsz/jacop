@@ -125,28 +125,34 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
   }
 
   public boolean satisfied() {
-    int one = Integer.MIN_VALUE;
-    if (x.singleton()) {
-      for (int i = 0; i < n; i++) {
-        if (item[i].b.singleton()) {
-          if (item[i].b.value() == 1) {
-            if (one == -1) {
-              one = i;
-            } else {
-              return false;
-            }
-          } else {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-    } else {
+    if (!x.singleton()) {
       return false;
     }
-
+    int one = findSingleActiveIndexOrMinValue();
     return one != Integer.MIN_VALUE && x.value() == item[one].value;
+  }
+
+  /**
+   * If all items are singleton and exactly one has value 1, returns that index; otherwise
+   * Integer.MIN_VALUE.
+   */
+  private int findSingleActiveIndexOrMinValue() {
+    int one = Integer.MIN_VALUE;
+    for (int i = 0; i < n; i++) {
+      if (!item[i].b.singleton()) {
+        return Integer.MIN_VALUE;
+      }
+      if (item[i].b.value() == 1) {
+        if (one == -1) {
+          one = i;
+        } else {
+          return Integer.MIN_VALUE;
+        }
+      } else {
+        return Integer.MIN_VALUE;
+      }
+    }
+    return one;
   }
 
   @Override

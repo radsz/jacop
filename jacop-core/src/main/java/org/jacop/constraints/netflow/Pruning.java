@@ -479,45 +479,47 @@ public class Pruning extends Network {
     return flow;
   }
 
+  private void pruneArcForward(int residual, ArcCompanion companion) {
+    if (companion.xVar != null) {
+      int maxFlow = companion.flowOffset + residual;
+      xvarInMax(companion, maxFlow);
+      companion.changeMaxCapacity(maxFlow);
+      modified(companion);
+    }
+    DomainStructure structure = companion.structure;
+    if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
+      int arcId = companion.arcId;
+      if (structure.behavior != Behavior.PRUNE_INACTIVE) {
+        Domain arcDomainC = structure.domains[arcId].complement();
+        svarInDom(companion, arcDomainC);
+      }
+    }
+  }
+
+  private void pruneArcBackward(int capacity, ArcCompanion companion) {
+    if (companion.xVar != null) {
+      int minFlow = companion.flowOffset + capacity;
+      xvarInMin(companion, minFlow);
+      companion.changeMinCapacity(minFlow);
+      modified(companion);
+    }
+    DomainStructure structure = companion.structure;
+    if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
+      int arcId = companion.arcId;
+      if (structure.behavior != Behavior.PRUNE_ACTIVE) {
+        Domain arcDomain = structure.domains[arcId];
+        svarInDom(companion, arcDomain);
+      }
+    }
+  }
+
   private void pruneArc(int capacity, int residual, boolean forward, ArcCompanion companion) {
     assert capacity > 0;
 
     if (forward) {
-      // prune upper capacity bound
-      if (companion.xVar != null) {
-        int maxFlow = companion.flowOffset + residual;
-
-        xvarInMax(companion, maxFlow);
-        companion.changeMaxCapacity(maxFlow);
-        modified(companion);
-      }
-      DomainStructure structure = companion.structure;
-      if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
-        int arcId = companion.arcId;
-
-        if (structure.behavior != Behavior.PRUNE_INACTIVE) {
-          Domain arcDomainC = structure.domains[arcId].complement();
-          svarInDom(companion, arcDomainC);
-        }
-      }
+      pruneArcForward(residual, companion);
     } else {
-      // prune lower capacity bound
-      if (companion.xVar != null) {
-        int minFlow = companion.flowOffset + capacity;
-
-        xvarInMin(companion, minFlow);
-        companion.changeMinCapacity(minFlow);
-        modified(companion);
-      }
-      DomainStructure structure = companion.structure;
-      if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
-        int arcId = companion.arcId;
-
-        if (structure.behavior != Behavior.PRUNE_ACTIVE) {
-          Domain arcDomain = structure.domains[arcId];
-          svarInDom(companion, arcDomain);
-        }
-      }
+      pruneArcBackward(capacity, companion);
     }
   }
 

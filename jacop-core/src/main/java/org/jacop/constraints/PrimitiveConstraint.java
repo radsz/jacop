@@ -102,53 +102,46 @@ public abstract class PrimitiveConstraint extends Constraint
    * @return pruning event associated with the given variable for a given consistency mode.
    */
   public int getNestedPruningEvent(Var v, boolean mode) {
+    return mode ? getNestedPruningEventConsistency(v) : getNestedPruningEventNotConsistency(v);
+  }
 
-    // If consistency function mode
-    if (mode) {
-      if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
+  private int getNestedPruningEventConsistency(Var v) {
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
       }
-
-      if (constraintScope != null && !constraintScope.isEmpty()) {
-
-        int eventAcross =
-            constraintScope.stream()
-                .filter(i -> i.arguments().contains(v))
-                .mapToInt(i -> i.getNestedPruningEvent(v, true))
-                .max()
-                .orElse(Integer.MIN_VALUE);
-
-        if (eventAcross != Integer.MIN_VALUE) {
-          return eventAcross;
-        }
-      }
-
-      return getDefaultNestedConsistencyPruningEvent();
-    } else { // If notConsistency function mode
-      if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
-      }
-      if (constraintScope != null && !constraintScope.isEmpty()) {
-
-        int eventAcross =
-            constraintScope.stream()
-                .filter(i -> i.arguments().contains(v))
-                .mapToInt(i -> i.getNestedPruningEvent(v, false))
-                .max()
-                .orElse(Integer.MIN_VALUE);
-
-        if (eventAcross != Integer.MIN_VALUE) {
-          return eventAcross;
-        }
-      }
-      return getDefaultNestedNotConsistencyPruningEvent();
     }
+    int eventAcross = getMaxNestedEventFromScope(v, true);
+    if (eventAcross != Integer.MIN_VALUE) {
+      return eventAcross;
+    }
+    return getDefaultNestedConsistencyPruningEvent();
+  }
+
+  private int getNestedPruningEventNotConsistency(Var v) {
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    int eventAcross = getMaxNestedEventFromScope(v, false);
+    if (eventAcross != Integer.MIN_VALUE) {
+      return eventAcross;
+    }
+    return getDefaultNestedNotConsistencyPruningEvent();
+  }
+
+  private int getMaxNestedEventFromScope(Var v, boolean consistencyMode) {
+    if (constraintScope == null || constraintScope.isEmpty()) {
+      return Integer.MIN_VALUE;
+    }
+    return constraintScope.stream()
+        .filter(i -> i.arguments().contains(v))
+        .mapToInt(i -> i.getNestedPruningEvent(v, consistencyMode))
+        .max()
+        .orElse(Integer.MIN_VALUE);
   }
 
   protected int getDefaultNestedNotConsistencyPruningEvent() {

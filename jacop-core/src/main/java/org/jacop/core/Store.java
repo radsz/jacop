@@ -433,6 +433,43 @@ public class Store {
     changed[c.getQueueIndex()].add(c);
   }
 
+  private void queueModelConstraintsForVariable(Domain vDom, Var v, int pruningEvent) {
+    for (int j : vDom.getEventsInclusion(pruningEvent)) {
+      Constraint[] addedConstraints = vDom.modelConstraints[j];
+      for (int i = vDom.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
+        Constraint c = addedConstraints[i];
+        c.queueVariable(level, v);
+        if (currentConstraint != c) {
+          addChanged(c);
+        }
+      }
+    }
+  }
+
+  private void queueSearchConstraintsForVariable(Domain vDom, Var v) {
+    List<Constraint> constr = vDom.searchConstraints;
+    for (int i = vDom.searchConstraintsToEvaluate - 1; i >= 0; i--) {
+      Constraint c = constr.get(i);
+      c.queueVariable(level, v);
+      if (currentConstraint != c) {
+        addChanged(c);
+      }
+    }
+  }
+
+  private void queueWatchedConstraintsForVariable(Var v) {
+    Set<Constraint> list = watchedConstraints.get(v);
+    if (list == null) {
+      return;
+    }
+    for (Constraint con : list) {
+      con.queueVariable(level, v);
+      if (currentConstraint != con) {
+        addChanged(con);
+      }
+    }
+  }
+
   /**
    * This function schedules all attached (not yet satisfied constraints) for given variable for
    * re-evaluation. This function must add all attached constraints for reevaluation but it will do
@@ -451,62 +488,15 @@ public class Store {
       variablesPrunned.add(v);
     }
 
-    // It records V as being changed so backtracking later on can be invoked for this variable.
     recordChange(v);
 
     Domain vDom = v.dom();
 
-    Constraint[] addedConstraints;
-    Constraint c;
+    queueModelConstraintsForVariable(vDom, v, pruningEvent);
+    queueSearchConstraintsForVariable(vDom, v);
 
-    // FIXME, BUG. it should not assume that events are from IntDomain.
-    // Who and when should add constraints to the queue?
-    // TEST, now.
-
-    for (int j : vDom.getEventsInclusion(pruningEvent)) {
-
-      addedConstraints = vDom.modelConstraints[j];
-
-      for (int i = vDom.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
-
-        c = addedConstraints[i];
-
-        c.queueVariable(level, v);
-
-        if (currentConstraint != c) {
-          addChanged(c);
-        }
-      }
-    }
-
-    List<Constraint> constr = vDom.searchConstraints;
-
-    for (int i = vDom.searchConstraintsToEvaluate - 1; i >= 0; i--) {
-
-      c = constr.get(i);
-
-      c.queueVariable(level, v);
-
-      if (currentConstraint != c) {
-
-        addChanged(c);
-      }
-    }
-
-    // Watched constraints
     if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
-
-      Set<Constraint> list = watchedConstraints.get(v);
-
-      if (list != null) {
-        for (Constraint con : list) {
-          con.queueVariable(level, v);
-
-          if (currentConstraint != con) {
-            addChanged(con);
-          }
-        }
-      }
+      queueWatchedConstraintsForVariable(v);
     }
   }
 
@@ -519,6 +509,25 @@ public class Store {
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
     }
+  }
+
+  private void handleConsistencyFailure() {
+    if (currentConstraint != null) {
+      currentConstraint.cleanAfterFailure();
+      if (variableWeightManagement) {
+        currentConstraint.increaseWeight();
+      }
+      if (constraintAfcManagement) {
+        currentConstraint.updateAfc(allConstraints, decay);
+      }
+      if (variableActivityManagement) {
+        updateActivities(currentConstraint);
+        variablesPrunned.clear();
+      }
+    }
+    recentlyFailedConstraint = currentConstraint;
+    currentConstraint = null;
+    isLastConsistencyFailure = true;
   }
 
   /**
@@ -546,49 +555,20 @@ public class Store {
     try {
 
       while (currentQueue < queueNo) {
-        // Selects changed constraints from changed queue
-        // and evaluates them
         while (!changed[currentQueue].isEmpty()) {
-
           currentConstraint = getFirstChanged();
-
           numberConsistencyCalls++;
-
           currentConstraint.consistency(this);
-
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();
           }
         }
-
         currentQueue++;
       }
 
     } catch (FailException _) {
-
-      if (currentConstraint != null) {
-
-        currentConstraint.cleanAfterFailure();
-
-        if (variableWeightManagement) {
-          currentConstraint.increaseWeight();
-        }
-
-        if (constraintAfcManagement) {
-          currentConstraint.updateAfc(allConstraints, decay);
-        }
-
-        if (variableActivityManagement) {
-          updateActivities(currentConstraint);
-          variablesPrunned.clear();
-        }
-      }
-
-      recentlyFailedConstraint = currentConstraint;
-      currentConstraint = null;
-
-      isLastConsistencyFailure = true;
+      handleConsistencyFailure();
       return false;
     }
 

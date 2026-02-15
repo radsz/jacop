@@ -157,35 +157,42 @@ public class OrBoolVector extends AbstractBoolVector {
     int start = position.value();
 
     if (result.max() == 0) {
-
-      for (int i = start; i < l; i++) {
-        if (list[i].max() != 0) {
-          return false;
-        } else {
-          swap(start, i);
-          start++;
-        }
-      }
-      position.update(start);
-
-      return true;
-
-    } else {
-
-      if (result.min() == 1) {
-
-        for (int i = start; i < l; i++) {
-          if (list[i].min() == 1) {
-            return true;
-          } else if (list[i].max() == 0) {
-            swap(start, i);
-            start++;
-          }
-        }
-      }
-      position.update(start);
+      return satisfiedWhenResultZero(start);
     }
 
+    if (result.min() == 1) {
+      if (satisfiedWhenResultOne(start)) {
+        return true;
+      }
+      return false;
+    }
+    position.update(start);
+    return false;
+  }
+
+  private boolean satisfiedWhenResultZero(int start) {
+    for (int i = start; i < l; i++) {
+      if (list[i].max() != 0) {
+        return false;
+      }
+      swap(start, i);
+      start++;
+    }
+    position.update(start);
+    return true;
+  }
+
+  private boolean satisfiedWhenResultOne(int start) {
+    for (int i = start; i < l; i++) {
+      if (list[i].min() == 1) {
+        return true;
+      }
+      if (list[i].max() == 0) {
+        swap(start, i);
+        start++;
+      }
+    }
+    position.update(start);
     return false;
   }
 

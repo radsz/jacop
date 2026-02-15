@@ -113,36 +113,47 @@ public class IndexDomainView {
    */
   public void intializeSupportSweep() {
 
-    if (viewOfSparseDomain) {
+    if (!viewOfSparseDomain) {
+      assert false : "Not yet implemented functionality for non sparse representation";
+      return;
+    }
 
-      if (v.domain.getSize() <= indexToValue.length) {
-        Arrays.fill(forRemoval, false);
+    if (v.domain.getSize() <= indexToValue.length) {
+      initializeSupportSweepSparseSmall();
+    } else {
+      initializeSupportSweepSparseLarge();
+    }
+  }
 
-        int index = 0;
-        for (ValueEnumeration enumer = v.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
-          int value = enumer.nextElement();
-          while (indexToValue[index] < value) {
-            index++;
-            if (index == indexToValue.length) {
-              return;
-            }
-          }
+  /** Initializes forRemoval when domain size is at most indexToValue length (merge-style). */
+  private void initializeSupportSweepSparseSmall() {
+    Arrays.fill(forRemoval, false);
 
-          if (indexToValue[index] == value) {
-            forRemoval[index] = true;
-          }
-        }
-      } else {
-        Arrays.fill(forRemoval, true);
-        for (int i = 0; i < indexToValue.length; i++) {
-          if (!v.domain.contains(indexToValue[i])) {
-            forRemoval[i] = false;
-          }
+    int index = 0;
+    for (ValueEnumeration enumer = v.domain.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int value = enumer.nextElement();
+      while (indexToValue[index] < value) {
+        index++;
+        if (index == indexToValue.length) {
+          return;
         }
       }
-    } else {
 
-      assert false : "Not yet implemented functionality for non sparse representation";
+      if (indexToValue[index] == value) {
+        forRemoval[index] = true;
+      }
+    }
+  }
+
+  /**
+   * Initializes forRemoval when domain is larger (mark all in focus, then remove if not in domain).
+   */
+  private void initializeSupportSweepSparseLarge() {
+    Arrays.fill(forRemoval, true);
+    for (int i = 0; i < indexToValue.length; i++) {
+      if (!v.domain.contains(indexToValue[i])) {
+        forRemoval[i] = false;
+      }
     }
   }
 

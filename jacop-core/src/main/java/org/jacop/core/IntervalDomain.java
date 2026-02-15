@@ -390,6 +390,38 @@ public class IntervalDomain extends IntDomain {
     assert checkInvariants() == null : checkInvariants();
   }
 
+  private void addDomFromIntervalDomain(IntervalDomain d) {
+    assert checkInvariants() == null : checkInvariants();
+    if (size == 0) {
+      if (intervals == null || intervals.length < d.intervals.length) {
+        intervals = new Interval[d.intervals.length];
+      }
+      System.arraycopy(d.intervals, 0, intervals, 0, d.size);
+      size = d.size;
+    } else {
+      for (int i = 0; i < d.size; i++) {
+        unionAdapt(d.intervals[i].min(), d.intervals[i].max());
+      }
+    }
+    assert checkInvariants() == null : checkInvariants();
+  }
+
+  private void addDomFromSparse(IntDomain domain) {
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      unionAdapt(next, next);
+    }
+  }
+
+  private void addDomFromIntervalEnumeration(IntDomain domain) {
+    IntervalEnumeration enumer = domain.intervalEnumeration();
+    while (enumer.hasMoreElements()) {
+      Interval next = enumer.nextElement();
+      unionAdapt(next.min(), next.max());
+    }
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -399,72 +431,26 @@ public class IntervalDomain extends IntDomain {
   public void addDom(IntDomain domain) {
 
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain d = (IntervalDomain) domain;
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (size == 0) {
-        if (intervals == null || intervals.length < d.intervals.length) {
-          intervals = new Interval[d.intervals.length];
-        }
-
-        System.arraycopy(d.intervals, 0, intervals, 0, d.size);
-        size = d.size;
-
-      } else {
-        for (int i = 0; i < d.size; i++) {
-          // can not use function add(Interval)
-          unionAdapt(d.intervals[i].min(), d.intervals[i].max());
-        }
-      }
-
-      assert checkInvariants() == null : checkInvariants();
-
+      addDomFromIntervalDomain((IntervalDomain) domain);
       return;
     }
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-
       assert checkInvariants() == null : checkInvariants();
-
       unionAdapt(domain.min(), domain.max());
-
       assert checkInvariants() == null : checkInvariants();
-
       return;
     }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
-      // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
-
       this.addDom(((SmallDenseDomain) domain).toIntervalDomain());
-
       return;
     }
 
     if (domain.isSparseRepresentation()) {
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        int next = enumer.nextElement();
-
-        unionAdapt(next, next);
-      }
-
+      addDomFromSparse(domain);
     } else {
-
-      IntervalEnumeration enumer = domain.intervalEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        Interval next = enumer.nextElement();
-
-        unionAdapt(next.min(), next.max());
-      }
+      addDomFromIntervalEnumeration(domain);
     }
   }
 

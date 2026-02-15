@@ -183,6 +183,26 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Builds a LinearInt constraint for one equation (nonzero coefficients only).
+   *
+   * @param eqn equation coefficients
+   * @return constraint for this equation
+   */
+  private Constraint equationToLinearInt(int[] eqn) {
+    List<IntVar> variables = new ArrayList<>();
+    List<Integer> weights = new ArrayList<>();
+
+    for (int i = 0; i < eqn.length; i++) {
+      if (eqn[i] != 0) {
+        variables.add(vars.get(i));
+        weights.add(eqn[i]);
+      }
+    }
+
+    return new LinearInt(variables, weights, "==", 0);
+  }
+
+  /**
    * Decomposes equations into primitive LinearInt constraints without network flow optimization.
    *
    * @param store the constraint store.
@@ -194,20 +214,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
       decomposition = new ArrayList<>();
 
-      // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
-
       for (int[] eqn : eqns) {
-        List<IntVar> variables = new ArrayList<>();
-        List<Integer> weights = new ArrayList<>();
-
-        for (int i = 0; i < eqn.length; i++) {
-          if (eqn[i] != 0) {
-            variables.add(vars.get(i));
-            weights.add(eqn[i]);
-          }
-        }
-
-        decomposition.add(new LinearInt(variables, weights, "==", 0));
+        decomposition.add(equationToLinearInt(eqn));
       }
 
       return decomposition;
@@ -215,20 +223,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
       List<Constraint> result = new ArrayList<>();
 
-      // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
-
       for (int[] eqn : eqns) {
-        List<IntVar> variables = new ArrayList<>();
-        List<Integer> weights = new ArrayList<>();
-
-        for (int i = 0; i < eqn.length; i++) {
-          if (eqn[i] != 0) {
-            variables.add(vars.get(i));
-            weights.add(eqn[i]);
-          }
-        }
-
-        result.add(new LinearInt(variables, weights, "==", 0));
+        result.add(equationToLinearInt(eqn));
       }
 
       return result;

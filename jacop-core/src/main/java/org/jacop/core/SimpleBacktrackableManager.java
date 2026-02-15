@@ -200,6 +200,33 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         : "It is only possible to remove the most recent not removed level";
   }
 
+  private void removeLevelFromTrail(int removedLevel, int[] lastTrail) {
+    if (lastTrail != emptyLevel && lastTrail != fullLevel) {
+      for (int i : lastTrail) {
+        objects[i].remove(removedLevel);
+      }
+    }
+    if (lastTrail == fullLevel) {
+      for (int i = noOfObjects - 1; i >= 0; i--) {
+        objects[i].remove(removedLevel);
+      }
+    }
+  }
+
+  private void removeLevelFromCurrentlyChanged(int removedLevel) {
+    if (!currentLevelMax) {
+      if (!currentlyChanged.isEmpty()) {
+        for (int i = currentlyChanged.members; i >= 0; i--) {
+          objects[currentlyChanged.dense[i]].remove(removedLevel);
+        }
+      }
+    } else {
+      for (int i = noOfObjects - 1; i >= 0; i--) {
+        objects[i].remove(removedLevel);
+      }
+    }
+  }
+
   /**
    * Core logic for removing a level. Extracted to allow subclasses to override specific parts.
    *
@@ -210,35 +237,10 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     if (trailContainsAllChanges) {
       int lastLevel = levelInfo.removeLast();
       assert lastLevel == removedLevel : "It is only possible to remove recently added level";
-
       int[] lastTrail = trail.removeLast();
-
-      if (lastTrail != emptyLevel && lastTrail != fullLevel) {
-        for (int i : lastTrail) {
-          objects[i].remove(removedLevel);
-        }
-      }
-
-      if (lastTrail == fullLevel) {
-        for (int i = noOfObjects - 1; i >= 0; i--) {
-          objects[i].remove(removedLevel);
-        }
-      }
-
+      removeLevelFromTrail(removedLevel, lastTrail);
     } else {
-
-      if (!currentLevelMax) {
-        if (!currentlyChanged.isEmpty()) {
-          for (int i = currentlyChanged.members; i >= 0; i--) {
-            objects[currentlyChanged.dense[i]].remove(removedLevel);
-          }
-        }
-      } else {
-        for (int i = noOfObjects - 1; i >= 0; i--) {
-          objects[i].remove(removedLevel);
-        }
-      }
-
+      removeLevelFromCurrentlyChanged(removedLevel);
       trailContainsAllChanges = true;
       currentlyChanged.clear();
     }

@@ -310,38 +310,30 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
   @Override
   public boolean notSatisfied() {
-
     IntDomain xDom = x.domain;
     IntDomain yDom = y.domain;
     int xSize = xDom.noIntervals();
     for (int i = 0; i < xSize; i++) {
-
-      int right = xDom.rightElement(i);
-
-      if (right <= 0) {
-        if (yDom.isIntersecting(-right, -xDom.leftElement(i))) {
-          return false;
-        }
-      } else {
-
-        int left = xDom.leftElement(i);
-        if (left >= 0) {
-          if (yDom.isIntersecting(left, right)) {
-            return false;
-          }
-        } else {
-
-          if (yDom.isIntersecting(0, -left)) {
-            return false;
-          }
-          if (yDom.isIntersecting(0, right)) {
-            return false;
-          }
-        }
+      if (yIntersectsAbsImage(xDom, yDom, i)) {
+        return false;
       }
     }
-
     return true;
+  }
+
+  /**
+   * Returns true if yDom intersects the image of the i-th x-interval under the absolute value map.
+   */
+  private boolean yIntersectsAbsImage(IntDomain xDom, IntDomain yDom, int i) {
+    int right = xDom.rightElement(i);
+    int left = xDom.leftElement(i);
+    if (right <= 0) {
+      return yDom.isIntersecting(-right, -left);
+    }
+    if (left >= 0) {
+      return yDom.isIntersecting(left, right);
+    }
+    return yDom.isIntersecting(0, -left) || yDom.isIntersecting(0, right);
   }
 
   @Override

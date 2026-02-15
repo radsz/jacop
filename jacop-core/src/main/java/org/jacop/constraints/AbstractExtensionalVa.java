@@ -221,27 +221,33 @@ public abstract class AbstractExtensionalVa extends Constraint
     while (pruned) {
       pruned = false;
       for (int varPosition = 0; varPosition < list.length; varPosition++) {
-        for (ValueEnumeration enumer = list[varPosition].domain.valueEnumeration();
-            enumer.hasMoreElements(); ) {
-
-          int value = enumer.nextElement();
-
-          if (DEBUG_ALL) {
-            log.debug("Seeking support for {} and value {}", list[varPosition], value);
-          }
-          int[] t = seekSupportVa(varPosition, value);
-
-          if (DEBUG_ALL) {
-            log.debug("Found support? {}", t != null);
-          }
-
-          if (t == null) {
-            list[varPosition].domain.inComplement(store.level, list[varPosition], value);
-            pruned = true;
-          }
-        }
+        pruned = pruneUnsupportedForVariable(store, varPosition) || pruned;
       }
     }
+  }
+
+  private boolean pruneUnsupportedForVariable(Store store, int varPosition) {
+    boolean pruned = false;
+    for (ValueEnumeration enumer = list[varPosition].domain.valueEnumeration();
+        enumer.hasMoreElements(); ) {
+
+      int value = enumer.nextElement();
+
+      if (DEBUG_ALL) {
+        log.debug("Seeking support for {} and value {}", list[varPosition], value);
+      }
+      int[] t = seekSupportVa(varPosition, value);
+
+      if (DEBUG_ALL) {
+        log.debug("Found support? {}", t != null);
+      }
+
+      if (t == null) {
+        list[varPosition].domain.inComplement(store.level, list[varPosition], value);
+        pruned = true;
+      }
+    }
+    return pruned;
   }
 
   /**
@@ -314,36 +320,40 @@ public abstract class AbstractExtensionalVa extends Constraint
     tupleString.append(")");
 
     if (tuplesFromConstructor != null) {
-
       int[][] subset = tuplesFromConstructor;
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = subset.length - 1; p2 > p1; p2--) {
-          if (smaller(subset[p2], subset[p2 - 1])) {
-            int[] temp = subset[p2];
-            subset[p2] = subset[p2 - 1];
-            subset[p2 - 1] = temp;
-          }
-        }
-      }
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = 0; p2 < subset[p1].length; p2++) {
-          tupleString.append(subset[p1][p2]);
-          if (p2 != subset[p1].length - 1) {
-            tupleString.append(" ");
-          }
-        }
-
-        if (p1 != subset.length - 1) {
-          tupleString.append("|");
-        }
-      }
-
+      sortSubsetTuples(subset);
+      appendTupleSubset(tupleString, subset);
       tupleString.append(")");
       return tupleString.toString();
     }
 
     return tupleString.toString();
+  }
+
+  private void sortSubsetTuples(int[][] subset) {
+    for (int p1 = 0; p1 < subset.length; p1++) {
+      for (int p2 = subset.length - 1; p2 > p1; p2--) {
+        if (smaller(subset[p2], subset[p2 - 1])) {
+          int[] temp = subset[p2];
+          subset[p2] = subset[p2 - 1];
+          subset[p2 - 1] = temp;
+        }
+      }
+    }
+  }
+
+  private void appendTupleSubset(StringBuilder sb, int[][] subset) {
+    for (int p1 = 0; p1 < subset.length; p1++) {
+      for (int p2 = 0; p2 < subset[p1].length; p2++) {
+        sb.append(subset[p1][p2]);
+        if (p2 != subset[p1].length - 1) {
+          sb.append(" ");
+        }
+      }
+
+      if (p1 != subset.length - 1) {
+        sb.append("|");
+      }
+    }
   }
 }

@@ -645,30 +645,31 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         log.debug("Comparing [{}, {}] with profile item {}", imin, imax, p);
       }
 
-      if (intervalOverlap(imin, intervalEnd, p.min, p.max)) {
-        IntDomain startDom = start.dom();
-        if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
-          narrowStartDomain(store, start, p, dur, "6. Profile Narrowed {} \\ {} => {}");
-
-          computeNewMaxDuration(start, p.min, p.max);
-
-          int lengthLimit = 0;
-          for (int l : durMax) {
-            if (lengthLimit < l) {
-              lengthLimit = l;
-            }
-          }
-
-          if (traceNarrOn) {
-            log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
-          }
-
-          duration.domain.in(currentStore.level, duration, 0, lengthLimit);
-        } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
-          narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
-        }
+      if (!intervalOverlap(imin, intervalEnd, p.min, p.max)) {
+        continue;
+      }
+      IntDomain startDom = start.dom();
+      if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+        applyStartNarrowing(store, start, duration, p);
+      } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+        narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
       }
     }
+  }
+
+  private void applyStartNarrowing(Store store, IntVar start, IntVar duration, ProfileItem p) {
+    narrowStartDomain(store, start, p, duration.min(), "6. Profile Narrowed {} \\ {} => {}");
+    computeNewMaxDuration(start, p.min, p.max);
+    int lengthLimit = 0;
+    for (int l : durMax) {
+      if (lengthLimit < l) {
+        lengthLimit = l;
+      }
+    }
+    if (traceNarrOn) {
+      log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
+    }
+    duration.domain.in(currentStore.level, duration, 0, lengthLimit);
   }
 
   void profileCheckRectangle(DiffnProfile profile, Rectangle r, int i, int j) {
@@ -786,69 +787,77 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
     for (int l = 0; l < rectangles.length; l++) {
       Rectangle r = rectangles[l];
-
-      boolean settled = true;
-      boolean minLengthEq0 = false;
-      int maxLevel = 0;
-      for (int i = 0; i < r.dim; i++) {
-        IntDomain rOrigin = r.origin[i].dom();
-        IntDomain rLength = r.length[i].dom();
-        settled = settled && rOrigin.singleton() && rLength.singleton();
-
-        minLengthEq0 = minLengthEq0 || (allowZeroLength ? rLength.min() < 0 : rLength.min() <= 0);
-
-        int originStamp = rOrigin.stamp;
-        int lengthStamp = rLength.stamp;
-        if (maxLevel < originStamp) {
-          maxLevel = originStamp;
-        }
-        if (maxLevel < lengthStamp) {
-          maxLevel = lengthStamp;
-        }
+      RectState state = computeRectangleState(r, allowZeroLength);
+      if (!shouldProcessRectangle(state, evalRects)) {
+        continue;
       }
 
-      boolean shouldProcess =
-          evalRects != null
-              ? (!minLengthEq0 && !(settled && maxLevel < currentStore.level))
-              : !(settled && maxLevel < currentStore.level);
+      needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-      if (shouldProcess) {
+      List<IntRectangle> usedRect = new ArrayList<>();
+      List<Rectangle> profileCandidates = new ArrayList<>();
+      List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
+      Rectangle[] rectsToCheck =
+          evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
+      boolean ntN =
+          findRectanglesEval(
+              rectsToCheck,
+              r,
+              usedRect,
+              profileCandidates,
+              overlappingRects,
+              fdvQueue,
+              allowZeroLength,
+              checkAreaAlways);
 
-        needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
+      needToNarrow = needToNarrow || ntN;
 
-        List<IntRectangle> usedRect = new ArrayList<>();
-        List<Rectangle> profileCandidates = new ArrayList<>();
-        List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
-        Rectangle[] rectsToCheck =
-            evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
-        boolean ntN =
-            findRectanglesEval(
-                rectsToCheck,
-                r,
-                usedRect,
-                profileCandidates,
-                overlappingRects,
-                fdvQueue,
-                allowZeroLength,
-                checkAreaAlways);
-
-        needToNarrow = needToNarrow || ntN;
-
-        // Checking r against all s with minUse in the domain of r
-        if (needToNarrow) {
-
-          if (evalRects != null
-              && overlappingRects != null
-              && overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
-            Diff2VarValue newRects = new Diff2VarValue();
-            newRects.setValue(overlappingRects);
-            evalRects[l].update(newRects);
-          }
-
-          narrowRectangle(r, usedRect, profileCandidates);
-        }
+      if (needToNarrow) {
+        maybeUpdateEvalRects(evalRects, overlappingRects, l);
+        narrowRectangle(r, usedRect, profileCandidates);
       }
     }
+  }
+
+  private record RectState(boolean settled, boolean minLengthEq0, int maxLevel) {}
+
+  private RectState computeRectangleState(Rectangle r, boolean allowZeroLength) {
+    boolean settled = true;
+    boolean minLengthEq0 = false;
+    int maxLevel = 0;
+    for (int i = 0; i < r.dim; i++) {
+      IntDomain rOrigin = r.origin[i].dom();
+      IntDomain rLength = r.length[i].dom();
+      settled = settled && rOrigin.singleton() && rLength.singleton();
+      minLengthEq0 = minLengthEq0 || (allowZeroLength ? rLength.min() < 0 : rLength.min() <= 0);
+      int originStamp = rOrigin.stamp;
+      int lengthStamp = rLength.stamp;
+      if (maxLevel < originStamp) {
+        maxLevel = originStamp;
+      }
+      if (maxLevel < lengthStamp) {
+        maxLevel = lengthStamp;
+      }
+    }
+    return new RectState(settled, minLengthEq0, maxLevel);
+  }
+
+  private boolean shouldProcessRectangle(RectState state, Diff2Var[] evalRects) {
+    if (evalRects != null) {
+      return !state.minLengthEq0() && !(state.settled() && state.maxLevel() < currentStore.level);
+    }
+    return !(state.settled() && state.maxLevel() < currentStore.level);
+  }
+
+  private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {
+    if (evalRects == null
+        || overlappingRects == null
+        || overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
+      return;
+    }
+    Diff2VarValue newRects = new Diff2VarValue();
+    newRects.setValue(overlappingRects);
+    evalRects[l].update(newRects);
   }
 
   /**

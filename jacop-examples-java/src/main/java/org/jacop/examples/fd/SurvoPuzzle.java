@@ -217,73 +217,60 @@ public class SurvoPuzzle extends ExampleFd {
     try (BufferedReader inr =
         new BufferedReader(
             new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-
-      String str;
-      int lineCount = 0;
-      List<List<Integer>> MatrixI = new ArrayList<>();
-      while ((str = inr.readLine()) != null && !str.isEmpty()) {
-
-        str = str.trim();
-
-        // ignore comments
-        // starting with either # or %
-        if (str.startsWith("#") || str.startsWith("%")) {
-          continue;
-        }
-
-        str = str.replace("_", "");
-        String[] row = str.split("\\s+");
-        IO.println(str);
-
-        // first line: column names: Ignore but count them
-        if (lineCount == 0) {
-          c = row.length;
-          colsums = new int[c];
-        } else {
-
-          // This is the last line: the column sums
-          if (row.length == c) {
-            colsums = new int[row.length];
-            for (int j = 0; j < row.length; j++) {
-              colsums[j] = Integer.parseInt(row[j]);
-            }
-            IO.println();
-          } else {
-            // Otherwise:
-            // The problem matrix: index 1 .. row.length-1
-            // The row sums: index row.length
-            List<Integer> this_row = new ArrayList<>();
-            for (String s : row) {
-              if ("*".equals(s)) {
-                this_row.add(0);
-              } else {
-                this_row.add(Integer.parseInt(s));
-              }
-            }
-            MatrixI.add(this_row);
-          }
-        }
-
-        lineCount++;
-      } // end while
-
-      // inr.close(); not needed; aiuto close
-
-      // Now we know everything to be known:
-      // Construct the problem matrix and column sums.
-      r = MatrixI.size();
-      rowsums = new int[r];
-      matrix = new int[r][c];
-      for (int i = 0; i < r; i++) {
-        List<Integer> this_row = MatrixI.get(i);
-        for (int j = 1; j < c + 1; j++) {
-          matrix[i][j - 1] = this_row.get(j);
-        }
-        rowsums[i] = this_row.get(c + 1);
+      List<List<Integer>> matrixI = readSurvoLines(inr);
+      if (!matrixI.isEmpty()) {
+        buildMatrixAndSums(matrixI);
       }
-
     } catch (IOException e) {
       IO.println(e);
+    }
+  }
+
+  private List<List<Integer>> readSurvoLines(BufferedReader inr) throws IOException {
+    String str;
+    int lineCount = 0;
+    List<List<Integer>> matrixI = new ArrayList<>();
+    while ((str = inr.readLine()) != null && !str.isEmpty()) {
+      str = str.trim();
+      if (str.startsWith("#") || str.startsWith("%")) {
+        continue;
+      }
+      str = str.replace("_", "");
+      String[] row = str.split("\\s+");
+      IO.println(str);
+      if (lineCount == 0) {
+        c = row.length;
+        colsums = new int[c];
+      } else {
+        if (row.length == c) {
+          colsums = new int[row.length];
+          for (int j = 0; j < row.length; j++) {
+            colsums[j] = Integer.parseInt(row[j]);
+          }
+          IO.println();
+        } else {
+          List<Integer> thisRow = new ArrayList<>();
+          for (String s : row) {
+            thisRow.add("*".equals(s) ? 0 : Integer.parseInt(s));
+          }
+          matrixI.add(thisRow);
+        }
+      }
+      lineCount++;
+    }
+    return matrixI;
+  }
+
+  private void buildMatrixAndSums(List<List<Integer>> matrixI) {
+    r = matrixI.size();
+    rowsums = new int[r];
+    matrix = new int[r][c];
+    for (int i = 0; i < r; i++) {
+      List<Integer> thisRow = matrixI.get(i);
+      for (int j = 1; j < c + 1; j++) {
+        matrix[i][j - 1] = thisRow.get(j);
+      }
+      rowsums[i] = thisRow.get(c + 1);
     }
   } // end readFile
 } // end class

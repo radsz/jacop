@@ -657,6 +657,23 @@ public class SmallDenseDomain extends IntDomain {
     return super.eq(domain);
   }
 
+  private int getElementAtFromBits(long bitsVal, int startValue, int index) {
+    long result = bitsVal;
+    int value = startValue;
+    while (index > 0) {
+      if (result < 0) {
+        index--;
+      }
+      result = result << 1;
+      value++;
+    }
+    while (result > 0) {
+      result = result << 1;
+      value++;
+    }
+    return value;
+  }
+
   @Override
   public int getElementAt(int index) {
 
@@ -666,23 +683,7 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalArgumentException("The domain has less elements then index.");
     }
 
-    long result = bits;
-    int value = minBound;
-
-    while (index > 0) {
-      if (result < 0) {
-        index--;
-      }
-      result = result << 1;
-      value++;
-    }
-
-    while (result > 0) {
-      result = result << 1;
-      value++;
-    }
-
-    return value;
+    return getElementAtFromBits(bits, minBound, index);
   }
 
   @Override
@@ -1157,62 +1158,45 @@ public class SmallDenseDomain extends IntDomain {
     in(storeLevel, v, min, max);
   }
 
+  private long computeInShiftBitsForSmallDense(SmallDenseDomain input, int shift) {
+    if (minBound <= input.minBound + shift) {
+      int internalShift = input.minBound + shift - minBound;
+      return internalShift < 64 ? input.bits >>> internalShift : 0L;
+    }
+    int internalShift = minBound - input.minBound - shift;
+    return internalShift < 64 ? input.bits << internalShift : 0L;
+  }
+
+  private void applyInShiftForIntervalDomain(
+      int storeLevel, Var v, IntervalDomain input, int shift) {
+    int i = findFirstOverlappingInterval(input, shift);
+    if (i == input.size) {
+      throw Store.failException;
+    }
+    Interval first = input.intervals[i];
+    int length =
+        Math.min(first.max() + shift, this.max) - Math.max(this.minBound, first.min() + shift);
+    if (length == this.max - this.minBound) {
+      return;
+    }
+    if (length < 0) {
+      throw Store.failException;
+    }
+    long inBits = convertIntervalsToBits(input, shift, i, length);
+    in(storeLevel, v, inBits);
+  }
+
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
       SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      long inBits;
-
-      if (minBound <= input.minBound + shift) {
-        int internalShift = input.minBound + shift - minBound;
-        if (internalShift < 64) {
-          inBits = input.bits >>> internalShift;
-        } else {
-          inBits = 0;
-        }
-      } else {
-        int internalShift = minBound - input.minBound - shift;
-        if (internalShift < 64) {
-          inBits = input.bits << internalShift;
-        } else {
-          inBits = 0;
-        }
-      }
-
-      in(storeLevel, v, inBits);
+      in(storeLevel, v, computeInShiftBitsForSmallDense(input, shift));
       return;
     }
 
-    // TODO: create proper assert check for this case.
-
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      int i = findFirstOverlappingInterval(input, shift);
-
-      if (i == input.size) {
-        throw Store.failException;
-      }
-
-      Interval first = input.intervals[i];
-      int length =
-          Math.min(first.max() + shift, this.max) - Math.max(this.minBound, first.min() + shift);
-
-      if (length == this.max - this.minBound) {
-        return;
-      }
-
-      if (length < 0) {
-        throw Store.failException;
-      }
-
-      long inBits = convertIntervalsToBits(input, shift, i, length);
-
-      in(storeLevel, v, inBits);
+      applyInShiftForIntervalDomain(storeLevel, v, (IntervalDomain) domain, shift);
       return;
     }
 

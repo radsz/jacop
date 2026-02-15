@@ -124,30 +124,37 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     variableQueue = new LinkedHashSet<>();
 
     for (IntVar Q : fdvs) {
-      if (Q.singleton()) {
-        int qPos = positionMapping.get(Q);
-        if (qPos > groundPos) {
-          list[qPos] = list[groundPos];
-          list[groundPos] = Q;
-          positionMapping.put(Q, groundPos);
-          positionMapping.put(list[qPos], qPos);
-          groundPos++;
-          if (!isExceptionValue(Q.value())) {
-            for (int i = groundPos; i < list.length; i++) {
-              list[i].domain.inComplement(store.level, list[i], Q.min());
-            }
-          }
-        } else if (qPos == groundPos) {
-          groundPos++;
-          if (!isExceptionValue(Q.value())) {
-            for (int i = groundPos; i < list.length; i++) {
-              list[i].domain.inComplement(store.level, list[i], Q.min());
-            }
-          }
-        }
+      if (!Q.singleton()) {
+        continue;
       }
+      int qPos = positionMapping.get(Q);
+      if (qPos > groundPos) {
+        list[qPos] = list[groundPos];
+        list[groundPos] = Q;
+        positionMapping.put(Q, groundPos);
+        positionMapping.put(list[qPos], qPos);
+        groundPos++;
+      } else if (qPos == groundPos) {
+        groundPos++;
+      } else {
+        continue;
+      }
+      removeValueFromOthersIfNotException(store, groundPos, Q.min());
     }
     return groundPos;
+  }
+
+  /**
+   * Removes the given value from the domain of all variables from groundPos onward, unless it is an
+   * exception value.
+   */
+  private void removeValueFromOthersIfNotException(Store store, int groundPos, int value) {
+    if (isExceptionValue(value)) {
+      return;
+    }
+    for (int i = groundPos; i < list.length; i++) {
+      list[i].domain.inComplement(store.level, list[i], value);
+    }
   }
 
   /**

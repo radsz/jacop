@@ -118,62 +118,72 @@ public class SumInt extends AbstractSum {
    * @param rel the relation type code to propagate.
    */
   public void propagate(int rel) {
-
     computeInit();
-
     do {
-
       store.propagationHasOccurred = false;
-
-      switch (rel) {
-        case EQ:
-          pruneLtEq(0L);
-          pruneGtEq(0L);
-
-          break;
-
-        case LE:
-          pruneLtEq(0L);
-
-          if (!reified && sumXmax <= sum.min()) {
-            removeConstraint();
-          }
-          break;
-
-        case LT:
-          pruneLtEq(1L);
-
-          if (!reified && sumXmax < sum.min()) {
-            removeConstraint();
-          }
-          break;
-        case NE:
-          pruneNeq();
-
-          if (!reified && (sumXmin > sum.max() || sumXmax < sum.min())) {
-            removeConstraint();
-          }
-          break;
-        case GT:
-          pruneGtEq(1L);
-
-          if (!reified && sumXmin > sum.max()) {
-            removeConstraint();
-          }
-          break;
-        case GE:
-          pruneGtEq(0L);
-
-          if (!reified && sumXmin >= sum.max()) {
-            removeConstraint();
-          }
-
-          break;
-        default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
-      }
-
+      applyRelation(rel);
     } while (store.propagationHasOccurred);
+  }
+
+  private void applyRelation(int rel) {
+    switch (rel) {
+      case EQ:
+        pruneLtEq(0L);
+        pruneGtEq(0L);
+        break;
+      case LE:
+        doRelationLe();
+        break;
+      case LT:
+        doRelationLt();
+        break;
+      case NE:
+        doRelationNe();
+        break;
+      case GT:
+        doRelationGt();
+        break;
+      case GE:
+        doRelationGe();
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void doRelationLe() {
+    pruneLtEq(0L);
+    if (!reified && sumXmax <= sum.min()) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationLt() {
+    pruneLtEq(1L);
+    if (!reified && sumXmax < sum.min()) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationNe() {
+    pruneNeq();
+    if (!reified && (sumXmin > sum.max() || sumXmax < sum.min())) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGt() {
+    pruneGtEq(1L);
+    if (!reified && sumXmin > sum.max()) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGe() {
+    pruneGtEq(0L);
+    if (!reified && sumXmin >= sum.max()) {
+      removeConstraint();
+    }
   }
 
   private void computeInit() {
@@ -210,43 +220,37 @@ public class SumInt extends AbstractSum {
    * @param b the offset value
    */
   private void pruneDirection(boolean isLtEq, long b) {
-
     if (isLtEq) {
       sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
     } else {
       sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
     }
-
-    long min;
-    long max;
     long sumBound = isLtEq ? sum.max() : sum.min();
-
     for (int i = 0; i < l; i++) {
-      boolean condition;
-      if (isLtEq) {
-        condition = I[i] > (sumBound - sumXmin - b);
-      } else {
-        condition = I[i] > -(sumBound - sumXmax + b);
-      }
+      pruneVariableForDirection(i, isLtEq, b, sumBound);
+    }
+  }
 
-      if (condition) {
-        if (isLtEq) {
-          min = x[i].min();
-          max = min + I[i];
-          if (pruneMax(x[i], sumBound - sumXmin + min - b)) {
-            long newMax = x[i].max();
-            sumXmax -= max - newMax;
-            I[i] = newMax - min;
-          }
-        } else {
-          max = x[i].max();
-          min = max - I[i];
-          if (pruneMin(x[i], sumBound - sumXmax + max + b)) {
-            long newMin = x[i].min();
-            sumXmin += newMin - min;
-            I[i] = max - newMin;
-          }
-        }
+  private void pruneVariableForDirection(int i, boolean isLtEq, long b, long sumBound) {
+    boolean condition = isLtEq ? I[i] > (sumBound - sumXmin - b) : I[i] > -(sumBound - sumXmax + b);
+    if (!condition) {
+      return;
+    }
+    if (isLtEq) {
+      long min = x[i].min();
+      long max = min + I[i];
+      if (pruneMax(x[i], sumBound - sumXmin + min - b)) {
+        long newMax = x[i].max();
+        sumXmax -= max - newMax;
+        I[i] = newMax - min;
+      }
+    } else {
+      long max = x[i].max();
+      long min = max - I[i];
+      if (pruneMin(x[i], sumBound - sumXmax + max + b)) {
+        long newMin = x[i].min();
+        sumXmin += newMin - min;
+        I[i] = max - newMin;
       }
     }
   }

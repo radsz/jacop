@@ -1317,25 +1317,37 @@ public class Alldistinct extends Constraint
     int lowx = low.get(x);
 
     if (lowx == dfsnum.get(x)) {
+      popAndStampSccComponentRevisit(x, l, lowx, fdvs);
+    }
+  }
+
+  /**
+   * Pops variables from the stack until x is reached, updating sccStamp and removing from fdvs.
+   *
+   * @param x the root of the SCC
+   * @param l the stack
+   * @param lowx the low value for the component
+   * @param fdvs set of variables to remove from
+   */
+  private void popAndStampSccComponentRevisit(
+      IntVar x, List<IntVar> l, int lowx, LinkedHashSet<IntVar> fdvs) {
+    if (debugAll) {
+      log.debug("Component found  ");
+    }
+
+    Var component;
+
+    do {
+      component = l.removeLast();
 
       if (debugAll) {
-        log.debug("Component found  ");
+        log.debug("Component part  {}id {}", component, lowx);
       }
 
-      Var component;
+      sccStamp.get(component).update(lowx);
+      fdvs.remove(component);
 
-      do {
-        component = l.removeLast();
-
-        if (debugAll) {
-          log.debug("Component part  {}id {}", component, lowx);
-        }
-
-        sccStamp.get(component).update(lowx);
-        fdvs.remove(component);
-
-      } while (component != x);
-    }
+    } while (component != x);
   }
 
   @Override
@@ -1421,24 +1433,33 @@ public class Alldistinct extends Constraint
     int lowx = low.get(x);
 
     if (lowx == dfsnum.get(x)) {
+      popAndStampSccComponentVisit(x, l, lowx);
+    }
+  }
+
+  /**
+   * Pops variables from the stack until x is reached, storing each in scc with lowx.
+   *
+   * @param x the root of the SCC
+   * @param l the stack
+   * @param lowx the low value for the component
+   */
+  private void popAndStampSccComponentVisit(IntVar x, List<IntVar> l, int lowx) {
+    if (debugAll) {
+      log.debug("Component found  ");
+    }
+
+    while (true) {
+      IntVar component = l.removeLast();
 
       if (debugAll) {
-        log.debug("Component found  ");
+        log.debug("Component part  {}", component);
       }
 
-      while (true) {
-        IntVar component = l.removeLast();
+      scc.put(component, lowx);
 
-        if (debugAll) {
-          log.debug("Component part  {}", component);
-        }
-
-        scc.put(component, lowx);
-
-        if (component == x) {
-
-          break;
-        }
+      if (component == x) {
+        break;
       }
     }
   }

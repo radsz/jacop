@@ -546,7 +546,6 @@ public class Binpacking extends Constraint
   }
 
   private void lbBins(int[] x, int capacity, int nb) {
-
     int nn = x.length;
     int sum = sum(x);
     int lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
@@ -556,36 +555,7 @@ public class Binpacking extends Constraint
     }
 
     for (int K = 0; K <= capacity / 2; K++) {
-      int N1 = 0;
-      int N2 = 0;
-
-      int i = 0;
-      while (i < nn && x[i] > capacity - K) {
-        N1++;
-        i++;
-      }
-
-      int freeSpaceN2 = 0;
-      while (i < nn && x[i] > capacity / 2) {
-        N2++;
-        freeSpaceN2 += capacity - x[i];
-        i++;
-      }
-
-      int sizeInN3 = 0;
-      while (i < nn && x[i] >= K) {
-        sizeInN3 += x[i];
-        i++;
-      }
-
-      int toPack = sizeInN3 - freeSpaceN2;
-      int noBinsN3 = 0;
-      if (toPack > 0) {
-        noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
-      }
-
-      int currentLb = N1 + N2 + noBinsN3;
-
+      int currentLb = computeLbForK(x, nn, capacity, K);
       if (currentLb > lb) {
         lb = currentLb;
       }
@@ -593,5 +563,32 @@ public class Binpacking extends Constraint
     if (nb < lb) {
       throw Store.failException;
     }
+  }
+
+  private int computeLbForK(int[] x, int nn, int capacity, int K) {
+    int N1 = 0;
+    int N2 = 0;
+    int i = 0;
+    while (i < nn && x[i] > capacity - K) {
+      N1++;
+      i++;
+    }
+    int freeSpaceN2 = 0;
+    while (i < nn && x[i] > capacity / 2) {
+      N2++;
+      freeSpaceN2 += capacity - x[i];
+      i++;
+    }
+    int sizeInN3 = 0;
+    while (i < nn && x[i] >= K) {
+      sizeInN3 += x[i];
+      i++;
+    }
+    int toPack = sizeInN3 - freeSpaceN2;
+    int noBinsN3 = 0;
+    if (toPack > 0) {
+      noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
+    }
+    return N1 + N2 + noBinsN3;
   }
 }

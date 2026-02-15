@@ -508,6 +508,50 @@ public class Dbox {
     return intersection;
   }
 
+  private void addSliceBeforeHole(
+      int dimension,
+      Dbox hole,
+      int[] lowerbound,
+      int[] upperbound,
+      Collection<Dbox> difference,
+      int i) {
+    if (hole.origin[i] <= lowerbound[i]) {
+      return;
+    }
+    Dbox newBox = newBox(dimension);
+    int[] sliceLength = newBox.length;
+    System.arraycopy(lowerbound, 0, newBox.origin, 0, dimension);
+    for (int j = dimension - 1; j >= 0; j--) {
+      sliceLength[j] = upperbound[j] - lowerbound[j];
+    }
+    sliceLength[i] = hole.origin[i] - lowerbound[i];
+    assert newBox.checkInvariants() == null : newBox.checkInvariants();
+    difference.add(newBox);
+    lowerbound[i] = hole.origin[i];
+  }
+
+  private void addSliceAfterHole(
+      int dimension,
+      Dbox hole,
+      int[] lowerbound,
+      int[] upperbound,
+      Collection<Dbox> difference,
+      int i) {
+    if (hole.origin[i] + hole.length[i] >= upperbound[i]) {
+      return;
+    }
+    Dbox newBox = newBox(dimension);
+    int[] sliceOrigin = newBox.origin;
+    System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
+    sliceOrigin[i] = hole.origin[i] + hole.length[i];
+    for (int j = dimension - 1; j >= 0; j--) {
+      newBox.length[j] = upperbound[j] - sliceOrigin[j];
+    }
+    assert newBox.checkInvariants() == null : newBox.checkInvariants();
+    difference.add(newBox);
+    upperbound[i] = hole.origin[i] + hole.length[i];
+  }
+
   /**
    * Computes the difference between this box and the given box. The difference is returned under
    * the form of a collection of boxes.
@@ -571,49 +615,8 @@ public class Dbox {
        * or where the hole end is before the origin
        */
       for (int i = dimension - 1; i >= 0; i--) {
-
-        // slice before hole
-        if (hole.origin[i] > lowerbound[i]) {
-          Dbox newBox = newBox(dimension);
-          int[] sliceLength = newBox.length;
-          // origin is same as lower bound
-          System.arraycopy(lowerbound, 0, newBox.origin, 0, dimension);
-          // slice upper bound is same as upper bound, except in the current dimension
-          for (int j = dimension - 1; j >= 0; j--) { // reverse loop
-            sliceLength[j] = upperbound[j] - lowerbound[j];
-          }
-
-          sliceLength[i] = hole.origin[i] - lowerbound[i];
-
-          assert newBox.checkInvariants() == null : newBox.checkInvariants();
-
-          // the box is defined, we can add it
-          difference.add(newBox);
-
-          // we can now update the bound
-          lowerbound[i] = hole.origin[i];
-        }
-
-        // slice after hole
-        if (hole.origin[i] + hole.length[i] < upperbound[i]) {
-          Dbox newBox = newBox(dimension);
-          int[] sliceOrigin = newBox.origin;
-          // origin is same as lower bound, except in the current dimension
-          System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
-          sliceOrigin[i] = hole.origin[i] + hole.length[i];
-          // slice upper bound is same as upper bound
-          for (int j = dimension - 1; j >= 0; j--) { // reverse loop
-            newBox.length[j] = upperbound[j] - sliceOrigin[j];
-          }
-
-          assert newBox.checkInvariants() == null : newBox.checkInvariants();
-
-          // the box is defined, we can add it
-          difference.add(newBox);
-
-          // we can now update the upper bound
-          upperbound[i] = hole.origin[i] + hole.length[i];
-        }
+        addSliceBeforeHole(dimension, hole, lowerbound, upperbound, difference, i);
+        addSliceAfterHole(dimension, hole, lowerbound, upperbound, difference, i);
       }
 
       dispatchBox(dummyBox);

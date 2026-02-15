@@ -113,29 +113,11 @@ public class CountVar extends AbstractCount {
     }
 
     if (numberMayBe == counter.min() - numberEq) {
-      for (int i = start; i < list.length; i++) {
-        IntVar v = list[i];
-        v.domain.in(store.level, v, value.domain);
-      }
-
-      if (value.singleton()) {
-        numberEq += numberMayBe;
-
-        counter.domain.inValue(store.level, counter, numberEq);
-        removeConstraint();
+      if (applyWhenMayBeTight(store, start, numberEq, numberMayBe)) {
         return;
       }
     } else if (numberEq == counter.max()) {
-      for (int i = start; i < list.length; i++) {
-        IntVar v = list[i];
-        if (value.singleton()) {
-          v.domain.inComplement(store.level, v, value.value());
-        }
-      }
-      if (value.singleton()) {
-
-        counter.domain.inValue(store.level, counter, numberEq);
-        removeConstraint();
+      if (applyWhenEqMax(store, start, numberEq)) {
         return;
       }
     }
@@ -143,6 +125,41 @@ public class CountVar extends AbstractCount {
     updateState(numberEq, start);
 
     counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+  }
+
+  /**
+   * Applies pruning when numberMayBe == counter.min() - numberEq; returns true if constraint
+   * removed.
+   */
+  private boolean applyWhenMayBeTight(Store store, int start, int numberEq, int numberMayBe) {
+    for (int i = start; i < list.length; i++) {
+      IntVar v = list[i];
+      v.domain.in(store.level, v, value.domain);
+    }
+
+    if (value.singleton()) {
+      numberEq += numberMayBe;
+      counter.domain.inValue(store.level, counter, numberEq);
+      removeConstraint();
+      return true;
+    }
+    return false;
+  }
+
+  /** Applies pruning when numberEq == counter.max(); returns true if constraint removed. */
+  private boolean applyWhenEqMax(Store store, int start, int numberEq) {
+    for (int i = start; i < list.length; i++) {
+      IntVar v = list[i];
+      if (value.singleton()) {
+        v.domain.inComplement(store.level, v, value.value());
+      }
+    }
+    if (value.singleton()) {
+      counter.domain.inValue(store.level, counter, numberEq);
+      removeConstraint();
+      return true;
+    }
+    return false;
   }
 
   @Override

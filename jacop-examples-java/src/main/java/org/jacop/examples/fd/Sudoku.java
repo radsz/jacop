@@ -184,23 +184,34 @@ public class Sudoku extends ExampleFd {
   private void addXneqYConstraints() {
     int noRows = 3;
     int noColumns = 3;
+    addXneqYConstraintsForRows(noRows, noColumns);
+    addXneqYConstraintsForColumns(noRows, noColumns);
+    addXneqYConstraintsForBlocks(noRows, noColumns);
+  }
 
-    for (int i = 0; i < noRows * noColumns; i++) {
-      for (int k = 0; k < noRows * noColumns; k++) {
-        for (int j = k + 1; j < noRows * noColumns; j++) {
+  private void addXneqYConstraintsForRows(int noRows, int noColumns) {
+    int n = noRows * noColumns;
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        for (int j = k + 1; j < n; j++) {
           store.impose(new XneqY(elements[i][k], elements[i][j]));
         }
       }
     }
+  }
 
-    for (int i = 0; i < noRows * noColumns; i++) {
-      for (int k = 0; k < noRows * noColumns; k++) {
-        for (int j = k + 1; j < noRows * noColumns; j++) {
+  private void addXneqYConstraintsForColumns(int noRows, int noColumns) {
+    int n = noRows * noColumns;
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        for (int j = k + 1; j < n; j++) {
           store.impose(new XneqY(elements[k][i], elements[j][i]));
         }
       }
     }
+  }
 
+  private void addXneqYConstraintsForBlocks(int noRows, int noColumns) {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         List<IntVar> block = new ArrayList<>();

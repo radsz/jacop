@@ -56,68 +56,63 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
   public int indomain(IntVar v) {
 
     assert !v.singleton() : "indomain does not work with singleton variables.";
-
     assert v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
         : "It is not possible to use BoundDomain";
 
-    int position = v.getSize();
-
-    if (position % 2 == 0) {
-      position = (position >> 1) - 1;
-    } else {
-      position = position >> 1;
-    }
+    int position = medianPosition(v.getSize());
 
     if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain domain = (IntervalDomain) v.domain;
-
-      for (int i = 0; i < domain.size; i++) {
-
-        int intervalSize = domain.intervals[i].max() - domain.intervals[i].min() + 1;
-        if (intervalSize <= position) {
-          position -= intervalSize;
-        } else {
-          return domain.intervals[i].min() + position;
-        }
-      }
-
-      assert false : "Indomain Median does not work properly.";
+      return medianFromIntervalDomain((IntervalDomain) v.domain, position);
     }
 
     IntDomain dom = v.dom();
-
     if (dom.isSparseRepresentation()) {
+      return medianFromSparseDomain(dom, position);
+    }
+    return medianFromIntervalEnumeration(dom, position);
+  }
 
-      ValueEnumeration enumer = dom.valueEnumeration();
+  private static int medianPosition(int size) {
+    if (size % 2 == 0) {
+      return (size >> 1) - 1;
+    }
+    return size >> 1;
+  }
 
-      while (enumer.hasMoreElements() && position > 0) {
-        enumer.nextElement();
-        position--;
-      }
-
-      return enumer.nextElement();
-
-    } else {
-
-      IntervalEnumeration enumer = dom.intervalEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        Interval next = enumer.nextElement();
-
-        int intervalSize = next.max() - next.min() + 1;
-
-        if (intervalSize <= position) {
-          position -= intervalSize;
-        } else {
-          return next.min() + position;
-        }
+  private static int medianFromIntervalDomain(IntervalDomain domain, int position) {
+    for (int i = 0; i < domain.size; i++) {
+      int intervalSize = domain.intervals[i].max() - domain.intervals[i].min() + 1;
+      if (intervalSize <= position) {
+        position -= intervalSize;
+      } else {
+        return domain.intervals[i].min() + position;
       }
     }
-
     assert false : "Indomain Median does not work properly.";
+    return 0;
+  }
 
+  private static int medianFromSparseDomain(IntDomain dom, int position) {
+    ValueEnumeration enumer = dom.valueEnumeration();
+    while (enumer.hasMoreElements() && position > 0) {
+      enumer.nextElement();
+      position--;
+    }
+    return enumer.nextElement();
+  }
+
+  private static int medianFromIntervalEnumeration(IntDomain dom, int position) {
+    IntervalEnumeration enumer = dom.intervalEnumeration();
+    while (enumer.hasMoreElements()) {
+      Interval next = enumer.nextElement();
+      int intervalSize = next.max() - next.min() + 1;
+      if (intervalSize <= position) {
+        position -= intervalSize;
+      } else {
+        return next.min() + position;
+      }
+    }
+    assert false : "Indomain Median does not work properly.";
     return 0;
   }
 }

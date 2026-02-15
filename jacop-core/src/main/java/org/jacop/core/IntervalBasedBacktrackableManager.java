@@ -91,6 +91,40 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     this.intervalBasedTrail = new ArrayList<>();
   }
 
+  /** Returns true if the caller should return immediately after. */
+  private boolean restoreFromTrailAndProcess(int index) {
+    if (debug) {
+      log.debug("Level info {}", levelInfo);
+      log.debug("Intervals? {}", intervalBasedTrail);
+      log.debug("LastTrail {}", trail.getLast());
+      log.debug("{}", super.toString());
+    }
+    trailContainsAllChanges = false;
+    currentlyChanged.clear();
+    levelInfo.removeLast();
+    addingToIntervals = intervalBasedTrail.removeLast();
+    int[] lastTrail = trail.removeLast();
+
+    if (lastTrail == fullLevel) {
+      currentLevelMax = true;
+      return true;
+    }
+    if (addingToIntervals) {
+      currentIntervals = lastTrail;
+      addChangedToInterval(index);
+      if (!isRecognizedAsChanged(index)) {
+        addChangedToInterval(index);
+      }
+      return true;
+    }
+    if (lastTrail != emptyLevel) {
+      for (int i : lastTrail) {
+        currentlyChanged.addMember(i);
+      }
+    }
+    return false;
+  }
+
   @Override
   public void addChanged(int index) {
 
@@ -102,60 +136,53 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       return;
     }
 
-    if (trailContainsAllChanges) {
-
-      if (debug) {
-        log.debug("Level info {}", levelInfo);
-        log.debug("Intervals? {}", intervalBasedTrail);
-        log.debug("LastTrail {}", trail.getLast());
-        log.debug("{}", super.toString());
-      }
-
-      trailContainsAllChanges = false;
-      currentlyChanged.clear();
-
-      levelInfo.removeLast();
-      addingToIntervals = intervalBasedTrail.removeLast();
-
-      int[] lastTrail = trail.removeLast();
-
-      if (lastTrail == fullLevel) {
-        currentLevelMax = true;
-        return;
-      }
-
-      if (addingToIntervals) {
-        // lastTrail is a list of intervals.
-        currentIntervals = lastTrail;
-
-        addChangedToInterval(index);
-
-        if (!isRecognizedAsChanged(index)) {
-          addChangedToInterval(index);
-        }
-
-        assert isRecognizedAsChanged(index);
-        return;
-      }
-
-      if (lastTrail != emptyLevel) {
-        for (int i : lastTrail) {
-          currentlyChanged.addMember(i);
-        }
-      }
+    if (trailContainsAllChanges && restoreFromTrailAndProcess(index)) {
+      assert isRecognizedAsChanged(index);
+      return;
     }
 
     if (addingToIntervals) {
       addChangedToInterval(index);
     } else {
       currentlyChanged.addMember(index);
-
       if (currentlyChanged.members > intervalCutOffValue) {
         currentLevelMax = true;
       }
     }
 
     assert isRecognizedAsChanged(index);
+  }
+
+  private void logSetLevelDebug(int level) {
+    if (debug) {
+      log.debug("Level being set {}", level);
+      log.debug("Last Level info {}", levelInfo);
+      log.debug("Intervals? {}", intervalBasedTrail);
+      if (!trail.isEmpty()) {
+        log.debug("LastTrail {}", trail.getLast());
+      }
+      log.debug("{}", super.toString());
+      log.debug(">{}Add level {}", this, level);
+    }
+  }
+
+  private void storeTrailForLevel() {
+    if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
+      int[] trailLevel = new int[currentlyChanged.members];
+      System.arraycopy(currentlyChanged.dense, 0, trailLevel, 0, currentlyChanged.members);
+      trail.add(trailLevel);
+      intervalBasedTrail.add(valueFalse);
+    } else if (currentlyChanged.members <= intervalCutOffValue && !currentlyChanged.isEmpty()) {
+      intervalBasedTrail.add(valueTrue);
+      trail.add(computeIntervals());
+    } else {
+      intervalBasedTrail.add(valueFalse);
+      if (!currentlyChanged.isEmpty()) {
+        trail.add(fullLevel);
+      } else {
+        trail.add(emptyLevel);
+      }
+    }
   }
 
   @Override
@@ -165,19 +192,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       return;
     }
 
-    if (debug) {
-      log.debug("Level being set {}", level);
-      log.debug("Last Level info {}", levelInfo);
-      log.debug("Intervals? {}", intervalBasedTrail);
-      if (!trail.isEmpty()) {
-        log.debug("LastTrail {}", trail.getLast());
-      }
-      log.debug("{}", super.toString());
-    }
-
-    if (debug) {
-      log.debug(">{}Add level {}", this, level);
-    }
+    logSetLevelDebug(level);
 
     assert level > this.currentLevel : "It is possible only to add higher levels";
 
@@ -186,31 +201,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       trail.add(currentIntervals);
       levelInfo.add(this.currentLevel);
     } else if (!trailContainsAllChanges) {
-      // store old level
-      if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
-        // remember the trail.
-        int[] trailLevel = new int[currentlyChanged.members];
-        System.arraycopy(currentlyChanged.dense, 0, trailLevel, 0, currentlyChanged.members);
-        trail.add(trailLevel);
-
-        intervalBasedTrail.add(valueFalse);
-
-      } else {
-        // @TODO: later implement intervals functionality.
-
-        if (currentlyChanged.members <= intervalCutOffValue && !currentlyChanged.isEmpty()) {
-          intervalBasedTrail.add(valueTrue);
-          trail.add(computeIntervals());
-        } else {
-          intervalBasedTrail.add(valueFalse);
-          if (!currentlyChanged.isEmpty()) {
-            trail.add(fullLevel);
-          } else {
-            trail.add(emptyLevel);
-          }
-        }
-      }
-
+      storeTrailForLevel();
       levelInfo.add(this.currentLevel);
     }
 

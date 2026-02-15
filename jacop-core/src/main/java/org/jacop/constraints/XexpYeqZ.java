@@ -60,6 +60,41 @@ public class XexpYeqZ extends AbstractXopYeqZ {
     super(idNumber, x, y, z);
   }
 
+  private int computeZi(int xi, int yi, IntVar zVar) {
+    if (xi == 0) {
+      if (yi == 0) {
+        return 1;
+      }
+      if (yi < 0) {
+        return -1; // 0 to negative exponent is infinity; signal skip
+      }
+      return 0;
+    }
+    long zl = toLong(Math.pow(xi, yi));
+    if (zl < zVar.min() || zl > zVar.max()) {
+      return -1; // signal skip
+    }
+    return long2int(zl);
+  }
+
+  private void propagateSupportedValues(IntDomain xDom, IntDomain yDom, IntDomain zDom) {
+    for (ValueEnumeration ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
+      int xi = ex.nextElement();
+      for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
+        int yi = ey.nextElement();
+        int zi = computeZi(xi, yi, z);
+        if (zi < 0) {
+          continue;
+        }
+        if (z.domain.contains(zi)) {
+          xDom.unionAdapt(xi);
+          yDom.unionAdapt(yi);
+        }
+        zDom.unionAdapt(zi);
+      }
+    }
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -67,43 +102,10 @@ public class XexpYeqZ extends AbstractXopYeqZ {
 
       store.propagationHasOccurred = false;
 
-      // compute domain for x,y and z
       IntDomain zDom = new IntervalDomain();
       IntDomain xDom = new IntervalDomain();
       IntDomain yDom = new IntervalDomain();
-      for (ValueEnumeration ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
-        int xi = ex.nextElement();
-        for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
-          int yi = ey.nextElement();
-
-          int zi;
-          long zl;
-          if (xi == 0) {
-            if (yi == 0) {
-              zi = 1;
-            } else if (yi < 0) {
-              continue; // 0 to negative exponent is infinity :(
-            } else {
-              zi = 0;
-            }
-          } else {
-            zl = toLong(Math.pow(xi, yi));
-
-            if (zl < z.min() || zl > z.max()) {
-              continue; // value not in domain of z
-            } else {
-              zi = long2int(zl);
-            }
-          }
-
-          if (z.domain.contains(zi)) {
-            xDom.unionAdapt(xi);
-            yDom.unionAdapt(yi);
-          }
-
-          zDom.unionAdapt(zi);
-        }
-      }
+      propagateSupportedValues(xDom, yDom, zDom);
 
       z.domain.in(store.level, z, zDom);
       x.domain.in(store.level, x, xDom);

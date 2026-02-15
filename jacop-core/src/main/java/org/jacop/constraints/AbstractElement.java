@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.function.IntConsumer;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -212,26 +213,20 @@ public abstract class AbstractElement extends Constraint implements Stateful {
 
   private void appendList(StringBuilder sb, Object listArray) {
     if (listArray instanceof int[] intArr) {
-      for (int i = 0; i < intArr.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
-        }
-        sb.append(intArr[i]);
-      }
+      appendArrayWithCommas(sb, intArr.length, i -> sb.append(intArr[i]));
     } else if (listArray instanceof double[] doubleArr) {
-      for (int i = 0; i < doubleArr.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
-        }
-        sb.append(doubleArr[i]);
-      }
+      appendArrayWithCommas(sb, doubleArr.length, i -> sb.append(doubleArr[i]));
     } else if (listArray instanceof Object[] objArr) {
-      for (int i = 0; i < objArr.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
-        }
-        sb.append(objArr[i]);
+      appendArrayWithCommas(sb, objArr.length, i -> sb.append(objArr[i]));
+    }
+  }
+
+  private void appendArrayWithCommas(StringBuilder sb, int length, IntConsumer appendElement) {
+    for (int i = 0; i < length; i++) {
+      if (i > 0) {
+        sb.append(", ");
       }
+      appendElement.accept(i);
     }
   }
 }

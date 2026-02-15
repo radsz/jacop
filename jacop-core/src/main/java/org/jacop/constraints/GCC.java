@@ -666,62 +666,55 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     pFirst.clear();
     int xIndex = 0;
-    int maxY;
     int match1xOrderIndex = 0;
-    int top;
 
     for (int i = 0; i < ySize; i++) {
-      // first we add all the x which min domain is y
       while ((xIndex < stampValue) && xDomain[xIndex].min() == i) {
-        // add a new element with index to get it back after the good element
-        // and the max of the domain of xNode to sort them.
         xDomain[xIndex].index = xIndex;
         pFirst.add(xDomain[xIndex]);
         xIndex++;
       }
+      int maxY = yDomain[1][i];
       int u = 0;
-      // second we add the maximum of these xs possible to the current y
-      maxY = yDomain[1][i];
       while (!pFirst.isEmpty() && u < maxY) {
-        top = pFirst.remove().index; // index of the first element of pFirst
+        int top = pFirst.remove().index;
         match1[top] = i;
         u++;
-        // match1xOrder gives the order in which xs where in the priority queue
-        // that sorted them by domain max by group of domain min.
-        // That is there are first sorted by domain min and after by domain max.
         match1xOrder[match1xOrderIndex] = top;
         match1xOrderIndex++;
-
-        if (xDomain[top].max() < i) {
-          if (DEBUG) {
-            log.debug("failure first pass");
-          }
-
-          throw Store.failException;
-          // it was checked that the min == i so max cannot be under min. Well, yes there are cases
-          // where it's useful.
-        }
+        failFirstPassIfInvalid(top, i);
       }
     }
 
-    // I add the test on the queue. It is possible if the maxY = 0 and is the last one visited
-    // otherwise the element in the queue can be used by the next yNode.
-    if (!pFirst.isEmpty()) {
+    failFirstPassIfQueueNonEmpty();
+    logMatch1Debug();
+  }
 
+  private void failFirstPassIfInvalid(int top, int i) {
+    if (xDomain[top].max() < i) {
+      if (DEBUG) {
+        log.debug("failure first pass");
+      }
+      throw Store.failException;
+    }
+  }
+
+  private void failFirstPassIfQueueNonEmpty() {
+    if (!pFirst.isEmpty()) {
       if (DEBUG) {
         log.debug("failure the queue is not empty");
       }
-
       throw Store.failException;
     }
+  }
 
+  private void logMatch1Debug() {
     if (DEBUG) {
       StringBuilder sb = new StringBuilder("match1Xorder : ");
       for (int aMatch1XOrder : match1xOrder) {
         sb.append(aMatch1XOrder).append(" ");
       }
       log.debug("{}", sb);
-
       sb = new StringBuilder("match1 : ");
       for (int aMatch1 : match1) {
         sb.append(aMatch1).append(" ");
@@ -733,54 +726,52 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void secondPass() {
 
     pSecond.clear();
-    int top;
     int xIndex = 0;
-    int minY;
     int match2xOrderIndex = 0;
-    int order;
 
     for (int i = 0; i < ySize; i++) {
-      // I should iterate on the match1xOrder instead of the normal order
-      // we take all the xs that where matched with yi in the first pass.
       while ((xIndex < stampValue) && (match1[match1xOrder[xIndex]] == i)) {
-        order = match1xOrder[xIndex];
+        int order = match1xOrder[xIndex];
         xDomain[order].index = order;
         pSecond.add(xDomain[order]);
         xIndex++;
       }
-      minY = yDomain[0][i];
+      int minY = yDomain[0][i];
       for (int l = 0; l < minY; l++) {
-        if (pSecond.isEmpty()) {
-          // failure need to be expressed
-          if (DEBUG) {
-            log.debug("failure second pass");
-          }
-
-          throw Store.failException;
-        }
-        top = pSecond.remove().index;
-        match2[top] = i;
-
-        match2xOrder[match2xOrderIndex] = top;
-        match2xOrderIndex++;
+        failSecondPassIfEmpty();
+        assignSecondPassMatch(pSecond.remove().index, i, match2xOrderIndex++);
         nbOfMatchPerY[i]++;
       }
       while (!pSecond.isEmpty() && pSecond.element().max() < i + 1) {
-        top = pSecond.remove().index;
-        match2[top] = i;
-        match2xOrder[match2xOrderIndex] = top;
-        match2xOrderIndex++;
+        assignSecondPassMatch(pSecond.remove().index, i, match2xOrderIndex++);
         nbOfMatchPerY[i]++;
       }
     }
 
+    logMatch2Debug();
+  }
+
+  private void failSecondPassIfEmpty() {
+    if (pSecond.isEmpty()) {
+      if (DEBUG) {
+        log.debug("failure second pass");
+      }
+      throw Store.failException;
+    }
+  }
+
+  private void assignSecondPassMatch(int top, int i, int orderIndex) {
+    match2[top] = i;
+    match2xOrder[orderIndex] = top;
+  }
+
+  private void logMatch2Debug() {
     if (DEBUG) {
       StringBuilder sb = new StringBuilder("match2Xorder : ");
       for (int aMatch2XOrder : match2xOrder) {
         sb.append(aMatch2XOrder).append(" ");
       }
       log.debug("{}", sb);
-
       sb = new StringBuilder("match2 : ");
       for (int aMatch2 : match2) {
         sb.append(aMatch2).append(" ");
@@ -983,24 +974,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private int sccsWithoutS(
       int[] compReachesLeft, int[] compReachesRight, int[] yreachesLeft, int[] yreachesRight) {
 
-    Component C;
-    Component C1;
     int sccNb = 0;
     S1.clear();
     S2.clear();
 
     reachedFromY(yreachesLeft, yreachesRight);
 
-    // init all componant as containing only one y and set these component
-    // reachesLeft and reachesRight to y reachesLeft and Right
     for (int y = 0; y < ySize; y++) {
       compReachesLeft[y] = yreachesLeft[y];
       compReachesRight[y] = yreachesRight[y];
     }
 
     for (int y = 0; y < ySize; y++) {
-      // set comp to (root, rightmostY, maxX)
-      C = new Component(y, y, yreachesRight[y]);
+      Component C = new Component(y, y, yreachesRight[y]);
 
       if (S2.isEmpty()) {
         S1.push(y);
@@ -1008,64 +994,50 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         continue;
       }
 
-      // once S2 not empty
-      // this first part treat the case we have a new component.
-      // (c1.max < C.root)
-
-      while ((!S2.isEmpty()) && (S2.peek().maxX < C.root)) {
-        compReachesLeft[sccNb] = ySize;
-        compReachesRight[sccNb] = -1;
-
-        assert !S1.isEmpty();
-
-        C1 = S2.pop();
-        while (!S1.isEmpty() && S1.peek() >= C1.root && S1.peek() <= C1.rightmostY) {
-          int popY;
-          popY = S1.pop();
-          compOfY[popY] = sccNb;
-          compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[popY]);
-          compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[popY]);
-        }
-        sccNb++;
+      while (!S2.isEmpty() && S2.peek().maxX < C.root) {
+        sccNb =
+            popComponentAndUpdate(
+                compReachesLeft, compReachesRight, yreachesLeft, yreachesRight, sccNb);
       }
-
-      assert S2.isEmpty() || S2.peek().maxX >= C.root;
-
-      // this second part treat the case the new c1 is in fact attainable by the current component
 
       while (!S2.isEmpty() && yreachesLeft[y] <= S2.peek().rightmostY) {
-        C1 = S2.pop();
+        Component C1 = S2.pop();
         C.maxX = Math.max(C.maxX, C1.maxX);
-        C.root =
-            C1.root; // as they are taken in order from left to right c1.root is always < C.root
-        C.rightmostY = y; // same remark
+        C.root = C1.root;
+        C.rightmostY = y;
       }
-
-      assert S2.isEmpty() || yreachesLeft[y] > S2.peek().rightmostY && S2.peek().maxX >= C.root;
 
       S1.push(y);
       S2.push(C);
-    } // end for
+    }
 
-    // for every component still on the pile update compOfY, compReachesLeft and Right, and sccNb
     while (!S2.isEmpty()) {
-      assert !S1.isEmpty();
-      C = S2.pop();
-      compReachesLeft[sccNb] = ySize;
-      compReachesRight[sccNb] = -1;
-
-      while (!S1.isEmpty() && S1.peek() >= C.root && S1.peek() <= C.rightmostY) {
-        int y;
-        y = S1.pop();
-        compOfY[y] = sccNb;
-        compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[y]);
-        compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[y]);
-      }
-      sccNb++;
+      sccNb =
+          popComponentAndUpdate(
+              compReachesLeft, compReachesRight, yreachesLeft, yreachesRight, sccNb);
     }
 
     assert S1.isEmpty();
     return sccNb;
+  }
+
+  private int popComponentAndUpdate(
+      int[] compReachesLeft,
+      int[] compReachesRight,
+      int[] yreachesLeft,
+      int[] yreachesRight,
+      int sccNb) {
+    compReachesLeft[sccNb] = ySize;
+    compReachesRight[sccNb] = -1;
+    assert !S1.isEmpty();
+    Component C = S2.pop();
+    while (!S1.isEmpty() && S1.peek() >= C.root && S1.peek() <= C.rightmostY) {
+      int popY = S1.pop();
+      compOfY[popY] = sccNb;
+      compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[popY]);
+      compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[popY]);
+    }
+    return sccNb + 1;
   }
 
   private void reachedFromY(int[] yreachesLeft, int[] yreachesRight) {

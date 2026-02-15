@@ -118,23 +118,26 @@ public class CrossWord extends ExampleFd {
   public void model() {
 
     store = new Store();
-
     blank = new IntVar(store, "blank", 'a', 'z');
-
     for (int s : wordSizesPrimitive) {
       wordSizes.add(s);
     }
-
     x = new IntVar[crosswordTemplate.length][];
-
     for (int i = 0; i < crosswordTemplate.length; i++) {
       x[i] = new IntVar[crosswordTemplate[i].length];
     }
-
     readDictionaryFromFile(defaultDictionary, wordSizes);
+    initCrosswordVariables();
+    for (int i = 0; i < r; i++) {
+      processWordSequence(i, true);
+    }
+    for (int j = 0; j < c; j++) {
+      processWordSequence(j, false);
+    }
+    collectVarsFromGrid();
+  }
 
-    // initiate structures and variables
-
+  private void initCrosswordVariables() {
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
         if (crosswordTemplate[i][j] != '*') {
@@ -145,17 +148,10 @@ public class CrossWord extends ExampleFd {
         }
       }
     }
+  }
 
-    for (int i = 0; i < r; i++) {
-      processWordSequence(i, true);
-    }
-
-    for (int j = 0; j < c; j++) {
-      processWordSequence(j, false);
-    }
-
+  private void collectVarsFromGrid() {
     vars = new ArrayList<>();
-
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
         if (x[i][j] != null) {

@@ -205,6 +205,27 @@ public class ProfileItem {
     value = val;
   }
 
+  private void subtractWhenMinLessThanA(ProfileItem a, ProfileItem left, ProfileItem right) {
+    if (max <= a.min) {
+      left.set(min, max, value);
+    } else if (max <= a.max) {
+      left.set(min, a.min, value);
+    } else {
+      right.set(a.max, max, value);
+      left.set(min, a.min, value);
+    }
+  }
+
+  private void subtractWhenMinGreaterThanA(ProfileItem a, ProfileItem left, ProfileItem right) {
+    if (min <= a.max) {
+      if (max > a.max) {
+        right.set(a.max, max, value);
+      }
+    } else {
+      right.set(min, max, value);
+    }
+  }
+
   /**
    * It computes subtraction of a given item and returns the result.
    *
@@ -218,30 +239,12 @@ public class ProfileItem {
       if (max > a.max) {
         right.set(a.max, max, value);
       }
+      return;
+    }
+    if (min < a.min) {
+      subtractWhenMinLessThanA(a, left, right);
     } else {
-      if (min < a.min) {
-        if (max <= a.min) {
-          left.set(min, max, value);
-        } else {
-          if (max <= a.max) {
-            left.set(min, a.min, value);
-          } else {
-            // a.Max < Max
-            right.set(a.max, max, value);
-            left.set(min, a.min, value);
-          }
-        }
-      } else {
-        // a.Min < Min
-        if (min <= a.max) {
-          if (max > a.max) {
-            right.set(a.max, max, value);
-          }
-        } else {
-          // Min > a.Max
-          right.set(min, max, value);
-        }
-      }
+      subtractWhenMinGreaterThanA(a, left, right);
     }
   }
 

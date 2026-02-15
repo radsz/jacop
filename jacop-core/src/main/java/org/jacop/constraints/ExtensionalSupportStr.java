@@ -565,52 +565,47 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   @Override
   public String toString() {
-
     StringBuilder tupleString = new StringBuilder();
-
     tupleString.append(id());
     tupleString.append("(");
-
     for (int i = 0; i < list.length; i++) {
       tupleString.append(list[i].toString());
       if (i + 1 < list.length) {
         tupleString.append(" ");
       }
     }
-
     tupleString.append(", ");
-
     if (tuples != null) {
-
-      int[][] subset = tuples;
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = subset.length - 1; p2 > p1; p2--) {
-          if (smaller(subset[p2], subset[p2 - 1])) {
-            int[] temp = subset[p2];
-            subset[p2] = subset[p2 - 1];
-            subset[p2 - 1] = temp;
-          }
-        }
-      }
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = 0; p2 < subset[p1].length; p2++) {
-          tupleString.append(subset[p1][p2]);
-          if (p2 != subset[p1].length - 1) {
-            tupleString.append(" ");
-          }
-        }
-
-        if (p1 != subset.length - 1) {
-          tupleString.append("|");
-        }
-      }
-
+      sortTuplesForDisplay(tuples);
+      appendTuplesTo(tupleString, tuples);
       tupleString.append(")");
-      return tupleString.toString();
     }
-
     return tupleString.toString();
+  }
+
+  private void sortTuplesForDisplay(int[][] subset) {
+    for (int p1 = 0; p1 < subset.length; p1++) {
+      for (int p2 = subset.length - 1; p2 > p1; p2--) {
+        if (smaller(subset[p2], subset[p2 - 1])) {
+          int[] temp = subset[p2];
+          subset[p2] = subset[p2 - 1];
+          subset[p2 - 1] = temp;
+        }
+      }
+    }
+  }
+
+  private void appendTuplesTo(StringBuilder sb, int[][] subset) {
+    for (int p1 = 0; p1 < subset.length; p1++) {
+      for (int p2 = 0; p2 < subset[p1].length; p2++) {
+        sb.append(subset[p1][p2]);
+        if (p2 != subset[p1].length - 1) {
+          sb.append(" ");
+        }
+      }
+      if (p1 != subset.length - 1) {
+        sb.append("|");
+      }
+    }
   }
 }

@@ -717,6 +717,64 @@ public class Knapsack extends Constraint
     super.impose(store);
   }
 
+  private void queueVariableLogDebug() {
+    if (DEBUG_ALL) {
+      int queueInfoFrom = 0;
+      if (countQueueVariable >= queueInfoFrom) {
+        log.debug("queueVariable is executed for the {}-th time", countQueueVariable);
+        log.debug("{}", displayQuantitiesInEfficiencyOrder());
+      }
+    }
+  }
+
+  private void setFlagsForCapacityOrProfit() {
+    needConsistency = true;
+    needForbidden = true;
+    needMandatory = true;
+    needUpdate = true;
+    needCriticalUpdate = true;
+  }
+
+  private void addToUpdateListIfNeeded(int level, TreeLeaf leafForV) {
+    List<TreeLeaf> list = hashForUpdate.get(level);
+    if (list == null) {
+      list = new ArrayList<>();
+      hashForUpdate.put(level, list);
+      positionOfAlreadyUpdated = 0;
+    }
+    if (list.size() <= updateLimit) {
+      list.add(leafForV);
+    }
+  }
+
+  private void applyMaxBoundChangeFlags(TreeLeaf leafForV, boolean leftToCrit) {
+    if (leftToCrit) {
+      needConsistency = true;
+      needMandatory = true;
+      needForbidden = true;
+      needCriticalUpdate = true;
+    } else {
+      needConsistency = true;
+      if (leafForV.positionInTheTree <= tree.criticalRightLeaf) {
+        needMandatory = true;
+      }
+    }
+  }
+
+  private void applyMinBoundChangeFlags(TreeLeaf leafForV, boolean leftToCrit) {
+    if (leftToCrit) {
+      needConsistency = true;
+      if (leafForV.positionInTheTree >= tree.criticalLeftLeaf) {
+        needForbidden = true;
+      }
+    } else {
+      needConsistency = true;
+      needMandatory = true;
+      needForbidden = true;
+      needCriticalUpdate = true;
+    }
+  }
+
   @Override
   public void queueVariable(int level, Var v) {
 
@@ -725,55 +783,22 @@ public class Knapsack extends Constraint
     }
 
     countQueueVariable++;
-
-    if (DEBUG_ALL) {
-      /*
-       It specifies how many queueVariable functions must be executed before the information about
-       the constraint is being printed out.
-      */
-      int queueInfoFrom = 0;
-      if (countQueueVariable >= queueInfoFrom) {
-
-        log.debug("queueVariable is executed for the {}-th time", countQueueVariable);
-        log.debug("{}", displayQuantitiesInEfficiencyOrder());
-      }
-    }
+    queueVariableLogDebug();
 
     if (v == knapsackCapacity || v == knapsackProfit) {
-
       if (inConsistency) {
         return;
       }
-
-      needConsistency = true;
-      needForbidden = true;
-      needMandatory = true;
-      needUpdate = true;
-      needCriticalUpdate = true;
-
+      setFlagsForCapacityOrProfit();
       return;
     }
 
     final TreeLeaf leafForV = variableLeafMapping.get((IntVar) v);
-
     final boolean maxBoundHasChanged = leafForV.hasMaxChanged();
     final boolean minBoundHasChanged = leafForV.hasMinChanged();
 
-    /* at least one bound has changed */
     if (maxBoundHasChanged || minBoundHasChanged) {
-
-      /* we test if a list exist and if it is different from null */
-      List<TreeLeaf> list;
-      if ((list = hashForUpdate.get(level)) == null) {
-        list = new ArrayList<>();
-        hashForUpdate.put(level, list);
-        positionOfAlreadyUpdated = 0;
-      }
-
-      if (list.size() <= updateLimit) {
-        list.add(leafForV);
-      }
-
+      addToUpdateListIfNeeded(level, leafForV);
       needUpdate = true;
     }
 
@@ -781,41 +806,13 @@ public class Knapsack extends Constraint
       return;
     }
 
-    // @TODO: What if item changed is critical, make sure the code is correct in that case.
-
     final boolean leftToCrit = leafForV.positionInTheTree < positionOfCriticalItem.value();
 
-    /* we look if there is some changed to do */
     if (maxBoundHasChanged) {
-      /* for max decreased of mandatory items */
-      if (leftToCrit) {
-        needConsistency = true;
-        needMandatory = true;
-        needForbidden = true;
-        needCriticalUpdate = true;
-      } else {
-        /* for max decreased of forbidden items */
-        needConsistency = true;
-        if (leafForV.positionInTheTree <= tree.criticalRightLeaf) {
-          needMandatory = true;
-        }
-      }
+      applyMaxBoundChangeFlags(leafForV, leftToCrit);
     }
-
     if (minBoundHasChanged) {
-      /* for min increased of mandatory items */
-      if (leftToCrit) {
-        needConsistency = true;
-        if (leafForV.positionInTheTree >= tree.criticalLeftLeaf) {
-          needForbidden = true;
-        }
-      } else {
-        /* for min increased of forbidden items */
-        needConsistency = true;
-        needMandatory = true;
-        needForbidden = true;
-        needCriticalUpdate = true;
-      }
+      applyMinBoundChangeFlags(leafForV, leftToCrit);
     }
   }
 

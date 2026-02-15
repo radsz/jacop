@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -374,16 +375,25 @@ public class Fsm {
     for (int i = 0; i < stateNumber; i++) {
       for (int j = 0; j < stateNumber; j++) {
         if (outarc[0][i][j] != null && outarc[0][i][j].getSize() > 0) {
-          IntervalDomain dom = outarc[0][i][j];
-          for (int h = 0; h < dom.size; h++) {
-            Interval inv = dom.intervals[h];
-            if (inv != null) {
-              for (int v = inv.min(); v <= inv.max(); v++) {
+          final int nextState = j;
+          forEachValueInArc(
+              outarc[0][i][j],
+              v -> {
                 tuple[0] = v;
-                enumerateTuples(j, 1, stateNumber, outarc, tuple, action);
-              }
-            }
-          }
+                enumerateTuples(nextState, 1, stateNumber, outarc, tuple, action);
+              });
+        }
+      }
+    }
+  }
+
+  /** Iterates over every value in the domain (all intervals) and invokes the consumer. */
+  private void forEachValueInArc(IntervalDomain dom, IntConsumer withValue) {
+    for (int h = 0; h < dom.size; h++) {
+      Interval inv = dom.intervals[h];
+      if (inv != null) {
+        for (int v = inv.min(); v <= inv.max(); v++) {
+          withValue.accept(v);
         }
       }
     }
@@ -433,17 +443,13 @@ public class Fsm {
 
     for (int i = 0; i < stateNumber; i++) {
       if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
-        IntervalDomain dom = outarc[level][prevSuc][i];
-
-        for (int h = 0; h < dom.size; h++) {
-          Interval inv = dom.intervals[h];
-          if (inv != null) {
-            for (int v = inv.min(); v <= inv.max(); v++) {
+        final int nextState = i;
+        forEachValueInArc(
+            outarc[level][prevSuc][i],
+            v -> {
               tuple[level] = v;
-              enumerateTuples(i, level + 1, stateNumber, outarc, tuple, action);
-            }
-          }
-        }
+              enumerateTuples(nextState, level + 1, stateNumber, outarc, tuple, action);
+            });
       }
     }
   }

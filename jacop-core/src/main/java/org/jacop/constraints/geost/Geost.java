@@ -683,47 +683,46 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
      */
 
     // find out if all constraints apply on the whole collection of objects
-    allLinked = true;
-
     Set<Object> scope = new HashSet<>();
-
-    for (ExternalConstraint ec : externalConstraints) {
-
-      GeostObject[] constraintScope = ec.getObjectScope();
-
-      if (constraintScope != null) {
-
-        int prevSize = scope.size();
-
-        List<GeostObject> constraintScopeArr = new ArrayList<>(constraintScope.length);
-        constraintScopeArr.addAll(Arrays.asList(constraintScope));
-
-        boolean changed = scope.addAll(constraintScopeArr);
-
-        if (changed && prevSize != 0) {
-          // some constraint applies to a subset of objects only
-          allLinked = false;
-          break;
-        }
-      }
-    }
+    allLinked = computeAllLinked(scope);
 
     if (allLinked && scope.size() != objects.length) {
       // may appear if only one constraint applies to a subset of objects
       allLinked = false;
     }
 
-    /*
-     * generate constraint corresponding to holes in the domain.
-     * They are handled separately because they are relevant only for
-     * the object being placed
-     *
-     */
+    setupDomainHolesAndObjectConstraints();
+  }
+
+  /**
+   * Determines whether all external constraints apply to the whole collection of objects.
+   *
+   * @param scope set to accumulate constraint scopes (modified by this method)
+   * @return true if all constraints are linked to the full object set so far
+   */
+  private boolean computeAllLinked(Set<Object> scope) {
+    for (ExternalConstraint ec : externalConstraints) {
+      GeostObject[] constraintScope = ec.getObjectScope();
+
+      if (constraintScope != null) {
+        int prevSize = scope.size();
+        List<GeostObject> constraintScopeArr = new ArrayList<>(constraintScope.length);
+        constraintScopeArr.addAll(Arrays.asList(constraintScope));
+        boolean changed = scope.addAll(constraintScopeArr);
+
+        if (changed && prevSize != 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /** Initializes domain holes constraints and per-object constraint sets depending on allLinked. */
+  private void setupDomainHolesAndObjectConstraints() {
     if (!allLinked) {
       for (GeostObject o : objects) {
         domainHolesConstraints[o.no] = new DomainHoles(o);
-
-        // collect related constraints
         Set<InternalConstraint> relatedConstraints = new HashSet<>();
         for (ExternalConstraint ec : externalConstraints) {
           relatedConstraints.addAll(ec.getObjectConstraints(o));
@@ -731,9 +730,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         objectConstraints[o.no] = relatedConstraints;
       }
     } else {
-
       Set<InternalConstraint> commonConstraints = new HashSet<>(internalConstraints);
-
       for (GeostObject o : objects) {
         domainHolesConstraints[o.no] = new DomainHoles(o);
         objectConstraints[o.no] = commonConstraints;

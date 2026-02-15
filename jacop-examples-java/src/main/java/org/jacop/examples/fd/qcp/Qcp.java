@@ -155,21 +155,27 @@ public class Qcp extends ExampleFd {
   @Override
   public void model() {
 
+    String[] lines = readLinesFromFile();
+    n = n - 1;
+    int[][] numbers = parseLinesToNumbers(lines);
+    store = new Store();
+    store.queueNo = 4;
+    vars = new ArrayList<>();
+    IntVar[][] x = createVariables(n, numbers);
+    imposeAlldistinctConstraints(n, x);
+  }
+
+  private String[] readLinesFromFile() {
     String[] lines = new String[100];
-
-    /* read from file args[0] or qcp.txt */
     try {
-
       BufferedReader in =
           new BufferedReader(
               new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
       String str;
-
       while ((str = in.readLine()) != null) {
         lines[n] = str;
         n++;
       }
-      // in.close(); not needed; aouto close
     } catch (FileNotFoundException _) {
       System.err.println(
           "You need to run this program in a directory that contains the required file.");
@@ -180,16 +186,14 @@ public class Qcp extends ExampleFd {
     } catch (IOException _) {
       System.err.println("Something is wrong with file" + filename);
     }
+    return lines;
+  }
 
-    n = n - 1;
-    /* Creating constraint store */
+  private int[][] parseLinesToNumbers(String[] lines) {
     int[][] numbers = new int[n][n];
-
-    // Transforms strings into ints
     for (int i = 1; i < n + 1; i++) {
       Pattern pat = Pattern.compile(" ");
       String[] result = pat.split(lines[i]);
-
       int current = 0;
       for (String s : result) {
         try {
@@ -200,19 +204,15 @@ public class Qcp extends ExampleFd {
         }
       }
     }
+    return numbers;
+  }
 
-    store = new Store();
-    store.queueNo = 4;
-
-    vars = new ArrayList<>();
-
-    // Get problem size n from second program argument.
-    IntVar[][] x = new IntVar[n][n];
-
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
+  private IntVar[][] createVariables(int size, int[][] numbers) {
+    IntVar[][] x = new IntVar[size][size];
+    for (int i = 0; i < size; i++) {
+      for (int j = 0; j < size; j++) {
         if (numbers[i][j] == -1) {
-          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, n - 1);
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, size - 1);
           vars.add(x[i][j]);
         } else {
           x[i][j] = new IntVar(store, "x" + i + "_" + j, numbers[i][j], numbers[i][j]);
@@ -220,19 +220,18 @@ public class Qcp extends ExampleFd {
         vars.add(x[i][j]);
       }
     }
+    return x;
+  }
 
-    // Create variables and state constraints.
-    for (int i = 0; i < n; i++) {
+  private void imposeAlldistinctConstraints(int size, IntVar[][] x) {
+    for (int i = 0; i < size; i++) {
       Constraint cx = new Alldistinct(x[i]);
-
       store.impose(cx);
       shavingConstraints.add(cx);
-
-      IntVar[] y = new IntVar[n];
-      for (int j = 0; j < n; j++) {
+      IntVar[] y = new IntVar[size];
+      for (int j = 0; j < size; j++) {
         y[j] = x[j][i];
       }
-
       Constraint cy = new Alldistinct(y);
       store.impose(cy);
       shavingConstraints.add(cy);

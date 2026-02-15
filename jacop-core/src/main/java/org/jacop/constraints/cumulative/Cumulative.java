@@ -96,36 +96,46 @@ public class Cumulative extends CumulativeBasic {
       taskReversed[i].index = i;
     }
 
-    // check for possible overflow
+    checkLimitOverflow(limit);
+    doEdgeFind = starts.length <= getEdgeFindSizeLimit();
+
+    if (!possibleZeroTasks && grounded(resources)) {
+      buildPreComputedCapMaps(starts.length);
+    }
+  }
+
+  private void checkLimitOverflow(IntVar limit) {
     if (limit != null) {
       for (Task t : taskNormal) {
         Math.addExact(t.start.max(), t.dur.max());
       }
     }
+  }
 
+  private static int getEdgeFindSizeLimit() {
     String s = System.getProperty("max_edge_find_size");
     int limitOnEdgeFind = 100;
     if (s != null) {
       limitOnEdgeFind = Integer.parseInt(s);
     }
-    doEdgeFind = starts.length <= limitOnEdgeFind;
+    return limitOnEdgeFind;
+  }
 
-    if (!possibleZeroTasks && grounded(resources)) {
-      preComputedCapacities = new LinkedHashSet<>();
-      for (TaskView t : taskNormal) {
-        preComputedCapacities.add(t.res.min());
-      }
+  private void buildPreComputedCapMaps(int numStarts) {
+    preComputedCapacities = new LinkedHashSet<>();
+    for (TaskView t : taskNormal) {
+      preComputedCapacities.add(t.res.min());
+    }
 
-      preComputedCapMap = new int[starts.length];
-      int capIndex = 0;
-      for (int ci : preComputedCapacities) {
-        for (TaskView aT : taskNormal) {
-          if (aT.res.min() == ci) {
-            preComputedCapMap[aT.index] = capIndex;
-          }
+    preComputedCapMap = new int[numStarts];
+    int capIndex = 0;
+    for (int ci : preComputedCapacities) {
+      for (TaskView aT : taskNormal) {
+        if (aT.res.min() == ci) {
+          preComputedCapMap[aT.index] = capIndex;
         }
-        capIndex++;
       }
+      capIndex++;
     }
   }
 

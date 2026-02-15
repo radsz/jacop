@@ -120,13 +120,10 @@ public class XorBool extends PrimitiveConstraint {
   }
 
   private void propagateXor(final Store store, boolean negated) {
-
-    // When negated, the values assigned for odd/even parity are flipped.
     int oddVal = negated ? 0 : 1;
     int evenVal = negated ? 1 : 0;
 
     IntVar nonGround = null;
-
     int numberOnes = 0;
     int numberZeros = 0;
 
@@ -141,25 +138,24 @@ public class XorBool extends PrimitiveConstraint {
     }
 
     if (numberOnes + numberZeros == x.length) {
-      if ((numberOnes & 1) == 1) {
-        y.domain.inValue(store.level, y, oddVal);
-      } else {
-        y.domain.inValue(store.level, y, evenVal);
-      }
+      propagateXorAllGround(store, numberOnes, oddVal, evenVal);
     } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
-      if (y.min() == 1) {
-        if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, evenVal);
-        } else {
-          nonGround.domain.inValue(store.level, nonGround, oddVal);
-        }
-      } else if (y.max() == 0) {
-        if ((numberOnes & 1) == 1) {
-          nonGround.domain.inValue(store.level, nonGround, oddVal);
-        } else {
-          nonGround.domain.inValue(store.level, nonGround, evenVal);
-        }
-      }
+      propagateXorOneNonGround(store, nonGround, numberOnes, oddVal, evenVal);
+    }
+  }
+
+  private void propagateXorAllGround(Store store, int numberOnes, int oddVal, int evenVal) {
+    int yVal = (numberOnes & 1) == 1 ? oddVal : evenVal;
+    y.domain.inValue(store.level, y, yVal);
+  }
+
+  private void propagateXorOneNonGround(
+      Store store, IntVar nonGround, int numberOnes, int oddVal, int evenVal) {
+    boolean oddParity = (numberOnes & 1) == 1;
+    if (y.min() == 1) {
+      nonGround.domain.inValue(store.level, nonGround, oddParity ? evenVal : oddVal);
+    } else if (y.max() == 0) {
+      nonGround.domain.inValue(store.level, nonGround, oddParity ? oddVal : evenVal);
     }
   }
 
