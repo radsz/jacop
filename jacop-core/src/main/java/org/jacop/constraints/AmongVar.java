@@ -162,28 +162,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int lb0 = lb0Ts.value();
     int ub0 = ub0Ts.value();
 
-    IntVar x;
-
-    boolean inLb;
-
-    for (int i = lb0; i < ub0; i++) {
-      x = listOfX[i];
-      inLb = false;
-      // watch the relation with lbS
-      if (lbSdom.getSize() > 0 && lbSdom.contains(x.domain)) {
-        swapXtoFront(i, lb0);
-        lb0++;
-        inLb = true;
-        x.removeConstraint(this);
-      }
-
-      if (!inLb && !lbSdom.isIntersecting(x.domain)) {
-        swapXtoBack(i, ub0 - 1);
-        ub0--;
-        i--;
-        x.removeConstraint(this);
-      }
-    }
+    int[] borders = reorderXByLbUb(lbSdom, lb0, ub0);
+    lb0 = borders[0];
+    ub0 = borders[1];
 
     if (lb0 != lb0Ts.value()) {
       lb0Ts.update(lb0);
@@ -215,33 +196,56 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (n.domain.singleton()) {
-
-      if (lb0 == n.min() && ub0 == n.min()) {
-        removeConstraint();
+      if (applyNSingletonPruningForX(store, lbSdom, lb0, ub0)) {
         return;
       }
+    }
+  }
 
-      if (lb0 == n.min()) {
-        for (int i = lb0; i < ub0; i++) {
-          x = listOfX[i];
-
-          x.domain.in(store.level, x, x.domain.subtract(lbSdom));
-          if (DEBUG_ALL) {
-            log.debug("-- {} in {}", x.id(), x.domain);
-          }
-        }
+  private int[] reorderXByLbUb(IntDomain lbSdom, int lb0, int ub0) {
+    for (int i = lb0; i < ub0; i++) {
+      IntVar x = listOfX[i];
+      boolean inLb = false;
+      if (lbSdom.getSize() > 0 && lbSdom.contains(x.domain)) {
+        swapXtoFront(i, lb0);
+        lb0++;
+        inLb = true;
+        x.removeConstraint(this);
       }
+      if (!inLb && !lbSdom.isIntersecting(x.domain)) {
+        swapXtoBack(i, ub0 - 1);
+        ub0--;
+        i--;
+        x.removeConstraint(this);
+      }
+    }
+    return new int[] {lb0, ub0};
+  }
 
-      if (ub0 == n.min()) {
-        for (int i = lb0; i < ub0; i++) {
-          x = listOfX[i];
-          x.domain.in(store.level, x, x.domain.intersect(lbSdom));
-          if (DEBUG_ALL) {
-            log.debug("-- {} in {}", x.id(), x.domain);
-          }
+  private boolean applyNSingletonPruningForX(Store store, IntDomain lbSdom, int lb0, int ub0) {
+    if (lb0 == n.min() && ub0 == n.min()) {
+      removeConstraint();
+      return true;
+    }
+    if (lb0 == n.min()) {
+      for (int i = lb0; i < ub0; i++) {
+        IntVar x = listOfX[i];
+        x.domain.in(store.level, x, x.domain.subtract(lbSdom));
+        if (DEBUG_ALL) {
+          log.debug("-- {} in {}", x.id(), x.domain);
         }
       }
     }
+    if (ub0 == n.min()) {
+      for (int i = lb0; i < ub0; i++) {
+        IntVar x = listOfX[i];
+        x.domain.in(store.level, x, x.domain.intersect(lbSdom));
+        if (DEBUG_ALL) {
+          log.debug("-- {} in {}", x.id(), x.domain);
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -315,29 +319,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    */
   public void consistencyForY(Store store) {
 
-    IntDomain K = new IntervalDomain();
-    for (IntVar x : listOfX) {
-      if (x.singleton()) {
-        K = K.union(x.min());
-      } else {
-        assert false : "consistencyForY is called without all X being grounded";
-        return;
-      }
+    IntDomain K = buildKFromGroundedX();
+    if (K == null) {
+      return;
     }
 
     IntDomain lbSdom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
     IntDomain futureDomain = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
-    IntDomain U;
-
-    if (lbSdom.getSize() > 0) {
-      if (futureDomain.getSize() > 0) {
-        U = lbSdom.subtract(futureDomain);
-      } else {
-        U = lbSdom.copy();
-      }
-    } else {
-      U = new IntervalDomain();
-    }
+    IntDomain U = computeU(lbSdom, futureDomain);
 
     if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR Y -------------");
@@ -350,65 +339,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     int yGr = this.yGrounded.value();
     int ub0 = this.ub0Ts.value();
-    IntVar y;
-    IntVar x;
 
-    // number of X that are already covered by some y
-    int countCoverMin = 0;
-    // Number of Y who are not playing role in covering x
-    int noRoleY = 0;
+    int countCoverMin = countXCoveredByU(ub0, U);
+    int[] yCounts = countYCoverStats(yGr, ub0, K, U);
 
-    // Number of Y who already covering some x
-    int alreadyCover = 0;
-
-    for (int i = 0; i < ub0; i++) {
-      x = this.listOfX[i];
-      if (U.contains(x.value())) {
-        countCoverMin++;
-      }
-    }
-
-    for (int i = 0; i < yGr; i++) {
-      y = listOfY[i];
-      if (K.contains(y.domain)) {
-        alreadyCover++;
-      } else {
-        noRoleY++;
-      }
-    }
-
-    new IntervalDomain();
-    IntDomain intersectK;
-    IntDomain disjoint = new IntervalDomain();
-    // Number of Y who might cover x that were not yet covered
-    int potentialCover = 0;
-    // Number of disjoint Y who will cover x that were not yet covered
-    int disjointCover = 0;
-    for (int i = yGr; i < listOfY.length; i++) {
-      y = listOfY[i];
-      if (y.singleton()) {
-        if (K.contains(y.domain)) {
-          alreadyCover++;
-        } else {
-          noRoleY++;
-        }
-      } else {
-
-        intersectK = y.domain.intersect(K).subtract(U);
-
-        if (intersectK.getSize() == 0) {
-          noRoleY++;
-        } else if (intersectK.getSize() == y.domain.getSize()) {
-          potentialCover++;
-          if (!disjoint.isIntersecting(y.domain)) {
-            disjointCover++;
-            disjoint = disjoint.union(y.domain);
-          }
-        } else {
-          potentialCover++;
-        }
-      }
-    }
+    int noRoleY = yCounts[0];
+    int alreadyCover = yCounts[1];
+    int potentialCover = yCounts[2];
+    int disjointCover = yCounts[3];
 
     if (DEBUG_ALL) {
       log.debug("--number of x already covered=       {}", countCoverMin);
@@ -436,24 +374,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     K = K.subtract(U);
 
     if ((countCoverMin == n.min()) && n.singleton()) {
-
       if (DEBUG_ALL) {
         log.debug("--K \\ U = {}", K);
       }
-
-      for (int i = yGr; i < listOfY.length; i++) {
-        y = listOfY[i];
-        if (y.domain.isIntersecting(K)) {
-          y.domain.in(store.level, y, y.domain.subtract(K));
-        }
-      }
+      pruneYSubtractK(store, yGr, K);
       return;
     }
 
     int mayLeftToCover = listOfX.length - ub0;
     for (int i = 0; i < ub0; i++) {
-      x = listOfX[i];
-      if (K.contains(x.min())) {
+      if (K.contains(listOfX[i].min())) {
         mayLeftToCover++;
       }
     }
@@ -463,25 +393,169 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (n.singleton()) {
-      if (potentialCover <= K.getSize()
-          && mayLeftToCover == (n.min() - countCoverMin)
-          && K.getSize() == mayLeftToCover) {
-        for (int i = yGr; i < listOfY.length; i++) {
-          y = listOfY[i];
-          if (y.domain.isIntersecting(K)) {
-            y.domain.in(store.level, y, K);
-          }
-        }
+      pruneYWhenNSingleton(store, yGr, K, countCoverMin, potentialCover, mayLeftToCover);
+    }
+  }
+
+  private IntDomain buildKFromGroundedX() {
+    IntDomain K = new IntervalDomain();
+    for (IntVar x : listOfX) {
+      if (x.singleton()) {
+        K = K.union(x.min());
+      } else {
+        assert false : "consistencyForY is called without all X being grounded";
+        return null;
       }
-      if (potentialCover == n.min() - countCoverMin && K.getSize() == mayLeftToCover) {
-        for (int i = yGr; i < listOfY.length; i++) {
-          y = listOfY[i];
-          if (y.domain.isIntersecting(K)) {
-            y.domain.in(store.level, y, K);
+    }
+    return K;
+  }
+
+  private IntDomain computeU(IntDomain lbSdom, IntDomain futureDomain) {
+    if (lbSdom.getSize() > 0) {
+      if (futureDomain.getSize() > 0) {
+        return lbSdom.subtract(futureDomain);
+      }
+      return lbSdom.copy();
+    }
+    return new IntervalDomain();
+  }
+
+  private int countXCoveredByU(int ub0, IntDomain U) {
+    int countCoverMin = 0;
+    for (int i = 0; i < ub0; i++) {
+      if (U.contains(listOfX[i].value())) {
+        countCoverMin++;
+      }
+    }
+    return countCoverMin;
+  }
+
+  private int[] countYCoverStats(int yGr, int ub0, IntDomain K, IntDomain U) {
+    int noRoleY = 0;
+    int alreadyCover = 0;
+    for (int i = 0; i < yGr; i++) {
+      IntVar y = listOfY[i];
+      if (K.contains(y.domain)) {
+        alreadyCover++;
+      } else {
+        noRoleY++;
+      }
+    }
+    IntDomain disjoint = new IntervalDomain();
+    int potentialCover = 0;
+    int disjointCover = 0;
+    for (int i = yGr; i < listOfY.length; i++) {
+      IntVar y = listOfY[i];
+      if (y.singleton()) {
+        if (K.contains(y.domain)) {
+          alreadyCover++;
+        } else {
+          noRoleY++;
+        }
+      } else {
+        IntDomain intersectK = y.domain.intersect(K).subtract(U);
+        if (intersectK.getSize() == 0) {
+          noRoleY++;
+        } else if (intersectK.getSize() == y.domain.getSize()) {
+          potentialCover++;
+          if (!disjoint.isIntersecting(y.domain)) {
+            disjointCover++;
+            disjoint = disjoint.union(y.domain);
           }
+        } else {
+          potentialCover++;
         }
       }
     }
+    return new int[] {noRoleY, alreadyCover, potentialCover, disjointCover};
+  }
+
+  private void pruneYSubtractK(Store store, int yGr, IntDomain K) {
+    for (int i = yGr; i < listOfY.length; i++) {
+      IntVar y = listOfY[i];
+      if (y.domain.isIntersecting(K)) {
+        y.domain.in(store.level, y, y.domain.subtract(K));
+      }
+    }
+  }
+
+  private void pruneYWhenNSingleton(
+      Store store,
+      int yGr,
+      IntDomain K,
+      int countCoverMin,
+      int potentialCover,
+      int mayLeftToCover) {
+    if (potentialCover <= K.getSize()
+        && mayLeftToCover == (n.min() - countCoverMin)
+        && K.getSize() == mayLeftToCover) {
+      for (int i = yGr; i < listOfY.length; i++) {
+        IntVar y = listOfY[i];
+        if (y.domain.isIntersecting(K)) {
+          y.domain.in(store.level, y, K);
+        }
+      }
+    }
+    if (potentialCover == n.min() - countCoverMin && K.getSize() == mayLeftToCover) {
+      for (int i = yGr; i < listOfY.length; i++) {
+        IntVar y = listOfY[i];
+        if (y.domain.isIntersecting(K)) {
+          y.domain.in(store.level, y, K);
+        }
+      }
+    }
+  }
+
+  /**
+   * For each value in mustBeCoveredNow, counts how many Y can cover it; fails if 0, grounds Y if 1.
+   * Updates lastIndexRef[0] when a Y is moved to front. Returns updated mustBeCoveredNow domain.
+   */
+  private IntervalDomain handleMustBeCoveredNow(
+      Store store, IntervalDomain mustBeCoveredNow, int[] lastIndexRef) {
+    if (mustBeCoveredNow.getSize() == 0) {
+      return mustBeCoveredNow;
+    }
+    if (DEBUG_ALL) {
+      log.debug("It appears that we must cover such values : {}", mustBeCoveredNow);
+    }
+    int lastIndex = lastIndexRef[0];
+    for (int h = 0; h < mustBeCoveredNow.size; h++) {
+      Interval inv = mustBeCoveredNow.intervals[h];
+      for (int v = inv.min(); v <= inv.max(); v++) {
+        int cardinalityV = 0;
+        int last = -1;
+        for (int i = yGrounded.value(); i < listOfY.length; i++) {
+          IntVar y = listOfY[i];
+          if (y.singleton() && y.min() == v) {
+            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.subtract(v, v);
+            cardinalityV = -1;
+            break;
+          }
+          if (y.domain.contains(v)) {
+            cardinalityV++;
+            last = i;
+          }
+        }
+        if (cardinalityV == 0) {
+          if (DEBUG_ALL) {
+            log.debug("Cardinality of {} is 0 => FAIL ", v);
+          }
+          throw Store.failException;
+        }
+        if (cardinalityV == 1) {
+          IntVar yLast = listOfY[last];
+          if (DEBUG_ALL) {
+            log.debug("Cardinality of {} is 1 => Groud {}", v, yLast.id);
+          }
+          swapYtoFront(last, lastIndex);
+          lastIndex++;
+          yLast.domain.inValue(store.level, yLast, v);
+          mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.subtract(v, v);
+        }
+      }
+    }
+    lastIndexRef[0] = lastIndex;
+    return mustBeCoveredNow;
   }
 
   @Override
@@ -586,58 +660,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           mustBeCoveredNow = (IntervalDomain) futureDom;
         }
 
-        // If there appeared the Y values that have a risk to stay ungrounded
-        // we will count their cardinality and FAIL if its 0, ground some Y if it is 1
-        if (mustBeCoveredNow.getSize() > 0) {
-          if (DEBUG_ALL) {
-            log.debug("It appears that we must cover such values : {}", mustBeCoveredNow);
-          }
-          int cardinalityV;
-          int last;
-          IntVar y_last;
-          // Go though all the intervals of the domain
-
-          Interval inv;
-          for (int h = 0; h < mustBeCoveredNow.size; h++) {
-            inv = mustBeCoveredNow.intervals[h];
-            // go through each value of the interval
-            for (int v = inv.min(); v <= inv.max(); v++) {
-              cardinalityV = 0;
-              last = -1;
-              // count the cardinality of v among Y
-              for (int i = this.yGrounded.value(); i < this.listOfY.length; i++) {
-                y = this.listOfY[i];
-
-                if (y.singleton() && y.min() == v) {
-                  mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
-                  cardinalityV = -1;
-                  break;
-                }
-                if (y.domain.contains(v)) {
-                  cardinalityV++;
-                  last = i;
-                }
-              }
-              if (cardinalityV == 0) {
-                if (DEBUG_ALL) {
-                  log.debug("Cardinality of {} is 0 => FAIL ", v);
-                }
-                throw Store.failException;
-              } else if (cardinalityV == 1) {
-                y_last = this.listOfY[last];
-                if (DEBUG_ALL) {
-                  log.debug("Cardinality of {} is 1 => Groud {}", v, y_last.id);
-                }
-
-                swapYtoFront(last, lastIndex);
-                lastIndex++;
-                y_last.domain.inValue(store.level, y_last, v);
-
-                mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
-              }
-            }
-          }
-        }
+        int[] lastIndexRef = new int[] {lastIndex};
+        mustBeCoveredNow = handleMustBeCoveredNow(store, mustBeCoveredNow, lastIndexRef);
+        lastIndex = lastIndexRef[0];
       }
       lbS.update(new MutableDomainValue(lbSdom));
       mustBeCoveredNow = new IntervalDomain();

@@ -152,68 +152,23 @@ public class CreditCalculator<T extends Var>
 
     currentLevel++;
 
-    // TODO: if not consistent in left child then transfer credits to right child?
-
     if (!consistent && leftChild) {
-      currentLevel--;
-      if (currentLevel > 0 && currentLevel < creditsLeft.length) {
-
-        // TODO: do we need that?  if (creditsLeft[currentLevel - 1] > 1)
-        creditsRight[currentLevel] += creditsLeft[currentLevel];
-        creditsLeft[currentLevel] = 0;
-      }
+      transferCreditsLeftToRightOnInconsistent();
     }
 
     if (consistent) {
       if (currentLevel > 0 && currentLevel < creditsLeft.length) {
-
-        if (leftChild) {
-          if (creditsLeft[currentLevel - 1] > 1) {
-            creditsRight[currentLevel] = creditsLeft[currentLevel - 1] / 2;
-            creditsLeft[currentLevel] = creditsLeft[currentLevel - 1] - creditsRight[currentLevel];
-            creditsLeft[currentLevel - 1] = 0;
-          } else if (creditsLeft[currentLevel - 1] == 1) {
-            currentBacktracks = backtracks;
-            creditsLeft[currentLevel - 1] = 0;
-          }
-        }
-
-        if (!leftChild) {
-          if (creditsRight[currentLevel - 1] > 1) {
-            creditsRight[currentLevel] = creditsRight[currentLevel - 1] / 2;
-            creditsLeft[currentLevel] = creditsRight[currentLevel - 1] - creditsRight[currentLevel];
-            creditsRight[currentLevel - 1] = 0;
-          } else if (creditsRight[currentLevel - 1] == 1) {
-            currentBacktracks = backtracks;
-            creditsRight[currentLevel - 1] = 0;
-          }
-        }
-
+        distributeCreditsAtMidDepth();
       } else if (currentLevel == creditsLeft.length) {
-
-        if (leftChild) {
-          if (creditsLeft[currentLevel - 1] >= 1) {
-            creditsLeft[currentLevel - 1]--;
-            currentBacktracks = backtracks;
-          }
-        } else {
-          if (creditsRight[currentLevel - 1] >= 1) {
-            creditsRight[currentLevel - 1]--;
-            currentBacktracks = backtracks;
-          }
-        }
+        consumeCreditAtMaxDepth();
       }
     }
 
     if (consistencyListeners != null) {
-      boolean code = false;
-      for (ConsistencyListener consistencyListener : consistencyListeners) {
-        code |= consistencyListener.executeAfterConsistency(consistent);
-      }
+      boolean code = delegateConsistencyListeners(consistent);
       if (code) {
         leftChild = true;
       }
-
       return code;
     }
 
@@ -221,6 +176,58 @@ public class CreditCalculator<T extends Var>
       leftChild = true;
     }
     return consistent;
+  }
+
+  private void transferCreditsLeftToRightOnInconsistent() {
+    currentLevel--;
+    if (currentLevel > 0 && currentLevel < creditsLeft.length) {
+      creditsRight[currentLevel] += creditsLeft[currentLevel];
+      creditsLeft[currentLevel] = 0;
+    }
+  }
+
+  private void distributeCreditsAtMidDepth() {
+    if (leftChild) {
+      if (creditsLeft[currentLevel - 1] > 1) {
+        creditsRight[currentLevel] = creditsLeft[currentLevel - 1] / 2;
+        creditsLeft[currentLevel] = creditsLeft[currentLevel - 1] - creditsRight[currentLevel];
+        creditsLeft[currentLevel - 1] = 0;
+      } else if (creditsLeft[currentLevel - 1] == 1) {
+        currentBacktracks = backtracks;
+        creditsLeft[currentLevel - 1] = 0;
+      }
+    } else {
+      if (creditsRight[currentLevel - 1] > 1) {
+        creditsRight[currentLevel] = creditsRight[currentLevel - 1] / 2;
+        creditsLeft[currentLevel] = creditsRight[currentLevel - 1] - creditsRight[currentLevel];
+        creditsRight[currentLevel - 1] = 0;
+      } else if (creditsRight[currentLevel - 1] == 1) {
+        currentBacktracks = backtracks;
+        creditsRight[currentLevel - 1] = 0;
+      }
+    }
+  }
+
+  private void consumeCreditAtMaxDepth() {
+    if (leftChild) {
+      if (creditsLeft[currentLevel - 1] >= 1) {
+        creditsLeft[currentLevel - 1]--;
+        currentBacktracks = backtracks;
+      }
+    } else {
+      if (creditsRight[currentLevel - 1] >= 1) {
+        creditsRight[currentLevel - 1]--;
+        currentBacktracks = backtracks;
+      }
+    }
+  }
+
+  private boolean delegateConsistencyListeners(boolean consistent) {
+    boolean code = false;
+    for (ConsistencyListener consistencyListener : consistencyListeners) {
+      code |= consistencyListener.executeAfterConsistency(consistent);
+    }
+    return code;
   }
 
   /** It is executed right after time out is determined. */
@@ -245,70 +252,71 @@ public class CreditCalculator<T extends Var>
    */
   public boolean leftChild(T v, int value, boolean status) {
 
-    // TODO: if credits are encountered in the node then backtracks should be set to zero. where?
-
     if (!status) {
+      return handleLeftChildFailureVar(v, value);
+    }
 
-      if (currentLevel > 0 && currentLevel < creditsLeft.length) {
-        creditsRight[currentLevel - 1] += creditsLeft[currentLevel];
-        creditsLeft[currentLevel] = 0;
+    if (status) {
+      return handleLeftChildSuccessVar(v, value);
+    }
+
+    return handleLeftChildTimeoutOrContinueVar(v, value);
+  }
+
+  private boolean handleLeftChildFailureVar(T v, int value) {
+    if (currentLevel > 0 && currentLevel < creditsLeft.length) {
+      creditsRight[currentLevel - 1] += creditsLeft[currentLevel];
+      creditsLeft[currentLevel] = 0;
+    }
+
+    if (currentBacktracks < 0
+        && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
+      notifyExitChildListenersLeft(v, value, false);
+      currentLevel--;
+      return false;
+    }
+    return handleLeftChildTimeoutOrContinueVar(v, value);
+  }
+
+  private boolean handleLeftChildSuccessVar(T v, int value) {
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(v, value, true);
       }
+      if (!code) {
+        currentLevel--;
+      }
+      return code;
+    }
+    return true;
+  }
 
-      if (currentBacktracks < 0
-          && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
-
-        if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(v, value, false);
-          }
-        }
-
+  private boolean handleLeftChildTimeoutOrContinueVar(T v, int value) {
+    if (timeOut) {
+      notifyExitChildListenersLeft(v, value, false);
+      currentLevel--;
+      return false;
+    }
+    leftChild = false;
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(v, value, false);
+      }
+      if (!code) {
         currentLevel--;
         return false;
       }
     }
+    return true;
+  }
 
-    if (status) {
-      if (exitChildListeners != null) {
-        boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(v, value, true);
-        }
-
-        if (!code) {
-          currentLevel--;
-        }
-        return code;
+  private void notifyExitChildListenersLeft(T v, int value, boolean status) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.leftChild(v, value, status);
       }
-      return true;
-    }
-
-    // !status since, status if clause is earlier and must cause exit.
-    if (timeOut) {
-      if (exitChildListeners != null) {
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(v, value, false);
-        }
-      }
-
-      currentLevel--;
-      return false;
-    } else {
-
-      leftChild = false;
-
-      if (exitChildListeners != null) {
-        boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(v, value, false);
-        }
-        if (!code) {
-          currentLevel--;
-          return false;
-        }
-      }
-
-      return true;
     }
   }
 
@@ -322,63 +330,67 @@ public class CreditCalculator<T extends Var>
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
 
     if (!status) {
+      return handleLeftChildFailureChoice(choice);
+    }
 
-      if (currentLevel + 1 < creditsLeft.length) {
-        creditsRight[currentLevel] += creditsLeft[currentLevel + 1];
-        creditsLeft[currentLevel + 1] = 0;
+    if (status) {
+      return handleLeftChildSuccessChoice(choice);
+    }
+
+    return handleLeftChildTimeoutOrContinueChoice(choice);
+  }
+
+  private boolean handleLeftChildFailureChoice(PrimitiveConstraint choice) {
+    if (currentLevel + 1 < creditsLeft.length) {
+      creditsRight[currentLevel] += creditsLeft[currentLevel + 1];
+      creditsLeft[currentLevel + 1] = 0;
+    }
+
+    if (currentBacktracks < 0
+        && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
+      notifyExitChildListenersLeft(choice, false);
+      currentLevel--;
+      return false;
+    }
+    return handleLeftChildTimeoutOrContinueChoice(choice);
+  }
+
+  private boolean handleLeftChildSuccessChoice(PrimitiveConstraint choice) {
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, true);
       }
+      return code;
+    }
+    return true;
+  }
 
-      // If credits of the right child are zero then right child will not be explored.
-      if (currentBacktracks < 0
-          && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
-
-        if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(choice, false);
-          }
-        }
-
+  private boolean handleLeftChildTimeoutOrContinueChoice(PrimitiveConstraint choice) {
+    if (timeOut) {
+      notifyExitChildListenersLeft(choice, false);
+      currentLevel--;
+      return false;
+    }
+    leftChild = false;
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, false);
+      }
+      if (!code) {
         currentLevel--;
         return false;
       }
     }
+    return true;
+  }
 
-    if (status) {
-      if (exitChildListeners != null) {
-        boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(choice, true);
-        }
-        return code;
+  private void notifyExitChildListenersLeft(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.leftChild(choice, status);
       }
-      return true;
-    }
-
-    if (timeOut) {
-      if (exitChildListeners != null) {
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(choice, false);
-        }
-      }
-
-      currentLevel--;
-      return false;
-    } else {
-
-      leftChild = false;
-
-      if (exitChildListeners != null) {
-        boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(choice, false);
-        }
-        if (!code) {
-          currentLevel--;
-          return false;
-        }
-      }
-
-      return true;
     }
   }
 

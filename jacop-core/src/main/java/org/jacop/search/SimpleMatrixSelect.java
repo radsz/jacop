@@ -182,149 +182,45 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
     int finalIndex = searchVariables.size();
 
     if (mainComparator == null) {
-
-      while (firstVariable < finalIndex) {
-
-        List<T> row = searchVariables.get(firstVariable);
-
-        for (int i = 0; i < row.size(); i++) {
-          if (!row.get(i).singleton()) {
-            primaryIndex = firstVariable;
-            secondaryIndex = i;
-            return row.get(i);
-          }
-        }
-
-        firstVariable++;
-      }
-
-      return null;
+      return getChoiceVariableNoComparator(firstVariable, finalIndex);
     }
 
     T currentVariable = searchVariables.get(firstVariable).get(pivotPosition);
 
-    // make sure that firstVariable points at row which contains not only singletons.
     if (currentVariable.singleton()) {
-
-      while (firstVariable < finalIndex) {
-
-        List<T> row = searchVariables.get(firstVariable);
-
-        boolean allGrounded = true;
-
-        for (int i = row.size() - 1; i >= 0 && allGrounded; i--) {
-          if (!row.get(i).singleton()) {
-            allGrounded = false;
-          }
-        }
-
-        if (allGrounded) {
-
-          firstVariable++;
-
-          if (firstVariable == finalIndex) {
-            return null;
-          }
-
-          currentVariable = searchVariables.get(firstVariable).get(pivotPosition);
-
-          if (!currentVariable.singleton()) {
-            break;
-          }
-
-        } else {
-          // row does not consists of singletons only, pivotVariable is a singleton.
-          break;
-        }
+      int[] next = skipToFirstNonSingletonRow(firstVariable, finalIndex);
+      firstVariable = next[0];
+      if (firstVariable < 0) {
+        return null;
       }
+      currentVariable = searchVariables.get(firstVariable).get(pivotPosition);
     }
 
     double optimalMetric = mainComparator.metric(currentVariable);
     int optimalPosition = firstVariable;
 
-    int comparison;
-
-    T v;
-
     for (int currentPosition = firstVariable + 1; currentPosition < finalIndex; currentPosition++) {
+      T v = searchVariables.get(currentPosition).get(pivotPosition);
 
-      v = searchVariables.get(currentPosition).get(pivotPosition);
-
-      // if later some singletons rows are encountered they are moved to the left (firstVariable
-      // position).
       if (v.singleton()) {
-
         List<T> row = searchVariables.get(currentPosition);
-
-        boolean allGrounded = true;
-
-        for (int i = row.size() - 1; i >= 0 && allGrounded; i--) {
-          if (!row.get(i).singleton()) {
-            allGrounded = false;
-          }
-        }
-
-        if (allGrounded) {
-          // switch rows.
+        if (isRowAllGrounded(row)) {
           searchVariables.set(currentPosition, searchVariables.get(firstVariable));
           searchVariables.set(firstVariable, row);
           if (optimalPosition == firstVariable) {
             optimalPosition = currentPosition;
           }
           firstVariable++;
-          // work with next row, that one was composed of singletons only.
           continue;
         }
       }
 
-      // row contains not only singletons, even is variable at pivot position is a singleton.
-
-      comparison = mainComparator.compare(optimalMetric, v);
-
+      int comparison = mainComparator.compare(optimalMetric, v);
       if (comparison < 0) {
         optimalPosition = currentPosition;
         optimalMetric = mainComparator.metric(v);
-      } else {
-
-        if (comparison == 0) {
-          if (tieBreakingComparator != null) {
-
-            int comp =
-                tieBreakingComparator.compare(
-                    searchVariables.get(optimalPosition).get(pivotPosition), v);
-
-            if (comp < 0) {
-              optimalPosition = currentPosition;
-            } else if (comp == 0 && inputOrderTieBreaking) {
-              // Employs input order tie breaking
-
-              int position1 = position.get(searchVariables.get(optimalPosition).get(pivotPosition));
-              int position2 = position.get(searchVariables.get(currentPosition).get(pivotPosition));
-
-              if (position2 < position1) {
-                optimalPosition = currentPosition;
-                // Variable with currentPosition had a smaller
-                // initial position within search variables
-              }
-            }
-          } else {
-
-            // If not InputOrderTieBreaking then dynamicLex as
-            // specified by search object is used
-
-            if (inputOrderTieBreaking) {
-              // Employs input order tie breaking
-              int position1 = position.get(searchVariables.get(optimalPosition).get(pivotPosition));
-              int position2 = position.get(searchVariables.get(currentPosition).get(pivotPosition));
-
-              if (position2 < position1) {
-                optimalPosition = currentPosition;
-                // Variable with currentPosition had a smaller
-                // initial position within search variables
-              }
-            }
-          }
-        }
+      } else if (comparison == 0 && applyMatrixTieBreak(optimalPosition, currentPosition, v)) {
+        optimalPosition = currentPosition;
       }
     }
 
@@ -346,6 +242,72 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
     }
 
     return searchVariables.get(primaryIndex).get(secondaryIndex);
+  }
+
+  private T getChoiceVariableNoComparator(int firstVariable, int finalIndex) {
+    while (firstVariable < finalIndex) {
+      List<T> row = searchVariables.get(firstVariable);
+      for (int i = 0; i < row.size(); i++) {
+        if (!row.get(i).singleton()) {
+          primaryIndex = firstVariable;
+          secondaryIndex = i;
+          return row.get(i);
+        }
+      }
+      firstVariable++;
+    }
+    return null;
+  }
+
+  /**
+   * Skips rows that are all singletons. Returns int[1] with new firstVariable, or -1 if no row
+   * found (caller should return null).
+   */
+  private int[] skipToFirstNonSingletonRow(int firstVariable, int finalIndex) {
+    while (firstVariable < finalIndex) {
+      List<T> row = searchVariables.get(firstVariable);
+      if (!isRowAllGrounded(row)) {
+        return new int[] {firstVariable};
+      }
+      firstVariable++;
+      if (firstVariable == finalIndex) {
+        return new int[] {-1};
+      }
+      T currentVariable = searchVariables.get(firstVariable).get(pivotPosition);
+      if (!currentVariable.singleton()) {
+        return new int[] {firstVariable};
+      }
+    }
+    return new int[] {-1};
+  }
+
+  private boolean isRowAllGrounded(List<T> row) {
+    for (int i = row.size() - 1; i >= 0; i--) {
+      if (!row.get(i).singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean applyMatrixTieBreak(int optimalPosition, int currentPosition, T v) {
+    if (tieBreakingComparator != null) {
+      int comp =
+          tieBreakingComparator.compare(searchVariables.get(optimalPosition).get(pivotPosition), v);
+      if (comp < 0) {
+        return true;
+      }
+      if (comp == 0 && inputOrderTieBreaking) {
+        return position.get(searchVariables.get(currentPosition).get(pivotPosition))
+            < position.get(searchVariables.get(optimalPosition).get(pivotPosition));
+      }
+      return false;
+    }
+    if (inputOrderTieBreaking) {
+      return position.get(searchVariables.get(currentPosition).get(pivotPosition))
+          < position.get(searchVariables.get(optimalPosition).get(pivotPosition));
+    }
+    return false;
   }
 
   /**

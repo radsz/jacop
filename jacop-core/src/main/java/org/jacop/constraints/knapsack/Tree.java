@@ -169,95 +169,77 @@ public class Tree {
     assert items.length > 1 : "Number of items must be greater than 1";
 
     TreeLeaf nullLeaf = new TreeLeaf(zero, 1, 0, items.length);
-
-    int totalLength = items.length;
-
-    if (totalLength % 2 == 1) {
-      totalLength++;
-    }
-
-    TreeNode[] currentLevel = new TreeNode[totalLength];
-
+    int totalLength = items.length + (items.length % 2 == 1 ? 1 : 0);
     alreadyObtainedProfit = 0;
-
     alreadyUsedCapacity = 0;
 
-    // Create leaves.
-    for (int i = 0; i < items.length; i++) {
-
-      KnapsackItem item = items[i];
-
-      IntVar v = item.getQuantity();
-      int v_weight = item.getWeight();
-      int v_profit = item.getProfit();
-
-      TreeLeaf leaf = new TreeLeaf(v, v_weight, v_profit, i);
-      leaves[i] = leaf;
-
-      currentLevel[i] = leaf;
-      varPositionMaping.put(v, leaf);
-    }
-
-    if (items.length < totalLength) {
-      currentLevel[items.length] = nullLeaf;
-    }
-
+    TreeNode[] currentLevel =
+        createLeavesLevel(items, leaves, varPositionMaping, nullLeaf, totalLength);
     first = leaves[0];
     last = leaves[items.length - 1];
 
-    // Create internal nodes.
+    currentLevel = buildInternalLevels(currentLevel, nullLeaf);
+    root = currentLevel[0];
+    root.recomputeDown(this);
+  }
+
+  private static TreeNode[] createLeavesLevel(
+      KnapsackItem[] items,
+      TreeLeaf[] leaves,
+      Map<IntVar, TreeLeaf> varPositionMaping,
+      TreeLeaf nullLeaf,
+      int totalLength) {
+    TreeNode[] currentLevel = new TreeNode[totalLength];
+    for (int i = 0; i < items.length; i++) {
+      KnapsackItem item = items[i];
+      TreeLeaf leaf = new TreeLeaf(item.getQuantity(), item.getWeight(), item.getProfit(), i);
+      leaves[i] = leaf;
+      currentLevel[i] = leaf;
+      varPositionMaping.put(item.getQuantity(), leaf);
+    }
+    if (items.length < totalLength) {
+      currentLevel[items.length] = nullLeaf;
+    }
+    return currentLevel;
+  }
+
+  private static TreeNode[] buildInternalLevels(TreeNode[] currentLevel, TreeLeaf nullLeaf) {
     while (currentLevel.length != 1) {
-
-      for (int i = 0; i < currentLevel.length - 1; i++) {
-        currentLevel[i].setRightNeighbor(currentLevel[i + 1]);
-      }
-
-      for (int i = 1; i < currentLevel.length; i++) {
-        currentLevel[i].setLeftNeighbor(currentLevel[i - 1]);
-      }
-
-      int k = 0;
-      int next = 0;
-
+      linkNeighbors(currentLevel);
       int length = currentLevel.length / 2;
-
       if (length % 2 == 1 && length != 1) {
         length++;
       }
-
-      TreeNode[] nextLevel = new TreeNode[length];
-
-      while (k < currentLevel.length && currentLevel[k] != null) {
-
-        TreeNode left = currentLevel[k];
-        TreeNode right = null;
-        if (k + 1 < currentLevel.length) {
-          right = currentLevel[k + 1];
-        }
-
-        if (right == null) {
-          // one item only.
-          nextLevel[next] = null;
-        } else {
-
-          TreeNode root = new TreeNode(left, right);
-          nextLevel[next] = root;
-        }
-
-        next++;
-        k += 2;
-      }
-
-      if (nextLevel[length - 1] == null) {
-        nextLevel[length - 1] = new TreeNode(nullLeaf, nullLeaf);
-      }
-
+      TreeNode[] nextLevel = buildNextLevel(currentLevel, length, nullLeaf);
       currentLevel = nextLevel;
     }
+    return currentLevel;
+  }
 
-    root = currentLevel[0];
+  private static void linkNeighbors(TreeNode[] currentLevel) {
+    for (int i = 0; i < currentLevel.length - 1; i++) {
+      currentLevel[i].setRightNeighbor(currentLevel[i + 1]);
+    }
+    for (int i = 1; i < currentLevel.length; i++) {
+      currentLevel[i].setLeftNeighbor(currentLevel[i - 1]);
+    }
+  }
 
-    root.recomputeDown(this);
+  private static TreeNode[] buildNextLevel(TreeNode[] currentLevel, int length, TreeLeaf nullLeaf) {
+    TreeNode[] nextLevel = new TreeNode[length];
+    int k = 0;
+    int next = 0;
+    while (k < currentLevel.length && currentLevel[k] != null) {
+      TreeNode left = currentLevel[k];
+      TreeNode right = k + 1 < currentLevel.length ? currentLevel[k + 1] : null;
+      nextLevel[next] = right == null ? null : new TreeNode(left, right);
+      next++;
+      k += 2;
+    }
+    if (nextLevel[length - 1] == null) {
+      nextLevel[length - 1] = new TreeNode(nullLeaf, nullLeaf);
+    }
+    return nextLevel;
   }
 
   /**
@@ -470,107 +452,19 @@ public class Tree {
       double efficiencyOfItemChecked,
       double profitSlack) {
 
-    // If the function can not go beyond critical leaf
-    if (currentNode == criticalLeaf
-        && efficiencyOfItemChecked * availableWeightOfCriticalItem - profitFromCriticalLeft
-            > profitSlack) {
-
-      // Playing safe, we return higher value (ceil) to avoid making items mandatory due to rounding
-      // errors).
-
-      return (int)
-          Math.ceil(
-              profitSlack
-                  * criticalLeaf.weightOfOne
-                  * weightOfItemChecked
-                  / (double)
-                      (criticalLeaf.weightOfOne * profitOfItemChecked
-                          - weightOfItemChecked * criticalLeaf.profitOfOne));
-
-    } else if (currentWeight < availableWeightOfCriticalItem) {
+    Integer criticalReturn =
+        tryCriticalLeafReturnReplacable(
+            weightOfItemChecked, profitOfItemChecked, efficiencyOfItemChecked, profitSlack);
+    if (criticalReturn != null) {
+      return criticalReturn;
+    }
+    if (currentWeight < availableWeightOfCriticalItem) {
       currentWeight = availableWeightOfCriticalItem;
     }
 
-    while (!exhaustedRightItems) {
-
-      if (currentNode.parent == null) {
-        exhaustedRightItems = true;
-        break;
-      }
-
-      boolean rightChild = currentNode.parent.right == currentNode;
-
-      if (!rightChild) {
-
-        // move right does not exceed slack.
-        double profitEaten =
-            efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
-                - (currentProfit + currentNode.rightNeighbor.getPSum())
-                - profitFromCriticalLeft;
-
-        // @TODO: < changed to <=, double check that it causes no problems...
-        if (profitEaten <= profitSlack) {
-
-          currentNode = currentNode.parent;
-          currentWeight += currentNode.right.getWSum();
-          currentProfit += currentNode.right.getPSum();
-
-        } else {
-          break;
-        }
-      } else {
-        // currentNode is the right child.
-        if (currentNode.rightNeighbor == null) {
-          exhaustedRightItems = true;
-          break;
-        }
-
-        // move right does not exceed slack.
-        // @TODO: < changed to <=, double check that it causes no problems...
-        if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
-                - (currentProfit + currentNode.rightNeighbor.getPSum())
-                - profitFromCriticalLeft
-            <= profitSlack) {
-
-          currentNode = currentNode.rightNeighbor;
-          currentWeight += currentNode.getWSum();
-          currentProfit += currentNode.getPSum();
-
-        } else {
-          break;
-        }
-      }
-    }
-
-    // Slack has been almost exhausted or left items has been exhausted.
-
+    exhaustRightItemsLoop(efficiencyOfItemChecked, profitSlack);
     if (!exhaustedRightItems) {
-      while (true) {
-
-        // move right does not exceed slack.
-        if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
-                - (currentProfit + currentNode.rightNeighbor.getPSum())
-                - profitFromCriticalLeft
-            < profitSlack) {
-
-          currentNode = currentNode.rightNeighbor;
-          currentWeight += currentNode.getWSum();
-          currentProfit += currentNode.getPSum();
-
-        } else {
-          // Going to right neighbor does exhaust slack.
-
-          if (!currentNode.isLeaf()) {
-            currentNode = currentNode.right;
-          } else {
-            break;
-          }
-        }
-
-        if (currentNode.isLeaf()) {
-          break;
-        }
-      }
+      finalReplacementLoopRight(efficiencyOfItemChecked, profitSlack);
     }
 
     if (!exhaustedRightItems && currentNode.rightNeighbor.getPSum() == 0) {
@@ -625,6 +519,87 @@ public class Tree {
       // currentWeight += (int) Math.floor( lastWeight );
     }
     return currentWeight + (int) Math.ceil(lastWeight);
+  }
+
+  /** Returns replacement weight if critical leaf case applies, else null. */
+  private Integer tryCriticalLeafReturnReplacable(
+      int weightOfItemChecked,
+      int profitOfItemChecked,
+      double efficiencyOfItemChecked,
+      double profitSlack) {
+    if (currentNode != criticalLeaf
+        || efficiencyOfItemChecked * availableWeightOfCriticalItem - profitFromCriticalLeft
+            <= profitSlack) {
+      return null;
+    }
+    return (int)
+        Math.ceil(
+            profitSlack
+                * criticalLeaf.weightOfOne
+                * weightOfItemChecked
+                / (double)
+                    (criticalLeaf.weightOfOne * profitOfItemChecked
+                        - weightOfItemChecked * criticalLeaf.profitOfOne));
+  }
+
+  private void exhaustRightItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
+    while (!exhaustedRightItems) {
+      if (currentNode.parent == null) {
+        exhaustedRightItems = true;
+        break;
+      }
+      boolean rightChild = currentNode.parent.right == currentNode;
+      if (!rightChild) {
+        double profitEaten =
+            efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
+                - (currentProfit + currentNode.rightNeighbor.getPSum())
+                - profitFromCriticalLeft;
+        if (profitEaten <= profitSlack) {
+          currentNode = currentNode.parent;
+          currentWeight += currentNode.right.getWSum();
+          currentProfit += currentNode.right.getPSum();
+        } else {
+          break;
+        }
+      } else {
+        if (currentNode.rightNeighbor == null) {
+          exhaustedRightItems = true;
+          break;
+        }
+        if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
+                - (currentProfit + currentNode.rightNeighbor.getPSum())
+                - profitFromCriticalLeft
+            <= profitSlack) {
+          currentNode = currentNode.rightNeighbor;
+          currentWeight += currentNode.getWSum();
+          currentProfit += currentNode.getPSum();
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  private void finalReplacementLoopRight(double efficiencyOfItemChecked, double profitSlack) {
+    while (true) {
+      if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
+              - (currentProfit + currentNode.rightNeighbor.getPSum())
+              - profitFromCriticalLeft
+          < profitSlack) {
+        currentNode = currentNode.rightNeighbor;
+        currentWeight += currentNode.getWSum();
+        currentProfit += currentNode.getPSum();
+      } else {
+        if (!currentNode.isLeaf()) {
+          currentNode = currentNode.right;
+        } else {
+          break;
+        }
+      }
+      if (currentNode.isLeaf()) {
+        break;
+      }
+    }
   }
 
   /**
@@ -711,113 +686,19 @@ public class Tree {
       double efficiencyOfItemChecked,
       double profitSlack) {
 
-    // If the function can not go beyond critical leaf
-    if (currentNode == criticalLeaf
-        && profitFromCriticalTaken - efficiencyOfItemChecked * takenWeightOfCriticalItem
-            > profitSlack) {
-
-      // Playing safe, we return higher value (ceil) to avoid making items forbidden due to rounding
-      // errors).
-      return (int)
-          Math.ceil(
-              profitSlack
-                  * criticalLeaf.weightOfOne
-                  * weightOfItemChecked
-                  / (double)
-                      (criticalLeaf.profitOfOne * weightOfItemChecked
-                          - profitOfItemChecked * criticalLeaf.weightOfOne));
-
-    } else if (currentWeight < takenWeightOfCriticalItem) {
+    Integer criticalReturn =
+        tryCriticalLeafReturnIntrusion(
+            weightOfItemChecked, profitOfItemChecked, efficiencyOfItemChecked, profitSlack);
+    if (criticalReturn != null) {
+      return criticalReturn;
+    }
+    if (currentWeight < takenWeightOfCriticalItem) {
       currentWeight = takenWeightOfCriticalItem;
     }
 
-    // Adding items until slack is ALMOST exhausted.
-    while (!exhaustedLeftItems) {
-
-      if (currentNode.parent == null) {
-        exhaustedLeftItems = true;
-        break;
-      }
-
-      boolean rightChild = currentNode.parent.right == currentNode;
-
-      if (rightChild) {
-
-        if (currentNode.leftNeighbor == null) {
-          exhaustedLeftItems = true;
-          break;
-        }
-
-        if (profitSlack
-                + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
-                - (currentProfit + currentNode.leftNeighbor.getPSum())
-                - profitFromCriticalTaken
-            < 0) {
-
-          // Going to left neighbor exhausts slack.
-          break;
-
-        } else {
-          // Going to left neighbor does not exhaust slack.
-
-          currentNode = currentNode.parent;
-          currentWeight += currentNode.left.getWSum();
-          currentProfit += currentNode.left.getPSum();
-        }
-
-      } else {
-        // currentNode is the left child.
-        if (currentNode.leftNeighbor == null) {
-          exhaustedLeftItems = true;
-          break;
-        }
-
-        if (profitSlack
-                + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
-                - (currentProfit + currentNode.leftNeighbor.getPSum())
-                - profitFromCriticalTaken
-            < 0) {
-
-          // Going to left neighbor would exceeded slack.
-          break;
-        }
-
-        currentNode = currentNode.leftNeighbor;
-        currentWeight += currentNode.getWSum();
-        currentProfit += currentNode.getPSum();
-      }
-    }
-
-    // Slack has been almost exhausted or left items has been exhausted.
-
+    exhaustLeftItemsLoop(efficiencyOfItemChecked, profitSlack);
     if (!exhaustedLeftItems) {
-      while (true) {
-
-        if (profitSlack
-                + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
-                - (currentProfit + currentNode.leftNeighbor.getPSum())
-                - profitFromCriticalTaken
-            < 0) {
-
-          // Going to left neighbor exhausts slack.
-          if (!currentNode.isLeaf()) {
-            currentNode = currentNode.left;
-          } else {
-            break;
-          }
-
-        } else {
-          // Going to left neighbor does not exhaust slack.
-
-          currentNode = currentNode.leftNeighbor;
-          currentWeight += currentNode.getWSum();
-          currentProfit += currentNode.getPSum();
-        }
-
-        if (currentNode.isLeaf()) {
-          break;
-        }
-      }
+      finalIntrusionLoopLeft(efficiencyOfItemChecked, profitSlack);
     }
 
     if (!exhaustedLeftItems && currentNode.leftNeighbor.getPSum() == 0) {
@@ -860,6 +741,91 @@ public class Tree {
     }
     lastWeight /= efficiencyLoss;
     return currentWeight + (int) Math.ceil(lastWeight);
+  }
+
+  /** Returns intrusion weight if critical leaf case applies, else null. */
+  private Integer tryCriticalLeafReturnIntrusion(
+      int weightOfItemChecked,
+      int profitOfItemChecked,
+      double efficiencyOfItemChecked,
+      double profitSlack) {
+    if (currentNode != criticalLeaf
+        || profitFromCriticalTaken - efficiencyOfItemChecked * takenWeightOfCriticalItem
+            <= profitSlack) {
+      return null;
+    }
+    return (int)
+        Math.ceil(
+            profitSlack
+                * criticalLeaf.weightOfOne
+                * weightOfItemChecked
+                / (double)
+                    (criticalLeaf.profitOfOne * weightOfItemChecked
+                        - profitOfItemChecked * criticalLeaf.weightOfOne));
+  }
+
+  private void exhaustLeftItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
+    while (!exhaustedLeftItems) {
+      if (currentNode.parent == null) {
+        exhaustedLeftItems = true;
+        break;
+      }
+      boolean rightChild = currentNode.parent.right == currentNode;
+      if (rightChild) {
+        if (currentNode.leftNeighbor == null) {
+          exhaustedLeftItems = true;
+          break;
+        }
+        if (profitSlack
+                + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
+                - (currentProfit + currentNode.leftNeighbor.getPSum())
+                - profitFromCriticalTaken
+            < 0) {
+          break;
+        }
+        currentNode = currentNode.parent;
+        currentWeight += currentNode.left.getWSum();
+        currentProfit += currentNode.left.getPSum();
+      } else {
+        if (currentNode.leftNeighbor == null) {
+          exhaustedLeftItems = true;
+          break;
+        }
+        if (profitSlack
+                + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
+                - (currentProfit + currentNode.leftNeighbor.getPSum())
+                - profitFromCriticalTaken
+            < 0) {
+          break;
+        }
+        currentNode = currentNode.leftNeighbor;
+        currentWeight += currentNode.getWSum();
+        currentProfit += currentNode.getPSum();
+      }
+    }
+  }
+
+  private void finalIntrusionLoopLeft(double efficiencyOfItemChecked, double profitSlack) {
+    while (true) {
+      if (profitSlack
+              + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
+              - (currentProfit + currentNode.leftNeighbor.getPSum())
+              - profitFromCriticalTaken
+          < 0) {
+        if (!currentNode.isLeaf()) {
+          currentNode = currentNode.left;
+        } else {
+          break;
+        }
+      } else {
+        currentNode = currentNode.leftNeighbor;
+        currentWeight += currentNode.getWSum();
+        currentProfit += currentNode.getPSum();
+      }
+      if (currentNode.isLeaf()) {
+        break;
+      }
+    }
   }
 
   /**

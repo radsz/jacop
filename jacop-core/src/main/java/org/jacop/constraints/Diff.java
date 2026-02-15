@@ -344,98 +344,85 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MAX_INT);
 
-    if (!usedRect.isEmpty()) {
-
-      IntRectangle[] usedRectArray = new IntRectangle[usedRect.size()];
-
-      usedRectArray = usedRect.toArray(usedRectArray);
-
-      TreeSet<IntRectangle> starts = new TreeSet<>(dimIthMinComparator.apply(i));
-
-      Collections.addAll(starts, usedRectArray);
-
-      int sizeOfstartsOfR =
-          Math.max(r.origin[0].domain.noIntervals(), r.origin[1].domain.noIntervals());
-
-      IntRectangle[] startsOfR = new IntRectangle[sizeOfstartsOfR];
-
-      for (int k = 0; k < sizeOfstartsOfR; k++) {
-        startsOfR[k] = new IntRectangle(r.dim);
-      }
-
-      for (int k = 0; k < r.dim; k++) {
-        IntDomain rOrigin = r.origin[k].dom();
-        int rOriginSize = rOrigin.noIntervals();
-        for (int n = 0; n < sizeOfstartsOfR; n++) {
-          if (n < rOriginSize) {
-            startsOfR[n].add(rOrigin.leftElement(n), 0);
-          } else {
-            startsOfR[n].add(rOrigin.min(), 0);
-          }
-        }
-      }
-      Collections.addAll(starts, startsOfR);
-
-      List<IntRectangle> consideredRect = new ArrayList<>();
-      for (IntRectangle ir : starts) {
-        int s = ir.origins[i];
-
-        consideredRect.clear();
-
-        for (IntRectangle t : usedRectArray) {
-          int tCompletion = t.origins[i] + t.lengths[i];
-
-          if (t.origins[i] <= s && s - rLengthiMin < tCompletion) {
-            consideredRect.add(t);
-          }
-        }
-
-        if (!consideredRect.isEmpty()) {
-
-          IntDomain rIdom = r.origin[i].dom();
-          if (s >= rIdom.min() && s <= rIdom.max()) {
-            Pair exclude = minForbiddenInterval(s, i, r, consideredRect);
-
-            if (exclude.max != -1) {
-              IntervalDomain Update =
-                  new IntervalDomain(IntDomain.MIN_INT, exclude.min - r.length[i].min());
-              Update.unionAdapt(exclude.max, IntDomain.MAX_INT);
-
-              if (traceNarrOn) {
-                log.debug(
-                    "7. Obligatory rectangles Narrow {} in {} --> {}",
-                    r.origin[i],
-                    Update,
-                    r.origin[i]);
-              }
-
-              r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
-
-              computeNewMaxDuration(r.origin[i], exclude.min, exclude.max);
-            }
-          }
-        }
-      }
-
-      // Update rectangles length in direction i
-      // sort rectangles on increasing origin i
-      if (traceOn) {
-        log.debug("10. length = {}", durMax);
-      }
-
-      int lengthLimit = 0;
-      for (int l : durMax) {
-        if (lengthLimit < l) {
-          lengthLimit = l;
-        }
-      }
-
-      if (traceNarrOn) {
-        log.debug("10. Duration {} <-- 0..{}", r.length[i], lengthLimit);
-      }
-
-      r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
+    if (usedRect.isEmpty()) {
+      return;
     }
+
+    IntRectangle[] usedRectArray = usedRect.toArray(new IntRectangle[0]);
+    TreeSet<IntRectangle> starts = buildStartsForNarrowIth(i, r, usedRectArray);
+    List<IntRectangle> consideredRect = new ArrayList<>();
+    for (IntRectangle ir : starts) {
+      int s = ir.origins[i];
+      consideredRect.clear();
+      for (IntRectangle t : usedRectArray) {
+        int tCompletion = t.origins[i] + t.lengths[i];
+        if (t.origins[i] <= s && s - rLengthiMin < tCompletion) {
+          consideredRect.add(t);
+        }
+      }
+      if (!consideredRect.isEmpty()) {
+        applyForbiddenIntervalIfInDomain(i, r, s, consideredRect);
+      }
+    }
+
+    if (traceOn) {
+      log.debug("10. length = {}", durMax);
+    }
+    int lengthLimit = 0;
+    for (int l : durMax) {
+      if (lengthLimit < l) {
+        lengthLimit = l;
+      }
+    }
+    if (traceNarrOn) {
+      log.debug("10. Duration {} <-- 0..{}", r.length[i], lengthLimit);
+    }
+    r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
+  }
+
+  private TreeSet<IntRectangle> buildStartsForNarrowIth(
+      int i, Rectangle r, IntRectangle[] usedRectArray) {
+    TreeSet<IntRectangle> starts = new TreeSet<>(dimIthMinComparator.apply(i));
+    Collections.addAll(starts, usedRectArray);
+    int sizeOfstartsOfR =
+        Math.max(r.origin[0].domain.noIntervals(), r.origin[1].domain.noIntervals());
+    IntRectangle[] startsOfR = new IntRectangle[sizeOfstartsOfR];
+    for (int k = 0; k < sizeOfstartsOfR; k++) {
+      startsOfR[k] = new IntRectangle(r.dim);
+    }
+    for (int k = 0; k < r.dim; k++) {
+      IntDomain rOrigin = r.origin[k].dom();
+      int rOriginSize = rOrigin.noIntervals();
+      for (int n = 0; n < sizeOfstartsOfR; n++) {
+        if (n < rOriginSize) {
+          startsOfR[n].add(rOrigin.leftElement(n), 0);
+        } else {
+          startsOfR[n].add(rOrigin.min(), 0);
+        }
+      }
+    }
+    Collections.addAll(starts, startsOfR);
+    return starts;
+  }
+
+  private void applyForbiddenIntervalIfInDomain(
+      int i, Rectangle r, int s, List<IntRectangle> consideredRect) {
+    IntDomain rIdom = r.origin[i].dom();
+    if (s < rIdom.min() || s > rIdom.max()) {
+      return;
+    }
+    Pair exclude = minForbiddenInterval(s, i, r, consideredRect);
+    if (exclude.max == -1) {
+      return;
+    }
+    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, exclude.min - r.length[i].min());
+    update.unionAdapt(exclude.max, IntDomain.MAX_INT);
+    if (traceNarrOn) {
+      log.debug(
+          "7. Obligatory rectangles Narrow {} in {} --> {}", r.origin[i], update, r.origin[i]);
+    }
+    r.origin[i].domain.in(currentStore.level, r.origin[i], update);
+    computeNewMaxDuration(r.origin[i], exclude.min, exclude.max);
   }
 
   private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
@@ -483,72 +470,76 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   private boolean notFit(
       int i, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
-    Profile barrier = new Profile((short) Profile.DIFFN);
-    int minimalAfter = 0;
     int j = 0;
     boolean excludedState = true;
     while (excludedState && j < r.dim) {
       if (i != j) {
-        IntDomain rOriginJdom = r.origin[j].dom();
-        IntDomain rLengthJdom = r.length[j].dom();
-        int minJ = rOriginJdom.min();
-        final int maxJ = rOriginJdom.max() + rLengthJdom.min();
-        int durJ = rLengthJdom.min();
-
-        int currentJposition = minJ;
-        barrier.clear();
-        for (IntRectangle hinder : consideredRect) {
-          int hinderJ = hinder.origins[j];
-          int hinderValue = hinder.origins[i] + hinder.lengths[i] - barierPosition;
-          if (hinderValue > 0) {
-            barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], hinderValue);
-          }
-        }
-
-        excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
-
-        if (excludedState) {
-          ProfileItem first = barrier.getFirst();
-          ProfileItem last = barrier.getLast();
-          if (minJ < first.min) { // exist free space before first
-            // obstacle
-            barrier.addToProfile(minJ, first.min, minimalAfter);
-          }
-          if (maxJ > last.max) { // exist free space after last
-            // obstacle
-            barrier.addToProfile(last.max, maxJ, minimalAfter);
-          }
-          List<Interval> toAdd = new ArrayList<>();
-          for (int m = 0; m < barrier.size() - 1; m++) {
-            ProfileItem p = barrier.get(m);
-            ProfileItem pNext = barrier.get(m + 1);
-            if (p.max != pNext.min) {
-              toAdd.add(new Interval(p.max, pNext.min));
-            }
-          }
-          for (Interval v : toAdd) {
-            barrier.addToProfile(v.min(), v.max(), minimalAfter);
-          }
-
-          int minSizeAfterBarier = IntDomain.MAX_INT;
-          for (ProfileItem p : barrier) {
-            if (p.value < minSizeAfterBarier) {
-              if (p.value == minimalAfter && p.max - p.min >= durJ) {
-                minSizeAfterBarier = minimalAfter;
-                break;
-              }
-              if (p.value > minimalAfter) {
-                minSizeAfterBarier = p.value;
-              }
-            }
-          }
-          minPosition = minSizeAfterBarier;
-        }
+        excludedState = checkDimensionFits(i, j, r, consideredRect, barierPosition);
       }
       j++;
     }
-
     return excludedState;
+  }
+
+  private boolean checkDimensionFits(
+      int i, int j, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
+    Profile barrier = new Profile((short) Profile.DIFFN);
+    IntDomain rOriginJdom = r.origin[j].dom();
+    IntDomain rLengthJdom = r.length[j].dom();
+    int minJ = rOriginJdom.min();
+    final int maxJ = rOriginJdom.max() + rLengthJdom.min();
+    int durJ = rLengthJdom.min();
+
+    for (IntRectangle hinder : consideredRect) {
+      int hinderJ = hinder.origins[j];
+      int hinderValue = hinder.origins[i] + hinder.lengths[i] - barierPosition;
+      if (hinderValue > 0) {
+        barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], hinderValue);
+      }
+    }
+
+    boolean excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
+    if (excludedState) {
+      fillBarrierGapsAndSetMinPosition(barrier, minJ, maxJ, durJ, 0);
+    }
+    return excludedState;
+  }
+
+  private void fillBarrierGapsAndSetMinPosition(
+      Profile barrier, int minJ, int maxJ, int durJ, int minimalAfter) {
+    ProfileItem first = barrier.getFirst();
+    ProfileItem last = barrier.getLast();
+    if (minJ < first.min) {
+      barrier.addToProfile(minJ, first.min, minimalAfter);
+    }
+    if (maxJ > last.max) {
+      barrier.addToProfile(last.max, maxJ, minimalAfter);
+    }
+    List<Interval> toAdd = new ArrayList<>();
+    for (int m = 0; m < barrier.size() - 1; m++) {
+      ProfileItem p = barrier.get(m);
+      ProfileItem pNext = barrier.get(m + 1);
+      if (p.max != pNext.min) {
+        toAdd.add(new Interval(p.max, pNext.min));
+      }
+    }
+    for (Interval v : toAdd) {
+      barrier.addToProfile(v.min(), v.max(), minimalAfter);
+    }
+
+    int minSizeAfterBarier = IntDomain.MAX_INT;
+    for (ProfileItem p : barrier) {
+      if (p.value < minSizeAfterBarier) {
+        if (p.value == minimalAfter && p.max - p.min >= durJ) {
+          minSizeAfterBarier = minimalAfter;
+          break;
+        }
+        if (p.value > minimalAfter) {
+          minSizeAfterBarier = p.value;
+        }
+      }
+    }
+    minPosition = minSizeAfterBarier;
   }
 
   /**

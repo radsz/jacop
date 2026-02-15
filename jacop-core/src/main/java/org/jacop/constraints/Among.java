@@ -128,128 +128,111 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
   @Override
   public void consistency(Store store) {
-    // ----------------------------------------------------------
     if (debugAll) {
       log.debug("LEVEL : {}", store.level);
       log.debug("{}", this);
     }
-    // ----------------------------------------------------------
 
     int currentLb = lowerBorder.value();
-    // Refer to the algorithm where ubS = n - |{ x | dom(x) intersect S =
-    // empty set } |
     int currentUb = upperBorder.value();
 
-    // For the variable that signaled the change of domain
-    // Count those that entered lbS, or ubS
-    for (IntVar v : variableQueue) {
-
-      int posVar = position.get(v);
-
-      if (posVar < currentLb || posVar > currentUb) {
-        continue;
-      }
-
-      if (kSet.contains(v.domain)) {
-
-        if (posVar != currentLb) {
-          list[posVar] = list[currentLb];
-          list[currentLb] = v;
-          position.put(v, currentLb);
-          position.put(list[posVar], posVar);
-        }
-        currentLb++;
-
-        // If variable entered lb then it would stay there
-        // and we can detach the constrain from it
-        v.removeConstraint(this);
-      }
-      if (!kSet.isIntersecting(v.domain)) {
-
-        if (posVar != currentUb) {
-          list[posVar] = list[currentUb - 1];
-          list[currentUb - 1] = v;
-          position.put(v, currentUb - 1);
-          position.put(list[posVar], posVar);
-        }
-        currentUb--;
-
-        // If the variable entered not ub then it will stay there
-        // and we can detach the constrain from it
-        v.removeConstraint(this);
-      }
-    }
+    int[] borders = processVariableQueue(currentLb, currentUb);
+    currentLb = borders[0];
+    currentUb = borders[1];
 
     variableQueue.clear();
 
-    // ----------------------------------------------------------
     if (debugAll) {
       log.debug("lbS = {}", currentLb);
       log.debug("ubS = {}", currentUb);
       log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLb, currentUb);
     }
-    // ----------------------------------------------------------
 
     if (currentLb > currentUb) {
       throw Store.failException;
     }
 
     n.domain.in(store.level, n, currentLb, currentUb);
-
-    // Just in case LB or UB have changed.
     upperBorder.update(currentUb);
     lowerBorder.update(currentLb);
 
-    if (currentLb == n.min() && n.domain.singleton()) {
-      // If the number of X that belong to S is equal to N.value than we
-      // have to subtract
-      // the K set from the rest of x that do not belong to S
-      for (int i = currentLb; i < currentUb; i++) {
-        IntVar v = list[i];
-        if (!kSet.contains(v.domain)) {
-          if (debugAll) {
-            log.debug("lb >> The value before in of {}: {}", v.id, v.domain);
-            log.debug("lb >> subtrack {}", kSet);
-            log.debug("lb >> equals {}", v.domain.subtract(kSet));
-          }
-          v.domain.in(store.level, v, v.domain.subtract(kSet));
-          v.removeConstraint(this);
-          if (debugAll) {
-            log.debug("lb >> The value after in of {}: {}", v.id, v.domain);
-          }
-        }
-      }
-
-      // since the constraint is satisfied UB is equal to LB.
-      upperBorder.update(currentLb);
-
-      // The constraint became satisfied
-      if (debugAll) {
-        log.debug("Simple Among is satisfied");
-      }
-    }
-
-    if (currentUb == n.min() && n.domain.singleton()) {
-      // If the number intersecting X is equal to desired number N than we
-      // have
-      // to intersect the domains of X with K set.
-      for (int i = currentLb; i < currentUb; i++) {
-        IntVar v = list[i];
-        v.domain.in(store.level, v, kSet);
-        v.removeConstraint(this);
-      }
-
-      // since the constraint is satisfied LB is equal to UB.
-      lowerBorder.update(currentUb);
-
-      // The constrain became satisfied
-      if (debugAll) {
-        log.debug("Simple Among is satisfied");
-      }
-    }
+    pruneWhenLbEqualsN(store, currentLb, currentUb);
+    pruneWhenUbEqualsN(store, currentLb, currentUb);
 
     if (debugAll) {
       log.debug("{}", this);
+    }
+  }
+
+  private int[] processVariableQueue(int currentLb, int currentUb) {
+    int lb = currentLb;
+    int ub = currentUb;
+    for (IntVar v : variableQueue) {
+      int posVar = position.get(v);
+      if (posVar < lb || posVar > ub) {
+        continue;
+      }
+      if (kSet.contains(v.domain)) {
+        if (posVar != lb) {
+          list[posVar] = list[lb];
+          list[lb] = v;
+          position.put(v, lb);
+          position.put(list[posVar], posVar);
+        }
+        lb++;
+        v.removeConstraint(this);
+      }
+      if (!kSet.isIntersecting(v.domain)) {
+        if (posVar != ub - 1) {
+          list[posVar] = list[ub - 1];
+          list[ub - 1] = v;
+          position.put(v, ub - 1);
+          position.put(list[posVar], posVar);
+        }
+        ub--;
+        v.removeConstraint(this);
+      }
+    }
+    return new int[] {lb, ub};
+  }
+
+  private void pruneWhenLbEqualsN(Store store, int currentLb, int currentUb) {
+    if (currentLb != n.min() || !n.domain.singleton()) {
+      return;
+    }
+    for (int i = currentLb; i < currentUb; i++) {
+      IntVar v = list[i];
+      if (!kSet.contains(v.domain)) {
+        if (debugAll) {
+          log.debug("lb >> The value before in of {}: {}", v.id, v.domain);
+          log.debug("lb >> subtrack {}", kSet);
+          log.debug("lb >> equals {}", v.domain.subtract(kSet));
+        }
+        v.domain.in(store.level, v, v.domain.subtract(kSet));
+        v.removeConstraint(this);
+        if (debugAll) {
+          log.debug("lb >> The value after in of {}: {}", v.id, v.domain);
+        }
+      }
+    }
+    upperBorder.update(currentLb);
+    if (debugAll) {
+      log.debug("Simple Among is satisfied");
+    }
+  }
+
+  private void pruneWhenUbEqualsN(Store store, int currentLb, int currentUb) {
+    if (currentUb != n.min() || !n.domain.singleton()) {
+      return;
+    }
+    for (int i = currentLb; i < currentUb; i++) {
+      IntVar v = list[i];
+      v.domain.in(store.level, v, kSet);
+      v.removeConstraint(this);
+    }
+    lowerBorder.update(currentUb);
+    if (debugAll) {
+      log.debug("Simple Among is satisfied");
     }
   }
 

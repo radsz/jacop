@@ -71,122 +71,121 @@ public class XmodYeqZ extends AbstractXopYeqZ {
 
       store.propagationHasOccurred = false;
 
-      // Compute bounds for reminder
-
-      int reminderMin;
-      int reminderMax;
-
-      if (x.min() >= 0) {
-        reminderMin = 0;
-        reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
-
-        reminderMax = Math.min(reminderMax, x.max());
-
-      } else if (x.max() < 0) {
-        reminderMax = 0;
-        reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-
-        reminderMin = Math.max(reminderMin, x.min());
-
-      } else {
-        reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
-        reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
-
-        reminderMin = Math.max(reminderMin, x.min());
-        reminderMax = Math.min(reminderMax, x.max());
-      }
+      int[] reminderBounds = computeReminderBounds();
+      int reminderMin = reminderBounds[0];
+      int reminderMax = reminderBounds[1];
 
       z.domain.in(store.level, z, reminderMin, reminderMax);
 
       if (y.singleton()) {
-        if (x.domain.getSize() < 100) {
-          // domain consistency method for small domains of x
-          int absY = Math.abs(y.value());
-          IntDomain d = makeDomain(x, absY, z);
-          x.domain.in(store.level, x, d);
-        } else {
-          // bound consistency
-          int absY = Math.abs(y.value());
-          IntDomain zDom = z.dom();
-
-          // compute LB
-          int xMin = x.min();
-          boolean found = false;
-          for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
-            xMin = e.nextElement();
-            if (zDom.contains(xMin % absY)) {
-              found = true;
-              break;
-            }
-          }
-          if (found) {
-            x.domain.inMin(store.level, x, xMin);
-          } else {
-            throw Store.failException;
-          }
-
-          // compute UB
-          int xMax = x.max();
-          xMin = x.min();
-          while (!zDom.contains(xMax % absY) && xMax >= xMin) {
-            xMax--;
-          }
-          if (xMax >= xMin) {
-            x.domain.inMax(store.level, x, xMax);
-          } else {
-            throw Store.failException;
-          }
-        }
+        propagateWhenYSingleton(store, reminderMin, reminderMax);
       }
 
       if (x.singleton()) {
-        if (!z.domain.contains(x.value() % Math.abs(y.min()))) {
-          y.domain.inMin(store.level, y, y.min() + 1);
-        } else if (!z.domain.contains(x.value() % Math.abs(y.max()))) {
-          y.domain.inMax(store.level, y, y.max() - 1);
-        }
+        propagateWhenXSingleton(store);
       }
 
       reminderMin = z.min();
       reminderMax = z.max();
 
       if (!(y.min() <= 0 && y.max() >= 0)) {
-
-        // Bounds for result
-        int oldResultMin = resultMin;
-        int oldResultMax = resultMax;
-
-        Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
-
-        resultMin = result.min();
-        resultMax = result.max();
-
-        if (oldResultMin != resultMin || oldResultMax != resultMax) {
-          store.propagationHasOccurred = true;
-        }
-
-        // Bounds for Y
-        Interval yBounds =
-            IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMax);
-
-        y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
-        // Bounds for Z and reminder
-        Interval reminder = IntDomain.mulBounds(resultMin, resultMax, y.min(), y.max());
-        int zMin = reminder.min();
-        int zMax = reminder.max();
-
-        reminderMin = x.min() - zMax;
-        reminderMax = x.max() - zMin;
-
-        z.domain.in(store.level, z, reminderMin, reminderMax);
-
-        x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+        resultMin = propagateNonZeroY(store, resultMin, resultMax, reminderMin, reminderMax);
+        resultMax = resultMaxFromLastPropagate;
       }
 
     } while (store.propagationHasOccurred);
 
     assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
+  }
+
+  private int resultMaxFromLastPropagate;
+
+  private int[] computeReminderBounds() {
+    int reminderMin;
+    int reminderMax;
+    if (x.min() >= 0) {
+      reminderMin = 0;
+      reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
+      reminderMax = Math.min(reminderMax, x.max());
+    } else if (x.max() < 0) {
+      reminderMax = 0;
+      reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
+      reminderMin = Math.max(reminderMin, x.min());
+    } else {
+      reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
+      reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
+      reminderMin = Math.max(reminderMin, x.min());
+      reminderMax = Math.min(reminderMax, x.max());
+    }
+    return new int[] {reminderMin, reminderMax};
+  }
+
+  private void propagateWhenYSingleton(Store store, int reminderMin, int reminderMax) {
+    if (x.domain.getSize() < 100) {
+      int absY = Math.abs(y.value());
+      IntDomain d = makeDomain(x, absY, z);
+      x.domain.in(store.level, x, d);
+    } else {
+      int absY = Math.abs(y.value());
+      IntDomain zDom = z.dom();
+      int xMin = x.min();
+      boolean found = false;
+      for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        xMin = e.nextElement();
+        if (zDom.contains(xMin % absY)) {
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        x.domain.inMin(store.level, x, xMin);
+      } else {
+        throw Store.failException;
+      }
+      int xMax = x.max();
+      int xMinVal = x.min();
+      while (!zDom.contains(xMax % absY) && xMax >= xMinVal) {
+        xMax--;
+      }
+      if (xMax >= xMinVal) {
+        x.domain.inMax(store.level, x, xMax);
+      } else {
+        throw Store.failException;
+      }
+    }
+  }
+
+  private void propagateWhenXSingleton(Store store) {
+    if (!z.domain.contains(x.value() % Math.abs(y.min()))) {
+      y.domain.inMin(store.level, y, y.min() + 1);
+    } else if (!z.domain.contains(x.value() % Math.abs(y.max()))) {
+      y.domain.inMax(store.level, y, y.max() - 1);
+    }
+  }
+
+  private int propagateNonZeroY(
+      Store store, int resultMin, int resultMax, int reminderMin, int reminderMax) {
+    int oldResultMin = resultMin;
+    int oldResultMax = resultMax;
+    Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
+    resultMin = result.min();
+    resultMaxFromLastPropagate = result.max();
+    if (oldResultMin != resultMin || oldResultMax != resultMaxFromLastPropagate) {
+      store.propagationHasOccurred = true;
+    }
+    Interval yBounds =
+        IntDomain.divBounds(
+            x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMaxFromLastPropagate);
+    y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+    Interval reminder =
+        IntDomain.mulBounds(resultMin, resultMaxFromLastPropagate, y.min(), y.max());
+    int zMin = reminder.min();
+    int zMax = reminder.max();
+    int newReminderMin = x.min() - zMax;
+    int newReminderMax = x.max() - zMin;
+    z.domain.in(store.level, z, newReminderMin, newReminderMax);
+    x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
+    return resultMin;
   }
 
   IntDomain makeDomain(IntVar x, int y, IntVar z) {

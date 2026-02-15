@@ -211,87 +211,89 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
       initFirstConsistencyCheck(store);
     }
 
-    // ====== Very simple implementation =========
-
-    // ==============================================
-
     boolean copyOfValueHasChanged = valueHasChanged;
 
     if (indexHasChanged) {
-
-      indexHasChanged = false;
-      IntDomain indexDom = index.dom().cloneLight();
-      IntervalDomain domValue = new IntervalDomain(5);
-
-      if (checkDuplicates) {
-        for (IntDomain duplicate : duplicates) {
-          if (indexDom.isIntersecting(duplicate)) {
-            if (domValue.isEmpty()) {
-              domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-            } else {
-              domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
-            }
-          }
-        }
-      }
-
-      indexDom = indexDom.subtract(duplicatesIndexes);
-
-      if (indexDom.getSize()
-          < limitForDomainPruning) { // domain consistency for small index domains
-        // values of index for duplicated values within list are already taken care of above.
-        for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
-          int valueOfElement = list[e.nextElement() - 1 - indexOffset];
-          domValue.unionAdapt(valueOfElement);
-        }
-
-        value.domain.in(store.level, value, domValue);
-        valueHasChanged = false;
-      } else { // bound consistency for large index domains
-        // values of index for duplicated values within list are already taken care of above.
-        int min = IntDomain.MAX_INT;
-        int max = IntDomain.MIN_INT;
-        for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
-          int valueOfElement = list[e.nextElement() - 1 - indexOffset];
-
-          min = Math.min(min, valueOfElement);
-          max = Math.max(max, valueOfElement);
-        }
-        domValue.unionAdapt(min, max);
-
-        value.domain.in(store.level, value, domValue);
-        valueHasChanged = false;
-      }
+      propagateIndexChanged(store);
     }
 
-    // the if statement above can change value variable but those changes can be ignored.
     if (copyOfValueHasChanged) {
-
-      valueHasChanged = false;
-
-      IntervalDomain indexDom = new IntervalDomain(5);
-      for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int position = e.nextElement() - 1 - indexOffset;
-        int val = list[position];
-
-        if (AbstractElement.disjoint(value.domain, val)) {
-          if (indexDom.size == 0) {
-            indexDom.unionAdapt(position + 1 + indexOffset);
-          } else {
-            // indexes are in ascending order and can be added at the end if the last element
-            // plus 1 is not equal a new value. In such case the max must be changed.
-            indexDom.addLastElement(position + 1 + indexOffset);
-          }
-        }
-      }
-
-      index.domain.in(store.level, index, indexDom.complement());
-      indexHasChanged = false;
+      propagateValueChanged(store);
     }
 
     if (value.singleton() && !index.singleton()) {
       removeConstraint();
     }
+  }
+
+  private void propagateIndexChanged(Store store) {
+    indexHasChanged = false;
+    IntDomain indexDom = index.dom().cloneLight();
+    IntervalDomain domValue = addDuplicatesToDomValue(indexDom);
+
+    indexDom = indexDom.subtract(duplicatesIndexes);
+
+    if (indexDom.getSize() < limitForDomainPruning) {
+      addIndexDomValuesToDomValue(indexDom, domValue);
+    } else {
+      setDomValueBoundsFromIndexDom(indexDom, domValue);
+    }
+
+    value.domain.in(store.level, value, domValue);
+    valueHasChanged = false;
+  }
+
+  private IntervalDomain addDuplicatesToDomValue(IntDomain indexDom) {
+    IntervalDomain domValue = new IntervalDomain(5);
+    if (!checkDuplicates) {
+      return domValue;
+    }
+    for (IntDomain duplicate : duplicates) {
+      if (indexDom.isIntersecting(duplicate)) {
+        if (domValue.isEmpty()) {
+          domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+        } else {
+          domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
+        }
+      }
+    }
+    return domValue;
+  }
+
+  private void addIndexDomValuesToDomValue(IntDomain indexDom, IntervalDomain domValue) {
+    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
+      int valueOfElement = list[e.nextElement() - 1 - indexOffset];
+      domValue.unionAdapt(valueOfElement);
+    }
+  }
+
+  private void setDomValueBoundsFromIndexDom(IntDomain indexDom, IntervalDomain domValue) {
+    int min = IntDomain.MAX_INT;
+    int max = IntDomain.MIN_INT;
+    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
+      int valueOfElement = list[e.nextElement() - 1 - indexOffset];
+      min = Math.min(min, valueOfElement);
+      max = Math.max(max, valueOfElement);
+    }
+    domValue.unionAdapt(min, max);
+  }
+
+  private void propagateValueChanged(Store store) {
+    valueHasChanged = false;
+    IntervalDomain indexDom = new IntervalDomain(5);
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int position = e.nextElement() - 1 - indexOffset;
+      int val = list[position];
+      if (AbstractElement.disjoint(value.domain, val)) {
+        if (indexDom.size == 0) {
+          indexDom.unionAdapt(position + 1 + indexOffset);
+        } else {
+          indexDom.addLastElement(position + 1 + indexOffset);
+        }
+      }
+    }
+    index.domain.in(store.level, index, indexDom.complement());
+    indexHasChanged = false;
   }
 
   @Override

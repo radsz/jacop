@@ -234,15 +234,16 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    *
    * @param store the store for propagation.
    */
+  private int restMayBe;
+
+  private int restEq;
+
   @Override
   public void consistency(final Store store) {
 
     int start = position.value();
     int[] numberMayBe = new int[values.length];
     int[] numberEq = new int[values.length];
-    int restEq;
-    int restMayBe;
-
     restEq = rest.value();
     for (int i = 0; i < values.length; i++) {
       numberEq[i] = equal[i].value();
@@ -255,34 +256,7 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       restMayBe = 0;
       Arrays.fill(numberMayBe, 0);
 
-      for (int i = start; i < n; i++) {
-        IntVar v = list[i];
-        int noValuesInDomain = 0;
-
-        for (int j = 0; j < values.length; j++) {
-          if (v.domain.contains(values[j])) {
-            if (v.singleton()) {
-              numberEq[j]++;
-              swap(start, i);
-              start++;
-            } else {
-              numberMayBe[j]++;
-            }
-          } else { // does not have the values in its domain
-            noValuesInDomain++;
-          }
-        }
-
-        if (!v.domain.subtract(valuesDomain).isEmpty()) {
-          restMayBe++;
-        }
-
-        if (noValuesInDomain == values.length) {
-          swap(start, i);
-          start++;
-          restEq++;
-        }
-      }
+      start = scanListAndCount(start, numberEq, numberMayBe);
 
       updateCounterRest(store, restEq, restMayBe);
 
@@ -290,52 +264,9 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
         updateCounter(store, i, numberEq[i], numberMayBe[i]);
       }
 
-      int min = 0;
-      int max = 0;
-      int extendedCounterLength = getExtendedCounterLength();
-      for (int i = 0; i < extendedCounterLength; i++) {
-        min += getExtendedCounterMin(i);
-        max += getExtendedCounterMax(i);
-      }
-      for (int i = 0; i < extendedCounterLength; i++) { // sum(extendedCounter) == n (list length)
-        updateExtendedCounter(
-            store, i, n - max + getExtendedCounterMax(i), n - min + getExtendedCounterMin(i));
-      }
+      updateExtendedCounters(store);
 
-      for (int i = 0; i < values.length; i++) {
-
-        if (numberMayBe[i] == getCounterMin(i) - numberEq[i]) {
-
-          for (int j = start; j < n; j++) {
-            IntVar v = list[j];
-            if (v.domain.contains(values[i])) {
-              assignValue(store, v, values[i]);
-            }
-          }
-        } else if (numberEq[i] == getCounterMax(i)) {
-
-          for (int j = start; j < n; j++) {
-            IntVar v = list[j];
-            v.domain.inComplement(store.level, v, values[i]);
-          }
-        }
-      }
-
-      if (restMayBe == getCounterRestMin() - restEq) {
-
-        for (int j = start; j < n; j++) {
-          IntVar v = list[j];
-          if (!v.domain.subtract(valuesDomain).isEmpty()) {
-            v.domain.in(store.level, v, valuesDomainComplement);
-          }
-        }
-      } else if (restEq == getCounterRestMax()) {
-
-        for (int j = start; j < n; j++) {
-          IntVar v = list[j];
-          v.domain.in(store.level, v, valuesDomain);
-        }
-      }
+      assignOrPruneByCounter(store, start, numberEq, numberMayBe);
 
     } while (store.propagationHasOccurred);
 
@@ -345,5 +276,83 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     rest.update(restEq);
 
     position.update(start);
+  }
+
+  private int scanListAndCount(int start, int[] numberEq, int[] numberMayBe) {
+    for (int i = start; i < n; i++) {
+      IntVar v = list[i];
+      int noValuesInDomain = 0;
+
+      for (int j = 0; j < values.length; j++) {
+        if (v.domain.contains(values[j])) {
+          if (v.singleton()) {
+            numberEq[j]++;
+            swap(start, i);
+            start++;
+          } else {
+            numberMayBe[j]++;
+          }
+        } else {
+          noValuesInDomain++;
+        }
+      }
+
+      if (!v.domain.subtract(valuesDomain).isEmpty()) {
+        restMayBe++;
+      }
+
+      if (noValuesInDomain == values.length) {
+        swap(start, i);
+        start++;
+        restEq++;
+      }
+    }
+    return start;
+  }
+
+  private void updateExtendedCounters(Store store) {
+    int min = 0;
+    int max = 0;
+    int extendedCounterLength = getExtendedCounterLength();
+    for (int i = 0; i < extendedCounterLength; i++) {
+      min += getExtendedCounterMin(i);
+      max += getExtendedCounterMax(i);
+    }
+    for (int i = 0; i < extendedCounterLength; i++) {
+      updateExtendedCounter(
+          store, i, n - max + getExtendedCounterMax(i), n - min + getExtendedCounterMin(i));
+    }
+  }
+
+  private void assignOrPruneByCounter(Store store, int start, int[] numberEq, int[] numberMayBe) {
+    for (int i = 0; i < values.length; i++) {
+      if (numberMayBe[i] == getCounterMin(i) - numberEq[i]) {
+        for (int j = start; j < n; j++) {
+          IntVar v = list[j];
+          if (v.domain.contains(values[i])) {
+            assignValue(store, v, values[i]);
+          }
+        }
+      } else if (numberEq[i] == getCounterMax(i)) {
+        for (int j = start; j < n; j++) {
+          IntVar v = list[j];
+          v.domain.inComplement(store.level, v, values[i]);
+        }
+      }
+    }
+
+    if (restMayBe == getCounterRestMin() - this.restEq) {
+      for (int j = start; j < n; j++) {
+        IntVar v = list[j];
+        if (!v.domain.subtract(valuesDomain).isEmpty()) {
+          v.domain.in(store.level, v, valuesDomainComplement);
+        }
+      }
+    } else if (this.restEq == getCounterRestMax()) {
+      for (int j = start; j < n; j++) {
+        IntVar v = list[j];
+        v.domain.in(store.level, v, valuesDomain);
+      }
+    }
   }
 }

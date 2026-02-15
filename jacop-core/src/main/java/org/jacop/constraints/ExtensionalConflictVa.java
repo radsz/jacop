@@ -109,13 +109,39 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
+    int[] t = getInitialSupportTuple(varPosition, value);
+    assert t != null : " First valid tuple can not be null ";
+
+    int pos = findPosition(value, values[varPosition]);
+    int[][] tuplesVarValue = tuples[varPosition][pos];
+    int[] lastofsequenceVarValue = lastofsequence[varPosition][pos];
+
+    while (true) {
+      int position = isDisallowed(varPosition, value, t);
+      if (position == -1) {
+        recordSupport(varPosition, value, t);
+        return t;
+      }
+      if (lastofsequenceVarValue[position] != position) {
+        System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
+      }
+      int invalidPosition = seekInvalidPosition(t);
+      boolean advanced =
+          invalidPosition == -1
+              ? advanceTupleFromEnd(t, varPosition)
+              : advanceTupleFromInvalidPosition(t, varPosition, invalidPosition);
+      if (!advanced) {
+        return null;
+      }
+    }
+  }
+
+  private int[] getInitialSupportTuple(int varPosition, int value) {
     int[] t = tuple;
     int pos = findPosition(value, values[varPosition]);
-
     if (pos == -1) {
       return setFirstValid(varPosition, value);
     }
-
     try {
       if (supports[varPosition][pos] != null) {
         System.arraycopy(supports[varPosition][pos], 0, t, 0, list.length);
@@ -125,70 +151,43 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
     } catch (Exception _) {
       t = setFirstValid(varPosition, value);
     }
+    return t;
+  }
 
-    assert t != null : " First valid tuple can not be null ";
-
-    int invalidPosition;
-
-    int[][] tuplesVarValue = tuples[varPosition][pos];
-    int[] lastofsequenceVarValue = lastofsequence[varPosition][pos];
-
-    while (true) {
-      // find if t is disallowed
-
-      int position = isDisallowed(varPosition, value, t);
-      if (position == -1) {
-        recordSupport(varPosition, value, t);
-        return t;
-      }
-
-      // finds the last of sequence of disallowed tuples from the
-      // convex.
-
-      if (lastofsequenceVarValue[position] != position) {
-        System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
-      }
-
-      invalidPosition = seekInvalidPosition(t);
-
-      if (invalidPosition == -1) {
-        int i = list.length - 1;
-        for (; i >= 0; i--) {
-          if (i != varPosition) {
-            if (t[i] == list[i].max()) {
-              t[i] = list[i].min();
-            } else {
-              t[i] = list[i].domain.nextValue(t[i]);
-              break;
-            }
-          }
-        }
-        if (i == -1) {
-          return null;
-        }
-      } else {
-        for (int i = invalidPosition + 1; i < list.length; i++) {
-          if (i != varPosition) {
-            t[i] = list[i].min();
-          }
-        }
-        boolean cont = false;
-        for (int i = invalidPosition; i >= 0; i--) {
-          if (i != varPosition) {
-            if (t[i] >= list[i].max()) {
-              t[i] = list[i].min();
-            } else {
-              t[i] = list[i].domain.nextValue(t[i]);
-              cont = true;
-              break;
-            }
-          }
-        }
-        if (!cont) {
-          return null;
+  /** Advances t to the next candidate from the end. Returns false if no more tuples. */
+  private boolean advanceTupleFromEnd(int[] t, int varPosition) {
+    int i = list.length - 1;
+    for (; i >= 0; i--) {
+      if (i != varPosition) {
+        if (t[i] == list[i].max()) {
+          t[i] = list[i].min();
+        } else {
+          t[i] = list[i].domain.nextValue(t[i]);
+          return true;
         }
       }
     }
+    return false;
+  }
+
+  /** Advances t from invalidPosition. Returns false if no more tuples. */
+  private boolean advanceTupleFromInvalidPosition(int[] t, int varPosition, int invalidPosition) {
+    for (int i = invalidPosition + 1; i < list.length; i++) {
+      if (i != varPosition) {
+        t[i] = list[i].min();
+      }
+    }
+    for (int i = invalidPosition; i >= 0; i--) {
+      if (i != varPosition) {
+        if (t[i] >= list[i].max()) {
+          t[i] = list[i].min();
+        } else {
+          t[i] = list[i].domain.nextValue(t[i]);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

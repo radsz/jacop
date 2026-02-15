@@ -230,17 +230,24 @@ public class Cumulative extends CumulativeBasic {
   private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long capacity) {
 
     int n = t.length;
-    int[] prec = new int[n];
+    int[] prec = initPrecFromEct(t, n);
+    processTasksForPrec(tree, t, prec, capacity);
+    return buildLctPrec(prec, lctInvOrder);
+  }
 
+  private static int[] initPrecFromEct(TaskView[] t, int n) {
+    int[] prec = new int[n];
     for (TaskView aT1 : t) {
       prec[aT1.index] = aT1.ect();
     }
+    return prec;
+  }
 
+  private void processTasksForPrec(ThetaLambdaTree tree, TaskView[] t, int[] prec, long capacity) {
     for (TaskView aT : t) {
       if (tree.rootNode().env > capacity * (long) aT.lct()) {
         throw Store.failException;
       }
-
       while (tree.rootNode().envLambda > capacity * (long) aT.lct()) {
         int i = tree.rootNode().responsibleEnvLambda;
         prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], aT.lct());
@@ -248,12 +255,13 @@ public class Cumulative extends CumulativeBasic {
       }
       tree.moveToLambda(aT.treeIndex);
     }
+  }
 
-    int[] lctPrec = new int[n];
+  private static int[] buildLctPrec(int[] prec, int[] lctInvOrder) {
+    int[] lctPrec = new int[prec.length];
     for (int i = 0; i < prec.length; i++) {
       lctPrec[lctInvOrder[i]] = prec[i];
     }
-
     return lctPrec;
   }
 
@@ -267,35 +275,39 @@ public class Cumulative extends CumulativeBasic {
       for (TaskView aT1 : t) {
         capacities.add(aT1.res.min());
       }
-
-      capMap = new int[n];
-      int capIndex = 0;
-      for (int ci : capacities) {
-        for (TaskView aT : t) {
-          if (aT.res.min() == ci) {
-            capMap[aT.index] = capIndex;
-          }
-        }
-        capIndex++;
-      }
+      capMap = buildCapMap(t, n, capacities);
     } else {
       capacities = preComputedCapacities;
       capMap = preComputedCapMap;
     }
 
-    int[][] update = new int[capacities.size()][n];
+    int[][] update = fillUpdateMatrix(tree, t, capacities, cap, n);
+    applyPrecOrderUpdates(store, t, prec, update, capMap, n);
+  }
 
+  private static int[] buildCapMap(TaskView[] t, int n, Set<Integer> capacities) {
+    int[] capMap = new int[n];
+    int capIndex = 0;
+    for (int ci : capacities) {
+      for (TaskView aT : t) {
+        if (aT.res.min() == ci) {
+          capMap[aT.index] = capIndex;
+        }
+      }
+      capIndex++;
+    }
+    return capMap;
+  }
+
+  private int[][] fillUpdateMatrix(
+      ThetaLambdaTree tree, TaskView[] t, Set<Integer> capacities, long cap, int n) {
+    int[][] update = new int[capacities.size()][n];
     int capi = 0;
     for (int ci : capacities) {
-
       tree.clearTree();
-
       int upd = Integer.MIN_VALUE;
-
-      for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
-
+      for (int l = n - 1; l >= 0; l--) {
         tree.enableNode(t[l].treeIndex, ci);
-
         long envlc = tree.calcEnvlc(t[l].lct(), ci);
         int diff = Integer.MIN_VALUE;
         if (envlc != Long.MIN_VALUE) {
@@ -307,7 +319,11 @@ public class Cumulative extends CumulativeBasic {
       }
       capi++;
     }
+    return update;
+  }
 
+  private void applyPrecOrderUpdates(
+      Store store, TaskView[] t, int[] prec, int[][] update, int[] capMap, int n) {
     Integer[] precTaskOrder = new Integer[n];
     for (int i = 0; i < n; i++) {
       precTaskOrder[i] = i;
@@ -316,28 +332,21 @@ public class Cumulative extends CumulativeBasic {
 
     int j = 0;
     for (int i = 0; i < n; i++) {
-
       TaskView taskI = t[precTaskOrder[i]];
       int precI = prec[precTaskOrder[i]];
-
-      // first skip all task j that are lct after prec
       while (j < n && t[j].lct() > precI) {
         j++;
       }
-
-      if (j < n) {
-
-        // update est[i] if possible
-        int nj = j;
-        while (nj < n && t[nj].lct() == precI) {
-          if (t[nj].lct() < taskI.lct()) {
-            taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
-            break;
-          }
-          nj++;
-        }
-      } else {
+      if (j >= n) {
         break;
+      }
+      int nj = j;
+      while (nj < n && t[nj].lct() == precI) {
+        if (t[nj].lct() < taskI.lct()) {
+          taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
+          break;
+        }
+        nj++;
       }
     }
   }
@@ -383,63 +392,68 @@ public class Cumulative extends CumulativeBasic {
     Arrays.sort(t2, Comparator.comparingInt((Integer o) -> ts[o].est()));
 
     for (TaskView u : ts) {
-
-      long Energy = 0;
-      long maxEnergy = 0;
-      int rr = Integer.MIN_VALUE;
-
-      for (int i : t1) {
-        TaskView t = ts[i];
-
-        if (t.lct() <= u.lct()) {
-          Energy += t.energy();
-
-          if (rr == Integer.MIN_VALUE
-              || (float) Energy / (float) (u.lct() - t.est())
-                  > (float) maxEnergy / ((float) u.lct() - (float) rr)) {
-            maxEnergy = Energy;
-            rr = t.est();
-          }
-        } else if (rr != Integer.MIN_VALUE) {
-          long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
-          if (rest > 0) {
-            Dupd[i] = (int) Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
-          }
-
-          if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
-            lb[i] = Math.max(lb[i], Dupd[i]);
-          }
-        }
-        E[i] = Energy;
-      }
-
-      long minSl = Integer.MAX_VALUE;
-      int rt = u.lct();
-      for (int i : t2) {
-        TaskView t = ts[i];
-
-        if (C * (u.lct() - t.est()) - E[i] < minSl) {
-          rt = t.est();
-          minSl = C * (u.lct() - rt) - E[i];
-        }
-
-        if (t.lct() > u.lct()) {
-
-          long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
-          if (rt <= u.lct() && rest > 0) {
-            SlUpd[i] = (int) Math.max(SlUpd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
-          }
-
-          if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
-            lb[i] = Math.max(Math.max(lb[i], Dupd[i]), SlUpd[i]);
-          }
-        }
-      }
+      edgeFindQuadProcessU(ts, u, t1, t2, C, lb, Dupd, SlUpd, E);
     }
 
     // update LB's
     for (int i = 0; i < n; i++) {
       ts[i].updateEdgeFind(store.level, lb[i]);
+    }
+  }
+
+  private static void edgeFindQuadProcessU(
+      TaskView[] ts,
+      TaskView u,
+      Integer[] t1,
+      Integer[] t2,
+      long C,
+      int[] lb,
+      int[] Dupd,
+      int[] SlUpd,
+      long[] E) {
+    long Energy = 0;
+    long maxEnergy = 0;
+    int rr = Integer.MIN_VALUE;
+
+    for (int i : t1) {
+      TaskView t = ts[i];
+      if (t.lct() <= u.lct()) {
+        Energy += t.energy();
+        if (rr == Integer.MIN_VALUE
+            || (float) Energy / (float) (u.lct() - t.est())
+                > (float) maxEnergy / ((float) u.lct() - (float) rr)) {
+          maxEnergy = Energy;
+          rr = t.est();
+        }
+      } else if (rr != Integer.MIN_VALUE) {
+        long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
+        if (rest > 0) {
+          Dupd[i] = (int) Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
+        }
+        if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
+          lb[i] = Math.max(lb[i], Dupd[i]);
+        }
+      }
+      E[i] = Energy;
+    }
+
+    long minSl = Integer.MAX_VALUE;
+    int rt = u.lct();
+    for (int i : t2) {
+      TaskView t = ts[i];
+      if (C * (u.lct() - t.est()) - E[i] < minSl) {
+        rt = t.est();
+        minSl = C * (u.lct() - rt) - E[i];
+      }
+      if (t.lct() > u.lct()) {
+        long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
+        if (rt <= u.lct() && rest > 0) {
+          SlUpd[i] = (int) Math.max(SlUpd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+        }
+        if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
+          lb[i] = Math.max(Math.max(lb[i], Dupd[i]), SlUpd[i]);
+        }
+      }
     }
   }
 

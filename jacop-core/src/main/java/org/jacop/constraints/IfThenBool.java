@@ -107,66 +107,64 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
   private void propagateIfThenBool(Store store, boolean negated) {
 
     if (negated) {
-      do {
-        store.propagationHasOccurred = false;
-
-        if (x.singleton()) {
-
-          if (x.max() == 0) {
-            z.domain.inValue(store.level, z, 0);
-          }
-
-          if (x.min() == 1) {
-            if (y.singleton()) {
-              z.domain.inComplement(store.level, z, y.value());
-            }
-            if (z.singleton()) {
-              y.domain.inComplement(store.level, y, z.value());
-            }
-          }
-        }
-
-        if (y.singleton()) {
-
-          if (y.max() == 0) {
-            z.domain.in(store.level, z, x.domain);
-            x.domain.in(store.level, x, z.domain);
-          }
-
-          if (y.min() == 1) {
-            z.domain.inValue(store.level, z, 0);
-          }
-        }
-
-        if (z.min() == 1) {
-          x.domain.inValue(store.level, x, 1);
-          y.domain.inValue(store.level, y, 0);
-        }
-
-      } while (store.propagationHasOccurred);
+      propagateIfThenBoolNegated(store);
     } else {
-      if (z.max() == 0) {
+      propagateIfThenBoolNonNegated(store);
+    }
+  }
+
+  private void propagateIfThenBoolNegated(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+      if (x.singleton()) {
+        if (x.max() == 0) {
+          z.domain.inValue(store.level, z, 0);
+        }
+        if (x.min() == 1) {
+          if (y.singleton()) {
+            z.domain.inComplement(store.level, z, y.value());
+          }
+          if (z.singleton()) {
+            y.domain.inComplement(store.level, y, z.value());
+          }
+        }
+      }
+      if (y.singleton()) {
+        if (y.max() == 0) {
+          z.domain.in(store.level, z, x.domain);
+          x.domain.in(store.level, x, z.domain);
+        }
+        if (y.min() == 1) {
+          z.domain.inValue(store.level, z, 0);
+        }
+      }
+      if (z.min() == 1) {
         x.domain.inValue(store.level, x, 1);
         y.domain.inValue(store.level, y, 0);
       }
+    } while (store.propagationHasOccurred);
+  }
 
-      if (x.max() == 0) {
-        z.domain.inValue(store.level, z, 1);
-      } else if (x.min() == 1) {
-        z.domain.in(store.level, z, y.domain);
-        y.domain.in(store.level, y, z.domain);
+  private void propagateIfThenBoolNonNegated(Store store) {
+    if (z.max() == 0) {
+      x.domain.inValue(store.level, x, 1);
+      y.domain.inValue(store.level, y, 0);
+    }
+    if (x.max() == 0) {
+      z.domain.inValue(store.level, z, 1);
+    } else if (x.min() == 1) {
+      z.domain.in(store.level, z, y.domain);
+      y.domain.in(store.level, y, z.domain);
+    }
+    if (y.max() == 0) {
+      if (x.singleton()) {
+        z.domain.inComplement(store.level, z, x.value());
       }
-
-      if (y.max() == 0) {
-        if (x.singleton()) {
-          z.domain.inComplement(store.level, z, x.value());
-        }
-        if (z.singleton()) {
-          x.domain.inComplement(store.level, x, z.value());
-        }
-      } else if (y.min() == 1) {
-        z.domain.inValue(store.level, z, 1);
+      if (z.singleton()) {
+        x.domain.inComplement(store.level, x, z.value());
       }
+    } else if (y.min() == 1) {
+      z.domain.inValue(store.level, z, 1);
     }
   }
 

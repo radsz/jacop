@@ -129,65 +129,58 @@ public class ProfileItem {
   protected void overlapInternal(
       ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
     if (a.min == min) {
-      // left = null;
-      if (a.max < max) {
-        if (min != a.max) {
-          int v = computeOverlapValue(a.value);
-          overlap.set(min, a.max, v);
-        }
-        right.set(a.max, max, value);
-      } else {
-        // Max <= a.Max
-        int v = computeOverlapValue(a.value);
-        overlap.set(min, max, v);
-        if (max != a.max) {
-          right.set(max, a.max, a.value);
-        }
-      }
+      overlapWhenAMinEqualsMin(a, overlap, right);
+    } else if (a.min < min) {
+      overlapWhenAMinLessThanMin(a, left, overlap, right);
     } else {
-      if (a.min < min) {
-        left.set(a.min, min, a.value);
-        if (a.max == max) {
-          int v = computeOverlapValue(a.value);
-          overlap.set(min, max, v);
-          // right = null;
-        } else {
-          if (a.max < max) {
-            if (min != a.max) {
-              int v = computeOverlapValue(a.value);
-              overlap.set(min, a.max, v);
-            }
-            right.set(a.max, max, value);
-          } else {
-            // Max <= a.Max
-            int v = computeOverlapValue(a.value);
-            overlap.set(min, max, v);
-            if (max != a.max) {
-              right.set(max, a.max, a.value);
-            }
-          }
-        }
-      } else {
-        // Min < a.Min
-        left.set(min, a.min, value);
-        if (a.max == max) {
-          int v = computeOverlapValue(a.value);
-          overlap.set(a.min, a.max, v);
-          // right = null;
-        } else {
-          if (a.max < max) {
-            int v = computeOverlapValue(a.value);
-            overlap.set(a.min, a.max, v);
-            right.set(a.max, max, value);
-          } else {
-            // Max <= a.Max
-            int v = computeOverlapValue(a.value);
-            overlap.set(a.min, max, v);
-            if (max != a.max) {
-              right.set(max, a.max, a.value);
-            }
-          }
-        }
+      overlapWhenAMinGreaterThanMin(a, left, overlap, right);
+    }
+  }
+
+  private void overlapWhenAMinEqualsMin(ProfileItem a, ProfileItem overlap, ProfileItem right) {
+    if (a.max < max) {
+      if (min != a.max) {
+        overlap.set(min, a.max, computeOverlapValue(a.value));
+      }
+      right.set(a.max, max, value);
+    } else {
+      overlap.set(min, max, computeOverlapValue(a.value));
+      if (max != a.max) {
+        right.set(max, a.max, a.value);
+      }
+    }
+  }
+
+  private void overlapWhenAMinLessThanMin(
+      ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
+    left.set(a.min, min, a.value);
+    if (a.max == max) {
+      overlap.set(min, max, computeOverlapValue(a.value));
+    } else if (a.max < max) {
+      if (min != a.max) {
+        overlap.set(min, a.max, computeOverlapValue(a.value));
+      }
+      right.set(a.max, max, value);
+    } else {
+      overlap.set(min, max, computeOverlapValue(a.value));
+      if (max != a.max) {
+        right.set(max, a.max, a.value);
+      }
+    }
+  }
+
+  private void overlapWhenAMinGreaterThanMin(
+      ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
+    left.set(min, a.min, value);
+    if (a.max == max) {
+      overlap.set(a.min, a.max, computeOverlapValue(a.value));
+    } else if (a.max < max) {
+      overlap.set(a.min, a.max, computeOverlapValue(a.value));
+      right.set(a.max, max, value);
+    } else {
+      overlap.set(a.min, max, computeOverlapValue(a.value));
+      if (max != a.max) {
+        right.set(max, a.max, a.value);
       }
     }
   }

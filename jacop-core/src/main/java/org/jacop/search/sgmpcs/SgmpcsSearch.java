@@ -173,13 +173,13 @@ public class SgmpcsSearch {
   /** Finds elite solutions if they do not exist yet. */
   public void findEliteSolutions() {
 
-    if (elite == null) {
-      elite = new int[e][];
-      for (int i = 0; i < e; i++) {
-        elite[i] = new int[vars.length + 1];
-      }
-    } else {
+    if (elite != null) {
       return;
+    }
+
+    elite = new int[e][];
+    for (int i = 0; i < e; i++) {
+      elite[i] = new int[vars.length + 1];
     }
 
     costPosition = vars.length;
@@ -189,43 +189,11 @@ public class SgmpcsSearch {
       }
     }
 
-    IntVar[] v;
-    if (costPosition == vars.length) {
-      v = new IntVar[vars.length + 1];
-      System.arraycopy(vars, 0, v, 0, vars.length);
-      v[vars.length] = cost;
-    } else {
-      v = vars;
-    }
+    IntVar[] v = costPosition == vars.length ? extendVarsWithCost() : vars;
 
-    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
-    label.getSolutionListener().searchAll(true);
-    label.getSolutionListener().recordSolutions(true);
-    label.getSolutionListener().setSolutionLimit(eInit);
-    label.setAssignSolution(false);
-    label.setPrintInfo(false);
-
-    SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
-    label.labeling(store, select);
-
-    int[][] solutionPool = new int[label.getSolutionListener().solutionsNo()][];
-    for (int i = 0; i < label.getSolutionListener().solutionsNo(); i++) {
-      solutionPool[i] = new int[v.length];
-      for (int j = 0; j < label.getSolution(i + 1).length; j++) {
-        solutionPool[i][j] = ((IntDomain) label.getSolution(i + 1)[j]).value();
-      }
-    }
-
+    int[][] solutionPool = buildSolutionPool(v);
     if (trace) {
-      log.debug("%% Initial pool of solutions");
-
-      for (int i = 0; i < solutionPool.length; i++) {
-        StringBuilder sb = new StringBuilder("%% Solution ").append(i + 1).append(": ");
-        for (int j = 0; j < v.length; j++) {
-          sb.append(solutionPool[i][j]).append(" ");
-        }
-        log.debug("{}", sb);
-      }
+      logSolutionPool(solutionPool, v.length);
     }
 
     Arrays.sort(solutionPool, solutionComparator.apply(costPosition));
@@ -237,15 +205,58 @@ public class SgmpcsSearch {
     }
 
     if (trace) {
-      log.debug("%% Selected best {} solutions", e);
+      logEliteSolutions(v.length);
+    }
+  }
 
-      for (int i = 0; i < e; i++) {
-        StringBuilder solution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
-        for (int j = 0; j < v.length; j++) {
-          solution.append(elite[i][j]).append(" ");
-        }
-        log.debug("{}", solution);
+  private IntVar[] extendVarsWithCost() {
+    IntVar[] v = new IntVar[vars.length + 1];
+    System.arraycopy(vars, 0, v, 0, vars.length);
+    v[vars.length] = cost;
+    return v;
+  }
+
+  private int[][] buildSolutionPool(IntVar[] v) {
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
+    label.getSolutionListener().searchAll(true);
+    label.getSolutionListener().recordSolutions(true);
+    label.getSolutionListener().setSolutionLimit(eInit);
+    label.setAssignSolution(false);
+    label.setPrintInfo(false);
+
+    SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
+    label.labeling(store, select);
+
+    int numSolutions = label.getSolutionListener().solutionsNo();
+    int[][] solutionPool = new int[numSolutions][];
+    for (int i = 0; i < numSolutions; i++) {
+      solutionPool[i] = new int[v.length];
+      for (int j = 0; j < label.getSolution(i + 1).length; j++) {
+        solutionPool[i][j] = ((IntDomain) label.getSolution(i + 1)[j]).value();
       }
+    }
+    return solutionPool;
+  }
+
+  private void logSolutionPool(int[][] solutionPool, int vLength) {
+    log.debug("%% Initial pool of solutions");
+    for (int i = 0; i < solutionPool.length; i++) {
+      StringBuilder sb = new StringBuilder("%% Solution ").append(i + 1).append(": ");
+      for (int j = 0; j < vLength; j++) {
+        sb.append(solutionPool[i][j]).append(" ");
+      }
+      log.debug("{}", sb);
+    }
+  }
+
+  private void logEliteSolutions(int vLength) {
+    log.debug("%% Selected best {} solutions", e);
+    for (int i = 0; i < e; i++) {
+      StringBuilder solution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
+      for (int j = 0; j < vLength; j++) {
+        solution.append(elite[i][j]).append(" ");
+      }
+      log.debug("{}", solution);
     }
   }
 
@@ -256,13 +267,10 @@ public class SgmpcsSearch {
   boolean improveSolution() {
 
     java.security.SecureRandom rand = Store.getRandom();
-
     searchStartTime = System.currentTimeMillis();
-
     search.setPrintInfo(printInfo);
 
     while (!terminationCriteria()) {
-
       long currentTime = System.currentTimeMillis();
       long restTimeOut = (timeOut - (currentTime - searchStartTime)) / 1000;
       if (restTimeOut <= 0) {
@@ -270,73 +278,62 @@ public class SgmpcsSearch {
       }
 
       search.setTimeOut(restTimeOut);
-
       int bestCost = elite[bestCostSolution()][costPosition];
       store.impose(new XltC(cost, bestCost));
 
       if (rand.nextFloat() < p) {
-
-        boolean result = search.searchFromEmptySolution(l);
-
-        if (!result) {
-          numberConsecutiveFails++;
-          updateFailLimit(true);
-        } else {
-          if (printInfo) {
-            log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
-          }
-
-          solution = search.getSolution();
-
-          if (printInfo) {
-            log.info("%% Solution starting from empty ");
-            printSolution(solution);
-          }
-
-          numberConsecutiveFails = 0;
-
-          int worst = worstCostSolution();
-          if (elite[worst][costPosition] > search.getCurrentCost()) {
-            replaceEliteSolution(worst, solution, search.getCurrentCost());
-          }
-
-          searchCost = search.getCurrentCost();
-          updateFailLimit(false);
-        }
+        tryImproveFromEmptySolution();
       } else {
-
-        // select random solution from e elite solutions
-        int n = rand.nextInt(e);
-
-        boolean result = search.searchFromEliteSolution(elite[n], l);
-
-        if (!result) {
-          numberConsecutiveFails++;
-          updateFailLimit(true);
-        } else {
-
-          if (printInfo) {
-            log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
-          }
-
-          solution = search.getSolution();
-
-          if (printInfo) {
-            log.info("%% Solution starting from reference with cost {}", elite[n][costPosition]);
-            printSolution(solution);
-          }
-
-          numberConsecutiveFails = 0;
-
-          replaceEliteSolution(n, solution, search.getCurrentCost());
-
-          searchCost = search.getCurrentCost();
-          updateFailLimit(false);
-        }
+        tryImproveFromEliteSolution(rand.nextInt(e));
       }
     }
 
     return true;
+  }
+
+  private void tryImproveFromEmptySolution() {
+    boolean result = search.searchFromEmptySolution(l);
+    if (!result) {
+      numberConsecutiveFails++;
+      updateFailLimit(true);
+      return;
+    }
+    if (printInfo) {
+      log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
+    }
+    solution = search.getSolution();
+    if (printInfo) {
+      log.info("%% Solution starting from empty ");
+      printSolution(solution);
+    }
+    numberConsecutiveFails = 0;
+    int worst = worstCostSolution();
+    if (elite[worst][costPosition] > search.getCurrentCost()) {
+      replaceEliteSolution(worst, solution, search.getCurrentCost());
+    }
+    searchCost = search.getCurrentCost();
+    updateFailLimit(false);
+  }
+
+  private void tryImproveFromEliteSolution(int n) {
+    boolean result = search.searchFromEliteSolution(elite[n], l);
+    if (!result) {
+      numberConsecutiveFails++;
+      updateFailLimit(true);
+      return;
+    }
+    if (printInfo) {
+      log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
+    }
+    solution = search.getSolution();
+    if (printInfo) {
+      log.info("%% Solution starting from reference with cost {}", elite[n][costPosition]);
+      printSolution(solution);
+    }
+    numberConsecutiveFails = 0;
+    replaceEliteSolution(n, solution, search.getCurrentCost());
+    searchCost = search.getCurrentCost();
+    updateFailLimit(false);
   }
 
   boolean terminationCriteria() {

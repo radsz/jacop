@@ -167,56 +167,7 @@ public class Assignment extends Constraint
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-
-      rangeX = new IntervalDomain(shiftX, x.length - 1 + shiftX);
-
-      rangeD = new IntervalDomain(shiftD, x.length - 1 + shiftD);
-
-      for (int i = 0; i < x.length; i++) {
-
-        IntDomain alreadyRemoved = rangeD.subtract(x[i].domain);
-
-        x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
-
-        if (!alreadyRemoved.isEmpty()) {
-          for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
-              enumer.hasMoreElements(); ) {
-
-            int xValue = enumer.nextElement();
-
-            d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
-          }
-        }
-
-        if (x[i].singleton()) {
-          int position = x[i].value() - shiftD;
-          d[position].domain.in(store.level, d[position], i + shiftX, i + shiftX);
-        }
-      }
-
-      for (int i = 0; i < d.length; i++) {
-
-        IntDomain alreadyRemoved = rangeX.subtract(d[i].domain);
-
-        d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
-
-        if (!alreadyRemoved.isEmpty()) {
-          for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
-              enumer.hasMoreElements(); ) {
-
-            int dValue = enumer.nextElement();
-
-            x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
-          }
-        }
-
-        if (d[i].singleton()) {
-
-          x[d[i].value() - shiftX].domain.in(
-              store.level, x[d[i].value() - shiftX], i + shiftD, i + shiftD);
-        }
-      }
-
+      initRangesAndPropagateInitial(store);
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
     }
@@ -228,63 +179,92 @@ public class Assignment extends Constraint
       variableQueue = new LinkedHashSet<>();
 
       for (IntVar V : fdvs) {
+        propagateFromPrunedVariable(store, V);
+      }
+    }
+  }
 
-        IntDomain vPrunedDomain = V.recentDomainPruning();
+  private void initRangesAndPropagateInitial(Store store) {
+    rangeX = new IntervalDomain(shiftX, x.length - 1 + shiftX);
+    rangeD = new IntervalDomain(shiftD, x.length - 1 + shiftD);
 
-        if (!vPrunedDomain.isEmpty()) {
-
-          Integer position = xs.get(V);
-          if (position == null) {
-            // d variable has been changed
-            position = ds.get(V);
-
-            vPrunedDomain = vPrunedDomain.intersect(rangeX);
-
-            if (vPrunedDomain.isEmpty()) {
-              continue;
-            }
-
-            for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
-                enumer.hasMoreElements(); ) {
-
-              int dValue = enumer.nextElement() - shiftX;
-
-              if (dValue >= 0 && dValue < x.length) {
-                x[dValue].domain.inComplement(store.level, x[dValue], position);
-              }
-            }
-
-            if (V.singleton()) {
-              x[V.value() - shiftX].domain.in(
-                  store.level, x[V.value() - shiftX], position, position);
-            }
-
-          } else {
-            // x variable has been changed
-
-            vPrunedDomain = vPrunedDomain.intersect(rangeD);
-
-            if (vPrunedDomain.isEmpty()) {
-              continue;
-            }
-
-            for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
-                enumer.hasMoreElements(); ) {
-
-              int xValue = enumer.nextElement() - shiftD;
-
-              if (xValue >= 0 && xValue < d.length) {
-                d[xValue].domain.inComplement(store.level, d[xValue], position);
-              }
-
-              if (V.singleton()) {
-                d[V.value() - shiftD].domain.in(
-                    store.level, d[V.value() - shiftD], position, position);
-              }
-            }
-          }
+    for (int i = 0; i < x.length; i++) {
+      IntDomain alreadyRemoved = rangeD.subtract(x[i].domain);
+      x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
+      if (!alreadyRemoved.isEmpty()) {
+        for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
+            enumer.hasMoreElements(); ) {
+          int xValue = enumer.nextElement();
+          d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
         }
       }
+      if (x[i].singleton()) {
+        int position = x[i].value() - shiftD;
+        d[position].domain.in(store.level, d[position], i + shiftX, i + shiftX);
+      }
+    }
+
+    for (int i = 0; i < d.length; i++) {
+      IntDomain alreadyRemoved = rangeX.subtract(d[i].domain);
+      d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
+      if (!alreadyRemoved.isEmpty()) {
+        for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
+            enumer.hasMoreElements(); ) {
+          int dValue = enumer.nextElement();
+          x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
+        }
+      }
+      if (d[i].singleton()) {
+        x[d[i].value() - shiftX].domain.in(
+            store.level, x[d[i].value() - shiftX], i + shiftD, i + shiftD);
+      }
+    }
+  }
+
+  private void propagateFromPrunedVariable(Store store, IntVar V) {
+    IntDomain vPrunedDomain = V.recentDomainPruning();
+    if (vPrunedDomain.isEmpty()) {
+      return;
+    }
+    Integer position = xs.get(V);
+    if (position == null) {
+      propagateFromPrunedD(store, V, vPrunedDomain);
+    } else {
+      propagateFromPrunedX(store, V, vPrunedDomain, position);
+    }
+  }
+
+  private void propagateFromPrunedD(Store store, IntVar V, IntDomain vPrunedDomain) {
+    Integer position = ds.get(V);
+    vPrunedDomain = vPrunedDomain.intersect(rangeX);
+    if (vPrunedDomain.isEmpty()) {
+      return;
+    }
+    for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int dValue = enumer.nextElement() - shiftX;
+      if (dValue >= 0 && dValue < x.length) {
+        x[dValue].domain.inComplement(store.level, x[dValue], position);
+      }
+    }
+    if (V.singleton()) {
+      x[V.value() - shiftX].domain.in(store.level, x[V.value() - shiftX], position, position);
+    }
+  }
+
+  private void propagateFromPrunedX(
+      Store store, IntVar V, IntDomain vPrunedDomain, Integer position) {
+    vPrunedDomain = vPrunedDomain.intersect(rangeD);
+    if (vPrunedDomain.isEmpty()) {
+      return;
+    }
+    for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int xValue = enumer.nextElement() - shiftD;
+      if (xValue >= 0 && xValue < d.length) {
+        d[xValue].domain.inComplement(store.level, d[xValue], position);
+      }
+    }
+    if (V.singleton()) {
+      d[V.value() - shiftD].domain.in(store.level, d[V.value() - shiftD], position, position);
     }
   }
 

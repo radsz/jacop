@@ -107,10 +107,8 @@ public class SumBool extends AbstractSum {
   }
 
   private void prune(byte rel) {
-
     int min = 0;
     int max = 0;
-
     for (int i = 0; i < l; i++) {
       IntDomain xd = x[i].dom();
       min += xd.min();
@@ -119,109 +117,110 @@ public class SumBool extends AbstractSum {
 
     switch (rel) {
       case EQ:
-        sum.domain.in(store.level, sum, min, max);
-
-        if (sum.singleton() && min != max) {
-          int sumValue = sum.value();
-          if (sumValue == min) {
-            for (int i = 0; i < l; i++) {
-              if (!x[i].singleton()) {
-                x[i].domain.inValue(store.level, x[i], 0);
-              }
-            }
-          }
-
-          if (sumValue == max) {
-            for (int i = 0; i < l; i++) {
-              if (!x[i].singleton()) {
-                x[i].domain.inValue(store.level, x[i], 1);
-              }
-            }
-          }
-        }
+        pruneEq(min, max);
         break;
       case LE:
-        sum.domain.inMin(store.level, sum, min);
-
-        if (!reified && max <= sum.min()) {
-          removeConstraint();
-        }
-
-        if (sum.singleton(min) && min != max) {
-
-          for (int i = 0; i < l; i++) {
-            if (!x[i].singleton()) {
-              x[i].domain.inValue(store.level, x[i], 0);
-            }
-          }
-        }
+        pruneLe(min, max);
         break;
       case LT:
-        sum.domain.inMin(store.level, sum, min + 1);
-
-        if (!reified && max < sum.min()) {
-          removeConstraint();
-        }
-
-        if (sum.singleton(min + 1) && min != max) {
-
-          for (int i = 0; i < l; i++) {
-            if (!x[i].singleton()) {
-              x[i].domain.inValue(store.level, x[i], 0);
-            }
-          }
-        }
+        pruneLt(min, max);
         break;
       case NE:
-        if (min == max) {
-          sum.domain.inComplement(store.level, sum, min);
-        }
-
-        int sumMin = sum.min() - max;
-        int sumMax = sum.max() - min;
-        if (sumMax - sumMin == 1) {
-          for (int i = 0; i < l; i++) {
-            if (!x[i].singleton()) {
-              x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
-            }
-          }
-        }
+        pruneNe(min, max);
         break;
       case GT:
-        sum.domain.inMax(store.level, sum, max - 1);
-
-        if (!reified && min > sum.max()) {
-          removeConstraint();
-        }
-
-        if (sum.singleton(max - 1) && min != max) {
-
-          for (int i = 0; i < l; i++) {
-            if (!x[i].singleton()) {
-              x[i].domain.inValue(store.level, x[i], 1);
-            }
-          }
-        }
+        pruneGt(min, max);
         break;
       case GE:
-        sum.domain.inMax(store.level, sum, max);
-
-        if (!reified && min >= sum.max()) {
-          removeConstraint();
-        }
-
-        if (sum.singleton(max) && min != max) {
-
-          for (int i = 0; i < l; i++) {
-            if (!x[i].singleton()) {
-              x[i].domain.inValue(store.level, x[i], 1);
-            }
-          }
-        }
+        pruneGe(min, max);
         break;
-
       default:
         throw new RuntimeException("Internal error in SumBool");
+    }
+  }
+
+  private void pruneEq(int min, int max) {
+    sum.domain.in(store.level, sum, min, max);
+    if (!sum.singleton() || min == max) {
+      return;
+    }
+    int sumValue = sum.value();
+    if (sumValue == min) {
+      forceAllToZero();
+    }
+    if (sumValue == max) {
+      forceAllToOne();
+    }
+  }
+
+  private void forceAllToZero() {
+    for (int i = 0; i < l; i++) {
+      if (!x[i].singleton()) {
+        x[i].domain.inValue(store.level, x[i], 0);
+      }
+    }
+  }
+
+  private void forceAllToOne() {
+    for (int i = 0; i < l; i++) {
+      if (!x[i].singleton()) {
+        x[i].domain.inValue(store.level, x[i], 1);
+      }
+    }
+  }
+
+  private void pruneLe(int min, int max) {
+    sum.domain.inMin(store.level, sum, min);
+    if (!reified && max <= sum.min()) {
+      removeConstraint();
+    }
+    if (sum.singleton(min) && min != max) {
+      forceAllToZero();
+    }
+  }
+
+  private void pruneLt(int min, int max) {
+    sum.domain.inMin(store.level, sum, min + 1);
+    if (!reified && max < sum.min()) {
+      removeConstraint();
+    }
+    if (sum.singleton(min + 1) && min != max) {
+      forceAllToZero();
+    }
+  }
+
+  private void pruneNe(int min, int max) {
+    if (min == max) {
+      sum.domain.inComplement(store.level, sum, min);
+    }
+    int sumMin = sum.min() - max;
+    int sumMax = sum.max() - min;
+    if (sumMax - sumMin == 1) {
+      for (int i = 0; i < l; i++) {
+        if (!x[i].singleton()) {
+          x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
+        }
+      }
+    }
+  }
+
+  private void pruneGt(int min, int max) {
+    sum.domain.inMax(store.level, sum, max - 1);
+    if (!reified && min > sum.max()) {
+      removeConstraint();
+    }
+    if (sum.singleton(max - 1) && min != max) {
+      forceAllToOne();
+    }
+  }
+
+  private void pruneGe(int min, int max) {
+    sum.domain.inMax(store.level, sum, max);
+    if (!reified && min >= sum.max()) {
+      removeConstraint();
+    }
+    if (sum.singleton(max) && min != max) {
+      forceAllToOne();
     }
   }
 

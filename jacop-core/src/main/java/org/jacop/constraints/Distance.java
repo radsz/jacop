@@ -84,189 +84,128 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
       store.propagationHasOccurred = false;
 
       if (x.singleton()) {
-
-        int xValue = x.value();
-        // |X - Y| = Z
-
-        IntDomain yDom = y.dom();
-        int ySize = yDom.noIntervals();
-
-        IntervalDomain tempPlus4Z = new IntervalDomain(ySize);
-
-        for (int i = ySize - 1; i >= 0; i--) {
-          if (xValue >= yDom.rightElement(i)) {
-            tempPlus4Z.unionAdapt(
-                new Interval(xValue - yDom.rightElement(i), xValue - yDom.leftElement(i)));
-          } else if (xValue >= yDom.leftElement(i)) {
-            tempPlus4Z.unionAdapt(new Interval(0, xValue - yDom.leftElement(i)));
-          }
-        }
-
-        IntervalDomain tempMinus4Z = new IntervalDomain(ySize);
-
-        for (int i = 0; i < ySize; i++) {
-          if (xValue <= yDom.leftElement(i)) {
-            tempMinus4Z.unionAdapt(
-                new Interval(-xValue + yDom.leftElement(i), -xValue + yDom.rightElement(i)));
-          } else if (xValue <= yDom.rightElement(i)) {
-            tempMinus4Z.unionAdapt(new Interval(0, -xValue + yDom.rightElement(i)));
-          }
-        }
-
-        tempPlus4Z.addDom(tempMinus4Z);
-        z.domain.in(store.level, z, tempPlus4Z);
-
-        // If Y changes Z then only if Z changes Y we execute
-        // consistency again.
-        store.propagationHasOccurred = false;
-
-        // |X - Y| = Z
-
-        IntDomain zDom = z.dom();
-        int zSize = z.domain.noIntervals();
-
-        IntervalDomain temp = new IntervalDomain(zSize);
-
-        for (int i = zSize - 1; i >= 0; i--) {
-          temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
-        }
-
-        temp.addDom(zDom);
-
-        y.domain.inShift(store.level, y, temp, xValue);
-
+        propagateWhenXSingleton(store);
+      } else if (y.singleton()) {
+        propagateWhenYSingleton(store);
+      } else if (z.singleton()) {
+        propagateWhenZSingleton(store);
       } else {
-
-        // X not singleton
-        if (y.singleton()) {
-
-          int yValue = y.value();
-          // |X - Y| = Z
-
-          IntDomain xDom = x.dom();
-          int xSize = x.domain.noIntervals();
-
-          IntervalDomain temp4PlusZ = new IntervalDomain(xSize);
-          IntervalDomain temp4MinusZ = new IntervalDomain(xSize);
-
-          for (int i = 0; i < xSize; i++) {
-            if (xDom.leftElement(i) - yValue >= 0) {
-              temp4PlusZ.unionAdapt(
-                  new Interval(xDom.leftElement(i) - yValue, xDom.rightElement(i) - yValue));
-            } else if (xDom.rightElement(i) - yValue >= 0) {
-              temp4PlusZ.unionAdapt(0, xDom.rightElement(i) - yValue);
-            }
-          }
-
-          for (int i = xSize - 1; i >= 0; i--) {
-            if (xDom.rightElement(i) - yValue <= 0) {
-              temp4MinusZ.unionAdapt(
-                  new Interval(-xDom.rightElement(i) + yValue, -xDom.leftElement(i) + yValue));
-            } else if (xDom.leftElement(i) - yValue <= 0) {
-              temp4MinusZ.unionAdapt(0, -xDom.leftElement(i) + yValue);
-            }
-          }
-
-          temp4PlusZ.addDom(temp4MinusZ);
-          z.domain.in(store.level, z, temp4PlusZ);
-
-          // If X changes Z then only if Z changes X we execute
-          // consistency again.
-          store.propagationHasOccurred = false;
-
-          // Y.singleton()
-          // |X - Y| = Z
-
-          IntDomain zDom = z.dom();
-          int zSize = zDom.noIntervals();
-
-          IntervalDomain temp = new IntervalDomain(zSize);
-
-          for (int i = zSize - 1; i >= 0; i--) {
-            temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
-          }
-
-          temp.addDom(zDom);
-
-          x.domain.inShift(store.level, x, temp, yValue);
-
-        } else {
-
-          // X and Y not singleton
-
-          if (z.singleton()) {
-
-            // Z is singleton
-            int zValue = z.value();
-
-            IntDomain xDom = x.dom();
-            int xSize = xDom.noIntervals();
-
-            IntervalDomain tempPlusC = new IntervalDomain(xSize);
-            IntervalDomain tempMinusC = new IntervalDomain(xSize);
-
-            for (int i = 0; i < xSize; i++) {
-              tempPlusC.unionAdapt(
-                  new Interval(xDom.leftElement(i) + zValue, xDom.rightElement(i) + zValue));
-              tempMinusC.unionAdapt(
-                  new Interval(xDom.leftElement(i) - zValue, xDom.rightElement(i) - zValue));
-            }
-
-            tempPlusC.addDom(tempMinusC);
-
-            y.domain.in(store.level, y, tempPlusC);
-
-            // If X changes Y then only if Y changes X we execute
-            // consistency again.
-            store.propagationHasOccurred = false;
-
-            IntDomain yDom = y.dom();
-            int ySize = yDom.noIntervals();
-
-            tempPlusC = new IntervalDomain(ySize);
-            tempMinusC = new IntervalDomain(ySize);
-
-            for (int i = 0; i < ySize; i++) {
-              tempPlusC.unionAdapt(
-                  new Interval(yDom.leftElement(i) + zValue, yDom.rightElement(i) + zValue));
-              tempMinusC.unionAdapt(
-                  new Interval(yDom.leftElement(i) - zValue, yDom.rightElement(i) - zValue));
-            }
-
-            tempPlusC.addDom(tempMinusC);
-            x.domain.in(store.level, x, tempPlusC);
-
-          } else {
-            // None is singleton
-
-            // Y - X = Z
-            IntervalDomain Xdom1 = new IntervalDomain(y.min() - z.max(), y.max() - z.min());
-
-            // X - Y = Z
-            Xdom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
-
-            x.domain.in(store.level, x, Xdom1);
-
-            store.propagationHasOccurred = false;
-
-            // Y - X = Z
-            IntervalDomain Ydom1 = new IntervalDomain(x.min() + z.min(), x.max() + z.max());
-            // X - Y = Z
-            Ydom1.unionAdapt(x.min() - z.max(), x.max() - z.min());
-
-            y.domain.in(store.level, y, Ydom1);
-
-            // Y - X = Z
-            IntervalDomain Zdom1 = new IntervalDomain(y.min() - x.max(), y.max() - x.min());
-            // X - Y = Z
-            Zdom1.unionAdapt(x.min() - y.max(), x.max() - y.min());
-
-            z.domain.in(store.level, z, Zdom1);
-          }
-        }
+        propagateWhenNoneSingleton(store);
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  private void propagateWhenXSingleton(Store store) {
+    int xValue = x.value();
+    IntDomain yDom = y.dom();
+    int ySize = yDom.noIntervals();
+    IntervalDomain tempPlus4Z = new IntervalDomain(ySize);
+    for (int i = ySize - 1; i >= 0; i--) {
+      if (xValue >= yDom.rightElement(i)) {
+        tempPlus4Z.unionAdapt(
+            new Interval(xValue - yDom.rightElement(i), xValue - yDom.leftElement(i)));
+      } else if (xValue >= yDom.leftElement(i)) {
+        tempPlus4Z.unionAdapt(new Interval(0, xValue - yDom.leftElement(i)));
+      }
+    }
+    IntervalDomain tempMinus4Z = new IntervalDomain(ySize);
+    for (int i = 0; i < ySize; i++) {
+      if (xValue <= yDom.leftElement(i)) {
+        tempMinus4Z.unionAdapt(
+            new Interval(-xValue + yDom.leftElement(i), -xValue + yDom.rightElement(i)));
+      } else if (xValue <= yDom.rightElement(i)) {
+        tempMinus4Z.unionAdapt(new Interval(0, -xValue + yDom.rightElement(i)));
+      }
+    }
+    tempPlus4Z.addDom(tempMinus4Z);
+    z.domain.in(store.level, z, tempPlus4Z);
+    store.propagationHasOccurred = false;
+    IntDomain zDom = z.dom();
+    int zSize = z.domain.noIntervals();
+    IntervalDomain temp = new IntervalDomain(zSize);
+    for (int i = zSize - 1; i >= 0; i--) {
+      temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
+    }
+    temp.addDom(zDom);
+    y.domain.inShift(store.level, y, temp, xValue);
+  }
+
+  private void propagateWhenYSingleton(Store store) {
+    int yValue = y.value();
+    IntDomain xDom = x.dom();
+    int xSize = x.domain.noIntervals();
+    IntervalDomain temp4PlusZ = new IntervalDomain(xSize);
+    IntervalDomain temp4MinusZ = new IntervalDomain(xSize);
+    for (int i = 0; i < xSize; i++) {
+      if (xDom.leftElement(i) - yValue >= 0) {
+        temp4PlusZ.unionAdapt(
+            new Interval(xDom.leftElement(i) - yValue, xDom.rightElement(i) - yValue));
+      } else if (xDom.rightElement(i) - yValue >= 0) {
+        temp4PlusZ.unionAdapt(0, xDom.rightElement(i) - yValue);
+      }
+    }
+    for (int i = xSize - 1; i >= 0; i--) {
+      if (xDom.rightElement(i) - yValue <= 0) {
+        temp4MinusZ.unionAdapt(
+            new Interval(-xDom.rightElement(i) + yValue, -xDom.leftElement(i) + yValue));
+      } else if (xDom.leftElement(i) - yValue <= 0) {
+        temp4MinusZ.unionAdapt(0, -xDom.leftElement(i) + yValue);
+      }
+    }
+    temp4PlusZ.addDom(temp4MinusZ);
+    z.domain.in(store.level, z, temp4PlusZ);
+    store.propagationHasOccurred = false;
+    IntDomain zDom = z.dom();
+    int zSize = zDom.noIntervals();
+    IntervalDomain temp = new IntervalDomain(zSize);
+    for (int i = zSize - 1; i >= 0; i--) {
+      temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
+    }
+    temp.addDom(zDom);
+    x.domain.inShift(store.level, x, temp, yValue);
+  }
+
+  private void propagateWhenZSingleton(Store store) {
+    int zValue = z.value();
+    IntDomain xDom = x.dom();
+    int xSize = xDom.noIntervals();
+    IntervalDomain tempPlusC = new IntervalDomain(xSize);
+    IntervalDomain tempMinusC = new IntervalDomain(xSize);
+    for (int i = 0; i < xSize; i++) {
+      tempPlusC.unionAdapt(
+          new Interval(xDom.leftElement(i) + zValue, xDom.rightElement(i) + zValue));
+      tempMinusC.unionAdapt(
+          new Interval(xDom.leftElement(i) - zValue, xDom.rightElement(i) - zValue));
+    }
+    tempPlusC.addDom(tempMinusC);
+    y.domain.in(store.level, y, tempPlusC);
+    store.propagationHasOccurred = false;
+    IntDomain yDom = y.dom();
+    int ySize = yDom.noIntervals();
+    IntervalDomain tempPlusC2 = new IntervalDomain(ySize);
+    IntervalDomain tempMinusC2 = new IntervalDomain(ySize);
+    for (int i = 0; i < ySize; i++) {
+      tempPlusC2.unionAdapt(
+          new Interval(yDom.leftElement(i) + zValue, yDom.rightElement(i) + zValue));
+      tempMinusC2.unionAdapt(
+          new Interval(yDom.leftElement(i) - zValue, yDom.rightElement(i) - zValue));
+    }
+    tempPlusC2.addDom(tempMinusC2);
+    x.domain.in(store.level, x, tempPlusC2);
+  }
+
+  private void propagateWhenNoneSingleton(Store store) {
+    IntervalDomain Xdom1 = new IntervalDomain(y.min() - z.max(), y.max() - z.min());
+    Xdom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
+    x.domain.in(store.level, x, Xdom1);
+    store.propagationHasOccurred = false;
+    IntervalDomain Ydom1 = new IntervalDomain(x.min() + z.min(), x.max() + z.max());
+    Ydom1.unionAdapt(x.min() - z.max(), x.max() - z.min());
+    y.domain.in(store.level, y, Ydom1);
+    IntervalDomain Zdom1 = new IntervalDomain(y.min() - x.max(), y.max() - x.min());
+    Zdom1.unionAdapt(x.min() - y.max(), x.max() - y.min());
+    z.domain.in(store.level, z, Zdom1);
   }
 
   @Override

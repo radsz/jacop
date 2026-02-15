@@ -843,76 +843,88 @@ public class TraceGenerator<T extends Var>
         visAtts.addAttribute("", "", "id", ATTR_TYPE_CDATA, "" + visualizerState);
         hdVis.startElement("", "", "visualizer_state", visAtts);
 
-        // variable visualization
         for (int i = 0; i < tracedVar.size(); i++) {
-
-          AttributesImpl vAtts = new AttributesImpl();
-          vAtts.addAttribute("", "", "index", ATTR_TYPE_CDATA, "" + (i + 1));
-          if (tracedVar.get(i) instanceof IntVar v) {
-            if (v.singleton()) { // IntVar
-              vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + v.value());
-              hdVis.startElement("", "", "integer", vAtts);
-              hdVis.endElement("", "", "integer");
-            } else {
-              vAtts.addAttribute("", "", "domain", ATTR_TYPE_CDATA, intDomainToString(v.dom()));
-              hdVis.startElement("", "", "dvar", vAtts);
-              hdVis.endElement("", "", "dvar");
-            }
-          } else { // setVar or other variable types
-            Var v = tracedVar.get(i);
-            DomainOperationHandler domainHandler =
-                SearchHandlerRegistry.getInstance().findDomainHandler(v);
-            if (domainHandler != null) {
-              String domainStr = domainHandler.getDomainString(v);
-              // Check if singleton using reflection to avoid SetVar import
-              boolean isSingleton = false;
-              try {
-                java.lang.reflect.Method singletonMethod = v.getClass().getMethod("singleton");
-                isSingleton = (Boolean) singletonMethod.invoke(v);
-              } catch (Exception ignored) {
-                // Method not available - assume not singleton
-              }
-
-              if (isSingleton) {
-                vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, domainStr);
-                hdVis.startElement("", "", "sinteger", vAtts);
-                hdVis.endElement("", "", "sinteger");
-              } else {
-                // TODO: BUG? Why the same thing is written to low and high attribute?
-                vAtts.addAttribute("", "", "low", ATTR_TYPE_CDATA, domainStr);
-                vAtts.addAttribute("", "", "high", ATTR_TYPE_CDATA, domainStr);
-                hdVis.startElement("", "", "svar", vAtts);
-                hdVis.endElement("", "", "svar");
-              }
-            }
-          }
-
-          visualizerState++;
+          visualizerState = writeVariableVisualization(visualizerState, i, tracedVar.get(i));
         }
-        if (varIndex.get(selectedVar) != null) {
-          AttributesImpl vFocus = new AttributesImpl();
-          vFocus.addAttribute(
-              "", "", "index", ATTR_TYPE_CDATA, "" + (varIndex.get(selectedVar) + 1));
-          vFocus.addAttribute("", "", "group", ATTR_TYPE_CDATA, "default");
-          if (tryNode) {
-            vFocus.addAttribute("", "", "type", ATTR_TYPE_CDATA, "");
-            hdVis.startElement("", "", "focus", vFocus);
-            hdVis.endElement("", "", "focus");
-          } else { // fail node
-            vFocus.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + selectedValue);
-            hdVis.startElement("", "", "failed", vFocus);
-            hdVis.endElement("", "", "failed");
-          }
-        }
+        writeFocusElement(tryNode);
         hdVis.endElement("", "", "visualizer_state");
       }
 
       hdVis.endElement("", "", "state");
-
       visualisationNodeId++;
 
     } catch (SAXException e) {
       log.error("Failed to generate visualization XML node", e);
+    }
+  }
+
+  private int writeVariableVisualization(int visualizerState, int index, Var var)
+      throws SAXException {
+    AttributesImpl vAtts = new AttributesImpl();
+    vAtts.addAttribute("", "", "index", ATTR_TYPE_CDATA, "" + (index + 1));
+    if (var instanceof IntVar v) {
+      writeIntVarVisualization(vAtts, v);
+    } else {
+      writeNonIntVarVisualization(vAtts, var);
+    }
+    return visualizerState + 1;
+  }
+
+  private void writeIntVarVisualization(AttributesImpl vAtts, IntVar v) throws SAXException {
+    if (v.singleton()) {
+      vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + v.value());
+      hdVis.startElement("", "", "integer", vAtts);
+      hdVis.endElement("", "", "integer");
+    } else {
+      vAtts.addAttribute("", "", "domain", ATTR_TYPE_CDATA, intDomainToString(v.dom()));
+      hdVis.startElement("", "", "dvar", vAtts);
+      hdVis.endElement("", "", "dvar");
+    }
+  }
+
+  private void writeNonIntVarVisualization(AttributesImpl vAtts, Var v) throws SAXException {
+    DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(v);
+    if (domainHandler == null) {
+      return;
+    }
+    String domainStr = domainHandler.getDomainString(v);
+    boolean isSingleton = invokeSingletonReflective(v);
+    if (isSingleton) {
+      vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, domainStr);
+      hdVis.startElement("", "", "sinteger", vAtts);
+      hdVis.endElement("", "", "sinteger");
+    } else {
+      vAtts.addAttribute("", "", "low", ATTR_TYPE_CDATA, domainStr);
+      vAtts.addAttribute("", "", "high", ATTR_TYPE_CDATA, domainStr);
+      hdVis.startElement("", "", "svar", vAtts);
+      hdVis.endElement("", "", "svar");
+    }
+  }
+
+  private boolean invokeSingletonReflective(Var v) {
+    try {
+      java.lang.reflect.Method singletonMethod = v.getClass().getMethod("singleton");
+      return (Boolean) singletonMethod.invoke(v);
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
+  private void writeFocusElement(boolean tryNode) throws SAXException {
+    if (varIndex.get(selectedVar) == null) {
+      return;
+    }
+    AttributesImpl vFocus = new AttributesImpl();
+    vFocus.addAttribute("", "", "index", ATTR_TYPE_CDATA, "" + (varIndex.get(selectedVar) + 1));
+    vFocus.addAttribute("", "", "group", ATTR_TYPE_CDATA, "default");
+    if (tryNode) {
+      vFocus.addAttribute("", "", "type", ATTR_TYPE_CDATA, "");
+      hdVis.startElement("", "", "focus", vFocus);
+      hdVis.endElement("", "", "focus");
+    } else {
+      vFocus.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + selectedValue);
+      hdVis.startElement("", "", "failed", vFocus);
+      hdVis.endElement("", "", "failed");
     }
   }
 

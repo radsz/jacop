@@ -125,102 +125,109 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
         log.debug("X {} Y {}", x, y);
       }
 
-      IntervalDomain xDom;
+      IntervalDomain xDom = xDomainAsInterval();
 
-      if (x.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-        xDom = (IntervalDomain) x.domain;
-      } else {
-
-        if (x.domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID) {
-          xDom = ((SmallDenseDomain) x.domain).toIntervalDomain();
-        } else {
-
-          xDom = new IntervalDomain();
-          IntervalEnumeration enumer = x.domain.intervalEnumeration();
-          while (enumer.hasMoreElements()) {
-            Interval next = enumer.nextElement();
-            xDom.unionAdapt(next);
-          }
-        }
-      }
-
-      IntervalDomain yDom1 = new IntervalDomain(xDom.size + 1);
-
-      int i = 0;
-      Interval[] intervals = xDom.intervals;
-      for (; i < xDom.size; i++) {
-        if (intervals[i].max() > 0) {
-          break;
-        }
-      }
-
-      int j = i;
-      if (j == xDom.size) {
-        j--;
-      }
-
-      for (; j >= 0; j--) {
-        if (intervals[j].max() <= 0) {
-          yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
-        }
-      }
-
-      if (i < xDom.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
-
-        if (-intervals[i].min() > intervals[i].max()) {
-          yDom1.unionAdapt(0, -intervals[i].min());
-        } else {
-          yDom1.unionAdapt(0, intervals[i].max());
-        }
-      }
-
-      IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
-
-      for (; i < xDom.size; i++) {
-        yDom.unionAdapt(intervals[i]);
-      }
-
-      yDom.addDom(yDom1);
+      IntervalDomain yDom1 = computeYDom1FromX(xDom);
+      IntervalDomain yDom = computeYDomFromX(xDom, yDom1);
 
       if (DEBUG_ALL) {
         log.debug("new Ydom {}", yDom);
       }
 
-      // @todo, test more the change from yDom1 to yDom.
       y.domain.in(store.level, y, yDom);
 
-      xDom = new IntervalDomain(xDom.size + 1);
-
-      if (y.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-        yDom = (IntervalDomain) y.domain;
-      } else {
-
-        if (y.domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID) {
-          yDom = ((SmallDenseDomain) y.domain).toIntervalDomain();
-        } else {
-
-          yDom = new IntervalDomain();
-          IntervalEnumeration enumer = y.domain.intervalEnumeration();
-          while (enumer.hasMoreElements()) {
-            Interval next = enumer.nextElement();
-            yDom.unionAdapt(next);
-          }
-        }
-      }
-
-      for (i = yDom.size - 1; i >= 0; i--) {
-        xDom.unionAdapt(-yDom.intervals[i].max(), -yDom.intervals[i].min());
-      }
-
-      xDom.addDom(yDom);
+      IntervalDomain yDomAsInterval = yDomainAsInterval();
+      IntervalDomain xDomFromY = computeXDomFromY(yDomAsInterval);
 
       if (DEBUG_ALL) {
-        log.debug("new Xdom {}", xDom);
+        log.debug("new Xdom {}", xDomFromY);
       }
 
-      x.domain.in(store.level, x, xDom);
+      x.domain.in(store.level, x, xDomFromY);
 
     } while (store.propagationHasOccurred);
+  }
+
+  private IntervalDomain xDomainAsInterval() {
+    if (x.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+      return (IntervalDomain) x.domain;
+    }
+    if (x.domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID) {
+      return ((SmallDenseDomain) x.domain).toIntervalDomain();
+    }
+    IntervalDomain xDom = new IntervalDomain();
+    IntervalEnumeration enumer = x.domain.intervalEnumeration();
+    while (enumer.hasMoreElements()) {
+      Interval next = enumer.nextElement();
+      xDom.unionAdapt(next);
+    }
+    return xDom;
+  }
+
+  private IntervalDomain computeYDom1FromX(IntervalDomain xDom) {
+    IntervalDomain yDom1 = new IntervalDomain(xDom.size + 1);
+    Interval[] intervals = xDom.intervals;
+    int i = 0;
+    for (; i < xDom.size; i++) {
+      if (intervals[i].max() > 0) {
+        break;
+      }
+    }
+    int j = i == xDom.size ? i - 1 : i;
+    for (; j >= 0; j--) {
+      if (intervals[j].max() <= 0) {
+        yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
+      }
+    }
+    if (i < xDom.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
+      if (-intervals[i].min() > intervals[i].max()) {
+        yDom1.unionAdapt(0, -intervals[i].min());
+      } else {
+        yDom1.unionAdapt(0, intervals[i].max());
+      }
+    }
+    return yDom1;
+  }
+
+  private IntervalDomain computeYDomFromX(IntervalDomain xDom, IntervalDomain yDom1) {
+    Interval[] intervals = xDom.intervals;
+    int i = 0;
+    for (; i < xDom.size; i++) {
+      if (intervals[i].max() > 0) {
+        break;
+      }
+    }
+    IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
+    for (; i < xDom.size; i++) {
+      yDom.unionAdapt(intervals[i]);
+    }
+    yDom.addDom(yDom1);
+    return yDom;
+  }
+
+  private IntervalDomain yDomainAsInterval() {
+    if (y.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+      return (IntervalDomain) y.domain;
+    }
+    if (y.domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID) {
+      return ((SmallDenseDomain) y.domain).toIntervalDomain();
+    }
+    IntervalDomain yDom = new IntervalDomain();
+    IntervalEnumeration enumer = y.domain.intervalEnumeration();
+    while (enumer.hasMoreElements()) {
+      Interval next = enumer.nextElement();
+      yDom.unionAdapt(next);
+    }
+    return yDom;
+  }
+
+  private IntervalDomain computeXDomFromY(IntervalDomain yDom) {
+    IntervalDomain xDom = new IntervalDomain(yDom.size + 1);
+    for (int i = yDom.size - 1; i >= 0; i--) {
+      xDom.unionAdapt(-yDom.intervals[i].max(), -yDom.intervals[i].min());
+    }
+    xDom.addDom(yDom);
+    return xDom;
   }
 
   void boundConsistency(final Store store) {

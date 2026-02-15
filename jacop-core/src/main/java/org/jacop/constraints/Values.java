@@ -110,89 +110,93 @@ public class Values extends Constraint implements SatisfiedPresent {
         log.debug("Sorted : \n{}", this);
       }
 
-      int minNumberDifferent = 1;
-      int minimumMax = list[0].max();
-
-      int[][] adj = new int[list.length + 1][];
-      adj[0] = new int[0];
-      Map<Integer, Integer> valueMap = new HashMap<>();
-      int valueIndex = 0;
-
-      int numberSingleton = 0;
-      IntDomain singletonValues = new IntervalDomain();
-
-      for (int i = 0; i < list.length; i++) {
-        IntVar v = list[i];
-
-        // compute information for pruning list of Variables
-        if (v.singleton()) {
-          numberSingleton++;
-          singletonValues.unionAdapt(v.min(), v.min());
-        }
-
-        // compute minimal value for count
-        if (v.min() > minimumMax) {
-          minNumberDifferent++;
-          minimumMax = v.max();
-        }
-        if (v.max() < minimumMax) {
-          minimumMax = v.max();
-        }
-
-        adj[i + 1] = new int[v.dom().getSize()];
-        int j = 0;
-        for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
-          int el = e.nextElement();
-          Integer elIndex = valueMap.get(el);
-          if (elIndex == null) {
-            valueMap.put(el, valueIndex);
-            adj[i + 1][j] = valueIndex + 1;
-            valueIndex++;
-          } else {
-            adj[i + 1][j] = elIndex + 1;
-          }
-          j++;
-        }
-      }
-      // compute maximal value for count
-      BipartiteGraphMatching matcher =
-          new BipartiteGraphMatching(adj, list.length, valueMap.size());
-      int maxNumberDifferent = matcher.hopcroftKarp();
+      ValuesConsistencyState state = buildAdjAndCounts();
 
       if (DEBUG) {
-        log.debug("Minimum number of different values = {}", minNumberDifferent);
-      }
-      if (DEBUG) {
-        log.debug("Maximum number of different values = {}", maxNumberDifferent);
-      }
-
-      count.domain.in(store.level, count, minNumberDifferent, maxNumberDifferent);
-
-      if (DEBUG) {
-        log.debug("Number singleton values = {} Values = {}", numberSingleton, singletonValues);
+        log.debug("Minimum number of different values = {}", state.minNumberDifferent);
+        log.debug("Maximum number of different values = {}", state.maxNumberDifferent);
+        log.debug(
+            "Number singleton values = {} Values = {}",
+            state.numberSingleton,
+            state.singletonValues);
       }
 
-      if (count.max() == singletonValues.getSize() && numberSingleton < list.length) {
-        for (IntVar v : list) {
-          if (!v.singleton()) {
-            v.domain.in(store.level, v, singletonValues);
-          }
-        }
-      } else {
+      count.domain.in(store.level, count, state.minNumberDifferent, state.maxNumberDifferent);
 
-        int diffMin = count.min() - singletonValues.getSize();
-        int diffSingleton = list.length - numberSingleton;
-
-        if (diffMin == diffSingleton) {
-          for (IntVar v : list) {
-            if (!v.singleton()) {
-              v.domain.in(store.level, v, singletonValues.complement());
-            }
-          }
-        }
-      }
+      applyCountPruning(store, state);
 
     } while (store.propagationHasOccurred);
+  }
+
+  private static class ValuesConsistencyState {
+    int minNumberDifferent;
+    int maxNumberDifferent;
+    int numberSingleton;
+    IntDomain singletonValues;
+  }
+
+  private ValuesConsistencyState buildAdjAndCounts() {
+    ValuesConsistencyState state = new ValuesConsistencyState();
+    state.minNumberDifferent = 1;
+    int minimumMax = list[0].max();
+    int[][] adj = new int[list.length + 1][];
+    adj[0] = new int[0];
+    Map<Integer, Integer> valueMap = new HashMap<>();
+    int valueIndex = 0;
+    state.numberSingleton = 0;
+    state.singletonValues = new IntervalDomain();
+
+    for (int i = 0; i < list.length; i++) {
+      IntVar v = list[i];
+      if (v.singleton()) {
+        state.numberSingleton++;
+        state.singletonValues.unionAdapt(v.min(), v.min());
+      }
+      if (v.min() > minimumMax) {
+        state.minNumberDifferent++;
+        minimumMax = v.max();
+      }
+      if (v.max() < minimumMax) {
+        minimumMax = v.max();
+      }
+      adj[i + 1] = new int[v.dom().getSize()];
+      int j = 0;
+      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int el = e.nextElement();
+        Integer elIndex = valueMap.get(el);
+        if (elIndex == null) {
+          valueMap.put(el, valueIndex);
+          adj[i + 1][j] = valueIndex + 1;
+          valueIndex++;
+        } else {
+          adj[i + 1][j] = elIndex + 1;
+        }
+        j++;
+      }
+    }
+    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
+    state.maxNumberDifferent = matcher.hopcroftKarp();
+    return state;
+  }
+
+  private void applyCountPruning(Store store, ValuesConsistencyState state) {
+    if (count.max() == state.singletonValues.getSize() && state.numberSingleton < list.length) {
+      for (IntVar v : list) {
+        if (!v.singleton()) {
+          v.domain.in(store.level, v, state.singletonValues);
+        }
+      }
+    } else {
+      int diffMin = count.min() - state.singletonValues.getSize();
+      int diffSingleton = list.length - state.numberSingleton;
+      if (diffMin == diffSingleton) {
+        for (IntVar v : list) {
+          if (!v.singleton()) {
+            v.domain.in(store.level, v, state.singletonValues.complement());
+          }
+        }
+      }
+    }
   }
 
   @Override

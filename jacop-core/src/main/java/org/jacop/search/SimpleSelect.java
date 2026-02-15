@@ -116,80 +116,23 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
     double optimalMetric = variableOrdering.metric(currentVariable);
     int optimalPosition = index;
 
-    int comparison;
-
-    T v;
     for (int currentPosition = index + 1; currentPosition < finalIndex; currentPosition++) {
-
-      v = searchVariables[currentPosition];
+      T v = searchVariables[currentPosition];
 
       if (v.singleton()) {
-
-        if (index == optimalPosition) {
-          placeSearchVariable(index, currentPosition);
-          optimalPosition = currentPosition;
-          index++;
-        } else {
-
-          while (index < currentPosition && searchVariables[index].singleton()) {
-            index++;
-          }
-
-          if (index != currentPosition) {
-
-            if (index == optimalPosition) {
-              placeSearchVariable(index, currentPosition);
-              optimalPosition = currentPosition;
-            } else {
-              placeSearchVariable(index, currentPosition);
-            }
-            index++;
-          }
-        }
-
+        int[] next = handleSingletonAtPosition(index, currentPosition, optimalPosition);
+        index = next[0];
+        optimalPosition = next[1];
         continue;
       }
 
-      comparison = variableOrdering.compare(optimalMetric, v);
+      int comparison = variableOrdering.compare(optimalMetric, v);
       if (comparison < 0) {
         optimalPosition = currentPosition;
         optimalMetric = variableOrdering.metric(v);
-      } else {
-        if (comparison == 0) {
-          if (tieBreakingComparator != null) {
-            int comp = tieBreakingComparator.compare(searchVariables[optimalPosition], v);
-
-            if (comp < 0) {
-              optimalPosition = currentPosition;
-            } else if (comp == 0 && inputOrderTieBreaking) {
-              // Employs input order tie breaking
-              int position1 = position.get(searchVariables[optimalPosition]);
-              int position2 = position.get(searchVariables[currentPosition]);
-
-              if (position2 < position1) {
-                optimalPosition = currentPosition;
-                // Variable with currentPosition had a smaller
-                // initial position within search variables
-              }
-            }
-          } else {
-
-            // If not InputOrderTieBreaking then dynamicLex as
-            // specified by search object is used
-
-            if (inputOrderTieBreaking) {
-              // Employs input order tie breaking
-              int position1 = position.get(searchVariables[optimalPosition]);
-              int position2 = position.get(searchVariables[currentPosition]);
-
-              if (position2 < position1) {
-                optimalPosition = currentPosition;
-                // Variable with currentPosition had a smaller
-                // initial position within search variables
-              }
-            }
-          }
-        }
+      } else if (comparison == 0) {
+        optimalPosition =
+            applyTieBreak(optimalPosition, currentPosition, v) ? currentPosition : optimalPosition;
       }
     }
 
@@ -198,8 +141,52 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
     }
 
     this.currentIndex = index;
-
     return searchVariables[index];
+  }
+
+  /**
+   * Handles a singleton variable at currentPosition: moves it and advances index. Returns new int[]
+   * { index, optimalPosition }.
+   */
+  private int[] handleSingletonAtPosition(int index, int currentPosition, int optimalPosition) {
+    if (index == optimalPosition) {
+      placeSearchVariable(index, currentPosition);
+      return new int[] {index + 1, currentPosition};
+    }
+    while (index < currentPosition && searchVariables[index].singleton()) {
+      index++;
+    }
+    if (index != currentPosition) {
+      placeSearchVariable(index, currentPosition);
+      if (index == optimalPosition) {
+        optimalPosition = currentPosition;
+      }
+      index++;
+    }
+    return new int[] {index, optimalPosition};
+  }
+
+  /**
+   * Applies tie-breaking between variables at optimalPosition and currentPosition. Returns true if
+   * currentPosition should become the new optimal.
+   */
+  private boolean applyTieBreak(int optimalPosition, int currentPosition, T v) {
+    if (tieBreakingComparator != null) {
+      int comp = tieBreakingComparator.compare(searchVariables[optimalPosition], v);
+      if (comp < 0) {
+        return true;
+      }
+      if (comp == 0 && inputOrderTieBreaking) {
+        return position.get(searchVariables[currentPosition])
+            < position.get(searchVariables[optimalPosition]);
+      }
+      return false;
+    }
+    if (inputOrderTieBreaking) {
+      return position.get(searchVariables[currentPosition])
+          < position.get(searchVariables[optimalPosition]);
+    }
+    return false;
   }
 
   /**

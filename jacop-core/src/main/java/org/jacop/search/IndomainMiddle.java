@@ -58,91 +58,64 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
         : "It is not possible to use BoundDomain";
 
     if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain domain = (IntervalDomain) v.domain;
-
-      int dMin = domain.min();
-      int dMax = domain.max();
-
-      if (domain.singleton()) {
-        return dMin;
-      }
-
-      // right shift operator is a division by 2, more efficient
-      int middle = dMin + ((dMax - dMin) >> 1);
-
-      if (!domain.contains(middle)) {
-        int iBefore = 0;
-        int iAfter = domain.size - 1;
-
-        while (iBefore < domain.size && domain.intervals[iBefore].max() < middle) {
-          iBefore++;
-        }
-
-        while (iAfter >= 0 && domain.intervals[iAfter].min() > middle) {
-          iAfter--;
-        }
-
-        if (iBefore > iAfter) {
-          if (middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle) {
-            return domain.intervals[iBefore].min();
-          } else {
-            return domain.intervals[iAfter].max();
-          }
-        }
-
-        if (middle - domain.intervals[iBefore].max() > domain.intervals[iAfter].min() - middle) {
-          return domain.intervals[iAfter].min();
-        } else {
-          return domain.intervals[iBefore].max();
-        }
-
-      } else {
-        return middle;
-      }
-
-    } else {
-
-      IntDomain dom = v.dom();
-      int dMin = dom.min();
-      int dMax = dom.max();
-
-      if (dom.singleton()) {
-        return dMin;
-      }
-
-      // right shift operator is a division by 2, more efficient
-      int middle = dMin + ((dMax - dMin) >> 1);
-
-      if (!dom.contains(middle)) {
-        int iBefore = 0;
-        int iAfter = dom.noIntervals() - 1;
-
-        while (iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle) {
-          iBefore++;
-        }
-
-        while (iAfter >= 0 && dom.getInterval(iAfter).min() > middle) {
-          iAfter--;
-        }
-
-        if (iBefore > iAfter) {
-          if (middle - dom.getInterval(iAfter).max() > dom.getInterval(iBefore).min() - middle) {
-            return dom.getInterval(iBefore).min();
-          } else {
-            return dom.getInterval(iAfter).max();
-          }
-        }
-
-        if (middle - dom.getInterval(iBefore).max() > dom.getInterval(iAfter).min() - middle) {
-          return dom.getInterval(iAfter).min();
-        } else {
-          return dom.getInterval(iBefore).max();
-        }
-
-      } else {
-        return middle;
-      }
+      return indomainIntervalDomain((IntervalDomain) v.domain);
     }
+    return indomainGeneric(v.dom());
+  }
+
+  private int indomainIntervalDomain(IntervalDomain domain) {
+    int dMin = domain.min();
+    int dMax = domain.max();
+    if (domain.singleton()) {
+      return dMin;
+    }
+    int middle = dMin + ((dMax - dMin) >> 1);
+    if (domain.contains(middle)) {
+      return middle;
+    }
+    int iBefore = 0;
+    int iAfter = domain.size - 1;
+    while (iBefore < domain.size && domain.intervals[iBefore].max() < middle) {
+      iBefore++;
+    }
+    while (iAfter >= 0 && domain.intervals[iAfter].min() > middle) {
+      iAfter--;
+    }
+    if (iBefore > iAfter) {
+      return middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle
+          ? domain.intervals[iBefore].min()
+          : domain.intervals[iAfter].max();
+    }
+    return middle - domain.intervals[iBefore].max() > domain.intervals[iAfter].min() - middle
+        ? domain.intervals[iAfter].min()
+        : domain.intervals[iBefore].max();
+  }
+
+  private int indomainGeneric(IntDomain dom) {
+    int dMin = dom.min();
+    int dMax = dom.max();
+    if (dom.singleton()) {
+      return dMin;
+    }
+    int middle = dMin + ((dMax - dMin) >> 1);
+    if (dom.contains(middle)) {
+      return middle;
+    }
+    int iBefore = 0;
+    int iAfter = dom.noIntervals() - 1;
+    while (iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle) {
+      iBefore++;
+    }
+    while (iAfter >= 0 && dom.getInterval(iAfter).min() > middle) {
+      iAfter--;
+    }
+    if (iBefore > iAfter) {
+      return middle - dom.getInterval(iAfter).max() > dom.getInterval(iBefore).min() - middle
+          ? dom.getInterval(iBefore).min()
+          : dom.getInterval(iAfter).max();
+    }
+    return middle - dom.getInterval(iBefore).max() > dom.getInterval(iAfter).min() - middle
+        ? dom.getInterval(iAfter).min()
+        : dom.getInterval(iBefore).max();
   }
 }

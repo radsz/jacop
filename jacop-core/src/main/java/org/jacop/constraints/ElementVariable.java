@@ -156,166 +156,166 @@ public class ElementVariable extends AbstractElement
   public void consistency(Store store) {
 
     if (index.singleton()) {
-      // index is singleton.
-
-      int position = index.value() - 1 - indexOffset;
-      value.domain.in(store.level, value, list[position].domain);
-      list[position].domain.in(store.level, list[position], value.domain);
-
+      enforceSingletonIndex(store);
     } else {
-      // index is not singleton.
-
       if (firstConsistencyCheck) {
-
-        index.domain.in(store.level, index, indexRange);
-
-        IntDomain valDomain = new IntervalDomain();
-        for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-          int position = e.nextElement() - 1 - indexOffset;
-          valDomain.addDom(list[position].domain);
-        }
-        value.domain.in(store.level, value, valDomain);
-
-        firstConsistencyCheck = false;
-        firstConsistencyLevel = store.level;
-        valueHasChanged = true;
-        indexHasChanged = true;
-        variableQueue.addAll(Arrays.asList(list));
-
-        supports = new IntDomain[list.length];
-        IntDomain temp = value.domain.cloneLight();
-        for (int i = list.length - 1; i >= 0; i--) {
-          if (!temp.isEmpty()) {
-            supports[i] = temp.intersect(list[i].domain);
-            if (!supports[i].isEmpty()) {
-              temp = temp.subtract(supports[i]);
-            }
-          } else {
-            supports[i] = new IntervalDomain();
-          }
-        }
+        doFirstConsistencyCheck(store);
       }
-
-      int valMin = IntDomain.MAX_INT;
-      int valMax = IntDomain.MIN_INT;
-      for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int position = e.nextElement() - 1 - indexOffset;
-        int min = list[position].domain.min();
-        int max = list[position].domain.max();
-        valMin = Math.min(valMin, min);
-        valMax = Math.max(valMax, max);
-      }
-      value.domain.in(store.level, value, valMin, valMax);
-
-      // Consequtive execution of the consistency function.
-
+      updateValueBounds(store);
       if (valueHasChanged) {
-
-        for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-
-          int position = e.nextElement() - 1 - indexOffset;
-
-          if (!list[position].domain.isIntersecting(value.domain)) {
-
-            index.domain.inComplement(store.level, index, position + 1 + indexOffset);
-
-            list[position].removeConstraint(this);
-          }
-        }
+        propagateValueChangedToIndex(store);
       }
-
       if (indexHasChanged) {
-
-        IntDomain nextValueDomain = new IntervalDomain();
-        int checkTrigger = value.getSize() - 1;
-        boolean propagation = true;
-        for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-          nextValueDomain.unionAdapt(list[e.nextElement() - 1 - indexOffset].dom());
-          if (nextValueDomain.getSize() > checkTrigger) {
-            if (nextValueDomain.contains(value.domain)) {
-              propagation = false;
-              break;
-            } else {
-              checkTrigger = nextValueDomain.getSize();
-            }
-          }
-        }
-
-        if (propagation) {
-          value.domain.in(store.level, value, nextValueDomain);
-        }
+        propagateIndexChangedToValue(store);
       }
-
       if (!variableQueue.isEmpty()) {
-
-        // TODO: what if one variable occurs multiple times in list? Only one
-        // occurence in the list can be active, the other ones have to be ignored.
-
-        for (IntVar changedVar : variableQueue) {
-
-          int position = mapping.get(changedVar);
-
-          // reason about possible changes to value variable.
-          if (!supports[position].isEmpty()) {
-            // changed variable supports some values in Value variable.
-            IntDomain lostSupports = supports[position].subtract(changedVar.domain);
-            lostSupports.intersectAdapt(value.domain);
-            if (!lostSupports.isEmpty()) {
-              for (ValueEnumeration enumer = lostSupports.valueEnumeration();
-                  enumer.hasMoreElements(); ) {
-                int lostSupport = enumer.nextElement();
-                int endingPosition = Store.getRandom().nextInt(list.length - 1);
-                int nextSupportPosition = -1;
-                for (int i = endingPosition + 1; ; ) {
-                  if (i == list.length) {
-                    i = 0;
-                  }
-                  if (list[i].domain.contains(lostSupport)) {
-                    nextSupportPosition = i;
-                    break;
-                  }
-                  if (i == endingPosition) {
-                    break;
-                  }
-                  i++;
-                }
-                if (nextSupportPosition != -1) {
-                  supports[nextSupportPosition].unionAdapt(lostSupport);
-                  supports[position].subtractAdapt(lostSupport);
-                } else {
-                  value.domain.inComplement(store.level, value, lostSupport);
-                }
-              }
-            }
-          }
-
-          // reason about possible changes to index variable.
-          if (!changedVar.domain.isIntersecting(value.domain)) {
-
-            index.domain.inComplement(store.level, index, position + 1 + indexOffset);
-            list[position].removeConstraint(this);
-
-            List<Integer> array = duplicates.get(changedVar);
-            if (array != null) {
-              for (int additionalPosition : array) {
-                index.domain.inComplement(store.level, index, additionalPosition + 1 + indexOffset);
-              }
-            }
-          }
-        }
+        processVariableQueue(store);
       }
-
       if (indexHasChanged && index.singleton()) {
-        // index is singleton.
-
-        int position = index.value() - 1 - indexOffset;
-        value.domain.in(store.level, value, list[position].domain);
-        list[position].domain.in(store.level, list[position], value.domain);
+        enforceSingletonIndex(store);
       }
-
       indexHasChanged = false;
       valueHasChanged = false;
       variableQueue.clear();
+    }
+  }
+
+  private void enforceSingletonIndex(Store store) {
+    int position = index.value() - 1 - indexOffset;
+    value.domain.in(store.level, value, list[position].domain);
+    list[position].domain.in(store.level, list[position], value.domain);
+  }
+
+  private void doFirstConsistencyCheck(Store store) {
+    index.domain.in(store.level, index, indexRange);
+    IntDomain valDomain = new IntervalDomain();
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int position = e.nextElement() - 1 - indexOffset;
+      valDomain.addDom(list[position].domain);
+    }
+    value.domain.in(store.level, value, valDomain);
+    firstConsistencyCheck = false;
+    firstConsistencyLevel = store.level;
+    valueHasChanged = true;
+    indexHasChanged = true;
+    variableQueue.addAll(Arrays.asList(list));
+    buildSupports();
+  }
+
+  private void buildSupports() {
+    supports = new IntDomain[list.length];
+    IntDomain temp = value.domain.cloneLight();
+    for (int i = list.length - 1; i >= 0; i--) {
+      if (!temp.isEmpty()) {
+        supports[i] = temp.intersect(list[i].domain);
+        if (!supports[i].isEmpty()) {
+          temp = temp.subtract(supports[i]);
+        }
+      } else {
+        supports[i] = new IntervalDomain();
+      }
+    }
+  }
+
+  private void updateValueBounds(Store store) {
+    int valMin = IntDomain.MAX_INT;
+    int valMax = IntDomain.MIN_INT;
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int position = e.nextElement() - 1 - indexOffset;
+      int min = list[position].domain.min();
+      int max = list[position].domain.max();
+      valMin = Math.min(valMin, min);
+      valMax = Math.max(valMax, max);
+    }
+    value.domain.in(store.level, value, valMin, valMax);
+  }
+
+  private void propagateValueChangedToIndex(Store store) {
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int position = e.nextElement() - 1 - indexOffset;
+      if (!list[position].domain.isIntersecting(value.domain)) {
+        index.domain.inComplement(store.level, index, position + 1 + indexOffset);
+        list[position].removeConstraint(this);
+      }
+    }
+  }
+
+  private void propagateIndexChangedToValue(Store store) {
+    IntDomain nextValueDomain = new IntervalDomain();
+    int checkTrigger = value.getSize() - 1;
+    boolean propagation = true;
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      nextValueDomain.unionAdapt(list[e.nextElement() - 1 - indexOffset].dom());
+      if (nextValueDomain.getSize() > checkTrigger) {
+        if (nextValueDomain.contains(value.domain)) {
+          propagation = false;
+          break;
+        } else {
+          checkTrigger = nextValueDomain.getSize();
+        }
+      }
+    }
+    if (propagation) {
+      value.domain.in(store.level, value, nextValueDomain);
+    }
+  }
+
+  private void processVariableQueue(Store store) {
+    for (IntVar changedVar : variableQueue) {
+      int position = mapping.get(changedVar);
+      processLostSupports(store, changedVar, position);
+      processIndexRemovalForDisjoint(store, changedVar, position);
+    }
+  }
+
+  private void processLostSupports(Store store, IntVar changedVar, int position) {
+    if (supports[position].isEmpty()) {
+      return;
+    }
+    IntDomain lostSupports = supports[position].subtract(changedVar.domain);
+    lostSupports.intersectAdapt(value.domain);
+    if (lostSupports.isEmpty()) {
+      return;
+    }
+    for (ValueEnumeration enumer = lostSupports.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int lostSupport = enumer.nextElement();
+      int nextSupportPosition = findNextSupportPosition(lostSupport);
+      if (nextSupportPosition != -1) {
+        supports[nextSupportPosition].unionAdapt(lostSupport);
+        supports[position].subtractAdapt(lostSupport);
+      } else {
+        value.domain.inComplement(store.level, value, lostSupport);
+      }
+    }
+  }
+
+  private int findNextSupportPosition(int lostSupport) {
+    int endingPosition = Store.getRandom().nextInt(list.length - 1);
+    for (int i = endingPosition + 1; ; ) {
+      if (i == list.length) {
+        i = 0;
+      }
+      if (list[i].domain.contains(lostSupport)) {
+        return i;
+      }
+      if (i == endingPosition) {
+        return -1;
+      }
+      i++;
+    }
+  }
+
+  private void processIndexRemovalForDisjoint(Store store, IntVar changedVar, int position) {
+    if (changedVar.domain.isIntersecting(value.domain)) {
+      return;
+    }
+    index.domain.inComplement(store.level, index, position + 1 + indexOffset);
+    list[position].removeConstraint(this);
+    List<Integer> array = duplicates.get(changedVar);
+    if (array != null) {
+      for (int additionalPosition : array) {
+        index.domain.inComplement(store.level, index, additionalPosition + 1 + indexOffset);
+      }
     }
   }
 

@@ -106,98 +106,109 @@ public class ArgMin extends AbstractArgMinMax {
 
       store.propagationHasOccurred = false;
 
-      int lb = IntDomain.MAX_INT;
-      int ub = IntDomain.MAX_INT;
-      int pos = -1;
-
-      // find lower/upper bounds for elements on list
-      for (int i = 0; i < list.length; i++) {
-
-        int vDomMin = list[i].dom().min();
-        if (lb > vDomMin) {
-          lb = vDomMin;
-        }
-
-        int vDomMax = list[i].dom().max();
-        if (ub > vDomMax) {
-          ub = vDomMax;
-          pos = i;
-        }
-      }
+      int[] lbUbPos = findLbUbPosForMin();
+      int lb = lbUbPos[0];
+      int ub = lbUbPos[1];
+      int pos = lbUbPos[2];
 
       if (lb == ub) {
         extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
       }
 
-      // find min/max values for index
-      IntervalDomain idxDomain = new IntervalDomain();
-      for (int i = 0; i < list.length; i++) {
-        int cp = i + 1 + indexOffset;
-
-        if (list[i].min() <= ub) {
-          if (idxDomain.getSize() == 0) {
-            idxDomain.unionAdapt(cp, cp);
-          } else {
-            idxDomain.addLastElement(cp);
-          }
-        }
-      }
+      IntervalDomain idxDomain = buildIdxDomainForMin(ub);
       if (idxDomain.isEmpty()) {
         throw Store.failException;
-      } else {
-        extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
       }
+      extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
 
-      // find min value for variables indexed by index variable
-      lb = IntDomain.MAX_INT;
-      pos = -1;
-      for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int i = e.nextElement() - 1 - indexOffset;
-
-        int vDomMin = list[i].dom().min();
-        if (lb > vDomMin) {
-          lb = vDomMin;
-          pos = i;
-        }
-      }
-      if (list[pos].singleton()) {
+      int[] lbPos = findLbPosForMin();
+      int lb2 = lbPos[0];
+      int pos2 = lbPos[1];
+      if (list[pos2].singleton()) {
         extremeIndex.domain.in(
-            store.level, extremeIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+            store.level, extremeIndex, pos2 + 1 + indexOffset, pos2 + 1 + indexOffset);
       }
 
       if (extremeIndex.singleton()) {
-
-        int idx = extremeIndex.value() - 1 - indexOffset;
-        IntVar y = list[idx];
-
-        for (int i = 0; i < list.length; i++) {
-
-          // prune variables before and after index of max value
-          IntVar x = list[i];
-          if (i < idx) {
-            // x > y
-            x.domain.inMin(store.level, x, y.min() + 1);
-            y.domain.inMax(store.level, y, x.max() - 1);
-          } else {
-            // x >= y
-            x.domain.inMin(store.level, x, y.min());
-            y.domain.inMax(store.level, y, x.max());
-          }
-        }
+        pruneWhenExtremeIndexSingletonMin(store);
       } else {
-        // prune values on the list
-        int im = extremeIndex.min();
-        for (int i = 0; i < list.length; i++) {
-          int cp = i + 1 + indexOffset;
-
-          if (cp < im) {
-            list[i].domain.inMin(store.level, list[i], lb + 1);
-          } else if (cp > im) {
-            list[i].domain.inMin(store.level, list[i], lb);
-          }
-        }
+        pruneWhenExtremeIndexNotSingletonMin(store, lb2);
       }
     } while (store.propagationHasOccurred);
+  }
+
+  private int[] findLbUbPosForMin() {
+    int lb = IntDomain.MAX_INT;
+    int ub = IntDomain.MAX_INT;
+    int pos = -1;
+    for (int i = 0; i < list.length; i++) {
+      int vDomMin = list[i].dom().min();
+      if (lb > vDomMin) {
+        lb = vDomMin;
+      }
+      int vDomMax = list[i].dom().max();
+      if (ub > vDomMax) {
+        ub = vDomMax;
+        pos = i;
+      }
+    }
+    return new int[] {lb, ub, pos};
+  }
+
+  private IntervalDomain buildIdxDomainForMin(int ub) {
+    IntervalDomain idxDomain = new IntervalDomain();
+    for (int i = 0; i < list.length; i++) {
+      int cp = i + 1 + indexOffset;
+      if (list[i].min() <= ub) {
+        if (idxDomain.getSize() == 0) {
+          idxDomain.unionAdapt(cp, cp);
+        } else {
+          idxDomain.addLastElement(cp);
+        }
+      }
+    }
+    return idxDomain;
+  }
+
+  private int[] findLbPosForMin() {
+    int lb = IntDomain.MAX_INT;
+    int pos = -1;
+    for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement() - 1 - indexOffset;
+      int vDomMin = list[i].dom().min();
+      if (lb > vDomMin) {
+        lb = vDomMin;
+        pos = i;
+      }
+    }
+    return new int[] {lb, pos};
+  }
+
+  private void pruneWhenExtremeIndexSingletonMin(Store store) {
+    int idx = extremeIndex.value() - 1 - indexOffset;
+    IntVar y = list[idx];
+    for (int i = 0; i < list.length; i++) {
+      IntVar x = list[i];
+      if (i < idx) {
+        x.domain.inMin(store.level, x, y.min() + 1);
+        y.domain.inMax(store.level, y, x.max() - 1);
+      } else {
+        x.domain.inMin(store.level, x, y.min());
+        y.domain.inMax(store.level, y, x.max());
+      }
+    }
+  }
+
+  private void pruneWhenExtremeIndexNotSingletonMin(Store store, int lb) {
+    int im = extremeIndex.min();
+    for (int i = 0; i < list.length; i++) {
+      int cp = i + 1 + indexOffset;
+      if (cp < im) {
+        list[i].domain.inMin(store.level, list[i], lb + 1);
+      } else if (cp > im) {
+        list[i].domain.inMin(store.level, list[i], lb);
+      }
+    }
   }
 
   @Override

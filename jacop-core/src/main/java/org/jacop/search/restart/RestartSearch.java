@@ -151,20 +151,7 @@ public class RestartSearch<T extends Var> {
     boolean result = true;
     while (result) {
 
-      if (rarVars != null) {
-
-        store.setLevel(store.level + 1);
-
-        if (values != null) {
-          assignRelaxedVariables();
-        }
-      }
-
-      if (cost == null) {
-        result = search.labeling(store, select);
-      } else {
-        result = search.labeling(store, select, cost);
-      }
+      result = runOneRestartIteration();
 
       if (rarVars != null) {
         store.removeLevel(store.level);
@@ -177,45 +164,14 @@ public class RestartSearch<T extends Var> {
 
       atLeastOneSolution |= result;
 
-      int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
-      if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
-        return false;
+      Boolean exit = checkRestartExitConditions();
+      if (exit != null) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        return exit;
       }
 
-      if (timeOutCheck && System.currentTimeMillis() > timeOut) {
-        search.timeOutOccured = true;
-        log.info("%% =====TIME-OUT=====");
-        return false;
-      }
-
-      if (result) {
-        if (cost != null) {
-          if (!calculator.pointsExhausted()) {
-            // optimization solution found and no better exists
-            result = false;
-          } else {
-            boundCost();
-          }
-        } else {
-          break;
-        } // single solution for satisfy search found
-      } else { // no result
-        result = true;
-        if (calculator.pointsExhausted()) {
-          if (cost != null) {
-            boundCost();
-          } else {
-            result = !atLeastOneSolution;
-          }
-        } else // fail before points are exhausted
-        if (rarVars == null) {
-          // restart search fails
-          result = false;
-        } else if (cost != null) {
-          boundCost();
-        }
-      }
-
+      result = computeNextResult(result);
       calculator.newLimit();
 
       if (result) {
@@ -225,7 +181,63 @@ public class RestartSearch<T extends Var> {
 
     store.removeLevel(store.level);
     store.setLevel(store.level - 1);
+    return true;
+  }
 
+  private boolean runOneRestartIteration() {
+    if (rarVars != null) {
+      store.setLevel(store.level + 1);
+      if (values != null) {
+        assignRelaxedVariables();
+      }
+    }
+
+    if (cost == null) {
+      return search.labeling(store, select);
+    } else {
+      return search.labeling(store, select, cost);
+    }
+  }
+
+  /** Returns true to indicate exit with success, false for failure, null to continue. */
+  private Boolean checkRestartExitConditions() {
+    int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
+    if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
+      return false;
+    }
+    if (timeOutCheck && System.currentTimeMillis() > timeOut) {
+      search.timeOutOccured = true;
+      log.info("%% =====TIME-OUT=====");
+      return false;
+    }
+    return null;
+  }
+
+  private boolean computeNextResult(boolean result) {
+    if (result) {
+      if (cost == null) {
+        return false; // break
+      }
+      if (!calculator.pointsExhausted()) {
+        return false;
+      }
+      boundCost();
+      return true;
+    }
+    // no result from search: continue with result = true, then maybe override
+    if (calculator.pointsExhausted()) {
+      if (cost != null) {
+        boundCost();
+      } else {
+        return !atLeastOneSolution;
+      }
+    }
+    if (rarVars == null) {
+      return false;
+    }
+    if (cost != null) {
+      boundCost();
+    }
     return true;
   }
 

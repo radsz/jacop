@@ -112,19 +112,37 @@ public abstract class AbstractExtensionalVa extends Constraint
    * @param store the constraint store
    */
   protected void filterAndIndexTuples(Store store) {
-    if (DEBUG_ALL) {
-      for (Var v : list) {
-        log.debug("Variable {}", v);
-      }
-    }
+    debugLogVariables();
 
     Object[] filterResult = TupleUtils.filterValidTuples(tuplesFromConstructor, list);
     @SuppressWarnings("unchecked")
     boolean[] stillValid = (boolean[]) filterResult[0];
     int noValid = (Integer) filterResult[1];
 
-    int i = 0;
+    debugLogValidTuples(stillValid, noValid);
+
+    tuplesFromConstructor = shrinkToValidTuples(stillValid, noValid);
+
+    this.tuples = new int[list.length][][][];
+    this.values = new int[list.length][];
+    int[][] supportCount = new int[list.length][];
+
+    for (int i = 0; i < list.length; i++) {
+      buildTuplesAndValuesForVariable(i, supportCount);
+    }
+  }
+
+  private void debugLogVariables() {
     if (DEBUG_ALL) {
+      for (Var v : list) {
+        log.debug("Variable {}", v);
+      }
+    }
+  }
+
+  private void debugLogValidTuples(boolean[] stillValid, int noValid) {
+    if (DEBUG_ALL) {
+      int i = 0;
       for (int[] t : tuplesFromConstructor) {
         log.debug("tuple for analysis{}", Arrays.toString(t));
         if (!stillValid[i]) {
@@ -133,79 +151,60 @@ public abstract class AbstractExtensionalVa extends Constraint
         i++;
       }
       log.debug("No. still valid {}", noValid);
-      i = 0;
     }
+  }
 
+  private int[][] shrinkToValidTuples(boolean[] stillValid, int noValid) {
     int[][] temp4Shrinking = new int[noValid][];
-    i = 0;
+    int i = 0;
     int k = 0;
-
     for (int[] t : tuplesFromConstructor) {
       if (stillValid[k]) {
         temp4Shrinking[i] = t;
         i++;
-
         if (DEBUG_ALL) {
           log.debug("Still valid {}", Arrays.toString(t));
         }
       }
       k++;
     }
+    return temp4Shrinking;
+  }
 
-    tuplesFromConstructor = temp4Shrinking;
-
-    this.tuples = new int[list.length][][][];
-    this.values = new int[list.length][];
-
-    int[][] supportCount = new int[list.length][];
-
-    for (i = 0; i < list.length; i++) {
-
-      Map<Integer, Integer> val = new HashMap<>();
-
-      for (int[] t : tuplesFromConstructor) {
-        Integer value = t[i];
-        val.merge(value, 1, Integer::sum);
-      }
-
+  private void buildTuplesAndValuesForVariable(int i, int[][] supportCount) {
+    Map<Integer, Integer> val = new HashMap<>();
+    for (int[] t : tuplesFromConstructor) {
+      Integer value = t[i];
+      val.merge(value, 1, Integer::sum);
+    }
+    if (DEBUG_ALL) {
+      log.debug("values {}", val.keySet());
+    }
+    PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
+    if (DEBUG_ALL) {
+      log.debug("Sorted val size {}", sortedVal.size());
+    }
+    values[i] = new int[sortedVal.size()];
+    supportCount[i] = new int[sortedVal.size()];
+    this.tuples[i] = new int[sortedVal.size()][][];
+    if (DEBUG_ALL) {
+      log.debug("values length {}", values[i].length);
+    }
+    for (int j = 0; j < values[i].length; j++) {
       if (DEBUG_ALL) {
-        log.debug("values {}", val.keySet());
+        log.debug("sortedVal {}", sortedVal);
       }
-
-      PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
-
-      if (DEBUG_ALL) {
-        log.debug("Sorted val size {}", sortedVal.size());
-      }
-
-      values[i] = new int[sortedVal.size()];
-      supportCount[i] = new int[sortedVal.size()];
-      this.tuples[i] = new int[sortedVal.size()][][];
-
-      if (DEBUG_ALL) {
-        log.debug("values length {}", values[i].length);
-      }
-
-      for (int j = 0; j < values[i].length; j++) {
-
-        if (DEBUG_ALL) {
-          log.debug("sortedVal {}", sortedVal);
-        }
-
-        values[i][j] = sortedVal.poll();
-        supportCount[i][j] = val.get(values[i][j]);
-        this.tuples[i][j] = new int[supportCount[i][j]][];
-      }
-
-      for (int[] t : tuplesFromConstructor) {
-        int value = t[i];
-        int position = findPosition(value, values[i]);
-        this.tuples[i][position][--supportCount[i][position]] = t;
-      }
-
-      for (int j = 0; j < tuples[i].length; j++) {
-        TupleUtils.sortTuplesWithin(tuples[i][j]);
-      }
+      values[i][j] = sortedVal.poll();
+      supportCount[i][j] = val.get(values[i][j]);
+      this.tuples[i][j] = new int[supportCount[i][j]][];
+    }
+    for (int[] t : tuplesFromConstructor) {
+      int value = t[i];
+      int position = findPosition(value, values[i]);
+      this.tuples[i][position][--supportCount[i][position]] = t;
+    }
+    for (int j = 0; j < tuples[i].length; j++) {
+      TupleUtils.sortTuplesWithin(tuples[i][j]);
     }
   }
 
