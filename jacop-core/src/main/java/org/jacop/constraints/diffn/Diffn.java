@@ -222,27 +222,36 @@ public class Diffn extends Nooverlap {
     int rMax = r.lct(dim);
     int sLengthMin = s.getLength(dim).min();
     if (s.getOrigin(dim).min() <= rMin) {
-      if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rMax) {
-        sLengthMin = Math.max(s.ect(dim) - rMin, 0);
-      } else {
-        int rmax = r.getOrigin(dim).max() + r.getLength(dim).min();
-        int distance1 = Math.min(s.ect(dim) - rMin, rmax - rMin);
-        int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rMin);
-        if (distance1 < distance2) {
-          sLengthMin = Math.max(distance1, 0);
-        } else if (distance2 > 0) {
-          sLengthMin = distance2 < s.getLength(dim).min() ? distance2 : s.getLength(dim).min();
-        } else {
-          sLengthMin = 0;
-        }
-      }
+      sLengthMin = areaCheckSOriginBeforeRMin(r, s, dim, rMin, rMax, sLengthMin);
     } else if (s.getOrigin(dim).max() + s.getLength(dim).min() > rMax) {
-      int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
-      if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
-        sLengthMin = distance2;
-      } else if (distance2 <= 0) {
-        sLengthMin = 0;
-      }
+      sLengthMin = areaCheckSOriginAfterRMin(r, s, dim, rMax, sLengthMin);
+    }
+    return sLengthMin;
+  }
+
+  private int areaCheckSOriginBeforeRMin(
+      Rectangle r, Rectangle s, int dim, int rMin, int rMax, int sLengthMin) {
+    if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rMax) {
+      return Math.max(s.ect(dim) - rMin, 0);
+    }
+    int rmax = r.getOrigin(dim).max() + r.getLength(dim).min();
+    int distance1 = Math.min(s.ect(dim) - rMin, rmax - rMin);
+    int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rMin);
+    if (distance1 < distance2) {
+      return Math.max(distance1, 0);
+    } else if (distance2 > 0) {
+      return distance2 < s.getLength(dim).min() ? distance2 : s.getLength(dim).min();
+    }
+    return 0;
+  }
+
+  private int areaCheckSOriginAfterRMin(
+      Rectangle r, Rectangle s, int dim, int rMax, int sLengthMin) {
+    int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
+    if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
+      return distance2;
+    } else if (distance2 <= 0) {
+      return 0;
     }
     return sLengthMin;
   }
