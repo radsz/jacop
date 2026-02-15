@@ -2494,6 +2494,138 @@ public class FloatIntervalDomain extends FloatDomain {
 
   // TODO: check and test inComplement below.
 
+  private void notifyInComplementRangeEvent(Var v, boolean isSingleton, boolean boundChange) {
+    if (isSingleton) {
+      v.domainHasChanged(IntDomain.GROUND);
+    } else if (boundChange) {
+      v.domainHasChanged(IntDomain.BOUND);
+    } else {
+      v.domainHasChanged(IntDomain.ANY);
+    }
+  }
+
+  private void inComplementRangeInPlace(int counter, double min, double max, Var v) {
+    if (intervals[counter].min() < min && intervals[counter].max() > max) {
+      if (size < intervals.length) {
+        for (int i = size; i > counter; i--) {
+          intervals[i] = intervals[i - 1];
+        }
+        intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
+        intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
+      } else {
+        FloatInterval[] oldIntervals = intervals;
+        intervals = new FloatInterval[oldIntervals.length + 5];
+        if (counter > 0) {
+          System.arraycopy(oldIntervals, 0, intervals, 0, counter);
+        }
+        System.arraycopy(oldIntervals, counter + 1, intervals, counter + 2, size - counter - 1);
+        intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max());
+        intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
+      }
+      size++;
+      assert checkInvariants() == null : checkInvariants();
+      v.domainHasChanged(IntDomain.ANY);
+      return;
+    }
+    int originalCounter = counter;
+    removeRangeFromIntervals(counter, min, max);
+    assert checkInvariants() == null : checkInvariants();
+    if (singleton()) {
+      v.domainHasChanged(IntDomain.GROUND);
+      return;
+    }
+    if (originalCounter == 0) {
+      v.domainHasChanged(IntDomain.BOUND);
+    } else if (max() > max || min <= min()) {
+      v.domainHasChanged(IntDomain.BOUND);
+    } else {
+      v.domainHasChanged(IntDomain.ANY);
+    }
+  }
+
+  private void inComplementRangeToResult(
+      int counter, double min, double max, int storeLevel, Var v) {
+    assert storeLevel > stamp;
+    FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
+    installResultDomain(result, storeLevel, v);
+    result.size = size;
+    int noRemoved = 0;
+    System.arraycopy(intervals, 0, result.intervals, 0, counter);
+    if (intervals[counter].min() < min) {
+      if (intervals[counter].max() > max) {
+        if (size - counter >= 0) {
+          System.arraycopy(intervals, counter, result.intervals, counter + 1, size - counter);
+        }
+        result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
+        result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
+        result.size++;
+        assert result.checkInvariants() == null : result.checkInvariants();
+        assert checkInvariants() == null : checkInvariants();
+        v.domainHasChanged(IntDomain.ANY);
+      } else {
+        inComplementRangeToResultLeftThenRemove(result, counter, min, max, noRemoved, v);
+      }
+    } else {
+      inComplementRangeToResultRightOnly(result, counter, min, max, noRemoved, v);
+    }
+  }
+
+  private void inComplementRangeToResultLeftThenRemove(
+      FloatIntervalDomain result, int counter, double min, double max, int noRemoved, Var v) {
+    result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
+    int position = ++counter;
+    while (position < size && intervals[position].max() <= max) {
+      position++;
+      noRemoved++;
+    }
+    for (int i = counter; i + noRemoved < size; i++) {
+      result.intervals[i] = intervals[i + noRemoved];
+    }
+    if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
+      result.intervals[counter] =
+          new FloatInterval(next(max), intervals[counter + noRemoved].max());
+    }
+    result.size -= noRemoved;
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    notifyInComplementRangeEvent(v, result.singleton(), result.max() > max);
+  }
+
+  private void inComplementRangeToResultRightOnly(
+      FloatIntervalDomain result, int counter, double min, double max, int noRemoved, Var v) {
+    if (intervals[counter].max() > max) {
+      if (size - (counter + 1) >= 0) {
+        System.arraycopy(
+            intervals, counter + 1, result.intervals, counter + 1, size - (counter + 1));
+      }
+      result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
+      assert checkInvariants() == null : checkInvariants();
+      assert result.checkInvariants() == null : result.checkInvariants();
+      if (result.singleton()) {
+        v.domainHasChanged(IntDomain.GROUND);
+        return;
+      }
+      notifyInComplementRangeEvent(v, false, counter == 0);
+    } else {
+      int position = counter;
+      while (position < size && intervals[position].max() <= max) {
+        position++;
+        noRemoved++;
+      }
+      for (int i = counter; i + noRemoved < size; i++) {
+        result.intervals[i] = intervals[i + noRemoved];
+      }
+      result.size -= noRemoved;
+      if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
+        result.intervals[counter] =
+            new FloatInterval(next(max), intervals[counter + noRemoved].max());
+      }
+      assert checkInvariants() == null : checkInvariants();
+      assert result.checkInvariants() == null : result.checkInvariants();
+      notifyInComplementRangeEvent(v, result.singleton(), result.max() >= max || min <= min());
+    }
+  }
+
   @Override
   public void inComplement(int storeLevel, Var v, double min, double max) {
 
@@ -2518,181 +2650,9 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     if (storeLevel == stamp) {
-
-      // Handle special case: range splits a single interval (min < interval.min && max >
-      // interval.max)
-      if (intervals[counter].min() < min && intervals[counter].max() > max) {
-        // Need to split into two intervals
-        if (size < intervals.length) {
-          // Copy elements to make one hole for new interval
-          for (int i = size; i > counter; i--) {
-            intervals[i] = intervals[i - 1];
-          }
-          intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
-          intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
-        } else {
-          // Create new array and copy
-          FloatInterval[] oldIntervals = intervals;
-          intervals = new FloatInterval[oldIntervals.length + 5];
-          if (counter > 0) {
-            System.arraycopy(oldIntervals, 0, intervals, 0, counter);
-          }
-          System.arraycopy(oldIntervals, counter + 1, intervals, counter + 2, size - counter - 1);
-          intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max());
-          intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
-        }
-        size++;
-        assert checkInvariants() == null : checkInvariants();
-        v.domainHasChanged(IntDomain.ANY);
-        return;
-      }
-
-      // Use helper for other cases
-      int originalCounter = counter;
-      removeRangeFromIntervals(counter, min, max);
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-        return;
-      }
-
-      // Determine event type
-      if (originalCounter == 0) {
-        v.domainHasChanged(IntDomain.BOUND);
-      } else if (max() > max || min <= min()) {
-        v.domainHasChanged(IntDomain.BOUND);
-      } else {
-        v.domainHasChanged(IntDomain.ANY);
-      }
-
+      inComplementRangeInPlace(counter, min, max, v);
     } else {
-
-      assert storeLevel > stamp;
-
-      FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
-
-      installResultDomain(result, storeLevel, v);
-      result.size = size;
-
-      int noRemoved = 0;
-
-      System.arraycopy(intervals, 0, result.intervals, 0, counter);
-
-      if (intervals[counter].min() < min) {
-        // intervals[counter].min..min-1
-
-        if (intervals[counter].max() > max) {
-          // max+1..intervals[counter].max
-          // copy elements to make one hole for new interval
-
-          if (size - counter >= 0) {
-            System.arraycopy(intervals, counter, result.intervals, counter + 1, size - counter);
-          }
-
-          result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
-          result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
-
-          result.size++;
-
-          assert result.checkInvariants() == null : result.checkInvariants();
-          assert checkInvariants() == null : checkInvariants();
-
-          v.domainHasChanged(IntDomain.ANY);
-
-        } else {
-
-          result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
-
-          int position = ++counter;
-
-          while (position < size && intervals[position].max() <= max) {
-            position++;
-            noRemoved++;
-          }
-
-          for (int i = counter; i + noRemoved < size; i++) {
-            result.intervals[i] = intervals[i + noRemoved];
-          }
-
-          if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
-            result.intervals[counter] =
-                new FloatInterval(next(max), intervals[counter + noRemoved].max());
-          }
-
-          result.size -= noRemoved;
-
-          assert checkInvariants() == null : checkInvariants();
-          assert result.checkInvariants() == null : result.checkInvariants();
-
-          if (v.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-          } else if (max() > max) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-        }
-
-      } else {
-
-        if (intervals[counter].max() > max) {
-          // max+1..intervals[counter].max
-
-          if (size - (counter + 1) >= 0) {
-            System.arraycopy(
-                intervals, counter + 1, result.intervals, counter + 1, size - (counter + 1));
-          }
-
-          result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
-
-          assert checkInvariants() == null : checkInvariants();
-          assert result.checkInvariants() == null : result.checkInvariants();
-
-          if (result.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-          if (counter == 0) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-
-        } else {
-          // intervals[counter] is removed
-
-          int position = counter;
-
-          while (position < size && intervals[position].max() <= max) {
-            position++;
-            noRemoved++;
-          }
-
-          for (int i = counter; i + noRemoved < size; i++) {
-            result.intervals[i] = intervals[i + noRemoved];
-          }
-
-          result.size -= noRemoved;
-
-          if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
-            result.intervals[counter] =
-                new FloatInterval(next(max), intervals[counter + noRemoved].max());
-          }
-
-          assert checkInvariants() == null : checkInvariants();
-          assert result.checkInvariants() == null : result.checkInvariants();
-
-          if (v.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-          } else if (max() >= max || min <= min()) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
-        }
-      }
+      inComplementRangeToResult(counter, min, max, storeLevel, v);
     }
   }
 

@@ -801,125 +801,89 @@ public class SmallDenseDomain extends IntDomain {
     }
   }
 
+  /** Computes pruned bits for in(min, max); returns null if no pruning or early return. */
+  private long computeInBitsResult(int min, int max) {
+    if (max < this.minBound || min > this.max) {
+      throw failException;
+    }
+    if (min <= this.minBound && max >= this.max || singleton) {
+      return -1; // sentinel: no change
+    }
+    long bitsResult = bits;
+    if (this.max - max > 0) {
+      int thisMax = this.minBound + 63;
+      bitsResult = bitsResult >>> (thisMax - max);
+      if (min - this.minBound > 0) {
+        bitsResult = bitsResult << (min - this.minBound + thisMax - max);
+        bitsResult = bitsResult >>> (min - this.minBound);
+      } else {
+        bitsResult = bitsResult << (thisMax - max);
+      }
+    } else {
+      if (min - this.minBound > 0) {
+        bitsResult = bitsResult << (min - this.minBound);
+        bitsResult = bitsResult >>> (min - this.minBound);
+      } else {
+        return -1; // nothing to prune
+      }
+    }
+    return bitsResult;
+  }
+
   /** {@inheritDoc} */
   @Override
   public void in(int storeLevel, Var v, int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
-
     assert min <= max : "Min value greater than max value " + min + " > " + max;
 
-    if (max < this.minBound) {
-      throw failException;
-    }
-
-    if (min > this.max) {
-      throw failException;
-    }
-
-    if (min <= this.minBound && max >= this.max) {
+    long bitsResult = computeInBitsResult(min, max);
+    if (bitsResult == -1) {
       return;
-    }
-
-    if (singleton) {
-      return;
-    }
-
-    long bitsResult = bits;
-
-    if (this.max - max > 0) {
-
-      int thisMax = this.minBound + 63;
-
-      bitsResult = bitsResult >>> (thisMax - max);
-
-      if (min - this.minBound > 0) {
-        bitsResult = bitsResult << (min - this.minBound + thisMax - max);
-
-        bitsResult = bitsResult >>> (min - this.minBound);
-      } else {
-        bitsResult = bitsResult << (thisMax - max);
-      }
-
-    } else {
-
-      if (min - this.minBound > 0) {
-        bitsResult = bitsResult << (min - this.minBound);
-
-        bitsResult = bitsResult >>> (min - this.minBound);
-      } else {
-        // nothing to prune, it should not be here as this condition is discovered earlier.
-        return;
-      }
     }
 
     int newSize = getSize(bitsResult);
-
     if (newSize == 0) {
       throw failException;
     }
-
     assert newSize < size : INCORRECT_IN_OPERATION;
 
-    // Pruning has occurred.
-
     if (stamp == storeLevel) {
-
       bits = bitsResult;
       size = newSize;
       if (newSize == 1) {
         singleton = true;
       }
-
-      // 1. Find new min.
       if (this.minBound < min) {
         bits = bits << (min - this.minBound);
         this.minBound = min;
         adaptMin();
       }
-
-      // 2. Find new max.
       if (this.max > max) {
         this.max = previousValue(max + 1);
       }
-
       assert checkInvariants() == null : checkInvariants();
-
-      if (singleton) {
-        v.domainHasChanged(GROUND);
-      } else {
-        v.domainHasChanged(BOUND);
-      }
-
-    } else {
-
-      assert stamp < storeLevel;
-
-      SmallDenseDomain result;
-
-      // 1. Find new min.
-      if (this.minBound < min) {
-        bitsResult = bitsResult << (min - this.minBound);
-        result = new SmallDenseDomain(min, bitsResult);
-        result.adaptMin();
-      } else {
-        result = new SmallDenseDomain(this.minBound, bitsResult);
-      }
-
-      if (newSize == 1) {
-        result.singleton = true;
-      }
-
-      // 2. Find new max.
-      if (this.max > max) {
-        result.max = result.previousValue(max + 1);
-      }
-
-      assert result.max <= max : DOMAIN_UPDATE_INCORRECT;
-      assert result.minBound >= min : DOMAIN_UPDATE_INCORRECT;
-
-      installAndNotify(result, storeLevel, v);
+      v.domainHasChanged(singleton ? GROUND : BOUND);
+      return;
     }
+
+    assert stamp < storeLevel;
+    SmallDenseDomain result =
+        this.minBound < min
+            ? new SmallDenseDomain(min, bitsResult << (min - this.minBound))
+            : new SmallDenseDomain(this.minBound, bitsResult);
+    if (this.minBound < min) {
+      result.adaptMin();
+    }
+    if (newSize == 1) {
+      result.singleton = true;
+    }
+    if (this.max > max) {
+      result.max = result.previousValue(max + 1);
+    }
+    assert result.max <= max : DOMAIN_UPDATE_INCORRECT;
+    assert result.minBound >= min : DOMAIN_UPDATE_INCORRECT;
+    installAndNotify(result, storeLevel, v);
   }
 
   /**

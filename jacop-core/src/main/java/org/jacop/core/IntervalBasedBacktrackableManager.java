@@ -299,56 +299,53 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     assert checkRemoveInvariant(removedLevel) == null : checkRemoveInvariant(removedLevel);
   }
 
+  private void removeLevelCoreFromTrail(int removedLevel) {
+    int lastLevel = levelInfo.removeLast();
+    assert lastLevel == removedLevel : "It is only possible to remove recently added level";
+    int[] lastTrail = trail.removeLast();
+    if (intervalBasedTrail.removeLast()) {
+      removeLevelFromIntervals(lastTrail, removedLevel);
+    } else {
+      if (lastTrail != emptyLevel && lastTrail != fullLevel) {
+        for (int i : lastTrail) {
+          objects[i].remove(removedLevel);
+        }
+      }
+      if (lastTrail == fullLevel) {
+        for (int i = noOfObjects - 1; i >= 0; i--) {
+          objects[i].remove(removedLevel);
+        }
+      }
+    }
+  }
+
+  private void removeLevelCoreFromCurrent(int removedLevel) {
+    if (addingToIntervals) {
+      removeLevelFromIntervals(currentIntervals, removedLevel);
+    } else {
+      if (!currentLevelMax) {
+        if (!currentlyChanged.isEmpty()) {
+          for (int i = currentlyChanged.members; i >= 0; i--) {
+            objects[currentlyChanged.dense[i]].remove(removedLevel);
+          }
+        }
+      } else {
+        for (int i = noOfObjects - 1; i >= 0; i--) {
+          objects[i].remove(removedLevel);
+        }
+      }
+    }
+    trailContainsAllChanges = true;
+    currentlyChanged.clear();
+  }
+
   @Override
   protected void removeLevelCore(int removedLevel) {
 
     if (trailContainsAllChanges) {
-      int lastLevel = levelInfo.removeLast();
-
-      assert lastLevel == removedLevel : "It is only possible to remove recently added level";
-
-      int[] lastTrail = trail.removeLast();
-
-      if (intervalBasedTrail.removeLast()) {
-
-        // interval based representation for removed level.
-        removeLevelFromIntervals(lastTrail, removedLevel);
-      } else { // non-interval based representation.
-
-        if (lastTrail != emptyLevel && lastTrail != fullLevel) {
-          for (int i : lastTrail) {
-            objects[i].remove(removedLevel);
-          }
-        }
-
-        if (lastTrail == fullLevel) {
-          for (int i = noOfObjects - 1; i >= 0; i--) {
-            objects[i].remove(removedLevel);
-          }
-        }
-      }
-
+      removeLevelCoreFromTrail(removedLevel);
     } else {
-
-      if (addingToIntervals) {
-        removeLevelFromIntervals(currentIntervals, removedLevel);
-      } else { // non adding to intervals.
-
-        if (!currentLevelMax) {
-          if (!currentlyChanged.isEmpty()) {
-            for (int i = currentlyChanged.members; i >= 0; i--) {
-              objects[currentlyChanged.dense[i]].remove(removedLevel);
-            }
-          }
-        } else {
-          for (int i = noOfObjects - 1; i >= 0; i--) {
-            objects[i].remove(removedLevel);
-          }
-        }
-      }
-
-      trailContainsAllChanges = true;
-      currentlyChanged.clear();
+      removeLevelCoreFromCurrent(removedLevel);
     }
   }
 
