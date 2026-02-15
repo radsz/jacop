@@ -431,36 +431,11 @@ public class Pruning extends Network {
      * Integer.MAX_VALUE; int flowAtMaxWeight = baseFlow;
      */
 
-    while (capacity > 0) {
-      int unitCost = arc.reducedCost(); // + arc.cost;
-      assert unitCost >= 0;
-      if (unitCost > 0) {
-        int maxCapacity = costLimit / unitCost;
-        if (capacity > maxCapacity) {
-          capacity = maxCapacity;
-          if (capacity == 0) {
-            break;
-          }
-        }
-      }
-
-      int delta = augmentFlow(source, sink, capacity);
-      flow += delta;
-      capacity -= delta;
-      costLimit -= unitCost * delta;
-      // costLimit -= arc.cost * delta;
-
-      /*
-       * int currentFlow = baseFlow + ((arc.forward) ? flow : -flow); if
-       * (currentFlow > 0) { int deltaWeight = costLimit / currentFlow; if
-       * (maxWeight < deltaWeight) { maxWeight = deltaWeight;
-       * flowAtMaxWeight = currentFlow; } }
-       */
-
-      if (capacity == 0 || !dualPivot(blocking)) {
-        break;
-      }
-    }
+    int[] state = new int[] {flow, capacity, costLimit};
+    analyzeArcLoop(arc, source, sink, state);
+    flow = state[0];
+    capacity = state[1];
+    costLimit = state[2];
 
     IntVar wVar = arc.getCompanion().wVar;
 
@@ -489,6 +464,29 @@ public class Pruning extends Network {
     arc.addFlow(flow);
 
     return flow;
+  }
+
+  private void analyzeArcLoop(Arc arc, Node source, Node sink, int[] state) {
+    while (state[1] > 0) {
+      int unitCost = arc.reducedCost();
+      assert unitCost >= 0;
+      if (unitCost > 0) {
+        int maxCapacity = state[2] / unitCost;
+        if (state[1] > maxCapacity) {
+          state[1] = maxCapacity;
+          if (state[1] == 0) {
+            break;
+          }
+        }
+      }
+      int delta = augmentFlow(source, sink, state[1]);
+      state[0] += delta;
+      state[1] -= delta;
+      state[2] -= unitCost * delta;
+      if (state[1] == 0 || !dualPivot(blocking)) {
+        break;
+      }
+    }
   }
 
   private void pruneArcForward(int residual, ArcCompanion companion) {
