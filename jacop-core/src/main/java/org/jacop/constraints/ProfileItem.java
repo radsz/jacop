@@ -96,6 +96,16 @@ public class ProfileItem {
   }
 
   /**
+   * Computes the combined value when two profile items overlap.
+   *
+   * @param aValue the value from the other profile item
+   * @return the combined value
+   */
+  protected int computeOverlapValue(int aValue) {
+    return type == Profile.CUMUL ? aValue + value : Math.max(aValue, value);
+  }
+
+  /**
    * It compute the overlap with the specified profile item. The results are given as profile items
    * too.
    *
@@ -105,29 +115,30 @@ public class ProfileItem {
    * @param right the right part of this profile item which is not being overlapped.
    */
   public void overlap(ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
+    overlapInternal(a, left, overlap, right);
+  }
 
+  /**
+   * Internal implementation of overlap computation with the common structural logic.
+   *
+   * @param a the object for which the overlap with current object is being computed.
+   * @param left the left part of this profile item which is not being overlapped.
+   * @param overlap the overlapped part.
+   * @param right the right part of this profile item which is not being overlapped.
+   */
+  protected void overlapInternal(
+      ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
     if (a.min == min) {
       // left = null;
       if (a.max < max) {
         if (min != a.max) {
-          int v =
-              type == Profile.CUMUL
-                  ? a.value + value // cumulative
-                  // is sum
-                  : Math.max(a.value, value); // diff2
-          // is
-          // max
+          int v = computeOverlapValue(a.value);
           overlap.set(min, a.max, v);
         }
         right.set(a.max, max, value);
       } else {
         // Max <= a.Max
-        int v =
-            type == Profile.CUMUL
-                ? a.value + value // cumulative is
-                // sum
-                : Math.max(a.value, value); // diff2 is
-        // max
+        int v = computeOverlapValue(a.value);
         overlap.set(min, max, v);
         if (max != a.max) {
           right.set(max, a.max, a.value);
@@ -137,39 +148,19 @@ public class ProfileItem {
       if (a.min < min) {
         left.set(a.min, min, a.value);
         if (a.max == max) {
-          int v =
-              type == Profile.CUMUL
-                  ? a.value + value // cumulative
-                  // is sum
-                  : Math.max(a.value, value); // diff2
-          // is
-          // max
+          int v = computeOverlapValue(a.value);
           overlap.set(min, max, v);
           // right = null;
         } else {
           if (a.max < max) {
             if (min != a.max) {
-              int v =
-                  type == Profile.CUMUL
-                      ? a.value + value // cumulative
-                      // is
-                      // sum
-                      : Math.max(a.value, value); // diff2
-              // is
-              // max
+              int v = computeOverlapValue(a.value);
               overlap.set(min, a.max, v);
             }
             right.set(a.max, max, value);
           } else {
             // Max <= a.Max
-            int v =
-                type == Profile.CUMUL
-                    ? a.value + value // cumulative
-                    // is
-                    // sum
-                    : Math.max(a.value, value); // diff2
-            // is
-            // max
+            int v = computeOverlapValue(a.value);
             overlap.set(min, max, v);
             if (max != a.max) {
               right.set(max, a.max, a.value);
@@ -180,37 +171,17 @@ public class ProfileItem {
         // Min < a.Min
         left.set(min, a.min, value);
         if (a.max == max) {
-          int v =
-              type == Profile.CUMUL
-                  ? a.value + value // cumulative
-                  // is sum
-                  : Math.max(a.value, value); // diff2
-          // is
-          // max
+          int v = computeOverlapValue(a.value);
           overlap.set(a.min, a.max, v);
           // right = null;
         } else {
           if (a.max < max) {
-            int v =
-                type == Profile.CUMUL
-                    ? a.value + value // cumulative
-                    // is
-                    // sum
-                    : Math.max(a.value, value); // diff2
-            // is
-            // max
+            int v = computeOverlapValue(a.value);
             overlap.set(a.min, a.max, v);
             right.set(a.max, max, value);
           } else {
             // Max <= a.Max
-            int v =
-                type == Profile.CUMUL
-                    ? a.value + value // cumulative
-                    // is
-                    // sum
-                    : Math.max(a.value, value); // diff2
-            // is
-            // max
+            int v = computeOverlapValue(a.value);
             overlap.set(a.min, max, v);
             if (max != a.max) {
               right.set(max, a.max, a.value);

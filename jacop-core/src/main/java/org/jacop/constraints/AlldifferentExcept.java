@@ -35,7 +35,6 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 
 /**
  * AlldifferentExcept constraint assures that all FDVs except those given as a set of values
@@ -71,19 +70,6 @@ public class AlldifferentExcept extends Alldifferent
    */
   public AlldifferentExcept(List<? extends IntVar> variables, IntDomain s) {
     this(variables.toArray(new IntVar[0]), s);
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    int groundPos = grounded.value();
-    do {
-      store.propagationHasOccurred = false;
-      groundPos = processGroundedVariables(store, groundPos);
-    } while (store.propagationHasOccurred);
-    grounded.update(groundPos);
-
-    checkMatchingExcept(store, groundPos);
   }
 
   @Override

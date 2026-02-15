@@ -384,30 +384,12 @@ public class DisjointConditional extends Diff {
   }
 
   boolean doesNotFit(int j, Rectangle r, Profile barrier) {
-    boolean excludedState = true;
-
     IntDomain rOriginJdom = r.origin[j].dom();
     IntDomain rLengthJdom = r.length[j].dom();
     int minJ = rOriginJdom.min();
     int maxJ = rOriginJdom.max() + rLengthJdom.min();
     int durJ = rLengthJdom.min();
-    int currentJposition = minJ;
-    int k = 0;
-    int barrierSize = barrier.size();
-    while (k < barrierSize && excludedState) {
-      ProfileItem p = barrier.get(k);
-      int hinderStart = p.min;
-      int hinderStop = p.max;
-      if (hinderStart - currentJposition >= durJ) {
-        excludedState = false;
-      }
-      currentJposition = hinderStop;
-      k++;
-    }
-    if (excludedState && maxJ - currentJposition >= durJ) {
-      excludedState = false;
-    }
-    return excludedState;
+    return checkBarrierFit(barrier, minJ, maxJ, durJ);
   }
 
   int findMaxLength(int i, int length, Rectangle r) {
@@ -850,22 +832,7 @@ public class DisjointConditional extends Diff {
           barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], 1);
         }
 
-        int currentJposition = minJ;
-        int k = 0;
-        int barrierSize = barrier.size();
-        while (k < barrierSize && excludedState) {
-          ProfileItem p = barrier.get(k);
-          int hinderStart = p.min;
-          int hinderStop = p.max;
-          if (hinderStart - currentJposition >= durJ) {
-            excludedState = false;
-          }
-          currentJposition = hinderStop;
-          k++;
-        }
-        if (excludedState && maxJ - currentJposition >= durJ) {
-          excludedState = false;
-        }
+        excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
       }
       j++;
     }
@@ -883,49 +850,32 @@ public class DisjointConditional extends Diff {
       IntVar resources) {
 
     int dur = duration.min();
+    int intervalEnd = maxVal + dur;
     for (ProfileItem p : profile) {
       if (traceOn) {
         log.debug("Comparing [{} {}] with profile item {}", minVal, maxVal, p);
       }
-      if (intervalOverlap(minVal, maxVal + dur, p.min, p.max)) {
-        if (limit - p.value < resources.min()) {
-          // Check for possible narrowing of start or fail
-          IntDomain startDom = start.dom();
-          int updateMin = p.min - dur + 1;
-          int updateMax = p.max - 1;
-          if (!(updateMin > startDom.max() || updateMax < startDom.min())) {
-            IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
-            update.unionAdapt(p.max, IntDomain.MAX_INT);
+      if (intervalOverlap(minVal, intervalEnd, p.min, p.max)) {
+        IntDomain startDom = start.dom();
+        if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+          IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+          update.unionAdapt(p.max, IntDomain.MAX_INT);
 
-            if (traceNarrOn) {
-              log.debug(
-                  "6. Profile Narrowed {} \\ {}; duration={}; resources={}, limit={}\n{}\n => {}",
-                  start,
-                  update,
-                  duration,
-                  resources,
-                  limit,
-                  profile,
-                  start);
-            }
-
-            start.domain.in(store.level, start, update);
+          if (traceNarrOn) {
+            log.debug(
+                "6. Profile Narrowed {} \\ {}; duration={}; resources={}, limit={}\n{}\n => {}",
+                start,
+                update,
+                duration,
+                resources,
+                limit,
+                profile,
+                start);
           }
-        } else {
-          IntDomain startDom = start.dom();
-          int startVal = startDom.max();
-          int stop = startDom.min() + dur;
-          if (startVal < stop && intervalOverlap(startVal, stop, p.min, p.max)) {
-            int updateMax = limit - p.value;
-            IntervalDomain update = new IntervalDomain(0, updateMax);
-            if (updateMax < resources.max()) {
-              if (traceNarrOn) {
-                log.debug("8. Profile Narrowed {} in {} => {}", resources, update, resources);
-              }
 
-              resources.domain.in(store.level, resources, update);
-            }
-          }
+          start.domain.in(store.level, start, update);
+        } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+          narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
         }
       }
     }

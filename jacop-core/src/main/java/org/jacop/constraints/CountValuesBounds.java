@@ -166,12 +166,7 @@ public class CountValuesBounds extends AbstractCountValues {
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
 
-      int cc = 0;
-      for (int j = 0; j < n; j++) {
-        if (list[j].singleton(v)) {
-          cc++;
-        }
-      }
+      int cc = countOccurrences(v);
       if (cc < counter[i].lb || cc > counter[i].ub) {
         return false;
       }

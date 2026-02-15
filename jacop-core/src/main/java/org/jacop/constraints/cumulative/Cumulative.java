@@ -457,12 +457,17 @@ public class Cumulative extends CumulativeBasic {
     }
   }
 
-  @Override
-  public String toString() {
+  /**
+   * Builds the common prefix of the toString representation.
+   *
+   * @param constraintName the name of the constraint (e.g., "cumulative", "cumulativeOptional")
+   * @return StringBuilder with the common prefix
+   */
+  protected StringBuilder buildToStringPrefix(String constraintName) {
 
     StringBuilder result = new StringBuilder(id());
     if (doEdgeFind) {
-      result.append(" : cumulative([ ");
+      result.append(" : ").append(constraintName).append("([ ");
     } else if (super.cumulativeForConstants != null) {
       result.append(" : cumulativePrimary([ ");
     } else {
@@ -474,6 +479,14 @@ public class Cumulative extends CumulativeBasic {
     }
 
     result.append(taskNormal[taskNormal.length - 1]);
+
+    return result;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = buildToStringPrefix("cumulative");
 
     result
         .append(" ]")

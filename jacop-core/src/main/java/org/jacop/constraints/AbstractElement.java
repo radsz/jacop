@@ -31,8 +31,10 @@
 package org.jacop.constraints;
 
 import org.jacop.api.Stateful;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Abstract base class for Element constraints that define a relation list[index - indexOffset] =
@@ -103,6 +105,87 @@ public abstract class AbstractElement extends Constraint implements Stateful {
     index.domain.in(store.level, index, 1 + indexOffset, listLength() + indexOffset);
     firstConsistencyLevel = store.level;
     firstConsistencyCheck = false;
+  }
+
+  /**
+   * Checks if two integer variable domains are disjoint.
+   *
+   * @param v1 the first variable
+   * @param v2 the second variable
+   * @return true if the domains are disjoint, false otherwise
+   */
+  protected static boolean disjoint(IntVar v1, IntVar v2) {
+    return v1.min() > v2.max() || v2.min() > v1.max() || !v2.domain.isIntersecting(v1.domain);
+  }
+
+  /**
+   * Checks if an integer variable domain and an integer value are disjoint.
+   *
+   * @param v1 the variable domain
+   * @param v2 the integer value
+   * @return true if the domain and value are disjoint, false otherwise
+   */
+  protected static boolean disjoint(IntDomain v1, int v2) {
+    if (v1.min() > v2 || v2 > v1.max()) {
+      return true;
+    } else {
+      return !v1.contains(v2);
+    }
+  }
+
+  /**
+   * Checks if an integer variable and an integer value are disjoint.
+   *
+   * @param v1 the variable
+   * @param v2 the integer value
+   * @return true if the variable domain and value are disjoint, false otherwise
+   */
+  protected static boolean disjoint(IntVar v1, int v2) {
+    return disjoint(v1.domain, v2);
+  }
+
+  /**
+   * Checks if the constraint is satisfied for element constraints with variable lists. The value
+   * must be singleton, and for each index in the index domain, the corresponding list element must
+   * be singleton and equal to the value.
+   *
+   * @param list the list of variables
+   * @param value the value variable
+   * @return true if the constraint is satisfied, false otherwise
+   */
+  protected boolean satisfiedForVariableList(IntVar[] list, IntVar value) {
+    boolean sat = value.singleton();
+    if (sat) {
+      int v = value.min();
+      ValueEnumeration e = index.domain.valueEnumeration();
+      while (sat && e.hasMoreElements()) {
+        IntVar fdv = list[e.nextElement() - 1 - indexOffset];
+        sat = fdv.singleton() && fdv.min() == v;
+      }
+    }
+    return sat;
+  }
+
+  /**
+   * Checks if the constraint is satisfied for element constraints with integer lists. The value
+   * must be singleton, and for each index in the index domain, the corresponding list element must
+   * equal the value.
+   *
+   * @param list the list of integers
+   * @param value the value variable
+   * @return true if the constraint is satisfied, false otherwise
+   */
+  protected boolean satisfiedForIntegerList(int[] list, IntVar value) {
+    boolean sat = value.singleton();
+    if (sat) {
+      int v = value.min();
+      ValueEnumeration e = index.domain.valueEnumeration();
+      while (sat && e.hasMoreElements()) {
+        int fdv = list[e.nextElement() - 1 - indexOffset];
+        sat = fdv == v;
+      }
+    }
+    return sat;
   }
 
   /**

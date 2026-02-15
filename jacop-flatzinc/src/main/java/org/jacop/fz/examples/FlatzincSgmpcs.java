@@ -54,8 +54,7 @@ public class FlatzincSgmpcs {
 
   void ex(String[] args) {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long T1 = System.currentTimeMillis();
 
     if (args.length == 0) {
       args = new String[2];
@@ -66,22 +65,10 @@ public class FlatzincSgmpcs {
     fl.load();
 
     Store store = fl.getStore();
+    printStoreStats(store);
 
-    IO.println(
-        "\nIntVar store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    if (fl.getSearch().type() == null || (!"int_search".equals(fl.getSearch().type()))) {
-      throw new RuntimeException(
-          "The problem is not of type int_search and cannot be handled by this method");
-    }
-
-    if (fl.getSolve().getSolveKind() != 1) {
-      throw new RuntimeException(
-          "The problem is not minimization problem and cannot be handled by this method");
-    }
+    validateSearchType(fl);
+    validateSolveKind(fl);
 
     int timeOut = fl.getOptions().getTimeOut();
     if (timeOut == 0) {
@@ -99,9 +86,40 @@ public class FlatzincSgmpcs {
 
     label.setPrintInfo(true);
 
-    boolean Result = label.search();
+    boolean result = label.search();
+    printSgmpcsResult(result, label);
 
-    if (Result) {
+    printExecutionTime(T1);
+  }
+
+  /** Prints store statistics. */
+  private void printStoreStats(Store store) {
+    IO.println(
+        "\nIntVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+  }
+
+  /** Validates that search type is int_search. */
+  private void validateSearchType(FlatzincLoader fl) {
+    if (fl.getSearch().type() == null || (!"int_search".equals(fl.getSearch().type()))) {
+      throw new RuntimeException(
+          "The problem is not of type int_search and cannot be handled by this method");
+    }
+  }
+
+  /** Validates that solve kind is minimization. */
+  private void validateSolveKind(FlatzincLoader fl) {
+    if (fl.getSolve().getSolveKind() != 1) {
+      throw new RuntimeException(
+          "The problem is not minimization problem and cannot be handled by this method");
+    }
+  }
+
+  /** Prints SGMPCS search result. */
+  private void printSgmpcsResult(boolean result, SgmpcsSearch label) {
+    if (result) {
       int[] sol = label.lastSolution();
       if (sol != null) {
         IO.println("\n%%% Last found solution with cost " + label.lastCost());
@@ -112,9 +130,12 @@ public class FlatzincSgmpcs {
         IO.println("\n%%% No solution found with this method");
       }
     }
+  }
 
+  /** Prints execution time. */
+  private void printExecutionTime(long startTime) {
     long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    long T = T2 - startTime;
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

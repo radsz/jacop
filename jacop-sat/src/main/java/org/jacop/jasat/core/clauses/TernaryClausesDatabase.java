@@ -179,11 +179,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
     return clause;
   }
 
-  /**
-   * Handles backjumping to a specified decision level.
-   *
-   * @param level the level to backjump to
-   */
+  @Override
   public void backjump(int level) {
     // nothing to do
   }
@@ -256,17 +252,6 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
   @Override
   public void toCnf(BufferedWriter output) throws IOException {
-
-    for (int i = 0; i < currentIndex; i++) {
-      int offset = i * 3;
-      if (clauses[offset] != 0 && clauses[offset + 1] != 0 && clauses[offset + 2] != 0) {
-        output.write(Integer.toString(clauses[offset]));
-        output.write(" ");
-        output.write(Integer.toString(clauses[offset + 1]));
-        output.write(" ");
-        output.write(Integer.toString(clauses[offset + 2]));
-        output.write(" 0\n");
-      }
-    }
+    writeClausesToCnf(output, clauses, currentIndex, 3);
   }
 }

@@ -65,6 +65,49 @@ public class FloatIntervalDomain extends FloatDomain {
   /** It specifies number of intervals needed to encode the domain. */
   public int size;
 
+  /**
+   * Copies metadata from this domain into the result domain and installs it on the variable. Sets
+   * prevDomain to this.
+   */
+  private void installResultDomain(FloatIntervalDomain result, int storeLevel, Var v) {
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.prevDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((FloatVar) v).domain = result;
+  }
+
+  /**
+   * Copies interval data from the source domain into this domain's intervals array, resizing if
+   * needed.
+   */
+  private void adoptIntervalsFrom(FloatIntervalDomain source) {
+    if (source.size <= intervals.length) {
+      System.arraycopy(source.intervals, 0, intervals, 0, source.size);
+    } else {
+      intervals = new FloatInterval[source.size];
+      System.arraycopy(source.intervals, 0, intervals, 0, source.size);
+    }
+    size = source.size;
+  }
+
+  /**
+   * Computes the propagation event for a narrowed domain.
+   *
+   * @param narrowed the new (narrower) domain
+   * @return GROUND, BOUND, or ANY
+   */
+  private int computeEvent(FloatDomain narrowed) {
+    if (narrowed.singleton()) {
+      return IntDomain.GROUND;
+    } else if (narrowed.min() > min() || narrowed.max() < max()) {
+      return IntDomain.BOUND;
+    }
+    return IntDomain.ANY;
+  }
+
   /** Empty constructor, does not initialize anything. */
   public FloatIntervalDomain() {
     // FIXME, check what is calling it and maybe remove some inappropriate callers.
@@ -1706,13 +1749,7 @@ public class FloatIntervalDomain extends FloatDomain {
         result.unionAdapt(intervals[pointer]);
       }
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
@@ -1787,13 +1824,7 @@ public class FloatIntervalDomain extends FloatDomain {
         result.unionAdapt(intervals[pointer]);
       }
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert result.checkInvariants() == null : result.checkInvariants();
       assert checkInvariants() == null : checkInvariants();
@@ -1873,28 +1904,10 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     if (stamp == storeLevel) {
-
-      // Copy all intervals
-      if (result.size <= intervals.length) {
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      } else {
-        intervals = new FloatInterval[result.size];
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      }
-
-      size = result.size;
-
+      adoptIntervalsFrom(result);
     } else {
-
       assert stamp < storeLevel;
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -2061,40 +2074,16 @@ public class FloatIntervalDomain extends FloatDomain {
       throw failException;
     }
 
-    int returnedEvent = IntDomain.ANY;
-
     assert checkInvariants() == null : checkInvariants();
     assert result.checkInvariants() == null : result.checkInvariants();
 
-    if (result.singleton()) {
-      returnedEvent = IntDomain.GROUND;
-    } else if (result.min() > min() || result.max() < max()) {
-      returnedEvent = IntDomain.BOUND;
-    }
+    int returnedEvent = computeEvent(result);
 
     if (stamp == storeLevel) {
-
-      // Copy all intervals
-      if (result.size <= intervals.length) {
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      } else {
-        intervals = new FloatInterval[result.size];
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      }
-
-      size = result.size;
-
+      adoptIntervalsFrom(result);
     } else {
-
       assert stamp < storeLevel;
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -2260,14 +2249,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
       // variable obtains new domain, current one (this) becomes
       // prevDomain
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (intervals[counter].min() == complement) {
 
@@ -2518,14 +2500,8 @@ public class FloatIntervalDomain extends FloatDomain {
 
       FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      installResultDomain(result, storeLevel, v);
       result.size = size;
-      ((FloatVar) v).domain = result;
 
       int noRemoved = 0;
 
@@ -2808,37 +2784,13 @@ public class FloatIntervalDomain extends FloatDomain {
     assert checkInvariants() == null : checkInvariants();
     assert result.checkInvariants() == null : result.checkInvariants();
 
-    int returnedEvent = IntDomain.ANY;
-
-    if (result.singleton()) {
-      returnedEvent = IntDomain.GROUND;
-    } else if (result.min() > min() || result.max() < max()) {
-      returnedEvent = IntDomain.BOUND;
-    }
+    int returnedEvent = computeEvent(result);
 
     if (stamp == storeLevel) {
-
-      // Copy all intervals
-      if (result.size <= intervals.length) {
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      } else {
-        intervals = new FloatInterval[result.size];
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      }
-
-      size = result.size;
-
+      adoptIntervalsFrom(result);
     } else {
-
       assert stamp < storeLevel;
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
     }
 
     v.domainHasChanged(returnedEvent);
@@ -2903,16 +2855,10 @@ public class FloatIntervalDomain extends FloatDomain {
 
         FloatIntervalDomain result = this.cloneLight();
 
-        result.modelConstraints = modelConstraints;
-
+        installResultDomain(result, storeLevel, v);
         result.searchConstraints =
             new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
         result.searchConstraintsCloned = true;
-        result.stamp = storeLevel;
-        result.prevDomain = this;
-        result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-        result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-        ((FloatVar) v).domain = result;
 
         result.putSearchConstraint(storeLevel, v, constraint);
         return;
@@ -2954,13 +2900,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
       FloatIntervalDomain result = this.cloneLight();
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       result.removeSearchConstraint(storeLevel, v, constraint);
       return;
@@ -2996,13 +2936,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
       FloatIntervalDomain result = this.cloneLight();
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.prevDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((FloatVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       result.removeSearchConstraint(storeLevel, v, position, constraint);
       return;
@@ -3427,26 +3361,12 @@ public class FloatIntervalDomain extends FloatDomain {
       return IntDomain.GROUND;
     }
 
-    int returnedEvent = IntDomain.ANY;
-
     assert checkInvariants() == null : checkInvariants();
     assert result.checkInvariants() == null : result.checkInvariants();
 
-    if (result.singleton()) {
-      returnedEvent = IntDomain.GROUND;
-    } else if (result.min() > min() || result.max() < max()) {
-      returnedEvent = IntDomain.BOUND;
-    }
+    int returnedEvent = computeEvent(result);
 
-    // Copy all intervals
-    if (result.size <= intervals.length) {
-      System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-    } else {
-      intervals = new FloatInterval[result.size];
-      System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-    }
-
-    size = result.size;
+    adoptIntervalsFrom(result);
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3516,24 +3436,12 @@ public class FloatIntervalDomain extends FloatDomain {
       }
     }
 
-    // Copy all intervals
-    if (result.size <= intervals.length) {
-      System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-    } else {
-      intervals = new FloatInterval[result.size];
-      System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-    }
-
-    size = result.size;
+    adoptIntervalsFrom(result);
 
     assert checkInvariants() == null : checkInvariants();
     assert result.checkInvariants() == null : result.checkInvariants();
 
-    if (result.singleton()) {
-      return IntDomain.GROUND;
-    } else {
-      return IntDomain.BOUND;
-    }
+    return result.singleton() ? IntDomain.GROUND : IntDomain.BOUND;
   }
 
   @Override

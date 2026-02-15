@@ -656,10 +656,7 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     table.addVariableArray(ident, array);
-    if (outputArray) {
-      outArrayAnn.setArray(array);
-      table.addOutArray(outArrayAnn);
-    }
+    registerOutputArray(table, outputArray, outArrayAnn, array);
   }
 
   private void registerSetArray(
@@ -669,10 +666,7 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     table.addSetVariableArray(ident, array);
-    if (outputArray) {
-      outArrayAnn.setArray(array);
-      table.addOutArray(outArrayAnn);
-    }
+    registerOutputArray(table, outputArray, outArrayAnn, array);
   }
 
   private void registerFloatArray(
@@ -682,6 +676,11 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     table.addVariableFloatArray(ident, array);
+    registerOutputArray(table, outputArray, outArrayAnn, array);
+  }
+
+  private void registerOutputArray(
+      Tables table, boolean outputArray, OutputArrayAnnotation outArrayAnn, Var[] array) {
     if (outputArray) {
       outArrayAnn.setArray(array);
       table.addOutArray(outArrayAnn);
@@ -1042,7 +1041,6 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   IntVar[] getScalarFlatExpr_ArrayVar(Store store, SimpleNode node, int index) {
-
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTARRAYLITERAL) {
       int count = child.jjtGetNumChildren();
@@ -1058,7 +1056,6 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   FloatVar[] getScalarFlatExpr_ArrayVarFloat(Store store, SimpleNode node, int index) {
-
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTARRAYLITERAL) {
       int count = child.jjtGetNumChildren();
@@ -1229,8 +1226,7 @@ public class VariablesParameters implements ParserTreeConstants {
     if (count == size) {
       int[] aa = new int[size];
       for (int i = 0; i < count; i++) {
-        int el = getScalarFlatExpr(child, i);
-        aa[i] = el;
+        aa[i] = getScalarFlatExpr(child, i);
       }
       return aa;
     } else {
@@ -1245,13 +1241,12 @@ public class VariablesParameters implements ParserTreeConstants {
     if (count == size) {
       double[] aa = new double[size];
       for (int i = 0; i < count; i++) {
-        double el = getScalarFlatExprFloat(child, i);
-        aa[i] = el;
+        aa[i] = getScalarFlatExprFloat(child, i);
       }
       return aa;
     } else {
       throw new IllegalArgumentException(
-          "Different size declaration and intiallization of int array; compilation aborted.");
+          "Different size declaration and intiallization of float array; compilation aborted.");
     }
   }
 

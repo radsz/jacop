@@ -1183,26 +1183,47 @@ public class Alldistinct extends Constraint
     variableQueue.add((IntVar) v);
   }
 
-  private void revisitTarjan(
+  /**
+   * Helper method to initialize Tarjan visit: set dfsnum/low and add to stack.
+   *
+   * @param x the variable being visited
+   * @param dfsnum the dfsnum map
+   * @param low the low map
+   * @param l the stack
+   * @param counter the current counter value (will be incremented)
+   * @return the counter value used for this visit
+   */
+  private int initializeTarjanVisit(
       IntVar x,
-      List<IntVar> l,
       Map<IntVar, Integer> dfsnum,
       Map<IntVar, Integer> low,
-      LinkedHashSet<IntVar> fdvs) {
-
-    Integer nInteger = n;
-
-    dfsnum.put(x, nInteger);
-    low.put(x, nInteger);
-    n++;
+      List<IntVar> l,
+      int counter) {
+    Integer counterInteger = counter;
+    dfsnum.put(x, counterInteger);
+    low.put(x, counterInteger);
 
     if (debugAll) {
       log.debug(
-          "Tarjan invocation : \nx {}\nn {}\nl {}\ndfsnum {}\nlow {}\n", x, n, l, dfsnum, low);
+          "Tarjan invocation : \nx {}\nn {}\nl {}\ndfsnum {}\nlow {}\n",
+          x,
+          counter + 1,
+          l,
+          dfsnum,
+          low);
     }
 
     l.add(x);
+    return counter + 1;
+  }
 
+  /**
+   * Helper method to get matched value and related data for Tarjan algorithm.
+   *
+   * @param x the variable
+   * @return array with [matchedValue, lastPosition]
+   */
+  private Object[] getTarjanMatchedData(IntVar x) {
     Integer matchedValue = matching.get(x).value();
 
     if (debugAll) {
@@ -1216,12 +1237,52 @@ public class Alldistinct extends Constraint
     }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
-
     int lastPosition = stamp.value();
 
     if (debugAll) {
       log.debug("Last valid position for variables {}", lastPosition);
     }
+
+    return new Object[] {matchedValue, lastPosition, currentList};
+  }
+
+  /**
+   * Helper method to process a neighbor in Tarjan algorithm: update low value if needed.
+   *
+   * @param x the current variable
+   * @param v the neighbor variable
+   * @param dfsnum the dfsnum map
+   * @param low the low map
+   * @param l the stack
+   */
+  private void processTarjanNeighbor(
+      IntVar x, IntVar v, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low, List<IntVar> l) {
+    if (debugAll) {
+      log.debug("Part 2 : low {}={} dfsnum {}={}", x, low.get(x), v, dfsnum.get(v));
+    }
+
+    int dfsnumv = dfsnum.get(v);
+
+    // If v was earlier visited and v belongs to stack then update low number of x.
+    if (dfsnumv < dfsnum.get(x) && l.contains(v) && low.get(x) > dfsnumv) {
+      low.put(x, dfsnumv);
+    }
+  }
+
+  private void revisitTarjan(
+      IntVar x,
+      List<IntVar> l,
+      Map<IntVar, Integer> dfsnum,
+      Map<IntVar, Integer> low,
+      LinkedHashSet<IntVar> fdvs) {
+
+    n = initializeTarjanVisit(x, dfsnum, low, l, n);
+
+    Object[] matchedData = getTarjanMatchedData(x);
+    Integer matchedValue = (Integer) matchedData[0];
+    int lastPosition = (Integer) matchedData[1];
+    @SuppressWarnings("unchecked")
+    ArrayList<IntVar> currentList = (ArrayList<IntVar>) matchedData[2];
 
     int sccStampX = sccStamp.get(x).value();
     // first variable is matched value
@@ -1240,18 +1301,7 @@ public class Alldistinct extends Constraint
             low.put(x, lowv);
           }
         } else {
-
-          if (debugAll) {
-            log.debug("Part 2 : low {}={} dfsnum {}={}", x, low.get(x), v, dfsnum.get(v));
-          }
-
-          int dfsnumv = dfsnum.get(v);
-
-          // If v was earlier visited and v belongs to stack then
-          // update low number of x.
-          if (dfsnumv < dfsnum.get(x) && l.contains(v) && low.get(x) > dfsnumv) {
-            low.put(x, dfsnumv);
-          }
+          processTarjanNeighbor(x, v, dfsnum, low, l);
         }
       }
     }
@@ -1331,37 +1381,12 @@ public class Alldistinct extends Constraint
   private void visitTarjan(
       IntVar x, List<IntVar> l, Map<IntVar, Integer> dfsnum, Map<IntVar, Integer> low) {
 
-    Integer vnInteger = vn;
-    dfsnum.put(x, vnInteger);
-    low.put(x, vnInteger);
-    vn++;
+    vn = initializeTarjanVisit(x, dfsnum, low, l, vn);
 
-    if (debugAll) {
-      log.debug(
-          "Tarjan invocation : \nx {}\nn {}\nl {}\ndfsnum {}\nlow {}\n", x, vn, l, dfsnum, low);
-    }
-
-    l.add(x);
-
-    Integer matchedValue = matching.get(x).value();
-
-    if (debugAll) {
-      log.debug("Matched value {} for {}", matchedValue, x);
-    }
-
-    ArrayList<IntVar> currentList = valueMapVariable.get(matchedValue);
-
-    if (debugAll) {
-      log.debug("Mapped variables to Matched value {}", currentList);
-    }
-
-    TimeStamp<Integer> stamp = stamps.get(matchedValue);
-
-    int lastPosition = stamp.value();
-
-    if (debugAll) {
-      log.debug("Last valid position for variables {}", lastPosition);
-    }
+    Object[] matchedData = getTarjanMatchedData(x);
+    int lastPosition = (Integer) matchedData[1];
+    @SuppressWarnings("unchecked")
+    ArrayList<IntVar> currentList = (ArrayList<IntVar>) matchedData[2];
 
     IntVar v;
 
@@ -1381,18 +1406,7 @@ public class Alldistinct extends Constraint
         }
 
       } else {
-
-        if (debugAll) {
-          log.debug("Part 2 : low {}={} dfsnum {}={}", x, low.get(x), v, dfsnum.get(v));
-        }
-
-        int dfsnumv = dfsnum.get(v);
-
-        // If v was earlier visited and v belongs to stack then
-        // update low number of x.
-        if (dfsnumv < dfsnum.get(x) && l.contains(v) && low.get(x) > dfsnumv) {
-          low.put(x, dfsnumv);
-        }
+        processTarjanNeighbor(x, v, dfsnum, low, l);
       }
     }
 

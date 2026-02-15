@@ -158,12 +158,7 @@ public class CountValues extends AbstractCountValues {
         return false;
       }
 
-      int cc = 0;
-      for (int j = 0; j < n; j++) {
-        if (list[j].singleton(v)) {
-          cc++;
-        }
-      }
+      int cc = countOccurrences(v);
       if (cc != counter[i].value()) {
         return false;
       }

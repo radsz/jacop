@@ -174,7 +174,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val)) {
+          if (AbstractElement.disjoint(value, val)) {
             if (indexDom.size == 0) {
               indexDom.unionAdapt(position + 1 + indexOffset);
             } else {
@@ -202,7 +202,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val)) {
+          if (AbstractElement.disjoint(value, val)) {
             if (indexDom.size == 0) {
               indexDom.unionAdapt(position + 1 + indexOffset);
             } else {
@@ -248,7 +248,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val)) {
+          if (AbstractElement.disjoint(value, val)) {
             if (indexDom.size == 0) {
               indexDom.unionAdapt(position + 1 + indexOffset);
             } else {
@@ -274,14 +274,6 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
     } while (store.propagationHasOccurred);
   }
 
-  private boolean disjoint(IntVar v1, int v2) {
-    if (v1.min() > v2 || v2 > v1.max()) {
-      return true;
-    } else {
-      return !v1.domain.contains(v2);
-    }
-  }
-
   @Override
   public void impose(Store store) {
 
@@ -292,16 +284,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
 
   @Override
   public boolean satisfied() {
-    boolean sat = value.singleton();
-    if (sat) {
-      int v = value.min();
-      ValueEnumeration e = index.domain.valueEnumeration();
-      while (sat && e.hasMoreElements()) {
-        int fdv = list[e.nextElement() - 1 - indexOffset];
-        sat = fdv == v;
-      }
-    }
-    return sat;
+    return satisfiedForIntegerList(list, value);
   }
 
   @Override

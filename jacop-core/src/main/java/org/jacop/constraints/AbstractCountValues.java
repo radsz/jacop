@@ -214,6 +214,22 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   protected abstract void assignValue(Store store, IntVar v, int value);
 
   /**
+   * Counts how many variables in the list are singleton and equal to the given value.
+   *
+   * @param value the value to count occurrences of.
+   * @return the count of variables that are singleton and equal to value.
+   */
+  protected int countOccurrences(int value) {
+    int count = 0;
+    for (int j = 0; j < n; j++) {
+      if (list[j].singleton(value)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Shared consistency propagation logic for CountValues and CountValuesBounds.
    *
    * @param store the store for propagation.

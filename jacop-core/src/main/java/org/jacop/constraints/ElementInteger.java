@@ -274,7 +274,7 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
         int position = e.nextElement() - 1 - indexOffset;
         int val = list[position];
 
-        if (disjoint(value.domain, val)) {
+        if (AbstractElement.disjoint(value.domain, val)) {
           if (indexDom.size == 0) {
             indexDom.unionAdapt(position + 1 + indexOffset);
           } else {
@@ -291,14 +291,6 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
 
     if (value.singleton() && !index.singleton()) {
       removeConstraint();
-    }
-  }
-
-  boolean disjoint(IntDomain v1, int v2) {
-    if (v1.min() > v2 || v2 > v1.max()) {
-      return true;
-    } else {
-      return !v1.contains(v2);
     }
   }
 

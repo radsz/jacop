@@ -304,6 +304,38 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   public abstract void toCnf(BufferedWriter output) throws IOException;
 
   /**
+   * Helper method to write clauses to CNF format. Used by fixed-size clause databases.
+   *
+   * @param output the buffered writer to write to
+   * @param clauses the clauses array
+   * @param currentIndex the current number of clauses
+   * @param clauseSize the size of each clause (2 for binary, 3 for ternary, etc.)
+   * @throws IOException if an I/O error occurs
+   */
+  protected void writeClausesToCnf(
+      BufferedWriter output, int[] clauses, int currentIndex, int clauseSize) throws IOException {
+    for (int i = 0; i < currentIndex; i++) {
+      int offset = i * clauseSize;
+      boolean allNonZero = true;
+      for (int j = 0; j < clauseSize; j++) {
+        if (clauses[offset + j] == 0) {
+          allNonZero = false;
+          break;
+        }
+      }
+      if (allNonZero) {
+        for (int j = 0; j < clauseSize; j++) {
+          output.write(Integer.toString(clauses[offset + j]));
+          if (j < clauseSize - 1) {
+            output.write(" ");
+          }
+        }
+        output.write(" 0\n");
+      }
+    }
+  }
+
+  /**
    * Swaps the two literals at position i and j in the clause.
    *
    * @param clause the clause

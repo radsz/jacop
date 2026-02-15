@@ -117,7 +117,18 @@ public class Sudoku extends ExampleFd {
 
   /** Builds the Sudoku model using Alldistinct constraints. */
   protected void buildModel(int[][] description) {
+    createVariables(description);
+    addAlldistinctConstraints();
+  }
 
+  /** Builds the Sudoku model using primitive XneqY constraints. */
+  protected void buildModelBasic(int[][] description) {
+    createVariables(description);
+    addXneqYConstraints();
+  }
+
+  /** Creates variables for the Sudoku grid. */
+  private void createVariables(int[][] description) {
     int noRows = 3;
     int noColumns = 3;
 
@@ -136,6 +147,12 @@ public class Sudoku extends ExampleFd {
         }
       }
     }
+  }
+
+  /** Adds Alldistinct constraints for rows, columns, and blocks. */
+  private void addAlldistinctConstraints() {
+    int noRows = 3;
+    int noColumns = 3;
 
     for (int i = 0; i < noRows * noColumns; i++) {
       store.impose(new Alldistinct(elements[i]));
@@ -161,27 +178,10 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  /** Builds the Sudoku model using primitive XneqY constraints. */
-  protected void buildModelBasic(int[][] description) {
-
+  /** Adds XneqY constraints for rows, columns, and blocks. */
+  private void addXneqYConstraints() {
     int noRows = 3;
     int noColumns = 3;
-
-    store = new Store();
-    vars = new ArrayList<>();
-
-    elements = new IntVar[noRows * noColumns][noRows * noColumns];
-
-    for (int i = 0; i < noRows * noColumns; i++) {
-      for (int j = 0; j < noRows * noColumns; j++) {
-        if (description[i][j] == 0) {
-          elements[i][j] = new IntVar(store, "f" + i + j, 1, noRows * noColumns);
-          vars.add(elements[i][j]);
-        } else {
-          elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
-        }
-      }
-    }
 
     for (int i = 0; i < noRows * noColumns; i++) {
       for (int k = 0; k < noRows * noColumns; k++) {

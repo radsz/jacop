@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,18 +44,9 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
+public class Reified extends AbstractReifiedConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies constraint c which status is being checked. */
-  public final PrimitiveConstraint c;
-
-  /**
-   * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1
-   * - for certain satisfied).
-   */
-  public final IntVar b;
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 
@@ -68,15 +58,8 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
    */
   public Reified(PrimitiveConstraint c, IntVar b) {
 
-    checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
-    if (b.min() > 1 || b.max() < 0) {
-      throw new IllegalArgumentException(
-          "Variable b in reified constraint must have domain at most 0..1");
-    }
-
+    super(b, c);
     numberId = idNumber.incrementAndGet();
-    this.c = c;
-    this.b = b;
     setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
     setConstraintScope(c);
     queueForward = new QueueForward<>(c, arguments());
@@ -113,31 +96,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     } else if (b.min() == 1) { // C must be false
       c.notConsistency(store);
     }
-  }
-
-  @Override
-  public int getNestedPruningEvent(Var v, boolean mode) {
-    return getConsistencyPruningEvent(v);
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return throwMorePreciseMethodExists();
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var v) {
-    return getConsistencyPruningEventForReified(v, b, c);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return throwMorePreciseMethodExists();
-  }
-
-  @Override
-  public int getNotConsistencyPruningEvent(Var v) {
-    return getNotConsistencyPruningEventForReified(v, b, c);
   }
 
   @Override

@@ -357,16 +357,7 @@ public class ElementVariable extends AbstractElement
 
   @Override
   public boolean satisfied() {
-    boolean sat = value.singleton();
-    if (sat) {
-      int v = value.min();
-      ValueEnumeration e = index.domain.valueEnumeration();
-      while (sat && e.hasMoreElements()) {
-        IntVar fdv = list[e.nextElement() - 1 - indexOffset];
-        sat = fdv.singleton() && fdv.min() == v;
-      }
-    }
-    return sat;
+    return satisfiedForVariableList(list, value);
   }
 
   @Override

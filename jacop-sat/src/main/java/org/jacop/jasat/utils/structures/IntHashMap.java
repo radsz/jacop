@@ -418,22 +418,12 @@ public final class IntHashMap<E> {
 
     /** Find the next key. */
     private void findNext() {
-      while (true) {
-        int[] bucket = tableKey[index];
-        bucketIndex++;
-        if (bucketIndex > bucket[0]) {
-          // finished this bucket, go to the next
-          bucketIndex = 0;
-          index++;
-          if (index >= tableKey.length) {
-            // no more keys at all
-            hasNext = false;
-            return;
-          }
-        } else {
-          current = bucket[bucketIndex];
-          return;
-        }
+      BucketInfo info = findNextBucket(index, bucketIndex);
+      index = info.index;
+      bucketIndex = info.bucketIndex;
+      hasNext = info.hasNext;
+      if (hasNext) {
+        current = tableKey[index][bucketIndex];
       }
     }
   }
@@ -490,23 +480,50 @@ public final class IntHashMap<E> {
 
     /** Find the next key. */
     private void findNext() {
-      while (true) {
-        int[] bucket = tableKey[index];
-        bucketIndex++;
-        if (bucketIndex > bucket[0]) {
-          // finished this bucket, go to the next
-          bucketIndex = 0;
-          index++;
-          if (index >= tableKey.length) {
-            // no more keys at all
-            hasNext = false;
-            return;
-          }
-        } else {
-          current = bucket[bucketIndex];
-          currentValue = tableValue[index][bucketIndex];
-          return;
+      BucketInfo info = findNextBucket(index, bucketIndex);
+      index = info.index;
+      bucketIndex = info.bucketIndex;
+      hasNext = info.hasNext;
+      if (hasNext) {
+        current = tableKey[index][bucketIndex];
+        currentValue = tableValue[index][bucketIndex];
+      }
+    }
+  }
+
+  /**
+   * Result of finding the next bucket in iteration.
+   *
+   * @param index the table index
+   * @param bucketIndex the bucket index
+   * @param hasNext whether there are more elements
+   */
+  private record BucketInfo(int index, int bucketIndex, boolean hasNext) {}
+
+  /**
+   * Common logic for finding the next bucket across iterators.
+   *
+   * @param startIndex the starting table index
+   * @param startBucketIndex the starting bucket index
+   * @return information about the next bucket
+   */
+  private BucketInfo findNextBucket(int startIndex, int startBucketIndex) {
+    int idx = startIndex;
+    int bucketIdx = startBucketIndex;
+
+    while (true) {
+      int[] bucket = tableKey[idx];
+      bucketIdx++;
+      if (bucketIdx > bucket[0]) {
+        // finished this bucket, go to the next
+        bucketIdx = 0;
+        idx++;
+        if (idx >= tableKey.length) {
+          // no more keys at all
+          return new BucketInfo(idx, bucketIdx, false);
         }
+      } else {
+        return new BucketInfo(idx, bucketIdx, true);
       }
     }
   }

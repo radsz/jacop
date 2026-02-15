@@ -52,6 +52,20 @@ class BoundDomain extends IntDomain {
   public int maxBound;
 
   /**
+   * Copies metadata from this domain into the result domain and installs it on the variable. Sets
+   * previousDomain to this.
+   */
+  private void installResultDomain(BoundDomain result, int storeLevel, Var v) {
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+  }
+
+  /**
    * It is a constructor which will create an empty Bound domain. An empty domain has minimum larger
    * than maximum.
    */
@@ -325,13 +339,7 @@ class BoundDomain extends IntDomain {
         result = new BoundDomain(this.minBound, max);
       }
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
@@ -368,13 +376,7 @@ class BoundDomain extends IntDomain {
 
       BoundDomain result = new BoundDomain(value, value);
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      v.domain = result;
+      installResultDomain(result, storeLevel, v);
     }
 
     v.domainHasChanged(GROUND);
@@ -420,13 +422,7 @@ class BoundDomain extends IntDomain {
         result = new BoundDomain(this.minBound, this.maxBound - 1);
       }
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
@@ -483,13 +479,7 @@ class BoundDomain extends IntDomain {
         result = new BoundDomain(this.minBound, min - 1);
       }
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
@@ -527,13 +517,7 @@ class BoundDomain extends IntDomain {
 
       BoundDomain result = new BoundDomain(minBound, max);
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
@@ -570,13 +554,7 @@ class BoundDomain extends IntDomain {
 
       BoundDomain result = new BoundDomain(min, this.maxBound);
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       if (result.singleton()) {
         v.domainHasChanged(GROUND);

@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -46,18 +45,9 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XexpYeqZ extends Constraint implements SatisfiedPresent {
+public class XexpYeqZ extends AbstractXopYeqZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies the variable x in equation x^y = z. */
-  private final IntVar x;
-
-  /** It specifies the variable y in equation x^y = z. */
-  private final IntVar y;
-
-  /** It specifies the variable z in equation x^y = z. */
-  private final IntVar z;
 
   /**
    * It constructs constraint X^Y=Z.
@@ -67,16 +57,7 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
    * @param z variable z.
    */
   public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
-
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
-
-    setScope(x, y, z);
+    super(idNumber, x, y, z);
   }
 
   @Override

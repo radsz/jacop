@@ -211,6 +211,69 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It specifies if the wrong decisions out is on. */
   boolean wrongDecisionsOutCheck;
 
+  /**
+   * Gets the current cost value (IntVar or FloatVar).
+   *
+   * @return the current cost value
+   */
+  private double getCurrentCostValue() {
+    return costVariable instanceof IntVar ? costValue : costValueFloat;
+  }
+
+  /**
+   * Gets the cost value from a child search.
+   *
+   * @param childSearch the child search
+   * @return the cost value
+   */
+  private double getChildCostValue(Search<? extends Var> childSearch) {
+    return costVariable instanceof IntVar
+        ? childSearch.getCostValue()
+        : childSearch.getCostValueFloat();
+  }
+
+  /**
+   * Updates the cost value and creates a cost constraint.
+   *
+   * @param newCost the new cost value
+   */
+  private void updateCostValue(double newCost) {
+    if (costVariable instanceof IntVar) {
+      costValue = (int) newCost;
+    } else {
+      costValueFloat = newCost;
+    }
+    CostVariableHandler costHandler =
+        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+    if (costHandler != null) {
+      cost = costHandler.createCostConstraint(costVariable, newCost);
+    } else if (costVariable instanceof IntVar v) {
+      cost = new XltC(v, costValue);
+    }
+  }
+
+  /**
+   * Gets cost value for logging/display purposes.
+   *
+   * @return string representation of cost
+   */
+  private String getCostValueString() {
+    CostVariableHandler costHandler =
+        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+    if (costHandler != null) {
+      DomainOperationHandler domainHandler =
+          SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
+      if (domainHandler != null) {
+        return domainHandler.getDomainString(costVariable);
+      } else {
+        return String.valueOf(getCurrentCostValue());
+      }
+    } else if (costVariable instanceof IntVar) {
+      return String.valueOf(costValue);
+    }
+    return String.valueOf(getCurrentCostValue());
+  }
+
   /** It specifies current child search. */
   public DepthFirstSearch() {
     searchId = "DFS" + no.incrementAndGet();
@@ -329,52 +392,62 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return null;
   }
 
+  /**
+   * Checks if timeout has occurred.
+   *
+   * @return true if timeout occurred
+   */
+  private boolean checkTimeOut() {
+    return timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut);
+  }
+
+  /** Marks timeout as occurred and notifies listener. */
+  private void markTimeOutOccurred() {
+    timeOutOccured = true;
+    if (timeOutListener != null) {
+      timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
+    }
+  }
+
+  /**
+   * Checks if any exit condition is met (timeout, nodes, decisions, etc.) and handles it.
+   *
+   * @return true if search should continue, false if it should exit
+   */
+  private boolean checkExitConditions() {
+    if (!check) {
+      return true;
+    }
+
+    boolean shouldExit = false;
+
+    if (timeOutCheck && System.currentTimeMillis() > timeOut) {
+      shouldExit = true;
+    } else if (nodesOutCheck && nodes > nodesOut) {
+      shouldExit = true;
+    } else if (decisionsOutCheck && decisions > decisionsOut) {
+      shouldExit = true;
+    } else if (wrongDecisionsOutCheck && wrongDecisions > wrongDecisionsOut) {
+      shouldExit = true;
+    } else if (backtracksOutCheck && numberBacktracks > backtracksOut) {
+      shouldExit = true;
+    }
+
+    if (shouldExit) {
+      markTimeOutOccurred();
+      return false;
+    }
+
+    return true;
+  }
+
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
 
     boolean consistent;
 
-    if (check) {
-
-      if (timeOutCheck && System.currentTimeMillis() > timeOut) {
-        timeOutOccured = true;
-        if (timeOutListener != null) {
-          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-        }
-        return false;
-      }
-
-      if (nodesOutCheck && nodes > nodesOut) {
-        timeOutOccured = true;
-        if (timeOutListener != null) {
-          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-        }
-        return false;
-      }
-
-      if (decisionsOutCheck && decisions > decisionsOut) {
-        timeOutOccured = true;
-        if (timeOutListener != null) {
-          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-        }
-        return false;
-      }
-
-      if (wrongDecisionsOutCheck && wrongDecisions > wrongDecisionsOut) {
-        timeOutOccured = true;
-        if (timeOutListener != null) {
-          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-        }
-        return false;
-      }
-
-      if (backtracksOutCheck && numberBacktracks > backtracksOut) {
-        timeOutOccured = true;
-        if (timeOutListener != null) {
-          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-        }
-        return false;
-      }
+    if (!checkExitConditions()) {
+      return false;
     }
 
     // Instead of imposing constraint just restrict bounds
@@ -813,8 +886,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     store.setLevel(store.level + 1);
     depth = store.level;
 
-    if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
-      timeOutOccured = true;
+    if (checkTimeOut()) {
+      markTimeOutOccurred();
       return false;
     }
 
@@ -852,8 +925,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         store.setLevel(store.level - 1);
       }
 
-      if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
-        timeOutOccured = true;
+      if (checkTimeOut()) {
+        markTimeOutOccurred();
 
         if (printInfo) {
           log.info("Time-out {}s", tOut);
@@ -887,8 +960,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         store.setLevel(store.level - 1);
       }
 
-      if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
-        timeOutOccured = true;
+      if (checkTimeOut()) {
+        markTimeOutOccurred();
 
         if (printInfo) {
           log.info("Time-out {}s", tOut);

@@ -230,24 +230,7 @@ public class CosPeqR extends AbstractTrigConstraint
 
   @Override
   public boolean satisfied() {
-
-    if (grounded()) {
-      double cosMin = Math.cos(p.min());
-      double cosMax = Math.cos(p.max());
-
-      FloatInterval minDiff =
-          cosMin < q.min()
-              ? new FloatInterval(cosMin, q.min())
-              : new FloatInterval(q.min(), cosMin);
-      FloatInterval maxDiff =
-          cosMax < q.max()
-              ? new FloatInterval(cosMax, q.max())
-              : new FloatInterval(q.max(), cosMax);
-
-      return minDiff.singleton() && maxDiff.singleton();
-    } else {
-      return false;
-    }
+    return satisfiedWithTrigFunction(Math::cos);
   }
 
   @Override

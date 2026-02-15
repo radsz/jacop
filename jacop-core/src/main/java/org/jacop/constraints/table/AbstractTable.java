@@ -36,6 +36,7 @@ import java.util.Set;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -152,6 +153,31 @@ public abstract class AbstractTable extends Constraint implements UsesQueueVaria
     if (noNoGround == 1) {
       removeConstraint();
     }
+  }
+
+  /**
+   * Computes the delta (number of removed values) and the removed domain for a variable.
+   *
+   * @param v the variable to compute delta for
+   * @return an array with [delta, removedDomain] where delta is the number of removed values, or
+   *     null if delta is 0 (no change)
+   */
+  protected Object[] computeDelta(IntVar v) {
+    IntDomain cd = v.dom();
+    IntDomain pd = cd.getPreviousDomain();
+    IntDomain rp;
+    int delta;
+    if (pd == null) {
+      rp = cd;
+      delta = cd.getSize();
+    } else {
+      rp = pd.subtract(cd);
+      delta = rp.getSize();
+      if (delta == 0) {
+        return null;
+      }
+    }
+    return new Object[] {delta, rp};
   }
 
   /**

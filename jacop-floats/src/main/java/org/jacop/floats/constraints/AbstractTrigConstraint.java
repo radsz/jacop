@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.function.DoubleUnaryOperator;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -110,6 +111,47 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
    */
   protected FloatInterval normalize(FloatVar v) {
     return org.jacop.floats.core.FloatDomain.normalizeAngle(v.min(), v.max());
+  }
+
+  /**
+   * Checks if the constraint is satisfied when both variables are grounded, using the given
+   * trigonometric function.
+   *
+   * @param trigFunction the trigonometric function to apply (e.g., Math::cos, Math::sin, Math::tan)
+   * @return true if the constraint is satisfied, false otherwise
+   */
+  protected boolean satisfiedWithTrigFunction(DoubleUnaryOperator trigFunction) {
+    return satisfiedWithTrigFunctionStatic(p, q, trigFunction);
+  }
+
+  /**
+   * Static helper method to check if a trigonometric constraint is satisfied when both variables
+   * are grounded.
+   *
+   * @param p the input variable
+   * @param q the output variable
+   * @param trigFunction the trigonometric function to apply (e.g., Math::cos, Math::sin, Math::tan)
+   * @return true if the constraint is satisfied, false otherwise
+   */
+  static boolean satisfiedWithTrigFunctionStatic(
+      FloatVar p, FloatVar q, DoubleUnaryOperator trigFunction) {
+    if (p.singleton() && q.singleton()) {
+      double trigMin = trigFunction.applyAsDouble(p.min());
+      double trigMax = trigFunction.applyAsDouble(p.max());
+
+      FloatInterval minDiff =
+          trigMin < q.min()
+              ? new FloatInterval(trigMin, q.min())
+              : new FloatInterval(q.min(), trigMin);
+      FloatInterval maxDiff =
+          trigMax < q.max()
+              ? new FloatInterval(trigMax, q.max())
+              : new FloatInterval(q.max(), trigMax);
+
+      return minDiff.singleton() && maxDiff.singleton();
+    } else {
+      return false;
+    }
   }
 
   @Override

@@ -197,25 +197,7 @@ public class SinPeqR extends AbstractTrigConstraint
 
   @Override
   public boolean satisfied() {
-
-    if (grounded()) {
-      double sinMin = Math.sin(p.min());
-      double sinMax = Math.sin(p.max());
-
-      FloatInterval minDiff =
-          sinMin < q.min()
-              ? new FloatInterval(sinMin, q.min())
-              : new FloatInterval(q.min(), sinMin);
-      FloatInterval maxDiff =
-          sinMax < q.max()
-              ? new FloatInterval(sinMax, q.max())
-              : new FloatInterval(q.max(), sinMax);
-
-      return minDiff.singleton() && maxDiff.singleton();
-
-    } else {
-      return false;
-    }
+    return satisfiedWithTrigFunction(Math::sin);
   }
 
   @Override

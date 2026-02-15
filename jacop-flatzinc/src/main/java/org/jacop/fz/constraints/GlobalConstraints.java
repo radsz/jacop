@@ -1765,9 +1765,22 @@ class GlobalConstraints implements ParserTreeConstants {
     FloatVar[] x = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
     FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    int n = x.length;
-    PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-    for (int i = 0; i < n; i++) {
+    PrimitiveConstraint[] cs = createFloatEqualityConstraints(x, y);
+    poseConditionalConstraints(b, cs);
+  }
+
+  void gen_jacop_if_then_else_set(SimpleNode node) {
+    IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    SetVar[] x = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+    SetVar y = support.getSetVariable(node, 2);
+
+    PrimitiveConstraint[] cs = createSetEqualityConstraints(x, y);
+    poseConditionalConstraints(b, cs);
+  }
+
+  private PrimitiveConstraint[] createFloatEqualityConstraints(FloatVar[] x, FloatVar y) {
+    PrimitiveConstraint[] cs = new PrimitiveConstraint[x.length];
+    for (int i = 0; i < x.length; i++) {
       if (y.singleton()) {
         cs[i] = new PeqC(x[i], y.value());
       } else if (x[i].singleton()) {
@@ -1776,22 +1789,12 @@ class GlobalConstraints implements ParserTreeConstants {
         cs[i] = new PeqQ(y, x[i]);
       }
     }
-
-    if (n == 2) {
-      support.pose(new IfThenElse(new XeqC(b[0], 1), cs[0], cs[1]));
-    } else {
-      support.pose(new Conditional(b, cs));
-    }
+    return cs;
   }
 
-  void gen_jacop_if_then_else_set(SimpleNode node) {
-    IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    SetVar[] x = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
-    SetVar y = support.getSetVariable(node, 2);
-
-    int n = x.length;
-    PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-    for (int i = 0; i < n; i++) {
+  private PrimitiveConstraint[] createSetEqualityConstraints(SetVar[] x, SetVar y) {
+    PrimitiveConstraint[] cs = new PrimitiveConstraint[x.length];
+    for (int i = 0; i < x.length; i++) {
       if (y.singleton()) {
         cs[i] = new AeqS(x[i], y.domain.glb());
       } else if (x[i].singleton()) {
@@ -1800,8 +1803,11 @@ class GlobalConstraints implements ParserTreeConstants {
         cs[i] = new AeqB(y, x[i]);
       }
     }
+    return cs;
+  }
 
-    if (n == 2) {
+  private void poseConditionalConstraints(IntVar[] b, PrimitiveConstraint[] cs) {
+    if (cs.length == 2) {
       support.pose(new IfThenElse(new XeqC(b[0], 1), cs[0], cs[1]));
     } else {
       support.pose(new Conditional(b, cs));

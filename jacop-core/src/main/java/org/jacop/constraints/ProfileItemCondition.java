@@ -76,6 +76,18 @@ class ProfileItemCondition extends ProfileItem {
     return rectHight;
   }
 
+  /**
+   * Computes the adjusted value for the other profile item based on exclusive rectangles.
+   *
+   * @param aValue the value from the other profile item
+   * @param exList the exclusive list for computing rectangle sizes
+   * @return the adjusted value
+   */
+  private int computeConditionValue(int aValue, ExclusiveList exList) {
+    int val = exclusiveRectsSize(exList);
+    return val == 0 ? aValue : aValue > val ? aValue - val : 0;
+  }
+
   void overlap(
       ProfileItemCondition a,
       ProfileItemCondition left,
@@ -88,8 +100,7 @@ class ProfileItemCondition extends ProfileItem {
       // left = null;
       if (a.max < max) {
         if (min != a.max) {
-          int val = exclusiveRectsSize(exList);
-          int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
+          int v = computeConditionValue(a.value, exList);
           overlap.set(min, a.max, value + v, rectangles);
           int[] rR = {r[0], v};
           overlap.addRect(rR);
@@ -97,8 +108,7 @@ class ProfileItemCondition extends ProfileItem {
         right.set(a.max, max, value, rectangles);
       } else {
         // Max <= a.Max
-        int val = exclusiveRectsSize(exList);
-        int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
+        int v = computeConditionValue(a.value, exList);
         overlap.set(min, max, value + v, rectangles);
         int[] rR = {r[0], v};
         overlap.addRect(rR);
@@ -111,8 +121,7 @@ class ProfileItemCondition extends ProfileItem {
       if (a.min < min) {
         left.set(a.min, min, a.value, r);
         if (a.max == max) {
-          int val = exclusiveRectsSize(exList);
-          int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
+          int v = computeConditionValue(a.value, exList);
           overlap.set(min, max, value + v, rectangles);
           int[] rR = {r[0], v};
           overlap.addRect(rR);
@@ -143,8 +152,7 @@ class ProfileItemCondition extends ProfileItem {
         // Min < a.Min
         left.set(min, a.min, value, rectangles);
         if (a.max == max) {
-          int val = exclusiveRectsSize(exList);
-          int v = val == 0 ? a.value : a.value > val ? a.value - val : 0;
+          int v = computeConditionValue(a.value, exList);
           overlap.set(a.min, a.max, value + v, rectangles);
           int[] rR = {r[0], v};
           overlap.addRect(rR);

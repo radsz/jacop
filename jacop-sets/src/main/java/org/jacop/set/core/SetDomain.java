@@ -300,6 +300,26 @@ public abstract class SetDomain extends Domain {
   public abstract SetDomain cloneLight();
 
   /**
+   * Creates new arrays for modelConstraints and modelConstraintsToEvaluate, copying existing
+   * values.
+   *
+   * @return an array containing [newModelConstraints, newModelConstraintsToEvaluate]
+   */
+  @SuppressWarnings("unchecked")
+  private Object[] createNewModelConstraintArrays() {
+
+    Constraint[][] newModelConstraints = new Constraint[modelConstraints.length][];
+    int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+
+    for (int i = 0; i < modelConstraints.length; i++) {
+      newModelConstraints[i] = modelConstraints[i];
+      newModelConstraintsToEvaluate[i] = modelConstraintsToEvaluate[i];
+    }
+
+    return new Object[] {newModelConstraints, newModelConstraintsToEvaluate};
+  }
+
+  /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
    * Variable object. putConstraint function from Variable must make a copy of a vector of
    * constraints if vector was not cloned.
@@ -354,13 +374,9 @@ public abstract class SetDomain extends Domain {
 
         newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
 
-        Constraint[][] newModelConstraints = new Constraint[modelConstraints.length][];
-        int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-
-        for (int i = 0; i < modelConstraints.length; i++) {
-          newModelConstraints[i] = modelConstraints[i];
-          newModelConstraintsToEvaluate[i] = modelConstraintsToEvaluate[i];
-        }
+        Object[] newArrays = createNewModelConstraintArrays();
+        Constraint[][] newModelConstraints = (Constraint[][]) newArrays[0];
+        int[] newModelConstraintsToEvaluate = (int[]) newArrays[1];
 
         newModelConstraints[pruningEvent] = newPruningEventConstraints;
         newModelConstraintsToEvaluate[pruningEvent]++;
@@ -374,13 +390,9 @@ public abstract class SetDomain extends Domain {
       Constraint[] newPruningEventConstraints = new Constraint[1];
       newPruningEventConstraints[0] = constraint;
 
-      Constraint[][] newModelConstraints = new Constraint[modelConstraints.length][];
-      int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-
-      for (int i = 0; i < modelConstraints.length; i++) {
-        newModelConstraints[i] = modelConstraints[i];
-        newModelConstraintsToEvaluate[i] = modelConstraintsToEvaluate[i];
-      }
+      Object[] newArrays = createNewModelConstraintArrays();
+      Constraint[][] newModelConstraints = (Constraint[][]) newArrays[0];
+      int[] newModelConstraintsToEvaluate = (int[]) newArrays[1];
 
       newModelConstraints[pruningEvent] = newPruningEventConstraints;
       newModelConstraintsToEvaluate[pruningEvent] = 1;
@@ -515,6 +527,58 @@ public abstract class SetDomain extends Domain {
   }
 
   /**
+   * Removes a constraint from a specific pruning event's constraint array.
+   *
+   * @param pruningEvent the pruning event type (GROUND, BOUND, or ANY)
+   * @param constraint the constraint to remove
+   * @return true if the constraint was found and removed, false otherwise
+   */
+  private boolean removeConstraintFromPruningEvent(int pruningEvent, Constraint constraint) {
+
+    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+    if (pruningEventConstraints != null) {
+
+      boolean isImposed = false;
+      int i;
+
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
+        if (pruningEventConstraints[i] == constraint) {
+          isImposed = true;
+          break;
+        }
+      }
+
+      if (isImposed) {
+
+        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+
+          modelConstraints[pruningEvent][i] =
+              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
+        }
+
+        int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
+        System.arraycopy(
+            modelConstraintsToEvaluate,
+            0,
+            newModelConstraintsToEvaluate,
+            0,
+            modelConstraintsToEvaluate.length);
+
+        newModelConstraintsToEvaluate[pruningEvent]--;
+
+        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * It removes a constraint from a domain, it should only be called by removeConstraint function of
    * Variable object.
    */
@@ -537,132 +601,15 @@ public abstract class SetDomain extends Domain {
       return;
     }
 
-    int pruningEvent = SetDomain.GROUND;
-
-    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        System.arraycopy(
-            modelConstraintsToEvaluate,
-            0,
-            newModelConstraintsToEvaluate,
-            0,
-            modelConstraintsToEvaluate.length);
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-        return;
-      }
+    if (removeConstraintFromPruningEvent(SetDomain.GROUND, constraint)) {
+      return;
     }
 
-    pruningEvent = SetDomain.BOUND;
-
-    pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        System.arraycopy(
-            modelConstraintsToEvaluate,
-            0,
-            newModelConstraintsToEvaluate,
-            0,
-            modelConstraintsToEvaluate.length);
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-        return;
-      }
+    if (removeConstraintFromPruningEvent(SetDomain.BOUND, constraint)) {
+      return;
     }
 
-    pruningEvent = SetDomain.ANY;
-
-    pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        System.arraycopy(
-            modelConstraintsToEvaluate,
-            0,
-            newModelConstraintsToEvaluate,
-            0,
-            modelConstraintsToEvaluate.length);
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-      }
-    }
+    removeConstraintFromPruningEvent(SetDomain.ANY, constraint);
   }
 
   /**

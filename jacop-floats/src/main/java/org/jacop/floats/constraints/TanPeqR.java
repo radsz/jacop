@@ -245,24 +245,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
   @Override
   public boolean satisfied() {
-
-    if (grounded()) {
-      double tanMin = Math.tan(p.min());
-      double tanMax = Math.tan(p.max());
-
-      FloatInterval minDiff =
-          tanMin < q.min()
-              ? new FloatInterval(tanMin, q.min())
-              : new FloatInterval(q.min(), tanMin);
-      FloatInterval maxDiff =
-          tanMax < q.max()
-              ? new FloatInterval(tanMax, q.max())
-              : new FloatInterval(q.max(), tanMax);
-
-      return minDiff.singleton() && maxDiff.singleton();
-    } else {
-      return false;
-    }
+    return AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(p, q, Math::tan);
   }
 
   @Override

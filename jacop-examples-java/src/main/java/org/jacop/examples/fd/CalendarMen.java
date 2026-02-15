@@ -114,8 +114,6 @@ public class CalendarMen extends ExampleFd {
 
     IO.println("This program solves logic puzzle Calendar Men");
 
-    // Firstnames of people involved
-
     String[] firstNames = {
       "Antonio",
       "Brett",
@@ -130,21 +128,6 @@ public class CalendarMen extends ExampleFd {
       "Karl",
       "Lorenzo"
     };
-
-    // indexes for people involved for ease of referring later.
-    final int iAntonio = 0;
-    final int iBrett = 1; /* iCliff = 2, */
-    final int iDabney = 3;
-    final int iEd = 4;
-    final int iFrancisco = 5;
-    final int iGriff = 6;
-    final int iHarry = 7;
-    final int iIvor = 8;
-    final int iJohn = 9;
-    final int iKarl = 10;
-    final int iLorenzo = 11;
-
-    // Lastnames of people involved
 
     String[] lastNames = {
       "Moross",
@@ -161,21 +144,6 @@ public class CalendarMen extends ExampleFd {
       "Xiao"
     };
 
-    // indexes for people involved for ease of referring later.
-    final int iMoross = 0;
-    final int iNelsen = 1;
-    final int iO_Rourke = 2;
-    final int iPaulos = 3;
-    final int iQuarello = 4;
-    final int iReede = 5;
-    final int iSheldon = 6;
-    final int iTaylor = 7;
-    final int iUhler = 8; /* iVickers = 9, */
-    final int iWang = 10;
-    final int iXiao = 11;
-
-    // Names of sports
-
     String[] sportNames = {
       "archery",
       "badminton",
@@ -191,7 +159,31 @@ public class CalendarMen extends ExampleFd {
       "volleyball"
     };
 
-    // indexes for sports involved for ease of referring later.
+    // indexes for people involved for ease of referring later.
+    final int iAntonio = 0;
+    final int iBrett = 1; /* iCliff = 2, */
+    final int iDabney = 3;
+    final int iEd = 4;
+    final int iFrancisco = 5;
+    final int iGriff = 6;
+    final int iHarry = 7;
+    final int iIvor = 8;
+    final int iJohn = 9;
+    final int iKarl = 10;
+    final int iLorenzo = 11;
+
+    final int iMoross = 0;
+    final int iNelsen = 1;
+    final int iO_Rourke = 2;
+    final int iPaulos = 3;
+    final int iQuarello = 4;
+    final int iReede = 5;
+    final int iSheldon = 6;
+    final int iTaylor = 7;
+    final int iUhler = 8; /* iVickers = 9, */
+    final int iWang = 10;
+    final int iXiao = 11;
+
     final int iarchery = 0;
     final int ibadminton = 1;
     final int icroquet = 2;
@@ -205,21 +197,9 @@ public class CalendarMen extends ExampleFd {
     final int itennis = 10;
     final int ivolleyball = 11;
 
-    // Three sets of variables, the same values at different sets denote
-    // relation between appropriate variables.
-
-    IntVar[] first = new IntVar[12];
-    IntVar[] last = new IntVar[12];
-    IntVar[] sport = new IntVar[12];
-
-    for (int i = 0; i < 12; i++) {
-      first[i] = new IntVar(store, firstNames[i], 1, 12);
-      last[i] = new IntVar(store, lastNames[i], 1, 12);
-      sport[i] = new IntVar(store, sportNames[i], 1, 12);
-      vars.add(first[i]);
-      vars.add(last[i]);
-      vars.add(sport[i]);
-    }
+    IntVar[] first = createVariables(firstNames);
+    IntVar[] last = createVariables(lastNames);
+    IntVar[] sport = createVariables(sportNames);
 
     store.impose(new Alldifferent(first));
     store.impose(new Alldifferent(last));
@@ -576,18 +556,9 @@ public class CalendarMen extends ExampleFd {
     final int itennis = 10;
     final int ivolleyball = 11;
 
-    IntVar[] firstname = new IntVar[12];
-    IntVar[] surname = new IntVar[12];
-    IntVar[] sport = new IntVar[12];
-
-    for (int i = 0; i < 12; i++) {
-      firstname[i] = new IntVar(store, firstnameId[i], 1, 12);
-      surname[i] = new IntVar(store, surnameId[i], 1, 12);
-      sport[i] = new IntVar(store, sportId[i], 1, 12);
-      vars.add(firstname[i]);
-      vars.add(surname[i]);
-      vars.add(sport[i]);
-    }
+    IntVar[] firstname = createVariables(firstnameId);
+    IntVar[] surname = createVariables(surnameId);
+    IntVar[] sport = createVariables(sportId);
 
     store.impose(new Alldifferent(firstname));
     store.impose(new Alldifferent(surname));
@@ -874,5 +845,15 @@ public class CalendarMen extends ExampleFd {
     // 16. The pole vaulter appeared sometime after the golfer.
 
     store.impose(new XltY(sport[igolf], sport[ip_vauliting])); // X < Y
+  }
+
+  /** Creates variables for a given array of names. */
+  private IntVar[] createVariables(String[] names) {
+    IntVar[] vars = new IntVar[12];
+    for (int i = 0; i < 12; i++) {
+      vars[i] = new IntVar(store, names[i], 1, 12);
+      this.vars.add(vars[i]);
+    }
+    return vars;
   }
 }

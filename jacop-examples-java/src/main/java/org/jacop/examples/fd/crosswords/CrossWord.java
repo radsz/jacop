@@ -147,55 +147,11 @@ public class CrossWord extends ExampleFd {
     }
 
     for (int i = 0; i < r; i++) {
-
-      List<Var> word = new ArrayList<>();
-
-      for (int j = 0; j < c; j++) {
-
-        if (crosswordTemplate[i][j] == '*') {
-          if (wordSizes.contains(word.size())) {
-            Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-            store.impose(new ExtensionalSupportMdd(mdd4word));
-          }
-          word.clear();
-        } else {
-          word.add(x[i][j]);
-        }
-      }
-
-      if (!word.isEmpty()) {
-        if (wordSizes.contains(word.size())) {
-          Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-          store.impose(new ExtensionalSupportMdd(mdd4word));
-        }
-        word.clear();
-      }
+      processWordSequence(i, true);
     }
 
     for (int j = 0; j < c; j++) {
-
-      List<Var> word = new ArrayList<>();
-
-      for (int i = 0; i < r; i++) {
-
-        if (crosswordTemplate[i][j] == '*') {
-          if (wordSizes.contains(word.size())) {
-            Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-            store.impose(new ExtensionalSupportMdd(mdd4word));
-          }
-          word.clear();
-        } else {
-          word.add(x[i][j]);
-        }
-      }
-
-      if (!word.isEmpty()) {
-        if (wordSizes.contains(word.size())) {
-          Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-          store.impose(new ExtensionalSupportMdd(mdd4word));
-        }
-        word.clear();
-      }
+      processWordSequence(j, false);
     }
 
     vars = new ArrayList<>();
@@ -206,6 +162,45 @@ public class CrossWord extends ExampleFd {
           vars.add(x[i][j]);
         }
       }
+    }
+  }
+
+  /**
+   * Processes a sequence of cells (row or column) to extract words and impose constraints.
+   *
+   * @param index the row or column index
+   * @param isRow true if processing a row, false if processing a column
+   */
+  private void processWordSequence(int index, boolean isRow) {
+    List<Var> word = new ArrayList<>();
+    int length = isRow ? c : r;
+
+    for (int pos = 0; pos < length; pos++) {
+      int row = isRow ? index : pos;
+      int col = isRow ? pos : index;
+
+      if (crosswordTemplate[row][col] == '*') {
+        imposeWordConstraint(word);
+        word.clear();
+      } else {
+        word.add(x[row][col]);
+      }
+    }
+
+    if (!word.isEmpty()) {
+      imposeWordConstraint(word);
+    }
+  }
+
+  /**
+   * Imposes extensional constraint on a word if its size matches allowed word sizes.
+   *
+   * @param word the list of variables representing a word
+   */
+  private void imposeWordConstraint(List<Var> word) {
+    if (wordSizes.contains(word.size())) {
+      Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
+      store.impose(new ExtensionalSupportMdd(mdd4word));
     }
   }
 

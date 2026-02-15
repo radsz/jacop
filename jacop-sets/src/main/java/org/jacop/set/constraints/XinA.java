@@ -135,13 +135,9 @@ public class XinA extends PrimitiveConstraint {
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-
-    // If notConsistency function mode
-    if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
+    Integer possibleEvent = getNotConsistencyPruningEventFromMap(v);
+    if (possibleEvent != null) {
+      return possibleEvent;
     }
 
     if (v == x) {
@@ -180,21 +176,15 @@ public class XinA extends PrimitiveConstraint {
 
   @Override
   public int getNestedPruningEvent(Var v, boolean mode) {
-
-    // If consistency function mode
     if (mode) {
-      if (consistencyPruningEvents != null) {
-        Integer possibleEvent = consistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
+      Integer possibleEvent = getConsistencyPruningEventFromMap(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
       }
-    } else { // If notConsistency function mode
-      if (notConsistencyPruningEvents != null) {
-        Integer possibleEvent = notConsistencyPruningEvents.get(v);
-        if (possibleEvent != null) {
-          return possibleEvent;
-        }
+    } else {
+      Integer possibleEvent = getNotConsistencyPruningEventFromMap(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
       }
     }
     if (v == x) {

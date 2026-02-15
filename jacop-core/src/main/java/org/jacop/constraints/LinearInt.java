@@ -547,12 +547,11 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   /**
-   * Checks if the equality relation is satisfied.
+   * Computes the minimum and maximum possible weighted sums.
    *
-   * @return true if the weighted sum is equal to the target value.
+   * @return a record containing sMin and sMax.
    */
-  public boolean satisfiedEq() {
-
+  private SumBounds computeSumBounds() {
     long sMin = 0L;
     long sMax = 0L;
     int i = 0;
@@ -564,8 +563,54 @@ public class LinearInt extends PrimitiveConstraint {
       sMin += (long) x[i].max() * a[i];
       sMax += (long) x[i].min() * a[i];
     }
+    return new SumBounds(sMin, sMax);
+  }
 
-    return sMin == sMax && sMin == b;
+  /**
+   * Computes the maximum possible weighted sum.
+   *
+   * @return the maximum possible weighted sum.
+   */
+  private long computeSumMax() {
+    long sMax = 0L;
+    int i = 0;
+    for (; i < pos; i++) {
+      sMax += (long) x[i].max() * a[i];
+    }
+    for (; i < l; i++) {
+      sMax += (long) x[i].min() * a[i];
+    }
+    return sMax;
+  }
+
+  /**
+   * Computes the minimum possible weighted sum.
+   *
+   * @return the minimum possible weighted sum.
+   */
+  private long computeSumMin() {
+    long sMin = 0L;
+    int i = 0;
+    for (; i < pos; i++) {
+      sMin += (long) x[i].min() * a[i];
+    }
+    for (; i < l; i++) {
+      sMin += (long) x[i].max() * a[i];
+    }
+    return sMin;
+  }
+
+  /** Holds the minimum and maximum possible weighted sums. */
+  private record SumBounds(long sMin, long sMax) {}
+
+  /**
+   * Checks if the equality relation is satisfied.
+   *
+   * @return true if the weighted sum is equal to the target value.
+   */
+  public boolean satisfiedEq() {
+    SumBounds bounds = computeSumBounds();
+    return bounds.sMin == bounds.sMax && bounds.sMin == b;
   }
 
   /**
@@ -574,20 +619,8 @@ public class LinearInt extends PrimitiveConstraint {
    * @return true if the weighted sum is provably not equal to the target value.
    */
   public boolean satisfiedNeq() {
-
-    long sMax = 0L;
-    long sMin = 0L;
-    int i = 0;
-    for (; i < pos; i++) {
-      sMin += (long) x[i].min() * a[i];
-      sMax += (long) x[i].max() * a[i];
-    }
-    for (; i < l; i++) {
-      sMin += (long) x[i].max() * a[i];
-      sMax += (long) x[i].min() * a[i];
-    }
-
-    return sMin > b || sMax < b;
+    SumBounds bounds = computeSumBounds();
+    return bounds.sMin > b || bounds.sMax < b;
   }
 
   /**
@@ -597,17 +630,7 @@ public class LinearInt extends PrimitiveConstraint {
    * @return true if the maximum possible weighted sum is at most b.
    */
   public boolean satisfiedLtEq(long b) {
-
-    long sMax = 0;
-    int i = 0;
-    for (; i < pos; i++) {
-      sMax += (long) x[i].max() * a[i];
-    }
-    for (; i < l; i++) {
-      sMax += (long) x[i].min() * a[i];
-    }
-
-    return sMax <= b;
+    return computeSumMax() <= b;
   }
 
   /**
@@ -617,17 +640,7 @@ public class LinearInt extends PrimitiveConstraint {
    * @return true if the minimum possible weighted sum is at least b.
    */
   public boolean satisfiedGtEq(long b) {
-
-    long sMin = 0;
-    int i = 0;
-    for (; i < pos; i++) {
-      sMin += (long) x[i].min() * a[i];
-    }
-    for (; i < l; i++) {
-      sMin += (long) x[i].max() * a[i];
-    }
-
-    return sMin >= b;
+    return computeSumMin() >= b;
   }
 
   @Override

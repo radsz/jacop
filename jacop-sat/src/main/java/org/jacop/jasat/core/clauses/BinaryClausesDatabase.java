@@ -137,12 +137,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     clauses[offset + 1] = 0;
   }
 
-  /**
-   * Checks if a clause can be removed from the database.
-   *
-   * @param clauseId the unique ID of the clause
-   * @return true if the clause can be removed
-   */
+  @Override
   public boolean canRemove(int clauseId) {
     return true;
   }
@@ -243,22 +238,8 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return currentIndex - numRemoved;
   }
 
-  /**
-   * Writes the binary clauses to CNF format.
-   *
-   * @param output the buffered writer to write to
-   * @throws IOException if an I/O error occurs
-   */
+  @Override
   public void toCnf(BufferedWriter output) throws IOException {
-
-    for (int i = 0; i < currentIndex; i++) {
-      int offset = i * 2;
-      if (clauses[offset] != 0 && clauses[offset + 1] != 0) {
-        output.write(Integer.toString(clauses[offset]));
-        output.write(" ");
-        output.write(Integer.toString(clauses[offset + 1]));
-        output.write(" 0\n");
-      }
-    }
+    writeClausesToCnf(output, clauses, currentIndex, 2);
   }
 }

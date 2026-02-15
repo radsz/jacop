@@ -106,6 +106,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       groundPos = processGroundedVariables(store, groundPos);
     } while (store.propagationHasOccurred);
     grounded.update(groundPos);
+
+    checkMatchingExcept(store, groundPos);
   }
 
   /**

@@ -111,53 +111,14 @@ class SetConstraints implements ParserTreeConstants {
   }
 
   void gen_set_in(SimpleNode node) {
-    PrimitiveConstraint c;
-
-    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-    SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
-    if (v1Type.getId() == JJTSETLITERAL) {
-      IntDomain d = support.getSetLiteral(node, 1);
-      IntVar v1 = support.getVariable(p1);
-
-      v1.domain.in(store.level, v1, d);
-      return;
-    } else {
-      SetVar v2 = support.getSetVariable(node, 1);
-
-      if (p1.getType() == 0) { // p1 int
-        int i1 = support.getInt(p1);
-        c = new EinA(i1, v2);
-      } else { // p1 var
-        IntVar v1 = support.getVariable(p1);
-        c = new XinA(v1, v2);
-      }
+    PrimitiveConstraint c = createSetInConstraint(node);
+    if (c != null) {
+      support.pose(c);
     }
-    // FIXME, include AinB here?
-
-    support.pose(c);
   }
 
   void gen_set_in_reif(SimpleNode node) {
-    PrimitiveConstraint c;
-
-    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-    SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
-    if (v1Type.getId() == JJTSETLITERAL) {
-      IntDomain d = support.getSetLiteral(node, 1);
-      IntVar v1 = support.getVariable(p1);
-      c = new In(v1, d);
-    } else {
-      SetVar v2 = support.getSetVariable(node, 1);
-
-      if (p1.getType() == 0) { // p1 int
-        int i1 = support.getInt(p1);
-        c = new EinA(i1, v2);
-      } else { // p1 var
-        IntVar v1 = support.getVariable(p1);
-        c = new XinA(v1, v2);
-      }
-    }
-
+    PrimitiveConstraint c = createSetInConstraint(node);
     IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     if (v3.singleton(1)) {
       support.pose(c);
@@ -169,29 +130,33 @@ class SetConstraints implements ParserTreeConstants {
   }
 
   void gen_set_in_imp(SimpleNode node) {
-    PrimitiveConstraint c;
+    PrimitiveConstraint c = createSetInConstraint(node);
+    IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    support.pose(new Implies(v3, c));
+  }
 
+  private PrimitiveConstraint createSetInConstraint(SimpleNode node) {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     SimpleNode v1Type = (SimpleNode) node.jjtGetChild(1);
     if (v1Type.getId() == JJTSETLITERAL) {
       IntDomain d = support.getSetLiteral(node, 1);
       IntVar v1 = support.getVariable(p1);
-      c = new In(v1, d);
+      // For non-reified case, directly constrain domain
+      if (node.jjtGetNumChildren() == 2) {
+        v1.domain.in(store.level, v1, d);
+        return null;
+      }
+      return new In(v1, d);
     } else {
       SetVar v2 = support.getSetVariable(node, 1);
-
       if (p1.getType() == 0) { // p1 int
         int i1 = support.getInt(p1);
-        c = new EinA(i1, v2);
+        return new EinA(i1, v2);
       } else { // p1 var
         IntVar v1 = support.getVariable(p1);
-        c = new XinA(v1, v2);
+        return new XinA(v1, v2);
       }
     }
-
-    IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-    support.pose(new Implies(v3, c));
   }
 
   void gen_set_intersect(SimpleNode node) {

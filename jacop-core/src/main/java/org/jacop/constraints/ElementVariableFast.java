@@ -165,7 +165,7 @@ public class ElementVariableFast extends AbstractElement implements SatisfiedPre
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
-      if (disjoint(value, list[position])) {
+      if (AbstractElement.disjoint(value, list[position])) {
         indexDomNonEmpty = true;
         if (indexDom.size == 0) {
           indexDom.unionAdapt(position + 1 + indexOffset);
@@ -191,22 +191,9 @@ public class ElementVariableFast extends AbstractElement implements SatisfiedPre
     }
   }
 
-  private boolean disjoint(IntVar v1, IntVar v2) {
-    return v1.min() > v2.max() || v2.min() > v1.max() || !v2.domain.isIntersecting(v1.domain);
-  }
-
   @Override
   public boolean satisfied() {
-    boolean sat = value.singleton();
-    if (sat) {
-      int v = value.min();
-      ValueEnumeration e = index.domain.valueEnumeration();
-      while (sat && e.hasMoreElements()) {
-        IntVar fdv = list[e.nextElement() - 1 - indexOffset];
-        sat = fdv.singleton() && fdv.min() == v;
-      }
-    }
-    return sat;
+    return satisfiedForVariableList(list, value);
   }
 
   @Override

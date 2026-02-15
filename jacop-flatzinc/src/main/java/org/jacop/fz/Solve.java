@@ -384,11 +384,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     label = null;
-    optimization = false;
+    optimization = solveKind > 0;
     list_seq_searches = new ArrayList<>();
 
-    Var cost = null;
-    Var max_cost = null;
     label = null;
     if (si != null) {
       if ("int_search".equals(si.type())) {
@@ -432,39 +430,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
 
+    // Set up cost variable before sub-search setup so constraints are visible
+    Var costVar = null;
     if (solveKind > 0) {
-      optimization = true;
-
-      cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
-      if (cost != null) {
-        if (solveKind == 1) { // minimize
-          costVariable = cost;
-        } else { // maximize
-          max_cost =
-              new IntVar(
-                  store,
-                  "-" + cost.id(),
-                  -((IntVar) cost).max(),
-                  -((IntVar) cost).min()); // IntDomain.MIN_INT, IntDomain.MAX_INT);
-          pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
-          costVariable = max_cost;
-        }
-      } else {
-        cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-        if (solveKind == 1) { // minimize
-          costVariable = cost;
-        } else { // maximize
-          max_cost =
-              new FloatVar(
-                  store,
-                  "-" + cost.id(),
-                  -((FloatVar) cost).max(),
-                  -((FloatVar) cost)
-                      .min()); // VariablesParameters.MIN_FLOAT, VariablesParameters.MAX_FLOAT);
-          pose(new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
-          costVariable = max_cost;
-        }
-      }
+      costVar = setupCostVariable(kind, solveKind);
     }
 
     // adds child search for cost; to be sure that all variables get a value
@@ -527,157 +496,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "complete".equals(si.exploration())
         || "lds".equals(si.exploration())
         || "credit".equals(si.exploration())) {
+      FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
+
+      if (options.getAll()) { // all solutions
+        if (restartCalculator != null) {
+          throw new IllegalArgumentException(
+              "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
+        }
+        searchForAll(label);
+      }
+
+      this.si = si;
+
+      String solveType;
       switch (solveKind) {
-        case 0: // satisfy
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          if (options.getAll()) { // all solutions
-            if (restartCalculator != null) {
-              throw new IllegalArgumentException(
-                  "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
-            }
-
-            searchForAll(label);
-          }
-
-          this.si = si;
-
-          if (options.runSearch()) {
-            try {
-              if (restartCalculator != null) {
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print(" satisfy ");
-                  printSearch(label);
-                }
-
-                rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-                if (options.debug()) {
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print("% satisfy ");
-                  printSearch(label);
-                }
-
-                result = label.labeling(store, variable_selection);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = label;
-            flatzincVariableSelection = variable_selection;
-            flatzincCost = null;
-            return;
-          }
-
+        case 0:
+          solveType = "satisfy";
           break;
-        case 1: // minimize
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          this.si = si;
-
-          if (options.runSearch()) {
-            try {
-              if (restartCalculator != null) {
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print(" minimize (" + cost + ") ");
-                  printSearch(label);
-                }
-
-                rs =
-                    new RestartSearch<>(
-                        store, label, variable_selection, restartCalculator, (T) cost);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-                if (options.debug()) {
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print("% minimize (" + cost + ") ");
-                  printSearch(label);
-                }
-                result = label.labeling(store, variable_selection, cost);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = label;
-            flatzincVariableSelection = variable_selection;
-            flatzincCost = cost;
-            return;
-          }
-
+        case 1:
+          solveType = "minimize";
           break;
-        case 2: // maximize
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          this.si = si;
-
-          if (options.runSearch()) {
-            try {
-              if (restartCalculator != null) {
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print("% maximize (" + cost + ") ");
-                  printSearch(label);
-                }
-
-                rs =
-                    new RestartSearch<>(
-                        store, label, variable_selection, restartCalculator, (T) max_cost);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-                if (options.debug()) {
-                  label.setSelectChoicePoint(variable_selection);
-                  IO.print("% maximize (" + cost + ") ");
-                  printSearch(label);
-                }
-
-                result = label.labeling(store, variable_selection, max_cost);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = label;
-            flatzincVariableSelection = variable_selection;
-            flatzincCost = max_cost;
-            return;
-          }
-
+        case 2:
+          solveType = "maximize";
           break;
         default:
           throw new IllegalArgumentException(
               "Not recognized or supported search strategy; compilation aborted");
+      }
+
+      result = executeSearch(label, costVar, solveType);
+      if (!options.runSearch()) {
+        return;
       }
     } else {
       throw new IllegalArgumentException(
@@ -760,6 +609,160 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int to = options.getTimeOut();
     if (to > 0) {
       search.setTimeOutMilliseconds(to);
+    }
+  }
+
+  /**
+   * Executes a search with optional restart and cost variable.
+   *
+   * @param label the depth first search to execute
+   * @param costVar the cost variable (null for satisfy)
+   * @param solveType the solve type string for debug output ("satisfy", "minimize", "maximize")
+   * @return true if a solution was found, false otherwise
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeSearch(DepthFirstSearch<T> label, Var costVar, String solveType) {
+    if (!options.runSearch()) {
+      flatzincDfs = label;
+      flatzincVariableSelection = variable_selection;
+      flatzincCost = costVar;
+      return false;
+    }
+
+    try {
+      if (restartCalculator != null) {
+        if (options.debug()) {
+          IO.print("% RestartSearch(" + restartCalculator + "), ");
+          label.setSelectChoicePoint(variable_selection);
+          IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+          printSearch(label);
+        }
+
+        rs =
+            new RestartSearch<>(
+                store,
+                label,
+                variable_selection,
+                restartCalculator,
+                costVar != null ? (T) costVar : null);
+        rs.setRestartsLimit(options.getRestartLimit());
+        setSearchTimeout(rs);
+
+        if (relaxVars != null) {
+          rs.setRelaxAndReconstruct(relaxVars, probability);
+        }
+
+        return rs.labeling();
+      } else {
+        if (options.debug()) {
+          label.setSelectChoicePoint(variable_selection);
+          IO.print("% " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+          printSearch(label);
+        }
+
+        if (costVar != null) {
+          return label.labeling(store, variable_selection, costVar);
+        } else {
+          return label.labeling(store, variable_selection);
+        }
+      }
+    } catch (NumberSolutionsReached _) {
+      return numberSolutions > 0;
+    }
+  }
+
+  /**
+   * Executes a search with optional restart and cost variable, using specified selection.
+   *
+   * @param label the depth first search to execute
+   * @param select the choice point selector to use
+   * @param costVar the cost variable (null for satisfy)
+   * @param solveType the solve type string for debug output ("satisfy", "minimize", "maximize")
+   * @return true if a solution was found, false otherwise
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeSearch(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (!options.runSearch()) {
+      flatzincDfs = label;
+      flatzincVariableSelection = select;
+      flatzincCost = costVar;
+      return false;
+    }
+
+    try {
+      if (restartCalculator != null) {
+        if (options.debug()) {
+          IO.print("% RestartSearch(" + restartCalculator + "), ");
+          label.setSelectChoicePoint(select);
+          IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+          printSearch(label);
+        }
+
+        rs =
+            new RestartSearch<>(
+                store, label, select, restartCalculator, costVar != null ? (T) costVar : null);
+        rs.setRestartsLimit(options.getRestartLimit());
+        setSearchTimeout(rs);
+
+        if (relaxVars != null) {
+          rs.setRelaxAndReconstruct(relaxVars, probability);
+        }
+
+        return rs.labeling();
+      } else {
+        if (options.debug()) {
+          label.setSelectChoicePoint(select);
+          IO.print("% " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+          printSearch(label);
+        }
+
+        if (costVar != null) {
+          return label.labeling(store, select, costVar);
+        } else {
+          return label.labeling(store, select);
+        }
+      }
+    } catch (NumberSolutionsReached _) {
+      return numberSolutions > 0;
+    }
+  }
+
+  /**
+   * Sets up cost variable for optimization (minimize or maximize).
+   *
+   * @param kind the solve kind AST node
+   * @param solveKind the solve kind (1 for minimize, 2 for maximize)
+   * @return the cost variable to use for optimization
+   */
+  private Var setupCostVariable(SimpleNode kind, int solveKind) {
+    Var cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
+    Var max_cost = null;
+
+    if (cost != null) {
+      if (solveKind == 1) { // minimize
+        costVariable = cost;
+        return cost;
+      } else { // maximize
+        max_cost =
+            new IntVar(store, "-" + cost.id(), -((IntVar) cost).max(), -((IntVar) cost).min());
+        pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
+        costVariable = max_cost;
+        return max_cost;
+      }
+    } else {
+      cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+      if (solveKind == 1) { // minimize
+        costVariable = cost;
+        return cost;
+      } else { // maximize
+        max_cost =
+            new FloatVar(
+                store, "-" + cost.id(), -((FloatVar) cost).max(), -((FloatVar) cost).min());
+        pose(new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
+        costVariable = max_cost;
+        return max_cost;
+      }
     }
   }
 
@@ -1190,6 +1193,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
 
+    // Set up cost variable before sub-search setup so constraints are visible
+    Var costVar = null;
+    if (solveKind > 0) {
+      costVar = setupCostVariable(kind, solveKind);
+    }
+
     DepthFirstSearch<T>[] complementary_search = setSubSearchForAll(last_search, options);
     for (DepthFirstSearch<T> aComplementary_search : complementary_search) {
       if (aComplementary_search != null) {
@@ -1201,11 +1210,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     result = false;
-    optimization = false;
+    optimization = solveKind > 0;
 
     final_search_seq = list_seq_searches.getLast();
-    Var cost;
-    Var max_cost;
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;
@@ -1214,208 +1221,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setSearchTimeout(list_seq_searches);
 
     if (si.exploration() == null || "complete".equals(si.exploration())) {
+      FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
+
+      if (options.getAll()) { // all solutions
+        if (restartCalculator != null) {
+          throw new IllegalArgumentException(
+              "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
+        }
+        searchForAll(masterLabel);
+      }
+
+      String solveType;
       switch (solveKind) {
         case 0: // satisfy
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          if (options.getAll()) { // all solutions
-            if (restartCalculator != null) {
-              throw new IllegalArgumentException(
-                  "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
-            }
-
-            searchForAll(masterLabel);
-          }
-
-          if (options.runSearch()) {
-            try {
-              if (restartCalculator != null) {
-
-                label = masterLabel;
-
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(masterSelect);
-                  IO.print(" satisfy ");
-                  printSearch(label);
-                }
-
-                rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-                if (options.debug()) {
-                  masterLabel.setSelectChoicePoint(masterSelect);
-                  IO.print("% satisfy ");
-                  printSearch(masterLabel);
-                }
-
-                label = masterLabel;
-                result = masterLabel.labeling(store, masterSelect);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = masterLabel;
-            flatzincVariableSelection = masterSelect;
-            flatzincCost = null;
-            return;
-          }
-
+          solveType = "satisfy";
           break;
-
         case 1: // minimize
-          optimization = true;
-
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
-          if (cost == null) {
-            cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-          }
-          costVariable = cost;
-
-          // result = restart_search(masterLabel, masterSelect, cost, true);
-
+          solveType = "minimize";
           for (Search<T> list_seq_searche : list_seq_searches) {
             list_seq_searche.setOptimize(true);
           }
-
-          if (options.runSearch()) {
-
-            try {
-              if (restartCalculator != null) {
-
-                label = masterLabel;
-
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(masterSelect);
-                  IO.print(" minimize (" + cost + ") ");
-                  printSearch(label);
-                }
-
-                rs =
-                    new RestartSearch<>(
-                        store, masterLabel, masterSelect, restartCalculator, (T) cost);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-
-                label = masterLabel;
-
-                if (options.debug()) {
-                  masterLabel.setSelectChoicePoint(masterSelect);
-                  IO.print("% minimize (" + cost + ") ");
-                  printSearch(masterLabel);
-                }
-
-                result = masterLabel.labeling(store, masterSelect, cost);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = masterLabel;
-            flatzincVariableSelection = masterSelect;
-            flatzincCost = cost;
-            return;
-          }
-
           break;
         case 2: // maximize
-          optimization = true;
-          // cost = getCost((ASTSolveExpr)kind.jjtGetChild(0));
-
-          FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
-
-          cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
-          if (cost != null) { // maximize
-            max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MIN_INT, IntDomain.MAX_INT);
-            pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
-          } else {
-            cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-            max_cost =
-                new FloatVar(
-                    store,
-                    "-" + cost.id(),
-                    VariablesParameters.MIN_FLOAT,
-                    VariablesParameters.MAX_FLOAT);
-            pose(
-                new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
-          }
-          costVariable = max_cost;
-
-          // result = restart_search(masterLabel, masterSelect, cost, false);
-
+          solveType = "maximize";
           for (Search<T> list_seq_searche : list_seq_searches) {
             list_seq_searche.setOptimize(true);
           }
-
-          if (options.runSearch()) {
-            try {
-              if (restartCalculator != null) {
-
-                label = masterLabel;
-
-                if (options.debug()) {
-                  IO.print("% RestartSearch(" + restartCalculator + "), ");
-                  label.setSelectChoicePoint(masterSelect);
-                  IO.print(" maximize (" + cost + ") ");
-                  printSearch(label);
-                }
-
-                rs =
-                    new RestartSearch<>(
-                        store, masterLabel, masterSelect, restartCalculator, (T) max_cost);
-                rs.setRestartsLimit(options.getRestartLimit());
-                setSearchTimeout(rs);
-
-                if (relaxVars != null) {
-                  rs.setRelaxAndReconstruct(relaxVars, probability);
-                }
-
-                result = rs.labeling();
-              } else {
-                if (options.debug()) {
-                  masterLabel.setSelectChoicePoint(masterSelect);
-                  IO.print("% maximize (" + cost + ") ");
-                  printSearch(masterLabel);
-                }
-
-                label = masterLabel;
-                result = masterLabel.labeling(store, masterSelect, max_cost);
-              }
-            } catch (NumberSolutionsReached _) {
-              result = numberSolutions > 0;
-            }
-          } else {
-            // storing flatiznc defined search
-            flatzincDfs = masterLabel;
-            flatzincVariableSelection = masterSelect;
-            flatzincCost = max_cost;
-            return;
-          }
-
           break;
         default:
           throw new IllegalArgumentException(
               "Not recognized or supported search strategy; compilation aborted");
+      }
+
+      label = masterLabel;
+      result = executeSearch(masterLabel, masterSelect, costVar, solveType);
+      if (!options.runSearch()) {
+        return;
       }
     } else {
       throw new IllegalArgumentException(

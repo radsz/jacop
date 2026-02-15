@@ -105,15 +105,9 @@ class ElementConstraints implements ParserTreeConstants {
   }
 
   void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
-
     p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
-    int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = Math.min(p2.length, newP2Length);
-    int[] newP2 = new int[listLength];
-    for (int i = 0; i < listLength; i++) {
-      newP2[i] = p2[p1.min() - 1 + i];
-    }
+    int[] newP2 = extractSubArray(p1, p2);
 
     if (p2.length > 1 && allEqual(p2)) {
       p3.domain.in(store.level, p3, p2[0], p2[0]);
@@ -131,19 +125,13 @@ class ElementConstraints implements ParserTreeConstants {
   }
 
   void generateBoolElementConstraint(SimpleNode node) throws FailException {
-
     IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
     int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
-    int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = Math.min(p2.length, newP2Length);
-    int[] newP2 = new int[listLength];
-    for (int i = 0; i < listLength; i++) {
-      newP2[i] = p2[p1.min() - 1 + i];
-    }
+    int[] newP2 = extractSubArray(p1, p2);
 
     if (p2.length > 1 && allEqual(p2)) {
       p3.domain.in(store.level, p3, p2[0], p2[0]);
@@ -156,6 +144,16 @@ class ElementConstraints implements ParserTreeConstants {
     } else {
       support.pose(new ElementBool(p1, newP2, p3, p1.min() - 1));
     }
+  }
+
+  private int[] extractSubArray(IntVar p1, int[] p2) {
+    int newP2Length = p1.max() - p1.min() + 1;
+    int listLength = Math.min(p2.length, newP2Length);
+    int[] newP2 = new int[listLength];
+    for (int i = 0; i < listLength; i++) {
+      newP2[i] = p2[p1.min() - 1 + i];
+    }
+    return newP2;
   }
 
   void generateVarElementConstraint(SimpleNode node) throws FailException {
@@ -257,7 +255,6 @@ class ElementConstraints implements ParserTreeConstants {
   }
 
   void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
-
     p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
     int newP2Length = p1.max() - p1.min() + 1;

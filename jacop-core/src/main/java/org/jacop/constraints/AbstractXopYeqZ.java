@@ -1,5 +1,5 @@
 /*
- * AlldifferentExceptZero.java
+ * AbstractXopYeqZ.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -30,62 +30,51 @@
 
 package org.jacop.constraints;
 
-import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
- * AlldifferentExceptZero constraint assures that all FDVs except those with zero value have
- * differnet values.
+ * Abstract base class for three-variable arithmetic constraints of the form X op Y = Z.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AlldifferentExceptZero extends Alldifferent
-    implements UsesQueueVariable, SatisfiedPresent {
+public abstract class AbstractXopYeqZ extends Constraint implements SatisfiedPresent {
 
-  /** Protected constructor for subclassing purposes. */
-  protected AlldifferentExceptZero() {}
+  /** It specifies variable x in constraint x op y = z. */
+  protected final IntVar x;
 
-  /**
-   * It constructs the alldifferent constraint for the supplied variable.
-   *
-   * @param list variables which are constrained to take different values.
-   */
-  public AlldifferentExceptZero(IntVar[] list) {
+  /** It specifies variable y in constraint x op y = z. */
+  protected final IntVar y;
 
-    super(list);
-  }
+  /** It specifies variable z in constraint x op y = z. */
+  protected final IntVar z;
 
   /**
-   * It constructs the alldifferent constraint for the supplied variable.
+   * Constructs a three-variable arithmetic constraint.
    *
-   * @param variables variables which are constrained to take different values.
+   * @param idNum the id counter for the concrete subclass.
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
    */
-  public AlldifferentExceptZero(List<? extends IntVar> variables) {
-    this(variables.toArray(new IntVar[0]));
+  protected AbstractXopYeqZ(AtomicInteger idNum, IntVar x, IntVar y, IntVar z) {
+
+    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
+
+    numberId = idNum.incrementAndGet();
+
+    this.x = x;
+    this.y = y;
+    this.z = z;
+
+    setScope(x, y, z);
   }
 
   @Override
-  protected boolean isExceptionValue(int value) {
-    return value == 0;
-  }
-
-  @Override
-  protected boolean hasExceptionValues(IntVar v) {
-    return v.domain.contains(0);
-  }
-
-  @Override
-  public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : AlldifferentExceptZero([");
-    appendArrayToString(result, list);
-    result.append("])");
-
-    return result.toString();
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 }

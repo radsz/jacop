@@ -159,21 +159,13 @@ public class Table extends AbstractTable {
 
     for (IntVar v : fdvs) {
 
-      // recent pruning
-      IntDomain cd = v.dom();
-      IntDomain pd = cd.getPreviousDomain();
-      IntDomain rp;
-      int delta;
-      if (pd == null) {
-        rp = cd;
-        delta = cd.getSize();
-      } else {
-        rp = pd.subtract(cd);
-        delta = rp.getSize();
-        if (delta == 0) {
-          continue;
-        }
+      Object[] deltaResult = computeDelta(v);
+      if (deltaResult == null) {
+        continue;
       }
+      int delta = (Integer) deltaResult[0];
+      IntDomain rp = (IntDomain) deltaResult[1];
+      IntDomain cd = v.dom();
 
       rbs.clearMask();
       int xIndex = varMap.get(v);

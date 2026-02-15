@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -45,24 +44,9 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmodYeqZ extends Constraint implements SatisfiedPresent {
+public class XmodYeqZ extends AbstractXopYeqZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /*
-   * It specifies variable x in constraint x mod y = z.
-   */
-  private final IntVar x;
-
-  /*
-   * It specifies variable y in constraint x mod y = z.
-   */
-  private final IntVar y;
-
-  /*
-   * It specifies variable z in constraint x mod y = z.
-   */
-  private final IntVar z;
 
   /**
    * It constructs a constraint X mod Y = Z.
@@ -72,16 +56,7 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
    * @param z variable z.
    */
   public XmodYeqZ(IntVar x, IntVar y, IntVar z) {
-
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
-
-    setScope(x, y, z);
+    super(idNumber, x, y, z);
   }
 
   @Override

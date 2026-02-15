@@ -79,74 +79,31 @@ public class SocialGolfer extends ExampleSet {
 
     SocialGolfer example = new SocialGolfer();
 
-    example.setup(3, 2, 2);
-    example.model();
-    example.search();
+    int[][] problems = {
+      {3, 2, 2},
+      {2, 5, 4}, // weeks - groups - players in each group
+      {2, 6, 4},
+      {2, 7, 4},
+      {3, 5, 4},
+      {3, 6, 4},
+      {3, 7, 4},
+      {4, 5, 4},
+      {4, 6, 5},
+      {4, 7, 4},
+      {4, 9, 4},
+      {5, 5, 3},
+      {5, 7, 4},
+      {5, 8, 3},
+      {6, 6, 3},
+      {5, 3, 2},
+      {4, 3, 3}
+    };
 
-    // Solved
-    example.setup(2, 5, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(2, 6, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(2, 7, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(3, 5, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(3, 6, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(3, 7, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(4, 5, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(4, 6, 5); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(4, 7, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(4, 9, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(5, 5, 3); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(5, 7, 4); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(5, 8, 3); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(6, 6, 3); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(5, 3, 2); // weeks - groups - players in each group
-    example.model();
-    example.search();
-
-    example.setup(4, 3, 3); // weeks - groups - players in each group
-    example.model();
-    example.search();
+    for (int[] problem : problems) {
+      example.setup(problem[0], problem[1], problem[2]);
+      example.model();
+      example.search();
+    }
   }
 
   /**

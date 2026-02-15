@@ -55,8 +55,7 @@ public class FlatzincSolver {
 
   void ex(String[] args) {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long T1 = System.currentTimeMillis();
 
     if (args.length == 0) {
       args = new String[2];
@@ -67,38 +66,55 @@ public class FlatzincSolver {
     fl.load();
 
     Store store = fl.getStore();
-
-    IO.println(
-        "\nIntVar store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
+    printStoreStats(store);
 
     DepthFirstSearch<Var> label = fl.getDfs();
     SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
     Var cost = fl.getCost();
 
-    boolean result;
-    if (cost != null) {
-      result = label.labeling(fl.getStore(), select, cost);
-    } else {
-      result = label.labeling(fl.getStore(), select);
-    }
+    boolean result = runSearch(label, fl.getStore(), select, cost);
 
     if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null) {
       IO.print(fl.getSolve().lastSolution);
     }
 
     fl.getSolve().statistics(result);
+    printResult(result);
+    printExecutionTime(T1);
+  }
 
+  /** Prints store statistics. */
+  private void printStoreStats(Store store) {
+    IO.println(
+        "\nIntVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+  }
+
+  /** Runs search with optional cost variable. */
+  private boolean runSearch(
+      DepthFirstSearch<Var> label, Store store, SelectChoicePoint<Var> select, Var cost) {
+    if (cost != null) {
+      return label.labeling(store, select, cost);
+    } else {
+      return label.labeling(store, select);
+    }
+  }
+
+  /** Prints search result. */
+  private void printResult(boolean result) {
     if (result) {
       IO.println("*** Yes");
     } else {
       IO.println("*** No");
     }
+  }
 
+  /** Prints execution time. */
+  private void printExecutionTime(long startTime) {
     long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    long T = T2 - startTime;
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

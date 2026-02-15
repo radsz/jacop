@@ -142,6 +142,20 @@ public class SmallDenseDomain extends IntDomain {
   private int size;
   private int max;
 
+  /**
+   * Copies metadata from this domain into the result domain and installs it on the variable. Sets
+   * previousDomain to this.
+   */
+  private void installResultDomain(SmallDenseDomain result, int storeLevel, Var v) {
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+  }
+
   /** It creates an empty domain. */
   public SmallDenseDomain() {
 
@@ -488,13 +502,7 @@ public class SmallDenseDomain extends IntDomain {
       result.singleton = true;
       result.size = 1;
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      v.domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
@@ -620,13 +628,7 @@ public class SmallDenseDomain extends IntDomain {
       assert result.max <= max : "Domain update incorrect.";
       assert result.minBound >= min : "Domain update incorrect.";
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
@@ -700,13 +702,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert result.max <= previousMax : "Domain update incorrect.";
       assert result.minBound >= previousMin : "Domain update incorrect.";
@@ -936,13 +932,7 @@ public class SmallDenseDomain extends IntDomain {
       assert result.max <= max : "Domain update incorrect.";
       assert result.minBound >= minBound : "Domain update incorrect.";
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
@@ -1067,13 +1057,7 @@ public class SmallDenseDomain extends IntDomain {
       assert result.max <= max : "Domain update incorrect.";
       assert result.minBound >= minBound : "Domain update incorrect.";
 
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
+      installResultDomain(result, storeLevel, v);
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();

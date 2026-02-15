@@ -144,20 +144,7 @@ public class CumulativeOptional extends Cumulative {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-    if (doEdgeFind) {
-      result.append(" : cumulativeOptional([ ");
-    } else if (super.cumulativeForConstants != null) {
-      result.append(" : cumulativePrimary([ ");
-    } else {
-      result.append(" : cumulativeBasic([ ");
-    }
-
-    for (int i = 0; i < taskNormal.length - 1; i++) {
-      result.append(taskNormal[i]).append(", ");
-    }
-
-    result.append(taskNormal[taskNormal.length - 1]);
+    StringBuilder result = buildToStringPrefix("cumulativeOptional");
 
     result
         .append(" ]")

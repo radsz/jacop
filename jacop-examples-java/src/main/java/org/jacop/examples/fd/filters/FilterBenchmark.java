@@ -459,57 +459,39 @@ public class FilterBenchmark {
   public static void schedule() {
 
     int[][] dfqEx = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
-    for (int[] dfqEx1 : dfqEx) {
-      int a = dfqEx1[0];
-      int m = dfqEx1[1];
+    for (int[] config : dfqEx) {
       Store store = new Store();
-      Dfq dfq = new Dfq();
-      experiment1(store, dfq, a, m);
+      experiment1(store, new Dfq(), config[0], config[1]);
     }
 
     int[][] firEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
-    for (int[] element : firEx) {
-      int a = element[0];
-      int m = element[1];
-      Fir fir = new Fir();
+    for (int[] config : firEx) {
       Store store = new Store();
-      experiment1(store, fir, a, m);
+      experiment1(store, new Fir(), config[0], config[1]);
     }
 
     int[][] arEx = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
-    for (int[] item : arEx) {
-      int a = item[0];
-      int m = item[1];
-      Ar ar = new Ar(1, 1);
+    for (int[] config : arEx) {
       Store store = new Store();
-      experiment2(store, ar, a, m);
+      experiment2(store, new Ar(1, 1), config[0], config[1]);
     }
 
     int[][] ewfEx = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-    for (int[] value : ewfEx) {
-      int a = value[0];
-      int m = value[1];
-      Ewf ewf = new Ewf();
+    for (int[] config : ewfEx) {
       Store store = new Store();
-      experiment1(store, ewf, a, m);
+      experiment1(store, new Ewf(), config[0], config[1]);
     }
 
     int[][] ewfEx2 = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-    for (int[] ints : ewfEx2) {
-      int a = ints[0];
-      int m = ints[1];
-      Ewf ewf = new Ewf(1, 1);
+    for (int[] config : ewfEx2) {
       Store store = new Store();
-      experiment1(store, ewf, a, m);
+      experiment1(store, new Ewf(1, 1), config[0], config[1]);
     }
 
     int[][] dctEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
-    for (int[] ex : dctEx) {
-      int a = ex[0];
-      int m = ex[1];
-      Dct dct = new Dct();
+    for (int[] config : dctEx) {
       Store store = new Store();
-      experiment1(store, dct, a, m);
+      experiment1(store, new Dct(), config[0], config[1]);
     }
   }
 

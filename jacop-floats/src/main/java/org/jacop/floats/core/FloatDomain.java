@@ -1336,6 +1336,90 @@ public abstract class FloatDomain extends Domain {
   }
 
   /**
+   * Creates a copy of the modelConstraints array with the specified pruning event array replaced.
+   *
+   * @param pruningEvent the pruning event index
+   * @param newPruningEventConstraints the new constraint array for this pruning event
+   * @return a new modelConstraints array
+   */
+  private Constraint[][] copyModelConstraintsArray(
+      int pruningEvent, Constraint[] newPruningEventConstraints) {
+    Constraint[][] newModelConstraints = new Constraint[3][];
+    newModelConstraints[0] = modelConstraints[0];
+    newModelConstraints[1] = modelConstraints[1];
+    newModelConstraints[2] = modelConstraints[2];
+    newModelConstraints[pruningEvent] = newPruningEventConstraints;
+    return newModelConstraints;
+  }
+
+  /**
+   * Creates a copy of the modelConstraintsToEvaluate array with the specified pruning event count
+   * updated.
+   *
+   * @param pruningEvent the pruning event index
+   * @param delta the change to apply to the count (positive for add, negative for remove)
+   * @return a new modelConstraintsToEvaluate array
+   */
+  private int[] copyModelConstraintsToEvaluateArray(int pruningEvent, int delta) {
+    int[] newModelConstraintsToEvaluate = new int[3];
+    newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+    newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+    newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+    newModelConstraintsToEvaluate[pruningEvent] = modelConstraintsToEvaluate[pruningEvent] + delta;
+    return newModelConstraintsToEvaluate;
+  }
+
+  /**
+   * Adds a constraint to the specified pruning event array.
+   *
+   * @param constraint the constraint to add
+   * @param pruningEvent the pruning event index
+   */
+  private void addConstraintToPruningEvent(Constraint constraint, int pruningEvent) {
+    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+    if (pruningEventConstraints != null) {
+      boolean alreadyImposed = false;
+
+      if (modelConstraintsToEvaluate[pruningEvent] > 0) {
+        for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
+          if (pruningEventConstraints[i] == constraint) {
+            alreadyImposed = true;
+            break;
+          }
+        }
+      }
+
+      if (!alreadyImposed) {
+        int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+        Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
+
+        System.arraycopy(
+            pruningEventConstraints,
+            0,
+            newPruningEventConstraints,
+            0,
+            pruningConstraintsToEvaluate);
+        newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
+
+        modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
+        modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, 1);
+      }
+    } else {
+      Constraint[] newPruningEventConstraints = new Constraint[1];
+      newPruningEventConstraints[0] = constraint;
+
+      modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
+      int[] newModelConstraintsToEvaluate = new int[3];
+      newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
+      newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
+      newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+      newModelConstraintsToEvaluate[pruningEvent] = 1;
+      modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+    }
+  }
+
+  /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
    * Variable object. putConstraint function from Variable must make a copy of a vector of
    * constraints if vector was not cloned.
@@ -1359,81 +1443,42 @@ public abstract class FloatDomain extends Domain {
       return;
     }
 
+    addConstraintToPruningEvent(constraint, pruningEvent);
+  }
+
+  /**
+   * Removes a constraint from the specified pruning event array.
+   *
+   * @param constraint the constraint to remove
+   * @param pruningEvent the pruning event index
+   * @return true if the constraint was found and removed, false otherwise
+   */
+  private boolean removeConstraintFromPruningEvent(Constraint constraint, int pruningEvent) {
     Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
     if (pruningEventConstraints != null) {
+      boolean isImposed = false;
+      int i;
 
-      boolean alreadyImposed = false;
-
-      if (modelConstraintsToEvaluate[pruningEvent] > 0) {
-        for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
-          if (pruningEventConstraints[i] == constraint) {
-            alreadyImposed = true;
-            break;
-          }
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
+        if (pruningEventConstraints[i] == constraint) {
+          isImposed = true;
+          break;
         }
       }
 
-      int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+      if (isImposed) {
+        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+          modelConstraints[pruningEvent][i] =
+              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
+        }
 
-      if (!alreadyImposed) {
-        Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
-
-        System.arraycopy(
-            pruningEventConstraints,
-            0,
-            newPruningEventConstraints,
-            0,
-            pruningConstraintsToEvaluate);
-        newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
-
-        Constraint[][] newModelConstraints = new Constraint[3][];
-
-        newModelConstraints[0] = modelConstraints[0];
-        newModelConstraints[1] = modelConstraints[1];
-        newModelConstraints[2] = modelConstraints[2];
-
-        newModelConstraints[pruningEvent] = newPruningEventConstraints;
-
-        modelConstraints = newModelConstraints;
-
-        int[] newModelConstraintsToEvaluate = new int[3];
-
-        newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-        newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-        newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-        newModelConstraintsToEvaluate[pruningEvent]++;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+        modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, -1);
+        return true;
       }
-
-    } else {
-
-      Constraint[] newPruningEventConstraints = new Constraint[1];
-
-      newPruningEventConstraints[0] = constraint;
-
-      Constraint[][] newModelConstraints = new Constraint[3][];
-
-      newModelConstraints[0] = modelConstraints[0];
-      newModelConstraints[1] = modelConstraints[1];
-      newModelConstraints[2] = modelConstraints[2];
-
-      newModelConstraints[pruningEvent] = newPruningEventConstraints;
-
-      modelConstraints = newModelConstraints;
-
-      int[] newModelConstraintsToEvaluate = new int[3];
-
-      newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-      newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-      newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-      newModelConstraintsToEvaluate[pruningEvent] = 1;
-
-      modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
     }
+    return false;
   }
 
   @Override
@@ -1455,126 +1500,13 @@ public abstract class FloatDomain extends Domain {
       return;
     }
 
-    int pruningEvent = FloatDomain.GROUND;
-
-    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[3];
-
-        newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-        newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-        newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-        return;
-      }
+    if (removeConstraintFromPruningEvent(constraint, GROUND)) {
+      return;
     }
-
-    pruningEvent = FloatDomain.BOUND;
-
-    pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[3];
-
-        newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-        newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-        newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-
-        return;
-      }
+    if (removeConstraintFromPruningEvent(constraint, BOUND)) {
+      return;
     }
-
-    pruningEvent = FloatDomain.ANY;
-
-    pruningEventConstraints = modelConstraints[pruningEvent];
-
-    if (pruningEventConstraints != null) {
-
-      boolean isImposed = false;
-
-      int i;
-
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == constraint) {
-          isImposed = true;
-          break;
-        }
-      }
-
-      if (isImposed) {
-
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
-        }
-
-        int[] newModelConstraintsToEvaluate = new int[3];
-
-        newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-        newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-        newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
-
-        newModelConstraintsToEvaluate[pruningEvent]--;
-
-        modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
-      }
-    }
+    removeConstraintFromPruningEvent(constraint, ANY);
   }
 
   /**

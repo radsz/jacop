@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -43,18 +42,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XdivYeqZ extends Constraint implements SatisfiedPresent {
+public class XdivYeqZ extends AbstractXopYeqZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x / y = z. */
-  private final IntVar x;
-
-  /** It specifies variable y in constraint x / y = z. */
-  private final IntVar y;
-
-  /** It specifies variable z in constraint x / y = z. */
-  private final IntVar z;
 
   /**
    * It constructs a constraint X div Y = Z.
@@ -64,16 +54,7 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
    * @param z variable z.
    */
   public XdivYeqZ(IntVar x, IntVar y, IntVar z) {
-
-    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-    this.z = z;
-
-    setScope(x, y, z);
+    super(idNumber, x, y, z);
   }
 
   @Override
@@ -136,11 +117,6 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
       x.domain.in(store.level, x, IntDomain.addInt(xMin, rMin), IntDomain.addInt(xMax, rMax));
 
     } while (store.propagationHasOccurred);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

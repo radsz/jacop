@@ -64,45 +64,14 @@ public class VarWeightNode extends VariableNode {
   }
 
   void propagate() {
-
-    FloatIntervalDomain mul = FloatDomain.mulBounds(v.min(), v.max(), weight, weight);
-    double min = mul.min();
-    double max = mul.max();
-
-    double node_min = min();
-    double node_max = max();
-
-    if (min > node_min) {
-      if (max < node_max) {
-
-        updateBounds(min, max, min, max);
-
-        parent.propagate();
-
-      } else {
-
-        if (min > node_max) {
-          throw Store.failException;
-        }
-
-        updateBounds(min, node_max, min, max);
-
-        parent.propagate();
-      }
-    } else if (max < node_max) {
-
-      if (node_min > max) {
-        throw Store.failException;
-      }
-
-      updateBounds(node_min, max, min, max);
-
-      parent.propagate();
-    }
+    propagateInternal(false);
   }
 
   void propagateAndPrune() {
+    propagateInternal(true);
+  }
 
+  private void propagateInternal(boolean andPrune) {
     FloatIntervalDomain mul = FloatDomain.mulBounds(v.min(), v.max(), weight, weight);
     double min = mul.min();
     double max = mul.max();
@@ -112,29 +81,33 @@ public class VarWeightNode extends VariableNode {
 
     if (min > node_min) {
       if (max < node_max) {
-
         updateBounds(min, max, min, max);
-
-        parent.propagateAndPrune();
-
+        if (andPrune) {
+          parent.propagateAndPrune();
+        } else {
+          parent.propagate();
+        }
       } else {
         if (min > node_max) {
           throw Store.failException;
         }
-
         updateBounds(min, node_max, min, max);
-
-        parent.propagateAndPrune();
+        if (andPrune) {
+          parent.propagateAndPrune();
+        } else {
+          parent.propagate();
+        }
       }
     } else if (max < node_max) {
-
       if (node_min > max) {
         throw Store.failException;
       }
-
       updateBounds(node_min, max, min, max);
-
-      parent.propagateAndPrune();
+      if (andPrune) {
+        parent.propagateAndPrune();
+      } else {
+        parent.propagate();
+      }
     }
   }
 

@@ -282,111 +282,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (currentLevel == removedLevel) {
-
-      if (trailContainsAllChanges) {
-        int lastLevel = levelInfo.removeLast();
-
-        assert lastLevel == removedLevel : "It is only possible to remove recently added level";
-
-        int[] lastTrail = trail.removeLast();
-
-        if (intervalBasedTrail.removeLast()) {
-
-          // interval based representation for removed level.
-          int currentPositionInHoles = 0;
-          int left = 0;
-
-          while (true) {
-
-            while (currentPositionInHoles < lastTrail.length
-                && lastTrail[currentPositionInHoles] == -1) {
-              currentPositionInHoles += 2;
-            }
-
-            if (currentPositionInHoles == lastTrail.length) {
-              break;
-            }
-
-            if (left < lastTrail[currentPositionInHoles]) {
-              for (int i = left; i < lastTrail[currentPositionInHoles]; i++) {
-                objects[i].remove(removedLevel);
-              }
-            }
-
-            left = lastTrail[currentPositionInHoles + 1] + 1;
-
-            currentPositionInHoles += 2;
-          }
-
-          for (int j = left; j < noOfObjects; j++) {
-            objects[j].remove(removedLevel);
-          }
-        } else { // non-interval based representation.
-
-          if (lastTrail != emptyLevel && lastTrail != fullLevel) {
-            for (int i : lastTrail) {
-              objects[i].remove(removedLevel);
-            }
-          }
-
-          if (lastTrail == fullLevel) {
-            for (int i = noOfObjects - 1; i >= 0; i--) {
-              objects[i].remove(removedLevel);
-            }
-          }
-        }
-
-      } else {
-
-        if (addingToIntervals) {
-
-          int currentPositionInHoles = 0;
-          int left = 0;
-
-          while (true) {
-
-            while (currentPositionInHoles < currentIntervals.length
-                && currentIntervals[currentPositionInHoles] == -1) {
-              currentPositionInHoles += 2;
-            }
-
-            if (currentPositionInHoles == currentIntervals.length) {
-              break;
-            }
-
-            if (left < currentIntervals[currentPositionInHoles]) {
-              for (int i = left; i < currentIntervals[currentPositionInHoles]; i++) {
-                objects[i].remove(removedLevel);
-              }
-            }
-
-            left = currentIntervals[currentPositionInHoles + 1] + 1;
-
-            currentPositionInHoles += 2;
-          }
-
-          for (int j = left; j < noOfObjects; j++) {
-            objects[j].remove(removedLevel);
-          }
-
-        } else { // non adding to intervals.
-
-          if (!currentLevelMax) {
-            if (!currentlyChanged.isEmpty()) {
-              for (int i = currentlyChanged.members; i >= 0; i--) {
-                objects[currentlyChanged.dense[i]].remove(removedLevel);
-              }
-            }
-          } else {
-            for (int i = noOfObjects - 1; i >= 0; i--) {
-              objects[i].remove(removedLevel);
-            }
-          }
-        }
-
-        trailContainsAllChanges = true;
-        currentlyChanged.clear();
-      }
+      removeLevelCore(removedLevel);
 
       if (!levelInfo.isEmpty()) {
         currentLevel = levelInfo.getLast();
@@ -410,6 +306,95 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         : "It is only possible to remove the most recent not removed level";
 
     assert checkRemoveInvariant(removedLevel) == null : checkRemoveInvariant(removedLevel);
+  }
+
+  @Override
+  protected void removeLevelCore(int removedLevel) {
+
+    if (trailContainsAllChanges) {
+      int lastLevel = levelInfo.removeLast();
+
+      assert lastLevel == removedLevel : "It is only possible to remove recently added level";
+
+      int[] lastTrail = trail.removeLast();
+
+      if (intervalBasedTrail.removeLast()) {
+
+        // interval based representation for removed level.
+        removeLevelFromIntervals(lastTrail, removedLevel);
+      } else { // non-interval based representation.
+
+        if (lastTrail != emptyLevel && lastTrail != fullLevel) {
+          for (int i : lastTrail) {
+            objects[i].remove(removedLevel);
+          }
+        }
+
+        if (lastTrail == fullLevel) {
+          for (int i = noOfObjects - 1; i >= 0; i--) {
+            objects[i].remove(removedLevel);
+          }
+        }
+      }
+
+    } else {
+
+      if (addingToIntervals) {
+        removeLevelFromIntervals(currentIntervals, removedLevel);
+      } else { // non adding to intervals.
+
+        if (!currentLevelMax) {
+          if (!currentlyChanged.isEmpty()) {
+            for (int i = currentlyChanged.members; i >= 0; i--) {
+              objects[currentlyChanged.dense[i]].remove(removedLevel);
+            }
+          }
+        } else {
+          for (int i = noOfObjects - 1; i >= 0; i--) {
+            objects[i].remove(removedLevel);
+          }
+        }
+      }
+
+      trailContainsAllChanges = true;
+      currentlyChanged.clear();
+    }
+  }
+
+  /**
+   * Removes level from objects based on interval representation.
+   *
+   * @param intervals the intervals array
+   * @param removedLevel the level being removed
+   */
+  private void removeLevelFromIntervals(int[] intervals, int removedLevel) {
+    int currentPositionInHoles = 0;
+    int left = 0;
+
+    while (true) {
+
+      while (currentPositionInHoles < intervals.length && intervals[currentPositionInHoles] == -1) {
+        currentPositionInHoles += 2;
+      }
+
+      if (currentPositionInHoles == intervals.length) {
+        break;
+      }
+
+      if (left < intervals[currentPositionInHoles]) {
+        for (int i = left; i < intervals[currentPositionInHoles]; i++) {
+          objects[i].remove(removedLevel);
+        }
+      }
+
+      left = intervals[currentPositionInHoles + 1] + 1;
+
+      currentPositionInHoles += 2;
+    }
+
+    for (int j = left; j < noOfObjects; j++) {
+      objects[j].remove(removedLevel);
+    }
   }
 
   /**

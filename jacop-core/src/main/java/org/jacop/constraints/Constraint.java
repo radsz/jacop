@@ -86,6 +86,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It specifies the event which must occur in order for the consistency function to be called. */
   protected Map<Var, Integer> consistencyPruningEvents;
 
+  /** It specifies the events which must occur for notConsistency() method being executed. */
+  protected Map<Var, Integer> notConsistencyPruningEvents;
+
   /**
    * It specifies if the constraint consistency function can be prematurely terminated through other
    * than FailureException exception.
@@ -300,6 +303,32 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
+  }
+
+  /**
+   * Helper method to get consistency pruning event from the map if present.
+   *
+   * @param v variable for which pruning event is retrieved
+   * @return the pruning event from the map, or null if not found
+   */
+  protected Integer getConsistencyPruningEventFromMap(Var v) {
+    if (consistencyPruningEvents != null) {
+      return consistencyPruningEvents.get(v);
+    }
+    return null;
+  }
+
+  /**
+   * Helper method to get notConsistency pruning event from the map if present.
+   *
+   * @param v variable for which pruning event is retrieved
+   * @return the pruning event from the map, or null if not found
+   */
+  protected Integer getNotConsistencyPruningEventFromMap(Var v) {
+    if (notConsistencyPruningEvents != null) {
+      return notConsistencyPruningEvents.get(v);
+    }
+    return null;
   }
 
   /**

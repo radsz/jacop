@@ -71,6 +71,50 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   private int[] hardUpperBound;
 
   /**
+   * Helper method to compute countedValue from xvars domains.
+   *
+   * @param xvars the variables
+   * @return array of counted values
+   */
+  private static int[] computeCountedValue(IntVar[] xvars) {
+    IntDomain sum = new IntervalDomain();
+    for (IntVar xVar : xvars) {
+      sum.unionAdapt(xVar.domain);
+    }
+
+    int[] result = new int[sum.getSize()];
+    int i = 0;
+    for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
+      result[i++] = enumer.nextElement();
+    }
+    return result;
+  }
+
+  /**
+   * Helper method to copy an IntVar array.
+   *
+   * @param source the source array
+   * @return a copy of the array
+   */
+  private static IntVar[] copyIntVarArray(IntVar[] source) {
+    IntVar[] result = new IntVar[source.length];
+    System.arraycopy(source, 0, result, 0, source.length);
+    return result;
+  }
+
+  /**
+   * Helper method to copy an int array.
+   *
+   * @param source the source array
+   * @return a copy of the array
+   */
+  private static int[] copyIntArray(int[] source) {
+    int[] result = new int[source.length];
+    System.arraycopy(source, 0, result, 0, source.length);
+    return result;
+  }
+
+  /**
    * It specifies soft-GCC constraint.
    *
    * @param xvars variables over which counting takes place.
@@ -111,21 +155,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           {violationMeasure}
         });
 
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.hardCounters = new IntVar[hardCounters.length];
-    System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
-
-    this.softLowerBound = new int[softLowerBound.length];
-    System.arraycopy(softLowerBound, 0, this.softLowerBound, 0, softLowerBound.length);
-
-    this.softUpperBound = new int[softUpperBound.length];
-    System.arraycopy(softUpperBound, 0, this.softUpperBound, 0, softUpperBound.length);
-
-    this.countedValue = new int[countedValue.length];
-    System.arraycopy(countedValue, 0, this.countedValue, 0, countedValue.length);
-
+    this.xvars = copyIntVarArray(xvars);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.softLowerBound = copyIntArray(softLowerBound);
+    this.softUpperBound = copyIntArray(softUpperBound);
+    this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
   }
@@ -150,21 +184,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.softCounters = new IntVar[softCounters.length];
-    System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
-
-    this.hardLowerBound = new int[hardLowerBound.length];
-    System.arraycopy(hardLowerBound, 0, this.hardLowerBound, 0, hardLowerBound.length);
-
-    this.hardUpperBound = new int[hardUpperBound.length];
-    System.arraycopy(hardUpperBound, 0, this.hardUpperBound, 0, hardUpperBound.length);
-
-    this.countedValue = new int[countedValue.length];
-    System.arraycopy(countedValue, 0, this.countedValue, 0, countedValue.length);
-
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardLowerBound = copyIntArray(hardLowerBound);
+    this.hardUpperBound = copyIntArray(hardUpperBound);
+    this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
   }
@@ -187,18 +211,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.softCounters = new IntVar[softCounters.length];
-    System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
-
-    this.hardCounters = new IntVar[hardCounters.length];
-    System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
-
-    this.countedValue = new int[countedValue.length];
-    System.arraycopy(countedValue, 0, this.countedValue, 0, countedValue.length);
-
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
   }
@@ -221,29 +237,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xvars) {
-      sum.unionAdapt(xVar.domain);
-    }
-
-    countedValue = new int[sum.getSize()];
-    int i = 0;
-    for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
-      countedValue[i++] = enumer.nextElement();
-    }
-
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.hardCounters = new IntVar[hardCounters.length];
-    System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
-
-    this.softLowerBound = new int[softLowerBound.length];
-    System.arraycopy(softLowerBound, 0, this.softLowerBound, 0, softLowerBound.length);
-
-    this.softUpperBound = new int[softUpperBound.length];
-    System.arraycopy(softUpperBound, 0, this.softUpperBound, 0, softUpperBound.length);
-
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.softLowerBound = copyIntArray(softLowerBound);
+    this.softUpperBound = copyIntArray(softUpperBound);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
   }
@@ -266,28 +264,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xvars) {
-      sum.unionAdapt(xVar.domain);
-    }
-
-    countedValue = new int[sum.getSize()];
-    int i = 0;
-    for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
-      countedValue[i++] = enumer.nextElement();
-    }
-
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.softCounters = new IntVar[softCounters.length];
-    System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
-
-    this.hardLowerBound = new int[hardLowerBound.length];
-    System.arraycopy(hardLowerBound, 0, this.hardLowerBound, 0, hardLowerBound.length);
-
-    this.hardUpperBound = new int[hardUpperBound.length];
-    System.arraycopy(hardUpperBound, 0, this.hardUpperBound, 0, hardUpperBound.length);
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardLowerBound = copyIntArray(hardLowerBound);
+    this.hardUpperBound = copyIntArray(hardUpperBound);
 
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
@@ -309,25 +290,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xvars) {
-      sum.unionAdapt(xVar.domain);
-    }
-
-    countedValue = new int[sum.getSize()];
-    int i = 0;
-    for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
-      countedValue[i++] = enumer.nextElement();
-    }
-
-    this.xvars = new IntVar[xvars.length];
-    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
-
-    this.softCounters = new IntVar[softCounters.length];
-    System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
-
-    this.hardCounters = new IntVar[hardCounters.length];
-    System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardCounters = copyIntVarArray(hardCounters);
 
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;

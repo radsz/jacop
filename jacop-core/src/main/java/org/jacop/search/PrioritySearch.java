@@ -163,6 +163,179 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return lastNotNullSearch;
   }
 
+  /**
+   * Initializes the search before labeling: sets store, solution listener variables, and handles
+   * level raising.
+   *
+   * @param store the constraint store
+   * @return true if level was raised, false otherwise
+   */
+  private boolean initializeSearch(Store store) {
+    this.store = store;
+    ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
+
+    for (DepthFirstSearch<T> dfs : search) {
+      dfs.setStore(store);
+    }
+
+    boolean raisedLevel = false;
+    if (store.raiseLevelBeforeConsistency) {
+      store.raiseLevelBeforeConsistency = false;
+      store.setLevel(store.level + 1);
+      raisedLevel = true;
+    }
+
+    depth = store.level;
+    return raisedLevel;
+  }
+
+  /**
+   * Executes consistency check and sub-search selection, handling solution limit exceptions.
+   *
+   * @param collectStatistics whether to collect statistics after solution limit exception
+   * @return true if consistency check passed, false otherwise
+   */
+  private boolean executeSubSearch(boolean collectStatistics) {
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
+
+    final boolean result = store.consistency();
+    store.setLevel(store.level + 1);
+    depth = store.level;
+
+    visited.clear();
+    int subSearch = getSubSearch();
+    visited.set(subSearch);
+
+    if (result) {
+      try {
+        search.get(2 * subSearch).labeling();
+      } catch (SolutionsLimitReached _) {
+        if (collectStatistics) {
+          getStatistics();
+        }
+        solutionsReached = true;
+        if (printInfo) {
+          log.info("Solution limit {} reached", solutionsLimit);
+        }
+      }
+
+      visited.set(subSearch, false);
+    }
+
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    depth--;
+
+    return result;
+  }
+
+  /**
+   * Executes consistency check and sub-search selection, returning the sub-search result.
+   *
+   * @param collectStatistics whether to collect statistics after solution limit exception
+   * @return the result from sub-search labeling, or false if consistency check failed
+   */
+  private boolean executeSubSearchWithResult(boolean collectStatistics) {
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
+
+    boolean result = store.consistency();
+    store.setLevel(store.level + 1);
+    depth = store.level;
+
+    visited.clear();
+    int subSearch = getSubSearch();
+    visited.set(subSearch);
+
+    if (result) {
+      try {
+        result = search.get(2 * subSearch).labeling();
+      } catch (SolutionsLimitReached _) {
+        if (collectStatistics) {
+          getStatistics();
+        }
+        solutionsReached = true;
+        if (printInfo) {
+          log.info("Solution limit {} reached", solutionsLimit);
+        }
+      }
+
+      visited.set(subSearch, false);
+    }
+
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    depth--;
+
+    return result;
+  }
+
+  /**
+   * Finalizes search execution: collects statistics, checks timeout, and prints results.
+   *
+   * @param raisedLevel whether level was raised during initialization
+   * @param exitSolutionCount the solution count to pass to exit listener
+   * @return true if solutions were found, false otherwise
+   */
+  private boolean finalizeSearch(boolean raisedLevel, int exitSolutionCount) {
+    getStatistics();
+
+    if (exitListener != null) {
+      exitListener.executedAtExit(store, exitSolutionCount);
+    }
+
+    for (int i = 0; i < n; i++) {
+      timeOutOccured |= search.get(2 * i).timeOutOccured;
+    }
+
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
+    }
+
+    if (noSolutions > 0) {
+      if (assignSolution) {
+        assignSolution();
+      }
+
+      if (printInfo && costVariable != null) {
+        CostVariableHandler costHandler =
+            SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+        if (costHandler != null) {
+          double costValue = costHandler.getCostValue(costVariable);
+          log.info("Solution cost is {}", costValue);
+        } else if (costVariable instanceof IntVar) {
+          log.info("Solution cost is {}", search.getFirst().costValue);
+        }
+      }
+
+      if (printInfo) {
+        log.info("{}", statistics());
+      }
+
+      if (raisedLevel) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+
+      return true;
+    } else {
+      if (printInfo) {
+        log.info("No solution found.");
+        log.info("{}", statistics());
+      }
+
+      if (raisedLevel) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+
+      return false;
+    }
+  }
+
   /** {@inheritDoc} */
   public boolean labeling(Store store, SelectChoicePoint<T> select) {
 
@@ -178,94 +351,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
    */
   public boolean labeling(Store store) {
 
-    this.store = store;
-    ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
-
-    for (DepthFirstSearch<T> dfs : search) {
-      dfs.setStore(store);
-    }
-
-    if (store.raiseLevelBeforeConsistency) {
-      store.raiseLevelBeforeConsistency = false;
-      store.setLevel(store.level + 1);
-    }
-
-    depth = store.level;
+    boolean raisedLevel = initializeSearch(store);
 
     if (costVariable == null) {
       optimize = false;
     }
 
-    if (initializeListener != null) {
-      initializeListener.executedAtInitialize(store);
-    }
+    executeSubSearch(false);
 
-    final boolean result = store.consistency();
-    store.setLevel(store.level + 1);
-    depth = store.level;
-
-    visited.clear();
-    int subSearch = getSubSearch();
-    visited.set(subSearch);
-
-    if (result) {
-
-      try {
-        search.get(2 * subSearch).labeling();
-      } catch (SolutionsLimitReached _) {
-        solutionsReached = true;
-        if (printInfo) {
-          log.info("Solution limit {} reached", solutionsLimit);
-        }
-      }
-
-      visited.set(subSearch, false);
-    }
-    store.removeLevel(store.level);
-    store.setLevel(store.level - 1);
-    depth--;
-
-    if (exitListener != null) {
-      exitListener.executedAtExit(store, noSolutions);
-    }
-
-    for (int i = 0; i < n; i++) {
-      timeOutOccured |= search.get(2 * i).timeOutOccured;
-    }
-
-    if (timeOutOccured && printInfo) {
-      log.info("Time-out {}s", tOut);
-    }
-
-    if (noSolutions > 0) {
-
-      if (assignSolution) {
-        assignSolution();
-      }
-
-      if (printInfo) {
-        log.info("{}", statistics());
-      }
-
-      return true;
-    } else {
-
-      if (printInfo) {
-
-        log.info("No solution found.");
-
-        log.info(
-            "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
-            searchId,
-            nodes,
-            decisions,
-            wrongDecisions,
-            numberBacktracks,
-            maxDepthExcludePaths);
-      }
-
-      return false;
-    }
+    return finalizeSearch(raisedLevel, noSolutions);
   }
 
   /**
@@ -290,8 +384,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
    */
   public boolean labeling(Store store, Var costVar) {
 
-    this.store = store;
-    ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
+    boolean raisedLevel = initializeSearch(store);
 
     if (solutionsLimit == -1) {
       solutionsLimit = Integer.MAX_VALUE;
@@ -300,7 +393,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> dfs : search) {
       DepthFirstSearch<T> ns = dfs;
       do {
-        ns.setStore(store);
         ns.setCostVar(costVar);
         ns.respectSolutionListenerAdvice = true;
         // find next search
@@ -308,12 +400,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       } while (ns != null);
     }
 
-    if (store.raiseLevelBeforeConsistency) {
-      store.raiseLevelBeforeConsistency = false;
-      store.setLevel(store.level + 1);
-    }
-
-    // heuristic = select;  // has selection already
     depth = store.level;
     costVariable = costVar;
     for (int i = 0; i < n; i++) {
@@ -322,95 +408,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     optimize = true;
     cost = null;
 
-    if (initializeListener != null) {
-      initializeListener.executedAtInitialize(store);
-    }
+    executeSubSearch(true);
 
-    final boolean result = store.consistency();
-    store.setLevel(store.level + 1);
-    depth = store.level;
-
-    visited.clear();
-    int subSearch = getSubSearch();
-    visited.set(subSearch);
-
-    if (result) {
-      try {
-        search.get(2 * subSearch).labeling();
-      } catch (SolutionsLimitReached _) {
-        getStatistics();
-
-        solutionsReached = true;
-        if (printInfo) {
-          log.info("Solution limit {} reached", solutionsLimit);
-        }
-      }
-
-      visited.set(subSearch, false);
-    }
-    store.removeLevel(store.level);
-    store.setLevel(store.level - 1);
-    depth--;
-
-    getStatistics();
-
-    if (exitListener != null) {
-      exitListener.executedAtExit(store, noSolutions);
-    }
-
-    for (int i = 0; i < n; i++) {
-      timeOutOccured |= search.get(2 * i).timeOutOccured;
-    }
-
-    if (timeOutOccured && printInfo) {
-      log.info("Time-out {}s", tOut);
-    }
-
-    if (noSolutions > 0) {
-
-      if (assignSolution) {
-        assignSolution();
-      }
-
-      if (printInfo) {
-        CostVariableHandler costHandler =
-            SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-        if (costHandler != null) {
-          double costValue = costHandler.getCostValue(costVariable);
-          log.info("Solution cost is {}", costValue);
-        } else if (costVariable instanceof IntVar) {
-          log.info("Solution cost is {}", search.getFirst().costValue);
-        }
-      }
-
-      if (printInfo) {
-        log.info("{}", statistics());
-      }
-
-      return true;
-
-    } else {
-
-      if (printInfo) {
-
-        log.info("No solution found.");
-
-        log.info("{}", statistics());
-      }
-
-      return false;
-    }
+    return finalizeSearch(raisedLevel, noSolutions);
   }
 
   /** {@inheritDoc} */
   public boolean labeling() {
 
-    this.store = allVars.getFirst().getStore();
-    ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
-
-    for (DepthFirstSearch<T> dfs : search) {
-      dfs.setStore(store);
-    }
+    boolean raisedLevel = initializeSearch(allVars.getFirst().getStore());
 
     if (costVariable != null) {
       for (DepthFirstSearch<T> dfs : search) {
@@ -426,14 +432,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
     }
 
-    boolean raisedLevel = false;
-
-    if (store.raiseLevelBeforeConsistency) {
-      store.raiseLevelBeforeConsistency = false;
-      store.setLevel(store.level + 1);
-      raisedLevel = true;
-    }
-
     depth = store.level;
     cost = null;
 
@@ -441,44 +439,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       optimize = false;
     }
 
-    if (initializeListener != null) {
-      initializeListener.executedAtInitialize(store);
-    }
-
-    // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
-    // executed
-    // after initialize listener.
-
-    // If constraints employ only one time execution of the part of
-    // the consistency technique then the results of that part must be
-    // stored in one level above the level search starts from as this
-    // can be removed.
-    boolean result = store.consistency();
-    store.setLevel(store.level + 1);
-    depth = store.level;
-
-    visited.clear();
-    int subSearch = getSubSearch();
-    visited.set(subSearch);
-
-    if (result) {
-      try {
-        result = search.get(2 * subSearch).labeling();
-      } catch (SolutionsLimitReached _) {
-        getStatistics();
-
-        solutionsReached = true;
-        if (printInfo) {
-          log.info("Solution limit {} reached", solutionsLimit);
-        }
-      }
-
-      visited.set(subSearch, false);
-    }
-
-    store.removeLevel(store.level);
-    store.setLevel(store.level - 1);
-    depth--;
+    boolean result = executeSubSearchWithResult(true);
 
     getStatistics();
 
@@ -498,6 +459,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       // update number solutions in solution listener; otherwise it will be zero :(
       ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
 
+      if (assignSolution) {
+        assignSolution();
+      }
+
       if (printInfo && costVariable != null && costVariable instanceof IntVar) {
         log.info("Solution cost is {}", costValue);
       }
@@ -516,13 +481,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       } else {
         return result;
       }
-
     } else {
-
       if (printInfo) {
-
         log.info("No solution found.");
-
         log.info("{}", statistics());
       }
 

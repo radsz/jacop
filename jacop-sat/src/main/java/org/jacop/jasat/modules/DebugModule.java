@@ -260,15 +260,7 @@ public final class DebugModule
   public void initialize(Core core) {
     this.core = core;
 
-    core.assertionModules[core.numAssertionModules++] = this;
-    core.backjumpModules[core.numBackjumpModules++] = this;
-    core.conflictModules[core.numConflictModules++] = this;
-    core.forgetModules[core.numForgetModules++] = this;
-    core.propagateModules[core.numPropagateModules++] = this;
-    core.solutionModules[core.numSolutionModules++] = this;
-    core.explanationModules[core.numExplanationModules++] = this;
-    core.clauseModules[core.numClauseModules++] = this;
-    core.startStopModules[core.numStartStopModules++] = this;
+    DebugModuleHelper.registerModule(core, this, this, this, this, this, this, this, this, this);
 
     mapClause.clear();
   }

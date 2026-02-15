@@ -162,13 +162,9 @@ public class Match extends Constraint implements SatisfiedPresent {
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-
-    // If consistency function mode
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
+    Integer possibleEvent = getConsistencyPruningEventFromMap(v);
+    if (possibleEvent != null) {
+      return possibleEvent;
     }
 
     if (v == a) {

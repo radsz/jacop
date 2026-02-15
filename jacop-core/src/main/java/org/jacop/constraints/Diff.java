@@ -290,6 +290,36 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return !(min1 >= max2 || max1 <= min2);
   }
 
+  /**
+   * Helper method to check if a rectangle fits around barriers in a given dimension.
+   *
+   * @param barrier the profile barrier
+   * @param minJ minimum position in dimension j
+   * @param maxJ maximum position in dimension j
+   * @param durJ duration in dimension j
+   * @return true if the rectangle does not fit (excluded state)
+   */
+  protected boolean checkBarrierFit(Profile barrier, int minJ, int maxJ, int durJ) {
+    boolean excludedState = true;
+    int currentJposition = minJ;
+    int k = 0;
+    int barrierSize = barrier.size();
+    while (k < barrierSize && excludedState) {
+      ProfileItem p = barrier.get(k);
+      int hinderStart = p.min;
+      int hinderStop = p.max;
+      if (hinderStart - currentJposition >= durJ) {
+        excludedState = false;
+      }
+      currentJposition = hinderStop;
+      k++;
+    }
+    if (excludedState && maxJ - currentJposition >= durJ) {
+      excludedState = false;
+    }
+    return excludedState;
+  }
+
   private Pair minForbiddenInterval(
       int start, int i, Rectangle r, List<IntRectangle> consideredRect) {
 
@@ -475,21 +505,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           }
         }
 
-        int k = 0;
-        int barrierSize = barrier.size();
-        while (k < barrierSize && excludedState) {
-          ProfileItem p = barrier.get(k);
-          int hinderStart = p.min;
-          int hinderStop = p.max;
-          if (hinderStart - currentJposition >= durJ) {
-            excludedState = false;
-          }
-          currentJposition = hinderStop;
-          k++;
-        }
-        if (excludedState && maxJ - currentJposition >= durJ) {
-          excludedState = false;
-        }
+        excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
 
         if (excludedState) {
           ProfileItem first = barrier.getFirst();
@@ -535,6 +551,83 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return excludedState;
   }
 
+  /**
+   * Helper method to check if a profile item requires narrowing the start domain.
+   *
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param resources the resource variable
+   * @param dur the duration
+   * @param startDom the start domain
+   * @return true if start domain needs narrowing
+   */
+  protected boolean needsStartNarrowing(
+      ProfileItem p, int limit, IntVar resources, int dur, IntDomain startDom) {
+    return limit - p.value < resources.min()
+        && !(p.min - dur + 1 > startDom.max() || p.max - 1 < startDom.min());
+  }
+
+  /**
+   * Helper method to check if a profile item requires narrowing the resources domain.
+   *
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param resources the resource variable
+   * @param dur the duration
+   * @param startDom the start domain
+   * @return true if resources domain needs narrowing
+   */
+  protected boolean needsResourcesNarrowing(
+      ProfileItem p, int limit, IntVar resources, int dur, IntDomain startDom) {
+    int startVal = startDom.max();
+    int stop = startDom.min() + dur;
+    return startVal < stop
+        && intervalOverlap(startVal, stop, p.min, p.max)
+        && limit - p.value < resources.max();
+  }
+
+  /**
+   * Helper method to narrow start domain based on profile item.
+   *
+   * @param store the store
+   * @param start the start variable
+   * @param p the profile item
+   * @param dur the duration
+   * @param traceMessage the trace message format (may be null)
+   */
+  protected void narrowStartDomain(
+      Store store, IntVar start, ProfileItem p, int dur, String traceMessage) {
+    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+    update.unionAdapt(p.max, IntDomain.MAX_INT);
+
+    if (traceNarrOn && traceMessage != null) {
+      log.debug(traceMessage, start, update, start);
+    }
+
+    start.domain.in(store.level, start, update);
+  }
+
+  /**
+   * Helper method to narrow resources domain based on profile item.
+   *
+   * @param store the store
+   * @param resources the resources variable
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param traceMessage the trace message format (may be null)
+   */
+  protected void narrowResourcesDomain(
+      Store store, IntVar resources, ProfileItem p, int limit, String traceMessage) {
+    int updateMax = limit - p.value;
+    IntervalDomain update = new IntervalDomain(0, updateMax);
+
+    if (traceNarrOn && traceMessage != null) {
+      log.debug(traceMessage, resources, update, resources);
+    }
+
+    resources.domain.in(store.level, resources, update);
+  }
+
   private void profileCheckInterval(
       Store store,
       DiffnProfile profile,
@@ -553,54 +646,26 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       }
 
       if (intervalOverlap(imin, intervalEnd, p.min, p.max)) {
-        if (limit - p.value < resources.min()) {
-          // Check for possible narrowing of start or fail
-          IntDomain startDom = start.dom();
-          int updateMin = p.min - dur + 1;
-          int updateMax = p.max - 1;
+        IntDomain startDom = start.dom();
+        if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+          narrowStartDomain(store, start, p, dur, "6. Profile Narrowed {} \\ {} => {}");
 
-          if (!(updateMin > startDom.max() || updateMax < startDom.min())) {
+          computeNewMaxDuration(start, p.min, p.max);
 
-            IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
-            update.unionAdapt(p.max, IntDomain.MAX_INT);
-
-            if (traceNarrOn) {
-              log.debug("6. Profile Narrowed {} \\ {} => {}", start, update, start);
-            }
-
-            start.domain.in(store.level, start, update);
-
-            computeNewMaxDuration(start, p.min, p.max);
-
-            int lengthLimit = 0;
-            for (int l : durMax) {
-              if (lengthLimit < l) {
-                lengthLimit = l;
-              }
-            }
-
-            if (traceNarrOn) {
-              log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
-            }
-
-            duration.domain.in(currentStore.level, duration, 0, lengthLimit);
-          }
-        } else {
-          IntDomain startDom = start.dom();
-          int startVal = startDom.max();
-          int stop = startDom.min() + dur;
-          if (startVal < stop && intervalOverlap(startVal, stop, p.min, p.max)) {
-            int updateMax = limit - p.value;
-            if (updateMax < resources.max()) {
-              IntervalDomain update = new IntervalDomain(0, updateMax);
-
-              if (traceNarrOn) {
-                log.debug("8. Profile Narrowed {} in {} => {}", resources, update, resources);
-              }
-
-              resources.domain.in(store.level, resources, update);
+          int lengthLimit = 0;
+          for (int l : durMax) {
+            if (lengthLimit < l) {
+              lengthLimit = l;
             }
           }
+
+          if (traceNarrOn) {
+            log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
+          }
+
+          duration.domain.in(currentStore.level, duration, 0, lengthLimit);
+        } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+          narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
         }
       }
     }

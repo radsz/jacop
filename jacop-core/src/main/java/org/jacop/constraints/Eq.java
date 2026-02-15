@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
@@ -108,16 +109,26 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     throw new IllegalStateException("Not implemented as more precise version exists.");
   }
 
-  @Override
-  public int getConsistencyPruningEvent(Var v) {
-
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(v);
+  /**
+   * Helper method to compute pruning event for a variable, checking custom events first.
+   *
+   * @param v the variable
+   * @param customEvents the map of custom pruning events (may be null)
+   * @return the pruning event for the variable
+   */
+  private int getPruningEvent(Var v, Map<Var, Integer> customEvents) {
+    if (customEvents != null) {
+      Integer possibleEvent = customEvents.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
     return computeMaxPruningEvent(v, c1, c2);
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    return getPruningEvent(v, consistencyPruningEvents);
   }
 
   @Override
@@ -127,14 +138,7 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-
-    if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return computeMaxPruningEvent(v, c1, c2);
+    return getPruningEvent(v, notConsistencyPruningEvents);
   }
 
   @Override
