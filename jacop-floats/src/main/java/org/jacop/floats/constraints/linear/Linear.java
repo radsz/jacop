@@ -183,64 +183,17 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     numberId = idNumber.incrementAndGet();
-
     this.sum = sum;
-
     noSat = new TimeStamp<>(store, false);
 
-    Map<FloatVar, Double> parameters = new LinkedHashMap<>();
-
-    for (int i = 0; i < list.length; i++) {
-      if (weights[i] != 0) {
-        // This causes problem for several examples...
-        if (list[i].min() == list[i].max()) {
-          this.sum -= list[i].value() * weights[i];
-        } else if (parameters.get(list[i]) != null) {
-          // variable ordered in the scope of the Linear constraint.
-          Double coeff = parameters.get(list[i]);
-          Double sumOfCoeff = coeff + weights[i];
-          parameters.put(list[i], sumOfCoeff);
-        } else {
-          parameters.put(list[i], weights[i]);
-        }
-      }
-    }
-
-    this.list = new FloatVar[parameters.size()];
-    this.weights = new double[parameters.size()];
-
-    int k = 0;
-    for (Map.Entry<FloatVar, Double> e : parameters.entrySet()) {
-      this.list[k] = e.getKey();
-      this.weights[k] = e.getValue();
-      k++;
-    }
+    Map<FloatVar, Double> parameters = buildParametersMap(list, weights);
+    installListAndWeights(parameters);
 
     if (this.list.length == 0) {
-
-      this.list = new FloatVar[2];
-      this.weights = new double[2];
-      this.list[0] = new FloatVar(store, 0, 0);
-      this.weights[0] = 1;
-      this.list[1] = new FloatVar(store, 0, 0);
-      this.weights[1] = 1;
-
-      if (Math.abs(this.sum) < FloatDomain.precision()) {
-        this.sum = 0;
-      }
+      installEmptyListFallback(store);
     }
-
     if (this.list.length == 1) {
-      // ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
-
-      FloatVar v = this.list[0];
-      double w = this.weights[0];
-      this.list = new FloatVar[2];
-      this.weights = new double[2];
-      this.list[0] = v;
-      this.weights[0] = w;
-      this.list[1] = new FloatVar(store, 0, 0);
-      this.weights[1] = 1;
+      installSingleVariableFallback(store);
     }
 
     VariableNode[] leafNodes = new VariableNode[this.list.length];
@@ -265,6 +218,58 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     setScope(this.list);
 
     checkForOverflow();
+  }
+
+  private Map<FloatVar, Double> buildParametersMap(FloatVar[] list, double[] weights) {
+    Map<FloatVar, Double> parameters = new LinkedHashMap<>();
+    for (int i = 0; i < list.length; i++) {
+      if (weights[i] != 0) {
+        if (list[i].min() == list[i].max()) {
+          this.sum -= list[i].value() * weights[i];
+        } else if (parameters.get(list[i]) != null) {
+          Double coeff = parameters.get(list[i]);
+          Double sumOfCoeff = coeff + weights[i];
+          parameters.put(list[i], sumOfCoeff);
+        } else {
+          parameters.put(list[i], weights[i]);
+        }
+      }
+    }
+    return parameters;
+  }
+
+  private void installListAndWeights(Map<FloatVar, Double> parameters) {
+    this.list = new FloatVar[parameters.size()];
+    this.weights = new double[parameters.size()];
+    int k = 0;
+    for (Map.Entry<FloatVar, Double> e : parameters.entrySet()) {
+      this.list[k] = e.getKey();
+      this.weights[k] = e.getValue();
+      k++;
+    }
+  }
+
+  private void installEmptyListFallback(Store store) {
+    this.list = new FloatVar[2];
+    this.weights = new double[2];
+    this.list[0] = new FloatVar(store, 0, 0);
+    this.weights[0] = 1;
+    this.list[1] = new FloatVar(store, 0, 0);
+    this.weights[1] = 1;
+    if (Math.abs(this.sum) < FloatDomain.precision()) {
+      this.sum = 0;
+    }
+  }
+
+  private void installSingleVariableFallback(Store store) {
+    FloatVar v = this.list[0];
+    double w = this.weights[0];
+    this.list = new FloatVar[2];
+    this.weights = new double[2];
+    this.list[0] = v;
+    this.weights[0] = w;
+    this.list[1] = new FloatVar(store, 0, 0);
+    this.weights[1] = 1;
   }
 
   RootBnode buildBinaryTree(BinaryNode[] nodes) {

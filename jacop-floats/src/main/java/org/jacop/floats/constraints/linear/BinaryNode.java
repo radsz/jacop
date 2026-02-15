@@ -84,42 +84,47 @@ public abstract class BinaryNode {
     double nodeMax = max();
 
     if (newMin > nodeMin) {
-      if (newMax < nodeMax) {
-        if (newMin > newMax) {
-          throw org.jacop.core.Store.failException;
-        }
-        updateBounds(newMin, newMax, newLb, newUb);
-        if (andPrune) {
-          parent.propagateAndPrune();
-        } else {
-          parent.propagate();
-        }
-        return true;
-      } else {
-        if (newMin > nodeMax) {
-          throw org.jacop.core.Store.failException;
-        }
-        updateBounds(newMin, nodeMax, newLb, newUb);
-        if (andPrune) {
-          parent.propagateAndPrune();
-        } else {
-          parent.propagate();
-        }
-        return true;
-      }
-    } else if (newMax < nodeMax) {
-      if (nodeMin > newMax) {
-        throw org.jacop.core.Store.failException;
-      }
-      updateBounds(nodeMin, newMax, newLb, newUb);
-      if (andPrune) {
-        parent.propagateAndPrune();
-      } else {
-        parent.propagate();
-      }
-      return true;
+      return applyNewMinAndPropagate(nodeMax, newMin, newMax, newLb, newUb, andPrune);
+    }
+    if (newMax < nodeMax) {
+      return applyNewMaxAndPropagate(nodeMin, newMax, newLb, newUb, andPrune);
     }
     return false;
+  }
+
+  private boolean applyNewMinAndPropagate(
+      double nodeMax, double newMin, double newMax, double newLb, double newUb, boolean andPrune) {
+    if (newMax < nodeMax) {
+      if (newMin > newMax) {
+        throw org.jacop.core.Store.failException;
+      }
+      updateBounds(newMin, newMax, newLb, newUb);
+    } else {
+      if (newMin > nodeMax) {
+        throw org.jacop.core.Store.failException;
+      }
+      updateBounds(newMin, nodeMax, newLb, newUb);
+    }
+    propagateToParent(andPrune);
+    return true;
+  }
+
+  private boolean applyNewMaxAndPropagate(
+      double nodeMin, double newMax, double newLb, double newUb, boolean andPrune) {
+    if (nodeMin > newMax) {
+      throw org.jacop.core.Store.failException;
+    }
+    updateBounds(nodeMin, newMax, newLb, newUb);
+    propagateToParent(andPrune);
+    return true;
+  }
+
+  private void propagateToParent(boolean andPrune) {
+    if (andPrune) {
+      parent.propagateAndPrune();
+    } else {
+      parent.propagate();
+    }
   }
 
   /**

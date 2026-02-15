@@ -88,86 +88,86 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   @Override
   public void consistency(Store store) {
 
-    // identity elements
     if (p.equals(r)) {
       q.domain.in(store.level, q, 1.0, 1.0);
       return;
-    } else if (q.equals(r)) {
+    }
+    if (q.equals(r)) {
       p.domain.in(store.level, p, 1.0, 1.0);
       return;
     }
 
-    if (xSquare) { // P^2 = R
-      do {
-
-        if (r.max() < 0) {
-          throw Store.failException;
-        }
-
-        store.propagationHasOccurred = false;
-
-        // Bounds for R
-
-        double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
-        double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
-        double min = Math.min(p1, p2);
-        double max = Math.max(p1, p2);
-        if (p.min() <= 0.0 && p.max() >= 0.0) {
-          min = 0.0;
-          max = FloatDomain.up(max);
-        } else {
-          min = FloatDomain.down(min);
-          max = FloatDomain.up(max);
-        }
-        r.domain.in(store.level, r, min, max);
-
-        // Bounds for P
-        double pMin;
-        if (r.min() <= 0.0) {
-          pMin = 0.0;
-        } else {
-          pMin = Math.sqrt(r.min());
-        }
-
-        double pMax;
-        if (r.max() < 0.0) {
-          throw Store.failException;
-        } else {
-          pMax = Math.sqrt(r.max());
-        }
-
-        if (pMin > pMax) {
-          throw Store.failException;
-        }
-
-        FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
-        dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
-
-        p.domain.in(store.level, p, dom);
-
-      } while (store.propagationHasOccurred);
-    } else { // P*Q = R
-      do {
-
-        store.propagationHasOccurred = false;
-
-        // Bounds for P
-        FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max());
-
-        p.domain.in(store.level, p, pBounds); // .min(), pBounds.max());
-
-        // Bounds for Q
-        FloatIntervalDomain qBounds = FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max());
-
-        q.domain.in(store.level, q, qBounds); // .min(), qBounds.max());
-
-        // Bounds for R
-        FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max());
-
-        r.domain.in(store.level, r, rBounds); // .min(), rBounds.max());
-
-      } while (store.propagationHasOccurred);
+    if (xSquare) {
+      consistencySquare(store);
+    } else {
+      consistencyProduct(store);
     }
+  }
+
+  private void consistencySquare(Store store) {
+    do {
+      if (r.max() < 0) {
+        throw Store.failException;
+      }
+      store.propagationHasOccurred = false;
+
+      double min = computeRMinForSquare();
+      double max = computeRMaxForSquare();
+      r.domain.in(store.level, r, min, max);
+
+      double pMin = r.min() <= 0.0 ? 0.0 : Math.sqrt(r.min());
+      double pMax;
+      if (r.max() < 0.0) {
+        throw Store.failException;
+      }
+      pMax = Math.sqrt(r.max());
+
+      if (pMin > pMax) {
+        throw Store.failException;
+      }
+
+      FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
+      dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
+      p.domain.in(store.level, p, dom);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  private double computeRMinForSquare() {
+    double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
+    double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
+    double min = Math.min(p1, p2);
+    double max = Math.max(p1, p2);
+    if (p.min() <= 0.0 && p.max() >= 0.0) {
+      return 0.0;
+    }
+    return FloatDomain.down(min);
+  }
+
+  private double computeRMaxForSquare() {
+    double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
+    double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
+    double max = Math.max(p1, p2);
+    if (p.min() <= 0.0 && p.max() >= 0.0) {
+      return FloatDomain.up(max);
+    }
+    return FloatDomain.up(max);
+  }
+
+  private void consistencyProduct(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max());
+      p.domain.in(store.level, p, pBounds);
+
+      FloatIntervalDomain qBounds = FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max());
+      q.domain.in(store.level, q, qBounds);
+
+      FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max());
+      r.domain.in(store.level, r, rBounds);
+
+    } while (store.propagationHasOccurred);
   }
 
   @Override

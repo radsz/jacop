@@ -90,7 +90,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     }
 
     do {
-
       store.propagationHasOccurred = false;
 
       if (satisfied()) {
@@ -100,8 +99,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
       double min = p.min();
       double max = p.max();
       if (p.min() < -FloatDomain.PI || p.max() > FloatDomain.PI) {
-        // normalize to -PI..PI
-
         FloatInterval normP = normalize(p);
         min = normP.min();
         max = normP.max();
@@ -115,95 +112,91 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         }
       }
 
-      int intervalForMin = intervalNo(min);
-      int intervalForMax = intervalNo(max);
-
-      double qMin;
-      double qMax;
-      switch (intervalForMin) {
-        case 1:
-          switch (intervalForMax) {
-            case 1: // d >= -FloatDomain.PI && d < -FloatDomain.PI/2
-              qMin = Math.tan(min);
-              qMax = Math.tan(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              if (qMax < 0) {
-                qMax = FloatDomain.MAX_FLOAT;
-              }
-              break;
-            default:
-              return;
-          }
-          break;
-
-        case 2:
-          switch (intervalForMax) {
-            case 2: // d >= -FloatDomain.PI/2 && d < FloatDomain.PI/2
-              qMin = Math.tan(min);
-              qMax = Math.tan(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              if (qMin > qMax) {
-                if (qMax > 0) {
-                  qMin = -FloatDomain.MAX_FLOAT;
-                } else if (qMin < 0) {
-                  qMax = FloatDomain.MAX_FLOAT;
-                }
-              }
-              break;
-            default:
-              return;
-          }
-          break;
-
-        case 3:
-          switch (intervalForMax) {
-            case 3: // d >= FloatDomain.PI/2 && d <= FloatDomain.PI
-              qMin = Math.tan(min);
-              qMax = Math.tan(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              if (qMin > 0) {
-                qMin = -FloatDomain.MAX_FLOAT;
-              }
-              break;
-            default:
-              return;
-          }
-          break;
-        default:
-          return;
+      double[] qBounds = computeTanQBounds(min, max);
+      if (qBounds == null) {
+        return;
       }
 
-      q.domain.in(store.level, q, qMin, qMax);
-
-      // p update
-      double pMin = Math.atan(qMin); // range -PI/2..PI/2
-      double pMax = Math.atan(qMax); // range -PI/2..PI/2
-
-      // -PI/2 .. PI/2");
-
-      pMin = FloatDomain.down(pMin);
-      pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) {
-        pMin = -FloatDomain.PI / 2;
-      }
-      if (java.lang.Double.isNaN(pMax)) {
-        pMax = FloatDomain.PI / 2;
-      }
-
-      double low;
-      double high;
-      double k = Math.floor(p.min() / FloatDomain.PI);
-      low = FloatDomain.down(pMin + k * FloatDomain.PI);
-      k = Math.ceil(p.max() / FloatDomain.PI);
-      high = FloatDomain.up(pMax + k * FloatDomain.PI);
-      FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
-
-      p.domain.in(store.level, p, pDom); // .min(), pDom.max());
+      q.domain.in(store.level, q, qBounds[0], qBounds[1]);
+      updatePFromQ(store, qBounds[0], qBounds[1]);
 
     } while (store.propagationHasOccurred);
+  }
+
+  /** Returns {qMin, qMax} or null if we should return from the loop. */
+  private double[] computeTanQBounds(double min, double max) {
+    int intervalForMin = intervalNo(min);
+    int intervalForMax = intervalNo(max);
+
+    switch (intervalForMin) {
+      case 1:
+        if (intervalForMax != 1) {
+          return null;
+        }
+        return qBoundsInterval1(min, max);
+      case 2:
+        if (intervalForMax != 2) {
+          return null;
+        }
+        return qBoundsInterval2(min, max);
+      case 3:
+        if (intervalForMax != 3) {
+          return null;
+        }
+        return qBoundsInterval3(min, max);
+      default:
+        return null;
+    }
+  }
+
+  private static double[] qBoundsInterval1(double min, double max) {
+    double qMin = FloatDomain.down(Math.tan(min));
+    double qMax = FloatDomain.up(Math.tan(max));
+    if (qMax < 0) {
+      qMax = FloatDomain.MAX_FLOAT;
+    }
+    return new double[] {qMin, qMax};
+  }
+
+  private static double[] qBoundsInterval2(double min, double max) {
+    double qMin = FloatDomain.down(Math.tan(min));
+    double qMax = FloatDomain.up(Math.tan(max));
+    if (qMin > qMax) {
+      if (qMax > 0) {
+        qMin = -FloatDomain.MAX_FLOAT;
+      } else if (qMin < 0) {
+        qMax = FloatDomain.MAX_FLOAT;
+      }
+    }
+    return new double[] {qMin, qMax};
+  }
+
+  private static double[] qBoundsInterval3(double min, double max) {
+    double qMin = FloatDomain.down(Math.tan(min));
+    double qMax = FloatDomain.up(Math.tan(max));
+    if (qMin > 0) {
+      qMin = -FloatDomain.MAX_FLOAT;
+    }
+    return new double[] {qMin, qMax};
+  }
+
+  private void updatePFromQ(Store store, double qMin, double qMax) {
+    double pMin = Math.atan(qMin);
+    double pMax = Math.atan(qMax);
+    pMin = FloatDomain.down(pMin);
+    pMax = FloatDomain.up(pMax);
+    if (java.lang.Double.isNaN(pMin)) {
+      pMin = -FloatDomain.PI / 2;
+    }
+    if (java.lang.Double.isNaN(pMax)) {
+      pMax = FloatDomain.PI / 2;
+    }
+    double k = Math.floor(p.min() / FloatDomain.PI);
+    double low = FloatDomain.down(pMin + k * FloatDomain.PI);
+    k = Math.ceil(p.max() / FloatDomain.PI);
+    double high = FloatDomain.up(pMax + k * FloatDomain.PI);
+    FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
+    p.domain.in(store.level, p, pDom);
   }
 
   /*

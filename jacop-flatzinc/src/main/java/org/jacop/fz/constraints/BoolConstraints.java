@@ -278,100 +278,148 @@ class BoolConstraints implements ParserTreeConstants {
 
     IntVar[] a1 = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(0)));
     IntVar[] a2 = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(1)));
-    for (IntVar v1 : a1) {
-      for (IntVar v2 : a2) {
-        if (v1.equals(v2)) {
-          // already satisfied since a variable is both negated and not negated
-          if (reified) {
-            IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-            r.domain.inValue(store.level, r, 1);
-          }
-          return;
-        } // already satisfied since a variable is both negated and not negated
-      } // already satisfied since a variable is both negated and not negated
+
+    if (clauseHasSameVarInBothSides(a1, a2)) {
+      setReifiedImpliedResult(node, 1);
+      return;
     }
     if (a1.length == 0 && a2.length == 0) {
       if (reified || implied) {
-        IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        r.domain.inValue(store.level, r, 1);
+        setReifiedImpliedResult(node, 1);
       }
       return;
     }
 
     if (support.options.useSat() && !implied) {
-      if (reified) { // reified
-        IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        sat.generateClauseReif(a1, a2, r);
-      } else {
-        sat.generateClause(a1, a2);
-      }
-    } else { // not SAT generation, use CP constraints
-      ArrayList<IntVar> a1reduced = new ArrayList<>();
-      for (IntVar v : a1) {
-        if (v.min() == 1) {
-          if (reified || implied) {
-            IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-            r.domain.inValue(store.level, r, 1);
-          }
-          return;
-        } else if (v.max() != 0) {
-          a1reduced.add(v);
-        }
-      }
+      poseSatClause(node, a1, a2);
+      return;
+    }
 
-      ArrayList<IntVar> a2reduced = new ArrayList<>();
-      for (IntVar intVar : a2) {
-        if (intVar.max() == 0) {
-          if (reified || implied) {
-            IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-            r.domain.inValue(store.level, r, 1);
-          }
-          return;
-        } else if (intVar.min() != 1) {
-          a2reduced.add(intVar);
-        }
-      }
+    clauseGenerationCp(node, a1, a2);
+  }
 
-      if (a1reduced.isEmpty() && a2reduced.isEmpty()) {
-        if (reified || implied) {
-          IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-          r.domain.inValue(store.level, r, 0);
-          return;
-        } else {
-          throw Store.failException;
+  private boolean clauseHasSameVarInBothSides(IntVar[] a1, IntVar[] a2) {
+    for (IntVar v1 : a1) {
+      for (IntVar v2 : a2) {
+        if (v1.equals(v2)) {
+          return true;
         }
-      }
-
-      PrimitiveConstraint c;
-      if (a1reduced.isEmpty()) {
-        c = new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).getFirst();
-      } else if (a2reduced.isEmpty()) {
-        if (reified) {
-          IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-          support.poseDc(new OrBool(a1reduced, b));
-          return;
-        } else {
-          IntVar r = support.dictionary.getConstant(1);
-          c = new OrBool(a1reduced, r).decompose(store).getFirst();
-        }
-      } else if (a1reduced.size() == 1 && a2reduced.size() == 1) {
-        c = new XlteqY(a2reduced.getFirst(), a1reduced.getFirst());
-      } else {
-        c = new BoolClause(a1reduced, a2reduced);
-      }
-
-      // bool_clause_reif/3 defined in redefinitions-2.0.
-      // bool_clause_imp defined in redefinitions.mzn
-      if (reified) {
-        IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        support.pose(new Reified(c, r));
-      } else if (implied) {
-        IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        support.pose(new Implies(r, c));
-      } else {
-        support.pose(c);
       }
     }
+    return false;
+  }
+
+  private void setReifiedImpliedResult(SimpleNode node, int value) {
+    IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    r.domain.inValue(store.level, r, value);
+  }
+
+  private void poseSatClause(SimpleNode node, IntVar[] a1, IntVar[] a2) {
+    if (reified) {
+      IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+      sat.generateClauseReif(a1, a2, r);
+    } else {
+      sat.generateClause(a1, a2);
+    }
+  }
+
+  private void clauseGenerationCp(SimpleNode node, IntVar[] a1, IntVar[] a2) {
+    ArrayList<IntVar> a1reduced = reduceClausePositives(a1, node);
+    if (a1reduced == null) {
+      return;
+    }
+
+    ArrayList<IntVar> a2reduced = reduceClauseNegatives(a2, node);
+    if (a2reduced == null) {
+      return;
+    }
+
+    if (a1reduced.isEmpty() && a2reduced.isEmpty()) {
+      if (reified || implied) {
+        setReifiedImpliedResult(node, 0);
+        return;
+      }
+      throw Store.failException;
+    }
+
+    PrimitiveConstraint c = buildClauseConstraint(a1reduced, a2reduced, node);
+    if (c == null) {
+      return;
+    }
+
+    if (reified) {
+      IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+      support.pose(new Reified(c, r));
+    } else if (implied) {
+      IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+      support.pose(new Implies(r, c));
+    } else {
+      support.pose(c);
+    }
+  }
+
+  /**
+   * Returns reduced list, or null if clause is satisfied (result set to 1 and caller should
+   * return).
+   */
+  private ArrayList<IntVar> reduceClausePositives(IntVar[] a1, SimpleNode node) {
+    ArrayList<IntVar> a1reduced = new ArrayList<>();
+    for (IntVar v : a1) {
+      if (v.min() == 1) {
+        if (reified || implied) {
+          setReifiedImpliedResult(node, 1);
+        }
+        return null;
+      }
+      if (v.max() != 0) {
+        a1reduced.add(v);
+      }
+    }
+    return a1reduced;
+  }
+
+  /**
+   * Returns reduced list, or null if clause is satisfied (result set to 1 and caller should
+   * return).
+   */
+  private ArrayList<IntVar> reduceClauseNegatives(IntVar[] a2, SimpleNode node) {
+    ArrayList<IntVar> a2reduced = new ArrayList<>();
+    for (IntVar intVar : a2) {
+      if (intVar.max() == 0) {
+        if (reified || implied) {
+          setReifiedImpliedResult(node, 1);
+        }
+        return null;
+      }
+      if (intVar.min() != 1) {
+        a2reduced.add(intVar);
+      }
+    }
+    return a2reduced;
+  }
+
+  /**
+   * Builds the clause constraint from reduced arrays. Returns null if constraint was posed directly
+   * (e.g. reified OrBool) and caller should return.
+   */
+  private PrimitiveConstraint buildClauseConstraint(
+      ArrayList<IntVar> a1reduced, ArrayList<IntVar> a2reduced, SimpleNode node) {
+    if (a1reduced.isEmpty()) {
+      return new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).getFirst();
+    }
+    if (a2reduced.isEmpty()) {
+      if (reified) {
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        support.poseDc(new OrBool(a1reduced, b));
+        return null;
+      }
+      IntVar r = support.dictionary.getConstant(1);
+      return new OrBool(a1reduced, r).decompose(store).getFirst();
+    }
+    if (a1reduced.size() == 1 && a2reduced.size() == 1) {
+      return new XlteqY(a2reduced.getFirst(), a1reduced.getFirst());
+    }
+    return new BoolClause(a1reduced, a2reduced);
   }
 
   boolean allVarOne(IntVar[] w) {

@@ -78,13 +78,24 @@ public class RootBnode extends Bnode {
     propagateForRoot();
   }
 
-  boolean propagateForRoot() { // result indicate whthter bounds are changed (true) or not changed
-    // (flase)
+  boolean propagateForRoot() {
 
     FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
     double min = d.min();
     double max = d.max();
 
+    checkRelationConsistency(min, max);
+
+    double currentMin = min();
+    double currentMax = max();
+    FloatDomain l = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = l.min();
+    double ub = l.max();
+
+    return updateBoundIfTightened(min, max, currentMin, currentMax, lb, ub);
+  }
+
+  private void checkRelationConsistency(double min, double max) {
     switch (rel) {
       case Linear.EQ:
         if (min > val || max < val) {
@@ -119,45 +130,31 @@ public class RootBnode extends Bnode {
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());
     }
+  }
 
-    double current_min = min();
-    double current_max = max();
-
-    FloatDomain l = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
-    double lb = l.min();
-    double ub = l.max();
-
-    // =====
-    if (min > current_min) {
-      if (max < current_max) {
-
+  private boolean updateBoundIfTightened(
+      double min, double max, double currentMin, double currentMax, double lb, double ub) {
+    if (min > currentMin) {
+      if (max < currentMax) {
         if (min > max) {
           throw Store.failException;
         }
-
         bound.update(min, max, lb, ub);
-
       } else {
-
-        if (min > current_max) {
+        if (min > currentMax) {
           throw Store.failException;
         }
-
-        bound.update(min, current_max, lb, ub);
+        bound.update(min, currentMax, lb, ub);
       }
-      return true;
-    } else if (max < current_max) {
-
-      if (current_min > max) {
-        throw Store.failException;
-      }
-
-      bound.update(current_min, max, lb, ub);
-
       return true;
     }
-    // =====
-
+    if (max < currentMax) {
+      if (currentMin > max) {
+        throw Store.failException;
+      }
+      bound.update(currentMin, max, lb, ub);
+      return true;
+    }
     return false;
   }
 
@@ -166,47 +163,46 @@ public class RootBnode extends Bnode {
     double min = min();
     double max = max();
 
+    double[] pruned = computePrunedMinMax(min, max);
+    prune(pruned[0], pruned[1]);
+  }
+
+  private double[] computePrunedMinMax(double min, double max) {
     switch (rel) {
-      case Linear.EQ: // =============================================
-        min = val;
-        max = val;
-        break;
-      case Linear.LT: // =============================================
-        max = FloatDomain.previous(val);
-        break;
-      case Linear.LE: // =============================================
-        max = val;
-        break;
-      case Linear.NE: // =============================================
-        if (val >= min && val <= max) {
-          if (min == val) {
-            if (FloatDomain.next(min) <= max) {
-              min = FloatDomain.next(min);
-            } else {
-              throw Store.failException;
-            }
-          } else {
-            if (max == val) {
-              if (FloatDomain.previous(max) >= min) {
-                max = FloatDomain.previous(max);
-              } else {
-                throw Store.failException;
-              }
-            }
-          }
-        }
-        break;
-      case Linear.GT: // =============================================
-        min = FloatDomain.next(val);
-        break;
-      case Linear.GE: // =============================================
-        min = val;
-        break;
+      case Linear.EQ:
+        return new double[] {val, val};
+      case Linear.LT:
+        return new double[] {min, FloatDomain.previous(val)};
+      case Linear.LE:
+        return new double[] {min, val};
+      case Linear.NE:
+        return computePrunedMinMaxNe(min, max);
+      case Linear.GT:
+        return new double[] {FloatDomain.next(val), max};
+      case Linear.GE:
+        return new double[] {val, max};
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());
     }
+  }
 
-    prune(min, max);
+  private double[] computePrunedMinMaxNe(double min, double max) {
+    if (val >= min && val <= max) {
+      if (min == val) {
+        if (FloatDomain.next(min) <= max) {
+          min = FloatDomain.next(min);
+        } else {
+          throw Store.failException;
+        }
+      } else if (max == val) {
+        if (FloatDomain.previous(max) >= min) {
+          max = FloatDomain.previous(max);
+        } else {
+          throw Store.failException;
+        }
+      }
+    }
+    return new double[] {min, max};
   }
 
   /**

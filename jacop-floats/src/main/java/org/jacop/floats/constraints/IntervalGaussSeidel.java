@@ -153,107 +153,118 @@ public class IntervalGaussSeidel {
     FloatInterval[] previousX = new FloatInterval[x.length];
     Arrays.fill(x, new FloatInterval(0.0, 0.0));
 
+    if (!ensureDiagonalDominance()) {
+      return null;
+    }
+
+    if (DEBUG) {
+      debugPrintMatrixSign();
+    }
+
+    while (true) {
+      performGaussSeidelIteration(x);
+
+      if (DEBUG) {
+        debugPrintIteration(N, x);
+      }
+
+      if (N == 0) {
+        N++;
+        copyToPrevious(x, previousX);
+        continue;
+      }
+      N++;
+      if (N == MaxIterations) {
+        break;
+      }
+
+      if (hasConverged(x, previousX)) {
+        break;
+      }
+
+      copyToPrevious(x, previousX);
+    }
+
+    return x;
+  }
+
+  private boolean ensureDiagonalDominance() {
     boolean[] d = new boolean[A.length];
     Arrays.fill(d, false);
     int[] r = new int[A.length];
     boolean dominant = restructure(0, d, r);
 
     if (!dominant) {
-
-      // current method for computing preconditioner is far too slow
-      // and need to be improved.
-
       precondition(A, b);
-
       d = new boolean[A.length];
       Arrays.fill(d, false);
       r = new int[A.length];
       dominant = restructure(0, d, r);
-
-      if (!dominant) {
-        return null;
-      }
     }
+    return dominant;
+  }
 
-    if (DEBUG) {
-      IO.println("dominant = " + true + " ===================================");
-      for (FloatInterval[] floatIntervals : A) {
-        for (FloatInterval floatInterval : floatIntervals) {
-          if (floatInterval.min() <= 0 && floatInterval.max() >= 0) {
-            IO.print("0 ");
-          } else if (floatInterval.min() > 0) {
-            IO.print("+ ");
-          } else if (floatInterval.min() < 0) {
-            IO.print("- ");
-          } else {
-            IO.print("? ");
-          }
+  private void debugPrintMatrixSign() {
+    IO.println("dominant = " + true + " ===================================");
+    for (FloatInterval[] floatIntervals : A) {
+      for (FloatInterval floatInterval : floatIntervals) {
+        if (floatInterval.min() <= 0 && floatInterval.max() >= 0) {
+          IO.print("0 ");
+        } else if (floatInterval.min() > 0) {
+          IO.print("+ ");
+        } else if (floatInterval.min() < 0) {
+          IO.print("- ");
+        } else {
+          IO.print("? ");
         }
-        IO.println();
       }
+      IO.println();
     }
+  }
 
-    while (true) {
+  private void performGaussSeidelIteration(FloatInterval[] x) {
+    for (int i = 0; i < b.length; i++) {
+      FloatIntervalDomain sum = new FloatIntervalDomain(b[i], b[i]);
 
-      for (int i = 0; i < b.length; i++) {
-        FloatIntervalDomain sum = new FloatIntervalDomain(b[i], b[i]);
-
-        for (int j = 0; j < A[i].length; j++) {
-          if (j != i) {
-            FloatIntervalDomain v1 =
-                FloatDomain.mulBounds(A[i][j].min(), A[i][j].max(), x[j].min(), x[j].max());
-            sum = FloatDomain.subBounds(sum.min(), sum.max(), v1.min(), v1.max());
-          }
+      for (int j = 0; j < A[i].length; j++) {
+        if (j != i) {
+          FloatIntervalDomain v1 =
+              FloatDomain.mulBounds(A[i][j].min(), A[i][j].max(), x[j].min(), x[j].max());
+          sum = FloatDomain.subBounds(sum.min(), sum.max(), v1.min(), v1.max());
         }
-
-        FloatIntervalDomain w =
-            FloatDomain.divBounds(sum.min(), sum.max(), A[i][i].min(), A[i][i].max());
-        x[i] = new FloatInterval(w.min(), w.max());
       }
 
-      if (DEBUG) {
-        IO.print("iteration " + N + ": {");
-        for (int i = 0; i < x.length; i++) {
-          if (i == x.length - 1) {
-            IO.print(x[i]);
-          } else {
-            IO.print(x[i] + ", ");
-          }
-        }
-        IO.println("}");
-      }
+      FloatIntervalDomain w =
+          FloatDomain.divBounds(sum.min(), sum.max(), A[i][i].min(), A[i][i].max());
+      x[i] = new FloatInterval(w.min(), w.max());
+    }
+  }
 
-      if (N == 0) {
-        N++;
-        for (int i = 0; i < x.length; i++) {
-          previousX[i] = x[i].copy();
-        }
+  private static void copyToPrevious(FloatInterval[] x, FloatInterval[] previousX) {
+    for (int i = 0; i < x.length; i++) {
+      previousX[i] = x[i].copy();
+    }
+  }
 
-        continue;
+  private void debugPrintIteration(int N, FloatInterval[] x) {
+    IO.print("iteration " + N + ": {");
+    for (int i = 0; i < x.length; i++) {
+      if (i == x.length - 1) {
+        IO.print(x[i]);
       } else {
-        N++;
-        if (N == MaxIterations) {
-          break;
-        }
-      }
-
-      boolean converged = true;
-      for (int i = 0; i < x.length; i++) {
-        if (!x[i].eq(previousX[i])) {
-          converged = false;
-        }
-      }
-
-      if (converged) {
-        break;
-      }
-
-      for (int i = 0; i < x.length; i++) {
-        previousX[i] = x[i].copy();
+        IO.print(x[i] + ", ");
       }
     }
+    IO.println("}");
+  }
 
-    return x;
+  private static boolean hasConverged(FloatInterval[] x, FloatInterval[] previousX) {
+    for (int i = 0; i < x.length; i++) {
+      if (!x[i].eq(previousX[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void precondition(FloatInterval[][] aa, double[] bb) {

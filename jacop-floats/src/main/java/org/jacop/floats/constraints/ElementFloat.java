@@ -173,56 +173,58 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
     boolean copyOfValueHasChanged = valueHasChanged;
 
     if (indexHasChanged) {
-
-      indexHasChanged = false;
-      IntDomain indexDom = index.dom().cloneLight();
-      FloatIntervalDomain domValue = new FloatIntervalDomain(5);
-
-      for (IntDomain duplicate : duplicates) {
-        if (indexDom.isIntersecting(duplicate)) {
-          if (domValue.isEmpty()) {
-            domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-          } else {
-            domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
-          }
-        }
-      }
-      indexDom = indexDom.subtract(duplicatesIndexes);
-
-      // values of index for duplicated values within list are already taken care of above.
-      for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
-        double valueOfElement = list[e.nextElement() - 1 - indexOffset];
-        domValue.unionAdapt(valueOfElement);
-      }
-
-      value.domain.in(store.level, value, domValue);
-      valueHasChanged = false;
+      propagateIndexToValue(store);
     }
 
-    // the if statement above can change value variable but those changes can be ignored.
     if (copyOfValueHasChanged) {
+      propagateValueToIndex(store);
+    }
+  }
 
-      valueHasChanged = false;
+  private void propagateIndexToValue(Store store) {
+    indexHasChanged = false;
+    IntDomain indexDom = index.dom().cloneLight();
+    FloatIntervalDomain domValue = new FloatIntervalDomain(5);
 
-      IntervalDomain indexDom = new IntervalDomain(5);
-      for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int position = e.nextElement() - 1 - indexOffset;
-        double val = list[position];
-
-        if (disjoint(value.domain, val)) {
-          if (indexDom.size == 0) {
-            indexDom.unionAdapt(position + 1 + indexOffset);
-          } else {
-            //   // indexes are in ascending order and can be added at the end if the last element
-            //   // plus 1 is not equal a new value. In such case the max must be changed.
-            indexDom.addLastElement(position + 1 + indexOffset);
-          }
+    for (IntDomain duplicate : duplicates) {
+      if (indexDom.isIntersecting(duplicate)) {
+        if (domValue.isEmpty()) {
+          domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+        } else {
+          domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
         }
       }
-
-      index.domain.in(store.level, index, indexDom.complement());
-      indexHasChanged = false;
     }
+    indexDom = indexDom.subtract(duplicatesIndexes);
+
+    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
+      double valueOfElement = list[e.nextElement() - 1 - indexOffset];
+      domValue.unionAdapt(valueOfElement);
+    }
+
+    value.domain.in(store.level, value, domValue);
+    valueHasChanged = false;
+  }
+
+  private void propagateValueToIndex(Store store) {
+    valueHasChanged = false;
+
+    IntervalDomain indexDom = new IntervalDomain(5);
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int position = e.nextElement() - 1 - indexOffset;
+      double val = list[position];
+
+      if (disjoint(value.domain, val)) {
+        if (indexDom.size == 0) {
+          indexDom.unionAdapt(position + 1 + indexOffset);
+        } else {
+          indexDom.addLastElement(position + 1 + indexOffset);
+        }
+      }
+    }
+
+    index.domain.in(store.level, index, indexDom.complement());
+    indexHasChanged = false;
   }
 
   boolean disjoint(FloatDomain v1, double v2) {

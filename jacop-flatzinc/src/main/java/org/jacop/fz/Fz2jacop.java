@@ -80,42 +80,17 @@ public class Fz2jacop {
     }
 
     try {
-
       parser.model();
-
     } catch (FailException _) {
-      IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
-      if (!opt.getOutputFilename().isEmpty()) {
-        String st = "=====UNSATISFIABLE=====";
-        try {
-          Files.writeString(Path.of(opt.getOutputFilename()), st);
-        } catch (IOException e1) {
-          log.error("Failed to write output to {}", opt.getOutputFilename(), e1);
-        }
-      }
-      if (opt.getStatistics()) {
-        IO.println(
-            "%%%mzn-stat: variables="
-                + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
-        IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
-        IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
-      }
+      handleFailException(opt, parser);
     } catch (ArithmeticException e) {
-      System.err.println("%% Evaluation of model resulted in an overflow.");
-      if (e.getStackTrace().length > 0) {
-        IO.println("%%\t" + e);
-      }
+      handleArithmeticException(e);
     } catch (IllegalArgumentException e) {
-      if (e.getStackTrace().length > 0) {
-        IO.println("%%\t" + e);
-      }
+      handleIllegalArgumentException(e);
     } catch (ParseException | TokenMgrError e) {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
-      IO.println("%% JaCoP internal error. Array out of bound exception " + e);
-      if (e.getStackTrace().length > 0) {
-        IO.println("%%\t" + e.getStackTrace()[0]);
-      }
+      handleArrayIndexOutOfBoundsException(e);
     } catch (OutOfMemoryError _) {
       IO.println("%% Out of memory error; consider option -Xmx... for JVM");
     } catch (StackOverflowError _) {
@@ -126,30 +101,70 @@ public class Fz2jacop {
 
     if (opt.getStatistics()) {
       Runtime.getRuntime().removeShutdownHook(t);
+      printStatisticsTime(parser);
+    }
+  }
 
-      // long execTime = (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;  // in ms
-      long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
-      final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
-      final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
-      final long sec =
-          TimeUnit.MILLISECONDS.toSeconds(
-              execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
-      final long ms =
-          TimeUnit.MILLISECONDS.toMillis(
-              execTime
-                  - TimeUnit.HOURS.toMillis(hr)
-                  - TimeUnit.MINUTES.toMillis(min)
-                  - TimeUnit.SECONDS.toMillis(sec));
-      System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double) execTime / 1000.0);
-      if (hr == 0) {
-        if (min == 0) {
-          IO.println(); // String.format("(%d.%03d)", sec, ms));
-        } else {
-          IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
-        }
-      } else {
-        IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
+  private void handleFailException(Options opt, Parser parser) {
+    IO.println("=====UNSATISFIABLE=====");
+    if (!opt.getOutputFilename().isEmpty()) {
+      try {
+        Files.writeString(Path.of(opt.getOutputFilename()), "=====UNSATISFIABLE=====");
+      } catch (IOException e1) {
+        log.error("Failed to write output to {}", opt.getOutputFilename(), e1);
       }
+    }
+    if (opt.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: variables="
+              + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
+      IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
+      IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+    }
+  }
+
+  private void handleArithmeticException(ArithmeticException e) {
+    System.err.println("%% Evaluation of model resulted in an overflow.");
+    if (e.getStackTrace().length > 0) {
+      IO.println("%%\t" + e);
+    }
+  }
+
+  private void handleIllegalArgumentException(IllegalArgumentException e) {
+    if (e.getStackTrace().length > 0) {
+      IO.println("%%\t" + e);
+    }
+  }
+
+  private void handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
+    IO.println("%% JaCoP internal error. Array out of bound exception " + e);
+    if (e.getStackTrace().length > 0) {
+      IO.println("%%\t" + e.getStackTrace()[0]);
+    }
+  }
+
+  private void printStatisticsTime(Parser parser) {
+    long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
+    final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
+    final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
+    final long sec =
+        TimeUnit.MILLISECONDS.toSeconds(
+            execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+    final long ms =
+        TimeUnit.MILLISECONDS.toMillis(
+            execTime
+                - TimeUnit.HOURS.toMillis(hr)
+                - TimeUnit.MINUTES.toMillis(min)
+                - TimeUnit.SECONDS.toMillis(sec));
+    System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double) execTime / 1000.0);
+    if (hr == 0) {
+      if (min == 0) {
+        IO.println();
+      } else {
+        IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
+      }
+    } else {
+      IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
     }
   }
 }

@@ -85,35 +85,42 @@ public class OptParse<E> {
   public E parse(String[] args, E e) {
     realArgs = new String[args.length];
     int realIndex = 0;
-    // the object
     E current = e;
-    // iterate on arguments
     for (String arg : args) {
-      if (arg.startsWith("-") || arg.startsWith("--")) {
-        if ("-".equals(arg)) {
-          // exception: this is not an option
-          realArgs[realIndex++] = arg;
-          continue;
-        }
-        // parse this as an option
-        int loc = arg.indexOf("=");
-        String key = loc > 0 ? arg.substring(0, loc) : arg;
-        String value = loc > 0 ? arg.substring(loc + 1) : "";
-        if (!handlers.containsKey(key)) {
-          // this option is not registered
-          IO.println("unknown option: " + key);
-          printHelp();
-          return null;
-        } else {
-          current = handlers.get(key).handle(this, current, value);
-        }
-      } else {
+      if (!isOptionArg(arg)) {
         realArgs[realIndex++] = arg;
+      } else {
+        E next = handleOption(arg, current);
+        if (next == null) {
+          return null;
+        }
+        current = next;
       }
     }
-    // truncate the "real args" array and return the E value
     this.realArgs = Arrays.copyOf(realArgs, realIndex);
     return current;
+  }
+
+  private boolean isOptionArg(String arg) {
+    if (!arg.startsWith("-") && !arg.startsWith("--")) {
+      return false;
+    }
+    if ("-".equals(arg)) {
+      return false;
+    }
+    return true;
+  }
+
+  private E handleOption(String arg, E current) {
+    int loc = arg.indexOf("=");
+    String key = loc > 0 ? arg.substring(0, loc) : arg;
+    String value = loc > 0 ? arg.substring(loc + 1) : "";
+    if (!handlers.containsKey(key)) {
+      IO.println("unknown option: " + key);
+      printHelp();
+      return null;
+    }
+    return handlers.get(key).handle(this, current, value);
   }
 
   /** Print help of all options. */

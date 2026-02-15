@@ -242,57 +242,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         makeVectorOfSearches(body);
       }
-      case WARM_START -> {
-        SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        search_variables = getVarArray(expr1);
-
-        SimpleNode expr2 = (SimpleNode) ann.jjtGetChild(1);
-        int[] values = null;
-        try {
-          values = getIntArray(expr2);
-        } catch (IllegalArgumentException _) {
-          throw new IllegalArgumentException(
-              "%Not supported types of values in warm_start; compilation aborted");
-        }
-
-        if (search_variables == null || values == null) {
-          throw new IllegalArgumentException(
-              "Not supported variable and/or value type in warm_start; compilation aborted.");
-        }
-        preferedValues = new HashMap<>();
-        int max = 0;
-        int min = 0;
-        for (int i = 0; i < values.length; i++) {
-          IntVar v = (IntVar) search_variables[i];
-          int val = values[i];
-
-          if (v.domain.contains(val)) {
-            if (preferedValues.get(v) != null && preferedValues.get(v) != val) {
-              IO.println(
-                  "% Warning: Double defintion on warm_start for variable "
-                      + v
-                      + "("
-                      + preferedValues.get(v)
-                      + ", "
-                      + val
-                      + "), the first value is used.");
-            } else {
-              if ((v.max() - val) > (val - v.min())) {
-                max++;
-              } else {
-                min++;
-              }
-              preferedValues.put(v, val);
-            }
-          } else {
-            IO.println(
-                "% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
-          }
-        }
-
-        var_selection_heuristic = INPUT_ORDER;
-        indomain = max > min ? INDOMAIN_MAX : INDOMAIN_MIN;
-      }
+      case WARM_START -> handleWarmStart(ann);
       case "priority_search" -> {
         prioritySearch = true;
 
@@ -312,28 +262,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       case "restart_none" -> {}
-      case "restart_constant" -> {
-        ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
-        int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-        restartCalculator = new ConstantCalculator(scale);
-      }
-      case "restart_linear" -> {
-        ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
-        int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-        restartCalculator = new LinearCalculator(scale);
-      }
-      case "restart_luby" -> {
-        ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
-        int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
-        restartCalculator = new LubyCalculator(scale);
-      }
-      case "restart_geometric" -> {
-        ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
-        double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
-        ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
-        int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
-        restartCalculator = new GeometricCalculator(base, scale);
-      }
+      case "restart_constant" -> handleRestartConstant(ann);
+      case "restart_linear" -> handleRestartLinear(ann);
+      case "restart_luby" -> handleRestartLuby(ann);
+      case "restart_geometric" -> handleRestartGeometric(ann);
       case "relax_and_reconstruct" -> {
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
         relax_and_reconstruct_variables = getVarArray(expr1);
@@ -344,6 +276,80 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
 
     // compilation aborted.");
+  }
+
+  private void handleWarmStart(ASTAnnotation ann) {
+    SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
+    search_variables = getVarArray(expr1);
+    SimpleNode expr2 = (SimpleNode) ann.jjtGetChild(1);
+    int[] values;
+    try {
+      values = getIntArray(expr2);
+    } catch (IllegalArgumentException _) {
+      throw new IllegalArgumentException(
+          "%Not supported types of values in warm_start; compilation aborted");
+    }
+    if (search_variables == null || values == null) {
+      throw new IllegalArgumentException(
+          "Not supported variable and/or value type in warm_start; compilation aborted.");
+    }
+    preferedValues = new HashMap<>();
+    int max = 0;
+    int min = 0;
+    for (int i = 0; i < values.length; i++) {
+      IntVar v = (IntVar) search_variables[i];
+      int val = values[i];
+      if (v.domain.contains(val)) {
+        if (preferedValues.get(v) != null && preferedValues.get(v) != val) {
+          IO.println(
+              "% Warning: Double defintion on warm_start for variable "
+                  + v
+                  + "("
+                  + preferedValues.get(v)
+                  + ", "
+                  + val
+                  + "), the first value is used.");
+        } else {
+          if ((v.max() - val) > (val - v.min())) {
+            max++;
+          } else {
+            min++;
+          }
+          preferedValues.put(v, val);
+        }
+      } else {
+        IO.println(
+            "% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
+      }
+    }
+    var_selection_heuristic = INPUT_ORDER;
+    indomain = max > min ? INDOMAIN_MAX : INDOMAIN_MIN;
+  }
+
+  private void handleRestartConstant(ASTAnnotation ann) {
+    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+    restartCalculator = new ConstantCalculator(scale);
+  }
+
+  private void handleRestartLinear(ASTAnnotation ann) {
+    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+    restartCalculator = new LinearCalculator(scale);
+  }
+
+  private void handleRestartLuby(ASTAnnotation ann) {
+    ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+    int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();
+    restartCalculator = new LubyCalculator(scale);
+  }
+
+  private void handleRestartGeometric(ASTAnnotation ann) {
+    ASTAnnExpr expr1 = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
+    double base = ((ASTScalarFlatExpr) expr1.jjtGetChild(0)).getFloat();
+    ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
+    int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
+    restartCalculator = new GeometricCalculator(base, scale);
   }
 
   /**
@@ -389,52 +395,55 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     switch (expr4.getAnnId()) {
       case ANN_EXPR ->
           explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0).jjtGetChild(0)).getIdent();
-      case "credit" -> {
-        explore = "credit";
-        if (expr4.jjtGetNumChildren() == 2) {
-          if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
-            ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
-            if (cp.jjtGetNumChildren() == 1) {
-              creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
-            }
-          }
-          ASTAnnotation bbs = (ASTAnnotation) expr4.jjtGetChild(1);
-          if (bbs.getId() == JJTANNOTATION && "bbs".equals(bbs.getAnnId())) {
-            if (bbs.jjtGetChild(0).jjtGetNumChildren() == 1) {
-              if (((SimpleNode) bbs.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
-                ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0).jjtGetChild(0);
-                if (bv.jjtGetNumChildren() == 1) {
-                  bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
-                  return;
-                }
-              }
-            }
-          }
-        }
-        explore = COMPLETE;
-        System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
-      }
-      case "lds" -> {
-        explore = "lds";
-
-        if (expr4.jjtGetNumChildren() == 1) {
-          if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
-            if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
-              ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
-              if (ae.jjtGetNumChildren() == 1) {
-                ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
-                return;
-              }
-            }
-          }
-        }
-        explore = COMPLETE;
-        System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
-      }
+      case "credit" -> handleCreditExploration(expr4);
+      case "lds" -> handleLdsExploration(expr4);
       case null, default ->
           throw new RuntimeException(
               "Error: not recognized search exploration type; execution aborted");
     }
+  }
+
+  private void handleCreditExploration(ASTAnnotation expr4) {
+    explore = "credit";
+    if (expr4.jjtGetNumChildren() == 2) {
+      if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+        ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
+        if (cp.jjtGetNumChildren() == 1) {
+          creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
+        }
+      }
+      ASTAnnotation bbs = (ASTAnnotation) expr4.jjtGetChild(1);
+      if (bbs.getId() == JJTANNOTATION && "bbs".equals(bbs.getAnnId())) {
+        if (bbs.jjtGetChild(0).jjtGetNumChildren() == 1) {
+          if (((SimpleNode) bbs.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
+            ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0).jjtGetChild(0);
+            if (bv.jjtGetNumChildren() == 1) {
+              bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
+              return;
+            }
+          }
+        }
+      }
+    }
+    explore = COMPLETE;
+    System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
+  }
+
+  private void handleLdsExploration(ASTAnnotation expr4) {
+    explore = "lds";
+    if (expr4.jjtGetNumChildren() == 1) {
+      if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+        if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
+          ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
+          if (ae.jjtGetNumChildren() == 1) {
+            ldsValue = ((ASTScalarFlatExpr) ae.jjtGetChild(0)).getInt();
+            return;
+          }
+        }
+      }
+    }
+    explore = COMPLETE;
+    System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
   }
 
   /**
@@ -501,73 +510,74 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
     if (RANDOM.equals(var_selection_heuristic)) {
       Indomain<IntVar> indom = getIndomain(indomain);
-      IntVar[] searchVars = new IntVar[search_variables.length];
-      for (int i = 0; i < search_variables.length; i++) {
-        searchVars[i] = (IntVar) search_variables[i];
-      }
-      return new RandomSelect<>(searchVars, indom);
+      return new RandomSelect<>(copyToIntVarArray(), indom);
     }
 
     ComparatorsVar<IntVar> vs = getVarSelect();
     ComparatorVariable<IntVar> var_sel = vs.getVarSel();
     ComparatorVariable<IntVar> tieBreaking =
         tieBreakingInt == null ? vs.getTieSel() : tieBreakingInt;
+    IntVar[] searchVars = copyToIntVarArray();
+
+    SelectChoicePoint<IntVar> splitSelect =
+        getIntSelectForSplitIndomain(searchVars, var_sel, tieBreaking);
+    if (splitSelect != null) {
+      return splitSelect;
+    }
+    if (INPUT_ORDER.equals(var_selection_heuristic)) {
+      return new InputOrderSelect<>(store, (IntVar[]) search_variables, getIndomain(indomain));
+    }
+    Indomain<IntVar> indom = getIndomain(indomain);
+    if (tieBreaking == null) {
+      return new SimpleSelect<>((IntVar[]) search_variables, var_sel, indom);
+    }
+    return new SimpleSelect<>((IntVar[]) search_variables, var_sel, tieBreaking, indom);
+  }
+
+  private IntVar[] copyToIntVarArray() {
     IntVar[] searchVars = new IntVar[search_variables.length];
     for (int i = 0; i < search_variables.length; i++) {
       searchVars[i] = (IntVar) search_variables[i];
     }
+    return searchVars;
+  }
 
+  private SelectChoicePoint<IntVar> getIntSelectForSplitIndomain(
+      IntVar[] searchVars,
+      ComparatorVariable<IntVar> var_sel,
+      ComparatorVariable<IntVar> tieBreaking) {
     if ("indomain_split".equals(indomain)) {
-      if (tieBreaking == null) {
-        return new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>());
-      } else {
-        return new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
-      }
-    } else if ("indomain_split_random".equals(indomain)) {
-      if (tieBreaking == null) {
-        return new SplitRandomSelect<>(searchVars, var_sel, new IndomainMiddle<>());
-      } else {
-        return new SplitRandomSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
-      }
-    } else if ("indomain_reverse_split".equals(indomain)) {
-      if (tieBreaking == null) {
-        SplitSelect<IntVar> sel = new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>());
-        sel.leftFirst = false;
-        return sel;
-      } else {
-        SplitSelect<IntVar> sel =
-            new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
-        sel.leftFirst = false;
-        return sel;
-      }
-    } else if ("outdomain_max".equals(indomain)) {
-      if (tieBreaking == null) {
-        return new SplitSelect<>(searchVars, var_sel, new IndomainMax<>());
-      } else {
-        return new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMax<>());
-      }
-    } else if ("outdomain_min".equals(indomain)) {
-      if (tieBreaking == null) {
-        SplitSelect<IntVar> sel = new SplitSelect<>(searchVars, var_sel, new IndomainMin<>());
-        sel.leftFirst = false;
-        return sel;
-      } else {
-        SplitSelect<IntVar> sel =
-            new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMin<>());
-        sel.leftFirst = false;
-        return sel;
-      }
-    } else if (INPUT_ORDER.equals(var_selection_heuristic)) {
-      Indomain<IntVar> indom = getIndomain(indomain);
-      return new InputOrderSelect<>(store, (IntVar[]) search_variables, indom);
-    } else {
-      Indomain<IntVar> indom = getIndomain(indomain);
-      if (tieBreaking == null) {
-        return new SimpleSelect<>((IntVar[]) search_variables, var_sel, indom);
-      } else {
-        return new SimpleSelect<>((IntVar[]) search_variables, var_sel, tieBreaking, indom);
-      }
+      return tieBreaking == null
+          ? new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>())
+          : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
     }
+    if ("indomain_split_random".equals(indomain)) {
+      return tieBreaking == null
+          ? new SplitRandomSelect<>(searchVars, var_sel, new IndomainMiddle<>())
+          : new SplitRandomSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
+    }
+    if ("indomain_reverse_split".equals(indomain)) {
+      SplitSelect<IntVar> sel =
+          tieBreaking == null
+              ? new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>())
+              : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
+      sel.leftFirst = false;
+      return sel;
+    }
+    if ("outdomain_max".equals(indomain)) {
+      return tieBreaking == null
+          ? new SplitSelect<>(searchVars, var_sel, new IndomainMax<>())
+          : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMax<>());
+    }
+    if ("outdomain_min".equals(indomain)) {
+      SplitSelect<IntVar> sel =
+          tieBreaking == null
+              ? new SplitSelect<>(searchVars, var_sel, new IndomainMin<>())
+              : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMin<>());
+      sel.leftFirst = false;
+      return sel;
+    }
+    return null;
   }
 
   /**
@@ -1179,47 +1189,47 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
     if (ANN_EXPR.equals(expr.getAnnId())) {
       return ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0)).getIdent();
-    } else if (expr.getId() == JJTANNOTATION && "tiebreak".equals(expr.getAnnId())) {
+    }
+    if (expr.getId() == JJTANNOTATION && "tiebreak".equals(expr.getAnnId())) {
+      return getVarSelectHeuristicFromTiebreak(expr);
+    }
+    throw new IllegalArgumentException(
+        "Not supported Variable selection annotation; compilation aborted.");
+  }
 
-      if (Objects.equals(((ASTAnnotation) expr.jjtGetChild(0)).getAnnId(), ANN_VECTOR)) {
-
-        int count = expr.jjtGetChild(0).jjtGetNumChildren();
-        if (count >= 2) {
-          String varSel1 =
-              ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).jjtGetChild(0))
-                  .getIdent();
-
-          var_selection_heuristic =
-              ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(1).jjtGetChild(0).jjtGetChild(0))
-                  .getIdent();
-
-          if ("int_search".equals(search_type) || "bool_search".equals(search_type)) {
-            tieBreakingInt = getVarSelect().getVarSel();
-          } else if ("set_search".equals(search_type)) {
-            tieBreakingSet = getSetVarSelect().getVarSel();
-          } else if ("float_search".equals(search_type)) {
-            tieBreakingFloat = getFloatVarSelect().getVarSel();
-          } else if ("priority_search".equals(search_type)) {
-            tieBreakingInt = getVarSelect().getVarSel();
-          }
-
-          if (count > 2) {
-            System.err.println(
-                "% Warning: tiebreak annotation uses only two variable selection methods, the rest is ignored");
-          }
-
-          return varSel1;
-        } else {
-          throw new IllegalArgumentException(
-              "tiebreak annotation must have two variable selection methods; compilation aborted.");
-        }
-      } else {
-        throw new IllegalArgumentException(
-            "Not supported Variable selection annotation; compilation aborted.");
-      }
-    } else {
+  private String getVarSelectHeuristicFromTiebreak(ASTAnnotation expr) {
+    if (!Objects.equals(((ASTAnnotation) expr.jjtGetChild(0)).getAnnId(), ANN_VECTOR)) {
       throw new IllegalArgumentException(
           "Not supported Variable selection annotation; compilation aborted.");
+    }
+    int count = expr.jjtGetChild(0).jjtGetNumChildren();
+    if (count < 2) {
+      throw new IllegalArgumentException(
+          "tiebreak annotation must have two variable selection methods; compilation aborted.");
+    }
+    String varSel1 =
+        ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).jjtGetChild(0))
+            .getIdent();
+    var_selection_heuristic =
+        ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(1).jjtGetChild(0).jjtGetChild(0))
+            .getIdent();
+    applyTieBreakTieBreaking();
+    if (count > 2) {
+      System.err.println(
+          "% Warning: tiebreak annotation uses only two variable selection methods, the rest is ignored");
+    }
+    return varSel1;
+  }
+
+  private void applyTieBreakTieBreaking() {
+    if ("int_search".equals(search_type) || "bool_search".equals(search_type)) {
+      tieBreakingInt = getVarSelect().getVarSel();
+    } else if ("set_search".equals(search_type)) {
+      tieBreakingSet = getSetVarSelect().getVarSel();
+    } else if ("float_search".equals(search_type)) {
+      tieBreakingFloat = getFloatVarSelect().getVarSel();
+    } else if ("priority_search".equals(search_type)) {
+      tieBreakingInt = getVarSelect().getVarSel();
     }
   }
 
@@ -1244,66 +1254,70 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   /** {@inheritDoc} */
   public String toString() {
     StringBuilder s = new StringBuilder();
-
     if (search_type == null) {
       s.append("defult_search\n");
     } else if (search_seq.isEmpty()) {
-      s.append(search_type).append("(");
-      if (search_variables == null) {
-        s.append("[]");
-      } else {
-        s.append("array1d(1..")
-            .append(search_variables.length)
-            .append(", ")
-            .append(Arrays.asList(search_variables));
-
-        if (WARM_START.equals(search_type)) {
-          s.append(", ").append(preferedValues);
-        }
-      }
-
-      s.append(", ")
-          .append(var_selection_heuristic)
-          .append(", ")
-          .append(indomain)
-          .append(", ")
-          .append(explore)
-          .append(")");
-      if (floatSearch) {
-        s.append(", ").append(precision);
-      }
+      appendSingleSearchToString(s);
     } else if (prioritySearch) {
-      s.append("priority_search(");
+      appendPrioritySearchToString(s);
+    } else {
+      appendSeqSearchToString(s);
+    }
+    return s.toString();
+  }
+
+  private void appendSingleSearchToString(StringBuilder s) {
+    s.append(search_type).append("(");
+    if (search_variables == null) {
+      s.append("[]");
+    } else {
       s.append("array1d(1..")
           .append(search_variables.length)
           .append(", ")
           .append(Arrays.asList(search_variables));
-
-      s.append(", [");
-      for (int i = 0; i < search_seq.size(); i++) {
-        if (i == search_seq.size() - 1) {
-          s.append(search_seq.get(i));
-        } else {
-          s.append(search_seq.get(i)).append(", ");
-        }
+      if (WARM_START.equals(search_type)) {
+        s.append(", ").append(preferedValues);
       }
-      s.append("]");
-
-      s.append(", ").append(var_selection_heuristic).append(", ").append(explore).append(")");
-
-      s.append(")");
-    } else {
-      s.append("seq_search([");
-      for (int i = 0; i < search_seq.size(); i++) { // SearchItem se : search_seq)
-        if (i == search_seq.size() - 1) {
-          s.append(search_seq.get(i));
-        } else {
-          s.append(search_seq.get(i)).append(", ");
-        }
-      }
-      s.append("])");
     }
-    return s.toString();
+    s.append(", ")
+        .append(var_selection_heuristic)
+        .append(", ")
+        .append(indomain)
+        .append(", ")
+        .append(explore)
+        .append(")");
+    if (floatSearch) {
+      s.append(", ").append(precision);
+    }
+  }
+
+  private void appendPrioritySearchToString(StringBuilder s) {
+    s.append("priority_search(");
+    s.append("array1d(1..")
+        .append(search_variables.length)
+        .append(", ")
+        .append(Arrays.asList(search_variables));
+    s.append(", [");
+    appendSearchSeqItems(s);
+    s.append("]");
+    s.append(", ").append(var_selection_heuristic).append(", ").append(explore).append(")");
+    s.append(")");
+  }
+
+  private void appendSeqSearchToString(StringBuilder s) {
+    s.append("seq_search([");
+    appendSearchSeqItems(s);
+    s.append("])");
+  }
+
+  private void appendSearchSeqItems(StringBuilder s) {
+    for (int i = 0; i < search_seq.size(); i++) {
+      if (i == search_seq.size() - 1) {
+        s.append(search_seq.get(i));
+      } else {
+        s.append(search_seq.get(i)).append(", ");
+      }
+    }
   }
 
   /** Pair of comparator variables for tie-breaking. */

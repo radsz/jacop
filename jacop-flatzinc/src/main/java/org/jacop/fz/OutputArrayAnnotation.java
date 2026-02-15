@@ -128,7 +128,19 @@ public class OutputArrayAnnotation {
   public String toString() {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");
+    appendIndexes(s);
+    s.append("[");
+    for (int i = 0; i < array.length; i++) {
+      appendVarToString(s, array[i]);
+      if (i < array.length - 1) {
+        s.append(", ");
+      }
+    }
+    s.append("]);");
+    return s.toString();
+  }
 
+  private void appendIndexes(StringBuilder s) {
     for (IntDomain index : indexes) {
       if (index.getSize() == 0) {
         s.append("{}, ");
@@ -136,53 +148,53 @@ public class OutputArrayAnnotation {
         s.append(index.min()).append("..").append(index.max()).append(", ");
       }
     }
+  }
 
-    s.append("[");
-    for (int i = 0; i < array.length; i++) {
-      Var v = array[i];
-
-      if (v instanceof BooleanVar var1) {
-        if (v.singleton()) {
-          switch (var1.value()) {
-            case 0:
-              s.append("false");
-              break;
-            case 1:
-              s.append("true");
-              break;
-            default:
-              s.append(v.dom().toString());
-          }
-        } else {
-          s.append("false..true");
-        }
-      } else if (v instanceof SetVar setVar) {
-        if (v.singleton()) {
-          IntDomain glb = setVar.dom().glb();
-          if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
-            s.append(glb.min()).append("..").append(glb.max());
-          } else {
-            s.append("{");
-            for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-              int element = e.nextElement();
-              s.append(element);
-              if (e.hasMoreElements()) {
-                s.append(", ");
-              }
-            }
-            s.append("}");
-          }
-        } else {
-          s.append(v.dom().toString());
-        }
-      } else {
-        s.append(v.dom().toString());
-      }
-      if (i < array.length - 1) {
-        s.append(", ");
-      }
+  private void appendVarToString(StringBuilder s, Var v) {
+    if (v instanceof BooleanVar var1) {
+      appendBooleanVarToString(s, var1);
+    } else if (v instanceof SetVar setVar) {
+      appendSetVarToString(s, setVar);
+    } else {
+      s.append(v.dom().toString());
     }
-    s.append("]);");
-    return s.toString();
+  }
+
+  private void appendBooleanVarToString(StringBuilder s, BooleanVar var1) {
+    if (var1.singleton()) {
+      switch (var1.value()) {
+        case 0:
+          s.append("false");
+          break;
+        case 1:
+          s.append("true");
+          break;
+        default:
+          s.append(String.valueOf(var1.dom()));
+      }
+    } else {
+      s.append("false..true");
+    }
+  }
+
+  private void appendSetVarToString(StringBuilder s, SetVar setVar) {
+    if (setVar.singleton()) {
+      IntDomain glb = setVar.dom().glb();
+      if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
+        s.append(glb.min()).append("..").append(glb.max());
+      } else {
+        s.append("{");
+        for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+          int element = e.nextElement();
+          s.append(element);
+          if (e.hasMoreElements()) {
+            s.append(", ");
+          }
+        }
+        s.append("}");
+      }
+    } else {
+      s.append(setVar.dom().toString());
+    }
   }
 }

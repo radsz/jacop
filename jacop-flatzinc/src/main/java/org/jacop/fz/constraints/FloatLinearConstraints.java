@@ -101,75 +101,94 @@ class FloatLinearConstraints implements ParserTreeConstants {
 
     double[] p1 = support.getFloatArray((SimpleNode) node.jjtGetChild(0));
     FloatVar[] p2 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
-
     double p3 = support.getFloat((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    if (reified) { // reified
+    if (reified) {
       IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+      floatLinRelationReified(operation, p1, p2, p3, p4);
+      return;
+    }
+    floatLinRelationNonReified(operation, p1, p2, p3);
+  }
 
-      switch (operation) {
-        case Support.EQ:
-          support.pose(new Reified(new LinearFloat(p2, p1, "==", p3), p4));
-          break;
-        case Support.NE:
-          support.pose(new Reified(new LinearFloat(p2, p1, "!=", p3), p4));
-          break;
-        case Support.LT:
-          support.pose(new Reified(new LinearFloat(p2, p1, "<", p3), p4));
-          break;
-        case Support.LE:
-          support.pose(new Reified(new LinearFloat(p2, p1, "<=", p3), p4));
-          break;
-        default:
-          throw new IllegalArgumentException(
-              "%% ERROR: Constraint floating-point operation not supported.");
+  private void floatLinRelationReified(
+      int operation, double[] p1, FloatVar[] p2, double p3, IntVar p4) {
+    switch (operation) {
+      case Support.EQ:
+        support.pose(new Reified(new LinearFloat(p2, p1, "==", p3), p4));
+        break;
+      case Support.NE:
+        support.pose(new Reified(new LinearFloat(p2, p1, "!=", p3), p4));
+        break;
+      case Support.LT:
+        support.pose(new Reified(new LinearFloat(p2, p1, "<", p3), p4));
+        break;
+      case Support.LE:
+        support.pose(new Reified(new LinearFloat(p2, p1, "<=", p3), p4));
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "%% ERROR: Constraint floating-point operation not supported.");
+    }
+  }
+
+  private void floatLinRelationNonReified(int operation, double[] p1, FloatVar[] p2, double p3) {
+    switch (operation) {
+      case Support.EQ:
+        poseFloatLinEq(p1, p2, p3);
+        break;
+      case Support.NE:
+        support.pose(new LinearFloat(p2, p1, "!=", p3));
+        break;
+      case Support.LT:
+        poseFloatLinLt(p1, p2, p3);
+        break;
+      case Support.LE:
+        poseFloatLinLe(p1, p2, p3);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "%% ERROR: Constraint floating-point operation not supported.");
+    }
+  }
+
+  private void poseFloatLinEq(double[] p1, FloatVar[] p2, double p3) {
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+      if (p3 != 0) {
+        support.pose(new PplusCeqR(p2[1], p3, p2[0]));
+      } else {
+        support.pose(new PeqQ(p2[1], p2[0]));
       }
-    } else { // non reified
-      switch (operation) {
-        case Support.EQ:
-          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-            if (p3 != 0) {
-              support.pose(new PplusCeqR(p2[1], p3, p2[0]));
-            } else {
-              support.pose(new PeqQ(p2[1], p2[0]));
-            }
-          } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-            if (p3 != 0) {
-              support.pose(new PplusCeqR(p2[0], p3, p2[1]));
-            } else {
-              support.pose(new PeqQ(p2[0], p2[1]));
-            }
-          } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-            support.pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
-          } else {
-            support.pose(new LinearFloat(p2, p1, "==", p3));
-          }
-          break;
-        case Support.NE:
-          support.pose(new LinearFloat(p2, p1, "!=", p3));
-          break;
-        case Support.LT:
-          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
-            support.pose(new PltQ(p2[0], p2[1]));
-          } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
-            support.pose(new PltQ(p2[1], p2[0]));
-          } else {
-            support.pose(new LinearFloat(p2, p1, "<", p3));
-          }
-          break;
-        case Support.LE:
-          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
-            support.pose(new PlteqQ(p2[0], p2[1]));
-          } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
-            support.pose(new PlteqQ(p2[1], p2[0]));
-          } else {
-            support.pose(new LinearFloat(p2, p1, "<=", p3));
-          }
-          break;
-        default:
-          throw new IllegalArgumentException(
-              "%% ERROR: Constraint floating-point operation not supported.");
+    } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+      if (p3 != 0) {
+        support.pose(new PplusCeqR(p2[0], p3, p2[1]));
+      } else {
+        support.pose(new PeqQ(p2[0], p2[1]));
       }
+    } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+      support.pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
+    } else {
+      support.pose(new LinearFloat(p2, p1, "==", p3));
+    }
+  }
+
+  private void poseFloatLinLt(double[] p1, FloatVar[] p2, double p3) {
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
+      support.pose(new PltQ(p2[0], p2[1]));
+    } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
+      support.pose(new PltQ(p2[1], p2[0]));
+    } else {
+      support.pose(new LinearFloat(p2, p1, "<", p3));
+    }
+  }
+
+  private void poseFloatLinLe(double[] p1, FloatVar[] p2, double p3) {
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
+      support.pose(new PlteqQ(p2[0], p2[1]));
+    } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
+      support.pose(new PlteqQ(p2[1], p2[0]));
+    } else {
+      support.pose(new LinearFloat(p2, p1, "<=", p3));
     }
   }
 }

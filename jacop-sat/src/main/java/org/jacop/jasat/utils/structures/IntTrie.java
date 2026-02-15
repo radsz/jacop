@@ -180,7 +180,6 @@ public class IntTrie<N extends IntTrie.Node<N>> {
    */
   public final boolean remove(int i) {
 
-    // special case for 0
     if (i == 0) {
       boolean answer = root.posMember;
       root.posMember = false;
@@ -190,75 +189,84 @@ public class IntTrie<N extends IntTrie.Node<N>> {
       return answer;
     }
 
-    // is it >= 0 ?
     int j = i;
-    boolean isPos = true;
+    boolean isPos = j >= 0;
     if (j < 0) {
-      isPos = false;
       j = -j;
     }
 
-    // the last node which we must keep (because it contains something)
-    N lastGoodNode = root;
-    boolean lastBranch = false; // was it 0 or 1 ? (false is 0)
-
-    // go down the Trie
-    N current = root;
-    while (j != 0) {
-
-      // least significant bit
-      int lsb = j & 1;
-      if (lsb == 0) {
-        if (current.son0 == null) {
-          return false;
-        }
-        if (current.posMember || current.negMember || current.son1 != null) {
-          lastGoodNode = current;
-          lastBranch = false; // record the '0'
-        }
-        current = current.son0;
-      } else {
-        if (current.son1 == null) {
-          return false;
-        }
-        if (current.posMember || current.negMember || current.son0 != null) {
-          lastGoodNode = current;
-          lastBranch = true; // record the '1'
-        }
-        current = current.son1;
-      }
-      j = j >> 1; // shift right
+    RemoveResult<N> result = traverseToLeafForRemove(j);
+    if (result == null) {
+      return false;
     }
 
-    // we are now at the node containing (maybe) j
-    boolean answer = isPos ? current.posMember : current.negMember;
+    boolean answer = isPos ? result.leaf.posMember : result.leaf.negMember;
     if (isPos) {
-      current.posMember = false;
+      result.leaf.posMember = false;
     } else {
-      current.negMember = false;
+      result.leaf.negMember = false;
     }
-    // is the node useless, now ?
-    boolean useless =
-        current.son0 == null
-            && current.son1 == null
-            && !(isPos ? current.negMember : current.posMember);
 
-    // clear the nodes that became useless, if there are some
-    if (useless) {
-      if (current != lastGoodNode) {
-        if (lastBranch) {
-          lastGoodNode.son1 = null;
-        } else {
-          lastGoodNode.son0 = null;
-        }
+    boolean useless =
+        result.leaf.son0 == null
+            && result.leaf.son1 == null
+            && !(isPos ? result.leaf.negMember : result.leaf.posMember);
+
+    if (useless && result.leaf != result.lastGoodNode) {
+      if (result.lastBranch) {
+        result.lastGoodNode.son1 = null;
+      } else {
+        result.lastGoodNode.son0 = null;
       }
     }
 
-    // update size and return answer
     if (answer) {
       size--;
     }
     return answer;
+  }
+
+  private RemoveResult<N> traverseToLeafForRemove(int j) {
+    N lastGoodNode = root;
+    boolean lastBranch = false;
+    N current = root;
+
+    while (j != 0) {
+      int lsb = j & 1;
+      if (lsb == 0) {
+        if (current.son0 == null) {
+          return null;
+        }
+        if (current.posMember || current.negMember || current.son1 != null) {
+          lastGoodNode = current;
+          lastBranch = false;
+        }
+        current = current.son0;
+      } else {
+        if (current.son1 == null) {
+          return null;
+        }
+        if (current.posMember || current.negMember || current.son0 != null) {
+          lastGoodNode = current;
+          lastBranch = true;
+        }
+        current = current.son1;
+      }
+      j = j >> 1;
+    }
+    return new RemoveResult<>(current, lastGoodNode, lastBranch);
+  }
+
+  private static final class RemoveResult<N extends IntTrie.Node<N>> {
+    final N leaf;
+    final N lastGoodNode;
+    final boolean lastBranch;
+
+    RemoveResult(N leaf, N lastGoodNode, boolean lastBranch) {
+      this.leaf = leaf;
+      this.lastGoodNode = lastGoodNode;
+      this.lastBranch = lastBranch;
+    }
   }
 
   /** Empty the Trie, removing all elements from it. */

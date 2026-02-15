@@ -713,74 +713,18 @@ public class Tables {
 
     StringBuilder s = new StringBuilder();
     for (int i = 0; i < dictionary.length; i++) {
-
-      // int array || float array
       if (i == indexIntArray) {
-        s.append(tableNames[i]).append("\n");
-        s.append("{");
-        Set<String> keys = dictionary[i].keySet();
-        for (String k : keys) {
-          int[] a = (int[]) dictionary[i].get(k);
-          s.append(k).append("=[");
-          for (int j = 0; j < a.length; j++) {
-            s.append(a[j]);
-            if (j < a.length - 1) {
-              s.append(", ");
-            }
-          }
-          s.append("], ");
-        }
-        s.append("}\n");
-      } else if (i == indexFloatArray) { // float array
-        s.append(tableNames[i]).append("\n");
-        s.append("{");
-        Set<String> keys = dictionary[i].keySet();
-        for (String k : keys) {
-          double[] a = (double[]) dictionary[i].get(k);
-          s.append(k).append("=[");
-          for (int j = 0; j < a.length; j++) {
-            s.append(a[j]);
-            if (j < a.length - 1) {
-              s.append(", ");
-            }
-          }
-          s.append("], ");
-        }
-        s.append("}\n");
-      } else if (i == indexSetArray) { // Set Array
-        s.append(tableNames[i]).append("\n");
-        s.append("{");
-        Set<String> keys = dictionary[i].keySet();
-        for (String k : keys) {
-          s.append(k).append("=");
-          IntDomain[] a = (IntDomain[]) dictionary[i].get(k);
-          s.append(Arrays.asList(a));
-          s.append(", ");
-        }
-        s.append("}\n");
-      } else if (i == indexVariableArray // Variable Array (IntVar, FloatVar, SetVar)
+        appendIntArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexFloatArray) {
+        appendFloatArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexSetArray) {
+        appendSetArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexVariableArray
           || i == indexFloatVariableArray
           || i == indexSetVariableArray) {
-        s.append(tableNames[i]).append("\n");
-        s.append("{");
-        Set<String> keys = dictionary[i].keySet();
-        for (String k : keys) {
-          Var[] a = (Var[]) dictionary[i].get(k);
-          s.append(k).append("=");
-          s.append(Arrays.asList(a));
-          s.append(", ");
-        }
-        s.append("}\n");
+        appendVariableArrayTable(s, dictionary[i], tableNames[i]);
       } else if (i == indexConstantTable) {
-        s.append(tableNames[i]).append("\n");
-        s.append("{");
-        Set<Integer> keys = dictionary[i].keySet();
-        for (Integer k : keys) {
-          Var a = (Var) dictionary[i].get(k);
-          s.append(a);
-          s.append(", ");
-        }
-        s.append("}\n");
+        appendConstantTable(s, dictionary[i], tableNames[i]);
       } else {
         s.append(tableNames[i]).append(" (").append(dictionary[i].size()).append(")\n");
         s.append(dictionary[i]).append("\n");
@@ -816,5 +760,84 @@ public class Tables {
     }
     s.append("]\n");
     return s.toString();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendIntArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      int[] a = (int[]) map.get(k);
+      s.append(k).append("=[");
+      for (int j = 0; j < a.length; j++) {
+        s.append(a[j]);
+        if (j < a.length - 1) {
+          s.append(", ");
+        }
+      }
+      s.append("], ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendFloatArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      double[] a = (double[]) map.get(k);
+      s.append(k).append("=[");
+      for (int j = 0; j < a.length; j++) {
+        s.append(a[j]);
+        if (j < a.length - 1) {
+          s.append(", ");
+        }
+      }
+      s.append("], ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendSetArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      s.append(k).append("=");
+      IntDomain[] a = (IntDomain[]) map.get(k);
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendVariableArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      Var[] a = (Var[]) map.get(k);
+      s.append(k).append("=");
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendConstantTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<Integer> keys = map.keySet();
+    for (Integer k : keys) {
+      Var a = (Var) map.get(k);
+      s.append(a);
+      s.append(", ");
+    }
+    s.append("}\n");
   }
 }

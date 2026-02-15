@@ -89,72 +89,80 @@ public class Derivative {
    */
   public static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
-    List<Constraint> constraints = new ArrayList<>();
-
     if (f == x) {
       return new FloatVar(store, 1.0, 1.0);
-    } else if (vars.contains(f)) {
-      return new FloatVar(store, 0.0, 0.0);
-    } else {
-      for (int i = 0; i < f.dom().modelConstraints.length; i++) {
-        if (f.dom().modelConstraints[i] != null) {
-          for (int j = 0; j < f.dom().modelConstraints[i].length; j++) {
-            if (f.dom().modelConstraints[i][j] != null) {
-
-              Constraint currentConstraint = f.dom().modelConstraints[i][j];
-              if (eval.search(currentConstraint) == -1) {
-
-                if (!derivateConstraints.contains(currentConstraint)) {
-                  constraints.add(currentConstraint);
-                }
-              }
-            }
-          }
-        }
-      }
     }
+    if (vars.contains(f)) {
+      return new FloatVar(store, 0.0, 0.0);
+    }
+
+    List<Constraint> constraints = collectConstraintsForDerivative(f);
 
     if (constraints.size() == 1) {
-
-      Constraint currentConstraint = constraints.getFirst();
-
-      if (!(currentConstraint instanceof FloatDerivableConstraint)) {
-        throw new UnsupportedOperationException(
-            "Constraint " + currentConstraint + " does not support derivatives");
-      }
-
-      eval.push(currentConstraint);
-      FloatVar v = ((FloatDerivableConstraint) currentConstraint).derivative(store, f, vars, x);
-      eval.pop();
-
-      return v;
-    } else if (constraints.isEmpty() && f.singleton()) {
-      return new FloatVar(store, 0.0, 0.0);
-    } else {
-
-      Constraint c = resolveConstraint(f, constraints);
-      if (c != null) {
-        if (!(c instanceof FloatDerivableConstraint)) {
-          throw new UnsupportedOperationException(
-              "Constraint " + c + " does not support derivatives");
-        }
-        eval.push(c);
-        FloatVar v = ((FloatDerivableConstraint) c).derivative(store, f, vars, x);
-        eval.pop();
-
-        return v;
-      }
-
-      IO.println(
-          "!!! "
-              + constraints.size()
-              + " constraints define a function for variable "
-              + f
-              + "\n"
-              + constraints);
-      System.exit(0);
-      return null;
+      return getDerivativeFromSingleConstraint(store, f, vars, x, constraints.getFirst());
     }
+    if (constraints.isEmpty() && f.singleton()) {
+      return new FloatVar(store, 0.0, 0.0);
+    }
+    return getDerivativeFromMultipleConstraints(store, f, vars, x, constraints);
+  }
+
+  private static List<Constraint> collectConstraintsForDerivative(FloatVar f) {
+    List<Constraint> constraints = new ArrayList<>();
+    for (int i = 0; i < f.dom().modelConstraints.length; i++) {
+      if (f.dom().modelConstraints[i] == null) {
+        continue;
+      }
+      for (int j = 0; j < f.dom().modelConstraints[i].length; j++) {
+        if (f.dom().modelConstraints[i][j] == null) {
+          continue;
+        }
+        Constraint currentConstraint = f.dom().modelConstraints[i][j];
+        if (eval.search(currentConstraint) != -1) {
+          continue;
+        }
+        if (!derivateConstraints.contains(currentConstraint)) {
+          constraints.add(currentConstraint);
+        }
+      }
+    }
+    return constraints;
+  }
+
+  private static FloatVar getDerivativeFromSingleConstraint(
+      Store store, FloatVar f, Set<FloatVar> vars, FloatVar x, Constraint currentConstraint) {
+    if (!(currentConstraint instanceof FloatDerivableConstraint)) {
+      throw new UnsupportedOperationException(
+          "Constraint " + currentConstraint + " does not support derivatives");
+    }
+    eval.push(currentConstraint);
+    FloatVar v = ((FloatDerivableConstraint) currentConstraint).derivative(store, f, vars, x);
+    eval.pop();
+    return v;
+  }
+
+  private static FloatVar getDerivativeFromMultipleConstraints(
+      Store store, FloatVar f, Set<FloatVar> vars, FloatVar x, List<Constraint> constraints) {
+    Constraint c = resolveConstraint(f, constraints);
+    if (c != null) {
+      if (!(c instanceof FloatDerivableConstraint)) {
+        throw new UnsupportedOperationException(
+            "Constraint " + c + " does not support derivatives");
+      }
+      eval.push(c);
+      FloatVar v = ((FloatDerivableConstraint) c).derivative(store, f, vars, x);
+      eval.pop();
+      return v;
+    }
+    IO.println(
+        "!!! "
+            + constraints.size()
+            + " constraints define a function for variable "
+            + f
+            + "\n"
+            + constraints);
+    System.exit(0);
+    return null;
   }
 
   static void poseDerivativeConstraint(Constraint c) {
@@ -166,50 +174,14 @@ public class Derivative {
 
   static Constraint resolveConstraint(FloatVar f, List<Constraint> cs) {
 
-    // resolve based on definitions given by a programmer
     Constraint c = definitionConstraint.get(f);
 
-    // if there is no definition use heuristic to resolve it
-    // basically we look for a constraint on a list of possibel constraints
-    // that has output equal variable defining the function
     List<Constraint> resolved = new ArrayList<>();
     if (c == null) {
       for (Constraint cc : cs) {
-        if (cc instanceof PmulQeqR qeqR) {
-          if (f.equals(qeqR.r)) {
-            resolved.add(cc);
-          }
+        if (constraintDefinesF(f, cc)) {
+          resolved.add(cc);
         }
-        if (cc instanceof PmulCeqR ceqR1) {
-          if (f.equals(ceqR1.r)) {
-            resolved.add(cc);
-          }
-        } else if (cc instanceof PplusQeqR qeqR2) {
-          if (f.equals(qeqR2.r)) {
-            resolved.add(cc);
-          }
-        } else if (cc instanceof PplusCeqR ceqR) {
-          if (f.equals(ceqR.r)) {
-            resolved.add(cc);
-          }
-        } else {
-          if (cc instanceof PdivQeqR qeqR) {
-            if (f.equals(qeqR.p)) {
-              resolved.add(cc);
-            }
-          } else if (cc instanceof LinearFloat float1) {
-            if (float1.relationType == Linear.EQ) {
-              double[] ws = float1.weights;
-              FloatVar[] ls = float1.list;
-              for (int i = 0; i < ls.length; i++) {
-                if (f.equals(ls[i]) && ws[i] == -1.0) {
-                  resolved.add(cc);
-                }
-              }
-            }
-          } // else if (cc instanceof EquationSystem)
-        }
-        // ;
       }
     }
 
@@ -218,6 +190,34 @@ public class Derivative {
     }
 
     return c;
+  }
+
+  private static boolean constraintDefinesF(FloatVar f, Constraint cc) {
+    if (cc instanceof PmulQeqR qeqR && f.equals(qeqR.r)) {
+      return true;
+    }
+    if (cc instanceof PmulCeqR ceqR1 && f.equals(ceqR1.r)) {
+      return true;
+    }
+    if (cc instanceof PplusQeqR qeqR2 && f.equals(qeqR2.r)) {
+      return true;
+    }
+    if (cc instanceof PplusCeqR ceqR && f.equals(ceqR.r)) {
+      return true;
+    }
+    if (cc instanceof PdivQeqR qeqR && f.equals(qeqR.p)) {
+      return true;
+    }
+    if (cc instanceof LinearFloat float1 && float1.relationType == Linear.EQ) {
+      double[] ws = float1.weights;
+      FloatVar[] ls = float1.list;
+      for (int i = 0; i < ls.length; i++) {
+        if (f.equals(ls[i]) && ws[i] == -1.0) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

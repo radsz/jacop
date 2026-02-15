@@ -170,54 +170,66 @@ public class Constraints implements ParserTreeConstants {
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 
-    if (node.getId() == JJTCONSTELEM) {
+    if (node.getId() != JJTCONSTELEM) {
+      return;
+    }
 
-      p = ((ASTConstElem) node).getName();
+    p = ((ASTConstElem) node).getName();
+    noConstraints++;
 
-      noConstraints++;
+    if (isBoolClauseConstraint(p)) {
+      boolClauses++;
+    } else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+      handleBool2IntAlias(node);
+    } else if (p.startsWith("int_eq_reif")) {
+      handleIntEqReif(node);
+    } else if (p.startsWith("int_eq_imp")) {
+      handleIntEqImp(node);
+    }
+  }
 
-      if (p.startsWith("bool_clause")
-          || p.startsWith("bool_not")
-          || p.startsWith("bool_eq")
-          || p.startsWith("array_bool_or")) {
-        // || p.startsWith("array_bool") || p.startsWith("bool_xor"))
-        boolClauses++;
-      } else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
-        bool2Int++;
+  private boolean isBoolClauseConstraint(String name) {
+    return name.startsWith("bool_clause")
+        || name.startsWith("bool_not")
+        || name.startsWith("bool_eq")
+        || name.startsWith("array_bool_or");
+  }
 
-        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-        IntVar v1 = support.getVariable(p1);
-        IntVar v2 = support.getVariable(p2);
-        dictionary.addAlias(v1, v2);
+  private void handleBool2IntAlias(SimpleNode node) {
+    bool2Int++;
+    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    IntVar v1 = support.getVariable(p1);
+    IntVar v2 = support.getVariable(p2);
+    dictionary.addAlias(v1, v2);
+    if (v1.singleton() || v2.singleton()) {
+      v1.domain.in(store.level, v1, v2.domain);
+      v2.domain.in(store.level, v2, v1.domain);
+    }
+    if (debug) {
+      IO.println("% Alias: " + v1 + " == " + v2);
+    }
+  }
 
-        if (v1.singleton() || v2.singleton()) {
-          v1.domain.in(store.level, v1, v2.domain);
-          v2.domain.in(store.level, v2, v1.domain);
-        }
+  private void handleIntEqReif(SimpleNode node) {
+    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+    IntVar b = support.getVariable(p3);
+    IntVarAndValue xv = extractIntVarAndValue(p1, p2);
+    if (xv != null) {
+      support.addReified(xv.x, xv.v, b);
+    }
+  }
 
-        if (debug) {
-          IO.println("% Alias: " + v1 + " == " + v2);
-        }
-      } else if (p.startsWith("int_eq_reif")) {
-        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-        ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-        IntVar b = support.getVariable(p3);
-        IntVarAndValue xv = extractIntVarAndValue(p1, p2);
-        if (xv != null) {
-          support.addReified(xv.x, xv.v, b);
-        }
-      } else if (p.startsWith("int_eq_imp")) {
-        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-        ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-        IntVar b = support.getVariable(p3);
-        IntVarAndValue xv = extractIntVarAndValue(p1, p2);
-        if (xv != null) {
-          support.addImplied(xv.x, xv.v, b);
-        }
-      }
+  private void handleIntEqImp(SimpleNode node) {
+    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+    IntVar b = support.getVariable(p3);
+    IntVarAndValue xv = extractIntVarAndValue(p1, p2);
+    if (xv != null) {
+      support.addImplied(xv.x, xv.v, b);
     }
   }
 

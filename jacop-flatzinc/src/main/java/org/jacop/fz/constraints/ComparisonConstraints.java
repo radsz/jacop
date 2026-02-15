@@ -271,166 +271,154 @@ class ComparisonConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-    if (p1.getType() == 0 || p1.getType() == 1) { // first parameter int or bool
-      if (p2.getType() == 0
-          || p2.getType() == 1) { // first parameter int/bool & second parameter int/bool
-        int i1 = support.getInt(p1);
-        if (i1 < IntDomain.MIN_INT || i1 > IntDomain.MAX_INT) {
-          throw new ArithmeticException(
-              "Constant "
-                  + i1
-                  + " outside variable bounds; must be in interval "
-                  + IntDomain.MIN_INT
-                  + ".."
-                  + IntDomain.MAX_INT);
-        }
-        int i2 = support.getInt(p2);
-        if (i2 < IntDomain.MIN_INT || i2 > IntDomain.MAX_INT) {
-          throw new ArithmeticException(
-              "Constant "
-                  + i2
-                  + " outside variable bounds; must be in interval "
-                  + IntDomain.MIN_INT
-                  + ".."
-                  + IntDomain.MAX_INT);
-        }
-        switch (operation) {
-          case Support.EQ:
-            if (i1 != i2) {
-              throw Store.failException;
-            }
-            break;
-          case Support.NE:
-            if (i1 == i2) {
-              throw Store.failException;
-            }
-            break;
-          case Support.LT:
-            if (i1 >= i2) {
-              throw Store.failException;
-            }
-            break;
-          case Support.GT:
-            if (i1 <= i2) {
-              throw Store.failException;
-            }
-            break;
-          case Support.LE:
-            if (i1 > i2) {
-              throw Store.failException;
-            }
-            break;
-          case Support.GE:
-            if (i1 < i2) {
-              throw Store.failException;
-            }
-            break;
-          default:
-            throw new RuntimeException("Internal error in " + getClass().getName());
-        }
-      } else { // first parameter int/bool & second parameter var
+    boolean p1Const = p1.getType() == 0 || p1.getType() == 1;
+    boolean p2Const = p2.getType() == 0 || p2.getType() == 1;
 
-        int i1 = support.getInt(p1);
-        if (i1 < IntDomain.MIN_INT || i1 > IntDomain.MAX_INT) {
-          throw new ArithmeticException(
-              "Constant "
-                  + i1
-                  + " outside variable bounds; must be in interval "
-                  + IntDomain.MIN_INT
-                  + ".."
-                  + IntDomain.MAX_INT);
+    if (p1Const && p2Const) {
+      int i1 = support.getInt(p1);
+      checkIntConstantInBounds(i1);
+      int i2 = support.getInt(p2);
+      checkIntConstantInBounds(i2);
+      intComparisonTwoConstants(operation, i1, i2);
+      return;
+    }
+    if (p1Const) {
+      int i1 = support.getInt(p1);
+      checkIntConstantInBounds(i1);
+      intComparisonConstVar(operation, i1, support.getVariable(p2));
+      return;
+    }
+    if (p2Const) {
+      IntVar v1 = support.getVariable(p1);
+      int i2 = support.getInt(p2);
+      checkIntConstantInBounds(i2);
+      intComparisonVarConst(operation, v1, i2);
+      return;
+    }
+    intComparisonVarVar(operation, support.getVariable(p1), support.getVariable(p2));
+  }
+
+  private static void checkIntConstantInBounds(int value) {
+    if (value < IntDomain.MIN_INT || value > IntDomain.MAX_INT) {
+      throw new ArithmeticException(
+          "Constant "
+              + value
+              + " outside variable bounds; must be in interval "
+              + IntDomain.MIN_INT
+              + ".."
+              + IntDomain.MAX_INT);
+    }
+  }
+
+  private void intComparisonTwoConstants(int operation, int i1, int i2) {
+    switch (operation) {
+      case Support.EQ:
+        if (i1 != i2) {
+          throw Store.failException;
         }
-        IntVar v2 = support.getVariable(p2);
-
-        switch (operation) {
-          case Support.EQ:
-            v2.domain.inValue(store.level, v2, i1);
-            break;
-          case Support.NE:
-            v2.domain.inComplement(store.level, v2, i1);
-            break;
-          case Support.LT:
-            v2.domain.inMin(store.level, v2, i1 + 1);
-            break;
-          case Support.GT:
-            v2.domain.inMax(store.level, v2, i1 - 1);
-            break;
-          case Support.LE:
-            v2.domain.inMin(store.level, v2, i1);
-            break;
-          case Support.GE:
-            v2.domain.inMax(store.level, v2, i1);
-            break;
-          default:
-            throw new RuntimeException("Internal error in " + getClass().getName());
+        break;
+      case Support.NE:
+        if (i1 == i2) {
+          throw Store.failException;
         }
-      }
-    } else { // first parameter var
-      if (p2.getType() == 0 || p2.getType() == 1) { // first parameter var & second parameter int
-
-        IntVar v1 = support.getVariable(p1);
-        int i2 = support.getInt(p2);
-        if (i2 < IntDomain.MIN_INT || i2 > IntDomain.MAX_INT) {
-          throw new ArithmeticException(
-              "Constant "
-                  + i2
-                  + " outside variable bounds; must be in interval "
-                  + IntDomain.MIN_INT
-                  + ".."
-                  + IntDomain.MAX_INT);
+        break;
+      case Support.LT:
+        if (i1 >= i2) {
+          throw Store.failException;
         }
-
-        switch (operation) {
-          case Support.EQ:
-            v1.domain.inValue(store.level, v1, i2);
-            break;
-          case Support.NE:
-            v1.domain.inComplement(store.level, v1, i2);
-            break;
-          case Support.LT:
-            v1.domain.inMax(store.level, v1, i2 - 1);
-            break;
-          case Support.GT:
-            v1.domain.inMin(store.level, v1, i2 + 1);
-            break;
-          case Support.LE:
-            v1.domain.inMax(store.level, v1, i2);
-            break;
-          case Support.GE:
-            v1.domain.inMin(store.level, v1, i2);
-            break;
-          default:
-            throw new RuntimeException("Internal error in " + getClass().getName());
+        break;
+      case Support.GT:
+        if (i1 <= i2) {
+          throw Store.failException;
         }
-
-      } else { // first parameter var & second parameter var
-
-        IntVar v1 = support.getVariable(p1);
-        IntVar v2 = support.getVariable(p2);
-
-        switch (operation) {
-          case Support.EQ:
-            support.pose(new XeqY(v1, v2));
-            break;
-          case Support.NE:
-            support.pose(new XneqY(v1, v2));
-            break;
-          case Support.LT:
-            support.pose(new XltY(v1, v2));
-            break;
-          case Support.GT:
-            support.pose(new XgtY(v1, v2));
-            break;
-          case Support.LE:
-            support.pose(new XlteqY(v1, v2));
-            break;
-          case Support.GE:
-            support.pose(new XgteqY(v1, v2));
-            break;
-          default:
-            throw new RuntimeException("Internal error in " + getClass().getName());
+        break;
+      case Support.LE:
+        if (i1 > i2) {
+          throw Store.failException;
         }
-      }
+        break;
+      case Support.GE:
+        if (i1 < i2) {
+          throw Store.failException;
+        }
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void intComparisonConstVar(int operation, int i1, IntVar v2) {
+    switch (operation) {
+      case Support.EQ:
+        v2.domain.inValue(store.level, v2, i1);
+        break;
+      case Support.NE:
+        v2.domain.inComplement(store.level, v2, i1);
+        break;
+      case Support.LT:
+        v2.domain.inMin(store.level, v2, i1 + 1);
+        break;
+      case Support.GT:
+        v2.domain.inMax(store.level, v2, i1 - 1);
+        break;
+      case Support.LE:
+        v2.domain.inMin(store.level, v2, i1);
+        break;
+      case Support.GE:
+        v2.domain.inMax(store.level, v2, i1);
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void intComparisonVarConst(int operation, IntVar v1, int i2) {
+    switch (operation) {
+      case Support.EQ:
+        v1.domain.inValue(store.level, v1, i2);
+        break;
+      case Support.NE:
+        v1.domain.inComplement(store.level, v1, i2);
+        break;
+      case Support.LT:
+        v1.domain.inMax(store.level, v1, i2 - 1);
+        break;
+      case Support.GT:
+        v1.domain.inMin(store.level, v1, i2 + 1);
+        break;
+      case Support.LE:
+        v1.domain.inMax(store.level, v1, i2);
+        break;
+      case Support.GE:
+        v1.domain.inMin(store.level, v1, i2);
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void intComparisonVarVar(int operation, IntVar v1, IntVar v2) {
+    switch (operation) {
+      case Support.EQ:
+        support.pose(new XeqY(v1, v2));
+        break;
+      case Support.NE:
+        support.pose(new XneqY(v1, v2));
+        break;
+      case Support.LT:
+        support.pose(new XltY(v1, v2));
+        break;
+      case Support.GT:
+        support.pose(new XgtY(v1, v2));
+        break;
+      case Support.LE:
+        support.pose(new XlteqY(v1, v2));
+        break;
+      case Support.GE:
+        support.pose(new XgteqY(v1, v2));
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
     }
   }
 

@@ -118,70 +118,63 @@ public final class SatChangesListener
    */
   private void onAssertion(int literal) {
 
-    // only interested in literals representing assertions on CP
-    // variables domains
     assert wrapper.isVarLiteral(literal);
     assert core.trail.isSet(Math.abs(literal));
     assert core.trail.values[Math.abs(literal)] == literal;
 
-    // this propagation asserts something about CP variables, let
-    // us find what exactly
-
-    // what variable and value does it concern
     int cpValue = wrapper.boolVarToCpValue(literal);
     IntVar cpVar = wrapper.boolVarToCpVar(literal);
     SatCpBridge range = wrapper.boolVarToDomain(literal);
 
     if (cpVar instanceof BooleanVar cpBoolVar) {
-      // boolean variable, only remember something happened
       booleanVarsToUpdate.add(cpBoolVar);
     } else {
-      // remember that something happened;
-      int cpVarIndex = cpVar.storeIndex;
-      intVarsToUpdate.set(cpVarIndex);
+      updateIntVarBounds(literal, cpValue, cpVar, range);
+    }
+  }
 
-      // is this the negation or the affirmation of some proposition ?
-      boolean isTrue = literal > 0;
+  private void updateIntVarBounds(int literal, int cpValue, IntVar cpVar, SatCpBridge range) {
+    int cpVarIndex = cpVar.storeIndex;
+    intVarsToUpdate.set(cpVarIndex);
+    boolean isTrue = literal > 0;
 
-      if (range.isEqualityBoolVar(literal)) {
-        // simple cases, equality propositions
-        if (isTrue) {
-          // 'x=v', remember this by fixing the range
-          upperBounds[cpVarIndex] = cpValue;
-          lowerBounds[cpVarIndex] = cpValue;
-        } else {
-          // 'x!=v', remember that this value is excluded
-          if (excludedValues[cpVarIndex] == null) {
-            excludedValues[cpVarIndex] = new HashSet<>();
-          }
-          excludedValues[cpVarIndex].add(cpValue);
-        }
+    if (range.isEqualityBoolVar(literal)) {
+      if (isTrue) {
+        upperBounds[cpVarIndex] = cpValue;
+        lowerBounds[cpVarIndex] = cpValue;
       } else {
-        // check impacts on ranges
-        if (isTrue) {
-          // 'x<=v' proposition
-          if (upperBounds[cpVarIndex] == null) {
-            upperBounds[cpVarIndex] = cpValue;
-          } else {
-            int curBound = upperBounds[cpVarIndex];
-            if (cpValue < curBound) {
-              upperBounds[cpVarIndex] = cpValue;
-            }
-          }
-
-        } else {
-          // 'not x<=v', so 'x>v' proposition
-
-          cpValue++; // work on '>=' predicate, not '>'
-          if (lowerBounds[cpVarIndex] == null) {
-            lowerBounds[cpVarIndex] = cpValue;
-          } else {
-            int curBound = lowerBounds[cpVarIndex];
-            if (cpValue > curBound) {
-              lowerBounds[cpVarIndex] = cpValue;
-            }
-          }
+        if (excludedValues[cpVarIndex] == null) {
+          excludedValues[cpVarIndex] = new HashSet<>();
         }
+        excludedValues[cpVarIndex].add(cpValue);
+      }
+    } else {
+      if (isTrue) {
+        updateUpperBound(cpVarIndex, cpValue);
+      } else {
+        updateLowerBound(cpVarIndex, cpValue + 1);
+      }
+    }
+  }
+
+  private void updateUpperBound(int cpVarIndex, int cpValue) {
+    if (upperBounds[cpVarIndex] == null) {
+      upperBounds[cpVarIndex] = cpValue;
+    } else {
+      int curBound = upperBounds[cpVarIndex];
+      if (cpValue < curBound) {
+        upperBounds[cpVarIndex] = cpValue;
+      }
+    }
+  }
+
+  private void updateLowerBound(int cpVarIndex, int cpValue) {
+    if (lowerBounds[cpVarIndex] == null) {
+      lowerBounds[cpVarIndex] = cpValue;
+    } else {
+      int curBound = lowerBounds[cpVarIndex];
+      if (cpValue > curBound) {
+        lowerBounds[cpVarIndex] = cpValue;
       }
     }
   }
@@ -209,7 +202,13 @@ public final class SatChangesListener
 
     assert wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate);
 
-    // first, update the IntVar
+    updateIntVars(storeLevel);
+    updateBooleanVars(storeLevel);
+
+    assert wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate);
+  }
+
+  private void updateIntVars(int storeLevel) {
     for (int index = intVarsToUpdate.nextSetBit(0);
         index >= 0;
         index = intVarsToUpdate.nextSetBit(index + 1)) {
@@ -223,7 +222,6 @@ public final class SatChangesListener
           upperBounds[index],
           excludedValues[index]);
 
-      // update the range bounds
       Integer lower = lowerBounds[index];
       Integer upper = upperBounds[index];
       if (lower != null && upper != null) {
@@ -237,25 +235,24 @@ public final class SatChangesListener
         }
       }
 
-      // exclude some values from the domain
       Set<Integer> excluded = excludedValues[variable.storeIndex];
-      if (excluded == null) {
-        continue;
-      }
-      for (int value : excluded) {
-        variable.domain.inComplement(storeLevel, variable, value);
+      if (excluded != null) {
+        for (int value : excluded) {
+          variable.domain.inComplement(storeLevel, variable, value);
+        }
       }
     }
+  }
 
-    // then, boolean variables
+  private void updateBooleanVars(int storeLevel) {
     for (BooleanVar variable : booleanVarsToUpdate) {
       int isOne = wrapper.cpVarToBoolVar(variable, 1, true);
       int isZero = wrapper.cpVarToBoolVar(variable, 0, true);
       int isOneValue = core.trail.values[isOne];
       int isZeroValue = core.trail.values[isZero];
 
-      assert !(isZeroValue * isOneValue > 0); // not both true or false
-      assert !(isOneValue == 0 && isZeroValue == 0); // at least one set
+      assert !(isZeroValue * isOneValue > 0);
+      assert !(isOneValue == 0 && isZeroValue == 0);
 
       if (isOneValue > 0 || isZeroValue < 0) {
         variable.domain.in(storeLevel, variable, 1, 1);
@@ -263,8 +260,6 @@ public final class SatChangesListener
         variable.domain.in(storeLevel, variable, 0, 0);
       }
     }
-
-    assert wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate);
   }
 
   /**

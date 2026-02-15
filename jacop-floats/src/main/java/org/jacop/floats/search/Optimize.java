@@ -103,17 +103,7 @@ public class Optimize<T extends Var> {
     boolean result = store.consistency();
 
     if (result) {
-      if (lastCost != null) {
-
-        if (!(lastCost.min() >= cost.min() && lastCost.max() <= cost.max())) {
-          result = search.labeling(store, select);
-        } else {
-          printLastSolution();
-        }
-
-      } else {
-        result = search.labeling(store, select);
-      }
+      result = performLabelingIfNeeded();
     }
 
     PrimitiveConstraint choice = split.getChoiceConstraint(0);
@@ -123,45 +113,51 @@ public class Optimize<T extends Var> {
     }
 
     double selValue = ((PlteqC) choice).c;
-    if (Double.isNaN(costValue)) { // costValue != Double.NaN)
-      if (costValue < selValue) {
-        choice = new PlteqC(cost, costValue);
-      }
+    if (!Double.isNaN(costValue) && costValue < selValue) {
+      choice = new PlteqC(cost, costValue);
     }
 
     if (result) {
+      return minimizeWithChoice(choice);
+    }
 
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    return false;
+  }
+
+  private boolean performLabelingIfNeeded() {
+    if (lastCost != null) {
+      if (lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) {
+        printLastSolution();
+        return true;
+      }
+    }
+    return search.labeling(store, select);
+  }
+
+  private boolean minimizeWithChoice(PrimitiveConstraint choice) {
+    if (printInfo) {
+      IO.println("% Current cost bounds: " + cost + "\n----------");
+      FloatInterval f = new FloatInterval(cost.min(), ((PlteqC) choice).c);
+      IO.println("% Checking interval " + f);
+    }
+
+    store.impose(choice);
+    boolean result = minimize();
+
+    if (!result) {
       if (printInfo) {
-        IO.println("% Current cost bounds: " + cost + "\n----------");
-        FloatInterval f = new FloatInterval(cost.min(), ((PlteqC) choice).c);
+        IO.println("% No solution");
+        FloatInterval f = new FloatInterval(FloatDomain.next(((PlteqC) choice).c), cost.max());
         IO.println("% Checking interval " + f);
       }
-
-      store.impose(choice);
+      store.impose(new Not(choice));
       result = minimize();
-
-      if (!result) {
-
-        if (printInfo) {
-          IO.println("% No solution");
-
-          FloatInterval f = new FloatInterval(FloatDomain.next(((PlteqC) choice).c), cost.max());
-          IO.println("% Checking interval " + f);
-        }
-
-        store.impose(new Not(choice));
-        result = minimize();
-      }
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
-      return result;
-    } else {
-
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
-
-      return false;
     }
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    return result;
   }
 
   /** Prints the last found solution including variable values and cost. */

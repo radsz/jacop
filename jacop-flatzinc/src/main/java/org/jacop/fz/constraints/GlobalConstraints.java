@@ -202,14 +202,48 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_cumulative(SimpleNode node) {
 
-    // possible to control when edge find algorithm is used for Cumulative constraint
-
     IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
-    // Filter non-existing tasks
+    IntVar[][] sdr = filterCumulativeTasks(str, dur, res);
+    IntVar[] s = sdr[0];
+    IntVar[] d = sdr[1];
+    IntVar[] r = sdr[2];
+
+    if (cumulativeResourceSumWithinCapacity(r, b)) {
+      return;
+    }
+
+    if (s.length == 1) {
+      support.pose(new XlteqY(r[0], b));
+      return;
+    }
+    if (s.length == 0) {
+      return;
+    }
+    if (b.max() == 1) {
+      poseCumulativeUnaryBranch(s, d, r, b);
+      return;
+    }
+
+    int[] minNext = computeResourceMinAndNextMin(r);
+    int min = minNext[0];
+    int nextMin = minNext[1];
+    boolean unaryPossible =
+        (min > b.max() / 2) || (nextMin > b.max() / 2 && min + nextMin > b.max());
+
+    if (unaryPossible) {
+      poseCumulativeUnaryPossible(s, d, r, b);
+    } else if (allVarGround(d) && allVarGround(r)) {
+      poseCumulativeGround(s, d, r, b);
+    } else {
+      poseCumulativeBasicWithImplied(s, d, r, b);
+    }
+  }
+
+  private IntVar[][] filterCumulativeTasks(IntVar[] str, IntVar[] dur, IntVar[] res) {
     ArrayList<IntVar> start = new ArrayList<>();
     ArrayList<IntVar> duration = new ArrayList<>();
     ArrayList<IntVar> resource = new ArrayList<>();
@@ -220,111 +254,88 @@ class GlobalConstraints implements ParserTreeConstants {
         resource.add(res[i]);
       }
     }
+    return new IntVar[][] {
+      start.toArray(new IntVar[0]), duration.toArray(new IntVar[0]), resource.toArray(new IntVar[0])
+    };
+  }
 
-    IntVar[] s = start.toArray(new IntVar[0]);
-    IntVar[] d = duration.toArray(new IntVar[0]);
-    IntVar[] r = resource.toArray(new IntVar[0]);
-
-    /* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
-     * it has expensive consistency method that do not need to be executed during model
-     * initialization every time an added constraint triggers execution of Cumulative.
-     */
-
+  private boolean cumulativeResourceSumWithinCapacity(IntVar[] r, IntVar b) {
     int resSum = 0;
     for (IntVar v : r) {
       resSum += v.max();
     }
-    if (resSum <= b.min()) {
-      return;
-    }
+    return resSum <= b.min();
+  }
 
-    if (s.length == 0) {
-    } else if (s.length == 1) {
-      support.pose(new XlteqY(r[0], b));
-    } else if (b.max() == 1) { // cumulative unary
-      if (allVarOne(d) && allVarOne(r)) {
-        support.pose(new Alldiff(s));
-      } else {
-        support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+  private void poseCumulativeUnaryBranch(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    if (allVarOne(d) && allVarOne(r)) {
+      support.pose(new Alldiff(s));
+    } else {
+      support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+    }
+  }
+
+  private int[] computeResourceMinAndNextMin(IntVar[] r) {
+    int min = Math.min(r[0].min(), r[1].min());
+    int nextMin = Math.max(r[0].min(), r[1].min());
+    for (int i = 2; i < r.length; i++) {
+      if (r[i].min() < min) {
+        nextMin = min;
+        min = r[i].min();
+      } else if (r[i].min() < nextMin) {
+        nextMin = r[i].min();
+      }
+    }
+    return new int[] {min, nextMin};
+  }
+
+  private void poseCumulativeUnaryPossible(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    if (allVarOne(d)) {
+      support.pose(new Alldiff(s));
+      if (!b.singleton()) {
+        for (IntVar intVar : r) {
+          support.pose(new XlteqY(intVar, b));
+        }
       }
     } else {
-      int min = Math.min(r[0].min(), r[1].min());
-      int nextMin = Math.max(r[0].min(), r[1].min());
-      for (int i = 2; i < r.length; i++) {
-        if (r[i].min() < min) {
-          nextMin = min;
-          min = r[i].min();
-        } else if (r[i].min() < nextMin) {
-          nextMin = r[i].min();
-        }
-      }
-      boolean unaryPossible =
-          (min > b.max() / 2) || (nextMin > b.max() / 2 && min + nextMin > b.max());
-      if (unaryPossible) {
-        if (allVarOne(d)) {
-          support.pose(new Alldiff(s));
-          if (!b.singleton()) {
-            for (IntVar intVar : r) {
-              support.pose(new XlteqY(intVar, b));
-            }
-          }
-        } else { // possible to use CumulativeUnary (it is used with profile propagator; option
-          // true)
-          support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
-        }
-        // these constraints are not needed if we run with profile-based propagator
-      } else if (allVarGround(d) && allVarGround(r)) {
-        HashSet<Integer> diff = new HashSet<>();
-        for (IntVar e : r) {
-          diff.add(e.min());
-        }
-        double n = r.length;
-        double k = diff.size();
-        // KKU, 2018-10-03, use quadratic edge-finding when n*n < n*k*log(n),
+      support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
+    }
+  }
 
-        Cumulative cumul = new Cumulative(s, d, r, b);
+  private void poseCumulativeGround(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    HashSet<Integer> diff = new HashSet<>();
+    for (IntVar e : r) {
+      diff.add(e.min());
+    }
+    double n = r.length;
+    double k = diff.size();
+    Cumulative cumul = new Cumulative(s, d, r, b);
+    if (2 * n * n < n * k * Math.log10(n) / Math.log10(2.0)) {
+      cumul.doQuadraticEdgeFind(true);
+    }
+    support.delayedConstraints.add(cumul);
+    applyCumulativeImpliedOptions(s, d, r, b);
+  }
 
-        if (2 * n * n < n * k * Math.log10(n) / Math.log10(2.0)) {
-          // algorithm with complexity O(n^2) selected
-          cumul.doQuadraticEdgeFind(true);
-        }
-        // algorithm with complexity O(n*k*logn) is default
-        support.delayedConstraints.add(cumul);
+  private void poseCumulativeBasicWithImplied(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+    applyCumulativeImpliedOptions(s, d, r, b);
+  }
 
-        String p = System.getProperty("fz_cumulative_use_disjunctions");
-        if (p != null) {
-          useDisjunctions = Boolean.parseBoolean(p);
-        }
-        p = System.getProperty("fz_cumulative_use_unary");
-        if (p != null) {
-          useCumulativeUnary = Boolean.parseBoolean(p);
-        }
-
-        if (useCumulativeUnary) {
-          impliedCumulativeUnaryConstraints(s, d, r, b);
-        }
-        if (useDisjunctions) {
-          impliedDisjunctionConstraints(s, d, r, b);
-        }
-      } else {
-        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
-
-        String p = System.getProperty("fz_cumulative_use_disjunctions");
-        if (p != null) {
-          useDisjunctions = Boolean.parseBoolean(p);
-        }
-        p = System.getProperty("fz_cumulative_use_unary");
-        if (p != null) {
-          useCumulativeUnary = Boolean.parseBoolean(p);
-        }
-
-        if (useCumulativeUnary) {
-          impliedCumulativeUnaryConstraints(s, d, r, b);
-        }
-        if (useDisjunctions) {
-          impliedDisjunctionConstraints(s, d, r, b);
-        }
-      }
+  private void applyCumulativeImpliedOptions(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    String p = System.getProperty("fz_cumulative_use_disjunctions");
+    if (p != null) {
+      useDisjunctions = Boolean.parseBoolean(p);
+    }
+    p = System.getProperty("fz_cumulative_use_unary");
+    if (p != null) {
+      useCumulativeUnary = Boolean.parseBoolean(p);
+    }
+    if (useCumulativeUnary) {
+      impliedCumulativeUnaryConstraints(s, d, r, b);
+    }
+    if (useDisjunctions) {
+      impliedDisjunctionConstraints(s, d, r, b);
     }
   }
 
@@ -1068,39 +1079,45 @@ class GlobalConstraints implements ParserTreeConstants {
     // ============================
 
     int[] vu = uniqueIndex(v);
-    if (vu.length != v.length) { // non unique variables
+    if (vu.length != v.length) {
+      poseTableWithUniqueVars(v, t, vu);
+    } else {
+      poseTableBySize(v, t);
+    }
+  }
 
-      // remove infeasible tuples for duplicated variables
-      int[][] nt = removeInfeasibleTuples(t);
-
-      IntVar[] nv = new IntVar[vu.length];
-      for (int i = 0; i < vu.length; i++) {
-        nv[i] = v[vu[i]];
+  private void poseTableWithUniqueVars(IntVar[] v, int[][] t, int[] vu) {
+    int[][] nt = removeInfeasibleTuples(t);
+    IntVar[] nv = new IntVar[vu.length];
+    for (int i = 0; i < vu.length; i++) {
+      nv[i] = v[vu[i]];
+    }
+    int[][] tt = new int[nt.length][vu.length];
+    for (int i = 0; i < tt.length; i++) {
+      for (int j = 0; j < vu.length; j++) {
+        tt[i][j] = nt[i][vu[j]];
       }
+    }
+    if (nv.length == 1) {
+      poseTableSingleVar(nv[0], tt);
+    } else {
+      poseTableBySize(nv, tt);
+    }
+  }
 
-      int[][] tt = new int[nt.length][vu.length];
-      for (int i = 0; i < tt.length; i++) {
-        for (int j = 0; j < vu.length; j++) {
-          tt[i][j] = nt[i][vu[j]];
-        }
-      }
+  private void poseTableSingleVar(IntVar var, int[][] tt) {
+    IntervalDomain d = new IntervalDomain();
+    for (int[] ints : tt) {
+      d.addDom(new IntervalDomain(ints[0], ints[0]));
+    }
+    var.domain.in(store.level, var, d);
+    if (support.options.debug()) {
+      IO.println("% " + var + " in " + d);
+    }
+  }
 
-      if (nv.length == 1) {
-        IntervalDomain d = new IntervalDomain();
-        for (int[] ints : tt) {
-          d.addDom(new IntervalDomain(ints[0], ints[0]));
-        }
-        nv[0].domain.in(store.level, nv[0], d);
-        if (support.options.debug()) {
-          IO.println("% " + nv[0] + " in " + d);
-        }
-
-      } else if (tt.length <= 64) {
-        generateTableConstraints(nv, tt);
-      } else {
-        support.pose(new Table(nv, tt, true));
-      }
-    } else if (t.length <= 64) {
+  private void poseTableBySize(IntVar[] v, int[][] t) {
+    if (t.length <= 64) {
       generateTableConstraints(v, t);
     } else {
       support.pose(new Table(v, t, true));
@@ -1132,29 +1149,31 @@ class GlobalConstraints implements ParserTreeConstants {
 
     if (v.length > 3 || size > 70) {
       support.pose(new SimpleTable(v, t, true));
-    } else {
+      return;
+    }
+    int[][] c = conflictTuples(v, t);
+    if (c == null || c.length > 3) {
+      support.pose(new SimpleTable(v, t, true));
+      return;
+    }
+    poseConflictTuplesAsConstraints(v, c);
+  }
 
-      int[][] c = conflictTuples(v, t);
-
-      if (c != null && c.length <= 3) {
-        if (v.length == 1) {
-          for (int[] ints : c) {
-            v[0].domain.inComplement(store.level, v[0], ints[0]);
-            if (support.options.debug()) {
-              IO.println("% " + v[0] + " \\ " + ints[0]);
-            }
-          }
-        } else {
-          for (int[] ints : c) {
-            XneqC[] x = new XneqC[ints.length];
-            for (int j = 0; j < ints.length; j++) {
-              x[j] = new XneqC(v[j], ints[j]);
-            }
-            support.pose(new Or(x));
-          }
+  private void poseConflictTuplesAsConstraints(IntVar[] v, int[][] c) {
+    if (v.length == 1) {
+      for (int[] ints : c) {
+        v[0].domain.inComplement(store.level, v[0], ints[0]);
+        if (support.options.debug()) {
+          IO.println("% " + v[0] + " \\ " + ints[0]);
         }
-      } else {
-        support.pose(new SimpleTable(v, t, true));
+      }
+    } else {
+      for (int[] ints : c) {
+        XneqC[] x = new XneqC[ints.length];
+        for (int j = 0; j < ints.length; j++) {
+          x[j] = new XneqC(v[j], ints[j]);
+        }
+        support.pose(new Or(x));
       }
     }
   }
@@ -1683,36 +1702,49 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    // filter false values of b
     IntVar[][] filtered = filterFalseEntries(b, x);
     b = filtered[0];
     x = filtered[1];
 
-    int n = x.length;
-    if (n == 2) {
-      if (support.options.useSat()
-          && x[0].min() >= 0
-          && x[0].max() <= 1
-          && x[1].min() >= 0
-          && x[1].max() <= 1
-          && y.singleton(1)) {
-        support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
-      } else if (b[0].singleton(1)) {
-        support.pose(new XeqY(x[0], y));
-      } else if (b[0].singleton(0) && b[1].singleton(1)) {
-        support.pose(new XeqY(x[1], y));
-      } else if (y.min() == 1) {
-        if (x[1].min() == 1) {
-          support.pose(support.fzIfThenBool(b[0], x[0]));
-        } else {
-          support.pose(new IfThenElseBool((BooleanVar) b[0], (BooleanVar) x[0], (BooleanVar) x[1]));
-        }
-      } else { // y is avraible or equals 0
-        gen_jacop_if_then_else_int(node);
+    if (x.length == 2) {
+      if (tryPoseIfThenElseBoolTwoBranches(b, x, y)) {
+        return;
       }
-    } else { // x vector is longer than 2
-      gen_jacop_if_then_else_int(node);
     }
+    gen_jacop_if_then_else_int(node);
+  }
+
+  /**
+   * Tries to pose the if_then_else for two boolean branches. Returns true if handled, false if
+   * caller should fall back to gen_jacop_if_then_else_int.
+   */
+  private boolean tryPoseIfThenElseBoolTwoBranches(IntVar[] b, IntVar[] x, IntVar y) {
+    if (support.options.useSat()
+        && x[0].min() >= 0
+        && x[0].max() <= 1
+        && x[1].min() >= 0
+        && x[1].max() <= 1
+        && y.singleton(1)) {
+      support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
+      return true;
+    }
+    if (b[0].singleton(1)) {
+      support.pose(new XeqY(x[0], y));
+      return true;
+    }
+    if (b[0].singleton(0) && b[1].singleton(1)) {
+      support.pose(new XeqY(x[1], y));
+      return true;
+    }
+    if (y.min() == 1) {
+      if (x[1].min() == 1) {
+        support.pose(support.fzIfThenBool(b[0], x[0]));
+      } else {
+        support.pose(new IfThenElseBool((BooleanVar) b[0], (BooleanVar) x[0], (BooleanVar) x[1]));
+      }
+      return true;
+    }
+    return false;
   }
 
   void gen_jacop_if_then_else_int(SimpleNode node) {

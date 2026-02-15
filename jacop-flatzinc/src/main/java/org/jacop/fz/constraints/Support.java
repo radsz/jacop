@@ -389,32 +389,31 @@ public class Support implements ParserTreeConstants {
   IntVar[] getVarArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
       return getIntVarArrayFromLiteral(node);
-    } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        String ident = ((ASTScalarFlatExpr) node).getIdent();
-        // array of var
-        IntVar[] v = dictionary.getVariableArray(ident);
-        if (v != null) {
-          return v;
-        } else { // array of int
-          int[] ia = dictionary.getIntArray(ident);
-          if (ia != null) {
-            IntVar[] aa = new IntVar[ia.length];
-            for (int i = 0; i < ia.length; i++) {
-              aa[i] = dictionary.getConstant(ia[i]); // new IntVar(store, ia[i], ia[i]);
-            }
-            return aa;
-          } else {
-            throw new IllegalArgumentException(
-                "Cannot find array " + ident + "; compilation aborted.");
-          }
-        }
-      } else {
-        throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
-      }
-    } else {
+    }
+    if (node.getId() == JJTSCALARFLATEXPR) {
+      return getVarArrayFromScalarFlatExpr((ASTScalarFlatExpr) node);
+    }
+    throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
+  }
+
+  private IntVar[] getVarArrayFromScalarFlatExpr(ASTScalarFlatExpr node) {
+    if (node.getType() != 2) {
       throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
     }
+    String ident = node.getIdent();
+    IntVar[] v = dictionary.getVariableArray(ident);
+    if (v != null) {
+      return v;
+    }
+    int[] ia = dictionary.getIntArray(ident);
+    if (ia != null) {
+      IntVar[] aa = new IntVar[ia.length];
+      for (int i = 0; i < ia.length; i++) {
+        aa[i] = dictionary.getConstant(ia[i]);
+      }
+      return aa;
+    }
+    throw new IllegalArgumentException("Cannot find array " + ident + "; compilation aborted.");
   }
 
   private IntVar[] getIntVarArrayFromLiteral(SimpleNode node) {
@@ -459,130 +458,162 @@ public class Support implements ParserTreeConstants {
   }
 
   IntDomain[] getSetArray(SimpleNode node) {
-    IntDomain[] s = null;
-    int arrayIndex = 0;
-
     if (node.getId() == JJTARRAYLITERAL) {
-      int count = node.jjtGetNumChildren();
-      s = new IntDomain[count];
-      for (int i = 0; i < count; i++) {
-        s[arrayIndex++] = getSetLiteral(node, i);
+      return getSetArrayFromLiteral(node);
+    }
+    if (node.getId() == JJTSCALARFLATEXPR) {
+      return getSetArrayFromIdent((ASTScalarFlatExpr) node);
+    }
+    return null;
+  }
+
+  private IntDomain[] getSetArrayFromLiteral(SimpleNode node) {
+    int count = node.jjtGetNumChildren();
+    IntDomain[] s = new IntDomain[count];
+    for (int i = 0; i < count; i++) {
+      s[i] = getSetLiteral(node, i);
+    }
+    return s;
+  }
+
+  private IntDomain[] getSetArrayFromIdent(ASTScalarFlatExpr node) {
+    if (node.getType() != 2) {
+      throw new IllegalArgumentException("Wrong set array.");
+    }
+    IntDomain[] s = dictionary.getSetArray(node.getIdent());
+    if (s != null) {
+      return s;
+    }
+    return getSetArrayFromSingletonSetVars(node.getIdent());
+  }
+
+  private IntDomain[] getSetArrayFromSingletonSetVars(String ident) {
+    SetVar[] sVar = dictionary.getSetVariableArray(ident);
+    if (sVar == null) {
+      return null;
+    }
+    int numberSingleton = 0;
+    for (SetVar setVar : sVar) {
+      if (setVar.singleton()) {
+        numberSingleton++;
       }
-    } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        s = dictionary.getSetArray(((ASTScalarFlatExpr) node).getIdent());
-        if (s == null) { // there is still a chance that the var_array has constant sets ;)
-          SetVar[] sVar = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
-          int numberSingleton = 0;
-          for (SetVar setVar : sVar) {
-            if (setVar.singleton()) {
-              numberSingleton++;
-            }
-          }
-          if (sVar.length == numberSingleton) {
-            s = new IntDomain[sVar.length];
-            for (int i = 0; i < sVar.length; i++) {
-              s[i] = sVar[i].dom().glb();
-            }
-          }
-        }
-      } else {
-        throw new IllegalArgumentException("Wrong set array.");
-      }
+    }
+    if (sVar.length != numberSingleton) {
+      return null;
+    }
+    IntDomain[] s = new IntDomain[sVar.length];
+    for (int i = 0; i < sVar.length; i++) {
+      s[i] = sVar[i].dom().glb();
     }
     return s;
   }
 
   SetVar[] getSetVarArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
-      int count = node.jjtGetNumChildren();
-      SetVar[] s = new SetVar[count];
-      for (int i = 0; i < count; i++) {
-        s[i] = getSetVariable(node, i);
-      }
-      return s;
-    } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
-        SetVar[] s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
-        if (s != null) {
-          return s;
-        } else {
-          throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
-        }
-      } else {
-        throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
-      }
-    } else {
+      return getSetVarArrayFromLiteral(node);
+    }
+    if (node.getId() == JJTSCALARFLATEXPR) {
+      return getSetVarArrayFromIdent((ASTScalarFlatExpr) node);
+    }
+    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+  }
+
+  private SetVar[] getSetVarArrayFromLiteral(SimpleNode node) {
+    int count = node.jjtGetNumChildren();
+    SetVar[] s = new SetVar[count];
+    for (int i = 0; i < count; i++) {
+      s[i] = getSetVariable(node, i);
+    }
+    return s;
+  }
+
+  private SetVar[] getSetVarArrayFromIdent(ASTScalarFlatExpr node) {
+    if (node.getType() != 2) {
       throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
     }
+    SetVar[] s = dictionary.getSetVariableArray(node.getIdent());
+    if (s != null) {
+      return s;
+    }
+    throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
   }
 
   IntDomain getSetLiteral(SimpleNode node, int index) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTSETLITERAL) {
-      switch (((ASTSetLiteral) child).getType()) {
-        case 0: // interval
-          SimpleNode grand_child_1 = (SimpleNode) child.jjtGetChild(0);
-          SimpleNode grand_child_2 = (SimpleNode) child.jjtGetChild(1);
-          if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
-            int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
-            int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
-            if (i1 > i2) {
-              return new IntervalDomain();
-            } else {
-              return new IntervalDomain(i1, i2);
-            }
-          }
-          break;
-        case 1: // list
-          IntDomain s = new IntervalDomain();
-          int el;
-          int count = child.jjtGetNumChildren();
-          for (int i = 0; i < count; i++) {
-            el = getScalarFlatExpr(child, i);
-            s.unionAdapt(el);
-          }
-          return s;
-        case 2: // range
-          IntDomain d = new IntervalDomain();
-          int n = child.jjtGetNumChildren();
-          for (int i = 0; i < n; i++) {
-
-            SimpleNode setElement = (SimpleNode) child.jjtGetChild(i);
-            if (setElement.getId() == JJTSETELEMENT) {
-              SimpleNode e1 = (SimpleNode) setElement.jjtGetChild(0);
-              if (e1.getId() == JJTSCALARFLATEXPR) {
-                d.unionAdapt(((ASTScalarFlatExpr) e1).getInt());
-              } else if (e1.getId() == JJTINTFLATEXPR) {
-                SimpleNode e2 = (SimpleNode) setElement.jjtGetChild(1);
-                d.unionAdapt(
-                    new Interval(((ASTIntFlatExpr) e1).getInt(), ((ASTIntFlatExpr) e2).getInt()));
-              }
-            }
-          }
-          return d;
-        default:
-          throw new IllegalArgumentException("Set type not supported; compilation aborted.");
+      IntDomain result = getSetLiteralFromSetLiteral(child);
+      if (result != null) {
+        return result;
       }
     } else if (child.getId() == JJTSCALARFLATEXPR) {
-      // bool
-      // float
-      return switch (((ASTScalarFlatExpr) child).getType()) { // int
-        case 0, 1 ->
-            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        case 2 -> // ident
-            dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
-        case 3 -> // array access
-            dictionary
-                .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
-                ((ASTScalarFlatExpr) child).getInt()]; // string
-        case 4, 5 ->
-            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        default ->
-            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-      };
+      return getSetLiteralFromScalarExpr((ASTScalarFlatExpr) child);
     }
     return new IntervalDomain();
+  }
+
+  private IntDomain getSetLiteralFromSetLiteral(SimpleNode child) {
+    switch (((ASTSetLiteral) child).getType()) {
+      case 0:
+        return getSetLiteralInterval(child);
+      case 1:
+        return getSetLiteralList(child);
+      case 2:
+        return getSetLiteralRange(child);
+      default:
+        throw new IllegalArgumentException("Set type not supported; compilation aborted.");
+    }
+  }
+
+  private IntDomain getSetLiteralInterval(SimpleNode child) {
+    SimpleNode grandChild1 = (SimpleNode) child.jjtGetChild(0);
+    SimpleNode grandChild2 = (SimpleNode) child.jjtGetChild(1);
+    if (grandChild1.getId() != JJTINTFLATEXPR || grandChild2.getId() != JJTINTFLATEXPR) {
+      return null;
+    }
+    int i1 = ((ASTIntFlatExpr) grandChild1).getInt();
+    int i2 = ((ASTIntFlatExpr) grandChild2).getInt();
+    return i1 > i2 ? new IntervalDomain() : new IntervalDomain(i1, i2);
+  }
+
+  private IntDomain getSetLiteralList(SimpleNode child) {
+    IntDomain s = new IntervalDomain();
+    int count = child.jjtGetNumChildren();
+    for (int i = 0; i < count; i++) {
+      s.unionAdapt(getScalarFlatExpr(child, i));
+    }
+    return s;
+  }
+
+  private IntDomain getSetLiteralRange(SimpleNode child) {
+    IntDomain d = new IntervalDomain();
+    int n = child.jjtGetNumChildren();
+    for (int i = 0; i < n; i++) {
+      SimpleNode setElement = (SimpleNode) child.jjtGetChild(i);
+      if (setElement.getId() == JJTSETELEMENT) {
+        SimpleNode e1 = (SimpleNode) setElement.jjtGetChild(0);
+        if (e1.getId() == JJTSCALARFLATEXPR) {
+          d.unionAdapt(((ASTScalarFlatExpr) e1).getInt());
+        } else if (e1.getId() == JJTINTFLATEXPR) {
+          SimpleNode e2 = (SimpleNode) setElement.jjtGetChild(1);
+          d.unionAdapt(
+              new Interval(((ASTIntFlatExpr) e1).getInt(), ((ASTIntFlatExpr) e2).getInt()));
+        }
+      }
+    }
+    return d;
+  }
+
+  private IntDomain getSetLiteralFromScalarExpr(ASTScalarFlatExpr child) {
+    return switch (child.getType()) {
+      case 0, 1 ->
+          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+      case 2 -> dictionary.getSet(child.getIdent());
+      case 3 -> dictionary.getSetArray(child.getIdent())[child.getInt()];
+      case 4, 5 ->
+          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+      default ->
+          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+    };
   }
 
   IntVar[] unique(IntVar[] vs) {
@@ -769,6 +800,100 @@ public class Support implements ParserTreeConstants {
     imply.pose();
   }
 
+  void propagateFzXeqC(
+      Store store, IntVar x, int c, IntVar b, boolean isReified, Runnable removeConstraint) {
+    if (x.singleton(c)) {
+      if (isReified) {
+        b.domain.inValue(store.level, b, 1);
+      } else {
+        removeConstraint.run();
+      }
+      return;
+    }
+    if (!x.domain.contains(c)) {
+      b.domain.inValue(store.level, b, 0);
+      removeConstraint.run();
+      return;
+    }
+    if (b.max() == 0) {
+      if (isReified) {
+        x.domain.inComplement(store.level, x, c);
+      }
+      removeConstraint.run();
+      return;
+    }
+    if (b.min() == 1) {
+      x.domain.inValue(store.level, x, c);
+    }
+  }
+
+  void propagateFzXneqC(
+      Store store, IntVar x, int c, IntVar b, boolean isReified, Runnable removeConstraint) {
+    if (x.singleton(c)) {
+      b.domain.inValue(store.level, b, 0);
+      return;
+    }
+    if (!x.domain.contains(c)) {
+      if (isReified) {
+        b.domain.inValue(store.level, b, 1);
+      }
+      removeConstraint.run();
+      return;
+    }
+    if (b.max() == 0) {
+      if (isReified) {
+        x.domain.inValue(store.level, x, c);
+      }
+      removeConstraint.run();
+      return;
+    }
+    if (b.min() == 1) {
+      x.domain.inComplement(store.level, x, c);
+      if (isReified) {
+        removeConstraint.run();
+      }
+    }
+  }
+
+  void propagateFzXeqY(
+      Store store, IntVar x, IntVar y, IntVar b, boolean isReified, Runnable removeConstraint) {
+    if (x == y || (x.singleton(y.min()) && y.singleton(x.min()))) {
+      if (isReified) {
+        b.domain.inValue(store.level, b, 1);
+      } else {
+        removeConstraint.run();
+      }
+      return;
+    }
+    if (!x.domain.isIntersecting(y.domain)) {
+      b.domain.inValue(store.level, b, 0);
+      removeConstraint.run();
+      return;
+    }
+    if (b.max() == 0) {
+      if (isReified) {
+        if (y.singleton()) {
+          x.domain.inComplement(store.level, x, y.value());
+          removeConstraint.run();
+        }
+        if (x.singleton()) {
+          y.domain.inComplement(store.level, y, x.value());
+          removeConstraint.run();
+        }
+      } else {
+        removeConstraint.run();
+      }
+      return;
+    }
+    if (b.min() == 1) {
+      do {
+        x.domain.in(store.level, x, y.domain);
+        store.propagationHasOccurred = false;
+        y.domain.in(store.level, y, x.domain);
+      } while (store.propagationHasOccurred);
+    }
+  }
+
   Constraint fzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
 
     return new Constraint(new IntVar[] {x, b}) {
@@ -777,24 +902,7 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public void consistency(final Store store) {
-
-        if (x.singleton(c)) {
-          if (isReified) {
-            b.domain.inValue(store.level, b, 1);
-          } else {
-            removeConstraint();
-          }
-        } else if (!x.domain.contains(c)) {
-          b.domain.inValue(store.level, b, 0);
-          removeConstraint();
-        } else if (b.max() == 0) { // x==c must be false
-          if (isReified) {
-            x.domain.inComplement(store.level, x, c);
-          }
-          removeConstraint();
-        } else if (b.min() == 1) { // x==c must be true
-          x.domain.inValue(store.level, x, c);
-        }
+        propagateFzXeqC(store, x, c, b, isReified, this::removeConstraint);
       }
 
       @Override
@@ -828,25 +936,7 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public void consistency(final Store store) {
-
-        if (x.singleton(c)) {
-          b.domain.inValue(store.level, b, 0);
-        } else if (!x.domain.contains(c)) {
-          if (isReified) {
-            b.domain.inValue(store.level, b, 1);
-          }
-          removeConstraint();
-        } else if (b.max() == 0) { // x!=c must be false
-          if (isReified) {
-            x.domain.inValue(store.level, x, c);
-          }
-          removeConstraint();
-        } else if (b.min() == 1) { // x!=c must be true
-          x.domain.inComplement(store.level, x, c);
-          if (isReified) {
-            removeConstraint();
-          }
-        }
+        propagateFzXneqC(store, x, c, b, isReified, this::removeConstraint);
       }
 
       @Override
@@ -880,41 +970,7 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public void consistency(final Store store) {
-
-        if (x == y || x.singleton(y.min()) && y.singleton(x.min())) {
-          if (isReified) {
-            b.domain.inValue(store.level, b, 1);
-          } else {
-            removeConstraint();
-          }
-        } else if (!x.domain.isIntersecting(y.domain)) {
-          b.domain.inValue(store.level, b, 0);
-          removeConstraint();
-        } else if (b.max() == 0) { // x!=y must be false
-          if (isReified) {
-            if (y.singleton()) {
-              x.domain.inComplement(store.level, x, y.value());
-              removeConstraint();
-            }
-            if (x.singleton()) {
-              y.domain.inComplement(store.level, y, x.value());
-              removeConstraint();
-            }
-          } else {
-            removeConstraint();
-          }
-        } else if (b.min() == 1) { // x==y must be true
-          do {
-
-            // domain consistency
-            x.domain.in(store.level, x, y.domain);
-
-            store.propagationHasOccurred = false;
-
-            y.domain.in(store.level, y, x.domain);
-
-          } while (store.propagationHasOccurred);
-        }
+        propagateFzXeqY(store, x, y, b, isReified, this::removeConstraint);
       }
 
       @Override

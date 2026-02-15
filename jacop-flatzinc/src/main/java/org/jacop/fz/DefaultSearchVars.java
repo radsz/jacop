@@ -170,44 +170,54 @@ public class DefaultSearchVars {
 
     LinkedHashSet<IntVar> int_vars = new LinkedHashSet<>();
     LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<>();
-    Set<Map.Entry<IntVar, IntVar>> aliasEntries = dictionary.aliasTable.entrySet();
+    Set<IntVar> aliasVars = collectAliasVars();
 
-    Set<IntVar> aliasVars = new LinkedHashSet<>();
-    // collect all boolean variables with int var alias
-    for (Map.Entry<IntVar, IntVar> e : aliasEntries) {
-      IntVar b = e.getKey();
-      aliasVars.add(b);
-    }
-
-    for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++) {
-      for (Var v : dictionary.defaultSearchArrays.get(i)) {
-        if (!v.singleton()) {
-          if (v instanceof BooleanVar bv) {
-            bool_vars.add(bv);
-          } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
-            bool_vars.add((BooleanVar) v);
-          } else {
-            int_vars.add((IntVar) v);
-          }
-        }
-      }
-    }
+    collectIntAndBoolVarsFromArrays(int_vars, bool_vars, aliasVars);
     for (Var v : dictionary.defaultSearchVariables) {
-      if (!v.singleton()) {
-        if (v instanceof BooleanVar bv) {
-          bool_vars.add(bv);
-        } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
-          bool_vars.add((BooleanVar) v);
-        } else {
-          int_vars.add((IntVar) v);
-        }
-      }
+      addVarToIntOrBool(int_vars, bool_vars, aliasVars, v);
     }
     int_search_variables = int_vars.toArray(new IntVar[0]);
     bool_search_variables = bool_vars.toArray(new BooleanVar[0]);
-
     Arrays.sort(int_search_variables, domainSizeComparator);
 
+    set_search_variables = collectSetVars().toArray(new SetVar[0]);
+    float_search_variables = collectFloatVars().toArray(new FloatVar[0]);
+  }
+
+  private Set<IntVar> collectAliasVars() {
+    Set<IntVar> aliasVars = new LinkedHashSet<>();
+    for (Map.Entry<IntVar, IntVar> e : dictionary.aliasTable.entrySet()) {
+      aliasVars.add(e.getKey());
+    }
+    return aliasVars;
+  }
+
+  private void collectIntAndBoolVarsFromArrays(
+      LinkedHashSet<IntVar> int_vars, LinkedHashSet<BooleanVar> bool_vars, Set<IntVar> aliasVars) {
+    for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++) {
+      for (Var v : dictionary.defaultSearchArrays.get(i)) {
+        if (!v.singleton()) {
+          addVarToIntOrBool(int_vars, bool_vars, aliasVars, v);
+        }
+      }
+    }
+  }
+
+  private void addVarToIntOrBool(
+      LinkedHashSet<IntVar> int_vars,
+      LinkedHashSet<BooleanVar> bool_vars,
+      Set<IntVar> aliasVars,
+      Var v) {
+    if (v instanceof BooleanVar bv) {
+      bool_vars.add(bv);
+    } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
+      bool_vars.add((BooleanVar) v);
+    } else {
+      int_vars.add((IntVar) v);
+    }
+  }
+
+  private LinkedHashSet<SetVar> collectSetVars() {
     LinkedHashSet<SetVar> set_vars = new LinkedHashSet<>();
     for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++) {
       for (Var v : dictionary.defaultSearchSetArrays.get(i)) {
@@ -217,11 +227,11 @@ public class DefaultSearchVars {
     for (Var v : dictionary.defaultSearchSetVariables) {
       set_vars.add((SetVar) v);
     }
+    return set_vars;
+  }
 
-    set_search_variables = set_vars.toArray(new SetVar[0]);
-
+  private LinkedHashSet<FloatVar> collectFloatVars() {
     LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<>();
-
     for (int i = 0; i < dictionary.defaultSearchFloatArrays.size(); i++) {
       for (Var v : dictionary.defaultSearchFloatArrays.get(i)) {
         float_vars.add((FloatVar) v);
@@ -230,9 +240,7 @@ public class DefaultSearchVars {
     for (Var v : dictionary.defaultSearchFloatVariables) {
       float_vars.add((FloatVar) v);
     }
-
-    float_search_variables = float_vars.toArray(new FloatVar[0]);
-    // ==== End collect guessed search variables ====
+    return float_vars;
   }
 
   /**

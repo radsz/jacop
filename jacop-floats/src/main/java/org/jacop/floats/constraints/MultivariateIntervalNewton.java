@@ -193,152 +193,120 @@ public class MultivariateIntervalNewton {
       return f.value();
     }
 
-    double result;
+    double result = computeValueForConstraint(f, c);
+    eval.pop();
+    return result;
+  }
 
+  private double computeValueForConstraint(FloatVar f, Constraint c) {
     switch (c) {
       case PdivQeqR qeqR2 -> {
         if (f.equals(qeqR2.r)) {
-          result = value(qeqR2.p) / value(qeqR2.q);
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(qeqR2.p) / value(qeqR2.q);
         }
+        throw valueError(f, c);
       }
       case PmulQeqR qeqR3 -> {
         if (f.equals(qeqR3.r)) {
-          result = value(qeqR3.p) * value(qeqR3.q);
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(qeqR3.p) * value(qeqR3.q);
         }
+        throw valueError(f, c);
       }
       case PmulCeqR ceqR1 -> {
         if (f.equals(ceqR1.r)) {
-          result = value(ceqR1.p) * ceqR1.c;
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(ceqR1.p) * ceqR1.c;
         }
+        throw valueError(f, c);
       }
       case PminusQeqR qeqR -> {
         if (f.equals(qeqR.r)) {
-          result = value(qeqR.p) - value(qeqR.q);
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(qeqR.p) - value(qeqR.q);
         }
+        throw valueError(f, c);
       }
       case PplusQeqR qeqR1 -> {
         if (f.equals(qeqR1.r)) {
-          result = value(qeqR1.p) + value(qeqR1.q);
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(qeqR1.p) + value(qeqR1.q);
         }
+        throw valueError(f, c);
       }
       case PplusCeqR ceqR -> {
         if (f.equals(ceqR.r)) {
-          result = value(ceqR.p) + ceqR.c;
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
+          return value(ceqR.p) + ceqR.c;
         }
+        throw valueError(f, c);
       }
       case LinearFloat float1 -> {
-        FloatVar[] v = float1.list;
-        double[] w = float1.weights;
-        double sum = float1.sum;
-
-        FloatVar vOut = null;
-        double wOut = 1000.0;
-
-        for (int i = 0; i < v.length; i++) {
-          if (!v[i].equals(f)) {
-            sum -= value(v[i]) * w[i];
-          } else {
-            vOut = v[i];
-            wOut = w[i];
-          }
-        }
-
-        if (vOut != null) {
-          result = sum / wOut;
-        } else {
-          throw new RuntimeException(
-              "!!! Anable to compute middle value for "
-                  + f
-                  + "; + Constraint "
-                  + c
-                  + " does not define a function for variable\n");
-        }
+        return computeLinearFloatValue(f, float1);
       }
       case null, default ->
           throw new RuntimeException(
               "!!! Constraint " + c + " is not yet supported in Newtoen method\n");
     }
+  }
 
-    eval.pop();
+  private static RuntimeException valueError(FloatVar f, Constraint c) {
+    return new RuntimeException(
+        "!!! Anable to compute middle value for "
+            + f
+            + "; + Constraint "
+            + c
+            + " does not define a function for variable\n");
+  }
 
-    return result;
+  private double computeLinearFloatValue(FloatVar f, LinearFloat float1) {
+    FloatVar[] v = float1.list;
+    double[] w = float1.weights;
+    double sum = float1.sum;
+    Double wOut = null;
+
+    for (int i = 0; i < v.length; i++) {
+      if (!v[i].equals(f)) {
+        sum -= value(v[i]) * w[i];
+      } else {
+        wOut = w[i];
+      }
+    }
+
+    if (wOut != null) {
+      return sum / wOut;
+    }
+    throw valueError(f, float1);
   }
 
   Constraint constraint(FloatVar v) {
 
+    List<Constraint> list = collectConstraintsForVariable(v);
+
+    if (list.size() == 1) {
+      return list.getFirst();
+    }
+    return Derivative.resolveConstraint(v, list);
+  }
+
+  private List<Constraint> collectConstraintsForVariable(FloatVar v) {
     List<Constraint> list = new ArrayList<>();
-
     for (int i = 0; i < v.dom().modelConstraints.length; i++) {
-      if (v.dom().modelConstraints[i] != null) {
-        for (int j = 0; j < v.dom().modelConstraints[i].length; j++) {
-          if (v.dom().modelConstraints[i][j] != null) {
-
-            Constraint c = v.dom().modelConstraints[i][j];
-
-            if (eval.search(c) == -1) {
-              if (Derivative.derivateConstraints.contains(c)) {
-                continue;
-              }
-
-              if (!list.contains(c)) {
-                list.add(c);
-              }
-            }
-          }
+      if (v.dom().modelConstraints[i] == null) {
+        continue;
+      }
+      for (int j = 0; j < v.dom().modelConstraints[i].length; j++) {
+        if (v.dom().modelConstraints[i][j] == null) {
+          continue;
+        }
+        Constraint c = v.dom().modelConstraints[i][j];
+        if (eval.search(c) != -1) {
+          continue;
+        }
+        if (Derivative.derivateConstraints.contains(c)) {
+          continue;
+        }
+        if (!list.contains(c)) {
+          list.add(c);
         }
       }
     }
-
-    Constraint c;
-    if (list.size() == 1) {
-      c = list.getFirst();
-    } else {
-      c = Derivative.resolveConstraint(v, list);
-    }
-
-    return c;
+    return list;
   }
 
   boolean contains(FloatVar[] fs, FloatVar r) {

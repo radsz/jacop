@@ -162,50 +162,60 @@ class OperationConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
 
-    if (p1.getType() == 0) { // p1 int
-      int c = support.getInt(p1);
-      if (c == 1) {
-        support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
-      } else if (c == 0) {
-        IntVar v3 = support.getVariable(p3);
-        v3.domain.inValue(store.level, v3, 0);
-      } else {
-        support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
-      }
-    } else if (p2.getType() == 0) { // p2 int
-      int c = support.getInt(p2);
-      if (c == 1) {
-        support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
-      } else if (c == 0) {
-        IntVar v3 = support.getVariable(p3);
-        v3.domain.inValue(store.level, v3, 0);
-      } else {
-        support.pose(
-            new XmulCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
-      }
-    } else if (p3.getType() == 0) { // p3 int
+    if (p1.getType() == 0) {
+      intTimesConstFirst(support.getInt(p1), p2, p3);
+      return;
+    }
+    if (p2.getType() == 0) {
+      intTimesConstSecond(p1, support.getInt(p2), p3);
+      return;
+    }
+    if (p3.getType() == 0) {
       support.pose(
           new XmulYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
-    } else {
-      IntVar v1 = support.getVariable(p1);
-      IntVar v2 = support.getVariable(p2);
+      return;
+    }
+    intTimesAllVars(support.getVariable(p1), support.getVariable(p2), support.getVariable(p3));
+  }
+
+  private void intTimesConstFirst(int c, ASTScalarFlatExpr p2, ASTScalarFlatExpr p3) {
+    if (c == 1) {
+      support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
+    } else if (c == 0) {
       IntVar v3 = support.getVariable(p3);
-      if (v1.min() >= 0
-          && v1.max() <= 1
-          && v2.min() >= 0
-          && v2.max() <= 1
-          && v3.min() >= 0
-          && v3.max() <= 1) {
-        if (v1.equals(v2)) {
-          support.pose(new XeqY(v1, v3));
-        } else {
-          support.pose(new AndBoolSimple(v1, v2, v3));
-        }
-      } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0)) {
-        v3.domain.inValue(store.level, v3, 0);
+      v3.domain.inValue(store.level, v3, 0);
+    } else {
+      support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
+    }
+  }
+
+  private void intTimesConstSecond(ASTScalarFlatExpr p1, int c, ASTScalarFlatExpr p3) {
+    if (c == 1) {
+      support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
+    } else if (c == 0) {
+      IntVar v3 = support.getVariable(p3);
+      v3.domain.inValue(store.level, v3, 0);
+    } else {
+      support.pose(new XmulCeqZ(support.getVariable(p1), c, support.getVariable(p3)));
+    }
+  }
+
+  private void intTimesAllVars(IntVar v1, IntVar v2, IntVar v3) {
+    if (v1.min() >= 0
+        && v1.max() <= 1
+        && v2.min() >= 0
+        && v2.max() <= 1
+        && v3.min() >= 0
+        && v3.max() <= 1) {
+      if (v1.equals(v2)) {
+        support.pose(new XeqY(v1, v3));
       } else {
-        support.pose(new XmulYeqZ(v1, v2, v3));
+        support.pose(new AndBoolSimple(v1, v2, v3));
       }
+    } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0)) {
+      v3.domain.inValue(store.level, v3, 0);
+    } else {
+      support.pose(new XmulYeqZ(v1, v2, v3));
     }
   }
 
