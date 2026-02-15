@@ -51,9 +51,6 @@ import org.jacop.core.Var;
 public abstract class PrimitiveConstraint extends Constraint
     implements StoreAware, SatisfiedPresent {
 
-  /** It specifies the events which must occur for notConsistency() method being executed. */
-  protected Map<Var, Integer> notConsistencyPruningEvents;
-
   /**
    * It retrieves the pruning event which causes reevaluation of the constraint notConsistency()
    * function.
