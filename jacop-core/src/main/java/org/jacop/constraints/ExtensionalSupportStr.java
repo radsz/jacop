@@ -280,160 +280,93 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     }
   }
 
-  @Override
-  public void consistency(Store store) {
-
-    if (firstConsistencyCheck) {
-
-      // adjust (even simplify) all internal data structures
-      // to current domains of variables.
-      // filter which ignores all tuples which already are not supports.
-
-      boolean[] stillSupport = new boolean[tuples.length];
-
-      int noSupports = 0;
-
-      int i = 0;
-
-      valuesInFocus = new IntervalDomain[list.length];
-
-      for (int j = 0; j < list.length; j++) {
-        valuesInFocus[j] = new IntervalDomain();
-      }
-
-      for (int[] t : tuples) {
-
-        stillSupport[i] = true;
-
-        int j = 0;
-
-        if (DEBUG_ALL) {
-          log.debug("support for analysis{}", Arrays.toString(t));
-        }
-
-        for (int val : t) {
-
-          if (!list[j].dom().contains(val)) {
-            stillSupport[i] = false;
-            break;
-          }
-
-          j++;
-        }
-
-        if (stillSupport[i]) {
-
-          noSupports++;
-
-          int m = 0;
-          for (int val : t) {
-            valuesInFocus[m].unionAdapt(val, val);
-            m++;
-          }
-        }
-
-        if (DEBUG_ALL && !stillSupport[i]) {
-          log.debug("Not support {}", Arrays.toString(t));
-        }
-
-        i++;
-      }
-
+  /** First-time setup: filter supports, shrink tuples, build views, transform to indexes. */
+  private void doFirstConsistencyCheck(Store store) {
+    boolean[] stillSupport = new boolean[tuples.length];
+    int noSupports = 0;
+    valuesInFocus = new IntervalDomain[list.length];
+    for (int j = 0; j < list.length; j++) {
+      valuesInFocus[j] = new IntervalDomain();
+    }
+    int i = 0;
+    for (int[] t : tuples) {
+      stillSupport[i] = true;
       if (DEBUG_ALL) {
-        log.debug("No. still supports {}", noSupports);
+        log.debug("support for analysis{}", Arrays.toString(t));
       }
-
-      int[][] temp4Shrinking = new int[noSupports][];
-
-      i = 0;
-      int k = 0;
-
-      for (int[] t : tuples) {
-
-        if (stillSupport[k]) {
-          temp4Shrinking[i] = t;
-          i++;
-
-          if (DEBUG_ALL) {
-            log.debug("Still support {}", Arrays.toString(t));
-          }
+      for (int j = 0; j < t.length; j++) {
+        if (!list[j].dom().contains(t[j])) {
+          stillSupport[i] = false;
+          break;
         }
-
-        k++;
       }
-
-      // Only still supports are kept.
-
-      tuples = temp4Shrinking;
-
-      if (tuples.length == 0) {
-        throw Store.failException;
-      }
-
-      first = 0;
-      nexts = new int[tuples.length];
-      for (int j = 0; j < nexts.length; j++) {
-        nexts[j] = j + 1;
-      }
-      nexts[nexts.length - 1] = -1;
-      last = nexts.length - 1;
-
-      for (int j = 0; j < views.length; j++) {
-
-        list[j].domain.in(store.level, list[j], valuesInFocus[j]);
-
-        views[j] = new IndexDomainView(list[j], true);
-      }
-
-      // transforms tuples into the ones based on indexes.
-
-      // By transforming, it is possible to check validity of the tuple
-      // by checking if indexes specified by the tuple still belongs to the
-      // domain.
-
-      for (int l = 0; l < tuples.length; l++) {
-
-        int[] originalTuple = tuples[l];
-        int[] transformedTuple = new int[originalTuple.length];
-
-        for (int m = 0; m < transformedTuple.length; m++) {
-          transformedTuple[m] = views[m].indexOfValue(originalTuple[m]);
+      if (stillSupport[i]) {
+        noSupports++;
+        int m = 0;
+        for (int val : t) {
+          valuesInFocus[m].unionAdapt(val, val);
+          m++;
         }
-
-        tuples[l] = transformedTuple;
       }
-
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
+      if (DEBUG_ALL && !stillSupport[i]) {
+        log.debug("Not support {}", Arrays.toString(t));
+      }
+      i++;
     }
-
-    if (backtrackOccured) {
-
-      for (int i = 0; i < list.length; i++) {
-        // If it zero it means that it has changed after backtracking so we
-        // need to check this variable. All other variables (not equal to zero)
-        // we do not need to check for validity just because of the backtracking.
-        // QueueVariable performed after backtracking and before consistency call
-        // registers all variables by setting their size to zero.
-        if (domainSizeAfterConsistency[i] != 0) {
-          domainSizeAfterConsistency[i] = list[i].getSize();
+    if (DEBUG_ALL) {
+      log.debug("No. still supports {}", noSupports);
+    }
+    int[][] temp4Shrinking = new int[noSupports][];
+    i = 0;
+    int k = 0;
+    for (int[] t : tuples) {
+      if (stillSupport[k]) {
+        temp4Shrinking[i++] = t;
+        if (DEBUG_ALL) {
+          log.debug("Still support {}", Arrays.toString(t));
         }
+      }
+      k++;
+    }
+    tuples = temp4Shrinking;
+    if (tuples.length == 0) {
+      throw Store.failException;
+    }
+    first = 0;
+    nexts = new int[tuples.length];
+    for (int j = 0; j < nexts.length; j++) {
+      nexts[j] = j + 1;
+    }
+    nexts[nexts.length - 1] = -1;
+    last = nexts.length - 1;
+    for (int j = 0; j < views.length; j++) {
+      list[j].domain.in(store.level, list[j], valuesInFocus[j]);
+      views[j] = new IndexDomainView(list[j], true);
+    }
+    for (int l = 0; l < tuples.length; l++) {
+      int[] originalTuple = tuples[l];
+      int[] transformedTuple = new int[originalTuple.length];
+      for (int m = 0; m < transformedTuple.length; m++) {
+        transformedTuple[m] = views[m].indexOfValue(originalTuple[m]);
+      }
+      tuples[l] = transformedTuple;
+    }
+    firstConsistencyCheck = false;
+    firstConsistencyLevel = store.level;
+  }
+
+  private void updateDomainSizesAfterBacktrack() {
+    for (int i = 0; i < list.length; i++) {
+      if (domainSizeAfterConsistency[i] != 0) {
+        domainSizeAfterConsistency[i] = list[i].getSize();
       }
     }
+  }
 
-    // This part decides for which variables we need to check to guarantee tuples validity.
-    // The ones which have changed since the last execution of the consistency function.
-    // Probably store the sizes of variables during last execution. If the size is the
-    // same then variable domain has not changed (backtracking is an issue). Upon
-    // backtracking register all changedVariable events by setting the size to -1.
-
-    // This part decides for which variables we need to check that all values are supported.
-    // the ones who were not singleton during the last execution of the consistency function.
-
+  private void fillValidityAndSupportCounts() {
     nbValidityVariables = 0;
     nbSupportsVariables = 0;
     nbGlobalValuesToBeSupported = 0;
-
     for (int i = 0; i < list.length; i++) {
       if (list[i].getSize() != domainSizeAfterConsistency[i]) {
         validityVariablePositions[nbValidityVariables++] = i;
@@ -445,6 +378,83 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
         nbValuesToBeSupported[i] = list[i].getSize();
       }
     }
+  }
+
+  private boolean isTupleValid(int[] checkedTuple, int lastAssignedIndex) {
+    if (lastAssignedVariablePosition != -1
+        && checkedTuple[lastAssignedVariablePosition] != lastAssignedIndex) {
+      return false;
+    }
+    for (int i = 0; i < nbValidityVariables; i++) {
+      int position = validityVariablePositions[i];
+      if (!views[position].contains(checkedTuple[position])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Updates support for a valid tuple; returns new previous pointer. */
+  private int updateSupportForTuple(int previous, int current, int[] checkedTuple) {
+    int nbbefore = nbGlobalValuesToBeSupported;
+    for (int i = nbSupportsVariables - 1; i >= 0; i--) {
+      int position = supportsVariablePositions[i];
+      if (!views[position].setSupport(checkedTuple[position])) {
+        nbGlobalValuesToBeSupported--;
+        nbValuesToBeSupported[position]--;
+        if (nbValuesToBeSupported[position] == 0) {
+          supportsVariablePositions[i] = supportsVariablePositions[--nbSupportsVariables];
+        }
+      }
+    }
+    if (residuesBefore && nbbefore > nbGlobalValuesToBeSupported) {
+      storeResidue(previous, current);
+      return previous;
+    }
+    return current;
+  }
+
+  private void applyResidues() {
+    if (!residuesBefore || firstResidue == -1) {
+      return;
+    }
+    nexts[lastResidue] = first;
+    if (first == -1) {
+      last = lastResidue;
+    }
+    first = firstResidue;
+  }
+
+  private void checkSupportFailure() {
+    for (int i = 0; i < nbSupportsVariables; i++) {
+      int position = supportsVariablePositions[i];
+      if (nbValuesToBeSupported[position] == list[position].getSize()) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  private void removeUnsupportedAndFinalize(Store store) {
+    for (int i = 0; i < nbSupportsVariables; i++) {
+      views[supportsVariablePositions[i]].removeUnSupportedValues(store);
+    }
+    for (int i = 0; i < list.length; i++) {
+      domainSizeAfterConsistency[i] = list[i].getSize();
+    }
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      doFirstConsistencyCheck(store);
+    }
+
+    if (backtrackOccured) {
+      updateDomainSizesAfterBacktrack();
+    }
+
+    fillValidityAndSupportCounts();
 
     int lastAssignedIndex = 0;
     if (lastAssignedVariablePosition != -1) {
@@ -457,67 +467,19 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     int previous = -1;
     int current = first;
     while (current != -1) {
-
       int next = nexts[current];
       int[] checkedTuple = tuples[current];
-
-      boolean valid =
-          lastAssignedVariablePosition == -1
-              || checkedTuple[lastAssignedVariablePosition] == lastAssignedIndex;
-      for (int i = 0; valid && i < nbValidityVariables; i++) {
-        int position = validityVariablePositions[i];
-        if (!views[position].contains(checkedTuple[position])) {
-          valid = false;
-        }
-      }
-
-      if (!valid) {
+      if (!isTupleValid(checkedTuple, lastAssignedIndex)) {
         remove(previous, current);
       } else {
-        int nbbefore = nbGlobalValuesToBeSupported;
-        for (int i = nbSupportsVariables - 1; i >= 0; i--) {
-          int position = supportsVariablePositions[i];
-
-          if (!views[position].setSupport(checkedTuple[position])) {
-            nbGlobalValuesToBeSupported--;
-            nbValuesToBeSupported[position]--;
-            if (nbValuesToBeSupported[position] == 0) {
-              supportsVariablePositions[i] = supportsVariablePositions[--nbSupportsVariables];
-            }
-          }
-        }
-        if (residuesBefore && nbbefore > nbGlobalValuesToBeSupported) {
-          storeResidue(previous, current);
-        } else {
-          previous = current;
-        }
+        previous = updateSupportForTuple(previous, current, checkedTuple);
       }
       current = next;
     }
 
-    if (residuesBefore && firstResidue != -1) {
-      nexts[lastResidue] = first;
-      if (first == -1) {
-        last = lastResidue;
-      }
-      first = firstResidue;
-    }
-
-    for (int i = 0; i < nbSupportsVariables; i++) {
-      int position = supportsVariablePositions[i];
-      if (nbValuesToBeSupported[position] == list[position].getSize()) {
-        throw Store.failException;
-      }
-    }
-
-    for (int i = 0; i < nbSupportsVariables; i++) {
-      views[supportsVariablePositions[i]].removeUnSupportedValues(store);
-    }
-
-    for (int i = 0; i < list.length; i++) {
-      domainSizeAfterConsistency[i] = list[i].getSize();
-    }
-
+    applyResidues();
+    checkSupportFailure();
+    removeUnsupportedAndFinalize(store);
     backtrackOccured = false;
   }
 

@@ -856,36 +856,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printResultStatus(interrupted, result, label.timeOutOccured, COMPLETE.equals(si.exploration()));
 
     if (options.getStatistics()) {
-      int nodes = 0;
-      int decisions = 0;
-      int wrong = 0;
-      int backtracks = 0;
-      int depth = 0;
-      int solutions = 0;
-
-      if (!defaultSearch) {
-        nodes = label.getNodes();
-        decisions = label.getDecisions();
-        wrong = label.getWrongDecisions();
-        backtracks = label.getBacktracks();
-        depth = label.getMaximumDepth();
-        solutions = label.getSolutionListener().solutionsNo();
-      }
-
-      for (DepthFirstSearch<T> l : final_search) {
-        if (l != null) {
-          nodes += l.getNodes();
-          decisions += l.getDecisions();
-          wrong += l.getWrongDecisions();
-          backtracks += l.getBacktracks();
-          depth += l.getMaximumDepth();
-          solutions =
-              l instanceof PrioritySearch ? solutions : l.getSolutionListener().solutionsNo();
-        }
-      }
-
-      printStatisticsOutput(nodes, wrong, depth, solutions);
+      int[] stats = gatherSingleSearchStats();
+      printStatisticsOutput(stats[0], stats[1], stats[2], stats[3]);
     }
+  }
+
+  private int[] gatherSingleSearchStats() {
+    int nodes = 0;
+    int wrong = 0;
+    int depth = 0;
+    int solutions = 0;
+
+    if (!defaultSearch) {
+      nodes = label.getNodes();
+      wrong = label.getWrongDecisions();
+      depth = label.getMaximumDepth();
+      solutions = label.getSolutionListener().solutionsNo();
+    }
+
+    for (DepthFirstSearch<T> l : final_search) {
+      if (l != null) {
+        nodes += l.getNodes();
+        wrong += l.getWrongDecisions();
+        depth += l.getMaximumDepth();
+        solutions = l instanceof PrioritySearch ? solutions : l.getSolutionListener().solutionsNo();
+      }
+    }
+
+    return new int[] {nodes, wrong, depth, solutions};
   }
 
   @SuppressWarnings("unchecked")
@@ -1077,60 +1075,64 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[3] = floatSearch;
     }
 
-    if (int_search_variables.length == 0
-        && bool_search_variables.length == 0
-        && set_search_variables.length == 0
-        && float_search_variables.length == 0) {
-
-      printSolution();
-
-      if (lastSolution != null) {
-        helperSolutionPrinter(lastSolution.toString());
-      }
-
-      if (options.getAll() || costVariable != null) {
-        IO.println(SEPARATOR_LINE);
-      }
-
-      if (options.getStatistics()) {
-        IO.println(
-            "%%%mzn-stat: variables="
-                + (store.size()
-                    + dictionary.getNumberBoolVariables()
-                    - dictionary.constantTable.size())
-                // + "\n%%%mzn-stat: boolVariables="+
-                // (dictionary.getNumberBoolVariables()-dictionary.aliasTable.size())
-                // + "\n%%%mzn-stat: setVariables="+ dictionary.getNumberSetVariables()
-                // + "\n%%%mzn-stat: floatVariables="+ dictionary.getNumberFloatVariables()
-                + "\n%%%mzn-stat: propagators="
-                + initNumberConstraints
-                + "\n\n%%%mzn-stat: initTime="
-                + getInitTime_ms() / 1000.0
-                + "\n%%%mzn-stat: solveTime="
-                + "0"
-                + "\n%%%mzn-stat: nodes=0"
-                + "\n%%man-stat: propagations="
-                + store.numberConsistencyCalls
-                + "\n%%%mzn-stat: restarts=0"
-                + "\n%%%mzn-stat: failures=0"
-                // + "\n%%%mzn-stat: backtracks=0"
-                + "\n%%%mzn-stat: peakDepth=0"
-                + "\n%%%mzn-stat: solutions=1"
-                + "\n%%%mzn-stat-end");
-      }
-      throw new TrivialSolution();
+    if (noSearchVariables(
+        int_search_variables,
+        bool_search_variables,
+        set_search_variables,
+        float_search_variables)) {
+      handleTrivialSolution();
     }
 
-    // add restart search for free search (option -f)
-
     return intAndSetSearch;
+  }
+
+  private boolean noSearchVariables(
+      IntVar[] intVars, BooleanVar[] boolVars, SetVar[] setVars, FloatVar[] floatVars) {
+    return intVars.length == 0
+        && boolVars.length == 0
+        && setVars.length == 0
+        && floatVars.length == 0;
+  }
+
+  private void handleTrivialSolution() {
+    printSolution();
+
+    if (lastSolution != null) {
+      helperSolutionPrinter(lastSolution.toString());
+    }
+
+    if (options.getAll() || costVariable != null) {
+      IO.println(SEPARATOR_LINE);
+    }
+
+    if (options.getStatistics()) {
+      IO.println(buildTrivialSolutionStatsLine());
+    }
+    throw new TrivialSolution();
+  }
+
+  private String buildTrivialSolutionStatsLine() {
+    return "%%%mzn-stat: variables="
+        + (store.size() + dictionary.getNumberBoolVariables() - dictionary.constantTable.size())
+        + "\n%%%mzn-stat: propagators="
+        + initNumberConstraints
+        + "\n\n%%%mzn-stat: initTime="
+        + getInitTime_ms() / 1000.0
+        + "\n%%%mzn-stat: solveTime=0"
+        + "\n%%%mzn-stat: nodes=0"
+        + "\n%%man-stat: propagations="
+        + store.numberConsistencyCalls
+        + "\n%%%mzn-stat: restarts=0"
+        + "\n%%%mzn-stat: failures=0"
+        + "\n%%%mzn-stat: peakDepth=0"
+        + "\n%%%mzn-stat: solutions=1"
+        + "\n%%%mzn-stat-end";
   }
 
   @SuppressWarnings("unchecked")
   void run_sequence_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
 
     singleSearch = false;
-
     this.si = si;
 
     if (solveKind == 1) {
@@ -1147,7 +1149,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     list_seq_searches = new ArrayList<>();
 
     for (int i = 0; i < si.getSearchItems().size(); i++) {
-      if (i == 0) { // master search
+      if (i == 0) {
         masterLabel = sub_search(si.getSearchItems().get(i), null, true);
         last_search = getLastSearch(masterLabel);
         masterSelect = variable_selection;
@@ -1155,16 +1157,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           masterLabel.setPrintInfo(false);
         }
       } else {
-        DepthFirstSearch<T> label = sub_search(si.getSearchItems().get(i), last_search, false);
-        last_search.addChildSearch(label);
-        last_search = getLastSearch(label);
-        if (!print_search_info) {
-          last_search.setPrintInfo(false);
-        }
+        last_search = addChildSequenceSearch(si.getSearchItems().get(i), last_search);
       }
     }
 
-    // Set up cost variable before sub-search setup so constraints are visible
     Var costVar = null;
     if (solveKind > 0) {
       costVar = setupCostVariable(kind, solveKind);
@@ -1241,6 +1237,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     printStatisticsForSeqSearch(false, result);
+  }
+
+  private DepthFirstSearch<T> addChildSequenceSearch(
+      SearchItem<T> item, DepthFirstSearch<T> lastSearch) {
+    DepthFirstSearch<T> label = sub_search(item, lastSearch, false);
+    lastSearch.addChildSearch(label);
+    DepthFirstSearch<T> newLast = getLastSearch(label);
+    if (!print_search_info) {
+      newLast.setPrintInfo(false);
+    }
+    return newLast;
   }
 
   @SuppressWarnings("unchecked")
@@ -1552,33 +1559,38 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> priority_search(SearchItem<T> si) {
 
-    ArrayList<SearchItem<T>> dfs_s = si.getSearchItems();
-    DepthFirstSearch<T>[] searches = new DepthFirstSearch[dfs_s.size()];
+    DepthFirstSearch<T>[] searches = buildPrioritySearchesArray(si.getSearchItems());
+
+    SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
+    PrioritySearch<T> label =
+        new PrioritySearch<>(
+            (T[]) si.vars(),
+            (ComparatorVariable<T>) vs.v1,
+            (ComparatorVariable<T>) vs.v2,
+            searches);
+    label.setPrintInfo(false);
+    label.setAssignSolution(false);
+
+    configurePriorityLabel(label, searches);
+    return label;
+  }
+
+  private DepthFirstSearch<T>[] buildPrioritySearchesArray(ArrayList<SearchItem<T>> items) {
+    DepthFirstSearch<T>[] searches = new DepthFirstSearch[items.size()];
     int i = 0;
-    for (SearchItem<T> s : dfs_s) {
+    for (SearchItem<T> s : items) {
       DepthFirstSearch<T> subSearch = createPrioritySubSearch(s);
       subSearch.setSelectChoicePoint(variable_selection);
       subSearch.setPrintInfo(false);
       searches[i++] = subSearch;
     }
+    return searches;
+  }
 
-    SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
-    ComparatorVariable<IntVar> comparator = vs.v1;
-    ComparatorVariable<IntVar> tieBreak = vs.v2;
-
-    PrioritySearch<T> label =
-        new PrioritySearch<>(
-            (T[]) si.vars(),
-            (ComparatorVariable<T>) comparator,
-            (ComparatorVariable<T>) tieBreak,
-            searches);
-    label.setPrintInfo(false);
-    label.setAssignSolution(false);
-
+  private void configurePriorityLabel(PrioritySearch<T> label, DepthFirstSearch<T>[] searches) {
     if (options.debug()) {
       label.setConsistencyListener(failStatistics);
     }
-
     setSearchTimeout(label);
     int to = options.getTimeOut();
     if (to > 0) {
@@ -1586,12 +1598,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         s.setTimeOutMilliseconds(to);
       }
     }
-
     if (options.getNumberSolutions() > 0) {
       label.setSolutionLimit(options.getNumberSolutions());
     }
-
-    return label;
   }
 
   @SuppressWarnings("unchecked")
@@ -1640,69 +1649,80 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     numberSolutions++;
 
     if (!dictionary.outputVariables.isEmpty()) {
-      for (int i = 0; i < dictionary.outputVariables.size(); i++) {
-        appendVariableOutput(printBuffer, dictionary.outputVariables.get(i));
-      }
+      appendOutputVariablesToBuffer(printBuffer);
     }
 
     for (int i = 0; i < dictionary.outputArray.size(); i++) {
-      OutputArrayAnnotation a = dictionary.outputArray.get(i);
-
-      printBuffer.append(a).append("\n");
+      printBuffer.append(dictionary.outputArray.get(i)).append("\n");
     }
 
     if (options.getVerbose()) {
-      // print number of search nodes and CPU time for this solution
-      int nodes = 0;
-      DepthFirstSearch<T> dfs = label;
-      while (dfs != null) {
-        nodes += dfs.getNodes();
-        dfs = dfs.childSearches == null ? null : (DepthFirstSearch) dfs.childSearches[0];
-      }
-
-      if (costVariable != null) {
-        if (minimize) {
-          if (costVariable instanceof IntVar var1) {
-            printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
-          } else if (costVariable instanceof FloatVar fv) {
-            printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
-          }
-        } else {
-          if (costVariable instanceof IntVar var1) {
-            printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
-          } else if (costVariable instanceof FloatVar fv) {
-            printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
-          }
-        }
-      }
-      double cpuTime = getSearchTime_ms();
-      printBuffer.append("%%%mzn-stat: nodes=").append(nf.format(nodes)).append("\n");
-      printBuffer
-          .append("%%%mzn-stat: nodesPerSecond=")
-          .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
-          .append("\n");
-      if (restartCalculator != null) {
-        printBuffer.append("%%%%mzn-stat: restarts=").append(nf.format(rs.restarts()));
-      }
-      printBuffer
-          .append("\n%%%mzn-stat: solveTime=")
-          .append(nf.format(cpuTime / 1000))
-          .append("\n");
-      printBuffer.append("%%%mzn-stat-end\n");
+      appendVerboseStatsToBuffer(printBuffer);
     }
 
     printBuffer.append("----------\n");
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());
-    } else { // store the print-out
-
+    } else {
       lastSolution = printBuffer;
     }
 
     if (options.getNumberSolutions() == numberSolutions) {
       throw new NumberSolutionsReached();
     }
+  }
+
+  private void appendOutputVariablesToBuffer(StringBuffer printBuffer) {
+    for (int i = 0; i < dictionary.outputVariables.size(); i++) {
+      appendVariableOutput(printBuffer, dictionary.outputVariables.get(i));
+    }
+  }
+
+  private int countNodesFromLabel() {
+    int nodes = 0;
+    @SuppressWarnings("unchecked")
+    DepthFirstSearch<T> dfs = label;
+    while (dfs != null) {
+      nodes += dfs.getNodes();
+      dfs = dfs.childSearches == null ? null : (DepthFirstSearch<T>) dfs.childSearches[0];
+    }
+    return nodes;
+  }
+
+  private void appendCostLineToBuffer(StringBuffer printBuffer) {
+    if (costVariable == null) {
+      return;
+    }
+    if (minimize) {
+      if (costVariable instanceof IntVar var1) {
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
+      } else if (costVariable instanceof FloatVar fv) {
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
+      }
+    } else {
+      if (costVariable instanceof IntVar var1) {
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
+      } else if (costVariable instanceof FloatVar fv) {
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
+      }
+    }
+  }
+
+  private void appendVerboseStatsToBuffer(StringBuffer printBuffer) {
+    int nodes = countNodesFromLabel();
+    appendCostLineToBuffer(printBuffer);
+    double cpuTime = getSearchTime_ms();
+    printBuffer.append("%%%mzn-stat: nodes=").append(nf.format(nodes)).append("\n");
+    printBuffer
+        .append("%%%mzn-stat: nodesPerSecond=")
+        .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
+        .append("\n");
+    if (restartCalculator != null) {
+      printBuffer.append("%%%%mzn-stat: restarts=").append(nf.format(rs.restarts()));
+    }
+    printBuffer.append("\n%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
+    printBuffer.append("%%%mzn-stat-end\n");
   }
 
   int getKind(String k) {

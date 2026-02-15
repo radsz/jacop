@@ -164,6 +164,20 @@ public class NonTransitiveDice extends ExampleFd {
     runSecondPhase(noDices, noSides, initialCurrentBest);
   }
 
+  /** Imposes implied constraints that fix wins[i][j][m] to 1 when probability is high enough. */
+  private void imposeImpliedWinConstraints(IntVar[][][] wins, int noDices, int noSides) {
+    int threshold = currentBest != noSides * noSides ? currentBest - 1 : (noSides * noSides) / 2;
+    for (int j = 0; j < noSides; j++) {
+      for (int m = 0; m < noSides; m++) {
+        if ((j + 1) * (noSides - m) > threshold) {
+          for (int i = 0; i < noDices; i++) {
+            store.impose(new XeqC(wins[i][j][m], 1));
+          }
+        }
+      }
+    }
+  }
+
   @Override
   public void model() {
 
@@ -218,27 +232,7 @@ public class NonTransitiveDice extends ExampleFd {
       }
     }
 
-    // Special implied constraints (type 1)
-
-    // Another type of implied constraints, they do reduce no of
-    // backtracks.
-    // If the winning probability is given as parameter to the program
-    // then use it.
-    for (int j = 0; j < noSides; j++) {
-      for (int m = 0; m < noSides; m++) {
-        if (currentBest != noSides * noSides) {
-          if ((j + 1) * (noSides - m) > currentBest - 1) {
-            for (int i = 0; i < noDices; i++) {
-              store.impose(new XeqC(wins[i][j][m], 1));
-            }
-          }
-        } else if ((j + 1) * (noSides - m) > ((noSides * noSides) / 2)) {
-          for (int i = 0; i < noDices; i++) {
-            store.impose(new XeqC(wins[i][j][m], 1));
-          }
-        }
-      }
-    }
+    imposeImpliedWinConstraints(wins, noDices, noSides);
 
     IntVar[] winningSum = new IntVar[noDices];
     for (int i = 0; i < noDices; i++) {

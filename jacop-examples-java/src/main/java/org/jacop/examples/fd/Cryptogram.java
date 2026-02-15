@@ -99,88 +99,85 @@ public class Cryptogram extends ExampleFd {
     }
   }
 
+  private void readLinesFromFile() {
+    try (BufferedReader in =
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
+      String str;
+      while ((str = in.readLine()) != null) {
+        if (str.trim().isEmpty()) {
+          continue;
+        }
+        int commentPosition = str.indexOf("//");
+        if (commentPosition == 0) {
+          continue;
+        }
+        if (commentPosition >= 0) {
+          str = str.substring(0, commentPosition);
+        }
+        lines[noLines++] = str;
+      }
+    } catch (FileNotFoundException _) {
+      System.err.println("File " + filename + " could not be found");
+    } catch (IOException _) {
+      System.err.println("Something is wrong with the file" + filename);
+    }
+  }
+
+  private void useDefaultLines() {
+    lines[0] = "HERE+SHE=COMES";
+    noLines = 1;
+    IO.println("No input file was supplied, using lines : ");
+    for (int i = 0; i < noLines; i++) {
+      IO.println(lines[0]);
+    }
+  }
+
+  private List<List<String>> parseWords() {
+    List<List<String>> words = new ArrayList<>();
+    for (int i = 0; i < noLines; i++) {
+      words.add(new ArrayList<>());
+    }
+    Pattern pat = Pattern.compile("[=+]");
+    for (int i = 0; i < noLines; i++) {
+      for (String s : pat.split(lines[i])) {
+        words.get(i).add(s);
+      }
+    }
+    return words;
+  }
+
+  private void createLetterVariables(List<List<String>> words, Map<String, IntVar> letters) {
+    vars = new ArrayList<>();
+    for (int i = 0; i < noLines; i++) {
+      for (int j = words.get(i).size() - 1; j >= 0; j--) {
+        String word = words.get(i).get(j);
+        for (int z = word.length() - 1; z >= 0; z--) {
+          String ch = String.valueOf(word.charAt(z));
+          IntVar currentLetter = letters.get(ch);
+          if (currentLetter == null) {
+            currentLetter = new IntVar(store, ch, 0, base - 1);
+            letters.put(ch, currentLetter);
+            vars.add(currentLetter);
+          }
+        }
+      }
+    }
+  }
+
   @Override
   public void model() {
 
     if (filename != null) {
-
-      /* read from file args[0] */
-      try {
-
-        BufferedReader in =
-            new BufferedReader(
-                new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
-        String str;
-
-        while ((str = in.readLine()) != null) {
-          if (!str.trim().isEmpty()) {
-
-            int commentPosition = str.indexOf("//");
-            if (commentPosition == 0) {
-              continue;
-            } else {
-              str = str.substring(0, commentPosition);
-            }
-
-            lines[noLines] = str;
-            noLines++;
-          }
-        }
-        // in.close(); not needed; aouto close
-      } catch (FileNotFoundException _) {
-        System.err.println("File " + filename + " could not be found");
-      } catch (IOException _) {
-        System.err.println("Something is wrong with the file" + filename);
-      }
+      readLinesFromFile();
     } else {
-
-      // Standard use case if no file is supplied
-      lines[0] = "HERE+SHE=COMES";
-      noLines = 1;
-
-      IO.println("No input file was supplied, using lines : ");
-      for (int i = 0; i < noLines; i++) {
-        IO.println(lines[0]);
-      }
+      useDefaultLines();
     }
 
-    /* Creating constraint store */
     store = new Store();
-
-    List<List<String>> words = new ArrayList<>();
-
-    // Adding array list for each inputed line
-    for (int i = 0; i < noLines; i++) {
-      words.add(new ArrayList<>());
-    }
-
-    // letters used in the file.
+    List<List<String>> words = parseWords();
     Map<String, IntVar> letters = new HashMap<>();
-
-    // parsing the words within each line.
-    for (int i = 0; i < noLines; i++) {
-      Pattern pat = Pattern.compile("[=+]");
-      String[] result = pat.split(lines[i]);
-
-      for (String s : result) {
-        words.get(i).add(s);
-      }
-    }
-
-    vars = new ArrayList<>();
-
-    for (int i = 0; i < noLines; i++) {
-      for (int j = words.get(i).size() - 1; j >= 0; j--) {
-        for (int z = words.get(i).get(j).length() - 1; z >= 0; z--) {
-          char[] currentChar = {words.get(i).get(j).charAt(z)};
-          if (letters.get(new String(currentChar)) == null) {
-            IntVar currentLetter = new IntVar(store, new String(currentChar), 0, base - 1);
-            vars.add(currentLetter);
-            letters.put(new String(currentChar), currentLetter);
-          }
-        }
-      }
-    }
+    createLetterVariables(words, letters);
 
     if (letters.size() > base) {
       IO.println("Expressions contain more than letters than base of the number system used ");

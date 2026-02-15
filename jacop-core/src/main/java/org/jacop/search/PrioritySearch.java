@@ -725,6 +725,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     final DepthFirstSearch<T> master;
 
+    /** Last child search run in the child loop (used when no early return). */
+    DepthFirstSearch<T> lastChildSearchRun;
+
     LinkingSearch(DepthFirstSearch<T> m) {
       master = m;
     }
@@ -794,121 +797,133 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     @SuppressWarnings("unchecked")
     public boolean labeling() {
-
       int index = getSubSearch();
       if (index < n) {
-        visited.set(index);
+        return runSubSearchLabeling(index);
+      }
+      return labelingAtPriorityLevel(index);
+    }
 
-        boolean result = search.get(2 * index).labeling();
+    private boolean runSubSearchLabeling(int index) {
+      visited.set(index);
+      boolean result = search.get(2 * index).labeling();
+      visited.set(index, false);
+      return result;
+    }
 
-        visited.set(index, false);
-        return result;
+    @SuppressWarnings("unchecked")
+    private boolean labelingAtPriorityLevel(int index) {
+      if (costVariable != null) {
+        return labelingWithCost(index);
+      }
+      if (master.childSearches != null) {
+        return labelingNoCostWithChildSearches(index);
+      }
+      return labelingNoCostNoChildSearches(index);
+    }
 
-      } else { // index == n
-        if (costVariable != null) {
+    @SuppressWarnings("unchecked")
+    private boolean labelingWithCost(int index) {
+      if (master.childSearches != null) {
+        Boolean earlyReturn = runChildSearchesWithCost(index);
+        if (earlyReturn != null) {
+          return earlyReturn;
+        }
+        noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+        constraineCostFromChild(lastChildSearchRun);
+      } else {
+        constraineCost();
+        noSolutions++;
+      }
+      return finishLabelingAfterSolution(index);
+    }
 
-          if (master.childSearches != null) {
-
-            DepthFirstSearch<T> childSearch = null;
-
-            for (Search<? extends Var> childObj : master.childSearches) {
-              DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
-              childSearch = child;
-              child.setStore(store);
-              child.getSolutionListener().setParentSolutionListener(solutionListener);
-              child.setCostVar(costVariable);
-              int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
-
-              boolean result = child.labeling();
-
-              if (result) {
-                // gets here when the limit of solutions was reached
-                break;
-              } else {
-                if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
-                  noSolutions = child.getSolutionListener().solutionsNo();
-
-                  constraineCostFromChild(child);
-
-                  if (noSolutions >= solutionsLimit) {
-                    throw new SolutionsLimitReached();
-                  }
-
-                  master.solutionListener.executeAfterSolution(this, null);
-
-                  visited.set(index, false);
-                  return false;
-                }
-              }
-            }
-
-            noSolutions += childSearch.getSolutionListener().solutionsNo();
-            constraineCostFromChild(childSearch);
-
-          } else { // no child search
-
-            constraineCost();
-            noSolutions++;
-          }
+    @SuppressWarnings("unchecked")
+    private Boolean runChildSearchesWithCost(int index) {
+      lastChildSearchRun = null;
+      for (Search<? extends Var> childObj : master.childSearches) {
+        DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
+        lastChildSearchRun = child;
+        child.setStore(store);
+        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        child.setCostVar(costVariable);
+        int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        boolean result = child.labeling();
+        if (result) {
+          break;
+        }
+        if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
+          noSolutions = child.getSolutionListener().solutionsNo();
+          constraineCostFromChild(child);
           if (noSolutions >= solutionsLimit) {
             throw new SolutionsLimitReached();
           }
           master.solutionListener.executeAfterSolution(this, null);
-          visited.set(index, false);
-          return false;
-        } else if (master.childSearches != null) { // no optimization and child search
-          DepthFirstSearch<T> childSearch = null;
-
-          for (Search<? extends Var> childObj2 : master.childSearches) {
-            DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj2);
-            childSearch = child;
-            child.setStore(store);
-            child.getSolutionListener().setParentSolutionListener(solutionListener);
-            int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
-
-            boolean result = child.labeling();
-
-            if (result) {
-              // gets here when the limit of solutions was reached
-              break;
-            } else {
-              if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
-                noSolutions = child.getSolutionListener().solutionsNo();
-
-                if (noSolutions >= solutionsLimit) {
-                  throw new SolutionsLimitReached();
-                }
-
-                master.solutionListener.executeAfterSolution(this, null);
-
-                visited.set(index, false);
-                return false;
-              }
-            }
-          }
-
-          noSolutions += childSearch.getSolutionListener().solutionsNo();
-          if (noSolutions >= solutionsLimit) {
-            throw new SolutionsLimitReached();
-          }
-
-          master.solutionListener.executeAfterSolution(this, null);
-
-          visited.set(index, false);
-          return false;
-        } else { // not optimization and no child search
-          noSolutions++;
-
-          master.solutionListener.executeAfterSolution(this, null);
-
-          if (noSolutions >= solutionsLimit) {
-            throw new SolutionsLimitReached();
-          }
-
           visited.set(index, false);
           return false;
         }
       }
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Boolean runChildSearchesNoCost(int index) {
+      lastChildSearchRun = null;
+      for (Search<? extends Var> childObj : master.childSearches) {
+        DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
+        lastChildSearchRun = child;
+        child.setStore(store);
+        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        boolean result = child.labeling();
+        if (result) {
+          break;
+        }
+        if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
+          noSolutions = child.getSolutionListener().solutionsNo();
+          if (noSolutions >= solutionsLimit) {
+            throw new SolutionsLimitReached();
+          }
+          master.solutionListener.executeAfterSolution(this, null);
+          visited.set(index, false);
+          return false;
+        }
+      }
+      return null;
+    }
+
+    private boolean finishLabelingAfterSolution(int index) {
+      if (noSolutions >= solutionsLimit) {
+        throw new SolutionsLimitReached();
+      }
+      master.solutionListener.executeAfterSolution(this, null);
+      visited.set(index, false);
+      return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean labelingNoCostWithChildSearches(int index) {
+      Boolean earlyReturn = runChildSearchesNoCost(index);
+      if (earlyReturn != null) {
+        return earlyReturn;
+      }
+      noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+      if (noSolutions >= solutionsLimit) {
+        throw new SolutionsLimitReached();
+      }
+      master.solutionListener.executeAfterSolution(this, null);
+      visited.set(index, false);
+      return false;
+    }
+
+    private boolean labelingNoCostNoChildSearches(int index) {
+      noSolutions++;
+      master.solutionListener.executeAfterSolution(this, null);
+      if (noSolutions >= solutionsLimit) {
+        throw new SolutionsLimitReached();
+      }
+      visited.set(index, false);
+      return false;
     }
   }
 }

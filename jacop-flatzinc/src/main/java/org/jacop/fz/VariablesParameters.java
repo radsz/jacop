@@ -476,214 +476,343 @@ public class VariablesParameters implements ParserTreeConstants {
 
     initContext(table);
     indexBounds = new ArrayList<>();
-    boolean outputArray = false;
-    OutputArrayAnnotation outArrayAnn = null;
-
     int type = getType(node);
     int initChild = getArrayAnnotations(node, 1);
     String ident = ((ASTVarDeclItem) node).getIdent();
-
-    if (annotations.contains("output_array")) {
-      outputArray = true;
-      outArrayAnn = new OutputArrayAnnotation(ident, indexBounds);
-    }
-
-    int size;
-    IntVar[] varArrayInt;
-    FloatVar[] varArrayFloat;
-    SetVar[] varArraySet;
+    boolean outputArray = annotations.contains("output_array");
+    OutputArrayAnnotation outArrayAnn =
+        outputArray ? new OutputArrayAnnotation(ident, indexBounds) : null;
 
     switch (type) {
-      case 0: // array of int
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++) {
-            varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", MIN_INT, MAX_INT);
-          }
-          table.addSearchArray(varArrayInt);
-        }
-        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+      case 0:
+        generateArrayVariablesInt(node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 1: // array of int interval
-        size = computeArraySize(node);
-        if (lowInterval > highInterval) {
-          throw Store.failException;
-        }
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++) {
-            if (INTERVAL) {
-              varArrayInt[i] =
-                  new IntVar(
-                      store, ident + "[" + i + "]", new IntervalDomain(lowInterval, highInterval));
-            } else {
-              varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", lowInterval, highInterval);
-            }
-          }
-          table.addSearchArray(varArrayInt);
-        }
-        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+      case 1:
+        generateArrayVariablesIntInterval(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 2: // array of int list
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++) {
-            IntervalDomain dom = new IntervalDomain();
-            for (Integer e : intList) {
-              dom.unionAdapt(e, e);
-            }
-            varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", dom);
-          }
-          table.addSearchArray(varArrayInt);
-        }
-        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+      case 2:
+        generateArrayVariablesIntList(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 3: // array of bool
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++) {
-            varArrayInt[i] = new BooleanVar(store, ident + "[" + i + "]");
-          }
-          table.addSearchArray(varArrayInt);
-          numberBooleanVariables += size;
-        }
-        registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+      case 3:
+        generateArrayVariablesBool(node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 4: // array of set int
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++) {
-            varArraySet[i] =
-                new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(MIN_INT, MAX_INT));
-          }
-          table.addSearchSetArray(varArraySet);
-          numberSetVariables += size;
-        }
-        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+      case 4:
+        generateArrayVariablesSetInt(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 5: // array of set interval
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++) {
-            if (lowInterval > highInterval) {
-              varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain());
-            } else {
-              varArraySet[i] =
-                  new SetVar(
-                      store,
-                      ident + "[" + i + "]",
-                      new BoundSetDomain(
-                          new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
-            }
-          }
-          table.addSearchSetArray(varArraySet);
-          numberSetVariables += size;
-        }
-        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+      case 5:
+        generateArrayVariablesSetInterval(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 6: // array of set list
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++) {
-            IntDomain sd = new IntervalDomain();
-            for (Integer e : intList) {
-              sd.unionAdapt(e, e);
-            }
-            varArraySet[i] =
-                new SetVar(
-                    store, ident + "[" + i + "]", new BoundSetDomain(new IntervalDomain(), sd));
-          }
-          table.addSearchSetArray(varArraySet);
-          numberSetVariables += size;
-        }
-        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+      case 6:
+        generateArrayVariablesSetList(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 7: // array of bool set
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++) {
-            varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(0, 1));
-          }
-          table.addSearchSetArray(varArraySet);
-          numberSetVariables += size;
-        }
-        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+      case 7:
+        generateArrayVariablesBoolSet(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 10: // array of range set
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-        } else {
-          varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++) {
-            varArraySet[i] =
-                new SetVar(
-                    store,
-                    ident + "[" + i + "]",
-                    new BoundSetDomain(new IntervalDomain(), rangeDomain));
-          }
-          table.addSearchSetArray(varArraySet);
-          numberSetVariables += size;
-        }
-        registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+      case 10:
+        generateArrayVariablesRangeSet(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 8: // array of float
-        size = computeArraySize(node);
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-        } else {
-          varArrayFloat = new FloatVar[size];
-          for (int i = 0; i < size; i++) {
-            varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", MIN_FLOAT, MAX_FLOAT);
-          }
-          table.addSearchFloatArray(varArrayFloat);
-          numberFloatVariables += size;
-        }
-        registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
+      case 8:
+        generateArrayVariablesFloat(node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
-      case 9: // array of float interval
-        size = computeArraySize(node);
-        validateFloatInterval(ident, "array float variable");
-        if (initChild < node.jjtGetNumChildren()) {
-          varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-        } else {
-          varArrayFloat = new FloatVar[size];
-          for (int i = 0; i < size; i++) {
-            varArrayFloat[i] =
-                new FloatVar(store, ident + "[" + i + "]", lowFloatInterval, highFloatInterval);
-          }
-          table.addSearchFloatArray(varArrayFloat);
-          numberFloatVariables += size;
-        }
-        registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
+      case 9:
+        generateArrayVariablesFloatInterval(
+            node, table, store, ident, initChild, outputArray, outArrayAnn);
         break;
       default:
         throw new IllegalArgumentException(
             "Not supported type in array parameter; compilation aborted.");
     }
+  }
+
+  private void generateArrayVariablesInt(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    IntVar[] varArrayInt =
+        initChild < node.jjtGetNumChildren()
+            ? getScalarFlatExpr_ArrayVar(store, node, initChild)
+            : createIntVarArray(store, ident, size, MIN_INT, MAX_INT, table);
+    registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+  }
+
+  private IntVar[] createIntVarArray(
+      Store store, String ident, int size, int low, int high, Tables table) {
+    IntVar[] a = new IntVar[size];
+    for (int i = 0; i < size; i++) {
+      a[i] = new IntVar(store, ident + "[" + i + "]", low, high);
+    }
+    table.addSearchArray(a);
+    return a;
+  }
+
+  private void generateArrayVariablesIntInterval(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    if (lowInterval > highInterval) {
+      throw Store.failException;
+    }
+    int size = computeArraySize(node);
+    IntVar[] varArrayInt;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArrayInt = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        varArrayInt[i] =
+            INTERVAL
+                ? new IntVar(
+                    store, ident + "[" + i + "]", new IntervalDomain(lowInterval, highInterval))
+                : new IntVar(store, ident + "[" + i + "]", lowInterval, highInterval);
+      }
+      table.addSearchArray(varArrayInt);
+    }
+    registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesIntList(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    IntVar[] varArrayInt;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArrayInt = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        IntervalDomain dom = new IntervalDomain();
+        for (Integer e : intList) {
+          dom.unionAdapt(e, e);
+        }
+        varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", dom);
+      }
+      table.addSearchArray(varArrayInt);
+    }
+    registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesBool(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    IntVar[] varArrayInt;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArrayInt = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        varArrayInt[i] = new BooleanVar(store, ident + "[" + i + "]");
+      }
+      table.addSearchArray(varArrayInt);
+      numberBooleanVariables += size;
+    }
+    registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesSetInt(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    SetVar[] varArraySet;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArraySet = new SetVar[size];
+      for (int i = 0; i < size; i++) {
+        varArraySet[i] =
+            new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(MIN_INT, MAX_INT));
+      }
+      table.addSearchSetArray(varArraySet);
+      numberSetVariables += size;
+    }
+    registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesSetInterval(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    SetVar[] varArraySet;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArraySet = new SetVar[size];
+      for (int i = 0; i < size; i++) {
+        varArraySet[i] =
+            lowInterval > highInterval
+                ? new SetVar(store, ident + "[" + i + "]", new BoundSetDomain())
+                : new SetVar(
+                    store,
+                    ident + "[" + i + "]",
+                    new BoundSetDomain(
+                        new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
+      }
+      table.addSearchSetArray(varArraySet);
+      numberSetVariables += size;
+    }
+    registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesSetList(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    SetVar[] varArraySet;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArraySet = new SetVar[size];
+      for (int i = 0; i < size; i++) {
+        IntDomain sd = new IntervalDomain();
+        for (Integer e : intList) {
+          sd.unionAdapt(e, e);
+        }
+        varArraySet[i] =
+            new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(new IntervalDomain(), sd));
+      }
+      table.addSearchSetArray(varArraySet);
+      numberSetVariables += size;
+    }
+    registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesBoolSet(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    SetVar[] varArraySet;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArraySet = new SetVar[size];
+      for (int i = 0; i < size; i++) {
+        varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(0, 1));
+      }
+      table.addSearchSetArray(varArraySet);
+      numberSetVariables += size;
+    }
+    registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesRangeSet(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    SetVar[] varArraySet;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArraySet = new SetVar[size];
+      for (int i = 0; i < size; i++) {
+        varArraySet[i] =
+            new SetVar(
+                store,
+                ident + "[" + i + "]",
+                new BoundSetDomain(new IntervalDomain(), rangeDomain));
+      }
+      table.addSearchSetArray(varArraySet);
+      numberSetVariables += size;
+    }
+    registerSetArray(table, ident, varArraySet, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesFloat(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    int size = computeArraySize(node);
+    FloatVar[] varArrayFloat;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
+    } else {
+      varArrayFloat = new FloatVar[size];
+      for (int i = 0; i < size; i++) {
+        varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", MIN_FLOAT, MAX_FLOAT);
+      }
+      table.addSearchFloatArray(varArrayFloat);
+      numberFloatVariables += size;
+    }
+    registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
+  }
+
+  private void generateArrayVariablesFloatInterval(
+      SimpleNode node,
+      Tables table,
+      Store store,
+      String ident,
+      int initChild,
+      boolean outputArray,
+      OutputArrayAnnotation outArrayAnn) {
+    validateFloatInterval(ident, "array float variable");
+    int size = computeArraySize(node);
+    FloatVar[] varArrayFloat;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
+    } else {
+      varArrayFloat = new FloatVar[size];
+      for (int i = 0; i < size; i++) {
+        varArrayFloat[i] =
+            new FloatVar(store, ident + "[" + i + "]", lowFloatInterval, highFloatInterval);
+      }
+      table.addSearchFloatArray(varArrayFloat);
+      numberFloatVariables += size;
+    }
+    registerFloatArray(table, ident, varArrayFloat, outputArray, outArrayAnn);
   }
 
   private void registerIntArray(
@@ -882,58 +1011,8 @@ public class VariablesParameters implements ParserTreeConstants {
         String id = ((ASTAnnotation) child).getAnnId();
 
         if ("output_array".equals(id)) {
-          annotations.add(id);
-
-          child = (SimpleNode) child.jjtGetChild(0);
-
-          int noAnnotations = child.jjtGetNumChildren();
-          for (int nc = 0; nc < noAnnotations; nc++) {
-
-            SimpleNode nchild = (SimpleNode) child.jjtGetChild(nc);
-            int no = nchild.jjtGetNumChildren();
-
-            if (no > 1 || ((SimpleNode) nchild.jjtGetChild(0)).getId() != JJTANNEXPR) {
-              throw new IllegalArgumentException(
-                  "More than one annotation expression in output_array annotation; execution aborted");
-            } else {
-              SimpleNode grandchild = (SimpleNode) nchild.jjtGetChild(0);
-              int number = grandchild.jjtGetNumChildren();
-              if (number == 1) {
-                SimpleNode setLiteral = (SimpleNode) grandchild.jjtGetChild(0);
-                if (setLiteral.getId() == JJTSETLITERAL) {
-
-                  if (((ASTSetLiteral) setLiteral).getType() == 0) { // interval
-                    int s_n = setLiteral.jjtGetNumChildren();
-                    if (s_n == 2) {
-                      int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
-                      int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
-                      IntDomain indexes = new IntervalDomain(low, high);
-                      indexBounds.add(indexes);
-                    } else {
-                      throw new IllegalArgumentException(
-                          "Unexpected set literal in output_array annotation; execution aborted");
-                    }
-                  } else if (((ASTSetLiteral) setLiteral).getType() == 1) { // list
-                    int s_n = setLiteral.jjtGetNumChildren();
-                    IntDomain indexes = new IntervalDomain();
-                    for (int k = 0; k < s_n; k++) {
-                      int el = ((ASTScalarFlatExpr) setLiteral.jjtGetChild(k)).getInt();
-                      indexes.unionAdapt(el);
-                    }
-                    indexBounds.add(indexes);
-                  } else {
-                    throw new IllegalArgumentException(
-                        "Unexpected set literal in output_array annotation; execution aborted");
-                  }
-                } else {
-                  throw new IllegalArgumentException(
-                      "Wrong expression in output_array annotation; execution aborted");
-                }
-              }
-            }
-          }
+          processOutputArrayAnnotation(child);
         } else {
-          // simple annotation id
           annotations.add(parseAnnExpr((SimpleNode) child.jjtGetChild(0), 0));
         }
         j++;
@@ -944,6 +1023,62 @@ public class VariablesParameters implements ParserTreeConstants {
     }
 
     return j;
+  }
+
+  private void processOutputArrayAnnotation(SimpleNode child) {
+    annotations.add("output_array");
+    child = (SimpleNode) child.jjtGetChild(0);
+    int noAnnotations = child.jjtGetNumChildren();
+    for (int nc = 0; nc < noAnnotations; nc++) {
+      SimpleNode nchild = (SimpleNode) child.jjtGetChild(nc);
+      int no = nchild.jjtGetNumChildren();
+      if (no > 1 || ((SimpleNode) nchild.jjtGetChild(0)).getId() != JJTANNEXPR) {
+        throw new IllegalArgumentException(
+            "More than one annotation expression in output_array annotation; execution aborted");
+      }
+      addIndexBoundsFromAnnotation((SimpleNode) nchild.jjtGetChild(0));
+    }
+  }
+
+  private void addIndexBoundsFromAnnotation(SimpleNode grandchild) {
+    int number = grandchild.jjtGetNumChildren();
+    if (number != 1) {
+      return;
+    }
+    SimpleNode setLiteral = (SimpleNode) grandchild.jjtGetChild(0);
+    if (setLiteral.getId() != JJTSETLITERAL) {
+      throw new IllegalArgumentException(
+          "Wrong expression in output_array annotation; execution aborted");
+    }
+    if (((ASTSetLiteral) setLiteral).getType() == 0) {
+      indexBounds.add(parseSetLiteralInterval(setLiteral));
+    } else if (((ASTSetLiteral) setLiteral).getType() == 1) {
+      indexBounds.add(parseSetLiteralList(setLiteral));
+    } else {
+      throw new IllegalArgumentException(
+          "Unexpected set literal in output_array annotation; execution aborted");
+    }
+  }
+
+  private IntDomain parseSetLiteralInterval(SimpleNode setLiteral) {
+    int s_n = setLiteral.jjtGetNumChildren();
+    if (s_n != 2) {
+      throw new IllegalArgumentException(
+          "Unexpected set literal in output_array annotation; execution aborted");
+    }
+    int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
+    int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
+    return new IntervalDomain(low, high);
+  }
+
+  private IntDomain parseSetLiteralList(SimpleNode setLiteral) {
+    int s_n = setLiteral.jjtGetNumChildren();
+    IntDomain indexes = new IntervalDomain();
+    for (int k = 0; k < s_n; k++) {
+      int el = ((ASTScalarFlatExpr) setLiteral.jjtGetChild(k)).getInt();
+      indexes.unionAdapt(el);
+    }
+    return indexes;
   }
 
   boolean constant_int(SimpleNode node, int i) {

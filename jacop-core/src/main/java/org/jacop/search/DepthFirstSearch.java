@@ -521,360 +521,350 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return true;
   }
 
+  /**
+   * Applies optimization cost restriction. Returns false if search should exit (no better solutions
+   * possible or FailException).
+   */
+  private boolean applyOptimizationCostRestriction() {
+    if (!optimize || cost == null) {
+      return true;
+    }
+    try {
+      CostVariableHandler costHandler =
+          SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+      if (costHandler != null) {
+        return applyOptimizationCostWithHandler(costHandler);
+      }
+      if (costVariable instanceof IntVar v) {
+        return applyOptimizationCostIntVarFallback(v);
+      }
+    } catch (FailException _) {
+      notifyConsistencyListener(false);
+      return false;
+    }
+    return true;
+  }
+
+  private boolean applyOptimizationCostWithHandler(CostVariableHandler costHandler) {
+    double minCost = costHandler.getMinCostValue(costVariable);
+    double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+    double previousCost = costHandler.getPreviousCostValue(currentBestCost);
+    boolean canImprove =
+        costVariable instanceof IntVar ? minCost <= previousCost : minCost < previousCost;
+    if (canImprove) {
+      costHandler.updateCostDomain(store, costVariable, currentBestCost);
+      return true;
+    }
+    notifyConsistencyListener(false);
+    return false;
+  }
+
+  private boolean applyOptimizationCostIntVarFallback(IntVar v) {
+    if (v.min() <= costValue - 1) {
+      v.domain.in(store.level, v, v.min(), costValue - 1);
+      return true;
+    }
+    notifyConsistencyListener(false);
+    return false;
+  }
+
+  private void notifyConsistencyListener(boolean consistent) {
+    if (consistencyListener != null) {
+      consistencyListener.executeAfterConsistency(consistent);
+    }
+  }
+
+  /** Applies the chosen value to the choice variable (left branch). */
+  private void applyChoiceVariableValue(T fdv, int val) {
+    assert store.currentConstraint == null;
+    DomainOperationHandler domainHandler =
+        SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
+    if (domainHandler != null) {
+      domainHandler.inValue(store, fdv, val, einAinleftTree);
+    } else if (fdv instanceof IntVar v) {
+      ((IntDomain) fdv.dom()).inValue(store.level, v, val);
+    }
+    decisions++;
+    updateDepthExcludePaths();
+  }
+
+  private void updateDepthExcludePaths() {
+    depthExcludePaths++;
+    if (depthExcludePaths > maxDepthExcludePaths) {
+      maxDepthExcludePaths = depthExcludePaths;
+    }
+  }
+
+  /** Applies the choice constraint (left branch) and updates decisions/depthExcludePaths. */
+  private void applyChoiceConstraint(PrimitiveConstraint choice) {
+    assert store.currentConstraint == null;
+    store.impose(choice);
+    decisions++;
+    updateDepthExcludePaths();
+  }
+
+  /**
+   * Runs child searches when a solution is found (choice == null). Returns the value to return from
+   * label (stopMasterSearch or false for optimize).
+   */
+  private boolean runChildSearchesWhenSolutionFound() {
+    boolean childResult = false;
+    boolean childFoundSolution = false;
+    currentChildSearch = 0;
+    for (; currentChildSearch < childSearches.length; currentChildSearch++) {
+      setupChildSearch(currentChildSearch);
+      int currentChildSolutionNo =
+          childSearches[currentChildSearch].getSolutionListener().solutionsNo();
+      childResult = childSearches[currentChildSearch].labeling();
+      if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
+          > currentChildSolutionNo) {
+        childFoundSolution = true;
+      }
+      if (childResult) {
+        break;
+      }
+      if (updateCostInChildLoopAndBreak()) {
+        break;
+      }
+    }
+    if (childResult && costVariable != null) {
+      updateCostFromChildSearch(childSearches[currentChildSearch]);
+    }
+    boolean stopMasterSearch = false;
+    if (childResult || childFoundSolution) {
+      stopMasterSearch = solutionListener.executeAfterSolution(this, heuristic);
+      if (!childResult) {
+        stopMasterSearch = false;
+      }
+    }
+    store.removeLevel(depth);
+    store.setLevel(--depth);
+    if (!respectSolutionListenerAdvice && optimize) {
+      return false;
+    }
+    return stopMasterSearch;
+  }
+
+  private void setupChildSearch(int index) {
+    childSearches[index].getSolutionListener().setParentSolutionListener(solutionListener);
+    childSearches[index].setStore(store);
+    if (costVariable != null) {
+      childSearches[index].setCostVar(costVariable);
+    }
+  }
+
+  /** Updates cost from child search in the loop. Returns true if the loop should break. */
+  private boolean updateCostInChildLoopAndBreak() {
+    if (costVariable == null) {
+      return false;
+    }
+    CostVariableHandler costHandler =
+        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+    if (costHandler != null) {
+      double childCostValue = getChildCostValue(childSearches[currentChildSearch]);
+      double currentBestCost = getCurrentCostValue();
+      if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
+        updateCostValue(childCostValue);
+      }
+      double minCost = costHandler.getMinCostValue(costVariable);
+      if (childCostValue <= minCost) {
+        return true;
+      }
+      costHandler.updateCostDomain(store, costVariable, childCostValue);
+      return false;
+    }
+    if (costVariable instanceof IntVar v) {
+      int childCostValue = childSearches[currentChildSearch].getCostValue();
+      if (childCostValue < costValue) {
+        costValue = childCostValue;
+        cost = new XltC(v, costValue);
+      }
+      if (childCostValue <= v.min()) {
+        return true;
+      }
+      v.domain.inMax(store.level, v, childCostValue - 1);
+      return false;
+    }
+    return false;
+  }
+
+  /** Records cost from current solution when there are no child searches. */
+  private void recordCostFromCurrentSolution() {
+    if (costVariable == null) {
+      return;
+    }
+    CostVariableHandler costHandler =
+        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+    if (costHandler != null) {
+      double currentCost = costHandler.getCostValue(costVariable);
+      if (costVariable instanceof IntVar) {
+        costValue = (int) currentCost;
+      } else {
+        costValueFloat = currentCost;
+      }
+      cost = costHandler.createCostConstraint(costVariable, currentCost);
+    } else if (costVariable instanceof IntVar v) {
+      costValue = v.dom().min();
+      cost = new XltC(v, costValue);
+    }
+  }
+
+  /**
+   * Handles solution found with no child searches: optionally records cost, runs listener, removes
+   * level. Returns the value to return from label.
+   */
+  private boolean handleSolutionFoundNoChildSearches() {
+    recordCostFromCurrentSolution();
+    if (!respectSolutionListenerAdvice && optimize) {
+      solutionListener.executeAfterSolution(this, heuristic);
+      store.removeLevel(depth);
+      store.setLevel(--depth);
+      return false;
+    }
+    boolean returnCode = solutionListener.executeAfterSolution(this, heuristic);
+    store.removeLevel(depth);
+    store.setLevel(--depth);
+    return returnCode;
+  }
+
+  /** Returns true if search should exit after left child (exitChildListener rejected). */
+  private boolean shouldExitAfterLeftChild(
+      T fdv, int val, PrimitiveConstraint choice, boolean consistent) {
+    if (exitChildListener == null) {
+      return false;
+    }
+    if (choice == null) {
+      return !exitChildListener.leftChild(fdv, val, consistent);
+    }
+    return !exitChildListener.leftChild(choice, consistent);
+  }
+
+  private void logRightBranch(
+      boolean isVariableBranch, T fdv, int val, PrimitiveConstraint choice) {
+    if (!SwitchesPruningLogging.TRACE_SEARCH_TREE) {
+      return;
+    }
+    if (isVariableBranch) {
+      SwitchesPruningLogging.log(
+          true,
+          DepthFirstSearch.class,
+          "Store level: {}, Right branch: {} \\ {}",
+          new Object[] {depth, fdv, val});
+    } else {
+      SwitchesPruningLogging.log(
+          false, DepthFirstSearch.class, "Store level: {}, Right branch: {}", depth, choice);
+    }
+  }
+
+  /** Executes right branch for constraint choice (Not(choice)), returns consistency result. */
+  private boolean doRightBranchChoice(PrimitiveConstraint choice, int firstVariable) {
+    assert store.currentConstraint == null;
+    store.setLevel(store.level);
+    store.impose(new Not(choice));
+    boolean consistent = label(firstVariable);
+    if (exitChildListener != null) {
+      exitChildListener.rightChild(choice, consistent);
+    }
+    if (!consistent) {
+      numberBacktracks++;
+    }
+    store.removeLevel(depth);
+    return consistent;
+  }
+
+  /** Executes right branch for variable (inComplement), returns consistency result. */
+  private boolean doRightBranchVariable(T fdv, int val, int firstVariable) {
+    assert store.currentConstraint == null;
+    store.setLevel(store.level);
+    DomainOperationHandler domainHandler =
+        SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
+    if (domainHandler != null) {
+      domainHandler.inComplement(store, fdv, val, einAinleftTree);
+    } else if (fdv instanceof IntVar v) {
+      ((IntDomain) fdv.dom()).inComplement(store.level, v, val);
+    }
+    boolean consistent = label(firstVariable);
+    if (exitChildListener != null) {
+      exitChildListener.rightChild(fdv, val, consistent);
+    }
+    if (!consistent) {
+      numberBacktracks++;
+    }
+    store.removeLevel(depth);
+    return consistent;
+  }
+
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
-
-    boolean consistent;
 
     if (!checkExitConditions()) {
       return false;
     }
-
-    // Instead of imposing constraint just restrict bounds
-    // -1 since costValue is the cost of last solution
-    if (optimize && cost != null) {
-      try {
-        CostVariableHandler costHandler =
-            SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-        if (costHandler != null) {
-          double minCost = costHandler.getMinCostValue(costVariable);
-          double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
-          double previousCost = costHandler.getPreviousCostValue(currentBestCost);
-
-          // Check if we can still improve
-          // For IntVar: minCost <= previousCost (which is costValue - 1)
-          // For FloatVar: minCost < previousCost (which accounts for floating-point precision)
-          boolean canImprove =
-              costVariable instanceof IntVar ? minCost <= previousCost : minCost < previousCost;
-
-          if (canImprove) {
-            // Can improve: restrict domain to exclude values worse than previous best
-            costHandler.updateCostDomain(store, costVariable, currentBestCost);
-          } else {
-            // Cannot improve: no better solutions possible
-            if (consistencyListener != null) {
-              consistencyListener.executeAfterConsistency(false);
-            }
-            return false;
-          }
-        } else if (costVariable instanceof IntVar v) {
-          // Fallback for IntVar (should always have handler, but just in case)
-          if (v.min() <= costValue - 1) {
-            v.domain.in(store.level, v, v.min(), costValue - 1);
-          } else {
-            if (consistencyListener != null) {
-              consistencyListener.executeAfterConsistency(false);
-            }
-            return false;
-          }
-        }
-      } catch (FailException _) {
-        if (consistencyListener != null) {
-          consistencyListener.executeAfterConsistency(false);
-        }
-        return false;
-      }
+    if (!applyOptimizationCostRestriction()) {
+      return false;
     }
 
-    // all search nodes begins here
     nodes++;
-
-    consistent = store.consistency();
-
+    boolean consistent = store.consistency();
     if (consistencyListener != null) {
       consistent = consistencyListener.executeAfterConsistency(consistent);
     }
-
     if (!consistent) {
-      // Failed leaf of the search tree
       wrongDecisions++;
       return false;
-    } else { // consistent
-
-      store.setLevel(++depth);
-      maxDepth = Math.max(depth, maxDepth);
-
-      // Delete function indicates which is next variable for
-      // labeling
-
-      T fdv = heuristic.getChoiceVariable(firstVariable);
-      PrimitiveConstraint choice = null;
-      int val = 0;
-
-      if (fdv != null) {
-
-        val = heuristic.getChoiceValue();
-        assert store.currentConstraint == null;
-
-        //   maybe a boolean flag, if search should work
-        //   C, not(C) versus not(C), C;
-
-        DomainOperationHandler domainHandler =
-            SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
-        if (domainHandler != null) {
-          domainHandler.inValue(store, fdv, val, einAinleftTree);
-        } else if (fdv instanceof IntVar v) {
-          // Fallback for IntVar (should always have handler, but just in case)
-          ((IntDomain) fdv.dom()).inValue(store.level, v, val);
-        }
-
-        decisions++;
-
-        depthExcludePaths++;
-        if (depthExcludePaths > maxDepthExcludePaths) {
-          maxDepthExcludePaths = depthExcludePaths;
-        }
-
-      } else {
-
-        choice = heuristic.getChoiceConstraint(firstVariable);
-
-        if (choice == null) {
-
-          // Solution already found so this is not a search node
-          nodes--;
-          // Execute subsearches if given.
-
-          if (childSearches != null) {
-
-            boolean childResult = false;
-            boolean childFoundSolution = false;
-            currentChildSearch = 0;
-
-            for (; currentChildSearch < childSearches.length; currentChildSearch++) {
-              childSearches[currentChildSearch]
-                  .getSolutionListener()
-                  .setParentSolutionListener(solutionListener);
-              childSearches[currentChildSearch].setStore(store);
-
-              if (costVariable != null) {
-                childSearches[currentChildSearch].setCostVar(costVariable);
-              }
-
-              int currentChildSolutionNo =
-                  childSearches[currentChildSearch].getSolutionListener().solutionsNo();
-              childResult = childSearches[currentChildSearch].labeling();
-              if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
-                  > currentChildSolutionNo) {
-                childFoundSolution = true;
-              }
-
-              if (childResult) {
-                break;
-              }
-
-              if (costVariable != null) {
-                CostVariableHandler costHandler =
-                    SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-                if (costHandler != null) {
-                  double childCostValue = getChildCostValue(childSearches[currentChildSearch]);
-                  double currentBestCost = getCurrentCostValue();
-                  if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
-                    updateCostValue(childCostValue);
-                  }
-
-                  double minCost = costHandler.getMinCostValue(costVariable);
-                  if (childCostValue <= minCost) {
-                    // other child searches will not be able to find any solutions.
-                    break;
-                  } else {
-                    costHandler.updateCostDomain(store, costVariable, childCostValue);
-                  }
-                } else if (costVariable instanceof IntVar v) {
-                  // Fallback for IntVar
-                  int childCostValue = childSearches[currentChildSearch].getCostValue();
-                  if (childCostValue < costValue) {
-                    costValue = childCostValue;
-                    cost = new XltC(v, costValue);
-                  }
-                  if (childCostValue <= v.min()) {
-                    break;
-                  } else {
-                    v.domain.inMax(store.level, v, childCostValue - 1);
-                  }
-                }
-              }
-            }
-
-            if (childResult && costVariable != null) {
-              updateCostFromChildSearch(childSearches[currentChildSearch]);
-            }
-
-            boolean stopMasterSearch = false;
-
-            if (childResult || childFoundSolution) {
-              // Child search found solution, so there is a
-              // solution
-              // for this search too.
-
-              stopMasterSearch = solutionListener.executeAfterSolution(this, heuristic);
-
-              if (!childResult) {
-                stopMasterSearch = false;
-              }
-            }
-
-            store.removeLevel(depth);
-            store.setLevel(--depth);
-
-            if (!respectSolutionListenerAdvice && optimize) {
-
-              return false;
-            }
-
-            return stopMasterSearch;
-          }
-
-          if (costVariable != null) {
-            // it does not mean there is an optimization, only that we want to remember the value
-            // of the costVariable
-            CostVariableHandler costHandler =
-                SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-            if (costHandler != null) {
-              double currentCost = costHandler.getCostValue(costVariable);
-              if (costVariable instanceof IntVar) {
-                costValue = (int) currentCost;
-              } else {
-                costValueFloat = currentCost;
-              }
-              cost = costHandler.createCostConstraint(costVariable, currentCost);
-            } else if (costVariable instanceof IntVar v) {
-              // Fallback for IntVar
-              costValue = v.dom().min();
-              cost = new XltC(v, costValue);
-            }
-          }
-
-          if (!respectSolutionListenerAdvice && optimize) {
-
-            solutionListener.executeAfterSolution(this, heuristic);
-
-            store.removeLevel(depth);
-            store.setLevel(--depth);
-
-            return false;
-          }
-
-          boolean returnCode = solutionListener.executeAfterSolution(this, heuristic);
-
-          store.removeLevel(depth);
-          store.setLevel(--depth);
-
-          return returnCode;
-
-        } else {
-
-          assert store.currentConstraint == null;
-          store.impose(choice);
-          decisions++;
-
-          depthExcludePaths++;
-          if (depthExcludePaths > maxDepthExcludePaths) {
-            maxDepthExcludePaths = depthExcludePaths;
-          }
-        }
-      }
-
-      // choice point imposed.
-
-      consistent = label(heuristic.getIndex());
-
-      if (exitChildListener != null
-          && ((choice == null && !exitChildListener.leftChild(fdv, val, consistent))
-              || (choice != null && !exitChildListener.leftChild(choice, consistent)))) {
-        store.removeLevel(depth);
-        store.setLevel(--depth);
-        depthExcludePaths--;
-        return false;
-      }
-
-      if (consistent) {
-        store.removeLevel(depth);
-        store.setLevel(--depth);
-        depthExcludePaths--;
-        return true;
-      } else {
-
-        // Assigning current variable to a value indicated by
-        // indomain result in a failure, this value is removed
-        // from the domain and label is called recursively with
-        // the same currentVariable.
-
-        store.removeLevel(depth);
-
-        Object[] args = {depth, fdv, val};
-
-        if (SwitchesPruningLogging.TRACE_SEARCH_TREE) {
-          SwitchesPruningLogging.log(
-              choice == null,
-              DepthFirstSearch.class,
-              "Store level: {}, Right branch: {} \\ {}",
-              args);
-          SwitchesPruningLogging.log(
-              choice != null,
-              DepthFirstSearch.class,
-              "Store level: {}, Right branch: {}",
-              depth,
-              choice);
-        }
-
-        if (choice != null) {
-
-          assert store.currentConstraint == null;
-
-          store.setLevel(store.level);
-
-          store.impose(new Not(choice));
-
-          consistent = label(firstVariable);
-
-          if (exitChildListener != null) {
-            exitChildListener.rightChild(choice, consistent);
-          }
-
-          if (!consistent) {
-            numberBacktracks++;
-          }
-
-          store.removeLevel(depth);
-        } else if (!fdv.dom().singleton()) { //       else if (!fdv.dom().singleton(val)) {
-
-          assert store.currentConstraint == null;
-
-          store.setLevel(store.level);
-
-          DomainOperationHandler domainHandler =
-              SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
-          if (domainHandler != null) {
-            domainHandler.inComplement(store, fdv, val, einAinleftTree);
-          } else if (fdv instanceof IntVar v) {
-            // Fallback for IntVar (should always have handler, but just in case)
-            ((IntDomain) fdv.dom()).inComplement(store.level, v, val);
-          }
-
-          consistent = label(firstVariable);
-
-          if (exitChildListener != null) {
-            exitChildListener.rightChild(fdv, val, consistent);
-          }
-
-          if (!consistent) {
-            numberBacktracks++;
-          }
-
-          store.removeLevel(depth);
-
-        } else {
-          consistent = false;
-        }
-
-        store.setLevel(--depth);
-
-        depthExcludePaths--;
-
-        return consistent;
-      }
     }
+
+    store.setLevel(++depth);
+    maxDepth = Math.max(depth, maxDepth);
+
+    T fdv = heuristic.getChoiceVariable(firstVariable);
+    PrimitiveConstraint choice = null;
+    int val = 0;
+
+    if (fdv != null) {
+      val = heuristic.getChoiceValue();
+      applyChoiceVariableValue(fdv, val);
+    } else {
+      choice = heuristic.getChoiceConstraint(firstVariable);
+      if (choice == null) {
+        nodes--;
+        if (childSearches != null) {
+          return runChildSearchesWhenSolutionFound();
+        }
+        return handleSolutionFoundNoChildSearches();
+      }
+      applyChoiceConstraint(choice);
+    }
+
+    consistent = label(heuristic.getIndex());
+
+    if (shouldExitAfterLeftChild(fdv, val, choice, consistent)) {
+      store.removeLevel(depth);
+      store.setLevel(--depth);
+      depthExcludePaths--;
+      return false;
+    }
+    if (consistent) {
+      store.removeLevel(depth);
+      store.setLevel(--depth);
+      depthExcludePaths--;
+      return true;
+    }
+
+    store.removeLevel(depth);
+    logRightBranch(choice == null, fdv, val, choice);
+
+    if (choice != null) {
+      consistent = doRightBranchChoice(choice, firstVariable);
+    } else if (!fdv.dom().singleton()) {
+      consistent = doRightBranchVariable(fdv, val, firstVariable);
+    } else {
+      consistent = false;
+    }
+
+    store.setLevel(--depth);
+    depthExcludePaths--;
+    return consistent;
   }
 
   /**

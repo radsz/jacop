@@ -52,36 +52,28 @@ public class Laplace {
     example.laplace();
   }
 
-  void laplace() {
+  private static FloatVar createGridCell(
+      Store store, int i, int j, int r, int c, double Z, double M) {
+    if (i == 0) {
+      return new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
+    }
+    if (i == r || j == 0 || j == c) {
+      return new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
+    }
+    return new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
+  }
 
-    IO.println("========= laplace =========");
-    IO.println(
-        "Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
-
-    Store store = new Store();
-
-    FloatDomain.setPrecision(1e-3);
-
-    int r = 10;
-    int c = 10;
-
-    double Z = 0.0;
-    double M = 100.0;
-
+  private static FloatVar[][] createGrid(Store store, int r, int c, double Z, double M) {
     FloatVar[][] x = new FloatVar[r + 1][c + 1];
-
     for (int i = 0; i < r + 1; i++) {
       for (int j = 0; j < c + 1; j++) {
-        if (i == 0) {
-          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
-        } else if (i == r || j == 0 || j == c) {
-          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
-        } else {
-          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
-        }
+        x[i][j] = createGridCell(store, i, j, r, c, Z, M);
       }
     }
+    return x;
+  }
 
+  private static void imposeLaplaceEquations(Store store, FloatVar[][] x, int r, int c) {
     for (int i = 1; i < r; i++) {
       for (int j = 1; j < c; j++) {
         store.impose(
@@ -92,6 +84,24 @@ public class Laplace {
                 0.0));
       }
     }
+  }
+
+  void laplace() {
+
+    IO.println("========= laplace =========");
+    IO.println(
+        "Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
+
+    Store store = new Store();
+    FloatDomain.setPrecision(1e-3);
+
+    int r = 10;
+    int c = 10;
+    double Z = 0.0;
+    double M = 100.0;
+
+    FloatVar[][] x = createGrid(store, r, c, Z, M);
+    imposeLaplaceEquations(store, x, r, c);
 
     FloatVar[] xs = new FloatVar[(r + 1) * (c + 1)];
     int n = 0;

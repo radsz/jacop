@@ -219,39 +219,37 @@ public class Binpacking extends Constraint
     lbPruningStamp = new TimeStamp<>(store, true);
   }
 
-  @Override
-  public void consistency(Store store) {
-
-    // Rule "Pack All" -- chcecked only first time
-    if (firstConsistencyCheck) {
-
-      Arrays.stream(item)
-          .map(BinItem::bin)
-          .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
-
-      firstConsistencyCheck = false;
+  /** Rule "Pack All" -- applied only on first consistency check. */
+  private void applyPackAllRule(Store store) {
+    if (!firstConsistencyCheck) {
+      return;
     }
+    Arrays.stream(item)
+        .map(BinItem::bin)
+        .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
+    firstConsistencyCheck = false;
+  }
 
-    boolean pruneLb = lbPruning && lbPruningStamp.value();
-    if (pruneLb) {
-      BitSet binUsed = new BitSet(load.length + minBinNumber);
-      for (BinItem itemEl : item) {
-        if (itemEl.bin().singleton()) {
-          binUsed.set(itemEl.bin().value());
-        }
-      }
-      if (binUsed.cardinality() == load.length) {
-        pruneLb = false;
-        lbPruningStamp.update(false);
+  /** Returns true if LB pruning should be skipped this round (all bins used). */
+  private boolean updatePruneLbFlag(boolean pruneLb) {
+    if (!pruneLb) {
+      return false;
+    }
+    BitSet binUsed = new BitSet(load.length + minBinNumber);
+    for (BinItem itemEl : item) {
+      if (itemEl.bin().singleton()) {
+        binUsed.set(itemEl.bin().value());
       }
     }
+    if (binUsed.cardinality() == load.length) {
+      lbPruningStamp.update(false);
+      return false;
+    }
+    return true;
+  }
 
-    store.propagationHasOccurred = false;
-
-    // we check bins that changed recently only
-    // it means:
-    //      - load[i] variables have changed,
-    //      - item[i] variables have changed (we check both current domain and pruned values)
+  /** Collects changed bin/item indices into an IntervalDomain for propagation. */
+  private IntervalDomain collectChangedDomains(Store store) {
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
       Iterator<IntVar> it = binQueue.iterator();
@@ -271,101 +269,119 @@ public class Binpacking extends Constraint
         d.addDom(v.dom());
       }
     }
+    return d;
+  }
 
-    BinItem[] candidates;
-    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-      int i = e.nextElement() - minBinNumber;
-
-      // check if bin no. is in the limits; might not be there since it is FDV specified in by a
-      // user
-      if (i >= 0 && i < load.length) {
-
-        candidates = new BinItem[item.length];
-        int candidatesLength = 0;
-
-        int required = 0;
-        int possible = 0;
-
-        for (BinItem itemEl : item) {
-          // "+itemEl.bin.dom().recentDomainPruning(store.level));
-
-          if (itemEl.bin().dom().contains(i + minBinNumber)) {
-            possible += itemEl.weight();
-            if (itemEl.bin().singleton()) {
-              required += itemEl.weight();
-            } else { // not singleton
-              candidates[candidatesLength++] = itemEl;
-            }
-          }
-        }
-
-        // Rule "Load Maintenance"
-        load[i].domain.in(store.level, load[i], required, possible);
-
-        for (int l = 0; l < candidatesLength; l++) {
-          BinItem bi = candidates[l];
-          if (required + bi.weight() > load[i].max()) {
-            bi.bin().domain.inComplement(store.level, bi.bin(), i + minBinNumber);
-          } else if (possible - bi.weight() < load[i].min()) {
-            bi.bin().domain.inValue(store.level, bi.bin(), i + minBinNumber);
-          }
-        }
-
-        // Rule 3.2 "Search Pruning"
-        int[] Cj = new int[candidatesLength];
-        for (int l = 0; l < candidatesLength; l++) {
-          Cj[l] = candidates[l].weight();
-        }
-
-        // Rule 3.3 "Tighteing Bounds on Bin Load"
-        if (noSum(Cj, load[i].min() - required, load[i].min() - required)) {
-          load[i].domain.inMin(store.level, load[i], required + betaP);
-        }
-
-        if (noSum(Cj, load[i].max() - required, load[i].max() - required)) {
-          load[i].domain.inMax(store.level, load[i], required + alphaP);
-        }
-
-        // Rule 3.4 "Elimination and Commitment of Items"
-        for (int j = 0; j < candidatesLength; j++) {
-          int[] CjMinusI = new int[candidatesLength - 1];
-          System.arraycopy(Cj, 0, CjMinusI, 0, j);
-          System.arraycopy(Cj, j + 1, CjMinusI, j, Cj.length - j - 1);
-
-          if (noSum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) {
-            candidates[j]
-                .bin()
-                .domain
-                .inComplement(store.level, candidates[j].bin(), i + minBinNumber);
-          }
-          if (noSum(CjMinusI, load[i].min() - required, load[i].max() - required)) {
-            candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), i + minBinNumber);
-          }
+  /** Processes one bin index: load maintenance, tightening, elimination/commitment. */
+  private void processBin(Store store, int i) {
+    if (i < 0 || i >= load.length) {
+      return;
+    }
+    BinItem[] candidates = new BinItem[item.length];
+    int candidatesLength = 0;
+    int required = 0;
+    int possible = 0;
+    int binIdx = i + minBinNumber;
+    for (BinItem itemEl : item) {
+      if (itemEl.bin().dom().contains(binIdx)) {
+        possible += itemEl.weight();
+        if (itemEl.bin().singleton()) {
+          required += itemEl.weight();
+        } else {
+          candidates[candidatesLength++] = itemEl;
         }
       }
     }
+    load[i].domain.in(store.level, load[i], required, possible);
+    applyLoadMaintenanceToCandidates(
+        store, i, binIdx, required, possible, candidates, candidatesLength);
+    int[] Cj = new int[candidatesLength];
+    for (int l = 0; l < candidatesLength; l++) {
+      Cj[l] = candidates[l].weight();
+    }
+    applyTighteningBounds(store, i, required, Cj, candidatesLength);
+    applyEliminationAndCommitment(store, i, binIdx, required, candidates, Cj, candidatesLength);
+  }
 
+  private void applyLoadMaintenanceToCandidates(
+      Store store,
+      int i,
+      int binIdx,
+      int required,
+      int possible,
+      BinItem[] candidates,
+      int candidatesLength) {
+    for (int l = 0; l < candidatesLength; l++) {
+      BinItem bi = candidates[l];
+      if (required + bi.weight() > load[i].max()) {
+        bi.bin().domain.inComplement(store.level, bi.bin(), binIdx);
+      } else if (possible - bi.weight() < load[i].min()) {
+        bi.bin().domain.inValue(store.level, bi.bin(), binIdx);
+      }
+    }
+  }
+
+  private void applyTighteningBounds(
+      Store store, int i, int required, int[] Cj, int candidatesLength) {
+    if (noSum(Cj, load[i].min() - required, load[i].min() - required)) {
+      load[i].domain.inMin(store.level, load[i], required + betaP);
+    }
+    if (noSum(Cj, load[i].max() - required, load[i].max() - required)) {
+      load[i].domain.inMax(store.level, load[i], required + alphaP);
+    }
+  }
+
+  private void applyEliminationAndCommitment(
+      Store store,
+      int i,
+      int binIdx,
+      int required,
+      BinItem[] candidates,
+      int[] Cj,
+      int candidatesLength) {
+    for (int j = 0; j < candidatesLength; j++) {
+      int[] CjMinusI = new int[candidatesLength - 1];
+      System.arraycopy(Cj, 0, CjMinusI, 0, j);
+      System.arraycopy(Cj, j + 1, CjMinusI, j, Cj.length - j - 1);
+      if (noSum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) {
+        candidates[j].bin().domain.inComplement(store.level, candidates[j].bin(), binIdx);
+      }
+      if (noSum(CjMinusI, load[i].min() - required, load[i].max() - required)) {
+        candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), binIdx);
+      }
+    }
+  }
+
+  /** Rule "Load and Size Coherence": updates load domains from global capacity. */
+  private void applyLoadAndSizeCoherence(Store store) {
     int allCapacityMin = 0;
     int allCapacityMax = 0;
     for (IntVar aLoad : load) {
       allCapacityMin += aLoad.min();
       allCapacityMax += aLoad.max();
     }
-
-    // Rule "Load and Size Coherence"
     int s1 = sizeAllItems - allCapacityMax;
     int s2 = sizeAllItems - allCapacityMin;
     for (IntVar aLoad : load) {
       aLoad.domain.in(store.level, aLoad, s1 + aLoad.max(), s2 + aLoad.min());
     }
+  }
 
-    // since the constraint is not idempotent (does not compute
-    // fix-point) we need to add it to the constraint queue for
-    // re-evaluation, if there was a changed in any of variables
+  @Override
+  public void consistency(Store store) {
+    applyPackAllRule(store);
+    boolean pruneLb = lbPruning && lbPruningStamp.value();
+    pruneLb = updatePruneLbFlag(pruneLb);
+    store.propagationHasOccurred = false;
+    IntervalDomain d = collectChangedDomains(store);
+    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement() - minBinNumber;
+      processBin(store, i);
+    }
+    applyLoadAndSizeCoherence(store);
     if (store.propagationHasOccurred) {
       store.addChanged(this);
     } else if (lbPruning && pruneLb) {
-      // when the constraint is fix-point check expensive LB computation
       lbNumberBins();
     }
   }
