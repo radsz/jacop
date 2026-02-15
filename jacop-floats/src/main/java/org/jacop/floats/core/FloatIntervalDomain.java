@@ -66,6 +66,9 @@ public class FloatIntervalDomain extends FloatDomain {
   /** It specifies number of intervals needed to encode the domain. */
   public int size;
 
+  private static final String ASSERT_MIN_NOT_ADDED = "The minimum was not added";
+  private static final String ASSERT_MAX_NOT_ADDED = "The maximum was not added";
+
   /**
    * Copies metadata from this domain into the result domain and installs it on the variable. Sets
    * prevDomain to this.
@@ -662,8 +665,8 @@ public class FloatIntervalDomain extends FloatDomain {
           size++;
 
           assert checkInvariants() == null : checkInvariants();
-          assert contains(min) : "The minimum was not added";
-          assert contains(max) : "The maximum was not added";
+          assert contains(min) : ASSERT_MIN_NOT_ADDED;
+          assert contains(max) : ASSERT_MAX_NOT_ADDED;
 
           return;
         }
@@ -682,8 +685,8 @@ public class FloatIntervalDomain extends FloatDomain {
         size++;
 
         assert checkInvariants() == null : checkInvariants();
-        assert contains(min) : "The minimum was not added";
-        assert contains(max) : "The maximum was not added";
+        assert contains(min) : ASSERT_MIN_NOT_ADDED;
+        assert contains(max) : ASSERT_MAX_NOT_ADDED;
 
         return;
       }
@@ -724,8 +727,8 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     assert checkInvariants() == null : checkInvariants();
-    assert contains(min) : "The minimum was not added";
-    assert contains(max) : "The maximum was not added";
+    assert contains(min) : ASSERT_MIN_NOT_ADDED;
+    assert contains(max) : ASSERT_MAX_NOT_ADDED;
   }
 
   @Override

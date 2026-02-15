@@ -50,6 +50,8 @@ import org.jacop.fz.SimpleNode;
  */
 class GraphConstraints implements ParserTreeConstants {
 
+  private static final String GRAPH_PACKAGE_PREFIX = "org.jacop.graph.";
+
   final Store store;
   final Support support;
 
@@ -70,7 +72,7 @@ class GraphConstraints implements ParserTreeConstants {
     String cName = "GraphIsomorphism";
 
     try {
-      Class<?> c = Class.forName("org.jacop.graph." + cName);
+      Class<?> c = Class.forName(GRAPH_PACKAGE_PREFIX + cName);
       Constructor<?> cons =
           c.getConstructor(
               IntDomain[].class,
@@ -88,7 +90,10 @@ class GraphConstraints implements ParserTreeConstants {
         | InstantiationException
         | NoSuchMethodException _) {
       throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
+          "% Constraint "
+              + cName
+              + " is not available in this version; requires "
+              + GRAPH_PACKAGE_PREFIX);
     }
   }
 
@@ -140,7 +145,7 @@ class GraphConstraints implements ParserTreeConstants {
         }
       }
 
-      Class<?> c = Class.forName("org.jacop.graph." + constraintName);
+      Class<?> c = Class.forName(GRAPH_PACKAGE_PREFIX + constraintName);
       Constructor<?> cons =
           c.getConstructor(
               Store.class,
@@ -164,7 +169,8 @@ class GraphConstraints implements ParserTreeConstants {
       throw new RuntimeException(
           "% Constraint "
               + constraintName
-              + " is not available in this version; requires org.jacop.graph.");
+              + " is not available in this version; requires "
+              + GRAPH_PACKAGE_PREFIX);
     }
   }
 
@@ -185,7 +191,7 @@ class GraphConstraints implements ParserTreeConstants {
     // the same as pattern graph");
 
     try {
-      Class<?> cls = Class.forName("org.jacop.graph." + cName);
+      Class<?> cls = Class.forName(GRAPH_PACKAGE_PREFIX + cName);
       Constructor<?> cons =
           cls.getConstructor(
               Store.class, int[].class, int[].class, int.class, IntVar[].class, IntVar.class);
@@ -198,7 +204,10 @@ class GraphConstraints implements ParserTreeConstants {
         | InstantiationException
         | NoSuchMethodException _) {
       throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
+          "% Constraint "
+              + cName
+              + " is not available in this version; requires "
+              + GRAPH_PACKAGE_PREFIX);
     }
   }
 }

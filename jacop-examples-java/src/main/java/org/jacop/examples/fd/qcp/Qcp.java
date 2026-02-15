@@ -72,6 +72,8 @@ public class Qcp extends ExampleFd {
   /** It contains the order of the Qcp being solved. */
   public int n;
 
+  private static final String SOLUTION_FOUND = " Solution(s) found ";
+
   /**
    * It executes the program which solves the Qcp in multiple different ways.
    *
@@ -88,7 +90,7 @@ public class Qcp extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.print(" Solution(s) found ");
+      IO.print(SOLUTION_FOUND);
     }
 
     example = new Qcp();
@@ -100,7 +102,7 @@ public class Qcp extends ExampleFd {
     example.model();
 
     if (example.searchWithRestarts()) {
-      IO.print(" Solution(s) found ");
+      IO.print(SOLUTION_FOUND);
     }
 
     example = new Qcp();
@@ -112,7 +114,7 @@ public class Qcp extends ExampleFd {
     example.model();
 
     if (example.searchWithShaving()) {
-      IO.print(" Solution(s) found ");
+      IO.print(SOLUTION_FOUND);
     }
 
     example = new Qcp();
@@ -125,7 +127,7 @@ public class Qcp extends ExampleFd {
     example.store.variableWeightManagement = true;
 
     if (example.searchWeightedDegree()) {
-      IO.print(" Solution(s) found ");
+      IO.print(SOLUTION_FOUND);
     }
   }
 
@@ -146,7 +148,7 @@ public class Qcp extends ExampleFd {
     example.model();
 
     if (example.searchWithRestarts()) {
-      IO.print(" Solution(s) found ");
+      IO.print(SOLUTION_FOUND);
     }
   }
 

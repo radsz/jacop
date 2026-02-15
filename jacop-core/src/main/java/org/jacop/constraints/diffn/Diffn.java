@@ -67,6 +67,7 @@ public class Diffn extends Nooverlap {
   static final int PRUNE_END = 3;
   private static final boolean DEBUG = false;
   private static final boolean DEBUG_NARR = false;
+  private static final String DEBUG_ARROW = " => {}";
   protected final List<Var> auxVar = new ArrayList<>();
   final Comparator<Event> eventComparator =
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
@@ -432,7 +433,7 @@ public class Diffn extends Nooverlap {
                     r.getOrigin(dim).domain.in(store.level, r.getOrigin(dim), update);
 
                     if (DEBUG_NARR) {
-                      log.debug(" => {}", r.getOrigin(dim));
+                      log.debug(DEBUG_ARROW, r.getOrigin(dim));
                     }
                   }
                   startExcluded = Integer.MAX_VALUE;
@@ -517,7 +518,7 @@ public class Diffn extends Nooverlap {
             rr.getOrigin(dim).domain.inMax(store.level, rr.getOrigin(dim), startExcluded - 1);
 
             if (DEBUG_NARR) {
-              log.debug(" => {}", rr.getOrigin(dim));
+              log.debug(DEBUG_ARROW, rr.getOrigin(dim));
             }
           }
 
@@ -547,7 +548,7 @@ public class Diffn extends Nooverlap {
             rr.getLength(dim).domain.inMax(store.level, rr.getLength(dim), maxDuration);
 
             if (DEBUG_NARR) {
-              log.debug(" => {}", rr.getLength(dim));
+              log.debug(DEBUG_ARROW, rr.getLength(dim));
             }
           }
 

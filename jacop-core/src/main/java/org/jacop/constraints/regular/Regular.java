@@ -75,6 +75,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** It specifies if debugging information should be printed out. */
   public static final boolean DEBUG_ALL = false;
 
+  private static final String STATE_Q_DEGREES =
+      "--  state q_{}{} with in degree : {} and out degree : {}";
+
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
@@ -361,21 +364,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
 
               if (DEBUG_ALL) {
-                log.debug(
-                    "--  state q_{}{} with in degree : {} and out degree : {}",
-                    level,
-                    i,
-                    s.inDegree,
-                    s.outDegree);
+                log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
               }
 
               if (DEBUG_ALL) {
-                log.debug(
-                    "--  state q_{}{} with in degree : {} and out degree : {}",
-                    level + 1,
-                    j,
-                    suc.inDegree,
-                    suc.outDegree);
+                log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
               }
             }
           }
@@ -593,18 +586,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
 
           if (DEBUG_ALL) {
-            log.debug(
-                "--  state q_{}{} with in degree : {} and out degree : {}",
-                s.level,
-                s.id,
-                s.inDegree,
-                s.outDegree);
-            log.debug(
-                "--  state q_{}{} with in degree : {} and out degree : {}",
-                suc.level,
-                suc.id,
-                suc.inDegree,
-                suc.outDegree);
+            log.debug(STATE_Q_DEGREES, s.level, s.id, s.inDegree, s.outDegree);
+            log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
           }
 
           assert s.outDegree >= 0;

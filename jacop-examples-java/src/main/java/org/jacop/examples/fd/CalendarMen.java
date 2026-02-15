@@ -66,6 +66,8 @@ import org.jacop.core.Store;
  */
 public class CalendarMen extends ExampleFd {
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /**
    * It executes the program solving this puzzle using two different models.
    *
@@ -78,7 +80,7 @@ public class CalendarMen extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     CalendarMen exampleBasic = new CalendarMen();
@@ -86,7 +88,7 @@ public class CalendarMen extends ExampleFd {
     exampleBasic.modelBasic();
 
     if (exampleBasic.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 
@@ -102,7 +104,7 @@ public class CalendarMen extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 

@@ -49,6 +49,8 @@ public class Langford extends ExampleFd {
   public int n = 3;
   public int m = 17;
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /**
    * It executes the program to solve the Langford problem. It is possible to specify two
    * parameters. If no parameter is used then default values for n and m are used.
@@ -66,7 +68,7 @@ public class Langford extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     Langford exampleBound = new Langford();
@@ -83,7 +85,7 @@ public class Langford extends ExampleFd {
     exampleDual.modelDual();
 
     if (exampleDual.search()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 
@@ -103,7 +105,7 @@ public class Langford extends ExampleFd {
     exampleDual.modelDual();
 
     if (exampleDual.search()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 

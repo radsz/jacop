@@ -64,6 +64,8 @@ public class Queens extends ExampleFd {
   /** It specifies the size of chessboard to be used in the model. */
   public int numberQ = 550;
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /**
    * It executes different models and search methods to solve Queens problem.
    *
@@ -75,7 +77,7 @@ public class Queens extends ExampleFd {
     example.parseArgs(args);
     example.model();
     if (example.searchSmallestMiddle()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 
@@ -97,21 +99,21 @@ public class Queens extends ExampleFd {
     example.parseArgs(args);
     example.model();
     if (example.searchSmallestMiddle()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     example = new Queens();
     example.parseArgs(args);
     example.modelBasic();
     if (example.searchLds(3)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     example = new Queens();
     example.parseArgs(args);
     example.modelChanneling();
     if (example.searchSmallestMiddle()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 

@@ -80,6 +80,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It represents the cost variable. */
   @Getter public Var costVariable;
 
+  private static final String SOLUTION_COST_IS = "Solution cost is {}";
+  private static final String TIMEOUT_S = "Time-out {}s";
+  private static final String NO_SOLUTION_FOUND = "No solution found.";
+  private static final String DFS_STATS_FORMAT =
+      "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}";
+  private static final String COST_LABEL = "Cost ";
+
   /** It is invoked when returning from left or right child. */
   @Getter @Setter public ExitChildListener<T> exitChildListener;
 
@@ -945,9 +952,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
               SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
           if (costHandler != null) {
             double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-            log.info("Solution cost is {}", cost);
+            log.info(SOLUTION_COST_IS, cost);
           } else if (costVariable instanceof IntVar) {
-            log.info("Solution cost is {}", costValue);
+            log.info(SOLUTION_COST_IS, costValue);
           }
         }
 
@@ -963,7 +970,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         markTimeOutOccurred();
 
         if (printInfo) {
-          log.info("Time-out {}s", tOut);
+          log.info(TIMEOUT_S, tOut);
         }
 
         return false;
@@ -977,10 +984,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       if (printInfo) {
 
-        log.info("No solution found.");
+        log.info(NO_SOLUTION_FOUND);
 
         log.info(
-            "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
+            DFS_STATS_FORMAT,
             searchId,
             nodes,
             decisions,
@@ -998,7 +1005,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         markTimeOutOccurred();
 
         if (printInfo) {
-          log.info("Time-out {}s", tOut);
+          log.info(TIMEOUT_S, tOut);
         }
       }
 
@@ -1031,7 +1038,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
-      log.info("Time-out {}s", tOut);
+      log.info(TIMEOUT_S, tOut);
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
@@ -1049,10 +1056,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       if (printInfo) {
 
-        log.info("No solution found.");
+        log.info(NO_SOLUTION_FOUND);
 
         log.info(
-            "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
+            DFS_STATS_FORMAT,
             searchId,
             nodes,
             decisions,
@@ -1095,7 +1102,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
-      log.info("Time-out {}s", tOut);
+      log.info(TIMEOUT_S, tOut);
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
@@ -1111,13 +1118,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           DomainOperationHandler domainHandler =
               SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
           if (domainHandler != null) {
-            log.info("Solution cost is {}", domainHandler.getDomainString(costVariable));
+            log.info(SOLUTION_COST_IS, domainHandler.getDomainString(costVariable));
           } else {
             double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-            log.info("Solution cost is {}", cost);
+            log.info(SOLUTION_COST_IS, cost);
           }
         } else if (costVariable instanceof IntVar) {
-          log.info("Solution cost is {}", costValue);
+          log.info(SOLUTION_COST_IS, costValue);
         }
       }
 
@@ -1131,10 +1138,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       if (printInfo) {
 
-        log.info("No solution found.");
+        log.info(NO_SOLUTION_FOUND);
 
         log.info(
-            "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
+            DFS_STATS_FORMAT,
             searchId,
             nodes,
             decisions,
@@ -1263,13 +1270,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         DomainOperationHandler domainHandler =
             SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
         if (domainHandler != null) {
-          buf.append("Cost ").append(domainHandler.getDomainString(costVariable)).append("\n");
+          buf.append(COST_LABEL).append(domainHandler.getDomainString(costVariable)).append("\n");
         } else {
           double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-          buf.append("Cost ").append(cost).append("\n");
+          buf.append(COST_LABEL).append(cost).append("\n");
         }
       } else if (costVariable instanceof IntVar) {
-        buf.append("Cost ").append(costValue).append("\n");
+        buf.append(COST_LABEL).append(costValue).append("\n");
       }
     }
 

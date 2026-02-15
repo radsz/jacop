@@ -120,6 +120,9 @@ public class Alldistinct extends Constraint
   final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
   final Map<Integer, ArrayList<IntVar>> valueMapVariable;
+
+  private static final String MAPPING_VALUE_TO_VARIABLE = "Mapping Value->Variable{}";
+  private static final String MAXIMUM_MATCHING = "Maximum Matching {}";
   static final boolean GREEDY = true;
 
   /** It counts the number of executions of the consistency function. */
@@ -368,9 +371,9 @@ public class Alldistinct extends Constraint
 
     if (debugAll) {
       log.debug("Before");
-      log.debug("Mapping Value->Variable{}", valueMapVariable);
+      log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
       log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
-      log.debug("Maximum Matching {}", matching);
+      log.debug(MAXIMUM_MATCHING, matching);
     }
 
     while (iter.hasNext()) {
@@ -455,7 +458,7 @@ public class Alldistinct extends Constraint
 
     if (debugAll) {
       log.debug("After");
-      log.debug("Mapping Value->Variable{}", valueMapVariable);
+      log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
       log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
     }
 
@@ -515,7 +518,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      log.debug("Maximum Matching {}", matching);
+      log.debug(MAXIMUM_MATCHING, matching);
     }
 
     // Revisited Tarjan
@@ -1129,8 +1132,8 @@ public class Alldistinct extends Constraint
     nStamp.update(n + 1);
 
     if (debugAll) {
-      log.debug("Mapping Value->Variable{}", valueMapVariable);
-      log.debug("Maximum Matching {}", matching);
+      log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
+      log.debug(MAXIMUM_MATCHING, matching);
     }
 
     store.raiseLevelBeforeConsistency = true;

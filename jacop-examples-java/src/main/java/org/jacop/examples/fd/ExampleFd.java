@@ -73,6 +73,10 @@ public abstract class ExampleFd {
    */
   public Store store;
 
+  private static final String EXECUTION_TIME_PREFIX = "\n\t*** Execution time = ";
+  private static final String FAILED_TO_FIND_SOLUTION = "Failed to find any solution";
+  private static final String NUMBER_OF_MILLISECONDS = "Number of milliseconds ";
+
   /** It specifies the search procedure used by a given example. */
   public Search<IntVar> searchLabel;
 
@@ -108,7 +112,7 @@ public abstract class ExampleFd {
 
   /** Prints execution time in ms since the given start time. */
   protected void printExecutionTime(long t1) {
-    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
   }
 
   /**
@@ -185,7 +189,7 @@ public abstract class ExampleFd {
 
     long T2 = System.currentTimeMillis();
     long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
 
     return result;
   }
@@ -295,7 +299,7 @@ public abstract class ExampleFd {
     if (result) {
       IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
-      IO.println("Failed to find any solution");
+      IO.println(FAILED_TO_FIND_SOLUTION);
     }
     printExecutionTime(T1);
     return result;
@@ -319,7 +323,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println("Number of milliseconds " + (end - begin));
+    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -357,7 +361,7 @@ public abstract class ExampleFd {
     long end = System.currentTimeMillis();
 
     if (printInfo) {
-      IO.println("Number of milliseconds " + (end - begin));
+      IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
       IO.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
       if (result) {
@@ -518,7 +522,7 @@ public abstract class ExampleFd {
     // Execution time measurement
     long end = System.currentTimeMillis();
 
-    IO.println("Number of milliseconds " + (end - begin));
+    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -549,10 +553,10 @@ public abstract class ExampleFd {
     if (result) {
       IO.println("Variables : " + vars);
     } else {
-      IO.println("Failed to find any solution");
+      IO.println(FAILED_TO_FIND_SOLUTION);
     }
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
 
     return result;
   }
@@ -578,7 +582,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println("Number of milliseconds " + (end - begin));
+    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -604,7 +608,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println("Number of milliseconds " + (end - begin));
+    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -631,10 +635,10 @@ public abstract class ExampleFd {
     if (solution) {
       store.print();
     } else {
-      IO.println("Failed to find any solution");
+      IO.println(FAILED_TO_FIND_SOLUTION);
     }
 
-    IO.println("Number of milliseconds " + (end - begin));
+    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return solution;
   }
@@ -675,7 +679,7 @@ public abstract class ExampleFd {
 
     long T2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (T2 - T1) + " ms");
 
     return result;
   }

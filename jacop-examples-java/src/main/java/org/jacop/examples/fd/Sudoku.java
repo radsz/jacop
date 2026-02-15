@@ -49,6 +49,8 @@ public class Sudoku extends ExampleFd {
   /** The Sudoku grid; shared with subclasses. */
   protected IntVar[][] elements;
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /** Returns the puzzle description for model(); 0 = unknown, &gt;0 = known value. */
   protected int[][] getDescription() {
     return new int[][] {
@@ -81,7 +83,7 @@ public class Sudoku extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);
@@ -99,7 +101,7 @@ public class Sudoku extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);
@@ -109,7 +111,7 @@ public class Sudoku extends ExampleFd {
     example.modelBasic();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);

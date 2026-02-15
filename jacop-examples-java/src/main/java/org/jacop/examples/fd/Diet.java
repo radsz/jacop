@@ -85,6 +85,8 @@ public class Diet extends ExampleFd {
   public IntVar[] x;
   public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
 
+  private static final String NO_SOLUTION = "No solution.";
+
   /**
    * Prints the last solution found for the diet problem.
    *
@@ -112,7 +114,7 @@ public class Diet extends ExampleFd {
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      IO.println("No solution.");
+      IO.println(NO_SOLUTION);
     }
 
     diet = new Diet();
@@ -122,7 +124,7 @@ public class Diet extends ExampleFd {
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      IO.println("No solution.");
+      IO.println(NO_SOLUTION);
     }
 
     diet = new Diet();
@@ -133,7 +135,7 @@ public class Diet extends ExampleFd {
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      IO.println("No solution.");
+      IO.println(NO_SOLUTION);
     }
 
     diet = new Diet();
@@ -143,7 +145,7 @@ public class Diet extends ExampleFd {
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      IO.println("No solution.");
+      IO.println(NO_SOLUTION);
     }
   }
 

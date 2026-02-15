@@ -133,6 +133,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   int probability;
   int finalNumberSolutions;
 
+  // Search type literals
+  private static final String INT_SEARCH = "int_search";
+  private static final String SET_SEARCH = "set_search";
+  private static final String BOOL_SEARCH = "bool_search";
+  private static final String FLOAT_SEARCH = "float_search";
+  private static final String SEQ_SEARCH = "seq_search";
+  private static final String PRIORITY_SEARCH = "priority_search";
+  private static final String WARM_START = "warm_start";
+  private static final String COMPLETE = "complete";
+  // Solve kind literals
+  private static final String SATISFY = "satisfy";
+  private static final String MINIMIZE = "minimize";
+  private static final String MAXIMIZE = "maximize";
+  // Output message literals
+  private static final String SEPARATOR_LINE = "==========";
+  private static final String TIME_OUT_MSG = "%% =====TIME-OUT=====";
+  private static final String MZN_STAT_OBJECTIVE = "%%%mzn-stat: objective=";
+
   /**
    * It creates a parser for the solve part of the flatzinc file.
    *
@@ -250,17 +268,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (opt.freeSearch()) { // free search -> ignoring search annotations
         run_single_search(solveKind, kind, null);
-      } else if ("int_search".equals(search_type)
-          || "set_search".equals(search_type)
-          || "bool_search".equals(search_type)) {
+      } else if (INT_SEARCH.equals(search_type)
+          || SET_SEARCH.equals(search_type)
+          || BOOL_SEARCH.equals(search_type)) {
         run_single_search(solveKind, kind, si);
-      } else if ("float_search".equals(search_type)) {
+      } else if (FLOAT_SEARCH.equals(search_type)) {
         run_single_search(solveKind, kind, si);
-      } else if ("seq_search".equals(search_type)) {
+      } else if (SEQ_SEARCH.equals(search_type)) {
         run_sequence_search(solveKind, kind, si);
-      } else if ("priority_search".equals(search_type)) {
+      } else if (PRIORITY_SEARCH.equals(search_type)) {
         run_single_search(solveKind, kind, si);
-      } else if ("warm_start".equals(search_type)) {
+      } else if (WARM_START.equals(search_type)) {
         run_single_search(solveKind, kind, si);
       } else if (search_type.startsWith("restart_")) {
         run_single_search(solveKind, kind, si);
@@ -288,7 +306,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
         solveKind = getKind(kind.getKind());
 
-        if ("seq_search".equals(fs.type())) {
+        if (SEQ_SEARCH.equals(fs.type())) {
           run_sequence_search(solveKind, kind, fs);
         } else {
           run_single_search(solveKind, kind, fs);
@@ -300,7 +318,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         // create seq_search from a number of searches without
         // explicit sq_search annotation (no order defined)
         SearchItem<T> siq = new SearchItem<>(store, dictionary);
-        siq.setSearchType("seq_search");
+        siq.setSearchType(SEQ_SEARCH);
         for (SearchItem<T> se : nsi) {
           siq.addSearch(se);
         }
@@ -336,7 +354,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         probability = s.probability;
       } else if (s.search_type.endsWith("_search")) {
         ns.add(s);
-      } else if (s.search_type.endsWith("warm_start")) {
+      } else if (s.search_type.endsWith(WARM_START)) {
         ns.addFirst(s);
       } else {
         System.err.println(
@@ -370,32 +388,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     label = null;
     if (si != null) {
-      if ("int_search".equals(si.type())) {
+      if (INT_SEARCH.equals(si.type())) {
         label = int_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
         setSearchTimeout(label);
-      } else if ("bool_search".equals(si.type())) {
+      } else if (BOOL_SEARCH.equals(si.type())) {
         label = int_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
         setSearchTimeout(label);
-      } else if ("set_search".equals(si.type())) {
+      } else if (SET_SEARCH.equals(si.type())) {
         label = set_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
         setSearchTimeout(label);
-      } else if ("float_search".equals(si.type())) {
+      } else if (FLOAT_SEARCH.equals(si.type())) {
         label = float_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
         setSearchTimeout(label);
-      } else if ("priority_search".equals(si.type())) {
+      } else if (PRIORITY_SEARCH.equals(si.type())) {
         label = priority_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
         setSearchTimeout(label);
-      } else if ("warm_start".equals(si.type())) {
+      } else if (WARM_START.equals(si.type())) {
         label = warm_start_search(si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
@@ -424,7 +442,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (si == null) {
       defaultSearch = true;
       si = new SearchItem<>(store, dictionary);
-      si.explore = "complete";
+      si.explore = COMPLETE;
       if (final_search[0] != null) {
         label = final_search[0];
         list_seq_searches.add(label);
@@ -468,7 +486,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     startCpu = currentTime;
 
     if (si.exploration() == null
-        || "complete".equals(si.exploration())
+        || COMPLETE.equals(si.exploration())
         || "lds".equals(si.exploration())
         || "credit".equals(si.exploration())) {
       FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
@@ -486,13 +504,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       String solveType;
       switch (solveKind) {
         case 0:
-          solveType = "satisfy";
+          solveType = SATISFY;
           break;
         case 1:
-          solveType = "minimize";
+          solveType = MINIMIZE;
           break;
         case 2:
-          solveType = "maximize";
+          solveType = MAXIMIZE;
           break;
         default:
           throw new IllegalArgumentException(
@@ -762,13 +780,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               if ((options.getNumberSolutions() == -1
                       || options.getNumberSolutions() > numberSolutions)
                   && relaxVars == null) {
-                IO.println("==========");
+                IO.println(SEPARATOR_LINE);
               }
             } else {
-              IO.println("%% =====TIME-OUT=====");
+              IO.println(TIME_OUT_MSG);
             }
           } else if (timeoutOccurred) {
-            IO.println("%% =====TIME-OUT=====");
+            IO.println(TIME_OUT_MSG);
           }
         }
       } else if (optimization) {
@@ -777,18 +795,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             if ((options.getNumberSolutions() == -1
                     || options.getNumberSolutions() > numberSolutions)
                 && relaxVars == null) {
-              IO.println("==========");
+              IO.println(SEPARATOR_LINE);
             }
           } else {
-            IO.println("%% =====TIME-OUT=====");
+            IO.println(TIME_OUT_MSG);
           }
         } else if (timeoutOccurred) {
-          IO.println("%% =====TIME-OUT=====");
+          IO.println(TIME_OUT_MSG);
         }
       }
     } else if (timeoutOccurred) {
       IO.println("=====UNKNOWN=====");
-      IO.println("%% =====TIME-OUT=====");
+      IO.println(TIME_OUT_MSG);
     } else if (interrupted) {
       IO.println("%% =====INTERRUPTED=====");
     } else if (isComplete) {
@@ -819,8 +837,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
 
-    printResultStatus(
-        interrupted, result, label.timeOutOccured, "complete".equals(si.exploration()));
+    printResultStatus(interrupted, result, label.timeOutOccured, COMPLETE.equals(si.exploration()));
 
     if (options.getStatistics()) {
       int nodes = 0;
@@ -1056,7 +1073,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
 
       if (options.getAll() || costVariable != null) {
-        IO.println("==========");
+        IO.println(SEPARATOR_LINE);
       }
 
       if (options.getStatistics()) {
@@ -1158,7 +1175,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     setSearchTimeout(list_seq_searches);
 
-    if (si.exploration() == null || "complete".equals(si.exploration())) {
+    if (si.exploration() == null || COMPLETE.equals(si.exploration())) {
       FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
       if (options.getAll()) { // all solutions
@@ -1343,7 +1360,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> label = null;
 
     switch (si.type()) {
-      case "int_search", "bool_search" -> {
+      case INT_SEARCH, BOOL_SEARCH -> {
         label = int_search(si);
         if (!master) {
           label.setSelectChoicePoint(variable_selection);
@@ -1353,7 +1370,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         list_seq_searches.add(label);
         label.setPrintInfo(false);
       }
-      case "set_search" -> {
+      case SET_SEARCH -> {
         label = set_search(si);
         if (!master) {
           label.setSelectChoicePoint(variable_selection);
@@ -1363,18 +1380,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         list_seq_searches.add(label);
         label.setPrintInfo(false);
       }
-      case "priority_search" -> {
+      case PRIORITY_SEARCH -> {
         label = priority_search(si);
 
         list_seq_searches.add(label);
       }
-      case "warm_start" -> {
+      case WARM_START -> {
         label = warm_start_search(si);
         if (!master) {
           label.setSelectChoicePoint(variable_selection);
         }
       }
-      case "seq_search" -> {
+      case SEQ_SEARCH -> {
         for (int i = 0; i < si.getSearchItems().size(); i++) {
           if (i == 0) { // master search
             DepthFirstSearch<T> label_seq =
@@ -1389,7 +1406,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           }
         }
       }
-      case "float_search" -> {
+      case FLOAT_SEARCH -> {
         label = float_search(si);
         if (!master) {
           label.setSelectChoicePoint(variable_selection);
@@ -1489,25 +1506,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       DepthFirstSearch<T> subSearch;
       switch (s.search_type) {
-        case "int_search", "bool_search" -> {
+        case INT_SEARCH, BOOL_SEARCH -> {
           subSearch = int_search(s);
           subSearch.setSelectChoicePoint(variable_selection);
           subSearch.setPrintInfo(false);
           searches[i++] = subSearch;
         }
-        case "set_search" -> {
+        case SET_SEARCH -> {
           subSearch = set_search(s);
           subSearch.setSelectChoicePoint(variable_selection);
           subSearch.setPrintInfo(false);
           searches[i++] = subSearch;
         }
-        case "float_search" -> {
+        case FLOAT_SEARCH -> {
           subSearch = float_search(s);
           subSearch.setSelectChoicePoint(variable_selection);
           subSearch.setPrintInfo(false);
           searches[i++] = subSearch;
         }
-        case "seq_search" -> {
+        case SEQ_SEARCH -> {
           subSearch = sub_search(s, null, false);
 
           DepthFirstSearch<T> ns = subSearch;
@@ -1523,7 +1540,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
           searches[i++] = subSearch;
         }
-        case "priority_search" -> {
+        case PRIORITY_SEARCH -> {
           subSearch = priority_search(s);
           subSearch.setPrintInfo(false);
           searches[i++] = subSearch;
@@ -1644,15 +1661,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (costVariable != null) {
         if (minimize) {
           if (costVariable instanceof IntVar var1) {
-            printBuffer.append("%%%mzn-stat: objective=").append(var1.value()).append("\n");
+            printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
           } else if (costVariable instanceof FloatVar fv) {
-            printBuffer.append("%%%mzn-stat: objective=").append(fv.value()).append("\n");
+            printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
           }
         } else {
           if (costVariable instanceof IntVar var1) {
-            printBuffer.append("%%%mzn-stat: objective=").append(-var1.value()).append("\n");
+            printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
           } else if (costVariable instanceof FloatVar fv) {
-            printBuffer.append("%%%mzn-stat: objective=").append(-fv.value()).append("\n");
+            printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
           }
         }
       }
@@ -1688,13 +1705,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   int getKind(String k) {
     return switch (k) {
-      case "satisfy" ->
+      case SATISFY ->
           // 0 = satisfy
           0;
-      case "minimize" ->
+      case MINIMIZE ->
           // 1 = minimize
           1;
-      case "maximize" ->
+      case MAXIMIZE ->
           // 2 = maximize
           2;
       default ->

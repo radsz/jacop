@@ -75,6 +75,14 @@ public class FilterBenchmark {
 
   static IntVar cost;
 
+  private static final String TEST_OF_SCHEDULING_FOR = "\n\nTest of scheduling for ";
+  private static final String WITH_PREFIX = "with ";
+  private static final String ADDERS_AND = " adders and ";
+  private static final String MULTIPLIERS = " multipliers";
+  private static final String ADD_DURATION = "add duration ";
+  private static final String AND_MUL_DURATION = " and mul duration ";
+  private static final String EXECUTION_TIME_PREFIX = "\n\t*** Execution time = ";
+
   /** Default constructor. */
   protected FilterBenchmark() {}
 
@@ -89,17 +97,17 @@ public class FilterBenchmark {
 
   /** Prints standard experiment header. */
   private static void printExperimentHeader(Filter filter, int addNum, int mulNum) {
-    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
+    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
   }
 
   /** Prints experiment header with clock length. */
   private static void printExperimentHeader(Filter filter, int addNum, int mulNum, int clock) {
-    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
+    IO.println(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
     IO.println(
-        "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+        WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS + ";\nclock length: " + clock);
+    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
   }
 
   /** Prints store stats and runs consistency; returns consistency result. */
@@ -159,7 +167,7 @@ public class FilterBenchmark {
     final long t1 = System.currentTimeMillis();
     Search<IntVar> label = new DepthFirstSearch<>();
     boolean result = label.labeling(store, select, cost);
-    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
     return result;
   }
 
@@ -182,7 +190,7 @@ public class FilterBenchmark {
       label = new DepthFirstSearch<>();
       result = label.labeling(store, selectIo);
     }
-    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
     return result;
   }
 
@@ -450,7 +458,7 @@ public class FilterBenchmark {
 
     long T2 = System.currentTimeMillis();
     long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
   }
 
   /**
@@ -757,15 +765,17 @@ public class FilterBenchmark {
    */
   public static int experiment1Pm(Store store, Filter filter, int addNum, int mulNum) {
     String header =
-        "\n\nTest of scheduling for "
+        TEST_OF_SCHEDULING_FOR
             + filter.name()
             + " example with pipeline multiplier\nwith "
             + addNum
-            + " adders and "
+            + ADDERS_AND
             + mulNum
-            + " multipliers\nadd duration "
+            + MULTIPLIERS
+            + "\n"
+            + ADD_DURATION
             + filter.addDel()
-            + " and mul duration "
+            + AND_MUL_DURATION
             + filter.mulDel();
     return runExperiment(
         store,
@@ -794,15 +804,17 @@ public class FilterBenchmark {
    */
   public static int experiment2Pm(Store store, Filter filter, int addNum, int mulNum) {
     String header =
-        "\n\nTest of scheduling for "
+        TEST_OF_SCHEDULING_FOR
             + filter.name()
             + " example with pipeline multiplier\nwith "
             + addNum
-            + " adders and "
+            + ADDERS_AND
             + mulNum
-            + " multipliers\nadd duration "
+            + MULTIPLIERS
+            + "\n"
+            + ADD_DURATION
             + filter.addDel()
-            + " and mul duration "
+            + AND_MUL_DURATION
             + filter.mulDel();
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
@@ -838,8 +850,8 @@ public class FilterBenchmark {
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
@@ -868,7 +880,7 @@ public class FilterBenchmark {
 
     final long t1 = System.currentTimeMillis();
     boolean result = search.labeling(store, select, cost);
-    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
 
     return reportResult(result);
   }
@@ -888,8 +900,8 @@ public class FilterBenchmark {
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
     int pipeLb = computePipelineLowerBound(filter, addNum, mulNum);

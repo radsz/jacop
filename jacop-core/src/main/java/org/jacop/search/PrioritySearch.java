@@ -79,6 +79,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   int solutionsLimit = -1; // Integer.MAX_VALUE;
   boolean solutionsReached;
 
+  private static final String SOLUTION_COST_IS = "Solution cost is {}";
+
   /**
    * It constructs a PrioritySearch.
    *
@@ -305,9 +307,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
         if (costHandler != null) {
           double costValue = costHandler.getCostValue(costVariable);
-          log.info("Solution cost is {}", costValue);
+          log.info(SOLUTION_COST_IS, costValue);
         } else if (costVariable instanceof IntVar) {
-          log.info("Solution cost is {}", search.getFirst().costValue);
+          log.info(SOLUTION_COST_IS, search.getFirst().costValue);
         }
       }
 
@@ -464,7 +466,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
 
       if (printInfo && costVariable != null && costVariable instanceof IntVar) {
-        log.info("Solution cost is {}", costValue);
+        log.info(SOLUTION_COST_IS, costValue);
       }
 
       if (printInfo) {

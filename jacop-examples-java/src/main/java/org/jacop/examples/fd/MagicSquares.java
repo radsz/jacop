@@ -61,6 +61,8 @@ public class MagicSquares extends ExampleFd {
   /** It specifies the list of constraints which can be used for guiding shaving. */
   public List<Constraint> guidingShaving;
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /** Parses size from args and runs model + modelDual. */
   private static void runModelAndDual(String[] args) {
 
@@ -70,7 +72,7 @@ public class MagicSquares extends ExampleFd {
     }
     example.model();
     if (example.searchMiddle()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     MagicSquares exampleDual = new MagicSquares();
@@ -79,7 +81,7 @@ public class MagicSquares extends ExampleFd {
     }
     exampleDual.modelDual();
     if (exampleDual.creditSearch(64, 5000, 10)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 
@@ -99,7 +101,7 @@ public class MagicSquares extends ExampleFd {
     }
     exampleShave.model4Shaving();
     if (exampleShave.shavingSearch(exampleShave.guidingShaving, true)) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 

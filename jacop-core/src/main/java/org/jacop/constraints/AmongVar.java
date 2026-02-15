@@ -103,6 +103,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   private TimeStamp<Integer> yGrounded;
   private TimeStamp<Integer> xGrounded;
 
+  private static final String DEBUG_LEVEL = "--LEVEL : {}";
+  private static final String DEBUG_SEPARATOR = "------------";
+  private static final String DEBUG_SEPARATOR_SHORT = "--------";
+  private static final String AMONG_ATTACHED = "       among attached : ";
+
   /**
    * It constructs an AmongVar constraint.
    *
@@ -189,11 +194,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR X -------------");
-      log.debug("--LEVEL : {}", store.level);
+      log.debug(DEBUG_LEVEL, store.level);
       log.debug("{}", this);
       log.debug("--lbS = {}", lb0);
       log.debug("--ubS = {}", ub0);
-      log.debug("------------");
+      log.debug(DEBUG_SEPARATOR);
     }
 
     int minN = Math.max(n.min(), lb0);
@@ -264,13 +269,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if (DEBUG_ALL) {
       log.debug("-------------Consistency when LB0 == UB0 -------------");
-      log.debug("--LEVEL : {}", store.level);
+      log.debug(DEBUG_LEVEL, store.level);
       IntDomain lbSdom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
       log.debug("--lbSdom  = {}", lbSdom);
       log.debug("--futureDom  = {}", futureDom);
       log.debug("covered min {}", yGround);
       log.debug("left y that may play role{}", potentialCover);
-      log.debug("------------");
+      log.debug(DEBUG_SEPARATOR);
     }
 
     if (potentialCover < futureDom.getSize()) {
@@ -331,11 +336,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR Y -------------");
-      log.debug("--LEVEL : {}", store.level);
+      log.debug(DEBUG_LEVEL, store.level);
       log.debug("{}", this);
       log.debug("--x formed K = {}", K);
       log.debug("--y formed U = {}", U);
-      log.debug("------------");
+      log.debug(DEBUG_SEPARATOR);
     }
 
     int yGr = this.yGrounded.value();
@@ -661,7 +666,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (DEBUG_ALL) {
         log.debug("lbS = {}", lbSdom);
         log.debug("ubS = {}", ubSdom);
-        log.debug("--------");
+        log.debug(DEBUG_SEPARATOR_SHORT);
       }
       // ----------------------------------------------------------
 
@@ -713,7 +718,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
 
       if (DEBUG_ALL) {
-        log.debug("--------");
+        log.debug(DEBUG_SEPARATOR_SHORT);
         log.debug("- lb0  = {}", lb0);
         log.debug("- glb0 = {}", glb0);
         log.debug("- ub0  = {}", ub0);
@@ -722,7 +727,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             n.domain,
             Math.max(n.min(), lb0),
             Math.min(n.max(), ub0));
-        log.debug("--------");
+        log.debug(DEBUG_SEPARATOR_SHORT);
       }
 
       int minN = Math.max(n.min(), lb0);
@@ -1124,18 +1129,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     for (IntVar v : this.listOfX) {
       result.append("X variable ").append(v.id).append(" : ").append(v.domain);
-      result.append("       among attached : ");
+      result.append(AMONG_ATTACHED);
       result.append(v.domain.constraints().contains(this)).append(" \n");
     }
 
     for (IntVar v : this.listOfY) {
       result.append("Y variable ").append(v.id).append(" : ").append(v.domain);
-      result.append("       among attached : ");
+      result.append(AMONG_ATTACHED);
       result.append(v.domain.constraints().contains(this)).append(" \n");
     }
 
     result.append("variable ").append(n.id).append(" : ").append(n.domain);
-    result.append("       among attached : ");
+    result.append(AMONG_ATTACHED);
     result.append(n.domain.constraints().contains(this)).append("\n");
 
     return result.toString();

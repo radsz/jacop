@@ -105,7 +105,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   final ArrayList<SearchItem<T>> search_seq = new ArrayList<>();
   Var[] search_variables;
   String search_type;
-  String explore = "complete";
+  String explore = COMPLETE;
   String indomain;
   String var_selection_heuristic;
 
@@ -126,6 +126,43 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   boolean prioritySearch;
 
   Map<IntVar, Integer> preferedValues;
+
+  // Exploration and search type literals
+  private static final String COMPLETE = "complete";
+  private static final String SEQ_SEARCH = "seq_search";
+  private static final String WARM_START = "warm_start";
+  private static final String INPUT_ORDER = "input_order";
+  private static final String INDOMAIN_MIN = "indomain_min";
+  private static final String INDOMAIN_MAX = "indomain_max";
+  // AST annotation IDs
+  private static final String ANN_VECTOR = "$vector";
+  private static final String ANN_EXPR = "$expr";
+  // Variable selection heuristics
+  private static final String RANDOM = "random";
+  private static final String FIRST_FAIL = "first_fail";
+  private static final String ANTI_FIRST_FAIL = "anti_first_fail";
+  private static final String MOST_CONSTRAINED = "most_constrained";
+  private static final String OCCURRENCE = "occurrence";
+  private static final String SMALLEST = "smallest";
+  private static final String LARGEST = "largest";
+  private static final String IMPACT = "impact";
+  private static final String DOM_W_DEG = "dom_w_deg";
+  private static final String AFC_MAX = "afc_max";
+  private static final String AFC_MIN = "afc_min";
+  private static final String AFC_MAX_DEG = "afc_max_deg";
+  private static final String AFC_MIN_DEG = "afc_min_deg";
+  private static final String ACTIVITY_MAX = "activity_max";
+  private static final String ACTIVITY_MIN = "activity_min";
+  private static final String ACTIVITY_MAX_DEG = "activity_max_deg";
+  private static final String ACTIVITY_MIN_DEG = "activity_min_deg";
+  // Warning message fragments
+  private static final String WARNING_EXPLORATION_USE_COMPLETE =
+      "Warning: not recognized search exploration type; use \"complete\"";
+  private static final String WARNING_VAR_HEURISTIC_PREFIX =
+      "Warning: Not implemented variable selection heuristic \"";
+  private static final String WARNING_VAR_HEURISTIC_SUFFIX = "\"; used input_order";
+  private static final String WARNING_INDOMAIN_USED_MIN =
+      "Warning: Not implemented indomain method \"";
 
   // relax and reconstruct
   IntVar[] relax_and_reconstruct_variables;
@@ -199,13 +236,13 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         ASTAnnExpr expr5 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
         precision = ((ASTScalarFlatExpr) expr5.jjtGetChild(0)).getFloat();
       }
-      case "seq_search" -> {
+      case SEQ_SEARCH -> {
         SimpleNode body = (SimpleNode) ann.jjtGetChild(0);
-        search_type = "seq_search";
+        search_type = SEQ_SEARCH;
 
         makeVectorOfSearches(body);
       }
-      case "warm_start" -> {
+      case WARM_START -> {
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
         search_variables = getVarArray(expr1);
 
@@ -253,8 +290,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
           }
         }
 
-        var_selection_heuristic = "input_order";
-        indomain = max > min ? "indomain_max" : "indomain_min";
+        var_selection_heuristic = INPUT_ORDER;
+        indomain = max > min ? INDOMAIN_MAX : INDOMAIN_MIN;
       }
       case "priority_search" -> {
         prioritySearch = true;
@@ -270,8 +307,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         ASTAnnotation expr3 = (ASTAnnotation) ann.jjtGetChild(3);
         explorationType(expr3);
-        if (!"complete".equals(explore)) {
-          System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+        if (!COMPLETE.equals(explore)) {
+          System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
         }
       }
       case "restart_none" -> {}
@@ -316,7 +353,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   void makeVectorOfSearches(SimpleNode body) {
 
-    if (Objects.equals(((ASTAnnotation) body).getAnnId(), "$vector")) {
+    if (Objects.equals(((ASTAnnotation) body).getAnnId(), ANN_VECTOR)) {
 
       int count = body.jjtGetNumChildren();
 
@@ -328,7 +365,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         subSearch.searchParameters(body, i);
 
-        if ("seq_search".equals(ann.getAnnId())) {
+        if (SEQ_SEARCH.equals(ann.getAnnId())) {
           search_seq.add(subSearch);
           continue;
         }
@@ -350,12 +387,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   void explorationType(ASTAnnotation expr4) {
     switch (expr4.getAnnId()) {
-      case "$expr" ->
+      case ANN_EXPR ->
           explore = ((ASTScalarFlatExpr) expr4.jjtGetChild(0).jjtGetChild(0)).getIdent();
       case "credit" -> {
         explore = "credit";
         if (expr4.jjtGetNumChildren() == 2) {
-          if ("$expr".equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+          if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
             ASTAnnExpr cp = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
             if (cp.jjtGetNumChildren() == 1) {
               creditValue = ((ASTScalarFlatExpr) cp.jjtGetChild(0)).getInt();
@@ -374,14 +411,14 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             }
           }
         }
-        explore = "complete";
-        System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+        explore = COMPLETE;
+        System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
       }
       case "lds" -> {
         explore = "lds";
 
         if (expr4.jjtGetNumChildren() == 1) {
-          if ("$expr".equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
+          if (ANN_EXPR.equals(((ASTAnnotation) expr4.jjtGetChild(0)).getAnnId())) {
             if (((SimpleNode) expr4.jjtGetChild(0).jjtGetChild(0)).getId() == JJTANNEXPR) {
               ASTAnnExpr ae = (ASTAnnExpr) expr4.jjtGetChild(0).jjtGetChild(0);
               if (ae.jjtGetNumChildren() == 1) {
@@ -391,8 +428,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             }
           }
         }
-        explore = "complete";
-        System.err.println("Warning: not recognized search exploration type; use \"complete\"");
+        explore = COMPLETE;
+        System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
       }
       case null, default ->
           throw new RuntimeException(
@@ -414,14 +451,14 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
       subSearch.searchParameters(node, i);
 
-      if (search_type == null && "warm_start".equals(subSearch.search_type)) {
+      if (search_type == null && WARM_START.equals(subSearch.search_type)) {
         search_seq.addFirst(subSearch);
       } else {
         search_seq.add(subSearch);
       }
     }
 
-    search_type = "seq_search";
+    search_type = SEQ_SEARCH;
   }
 
   /**
@@ -432,7 +469,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   SelectChoicePoint<IntVar> getWarmStartSelect() {
 
     Indomain<IntVar> indom =
-        "indomain_min".equals(indomain)
+        INDOMAIN_MIN.equals(indomain)
             ? new IndomainDefaultValue<>(preferedValues, new IndomainMin<>())
             : new IndomainDefaultValue<>(preferedValues, new IndomainMax<>());
     ArrayList<IntVar> sv = new ArrayList<>();
@@ -462,7 +499,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   SelectChoicePoint<IntVar> getIntSelect() {
 
-    if ("random".equals(var_selection_heuristic)) {
+    if (RANDOM.equals(var_selection_heuristic)) {
       Indomain<IntVar> indom = getIndomain(indomain);
       IntVar[] searchVars = new IntVar[search_variables.length];
       for (int i = 0; i < search_variables.length; i++) {
@@ -520,7 +557,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         sel.leftFirst = false;
         return sel;
       }
-    } else if ("input_order".equals(var_selection_heuristic)) {
+    } else if (INPUT_ORDER.equals(var_selection_heuristic)) {
       Indomain<IntVar> indom = getIndomain(indomain);
       return new InputOrderSelect<>(store, (IntVar[]) search_variables, indom);
     } else {
@@ -619,12 +656,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new IndomainSetMin<>();
     } else {
       return switch (indomain) {
-        case "indomain_min" -> new IndomainSetMin<>();
-        case "indomain_max" -> new IndomainSetMax<>();
+        case INDOMAIN_MIN -> new IndomainSetMin<>();
+        case INDOMAIN_MAX -> new IndomainSetMax<>();
         case "indomain_random" -> new IndomainSetRandom<>();
         default -> {
-          System.err.println(
-              "Warning: Not implemented indomain method \"" + indomain + "\"; used indomain_min");
+          System.err.println(WARNING_INDOMAIN_USED_MIN + indomain + "\"; used indomain_min");
           yield new IndomainSetMin<>();
         }
       };
@@ -642,14 +678,13 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new IndomainMin<>();
     } else {
       return switch (indomain) {
-        case "indomain_min" -> new IndomainMin<>();
-        case "indomain_max" -> new IndomainMax<>();
+        case INDOMAIN_MIN -> new IndomainMin<>();
+        case INDOMAIN_MAX -> new IndomainMax<>();
         case "indomain_middle" -> new IndomainMiddle<>();
         case "indomain_median" -> new IndomainMedian<>();
         case "indomain_random" -> new IndomainRandom<>();
         default -> {
-          System.err.println(
-              "Warning: Not implemented indomain method \"" + indomain + "\"; used indomain_min");
+          System.err.println(WARNING_INDOMAIN_USED_MIN + indomain + "\"; used indomain_min");
           yield new IndomainMin<>();
         }
       };
@@ -667,53 +702,53 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new ComparatorsVar<>(null);
     } else {
       return switch (var_selection_heuristic) {
-        case "input_order" -> new ComparatorsVar<>(null);
-        case "random" -> new ComparatorsVar<>(new RandomVar<>());
-        case "first_fail" -> new ComparatorsVar<>(new SmallestDomain<>());
-        case "anti_first_fail" -> new ComparatorsVar<>(new LargestDomain<>());
-        case "most_constrained" ->
+        case INPUT_ORDER -> new ComparatorsVar<>(null);
+        case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
+        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>());
+        case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new LargestDomain<>());
+        case MOST_CONSTRAINED ->
             new ComparatorsVar<>(new SmallestDomain<>(), new MostConstrainedStatic<>());
-        case "occurrence" -> new ComparatorsVar<>(new MostConstrainedStatic<>());
-        case "smallest" -> new ComparatorsVar<>(new SmallestMin<>());
-        case "largest" -> new ComparatorsVar<>(new LargestMax<>());
+        case OCCURRENCE -> new ComparatorsVar<>(new MostConstrainedStatic<>());
+        case SMALLEST -> new ComparatorsVar<>(new SmallestMin<>());
+        case LARGEST -> new ComparatorsVar<>(new LargestMax<>());
         case "max_regret" -> new ComparatorsVar<>(new MaxRegret<>());
-        case "impact" ->
+        case IMPACT ->
             new ComparatorsVar<>(new ActivityMax<>(store), new MostConstrainedStatic<>());
-        case "dom_w_deg" -> new ComparatorsVar<>(new WeightedDegree<>(store));
+        case DOM_W_DEG -> new ComparatorsVar<>(new WeightedDegree<>(store));
         case "smallest_max" -> new ComparatorsVar<>(new SmallestMax<>(), new SmallestDomain<>());
         case "smallest_most_constrained" ->
             new ComparatorsVar<>(new SmallestMin<>(), new MostConstrainedStatic<>());
         case "smallest_first_fail" ->
             new ComparatorsVar<>(new SmallestMin<>(), new SmallestDomain<>());
-        case "afc_max" ->
+        case AFC_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMax<>(store));
-        case "afc_min" ->
+        case AFC_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMin<>(store));
-        case "afc_max_deg" ->
+        case AFC_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMaxDeg<>(store));
-        case "afc_min_deg" ->
+        case AFC_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMinDeg<>(store));
-        case "activity_max" ->
+        case ACTIVITY_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));
-        case "activity_min" ->
+        case ACTIVITY_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMin<>(store));
-        case "activity_max_deg" ->
+        case ACTIVITY_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMaxDeg<>(store));
-        case "activity_min_deg" ->
+        case ACTIVITY_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
         default -> {
           System.err.println(
-              "Warning: Not implemented variable selection heuristic \""
+              WARNING_VAR_HEURISTIC_PREFIX
                   + var_selection_heuristic
-                  + "\"; used input_order");
+                  + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield null;
         }
@@ -732,50 +767,50 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new ComparatorsVar<>(null);
     } else {
       return switch (var_selection_heuristic) {
-        case "input_order" -> new ComparatorsVar<>(null);
-        case "first_fail" -> new ComparatorsVar<>(new SmallestDomainFloat<>());
-        case "anti_first_fail" -> new ComparatorsVar<>(new LargestDomainFloat<>());
-        case "most_constrained" ->
+        case INPUT_ORDER -> new ComparatorsVar<>(null);
+        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomainFloat<>());
+        case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new LargestDomainFloat<>());
+        case MOST_CONSTRAINED ->
             new ComparatorsVar<>(new SmallestDomainFloat<>(), new MostConstrainedStatic<>());
-        case "occurrence" -> new ComparatorsVar<>(new MostConstrainedStatic<>());
-        case "smallest" -> new ComparatorsVar<>(new SmallestMinFloat<>());
-        case "largest" -> new ComparatorsVar<>(new LargestMaxFloat<>());
+        case OCCURRENCE -> new ComparatorsVar<>(new MostConstrainedStatic<>());
+        case SMALLEST -> new ComparatorsVar<>(new SmallestMinFloat<>());
+        case LARGEST -> new ComparatorsVar<>(new LargestMaxFloat<>());
         case "max_regret" -> new ComparatorsVar<>(new MaxRegretFloat<>());
-        case "dom_w_deg" -> new ComparatorsVar<>(new WeightedDegree<>(store));
-        case "impact" ->
+        case DOM_W_DEG -> new ComparatorsVar<>(new WeightedDegree<>(store));
+        case IMPACT ->
             new ComparatorsVar<>(new ActivityMax<>(store), new MostConstrainedStatic<>());
-        case "afc_max" ->
+        case AFC_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMax<>(store));
-        case "afc_max_deg" ->
+        case AFC_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMaxDeg<>(store));
-        case "afc_min" ->
+        case AFC_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMin<>(store));
-        case "afc_min_deg" ->
+        case AFC_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMinDeg<>(store));
-        case "activity_max" ->
+        case ACTIVITY_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));
-        case "activity_max_deg" ->
+        case ACTIVITY_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMaxDeg<>(store));
-        case "activity_min" ->
+        case ACTIVITY_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMin<>(store));
-        case "activity_min_deg" ->
+        case ACTIVITY_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
         // for FloatVar's getSize() is not defined :(
         // afc*_deg and activity*_deg cannot be used
-        case "random" -> new ComparatorsVar<>(new RandomVar<>());
+        case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
-              "Warning: Not implemented variable selection heuristic \""
+              WARNING_VAR_HEURISTIC_PREFIX
                   + var_selection_heuristic
-                  + "\"; used input_order");
+                  + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield new ComparatorsVar<>(null);
         }
@@ -794,47 +829,47 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new ComparatorsVar<>(null);
     } else {
       return switch (var_selection_heuristic) {
-        case "input_order" -> new ComparatorsVar<>(null);
-        case "first_fail" -> new ComparatorsVar<>(new MinCardDiff<>());
-        case "smallest" -> new ComparatorsVar<>(new MinGlbCard<>());
-        case "occurrence" -> new ComparatorsVar<>(new MostConstrainedStatic<>());
-        case "anti_first_fail" -> new ComparatorsVar<>(new MaxCardDiff<>());
-        case "dom_w_deg" -> new ComparatorsVar<>(new WeightedDegree<>(store));
-        case "impact" ->
+        case INPUT_ORDER -> new ComparatorsVar<>(null);
+        case FIRST_FAIL -> new ComparatorsVar<>(new MinCardDiff<>());
+        case SMALLEST -> new ComparatorsVar<>(new MinGlbCard<>());
+        case OCCURRENCE -> new ComparatorsVar<>(new MostConstrainedStatic<>());
+        case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new MaxCardDiff<>());
+        case DOM_W_DEG -> new ComparatorsVar<>(new WeightedDegree<>(store));
+        case IMPACT ->
             new ComparatorsVar<>(new ActivityMax<>(store), new MostConstrainedStatic<>());
-        case "afc_max" ->
+        case AFC_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMax<>(store));
-        case "afc_min" ->
+        case AFC_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMin<>(store));
-        case "afc_max_deg" ->
+        case AFC_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMaxDeg<>(store));
-        case "afc_min_deg" ->
+        case AFC_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new AfcMinDeg<>(store));
-        case "activity_max" ->
+        case ACTIVITY_MAX ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));
-        case "activity_min" ->
+        case ACTIVITY_MIN ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMin<>(store));
-        case "activity_max_deg" ->
+        case ACTIVITY_MAX_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMaxDeg<>(store));
-        case "activity_min_deg" ->
+        case ACTIVITY_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
-        case "most_constrained" ->
+        case MOST_CONSTRAINED ->
             new ComparatorsVar<>(new MinGlbCard<>(), new MostConstrainedStatic<>());
-        case "largest" -> new ComparatorsVar<>(new MaxLubCard<>());
-        case "random" -> new ComparatorsVar<>(new RandomVar<>());
+        case LARGEST -> new ComparatorsVar<>(new MaxLubCard<>());
+        case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
-              "Warning: Not implemented variable selection heuristic \""
+              WARNING_VAR_HEURISTIC_PREFIX
                   + var_selection_heuristic
-                  + "\"; used input_order");
+                  + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield new ComparatorsVar<>(null);
         }
@@ -899,7 +934,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   int[] getIntArray(SimpleNode node) {
 
-    if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
+    if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_VECTOR)) {
       int count = node.jjtGetNumChildren();
       int[] aa = new int[count];
       for (int i = 0; i < count; i++) {
@@ -909,7 +944,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         aa[i] = el;
       }
       return aa;
-    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$expr")) {
+    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
         return dictionary.getIntArray(((ASTScalarFlatExpr) n).getIdent());
@@ -957,7 +992,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   IntVar[] getVarArray(SimpleNode node) {
 
-    if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
+    if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_VECTOR)) {
       int count = node.jjtGetNumChildren();
       IntVar[] aa = new IntVar[count];
       for (int i = 0; i < count; i++) {
@@ -967,7 +1002,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         aa[i] = el;
       }
       return aa;
-    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$expr")) {
+    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       ASTAnnExpr m = (ASTAnnExpr) node.jjtGetChild(0);
       if ("ArrayLiteral".equals(m.jjtGetChild(0).toString())
           && m.jjtGetChild(0).jjtGetNumChildren() == 0) {
@@ -995,7 +1030,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   FloatVar[] getFloatVarArray(SimpleNode node) {
 
-    if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
+    if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_VECTOR)) {
       int count = node.jjtGetNumChildren();
       FloatVar[] aa = new FloatVar[count];
       for (int i = 0; i < count; i++) {
@@ -1005,7 +1040,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         aa[i] = el;
       }
       return aa;
-    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$expr")) {
+    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
         return dictionary.getVariableFloatArray(((ASTScalarFlatExpr) n).getIdent());
@@ -1041,7 +1076,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   SetVar[] getSetVarArray(SimpleNode node) {
 
-    if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
+    if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_VECTOR)) {
       int count = node.jjtGetNumChildren();
       SetVar[] aa = new SetVar[count];
       for (int i = 0; i < count; i++) {
@@ -1059,7 +1094,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       return aa;
-    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$expr")) {
+    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
         return dictionary.getSetVariableArray(((ASTScalarFlatExpr) n).getIdent());
@@ -1142,11 +1177,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   public String getVarSelectHeuristic(ASTAnnotation expr) {
 
-    if ("$expr".equals(expr.getAnnId())) {
+    if (ANN_EXPR.equals(expr.getAnnId())) {
       return ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0)).getIdent();
     } else if (expr.getId() == JJTANNOTATION && "tiebreak".equals(expr.getAnnId())) {
 
-      if (Objects.equals(((ASTAnnotation) expr.jjtGetChild(0)).getAnnId(), "$vector")) {
+      if (Objects.equals(((ASTAnnotation) expr.jjtGetChild(0)).getAnnId(), ANN_VECTOR)) {
 
         int count = expr.jjtGetChild(0).jjtGetNumChildren();
         if (count >= 2) {
@@ -1222,7 +1257,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             .append(", ")
             .append(Arrays.asList(search_variables));
 
-        if ("warm_start".equals(search_type)) {
+        if (WARM_START.equals(search_type)) {
           s.append(", ").append(preferedValues);
         }
       }

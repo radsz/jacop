@@ -46,6 +46,12 @@ import org.jacop.constraints.netflow.simplex.Node;
 @Slf4j
 public class Assert {
 
+  private static final String BALANCE_EQUALS = ", balance = ";
+  private static final String MSG_I = "\ni = ";
+  private static final String MSG_J = "\nj = ";
+  private static final String MSG_IJ = "\nij = ";
+  private static final String MSG_P = "\np = ";
+
   private Assert() {}
 
   /**
@@ -108,7 +114,7 @@ public class Assert {
               + out
               + ", in = "
               + in
-              + ", balance = "
+              + BALANCE_EQUALS
               + n.balance
               + "\n"
               + n
@@ -120,7 +126,7 @@ public class Assert {
               + del_out
               + ", in = "
               + del_in
-              + ", balance = "
+              + BALANCE_EQUALS
               + n.balance
               + ", delta = "
               + n.deltaBalance
@@ -157,7 +163,7 @@ public class Assert {
               + out
               + ", out = "
               + in
-              + ", balance = "
+              + BALANCE_EQUALS
               + 0
               + "\n"
               + g.root
@@ -213,10 +219,10 @@ public class Assert {
         Node i = arc.sister.head;
 
         if (i.toParent == arc) {
-          assert j == i.parent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
+          assert j == i.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
         } else {
-          assert arc.sister == j.toParent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
-          assert i == j.parent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
+          assert arc.sister == j.toParent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+          assert i == j.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
         }
       } else if (arc.index != -3) { // non-tree arc
 
@@ -261,13 +267,13 @@ public class Assert {
 
       Node p = i.parent;
 
-      assert p.depth + 1 == i.depth : "\ni = " + i + "\np = " + p + "\n";
-      assert i == i.toParent.sister.head : "\ni = " + i + "\np = " + p + "\n";
-      assert p == i.toParent.head : "\ni = " + i + "\np = " + p + "\n";
-      assert 0 == i.toParent.reducedCost() : "\ni = " + i + "\np = " + p + "\n";
+      assert p.depth + 1 == i.depth : MSG_I + i + MSG_P + p + "\n";
+      assert i == i.toParent.sister.head : MSG_I + i + MSG_P + p + "\n";
+      assert p == i.toParent.head : MSG_I + i + MSG_P + p + "\n";
+      assert 0 == i.toParent.reducedCost() : MSG_I + i + MSG_P + p + "\n";
       boolean b1 = tree.contains(i.toParent);
       boolean b2 = tree.contains(i.toParent.sister);
-      assert b1 ^ b2 : "\ni = " + i + "\np = " + p + "\n";
+      assert b1 ^ b2 : MSG_I + i + MSG_P + p + "\n";
     }
 
     assert N == x;

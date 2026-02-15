@@ -72,6 +72,8 @@ public class Golomb extends ExampleFd {
   /** It contains all differences between all possible pairs of marks. */
   public List<IntVar> subs = new ArrayList<>();
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /**
    * It executes the program which computes the optimal Golomb ruler.
    *
@@ -93,7 +95,7 @@ public class Golomb extends ExampleFd {
     example.model();
 
     if (example.searchOptimalInfo()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 
@@ -120,7 +122,7 @@ public class Golomb extends ExampleFd {
     example.model();
 
     if (example.searchOptimalInfo()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     Golomb exampleAll = new Golomb();
@@ -136,7 +138,7 @@ public class Golomb extends ExampleFd {
     exampleAll.model();
 
     if (exampleAll.searchAllOptimal()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
   }
 

@@ -90,6 +90,8 @@ public class MineSweeper extends ExampleFd {
   IntVar[][] game; // The FDV version of the problem matrix.
   IntVar[][] mines; // solution matrix: 0..1 where 1 means mine.
 
+  private static final String ROW_01_10 = "...01.10...";
+
   /**
    * It transforms string representation of the problem into an array of ints representation.
    *
@@ -289,15 +291,15 @@ public class MineSweeper extends ExampleFd {
   public static String[] problemKayeSplitter() {
     return new String[] {
       "...0...0...",
-      "...01.10...",
-      "...01.10...",
+      ROW_01_10,
+      ROW_01_10,
       "00001110000",
       ".1111.1111.",
       "...1.2.1...",
       ".1111.1111.",
       "00001110000",
-      "...01.10...",
-      "...01.10...",
+      ROW_01_10,
+      ROW_01_10,
       "...0...0..."
     };
   }

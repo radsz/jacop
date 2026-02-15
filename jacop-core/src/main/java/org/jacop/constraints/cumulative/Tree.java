@@ -52,6 +52,8 @@ abstract class Tree {
   // number of leaves (tasks)
   int n;
 
+  private static final String NODE_PREFIX = "node_";
+
   abstract void clearNode(int i);
 
   protected abstract String treeName();
@@ -150,7 +152,7 @@ abstract class Tree {
 
     for (int i = 0; i < treeSize; i++) {
       result
-          .append("node_")
+          .append(NODE_PREFIX)
           .append(i)
           .append(" [shape = box, label = \"")
           .append(getNodeString(i))
@@ -173,13 +175,13 @@ abstract class Tree {
     if (notExist(i)) {
       return result;
     } else {
-      String s = "node_" + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
+      String s = NODE_PREFIX + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
       if (exist(left(i))) {
-        result.append(s).append("node_").append(left(i)).append("\n");
+        result.append(s).append(NODE_PREFIX).append(left(i)).append("\n");
         result.append(treeToGraph(left(i)));
       }
       if (exist(right(i))) {
-        result.append(s).append("node_").append(right(i)).append("\n");
+        result.append(s).append(NODE_PREFIX).append(right(i)).append("\n");
         result.append(treeToGraph(right(i)));
       }
 

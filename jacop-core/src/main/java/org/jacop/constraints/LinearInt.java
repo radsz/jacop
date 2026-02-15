@@ -114,6 +114,8 @@ public class LinearInt extends PrimitiveConstraint {
   long sumMin;
   long sumMax;
 
+  private static final String WEIGHTS = "weights";
+
   /** Default constructor for subclasses. */
   protected LinearInt() {}
 
@@ -130,7 +132,7 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public LinearInt(IntVar[] list, int[] weights, String rel, int sum) {
     checkInputForNullness("list", list);
-    checkInputForNullness("weights", weights);
+    checkInputForNullness(WEIGHTS, weights);
     commonInitialization(list[0].getStore(), list, weights, rel, sum);
     numberId = idNumber.incrementAndGet();
   }
@@ -145,7 +147,7 @@ public class LinearInt extends PrimitiveConstraint {
    * @param sum the sum of weighted list.
    */
   public LinearInt(List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
-    checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
+    checkInputForNullness(new String[] {"list", WEIGHTS}, new Object[] {list, weights});
     commonInitialization(
         list.getFirst().getStore(),
         list.toArray(new IntVar[0]),
@@ -166,7 +168,7 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public LinearInt(IntVar[] list, int[] weights, String rel, IntVar sum) {
     checkInputForNullness("list", list);
-    checkInputForNullness("weights", weights);
+    checkInputForNullness(WEIGHTS, weights);
     commonInitialization(
         sum.getStore(),
         Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),

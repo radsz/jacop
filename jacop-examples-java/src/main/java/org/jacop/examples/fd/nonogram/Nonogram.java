@@ -86,6 +86,8 @@ public class Nonogram extends ExampleFd {
   /** A board to be painted in white/black dots. */
   public IntVar[][] board;
 
+  private static final String SOLUTION_FOUND = "Solution(s) found";
+
   /** It specifies a rule for each row. */
   public int[][] row_rules = {
     {0, 0, 0, 0, 2, 2, 3},
@@ -155,7 +157,7 @@ public class Nonogram extends ExampleFd {
 
     example.model();
     if (example.searchAll()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
 
     example.printMatrix(example.board);
@@ -172,7 +174,7 @@ public class Nonogram extends ExampleFd {
 
     example.model();
     if (example.searchAll()) {
-      IO.println("Solution(s) found");
+      IO.println(SOLUTION_FOUND);
     }
     example.printMatrix(example.board);
 
@@ -188,7 +190,7 @@ public class Nonogram extends ExampleFd {
       example.model();
 
       if (example.searchAll()) {
-        IO.println("Solution(s) found");
+        IO.println(SOLUTION_FOUND);
       }
 
       example.printMatrix(example.board);

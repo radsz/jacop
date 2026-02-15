@@ -77,6 +77,11 @@ public class PerfectSquare extends ExampleFd {
   IntVar[] varsY;
   IntVar[] size;
 
+  private static final String SIZE_LABEL = " Size = ";
+  private static final String SQUARE_SIZE_PREFIX = "Square size = [";
+  private static final String NUMBER_OF_VARIABLES = "Number of variables: ";
+  private static final String NUMBER_OF_CONSTRAINTS = "Number of constraints: ";
+
   /**
    * Returns the problem instances data.
    *
@@ -1566,8 +1571,8 @@ public class PerfectSquare extends ExampleFd {
     size = new IntVar[numberOfRectangles];
 
     IO.print("Constraint model without use of Diffn constraint");
-    IO.println("No squares = " + numberOfRectangles + " Size = " + masterSize);
-    IO.print("Square size = [");
+    IO.println("No squares = " + numberOfRectangles + SIZE_LABEL + masterSize);
+    IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = numberOfRectangles - 1; j >= 0; j--) {
 
@@ -1643,8 +1648,8 @@ public class PerfectSquare extends ExampleFd {
       store.impose(new SumInt(sumList, "==", limit));
     }
 
-    IO.println("Number of variables: " + store.size());
-    IO.println("Number of constraints: " + store.numberConstraints());
+    IO.println(NUMBER_OF_VARIABLES + store.size());
+    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   /**
@@ -1667,8 +1672,8 @@ public class PerfectSquare extends ExampleFd {
     IntVar[][] rectangles = new IntVar[noRectangles][4];
 
     IO.print("Constraint model based on Diffn constraint");
-    IO.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
-    IO.print("Square size = [");
+    IO.println("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
+    IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = noRectangles - 1; j >= 0; j--) {
 
@@ -1694,8 +1699,8 @@ public class PerfectSquare extends ExampleFd {
 
     store.impose(new Diffn(rectangles));
 
-    IO.println("Number of variables: " + store.size());
-    IO.println("Number of constraints: " + store.numberConstraints());
+    IO.println(NUMBER_OF_VARIABLES + store.size());
+    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   @Override
@@ -1728,8 +1733,8 @@ public class PerfectSquare extends ExampleFd {
     List<Shape> shapes = new ArrayList<>();
 
     IO.print("Constraint model based on Geost and Diffn constraint");
-    IO.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
-    IO.print("Square size = [");
+    IO.println("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
+    IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = noRectangles - 1; j >= 0; j--) {
 
@@ -1781,8 +1786,8 @@ public class PerfectSquare extends ExampleFd {
     // the main pruning component still.
     store.impose(new Diffn(rectangles, false));
 
-    IO.println("Number of variables: " + store.size());
-    IO.println("Number of constraints: " + store.numberConstraints());
+    IO.println(NUMBER_OF_VARIABLES + store.size());
+    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   @Override

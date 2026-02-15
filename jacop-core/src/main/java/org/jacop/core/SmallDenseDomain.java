@@ -46,6 +46,9 @@ public class SmallDenseDomain extends IntDomain {
    */
   public static final SmallDenseDomain emptyDomain = new SmallDenseDomain(1, 0L);
 
+  private static final String DOMAIN_UPDATE_INCORRECT = "Domain update incorrect.";
+  private static final String INCORRECT_IN_OPERATION = "Incorrect in operation";
+
   private static final long[] TWO_N_ARRAY =
       new long[] {
         0x1L,
@@ -401,8 +404,8 @@ public class SmallDenseDomain extends IntDomain {
       boundEvent = true;
     }
 
-    assert max <= previousMax : "Domain update incorrect.";
-    assert minBound >= previousMin : "Domain update incorrect.";
+    assert max <= previousMax : DOMAIN_UPDATE_INCORRECT;
+    assert minBound >= previousMin : DOMAIN_UPDATE_INCORRECT;
     assert checkInvariants() == null : checkInvariants();
 
     notifyEvent(singleton, boundEvent, v);
@@ -438,8 +441,8 @@ public class SmallDenseDomain extends IntDomain {
       result.singleton = true;
     }
 
-    assert result.max <= max : "Domain update incorrect.";
-    assert result.minBound >= minBound : "Domain update incorrect.";
+    assert result.max <= max : DOMAIN_UPDATE_INCORRECT;
+    assert result.minBound >= minBound : DOMAIN_UPDATE_INCORRECT;
 
     installResultDomain(result, storeLevel, v);
 
@@ -855,7 +858,7 @@ public class SmallDenseDomain extends IntDomain {
       throw failException;
     }
 
-    assert newSize < size : "Incorrect in operation";
+    assert newSize < size : INCORRECT_IN_OPERATION;
 
     // Pruning has occurred.
 
@@ -911,8 +914,8 @@ public class SmallDenseDomain extends IntDomain {
         result.max = result.previousValue(max + 1);
       }
 
-      assert result.max <= max : "Domain update incorrect.";
-      assert result.minBound >= min : "Domain update incorrect.";
+      assert result.max <= max : DOMAIN_UPDATE_INCORRECT;
+      assert result.minBound >= min : DOMAIN_UPDATE_INCORRECT;
 
       installAndNotify(result, storeLevel, v);
     }
@@ -957,8 +960,8 @@ public class SmallDenseDomain extends IntDomain {
       adaptMin();
       max = previousValue(max + 1);
 
-      assert max <= previousMax : "Domain update incorrect.";
-      assert minBound >= previousMin : "Domain update incorrect.";
+      assert max <= previousMax : DOMAIN_UPDATE_INCORRECT;
+      assert minBound >= previousMin : DOMAIN_UPDATE_INCORRECT;
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -968,8 +971,8 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
-      assert result.max <= previousMax : "Domain update incorrect.";
-      assert result.minBound >= previousMin : "Domain update incorrect.";
+      assert result.max <= previousMax : DOMAIN_UPDATE_INCORRECT;
+      assert result.minBound >= previousMin : DOMAIN_UPDATE_INCORRECT;
 
       installAndNotifyWithEvent(result, storeLevel, previousMin, previousMax, v);
     }
@@ -1068,7 +1071,7 @@ public class SmallDenseDomain extends IntDomain {
       throw failException;
     }
 
-    assert newSize <= size : "Incorrect in operation";
+    assert newSize <= size : INCORRECT_IN_OPERATION;
 
     if (newSize == size) {
       return;
@@ -1117,7 +1120,7 @@ public class SmallDenseDomain extends IntDomain {
       throw failException;
     }
 
-    assert newSize <= size : "Incorrect in operation";
+    assert newSize <= size : INCORRECT_IN_OPERATION;
 
     if (newSize == size) {
       return;
@@ -1356,8 +1359,8 @@ public class SmallDenseDomain extends IntDomain {
       adaptMin();
       max = previousValue(max + 1);
 
-      assert max <= previousMax : "Domain update incorrect.";
-      assert minBound >= previousMin : "Domain update incorrect.";
+      assert max <= previousMax : DOMAIN_UPDATE_INCORRECT;
+      assert minBound >= previousMin : DOMAIN_UPDATE_INCORRECT;
 
       assert checkInvariants() == null : checkInvariants();
 

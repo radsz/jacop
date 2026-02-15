@@ -70,6 +70,11 @@ public class IntervalDomain extends IntDomain {
   /** It specifies number of intervals needed to encode the domain. */
   public int size;
 
+  private static final String ASSERT_MIN_ADDED = "The minimum was not added";
+  private static final String ASSERT_MAX_ADDED = "The maximum was not added";
+  private static final String IS_INTERSECTING_NOT_IMPLEMENTED =
+      "isIntersecting not properly implemented";
+
   /**
    * Copies metadata from this domain into the result domain and installs it on the variable. Sets
    * previousDomain to this.
@@ -283,8 +288,8 @@ public class IntervalDomain extends IntDomain {
           size++;
 
           assert checkInvariants() == null : checkInvariants();
-          assert contains(min) : "The minimum was not added";
-          assert contains(max) : "The maximum was not added";
+          assert contains(min) : ASSERT_MIN_ADDED;
+          assert contains(max) : ASSERT_MAX_ADDED;
 
           return;
         }
@@ -298,8 +303,8 @@ public class IntervalDomain extends IntDomain {
         size++;
 
         assert checkInvariants() == null : checkInvariants();
-        assert contains(min) : "The minimum was not added";
-        assert contains(max) : "The maximum was not added";
+        assert contains(min) : ASSERT_MIN_ADDED;
+        assert contains(max) : ASSERT_MAX_ADDED;
 
         return;
       }
@@ -340,8 +345,8 @@ public class IntervalDomain extends IntDomain {
     }
 
     assert checkInvariants() == null : checkInvariants();
-    assert contains(min) : "The minimum was not added";
-    assert contains(max) : "The maximum was not added";
+    assert contains(min) : ASSERT_MIN_ADDED;
+    assert contains(max) : ASSERT_MAX_ADDED;
   }
 
   @Override
@@ -549,20 +554,20 @@ public class IntervalDomain extends IntDomain {
 
           if (i == size) {
             assert !isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-                : "isIntersecting not properly implemented";
+                : IS_INTERSECTING_NOT_IMPLEMENTED;
             return false;
           }
 
           if (next >= intervals[i].min()) {
             assert isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-                : "isIntersecting not properly implemented";
+                : IS_INTERSECTING_NOT_IMPLEMENTED;
 
             return true;
           }
         }
 
         assert !isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-            : "isIntersecting not properly implemented";
+            : IS_INTERSECTING_NOT_IMPLEMENTED;
 
         return false;
 

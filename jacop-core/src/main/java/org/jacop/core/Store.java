@@ -73,6 +73,9 @@ public class Store {
   /** Centralized random number generator used by all JaCoP components. */
   private static SecureRandom random = new SecureRandom();
 
+  private static final String CONSTRAINT_QUEUE_TOO_LARGE =
+      "Constraint queue number larger than permitted by store.";
+
   /**
    * Returns the centralized random number generator.
    *
@@ -743,7 +746,7 @@ public class Store {
    */
   public void impose(Constraint c, int queueIndex) {
 
-    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
 
     c.impose(this, queueIndex);
   }
@@ -776,7 +779,7 @@ public class Store {
    */
   public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
 
-    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
 
     c.impose(this, queueIndex);
 
@@ -808,7 +811,7 @@ public class Store {
   public <T extends Constraint> void imposeDecomposition(
       DecomposedConstraint<T> c, int queueIndex) {
 
-    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
 
     c.imposeDecomposition(this, queueIndex);
   }

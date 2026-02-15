@@ -67,6 +67,8 @@ public final class WrapperDebugModule
   // the associate wrapper
   private SatWrapper wrapper;
 
+  private static final String MEANING = " meaning ";
+
   /** {@inheritDoc} */
   public void onRestart(int oldLevel) {
     printLine(true);
@@ -82,7 +84,7 @@ public final class WrapperDebugModule
     core.logc(
         "conflict clause : "
             + conflictClause
-            + " meaning "
+            + MEANING
             + wrapper.showClauseMeaning(conflictClause));
     printLine(false);
     printBlank();
@@ -122,7 +124,7 @@ public final class WrapperDebugModule
             + wrapper.store.level
             + ") assertion : "
             + literal
-            + " meaning "
+            + MEANING
             + wrapper.showLiteralMeaning(literal));
     printLine(false);
     printBlank();
@@ -143,7 +145,7 @@ public final class WrapperDebugModule
     } else {
       mapClause.clear();
       core.dbStore.resolutionWith(clauseId, mapClause);
-      core.logc(3, "cause: " + mapClause + " meaning " + wrapper.showClauseMeaning(mapClause));
+      core.logc(3, "cause: " + mapClause + MEANING + wrapper.showClauseMeaning(mapClause));
     }
     printLine(false);
     printBlank();
@@ -164,10 +166,7 @@ public final class WrapperDebugModule
   public void onExplain(MapClause explanation) {
     printLine(true);
     core.logc(
-        "explanation clause : "
-            + explanation
-            + " meaning "
-            + wrapper.showClauseMeaning(explanation));
+        "explanation clause : " + explanation + MEANING + wrapper.showClauseMeaning(explanation));
     printTrail("var state :          ", explanation);
     printLine(false);
     printBlank();
@@ -185,7 +184,7 @@ public final class WrapperDebugModule
             + c
             + " at level "
             + core.currentLevel
-            + " meaning "
+            + MEANING
             + wrapper.showClauseMeaning(mapClause));
   }
 

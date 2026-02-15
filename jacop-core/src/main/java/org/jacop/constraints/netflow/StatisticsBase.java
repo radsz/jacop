@@ -42,6 +42,8 @@ public class StatisticsBase {
 
   protected static final DecimalFormat DF = new DecimalFormat("0.###");
 
+  private static final String AVG_PREFIX = "\t(avg ";
+
   int arcsExamined;
   int arcsPruned;
   int amountPruned;
@@ -60,17 +62,17 @@ public class StatisticsBase {
 
     str.append("\t# arcs examined : ");
     str.append(arcsExamined);
-    str.append("\t(avg ");
+    str.append(AVG_PREFIX);
     str.append(DF.format((double) arcsExamined / consistencyIterations));
 
     str.append(")\n\t# arcs pruned   : ");
     str.append(arcsPruned);
-    str.append("\t(avg ");
+    str.append(AVG_PREFIX);
     str.append(DF.format((double) arcsPruned / arcsExamined));
 
     str.append(")\n\tAmount pruned   : ");
     str.append(amountPruned);
-    str.append("\t(avg ");
+    str.append(AVG_PREFIX);
     str.append(DF.format((double) amountPruned / arcsPruned));
 
     str.append(")\n\tAvg max score   : ");
