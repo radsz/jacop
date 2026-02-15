@@ -342,63 +342,65 @@ public class Muca extends ExampleFd {
 
     store = new Store();
 
-    // maximal number of transformations in a sequence.
+    int noAvailableTransformations = computeMaxNoTransformations();
+
+    IntVar[] usedTransformation = createTransitionsAndAmong(noAvailableTransformations);
+
+    createBidCostsAndExtensional(usedTransformation);
+
+    createDeltasAndPartialSums(usedTransformation, noAvailableTransformations);
+
+    createWeightsAndSum(usedTransformation);
+
+    cost = new IntVar(store, "cost", minCost, maxCost);
+
+    store.impose(new SumInt(bidCosts, "==", cost));
+  }
+
+  private int computeMaxNoTransformations() {
     maxNoTransformations = 0;
-    // number of transformations
     int noAvailableTransformations = 0;
-
     for (List<List<Transformation>> bid : bids) {
-
       int max = 0;
-
       for (List<Transformation> bid_xor : bid) {
         noAvailableTransformations += bid_xor.size();
         if (bid_xor.size() > max) {
           max = bid_xor.size();
         }
       }
-
       maxNoTransformations += max;
     }
+    return noAvailableTransformations;
+  }
 
-    // Variables, transition ordering
-
+  private IntVar[] createTransitionsAndAmong(int noAvailableTransformations) {
     transitions = new IntVar[maxNoTransformations];
-
     for (int i = 0; i < maxNoTransformations; i++) {
       transitions[i] = new IntVar(store, "t" + (i + 1), 0, noAvailableTransformations);
     }
     for (int i = 0; i < maxNoTransformations - 1; i++) {
       store.impose(new IfThen(new XeqC(transitions[i], 0), new XeqC(transitions[i + 1], 0)));
     }
-    // for each set of transformations create an among
-
     IntVar[] usedTransformation = new IntVar[noAvailableTransformations];
-
     for (int i = 0; i < noAvailableTransformations; i++) {
-
       usedTransformation[i] = new IntVar(store, "isUsed_" + (i + 1), 0, 1);
       IntervalDomain kSet = new IntervalDomain(i + 1, i + 1);
       store.impose(new Among(transitions, kSet, usedTransformation[i]));
     }
+    return usedTransformation;
+  }
 
+  private void createBidCostsAndExtensional(IntVar[] usedTransformation) {
     int noTransformations = 0;
     int no = 0;
-
     bidCosts = new ArrayList<>();
-
     for (List<List<Transformation>> bid : bids) {
-
       IntVar[] nVars = new IntVar[bid.size() + 1];
       int[][] tuples = new int[bid.size() + 1][];
-      // tuples[0] denotes [0, 0, ....] so bid is not used.
       tuples[0] = new int[bid.size() + 1];
-
       int i = 0;
       for (List<Transformation> bid_xor : bid) {
-
         IntervalDomain kSet = new IntervalDomain();
-
         List<IntVar> xorUsedTransformation = new ArrayList<>();
         for (Transformation t : bid_xor) {
           noTransformations++;
@@ -406,89 +408,67 @@ public class Muca extends ExampleFd {
           kSet.unionAdapt(noTransformations, noTransformations);
           xorUsedTransformation.add(usedTransformation[t.id - 1]);
         }
-
         IntVar n = new IntVar(store, "ind_" + no + "_" + i);
         n.addDom(0, 0);
         n.addDom(bid_xor.size(), bid_xor.size());
-
         store.impose(new SumInt(xorUsedTransformation, "==", n));
-
         nVars[++i] = n;
         tuples[i] = new int[bid.size() + 1];
         tuples[i][0] = costs.get(no).get(i - 1);
         tuples[i][i] = n.max();
-
         store.impose(new Among(transitions, kSet, n));
       }
-
       IntVar bidCost = new IntVar(store, "bidCost" + (bidCosts.size() + 1), minCost, maxCost);
       nVars[0] = bidCost;
-
       store.impose(new ExtensionalSupportVa(nVars, tuples));
       bidCosts.add(bidCost);
-
       no++;
     }
+  }
 
+  private void createDeltasAndPartialSums(
+      IntVar[] usedTransformation, int noAvailableTransformations) {
     deltasI = new IntVar[maxNoTransformations][noGoods];
     deltasO = new IntVar[maxNoTransformations][noGoods];
-
     sum = new IntVar[noGoods];
-
     for (int g = 0; g < noGoods; g++) {
-
       List<int[]> tuples4transitions = new ArrayList<>();
-
-      int[] dummyTransition = {0, 0, 0};
-      tuples4transitions.add(dummyTransition);
-
+      tuples4transitions.add(new int[] {0, 0, 0});
       for (List<List<Transformation>> bid : bids) {
-
         for (List<Transformation> bid_xor : bid) {
-
           for (Transformation t : bid_xor) {
-
-            int[] tuple = {t.id, -t.getDeltaInput(g), t.getDeltaOutput(g)};
-            tuples4transitions.add(tuple);
+            tuples4transitions.add(new int[] {t.id, -t.getDeltaInput(g), t.getDeltaOutput(g)});
           }
         }
       }
-
       int[][] tuples = new int[tuples4transitions.size()][];
       for (int i = 0; i < tuples4transitions.size(); i++) {
         tuples[i] = tuples4transitions.get(i);
       }
-
       IntVar previousPartialSum =
           new IntVar(store, "initialQuantity_" + g, initialQuantity.get(g), initialQuantity.get(g));
-
       for (int i = 0; i < maxNoTransformations; i++) {
-
         List<IntVar> vars = new ArrayList<>();
         vars.add(transitions[i]);
         deltasI[i][g] = new IntVar(store, "deltaI_g" + g + "t" + i, minDelta, maxDelta);
         vars.add(deltasI[i][g]);
         deltasO[i][g] = new IntVar(store, "deltaO_g" + g + "t" + i, minDelta, maxDelta);
         vars.add(deltasO[i][g]);
-
         store.impose(new ExtensionalSupportVa(vars, tuples));
-
         store.impose(new XplusYgtC(previousPartialSum, deltasI[i][g], -1));
-
         IntVar partialSum = new IntVar(store, "partialSum_" + g + "_" + i, 0, maxProducts);
         store.impose(
             new SumInt(
                 new IntVar[] {previousPartialSum, deltasI[i][g], deltasO[i][g]}, "==", partialSum));
-
         previousPartialSum = partialSum;
       }
-
       store.impose(new XgteqC(previousPartialSum, finalQuantity.get(g)));
       sum[g] = previousPartialSum;
     }
+  }
 
+  private void createWeightsAndSum(IntVar[] usedTransformation) {
     for (int g = 0; g < noGoods; g++) {
-
       IntVar[] weights = new IntVar[usedTransformation.length + 1];
       weights[0] =
           new IntVar(
@@ -496,38 +476,26 @@ public class Muca extends ExampleFd {
               initialQuantity.get(g) + "of-g" + g,
               initialQuantity.get(g),
               initialQuantity.get(g));
-
       for (List<List<Transformation>> bid : bids) {
-
         for (List<Transformation> bid_xor : bid) {
-
           for (Transformation t : bid_xor) {
-
-            int[][] tuples = new int[2][2];
-
             if (t.getDelta(g) >= 0) {
               weights[t.id] = new IntVar(store, "delta_tid_" + t.id + "_g" + g, 0, t.getDelta(g));
             } else {
               weights[t.id] = new IntVar(store, "delta_t" + t.id + "_g" + g, t.getDelta(g), 0);
             }
-
+            int[][] tuples = new int[2][2];
             tuples[0][0] = 0;
             tuples[0][1] = 0;
             tuples[1][0] = 1;
             tuples[1][1] = t.getDelta(g);
-
             IntVar[] vars = {usedTransformation[t.id - 1], weights[t.id]};
             store.impose(new ExtensionalSupportVa(vars, tuples));
           }
         }
       }
-
       store.impose(new SumInt(weights, "==", sum[g]));
     }
-
-    cost = new IntVar(store, "cost", minCost, maxCost);
-
-    store.impose(new SumInt(bidCosts, "==", cost));
   }
 
   /**
@@ -552,24 +520,28 @@ public class Muca extends ExampleFd {
 
     boolean result = search1.labeling(store, select1, cost);
 
-    IO.print("\t");
+    printSearchSpecialTransitions();
+    printSearchSpecialGoods();
 
+    return result;
+  }
+
+  private void printSearchSpecialTransitions() {
+    IO.print("\t");
     for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
       IO.print(transitions[i] + "\t");
     }
     IO.println();
+  }
 
+  private void printSearchSpecialGoods() {
     for (int g = 0; g < noGoods; g++) {
-
       IO.print(initialQuantity.get(g) + "\t");
       for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
         IO.print(deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
       }
-
       IO.println(sum[g].value() + ">=" + finalQuantity.get(g));
     }
-
-    return result;
   }
 
   /**
@@ -585,146 +557,28 @@ public class Muca extends ExampleFd {
         new BufferedReader(
             new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
 
-      // the first line represents the input goods
-      String line = br.readLine();
-      StringTokenizer tk = new StringTokenizer(line, "(),: ");
-
-      initialQuantity = new ArrayList<>();
-
-      while (tk.hasMoreTokens()) {
-        noGoods++;
-        tk.nextToken();
-        initialQuantity.add(Integer.parseInt(tk.nextToken()));
-      }
-
-      // the second line represents the output goods
-      line = br.readLine();
-      tk = new StringTokenizer(line, "(),: ");
-
-      finalQuantity = new ArrayList<>();
-
-      while (tk.hasMoreTokens()) {
-        tk.nextToken();
-        finalQuantity.add(Integer.parseInt(tk.nextToken()));
-      }
-
-      // until the word price is read, one is reading transformations.
-      // Assume that the transformations are properly grouped
-
-      line = br.readLine();
-
-      int bidCounter = 1;
-      int bid_xorCounter = 1;
-      int transformationCounter = 0;
-      int goodsCounter;
-      int Id;
-      int in;
-      int out;
-
-      int[] input;
-      int[] output;
+      readInitialQuantity(br);
+      readFinalQuantity(br);
 
       bids = new ArrayList<>();
-
       bids.add(new ArrayList<>());
-
       bids.getFirst().add(new ArrayList<>());
 
+      String line = br.readLine();
+      int bidCounter = 1;
+      int bidXorCounter = 1;
+      int transformationCounter = 0;
+
       while (!"price".equals(line)) {
-        tk = new StringTokenizer(line, "():, ");
-        transformationCounter++;
-
-        if (Integer.parseInt(tk.nextToken()) > bidCounter) {
-          bidCounter++;
-          bid_xorCounter = 1;
-          transformationCounter = 1;
-
-          bids.add(new ArrayList<>());
-          bids.get(bidCounter - 1).add(new ArrayList<>());
-        }
-        if (Integer.parseInt(tk.nextToken()) > bid_xorCounter) {
-          bid_xorCounter++;
-          transformationCounter = 1;
-
-          bids.get(bidCounter - 1).add(new ArrayList<>());
-        }
-        // this token contains the number of the transformation
-        tk.nextToken();
-        bids.get(bidCounter - 1).get(bid_xorCounter - 1).add(new Transformation());
-
-        bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).goodsIds =
-            new ArrayList<>();
-        bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).delta =
-            new ArrayList<>();
-
-        input = new int[noGoods];
-        output = new int[noGoods];
-
-        goodsCounter = 0;
-        while (tk.hasMoreTokens()) {
-          goodsCounter++;
-          if (goodsCounter <= noGoods) {
-            Id = Integer.parseInt(tk.nextToken()) - 1;
-            in = Integer.parseInt(tk.nextToken());
-            input[Id] = in;
-          } else {
-            Id = Integer.parseInt(tk.nextToken()) - 1;
-            out = Integer.parseInt(tk.nextToken());
-            output[Id] = out;
-          }
-        }
-
-        for (int i = 0; i < noGoods; i++) {
-          // delta = output[i] - input[i];
-          if (output[i] > maxDelta) {
-            maxDelta = output[i];
-          } else if (-input[i] < minDelta) {
-            minDelta = -input[i];
-          }
-
-          if (output[i] != 0 || input[i] != 0) {
-            bids.get(bidCounter - 1)
-                .get(bid_xorCounter - 1)
-                .get(transformationCounter - 1)
-                .goodsIds
-                .add(i);
-            bids.get(bidCounter - 1)
-                .get(bid_xorCounter - 1)
-                .get(transformationCounter - 1)
-                .delta
-                .add(new Delta(input[i], output[i]));
-          }
-        }
-        IO.print("\n");
-
+        int[] next =
+            readOneTransformationLine(line, bidCounter, bidXorCounter, transformationCounter);
+        bidCounter = next[0];
+        bidXorCounter = next[1];
+        transformationCounter = next[2];
         line = br.readLine();
       }
 
-      // now read in the price for each xor bid
-
-      costs = new ArrayList<>();
-
-      costs.add(new ArrayList<>());
-
-      bidCounter = 1;
-
-      line = br.readLine();
-
-      while (!(line == null)) {
-        tk = new StringTokenizer(line, "(): ");
-
-        if (Integer.parseInt(tk.nextToken()) > bidCounter) {
-          bidCounter++;
-          costs.add(new ArrayList<>());
-        }
-
-        // this token contains the xor_bid id.
-        tk.nextToken();
-
-        costs.get(bidCounter - 1).add(Integer.parseInt(tk.nextToken()));
-
-        line = br.readLine();
-      }
+      readCosts(br, br.readLine());
 
     } catch (FileNotFoundException ex) {
       log.error("You need to run this program in a directory that contains the required file.", ex);
@@ -739,6 +593,108 @@ public class Muca extends ExampleFd {
     IO.println(this.maxCost);
     IO.println(this.maxDelta);
     IO.println(this.minDelta);
+  }
+
+  private void readInitialQuantity(BufferedReader br) throws IOException {
+    String line = br.readLine();
+    StringTokenizer tk = new StringTokenizer(line, "(),: ");
+    initialQuantity = new ArrayList<>();
+    while (tk.hasMoreTokens()) {
+      noGoods++;
+      tk.nextToken();
+      initialQuantity.add(Integer.parseInt(tk.nextToken()));
+    }
+  }
+
+  private void readFinalQuantity(BufferedReader br) throws IOException {
+    String line = br.readLine();
+    StringTokenizer tk = new StringTokenizer(line, "(),: ");
+    finalQuantity = new ArrayList<>();
+    while (tk.hasMoreTokens()) {
+      tk.nextToken();
+      finalQuantity.add(Integer.parseInt(tk.nextToken()));
+    }
+  }
+
+  /**
+   * Returns int[] { bidCounter, bidXorCounter, transformationCounter } after processing one line.
+   */
+  private int[] readOneTransformationLine(
+      String line, int bidCounter, int bidXorCounter, int transformationCounter) {
+    StringTokenizer tk = new StringTokenizer(line, "():, ");
+    transformationCounter++;
+
+    if (Integer.parseInt(tk.nextToken()) > bidCounter) {
+      bidCounter++;
+      bidXorCounter = 1;
+      transformationCounter = 1;
+      bids.add(new ArrayList<>());
+      bids.get(bidCounter - 1).add(new ArrayList<>());
+    }
+    if (Integer.parseInt(tk.nextToken()) > bidXorCounter) {
+      bidXorCounter++;
+      transformationCounter = 1;
+      bids.get(bidCounter - 1).add(new ArrayList<>());
+    }
+    tk.nextToken();
+    bids.get(bidCounter - 1).get(bidXorCounter - 1).add(new Transformation());
+    Transformation t =
+        bids.get(bidCounter - 1).get(bidXorCounter - 1).get(transformationCounter - 1);
+    t.goodsIds = new ArrayList<>();
+    t.delta = new ArrayList<>();
+
+    int[] input = new int[noGoods];
+    int[] output = new int[noGoods];
+    int goodsCounter = 0;
+    while (tk.hasMoreTokens()) {
+      goodsCounter++;
+      if (goodsCounter <= noGoods) {
+        int id = Integer.parseInt(tk.nextToken()) - 1;
+        int in = Integer.parseInt(tk.nextToken());
+        input[id] = in;
+      } else {
+        int id = Integer.parseInt(tk.nextToken()) - 1;
+        int out = Integer.parseInt(tk.nextToken());
+        output[id] = out;
+      }
+    }
+
+    addTransformationDeltas(bidCounter, bidXorCounter, transformationCounter, input, output);
+    IO.print("\n");
+    return new int[] {bidCounter, bidXorCounter, transformationCounter};
+  }
+
+  private void addTransformationDeltas(
+      int bidCounter, int bidXorCounter, int transformationCounter, int[] input, int[] output) {
+    Transformation t =
+        bids.get(bidCounter - 1).get(bidXorCounter - 1).get(transformationCounter - 1);
+    for (int i = 0; i < noGoods; i++) {
+      if (output[i] > maxDelta) {
+        maxDelta = output[i];
+      } else if (-input[i] < minDelta) {
+        minDelta = -input[i];
+      }
+      if (output[i] != 0 || input[i] != 0) {
+        t.goodsIds.add(i);
+        t.delta.add(new Delta(input[i], output[i]));
+      }
+    }
+  }
+
+  private void readCosts(BufferedReader br, String line) throws IOException {
+    costs = new ArrayList<>();
+    costs.add(new ArrayList<>());
+    int bidCounter = 1;
+    while (line != null) {
+      StringTokenizer tk = new StringTokenizer(line, "(): ");
+      if (Integer.parseInt(tk.nextToken()) > bidCounter) {
+        bidCounter++;
+        costs.add(new ArrayList<>());
+      }
+      tk.nextToken();
+      costs.get(bidCounter - 1).add(Integer.parseInt(tk.nextToken()));
+      line = br.readLine();
+    }
   }
 
   static class Delta {

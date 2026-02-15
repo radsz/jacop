@@ -350,27 +350,31 @@ public abstract class FloatDomain extends Domain {
    * @return the interval domain representing the result of the subtraction
    */
   public static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
+    double min = subBoundsMin(a, d);
+    double max = subBoundsMax(b, c);
+    return new FloatIntervalDomain(min, max);
+  }
 
-    // Changing constants to smallest encapsulating intervals to
-    // limit rounding effects problem
+  private static double subBoundsMin(double a, double d) {
     double min = down(a - d);
-    double max = up(b - c);
-
     if (d == 0.0) {
       min = a;
     }
-    if (c == 0.0) {
-      max = b;
-    }
-
     if (a == 0.0) {
       min = -d;
+    }
+    return min;
+  }
+
+  private static double subBoundsMax(double b, double c) {
+    double max = up(b - c);
+    if (c == 0.0) {
+      max = b;
     }
     if (b == 0.0) {
       max = -c;
     }
-
-    return new FloatIntervalDomain(min, max);
+    return max;
   }
 
   /**
@@ -386,125 +390,161 @@ public abstract class FloatDomain extends Domain {
 
     if (c == 1.0 && d == 1.0) {
       return new FloatIntervalDomain(a, b);
-    } else if (c == -1.0 && d == -1.0) {
+    }
+    if (c == -1.0 && d == -1.0) {
       return new FloatIntervalDomain(-b, -a);
     }
 
-    boolean M_1 = a < 0 && b > 0; // contains zero
-    // boolean Z_1 = (a == 0 && b == 0);     // zero
-    boolean P0_1 = a == 0 && b > 0; // positive with zero
-    boolean P1_1 = a > 0 && b > 0; // strictly positive
-    boolean N0_1 = a < 0 && b == 0; // negative with zero
-    boolean N1_1 = a < 0 && b < 0; // strictly negative
+    boolean m1 = a < 0 && b > 0;
+    boolean p0_1 = a == 0 && b > 0;
+    boolean p1_1 = a > 0 && b > 0;
+    boolean n0_1 = a < 0 && b == 0;
+    boolean n1_1 = a < 0 && b < 0;
 
-    boolean M_2 = c < 0 && d > 0;
-    boolean P0_2 = c == 0 && d > 0;
-    boolean P1_2 = c > 0 && d > 0;
-    boolean N0_2 = c < 0 && d == 0;
-    boolean N1_2 = c < 0 && d < 0;
+    boolean m2 = c < 0 && d > 0;
+    boolean p0_2 = c == 0 && d > 0;
+    boolean p1_2 = c > 0 && d > 0;
+    boolean n0_2 = c < 0 && d == 0;
+    boolean n1_2 = c < 0 && d < 0;
 
-    double min;
-    double max;
-
-    if (P1_1) {
-      if (P1_2) { // P1 /\ P1
-        min = down(a * c);
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (P0_2) { // P1 /\ P0
-        min = 0.0; // down(a*c);
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (M_2) { // P1 /\ M
-        min = down(b * c);
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2) { // P1 /\ N1
-        min = down(b * c);
-        max = up(a * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (N0_2) { // P1 /\ N0
-        min = down(b * c);
-        max = 0.0; // up(a*d);
-        return new FloatIntervalDomain(min, max);
-      } else { // P1 /\ Z
-        return new FloatIntervalDomain(0.0, 0.0);
-      }
-    } else if (P0_1) {
-      if (P1_2 || P0_2) { // P0 /\ { P1 \/ P0}
-        min = 0.0;
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2 || N0_2) { // P0 /\ { N0 \/ N1 }
-        min = down(b * c);
-        max = 0.0; // up(a*d);
-        return new FloatIntervalDomain(min, max);
-      } else if (M_2) { // P0 /\ M
-        min = down(b * c);
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else { // if (Z_2) // P0 /\ Z
-        return new FloatIntervalDomain(0.0, 0.0);
-      }
-    } else if (M_1) {
-      if (P0_2 || P1_2) { // M /\ { P0 \/ P1}
-        min = down(a * d);
-        max = up(b * d);
-        return new FloatIntervalDomain(min, max);
-      } else if (N0_2 || N1_2) { // M /\ { N0 \/ N1}
-        min = down(b * c);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else if (M_2) { // M /\ M
-        min = down(Math.min(a * d, b * c));
-        max = up(Math.max(a * c, b * d));
-        return new FloatIntervalDomain(min, max);
-      } else { // if (Z_2) M /\ Z
-        return new FloatIntervalDomain(0.0, 0.0);
-      }
-    } else if (N1_1) {
-      if (P1_2) { // N1 /\ P1
-        min = down(a * d);
-        max = up(b * c);
-        return new FloatIntervalDomain(min, max);
-      } else if (P0_2) { // N1 /\ P0
-        min = down(a * d);
-        max = 0.0; // up(b*c);
-        return new FloatIntervalDomain(min, max);
-      } else if (M_2) { // N1 /\ M
-        min = down(a * d);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2) { // N1 /\ N1
-        min = down(b * d);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else if (N0_2) { // N1 /\ N0
-        min = 0.0; // down(b*d);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else { // N1 /\ Z
-        return new FloatIntervalDomain(0.0, 0.0);
-      }
-    } else if (N0_1) {
-      if (P0_2 || P1_2) { // N0 /\ { P0 \/ P1}
-        min = down(a * d);
-        max = 0.0; // up(b*c);
-        return new FloatIntervalDomain(min, max);
-      } else if (N0_2 || N1_2) { // N0 /\ { N0 \/ N1}
-        min = 0.0; // down(b*d);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else if (M_2) { // N0 /\ M
-        min = down(a * d);
-        max = up(a * c);
-        return new FloatIntervalDomain(min, max);
-      } else { // N0 /\ Z
-        return new FloatIntervalDomain(0.0, 0.0);
-      }
-    } else { //  Z /\ {ALL}
-      return new FloatIntervalDomain(0.0, 0.0);
+    if (p1_1) {
+      return mulBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
+    if (p0_1) {
+      return mulBoundsP0(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    }
+    if (m1) {
+      return mulBoundsM(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    }
+    if (n1_1) {
+      return mulBoundsN1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    }
+    if (n0_1) {
+      return mulBoundsN0(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  private static FloatIntervalDomain mulBoundsP1(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a * c), up(b * d));
+    }
+    if (p0_2) {
+      return new FloatIntervalDomain(0.0, up(b * d));
+    }
+    if (m2) {
+      return new FloatIntervalDomain(down(b * c), up(b * d));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b * c), up(a * d));
+    }
+    if (n0_2) {
+      return new FloatIntervalDomain(down(b * c), 0.0);
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  private static FloatIntervalDomain mulBoundsP0(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p1_2 || p0_2) {
+      return new FloatIntervalDomain(0.0, up(b * d));
+    }
+    if (n1_2 || n0_2) {
+      return new FloatIntervalDomain(down(b * c), 0.0);
+    }
+    if (m2) {
+      return new FloatIntervalDomain(down(b * c), up(b * d));
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  private static FloatIntervalDomain mulBoundsM(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p0_2 || p1_2) {
+      return new FloatIntervalDomain(down(a * d), up(b * d));
+    }
+    if (n0_2 || n1_2) {
+      return new FloatIntervalDomain(down(b * c), up(a * c));
+    }
+    if (m2) {
+      return new FloatIntervalDomain(down(Math.min(a * d, b * c)), up(Math.max(a * c, b * d)));
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  private static FloatIntervalDomain mulBoundsN1(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a * d), up(b * c));
+    }
+    if (p0_2) {
+      return new FloatIntervalDomain(down(a * d), 0.0);
+    }
+    if (m2) {
+      return new FloatIntervalDomain(down(a * d), up(a * c));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b * d), up(a * c));
+    }
+    if (n0_2) {
+      return new FloatIntervalDomain(0.0, up(a * c));
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  private static FloatIntervalDomain mulBoundsN0(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p0_2 || p1_2) {
+      return new FloatIntervalDomain(down(a * d), 0.0);
+    }
+    if (n0_2 || n1_2) {
+      return new FloatIntervalDomain(0.0, up(a * c));
+    }
+    if (m2) {
+      return new FloatIntervalDomain(down(a * d), up(a * c));
+    }
+    return new FloatIntervalDomain(0.0, 0.0);
   }
 
   /**
@@ -520,122 +560,145 @@ public abstract class FloatDomain extends Domain {
 
     if (c == 1.0 && d == 1.0) {
       return new FloatIntervalDomain(a, b);
-    } else if (c == -1.0 && d == -1.0) {
+    }
+    if (c == -1.0 && d == -1.0) {
       return new FloatIntervalDomain(-b, -a);
     }
 
-    boolean M_1 = a < 0 && b > 0; // contains zero
-    boolean Z_1 = a == 0 && b == 0; // zero
-    boolean P0_1 = a == 0 && b > 0; // positive with zero
-    boolean P1_1 = a > 0 && b > 0; // strictly positive
-    boolean N0_1 = a < 0 && b == 0; // negative with zero
-    boolean N1_1 = a < 0 && b < 0; // strictly negative
+    boolean m1 = a < 0 && b > 0;
+    boolean z1 = a == 0 && b == 0;
+    boolean p0_1 = a == 0 && b > 0;
+    boolean p1_1 = a > 0 && b > 0;
+    boolean n0_1 = a < 0 && b == 0;
+    boolean n1_1 = a < 0 && b < 0;
 
-    boolean M_2 = c < 0 && d > 0;
-    boolean P0_2 = c == 0 && d > 0;
-    boolean P1_2 = c > 0 && d > 0;
-    boolean N0_2 = c < 0 && d == 0;
-    boolean N1_2 = c < 0 && d < 0;
+    boolean m2 = c < 0 && d > 0;
+    boolean p0_2 = c == 0 && d > 0;
+    boolean p1_2 = c > 0 && d > 0;
+    boolean n0_2 = c < 0 && d == 0;
+    boolean n1_2 = c < 0 && d < 0;
 
-    double min;
-    double max;
-
-    if (P1_1) {
-      if (P1_2) { // P1 /\ P1
-        min = down(a / d);
-        max = up(b / c);
-        return new FloatIntervalDomain(min, max); // .subtract(0.0);
-      } else if (P0_2) { // P1 /\ P0
-        min = down(a / d);
-        return new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT); // .subtract(0.0);
-      } else if (M_2) { // P1 /\ M
-        min = down(a / d);
-        max = up(a / c);
-        return (FloatIntervalDomain)
-            new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max)
-                .union(new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT)); // .subtract(0.0)
-      } else if (N1_2) { // P1 /\ N1
-        min = down(b / d);
-        max = up(a / c);
-        return new FloatIntervalDomain(min, max); // .subtract(0.0);
-      } else if (N0_2) { // P1 /\ N0
-        max = up(a / c);
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max); // .subtract(0.0);
-      } else { // P1 /\ Z
-        throw Store.failException;
-      }
-    } else if (P0_1) {
-      if (P1_2) { // P0 /\ P1
-        min = 0.0;
-        max = up(b / c);
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2) { // P0 /\ N1
-        min = down(b / d);
-        max = 0.0;
-        return new FloatIntervalDomain(min, max);
-      } else { // P0 /\ {M \/ Z \/ P0 \/ N0}}
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      }
-    } else if (M_1) {
-      if (P1_2) { // M /\ P
-        min = down(a / c);
-        max = up(b / c);
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2) { // M /\ N1
-        min = down(b / d);
-        max = up(a / d);
-        return new FloatIntervalDomain(min, max);
-      } else {
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      }
-    } else if (N1_1) {
-      if (P1_2) { // N1 /\ P1
-        min = down(a / c);
-        max = up(b / d);
-        return new FloatIntervalDomain(min, max); // .subtract(0.0);
-      } else if (P0_2) { // N1 /\ P0
-        max = up(b / d);
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max); // .subtract(0.0);
-      } else if (M_2) {
-        min = down(b / c);
-        max = up(b / d);
-
-        return (FloatIntervalDomain)
-            new FloatIntervalDomain(FloatDomain.MIN_FLOAT, max)
-                .union(new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT)); // .subtract(0.0)
-      } else if (N1_2) { // N1 /\ N1
-        min = down(b / c);
-        max = up(a / d);
-        return new FloatIntervalDomain(min, max); // .subtract(0.0);
-      } else if (N0_2) { // N1 /\ N0
-        min = down(b / c);
-        return new FloatIntervalDomain(min, FloatDomain.MAX_FLOAT); // .subtract(0.0);
-      } else { // N1 /\ Z
-        throw Store.failException;
-      }
-    } else if (N0_1) {
-      if (P1_2) { // N0 /\ P1
-        min = down(a / c);
-        max = 0.0;
-        return new FloatIntervalDomain(min, max);
-      } else if (N1_2) { // N0 /\ N1
-        min = 0.0;
-        max = up(a / d);
-        return new FloatIntervalDomain(min, max);
-      } else { // N0 /\ {M \/ Z \/ P0 \/ N0}}
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      }
-    } else if (Z_1) {
-      if (P1_2 || N1_2) {
-        min = 0.0;
-        max = 0.0;
-        return new FloatIntervalDomain(min, max);
-      } else {
-        return new FloatIntervalDomain(FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      }
+    if (p1_1) {
+      return divBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
-
+    if (p0_1) {
+      return divBoundsP0(a, b, c, d, p1_2, n1_2);
+    }
+    if (m1) {
+      return divBoundsM(a, b, c, d, p1_2, n1_2);
+    }
+    if (n1_1) {
+      return divBoundsN1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    }
+    if (n0_1) {
+      return divBoundsN0(a, b, c, d, p1_2, n1_2);
+    }
+    if (z1) {
+      return divBoundsZ(p1_2, n1_2);
+    }
     return null;
+  }
+
+  private static FloatIntervalDomain divBoundsP1(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a / d), up(b / c));
+    }
+    if (p0_2) {
+      return new FloatIntervalDomain(down(a / d), MAX_FLOAT);
+    }
+    if (m2) {
+      double min = down(a / d);
+      double max = up(a / c);
+      return (FloatIntervalDomain)
+          new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b / d), up(a / c));
+    }
+    if (n0_2) {
+      return new FloatIntervalDomain(MIN_FLOAT, up(a / c));
+    }
+    throw Store.failException;
+  }
+
+  private static FloatIntervalDomain divBoundsP0(
+      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(0.0, up(b / c));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b / d), 0.0);
+    }
+    return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
+  }
+
+  private static FloatIntervalDomain divBoundsM(
+      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a / c), up(b / c));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b / d), up(a / d));
+    }
+    return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
+  }
+
+  private static FloatIntervalDomain divBoundsN1(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a / c), up(b / d));
+    }
+    if (p0_2) {
+      return new FloatIntervalDomain(MIN_FLOAT, up(b / d));
+    }
+    if (m2) {
+      double min = down(b / c);
+      double max = up(b / d);
+      return (FloatIntervalDomain)
+          new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(down(b / c), up(a / d));
+    }
+    if (n0_2) {
+      return new FloatIntervalDomain(down(b / c), MAX_FLOAT);
+    }
+    throw Store.failException;
+  }
+
+  private static FloatIntervalDomain divBoundsN0(
+      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
+    if (p1_2) {
+      return new FloatIntervalDomain(down(a / c), 0.0);
+    }
+    if (n1_2) {
+      return new FloatIntervalDomain(0.0, up(a / d));
+    }
+    return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
+  }
+
+  private static FloatIntervalDomain divBoundsZ(boolean p1_2, boolean n1_2) {
+    if (p1_2 || n1_2) {
+      return new FloatIntervalDomain(0.0, 0.0);
+    }
+    return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }
 
   /**

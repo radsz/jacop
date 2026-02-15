@@ -94,150 +94,117 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    */
   public void assertLiteral(int literal) {
 
-    /* get the watched clauses for this literal;
-     * for each such clause, find its state, and if needed, propagate,
-     * find a new watch or trigger conflict
-     */
-
-    // get the current watched clauses for the variable
     assert literal != 0;
     int varIdx = literal < 0 ? -literal : literal;
 
-    // The variable associated with the literal is not watching any clauses.
     if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
       return;
     }
 
-    assert watchLists[varIdx] != null;
     int[] varClauses = watchLists[varIdx];
+    int[] positionRef = new int[] {varClauses[0]};
 
-    int positionOfFirstAvailablePlace = varClauses[0];
-
-    // watched clauses
-    for (int i = 1; i < positionOfFirstAvailablePlace; i++) {
-
+    for (int i = 1; i < positionRef[0]; i++) {
       int clauseIndex = varClauses[i];
       int[] cache = literalsCache[clauseIndex];
-
-      // is the literal the first or second watch ?
       int myWatchPos = (cache[0] < 0 ? -cache[0] : cache[0]) == varIdx ? 0 : 1;
-
-      // get watches, and perform some checks
       int otherWatch = cache[1 - myWatchPos];
       int myWatch = cache[myWatchPos];
 
       assert Math.abs(myWatch) == varIdx;
-      assert otherWatch * myWatch != 0; // none is zero
+      assert otherWatch * myWatch != 0;
 
-      /*
-       *  updates watches, and see how the clause evolved.
-       *
-       *  The watch that no longer can watch unknown clause
-       *  is substituted by another watch.
-       */
-
-      // clause is satisfied, because of the watch triggering this function.
       if (cache[myWatchPos] == literal) {
         continue;
       }
-      // clause is satisfied, because of the other watch for this clause.
-      if (isSatisfied(cache[otherWatch])) {
+      if (isSatisfied(otherWatch)) {
         continue;
       }
 
-      // maybe watch replacement can be found in cache.
-      for (int no = 2; no < SIZE_OF_CLAUSE_CACHE; no++) {
-        if (isActiveOrSatisfied(cache[no])) {
-          varClauses[i] = varClauses[--positionOfFirstAvailablePlace];
-          varClauses[0] = positionOfFirstAvailablePlace;
-          addWatch(cache[no], clauseIndex);
-          cache[myWatchPos] = cache[no];
-          cache[no] = myWatch;
-        }
+      if (tryReplaceWatchFromCache(
+          varClauses, positionRef, i, cache, myWatchPos, myWatch, clauseIndex)) {
+        continue;
       }
 
-      // maybe watch replacement can be find in main clause array.
-      // replace cache with new potential watches later on.
       int[] clause = clauses[clauseIndex];
-      int startingPosition = Store.getRandom().nextInt(clause.length - 1);
-      int currentPosition = startingPosition + 1;
-      int right = cache.length - 1;
-
-      while (currentPosition < clause.length) {
-
-        if (right == 2) {
-          break;
-        }
-
-        if (isActiveOrSatisfied(clause[currentPosition])) {
-          cache[right--] = clause[currentPosition];
-        }
-
-        currentPosition++;
-      }
-
-      currentPosition = 0;
-      while (currentPosition <= startingPosition) {
-
-        if (right == 2) {
-          break;
-        }
-
-        if (isActiveOrSatisfied(clause[currentPosition])) {
-          cache[right--] = clause[currentPosition];
-        }
-
-        currentPosition++;
-      }
+      int right = scanClauseForWatches(clause, cache);
 
       if (right == cache.length - 1) {
-
-        // state = ClauseState.UNSATISFIABLE_CLAUSE;
         MapClause conflictClause = core.explanationClause;
         conflictClause.clear();
-        int[] localClause = clauses[clauseIndex];
-        conflictClause.addAll(localClause);
+        conflictClause.addAll(clauses[clauseIndex]);
         core.triggerConflictEvent(conflictClause);
-
         break;
       }
 
-      if (right == cache.length - 2) {
-        if (isActive(cache[cache.length - 1])) {
-
-          // Unit propagation.
-
-          /*
-           * TODO: Radek, can we trigger propagation right away or should we wait until all watches
-           * are checked.
-           */
-          int clauseId = indexToUniqueId(clauseIndex);
-          core.triggerPropagateEvent(cache[cache.length - 1], clauseId);
-
-          continue;
-        }
+      if (right == cache.length - 2 && isActive(cache[cache.length - 1])) {
+        int clauseId = indexToUniqueId(clauseIndex);
+        core.triggerPropagateEvent(cache[cache.length - 1], clauseId);
+        continue;
       }
 
-      // watch replacement can be found in cache.
-      for (int no = 2; no < SIZE_OF_CLAUSE_CACHE; no++) {
-        if (isActiveOrSatisfied(cache[no])) {
-          varClauses[i] = varClauses[--positionOfFirstAvailablePlace];
-          varClauses[0] = positionOfFirstAvailablePlace;
-          addWatch(cache[no], clauseIndex);
-          cache[myWatchPos] = cache[no];
-          cache[no] = myWatch;
-        }
+      if (tryReplaceWatchFromCache(
+          varClauses, positionRef, i, cache, myWatchPos, myWatch, clauseIndex)) {
+        continue;
       }
 
       throw new AssertionError("should not happen, bad int");
-    } // clauseIterate
+    }
 
-    // remember which clauses we watch from now
-    if (positionOfFirstAvailablePlace == 1) {
-      // recycle old watches
+    if (positionRef[0] == 1) {
       pool.storeOld(watchLists[varIdx]);
       watchLists[varIdx] = null;
     }
+  }
+
+  /** Tries to replace watch from cache. Updates positionRef[0] and varClauses if replaced. */
+  private boolean tryReplaceWatchFromCache(
+      int[] varClauses,
+      int[] positionRef,
+      int i,
+      int[] cache,
+      int myWatchPos,
+      int myWatch,
+      int clauseIndex) {
+    for (int no = 2; no < SIZE_OF_CLAUSE_CACHE; no++) {
+      if (isActiveOrSatisfied(cache[no])) {
+        positionRef[0]--;
+        varClauses[i] = varClauses[positionRef[0]];
+        varClauses[0] = positionRef[0];
+        addWatch(cache[no], clauseIndex);
+        cache[myWatchPos] = cache[no];
+        cache[no] = myWatch;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Scans clause for active/satisfied literals into cache. Returns right index after fill. */
+  private int scanClauseForWatches(int[] clause, int[] cache) {
+    int startingPosition = Store.getRandom().nextInt(clause.length - 1);
+    int right = cache.length - 1;
+    int currentPosition = startingPosition + 1;
+    while (currentPosition < clause.length) {
+      if (right == 2) {
+        break;
+      }
+      if (isActiveOrSatisfied(clause[currentPosition])) {
+        cache[right--] = clause[currentPosition];
+      }
+      currentPosition++;
+    }
+    currentPosition = 0;
+    while (currentPosition <= startingPosition) {
+      if (right == 2) {
+        break;
+      }
+      if (isActiveOrSatisfied(clause[currentPosition])) {
+        cache[right--] = clause[currentPosition];
+      }
+      currentPosition++;
+    }
+    return right;
   }
 
   /**

@@ -117,179 +117,54 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     IterateOnWatchedClauses:
     for (int i = 1, n = watchList[0]; i < n; i++) {
 
-      // the clause and its index
       int clauseIndex = watchList[i];
-
       int[] clause = clauses[clauseIndex];
-
-      // is the literal the first or second watch ?
       int myWatchPos = clause[0] == varIdx || -clause[0] == varIdx ? 0 : 1;
       int myWatch = clause[myWatchPos];
 
-      /*
-       * case a1)  myWatch satisfies the clause, keep watching it and continue
-       */
       if (myWatch == myValue) {
         newWatchList[newWatchNum++] = clauseIndex;
         continue;
       }
 
-      // get the other watch and its value, and perform some checks
       int otherWatch = clause[1 - myWatchPos];
       int otherValue = trail.values[otherWatch < 0 ? -otherWatch : otherWatch];
 
       assert Math.abs(myWatch) == varIdx;
-      assert otherWatch * myWatch != 0; // none is zero
+      assert otherWatch * myWatch != 0;
       assert doesWatch(myWatch, clauseIndex);
       assert doesWatch(otherWatch, clauseIndex);
 
-      /*
-       * case a2)  clause satisfied by the other watch, keep watching it
-       * and go on with next clause
-       */
       if (otherValue == otherWatch) {
-        // keep the watch
         newWatchList[newWatchNum++] = clauseIndex;
         continue;
       }
 
-      /*
-       * case b)  both watches are wrong. Try to find 2 other
-       */
       if (myValue == -myWatch && otherValue == -otherWatch) {
-
-        /*
-         * try to find 2 other watches in the rest of the clause
-         */
-        int watch1pos = -1; // position (index) of first watch
-        int watch2pos = -1; // position of second watch
-        int countWatches = 0; // number of (real) watches found
-        /*
-         * iterate until two watches are found or the whole clause is explored
-         */
-        for (int j = 2; j < clause.length && countWatches < 2; j++) {
-
-          int lit = clause[j];
-          int value = trail.values[lit < 0 ? -lit : lit];
-          if (value == 0) {
-            // new watch, remember it
-            if (countWatches == 0) {
-              watch1pos = j;
-            } else {
-              watch2pos = j;
-            }
-            countWatches++;
-
-          } else if (value == lit) {
-            /*
-             * case b1)  satisfiable, continue watching
-             * We are done with this clause
-             */
-            newWatchList[newWatchNum++] = clauseIndex;
-            continue IterateOnWatchedClauses; // done with this clause
-          }
+        int[] newWatchNumRef = new int[] {newWatchNum};
+        boolean conflict =
+            processBothWatchesWrong(
+                clause,
+                clauseIndex,
+                myWatchPos,
+                otherWatch,
+                watchList,
+                i,
+                newWatchList,
+                newWatchNumRef);
+        newWatchNum = newWatchNumRef[0];
+        if (conflict) {
+          break IterateOnWatchedClauses;
         }
-
-        /*
-         * analyse results
-         */
-        assert countWatches <= 2;
-        switch (countWatches) {
-          case 0:
-            /*
-             * case b2)  unsatisfiable (conflict), keep both old watches,
-             * trigger conflict and exit
-             */
-            newWatchList[newWatchNum++] = clauseIndex;
-            // trigger conflict
-            MapClause conflictClause = core.explanationClause;
-            conflictClause.clear();
-            conflictClause.addAll(clause);
-            assert conflictClause.isUnsatisfiableIn(trail);
-            core.triggerConflictEvent(conflictClause);
-            // copy remaining elements of watchList to the newWatchList
-            for (int j = i + 1; j < watchList[0]; j++) {
-              newWatchList[newWatchNum++] = watchList[j];
-            }
-            // stop iterating on watchList
-            break IterateOnWatchedClauses;
-
-          case 1:
-            /*
-             * case b3)  unit clause. We keep myWatch as a watch,
-             * because it is among the literals asserted at the very last
-             * level (the current level)
-             */
-            assert watch1pos != myWatchPos;
-            assert watch1pos >= 2;
-            assert trail.values[Math.abs(clause[watch1pos])] == 0; // check unit clause
-            // keep watching it
-            newWatchList[newWatchNum++] = clauseIndex;
-
-            /*
-             * propagate the new first watch, because the clause is unit
-             */
-            int uniqueClauseId = indexToUniqueId(clauseIndex);
-            assert new MapClause(clause).isUnitIn(trail);
-            assert new MapClause(clause).isUnitIn(clause[watch1pos], trail);
-            core.triggerPropagateEvent(clause[watch1pos], uniqueClauseId);
-            continue;
-          case 2:
-            /*
-             * case b4)  two new watches have been found. Forget about
-             * the two old watches, they are obsolete.
-             */
-            // put watches
-            swap(clause, 0, watch1pos);
-            swap(clause, 1, watch2pos);
-            // update the watch lists
-            removeWatch(otherWatch, clauseIndex); // we must remove the old watch
-            addWatch(clause[0], clauseIndex);
-            addWatch(clause[1], clauseIndex);
-            assert trail.values[Math.abs(clause[0])] == 0;
-            assert trail.values[Math.abs(clause[1])] == 0;
-            continue;
-          default:
-            throw new AssertionError("wrong case!");
-        }
+        continue;
       }
 
-      // the current literal should be the second watch, to simplify many things
-
-      /*
-       * case c)  Maybe unit clause, maybe unknown clause if another watch
-       * can be found
-       */
-      assert otherValue == 0; // myValue cannot be 0, the literal has just been asserted
-      // iterate on all literals but the first (which is the unit literal, otherWatch)
-      for (int j = 2; j < clause.length; j++) {
-        int lit = clause[j];
-        int value = trail.values[lit < 0 ? -lit : lit];
-        if (value == 0 || value == lit) {
-          /*
-           * case c1)  a watch! burn! we have found another watch and
-           * thus, we do not need to watch this clause anymore.
-           */
-          /*
-           * case c2)  a satisfied literal. swap it with current literal
-           */
-          swap(clause, myWatchPos, j);
-          addWatch(lit, clauseIndex);
-          continue IterateOnWatchedClauses;
-        }
-      }
-
-      /*
-       * case c3) no watch has been found, this is a unit clause. We still
-       * watch the clause (backjump), and we propagate the unit literal
-       */
-      // the literal still watches the clause (among highest level literals)
-      newWatchList[newWatchNum++] = clauseIndex;
-      // unit propagate the real watch (myWatch cannot be == 0)
-      int uniqueClauseId = indexToUniqueId(clauseIndex);
-      assert new MapClause(clause).isUnitIn(trail);
-      core.triggerPropagateEvent(otherWatch, uniqueClauseId);
-    } // IterateOnWatchedClauses
+      assert otherValue == 0;
+      int[] newWatchNumRef = new int[] {newWatchNum};
+      tryFindNewWatchOrUnitPropagate(
+          clause, clauseIndex, myWatchPos, otherWatch, newWatchList, newWatchNumRef);
+      newWatchNum = newWatchNumRef[0];
+    }
 
     /*
      * cleanup: put the new array of watched clauses in place of the old one
@@ -312,6 +187,101 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
   }
 
   /**
+   * Handles case b) both watches wrong: find two other watches or conflict/unit/two-watches.
+   *
+   * @return true if conflict (caller must break), false otherwise
+   */
+  private boolean processBothWatchesWrong(
+      int[] clause,
+      int clauseIndex,
+      int myWatchPos,
+      int otherWatch,
+      int[] watchList,
+      int currentIdx,
+      int[] newWatchList,
+      int[] newWatchNumRef) {
+    int watch1pos = -1;
+    int watch2pos = -1;
+    int countWatches = 0;
+    for (int j = 2; j < clause.length && countWatches < 2; j++) {
+      int lit = clause[j];
+      int value = trail.values[lit < 0 ? -lit : lit];
+      if (value == 0) {
+        if (countWatches == 0) {
+          watch1pos = j;
+        } else {
+          watch2pos = j;
+        }
+        countWatches++;
+      } else if (value == lit) {
+        newWatchList[newWatchNumRef[0]++] = clauseIndex;
+        return false;
+      }
+    }
+    assert countWatches <= 2;
+    switch (countWatches) {
+      case 0:
+        newWatchList[newWatchNumRef[0]++] = clauseIndex;
+        MapClause conflictClause = core.explanationClause;
+        conflictClause.clear();
+        conflictClause.addAll(clause);
+        assert conflictClause.isUnsatisfiableIn(trail);
+        core.triggerConflictEvent(conflictClause);
+        for (int j = currentIdx + 1; j < watchList[0]; j++) {
+          newWatchList[newWatchNumRef[0]++] = watchList[j];
+        }
+        return true;
+      case 1:
+        assert watch1pos != myWatchPos;
+        assert watch1pos >= 2;
+        assert trail.values[Math.abs(clause[watch1pos])] == 0;
+        newWatchList[newWatchNumRef[0]++] = clauseIndex;
+        int uniqueClauseId1 = indexToUniqueId(clauseIndex);
+        assert new MapClause(clause).isUnitIn(trail);
+        assert new MapClause(clause).isUnitIn(clause[watch1pos], trail);
+        core.triggerPropagateEvent(clause[watch1pos], uniqueClauseId1);
+        return false;
+      case 2:
+        swap(clause, 0, watch1pos);
+        swap(clause, 1, watch2pos);
+        removeWatch(otherWatch, clauseIndex);
+        addWatch(clause[0], clauseIndex);
+        addWatch(clause[1], clauseIndex);
+        assert trail.values[Math.abs(clause[0])] == 0;
+        assert trail.values[Math.abs(clause[1])] == 0;
+        return false;
+      default:
+        throw new AssertionError("wrong case!");
+    }
+  }
+
+  /**
+   * Case c) Other watch unset: find another watch or unit propagate. Updates newWatchNumRef when
+   * adding clause to newWatchList (unit case).
+   */
+  private void tryFindNewWatchOrUnitPropagate(
+      int[] clause,
+      int clauseIndex,
+      int myWatchPos,
+      int otherWatch,
+      int[] newWatchList,
+      int[] newWatchNumRef) {
+    for (int j = 2; j < clause.length; j++) {
+      int lit = clause[j];
+      int value = trail.values[lit < 0 ? -lit : lit];
+      if (value == 0 || value == lit) {
+        swap(clause, myWatchPos, j);
+        addWatch(lit, clauseIndex);
+        return;
+      }
+    }
+    newWatchList[newWatchNumRef[0]++] = clauseIndex;
+    int uniqueClauseId = indexToUniqueId(clauseIndex);
+    assert new MapClause(clause).isUnitIn(trail);
+    core.triggerPropagateEvent(otherWatch, uniqueClauseId);
+  }
+
+  /**
    * Adds a clause to the database.
    *
    * @param clause the clause to add (must be of length at least 2)
@@ -323,104 +293,101 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     assert clause.length >= 2;
 
     int clauseIndex = currentIndex++;
-    // compute unique ID for the clause
     int clauseId = indexToUniqueId(clauseIndex);
 
-    // add the clause
     ensureSize(currentIndex);
     clauses[clauseIndex] = clause;
 
-    /*
-     * try to find the watches
-     */
+    WatchSearchResult search = findWatchPositions(clause);
 
-    int watch1pos = -1; // position of watches
-    int watch2pos = -1;
-    int highestPos = -1; // literal with highest level
-    int highestLevel = -1;
-    int secondHighestPos = -1; // literal with second highest level
-    int secondHighestLevel = -1;
-    int numFoundWatch = 0; // how many watches did we found?
-    /*
-     * search for watches or literals asserted at current level
-     */
-    for (int i = 0; i < clause.length && numFoundWatch < 2; i++) {
-      int literal = clause[i];
-      int value = trail.values[literal < 0 ? -literal : literal];
+    applyAddClauseWatches(clause, clauseIndex, clauseId, search);
 
-      if (value == 0 || value == literal) {
-        if (numFoundWatch == 1) {
-          // there is already one watch
-          watch2pos = i;
-        } else {
-          assert numFoundWatch == 0;
-          watch1pos = i;
-        }
-        numFoundWatch++;
-      } else {
-        // falsified literal. Maybe it is interesting because of its level
-        assert value == -literal;
-        assert highestLevel >= secondHighestLevel;
-        int level = trail.getLevel(literal < 0 ? -literal : literal);
-        if (level >= highestLevel) {
-          // shift current, highest and second highest literals
-          secondHighestLevel = highestLevel;
-          secondHighestPos = highestPos;
-          highestLevel = level;
-          highestPos = i;
-        } else if (level > secondHighestLevel) {
-          // replace second highest literal
-          secondHighestLevel = level;
-          secondHighestPos = i;
-        }
-      }
-    } // loop
-
-    switch (numFoundWatch) {
-      /*
-       * case b)  unknown clause, just add both watches.
-       */
-      case 2:
-        assert watch1pos != watch2pos;
-        putAt0And1(clause, watch1pos, watch2pos);
-        break;
-      /*
-       * case c)  unit clause (we found exactly one unset literal),
-       * add unit literal as first watch and highest set literal as
-       * second watch
-       */
-      case 1:
-        assert watch2pos == -1;
-        putAt0And1(clause, watch1pos, highestPos);
-        // trigger propagation of the first literal if not already fixed literal satisfying the
-        // clause.
-        core.triggerPropagateEvent(clause[0], clauseId);
-        break;
-      /*
-       * case d)  conflict clause, just add the two highest literals
-       * as watches and trigger conflict
-       */
-      case 0:
-        assert highestPos != secondHighestPos;
-        putAt0And1(clause, highestPos, secondHighestPos);
-        // trigger conflict
-        MapClause conflictClause = core.explanationClause;
-        conflictClause.clear();
-        conflictClause.addAll(clause);
-        assert conflictClause.isUnsatisfiableIn(trail);
-        core.triggerConflictEvent(conflictClause);
-        break;
-
-      default:
-        throw new AssertionError("wrong number of found watches");
-    }
-    // anyway, add watches and return the ID
     addWatch(clause[0], clauseIndex);
     addWatch(clause[1], clauseIndex);
 
     assert (checkWatches4Clause(clauseIndex) == null);
 
     return clauseId;
+  }
+
+  private static final class WatchSearchResult {
+    final int watch1pos;
+    final int watch2pos;
+    final int highestPos;
+    final int secondHighestPos;
+    final int numFoundWatch;
+
+    WatchSearchResult(
+        int watch1pos, int watch2pos, int highestPos, int secondHighestPos, int numFoundWatch) {
+      this.watch1pos = watch1pos;
+      this.watch2pos = watch2pos;
+      this.highestPos = highestPos;
+      this.secondHighestPos = secondHighestPos;
+      this.numFoundWatch = numFoundWatch;
+    }
+  }
+
+  private WatchSearchResult findWatchPositions(int[] clause) {
+    int watch1pos = -1;
+    int watch2pos = -1;
+    int highestPos = -1;
+    int highestLevel = -1;
+    int secondHighestPos = -1;
+    int secondHighestLevel = -1;
+    int numFoundWatch = 0;
+    for (int i = 0; i < clause.length && numFoundWatch < 2; i++) {
+      int literal = clause[i];
+      int varIdx = literal < 0 ? -literal : literal;
+      int value = trail.values[varIdx];
+      if (value == 0 || value == literal) {
+        if (numFoundWatch == 1) {
+          watch2pos = i;
+        } else {
+          watch1pos = i;
+        }
+        numFoundWatch++;
+      } else {
+        assert value == -literal;
+        assert highestLevel >= secondHighestLevel;
+        int level = trail.getLevel(varIdx);
+        if (level >= highestLevel) {
+          secondHighestLevel = highestLevel;
+          secondHighestPos = highestPos;
+          highestLevel = level;
+          highestPos = i;
+        } else if (level > secondHighestLevel) {
+          secondHighestLevel = level;
+          secondHighestPos = i;
+        }
+      }
+    }
+    return new WatchSearchResult(watch1pos, watch2pos, highestPos, secondHighestPos, numFoundWatch);
+  }
+
+  private void applyAddClauseWatches(
+      int[] clause, int clauseIndex, int clauseId, WatchSearchResult search) {
+    switch (search.numFoundWatch) {
+      case 2:
+        assert search.watch1pos != search.watch2pos;
+        putAt0And1(clause, search.watch1pos, search.watch2pos);
+        break;
+      case 1:
+        assert search.watch2pos == -1;
+        putAt0And1(clause, search.watch1pos, search.highestPos);
+        core.triggerPropagateEvent(clause[0], clauseId);
+        break;
+      case 0:
+        assert search.highestPos != search.secondHighestPos;
+        putAt0And1(clause, search.highestPos, search.secondHighestPos);
+        MapClause conflictClause = core.explanationClause;
+        conflictClause.clear();
+        conflictClause.addAll(clause);
+        assert conflictClause.isUnsatisfiableIn(trail);
+        core.triggerConflictEvent(conflictClause);
+        break;
+      default:
+        throw new AssertionError("wrong number of found watches");
+    }
   }
 
   /**
@@ -566,36 +533,33 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     assert j >= 0 && j < clause.length;
     assert i != j;
 
-    if (i > 1) {
-      if (j > 1) {
-        // no risk of collision
-        swap(clause, 0, i);
-        swap(clause, 1, j);
-      } else {
-        // i > 1, j is 0 or 1
-        if (j == 0) {
-          swap(clause, 1, j);
-          swap(clause, 0, i);
-        } else {
-          // j == 1
-          swap(clause, 0, i);
-        }
-      }
-    } else if (j > 1) {
-      // i is 0 or 1, j > 1
-      if (i == 0) {
-        swap(clause, 1, j);
-      } else {
-        swap(clause, 0, i);
-        swap(clause, 1, j);
-      }
-    } else {
-      // j and i are 0 and 1
-      if (i == 0) {
-      } else {
-        swap(clause, 0, 1);
-      }
+    if (i == 0 && j == 1) {
+      return;
     }
+    if (i == 1 && j == 0) {
+      swap(clause, 0, 1);
+      return;
+    }
+    if (i == 0) {
+      swap(clause, 1, j);
+      return;
+    }
+    if (i == 1) {
+      swap(clause, 0, 1);
+      swap(clause, 1, j);
+      return;
+    }
+    if (j == 0) {
+      swap(clause, 0, i);
+      swap(clause, 1, i);
+      return;
+    }
+    if (j == 1) {
+      swap(clause, 0, i);
+      return;
+    }
+    swap(clause, 0, i);
+    swap(clause, 1, j);
   }
 
   /**

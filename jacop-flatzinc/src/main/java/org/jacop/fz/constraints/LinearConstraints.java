@@ -439,265 +439,314 @@ class LinearConstraints implements ParserTreeConstants {
     IntVar[] p2 = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    // If a linear term contains only constants and can be evaluated
-    // check if satisfied and do not generate constraint
     Integer s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
 
-    IntVar t;
     switch (operation) {
       case Support.EQ:
-        if (p2Fixed) {
-          if (s == p3) {
-            return;
-          } else {
-            throw Store.failException;
-          }
-        }
-
-        if (p1.length == 1) {
-          support.pose(
-              new XmulCeqZ(
-                  p2[0],
-                  p1[0],
-                  support.dictionary.getConstant(p3))); // new IntVar(store, p3, p3)));
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 != 0) {
-            support.pose(new XplusCeqZ(p2[1], p3, p2[0]));
-          } else {
-            support.pose(new XeqY(p2[1], p2[0]));
-          }
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 != 0) {
-            support.pose(new XplusCeqZ(p2[0], p3, p2[1]));
-          } else {
-            support.pose(new XeqY(p2[0], p2[1]));
-          }
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
-          support.pose(new XplusYeqC(p2[0], p2[1], p3));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
-          if (p3 == 0) {
-            support.pose(new XplusYeqC(p2[0], p2[1], p3));
-          } else {
-            support.pose(new XplusYeqC(p2[0], p2[1], -p3));
-          }
-        } else if (support.domainConsistency && !support.options.getBoundConsistency()) {
-          // We do not impose linear constraint with domain consistency if
-          // the cases are covered by four cases above.
-
-          // possible use of Table constraint
-
-          int pos = sumPossible(p1);
-          if (pos > -1) {
-            // Use SumBool constraint instead of LinearIntDom
-            IntVar[] vect = createVectorExcluding(p2, pos);
-
-            if (boolSum(vect)) {
-              if (p3 == 0) {
-                support.pose(new SumBool(vect, "==", p2[pos]));
-              } else {
-                IntVar tmp = new IntVar(store, 0, IntDomain.MAX_INT);
-                support.pose(new SumBool(vect, "==", tmp));
-                support.pose(new XplusCeqZ(p2[pos], p3, tmp));
-              }
-              return;
-            }
-          }
-
-          support.pose(new LinearIntDom(p2, p1, "==", p3));
-
-        } else if ((p3 == 0 && p1.length == 3)
-            && ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1)
-                || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1))) {
-          support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
-        } else if (p3 == 0 && p1.length == 2 && p1[0] == 1) {
-          support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
-        } else if (p3 == 0 && p1.length == 2 && p1[1] == 1) {
-          support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
-        } else if (p3 == 0 && p1.length == 2 && p1[0] == -1) {
-          support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
-        } else if (p3 == 0 && p1.length == 2 && p1[1] == -1) {
-          support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
-        } else if ((p3 == 0 && p1.length == 3)
-            && ((p1[0] == 1 && p1[1] == -1 && p1[2] == -1)
-                || (p1[0] == -1 && p1[1] == 1 && p1[2] == 1))) {
-          if (paramZero(p2[1])) {
-            support.pose(new XeqY(p2[2], p2[0]));
-          } else if (paramZero(p2[2])) {
-            support.pose(new XeqY(p2[1], p2[0]));
-          } else {
-            support.pose(new XplusYeqZ(p2[1], p2[2], p2[0]));
-          }
-        } else {
-          int pos = sumPossible(p1);
-          if (pos > -1) {
-            if (p3 == 0) {
-              IntVar[] vect = createVectorExcluding(p2, pos);
-
-              poseSumEq(vect, p2[pos]);
-            } else {
-              // p3 != 0
-              IntVar[] vect = new IntVar[p1.length];
-              IntVar v = p2[pos];
-              int constant = p1[pos] == 1 ? p3 : -p3;
-              int n = 0;
-              for (int i = 0; i < p2.length; i++) {
-                if (i != pos) {
-                  vect[n++] = p2[i];
-                } else {
-                  vect[n++] = support.dictionary.getConstant(constant);
-                }
-              }
-              poseSumEq(vect, v);
-            }
-          } else if (allWeightsOne(p1)) {
-            poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(p3));
-          } else if (allWeightsMinusOne(p1)) {
-            poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(-p3));
-          } else {
-            if (p2.length < 100) {
-              support.pose(new LinearInt(p2, p1, "==", p3));
-            } else {
-              support.pose(new SumWeight(p2, p1, p3));
-            }
-          }
-        }
+        int_lin_relationEq(p1, p2, p3, s, p2Fixed);
         break;
       case Support.NE:
-        if (p2Fixed) {
-          if (s != p3) {
-            return;
-          } else {
-            throw Store.failException;
-          }
-        }
-
-        if (p1.length == 1 && p1[0] == 1) {
-          p2[0].domain.inComplement(store.level, p2[0], p3);
-        } else if (p1.length == 1 && p1[0] == -1) {
-          p2[0].domain.inComplement(store.level, p2[0], -p3);
-        } else if (p1.length == 2
-            && p3 == 0
-            && ((p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1))) {
-          if (p2[0].max() < p2[1].min() || p2[0].min() > p2[1].max()) {
-            return;
-          } else {
-            support.pose(new XneqY(p2[0], p2[1]));
-          }
-        } else {
-          int pos = sumPossible(p1, p3);
-          if (pos > -1) {
-            IntVar[] vect = createVectorExcluding(p2, pos);
-            poseSumBoolOrInt(vect, "!=", p2[pos]);
-          } else {
-            if (boolSum(p2) && allWeightsOne(p1)) {
-              support.pose(new SumBool(p2, "!=", support.dictionary.getConstant(p3)));
-            } else {
-              support.pose(new LinearInt(p2, p1, "!=", p3));
-            }
-          }
-        }
+        int_lin_relationNe(p1, p2, p3, s, p2Fixed);
         break;
       case Support.LT:
-        if (p2Fixed) {
-          if (s < p3) {
-            return;
-          } else {
-            throw Store.failException;
-          }
-        }
-
-        if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
-          support.pose(new XltY(p2[0], p2[1]));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
-          support.pose(new XltY(p2[1], p2[0]));
-        } else {
-          int posLe = sumLePossible(p1, p3);
-          int posGe = sumGePossible(p1, p3);
-          if (posLe > -1) {
-            IntVar[] vect = createVectorExcluding(p2, posLe);
-            poseSumBoolOrInt(vect, "<", p2[posLe]);
-          } else if (posGe > -1) {
-            IntVar[] vect = createVectorExcluding(p2, posGe);
-            poseSumBoolOrInt(vect, ">", p2[posGe]);
-          } else {
-            support.pose(new LinearInt(p2, p1, "<", p3));
-          }
-        }
+        int_lin_relationLt(p1, p2, p3, s, p2Fixed);
         break;
       case Support.LE:
-        if (p2Fixed) {
-          if (s <= p3) {
-            return;
-          } else {
-            throw Store.failException;
-          }
-        }
-
-        if (p1.length == 1) {
-
-          if (p1[0] < 0) {
-            int rhsValue = (int) (Math.round(Math.ceil((float) p3 / (float) p1[0])));
-
-            p2[0].domain.inMin(store.level, p2[0], rhsValue);
-            if (support.options.debug()) {
-              IO.println("Pruned variable " + p2[0] + " to be >= " + rhsValue);
-            }
-          } else { // weight > 0
-            int rhsValue = (int) (Math.round(Math.floor((float) p3 / (float) p1[0])));
-
-            p2[0].domain.inMax(store.level, p2[0], rhsValue);
-
-            if (support.options.debug()) {
-              IO.println("% Pruned variable " + p2[0] + " to be <= " + rhsValue);
-            }
-          }
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
-          support.pose(new XlteqY(p2[0], p2[1]));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
-          support.pose(new XlteqY(p2[1], p2[0]));
-        } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
-        } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
-        } else if (allWeightsOne(p1)) {
-          t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
-          if (boolSum(p2)) {
-            if (p2.length == 2) {
-              support.pose(new XplusYlteqZ(p2[0], p2[1], t));
-            } else {
-              support.pose(new SumBool(p2, "<=", t));
-            }
-          } else if (p2.length == 2) {
-            support.pose(new XplusYlteqZ(p2[0], p2[1], t));
-          } else {
-            support.pose(new SumInt(p2, "<=", t));
-          }
-        } else if (allWeightsMinusOne(p1)) {
-          poseSumBoolOrInt(p2, ">=", support.dictionary.getConstant(-p3));
-        } else {
-          int posLe = sumLePossible(p1, p3);
-          int posGe = sumGePossible(p1, p3);
-          if (posLe > -1) {
-            IntVar[] vect = createVectorExcluding(p2, posLe);
-            if (boolSum(vect)) {
-              support.pose(new SumBool(vect, "<=", p2[posLe]));
-            } else if (vect.length == 2) {
-              support.pose(new XplusYlteqZ(vect[0], vect[1], p2[posLe]));
-            } else {
-              support.pose(new SumInt(vect, "<=", p2[posLe]));
-            }
-          } else if (posGe > -1) {
-            IntVar[] vect = createVectorExcluding(p2, posGe);
-            poseSumBoolOrInt(vect, ">=", p2[posGe]);
-          } else {
-            support.pose(new LinearInt(p2, p1, "<=", p3));
-          }
-        }
+        int_lin_relationLe(p1, p2, p3, s, p2Fixed);
         break;
       default:
         throw new IllegalArgumentException(
             "%% ERROR: Relation in linear constraint not supported.");
+    }
+  }
+
+  private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+      throws FailException {
+    if (p2Fixed) {
+      if (s == p3) {
+        return;
+      }
+      throw Store.failException;
+    }
+    if (p1.length == 1) {
+      support.pose(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+      if (p3 != 0) {
+        support.pose(new XplusCeqZ(p2[1], p3, p2[0]));
+      } else {
+        support.pose(new XeqY(p2[1], p2[0]));
+      }
+      return;
+    }
+    if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+      if (p3 != 0) {
+        support.pose(new XplusCeqZ(p2[0], p3, p2[1]));
+      } else {
+        support.pose(new XeqY(p2[0], p2[1]));
+      }
+      return;
+    }
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
+      support.pose(new XplusYeqC(p2[0], p2[1], p3));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
+      support.pose(new XplusYeqC(p2[0], p2[1], p3 == 0 ? p3 : -p3));
+      return;
+    }
+    if (support.domainConsistency && !support.options.getBoundConsistency()) {
+      int_lin_relationEqDomainConsistency(p1, p2, p3);
+      return;
+    }
+    if (int_lin_relationEqSpecial3(p1, p2, p3)) {
+      return;
+    }
+    if (int_lin_relationEqSpecial2(p1, p2, p3)) {
+      return;
+    }
+    if (int_lin_relationEqXplusYeqZ(p1, p2, p3)) {
+      return;
+    }
+    int_lin_relationEqDefault(p1, p2, p3);
+  }
+
+  private void int_lin_relationEqDomainConsistency(int[] p1, IntVar[] p2, int p3) {
+    int pos = sumPossible(p1);
+    if (pos > -1) {
+      IntVar[] vect = createVectorExcluding(p2, pos);
+      if (boolSum(vect)) {
+        if (p3 == 0) {
+          support.pose(new SumBool(vect, "==", p2[pos]));
+        } else {
+          IntVar tmp = new IntVar(store, 0, IntDomain.MAX_INT);
+          support.pose(new SumBool(vect, "==", tmp));
+          support.pose(new XplusCeqZ(p2[pos], p3, tmp));
+        }
+        return;
+      }
+    }
+    support.pose(new LinearIntDom(p2, p1, "==", p3));
+  }
+
+  private boolean int_lin_relationEqSpecial3(int[] p1, IntVar[] p2, int p3) {
+    if (p3 != 0 || p1.length != 3) {
+      return false;
+    }
+    if ((p1[0] == -1 && p1[1] == -1 && p1[2] == 1) || (p1[0] == 1 && p1[1] == 1 && p1[2] == -1)) {
+      support.pose(new XplusYeqZ(p2[0], p2[1], p2[2]));
+      return true;
+    }
+    return false;
+  }
+
+  private boolean int_lin_relationEqSpecial2(int[] p1, IntVar[] p2, int p3) {
+    if (p3 != 0 || p1.length != 2) {
+      return false;
+    }
+    if (p1[0] == 1) {
+      support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
+      return true;
+    }
+    if (p1[1] == 1) {
+      support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
+      return true;
+    }
+    if (p1[0] == -1) {
+      support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
+      return true;
+    }
+    if (p1[1] == -1) {
+      support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
+      return true;
+    }
+    return false;
+  }
+
+  private boolean int_lin_relationEqXplusYeqZ(int[] p1, IntVar[] p2, int p3) {
+    if (p3 != 0 || p1.length != 3) {
+      return false;
+    }
+    if (!((p1[0] == 1 && p1[1] == -1 && p1[2] == -1)
+        || (p1[0] == -1 && p1[1] == 1 && p1[2] == 1))) {
+      return false;
+    }
+    if (paramZero(p2[1])) {
+      support.pose(new XeqY(p2[2], p2[0]));
+    } else if (paramZero(p2[2])) {
+      support.pose(new XeqY(p2[1], p2[0]));
+    } else {
+      support.pose(new XplusYeqZ(p2[1], p2[2], p2[0]));
+    }
+    return true;
+  }
+
+  private void int_lin_relationEqDefault(int[] p1, IntVar[] p2, int p3) {
+    int pos = sumPossible(p1);
+    if (pos > -1) {
+      if (p3 == 0) {
+        IntVar[] vect = createVectorExcluding(p2, pos);
+        poseSumEq(vect, p2[pos]);
+      } else {
+        IntVar[] vect = new IntVar[p1.length];
+        IntVar v = p2[pos];
+        int constant = p1[pos] == 1 ? p3 : -p3;
+        int n = 0;
+        for (int i = 0; i < p2.length; i++) {
+          vect[n++] = (i != pos) ? p2[i] : support.dictionary.getConstant(constant);
+        }
+        poseSumEq(vect, v);
+      }
+      return;
+    }
+    if (allWeightsOne(p1)) {
+      poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(p3));
+    } else if (allWeightsMinusOne(p1)) {
+      poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(-p3));
+    } else if (p2.length < 100) {
+      support.pose(new LinearInt(p2, p1, "==", p3));
+    } else {
+      support.pose(new SumWeight(p2, p1, p3));
+    }
+  }
+
+  private void int_lin_relationNe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+      throws FailException {
+    if (p2Fixed) {
+      if (s != p3) {
+        return;
+      }
+      throw Store.failException;
+    }
+    if (p1.length == 1 && p1[0] == 1) {
+      p2[0].domain.inComplement(store.level, p2[0], p3);
+      return;
+    }
+    if (p1.length == 1 && p1[0] == -1) {
+      p2[0].domain.inComplement(store.level, p2[0], -p3);
+      return;
+    }
+    if (p1.length == 2 && p3 == 0 && ((p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1))) {
+      if (p2[0].max() >= p2[1].min() && p2[0].min() <= p2[1].max()) {
+        support.pose(new XneqY(p2[0], p2[1]));
+      }
+      return;
+    }
+    int pos = sumPossible(p1, p3);
+    if (pos > -1) {
+      IntVar[] vect = createVectorExcluding(p2, pos);
+      poseSumBoolOrInt(vect, "!=", p2[pos]);
+    } else if (boolSum(p2) && allWeightsOne(p1)) {
+      support.pose(new SumBool(p2, "!=", support.dictionary.getConstant(p3)));
+    } else {
+      support.pose(new LinearInt(p2, p1, "!=", p3));
+    }
+  }
+
+  private void int_lin_relationLt(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+      throws FailException {
+    if (p2Fixed) {
+      if (s < p3) {
+        return;
+      }
+      throw Store.failException;
+    }
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
+      support.pose(new XltY(p2[0], p2[1]));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
+      support.pose(new XltY(p2[1], p2[0]));
+      return;
+    }
+    int posLe = sumLePossible(p1, p3);
+    int posGe = sumGePossible(p1, p3);
+    if (posLe > -1) {
+      IntVar[] vect = createVectorExcluding(p2, posLe);
+      poseSumBoolOrInt(vect, "<", p2[posLe]);
+    } else if (posGe > -1) {
+      IntVar[] vect = createVectorExcluding(p2, posGe);
+      poseSumBoolOrInt(vect, ">", p2[posGe]);
+    } else {
+      support.pose(new LinearInt(p2, p1, "<", p3));
+    }
+  }
+
+  private void int_lin_relationLe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+      throws FailException {
+    if (p2Fixed) {
+      if (s <= p3) {
+        return;
+      }
+      throw Store.failException;
+    }
+    if (p1.length == 1) {
+      int_lin_relationLeSingleWeight(p1[0], p2[0], p3);
+      return;
+    }
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
+      support.pose(new XlteqY(p2[0], p2[1]));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
+      support.pose(new XlteqY(p2[1], p2[0]));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
+      support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
+      return;
+    }
+    if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
+      support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
+      return;
+    }
+    if (allWeightsOne(p1)) {
+      IntVar t = support.dictionary.getConstant(p3);
+      if (boolSum(p2)) {
+        support.pose(p2.length == 2 ? new XplusYlteqZ(p2[0], p2[1], t) : new SumBool(p2, "<=", t));
+      } else {
+        support.pose(p2.length == 2 ? new XplusYlteqZ(p2[0], p2[1], t) : new SumInt(p2, "<=", t));
+      }
+      return;
+    }
+    if (allWeightsMinusOne(p1)) {
+      poseSumBoolOrInt(p2, ">=", support.dictionary.getConstant(-p3));
+      return;
+    }
+    int posLe = sumLePossible(p1, p3);
+    int posGe = sumGePossible(p1, p3);
+    if (posLe > -1) {
+      IntVar[] vect = createVectorExcluding(p2, posLe);
+      if (boolSum(vect)) {
+        support.pose(new SumBool(vect, "<=", p2[posLe]));
+      } else if (vect.length == 2) {
+        support.pose(new XplusYlteqZ(vect[0], vect[1], p2[posLe]));
+      } else {
+        support.pose(new SumInt(vect, "<=", p2[posLe]));
+      }
+    } else if (posGe > -1) {
+      IntVar[] vect = createVectorExcluding(p2, posGe);
+      poseSumBoolOrInt(vect, ">=", p2[posGe]);
+    } else {
+      support.pose(new LinearInt(p2, p1, "<=", p3));
+    }
+  }
+
+  private void int_lin_relationLeSingleWeight(int w, IntVar x, int p3) {
+    if (w < 0) {
+      int rhsValue = (int) Math.round(Math.ceil((float) p3 / (float) w));
+      x.domain.inMin(store.level, x, rhsValue);
+      if (support.options.debug()) {
+        IO.println("Pruned variable " + x + " to be >= " + rhsValue);
+      }
+    } else {
+      int rhsValue = (int) Math.round(Math.floor((float) p3 / (float) w));
+      x.domain.inMax(store.level, x, rhsValue);
+      if (support.options.debug()) {
+        IO.println("% Pruned variable " + x + " to be <= " + rhsValue);
+      }
     }
   }
 
