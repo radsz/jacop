@@ -306,16 +306,7 @@ public abstract class AbstractExtensionalVa extends Constraint
   public String toString() {
 
     StringBuilder tupleString = new StringBuilder();
-    tupleString.append(id());
-    tupleString.append("(");
-
-    for (int i = 0; i < list.length; i++) {
-      tupleString.append(list[i].toString());
-      if (i + 1 < list.length) {
-        tupleString.append(" ");
-      }
-    }
-
+    appendIdAndListVars(tupleString);
     tupleString.append(")");
 
     if (tuplesFromConstructor != null) {
@@ -323,10 +314,20 @@ public abstract class AbstractExtensionalVa extends Constraint
       sortSubsetTuples(subset);
       appendTupleSubset(tupleString, subset);
       tupleString.append(")");
-      return tupleString.toString();
     }
 
     return tupleString.toString();
+  }
+
+  private void appendIdAndListVars(StringBuilder sb) {
+    sb.append(id());
+    sb.append("(");
+    for (int i = 0; i < list.length; i++) {
+      sb.append(list[i].toString());
+      if (i + 1 < list.length) {
+        sb.append(" ");
+      }
+    }
   }
 
   private void sortSubsetTuples(int[][] subset) {

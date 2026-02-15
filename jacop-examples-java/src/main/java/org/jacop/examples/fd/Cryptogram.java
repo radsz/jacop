@@ -168,63 +168,76 @@ public class Cryptogram extends ExampleFd {
   @Override
   public void model() {
 
-    if (filename != null) {
-      readLinesFromFile();
-    } else {
-      useDefaultLines();
-    }
-
+    loadLines();
     store = new Store();
     List<List<String>> words = parseWords();
     Map<String, IntVar> letters = new HashMap<>();
     createLetterVariables(words, letters);
 
+    warnIfTooManyLetters(letters);
+
+    store.impose(new Alldistinct(vars.toArray(new IntVar[0])));
+
+    imposeLineConstraints(words, letters);
+  }
+
+  private void loadLines() {
+    if (filename != null) {
+      readLinesFromFile();
+    } else {
+      useDefaultLines();
+    }
+  }
+
+  private void warnIfTooManyLetters(Map<String, IntVar> letters) {
     if (letters.size() > base) {
       IO.println("Expressions contain more than letters than base of the number system used ");
       IO.println("Base " + base);
       IO.println("Letters " + letters);
       IO.println("There can not be any solution");
     }
+  }
 
-    store.impose(new Alldistinct(vars.toArray(new IntVar[0])));
-
+  private void imposeLineConstraints(List<List<String>> words, Map<String, IntVar> letters) {
     for (int currentLine = 0; currentLine < noLines; currentLine++) {
+      imposeConstraintsForLine(words.get(currentLine), letters);
+    }
+  }
 
-      int noWords = words.get(currentLine).size();
+  private void imposeConstraintsForLine(List<String> lineWords, Map<String, IntVar> letters) {
+    int noWords = lineWords.size();
+    IntVar[] fdv4words = new IntVar[noWords];
+    IntVar[] terms = new IntVar[noWords - 1];
 
-      IntVar[] fdv4words = new IntVar[noWords];
-      IntVar[] terms = new IntVar[noWords - 1];
+    for (int j = 0; j < noWords; j++) {
+      String currentWord = lineWords.get(j);
+      fdv4words[j] = new IntVar(store, currentWord, 0, IntDomain.MAX_INT);
 
-      for (int j = 0; j < noWords; j++) {
-
-        String currentWord = words.get(currentLine).get(j);
-        fdv4words[j] = new IntVar(store, currentWord, 0, IntDomain.MAX_INT);
-
-        // stores fdvs corresponding to all but the last one in the
-        // separate
-        // array for later use.
-        if (j < noWords - 1) {
-          terms[j] = fdv4words[j];
-        }
-
-        IntVar[] lettersWithinCurrentWord = new IntVar[currentWord.length()];
-
-        for (int i = 0; i < currentWord.length(); i++) {
-          char[] currentChar = {currentWord.charAt(i)};
-          lettersWithinCurrentWord[i] = letters.get(new String(currentChar));
-        }
-
-        store.impose(
-            new LinearInt(
-                lettersWithinCurrentWord,
-                createWeights(currentWord.length(), base),
-                "==",
-                fdv4words[j]));
-
-        store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
+      if (j < noWords - 1) {
+        terms[j] = fdv4words[j];
       }
 
-      store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
+      IntVar[] lettersWithinCurrentWord = getLettersForWord(currentWord, letters);
+
+      store.impose(
+          new LinearInt(
+              lettersWithinCurrentWord,
+              createWeights(currentWord.length(), base),
+              "==",
+              fdv4words[j]));
+
+      store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
     }
+
+    store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
+  }
+
+  private IntVar[] getLettersForWord(String word, Map<String, IntVar> letters) {
+    IntVar[] lettersWithinCurrentWord = new IntVar[word.length()];
+    for (int i = 0; i < word.length(); i++) {
+      char[] currentChar = {word.charAt(i)};
+      lettersWithinCurrentWord[i] = letters.get(new String(currentChar));
+    }
+    return lettersWithinCurrentWord;
   }
 }

@@ -282,42 +282,75 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   /** First-time setup: filter supports, shrink tuples, build views, transform to indexes. */
   private void doFirstConsistencyCheck(Store store) {
+    valuesInFocus = createValuesInFocus();
     boolean[] stillSupport = new boolean[tuples.length];
-    int noSupports = 0;
-    valuesInFocus = new IntervalDomain[list.length];
-    for (int j = 0; j < list.length; j++) {
-      valuesInFocus[j] = new IntervalDomain();
+    int noSupports = markSupportAndCollectValuesInFocus(stillSupport);
+    logFirstConsistencySupports(noSupports);
+    tuples = shrinkToSupportedTuples(stillSupport, noSupports);
+    if (tuples.length == 0) {
+      throw Store.failException;
     }
+    initFirstAndNexts();
+    restrictDomainsAndCreateViews(store);
+    transformTuplesToIndexes();
+    firstConsistencyCheck = false;
+    firstConsistencyLevel = store.level;
+  }
+
+  private IntervalDomain[] createValuesInFocus() {
+    IntervalDomain[] focus = new IntervalDomain[list.length];
+    for (int j = 0; j < list.length; j++) {
+      focus[j] = new IntervalDomain();
+    }
+    return focus;
+  }
+
+  private int markSupportAndCollectValuesInFocus(boolean[] stillSupport) {
+    int noSupports = 0;
     int i = 0;
     for (int[] t : tuples) {
-      stillSupport[i] = true;
+      stillSupport[i] = isTupleSupported(t);
       if (DEBUG_ALL) {
         log.debug("support for analysis{}", Arrays.toString(t));
       }
-      for (int j = 0; j < t.length; j++) {
-        if (!list[j].dom().contains(t[j])) {
-          stillSupport[i] = false;
-          break;
-        }
-      }
       if (stillSupport[i]) {
         noSupports++;
-        int m = 0;
-        for (int val : t) {
-          valuesInFocus[m].unionAdapt(val, val);
-          m++;
-        }
+        addTupleToValuesInFocus(t);
       }
       if (DEBUG_ALL && !stillSupport[i]) {
         log.debug("Not support {}", Arrays.toString(t));
       }
       i++;
     }
+    return noSupports;
+  }
+
+  private boolean isTupleSupported(int[] t) {
+    for (int j = 0; j < t.length; j++) {
+      if (!list[j].dom().contains(t[j])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void addTupleToValuesInFocus(int[] t) {
+    int m = 0;
+    for (int val : t) {
+      valuesInFocus[m].unionAdapt(val, val);
+      m++;
+    }
+  }
+
+  private void logFirstConsistencySupports(int noSupports) {
     if (DEBUG_ALL) {
       log.debug("No. still supports {}", noSupports);
     }
+  }
+
+  private int[][] shrinkToSupportedTuples(boolean[] stillSupport, int noSupports) {
     int[][] temp4Shrinking = new int[noSupports][];
-    i = 0;
+    int i = 0;
     int k = 0;
     for (int[] t : tuples) {
       if (stillSupport[k]) {
@@ -328,10 +361,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
       }
       k++;
     }
-    tuples = temp4Shrinking;
-    if (tuples.length == 0) {
-      throw Store.failException;
-    }
+    return temp4Shrinking;
+  }
+
+  private void initFirstAndNexts() {
     first = 0;
     nexts = new int[tuples.length];
     for (int j = 0; j < nexts.length; j++) {
@@ -339,10 +372,16 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     }
     nexts[nexts.length - 1] = -1;
     last = nexts.length - 1;
+  }
+
+  private void restrictDomainsAndCreateViews(Store store) {
     for (int j = 0; j < views.length; j++) {
       list[j].domain.in(store.level, list[j], valuesInFocus[j]);
       views[j] = new IndexDomainView(list[j], true);
     }
+  }
+
+  private void transformTuplesToIndexes() {
     for (int l = 0; l < tuples.length; l++) {
       int[] originalTuple = tuples[l];
       int[] transformedTuple = new int[originalTuple.length];
@@ -351,8 +390,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
       }
       tuples[l] = transformedTuple;
     }
-    firstConsistencyCheck = false;
-    firstConsistencyLevel = store.level;
   }
 
   private void updateDomainSizesAfterBacktrack() {

@@ -109,52 +109,78 @@ public class WhoKilledAgatha extends ExampleFd {
     int n = 3;
     store = new Store();
 
-    IntVar the_killer = new IntVar(store, "the_killer", 0, n - 1);
-
     final int agatha = 0;
     final int butler = 1;
     final int charles = 2;
 
+    IntVar the_killer = new IntVar(store, "the_killer", 0, n - 1);
     IntVar[][] hates = new IntVar[n][n];
     IntVar[][] richer = new IntVar[n][n];
+    fillHatesAndRicherArrays(n, hates, richer);
+
+    vars = new ArrayList<>();
+
+    imposeKillerConstraints(the_killer, hates, richer, n, agatha);
+    imposeRicherDiagonal(richer, n);
+    imposeRicherSymmetry(richer, n);
+    imposeAgathaHatesConstraints(hates, agatha, butler, charles);
+    imposeCharlesHatesAgathaConstraints(hates, n, agatha, charles);
+    imposeButlerRicherHatesConstraints(richer, hates, n, agatha, butler);
+    imposeButlerHatesAgathaConstraints(hates, n, agatha, butler);
+    addSearchVariables(the_killer, hates, richer, n);
+    imposeSumConstraints(hates, n);
+  }
+
+  private void fillHatesAndRicherArrays(int n, IntVar[][] hates, IntVar[][] richer) {
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         hates[i][j] = new IntVar(store, "hates:" + i + "->" + j, 0, 1);
         richer[i][j] = new IntVar(store, "richer:" + i + "->" + j, 0, 1);
       }
     }
+  }
 
-    vars = new ArrayList<>();
-
-    // "A killer always hates, and is no richer than his victim."
+  private void imposeKillerConstraints(
+      IntVar the_killer, IntVar[][] hates, IntVar[][] richer, int n, int agatha) {
     for (int i = 0; i < n; i++) {
       store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(hates[i][agatha], 1)));
       store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(richer[i][agatha], 0)));
     }
+  }
 
+  private void imposeRicherDiagonal(IntVar[][] richer, int n) {
     for (int i = 0; i < n; i++) {
       store.impose(new XeqC(richer[i][i], 0));
     }
+  }
 
-    imposeRicherSymmetry(richer, n);
-
-    // "Agatha hates everybody except the butler. "
+  private void imposeAgathaHatesConstraints(IntVar[][] hates, int agatha, int butler, int charles) {
     store.impose(new XeqC(hates[agatha][charles], 1));
     store.impose(new XeqC(hates[agatha][agatha], 1));
     store.impose(new XeqC(hates[agatha][butler], 0));
+  }
 
+  private void imposeCharlesHatesAgathaConstraints(
+      IntVar[][] hates, int n, int agatha, int charles) {
     for (int i = 0; i < n; i++) {
       store.impose(new IfThen(new XeqC(hates[agatha][i], 1), new XeqC(hates[charles][i], 0)));
     }
+  }
 
+  private void imposeButlerRicherHatesConstraints(
+      IntVar[][] richer, IntVar[][] hates, int n, int agatha, int butler) {
     for (int i = 0; i < n; i++) {
       store.impose(new IfThen(new XeqC(richer[i][agatha], 0), new XeqC(hates[butler][i], 1)));
     }
+  }
 
+  private void imposeButlerHatesAgathaConstraints(IntVar[][] hates, int n, int agatha, int butler) {
     for (int i = 0; i < n; i++) {
       store.impose(new IfThen(new XeqC(hates[agatha][i], 1), new XeqC(hates[butler][i], 1)));
     }
+  }
 
+  private void addSearchVariables(IntVar the_killer, IntVar[][] hates, IntVar[][] richer, int n) {
     vars.add(the_killer);
     for (int i = 0; i < n; i++) {
       vars.addAll(Arrays.asList(hates[i]).subList(0, n));
@@ -162,7 +188,9 @@ public class WhoKilledAgatha extends ExampleFd {
     for (int i = 0; i < n; i++) {
       vars.addAll(Arrays.asList(richer[i]).subList(0, n));
     }
+  }
 
+  private void imposeSumConstraints(IntVar[][] hates, int n) {
     for (int i = 0; i < n; i++) {
       IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
       store.impose(new SumInt(hates[i], "==", a_sum));

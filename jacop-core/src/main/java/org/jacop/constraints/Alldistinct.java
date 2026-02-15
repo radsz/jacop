@@ -293,7 +293,7 @@ public class Alldistinct extends Constraint
     LinkedHashSet<IntVar> fdvs = variableQueue;
 
     if (debugAll) {
-      log.debug("Changed Variables {}", variableQueue);
+      debugConsistencyChangedVars();
     }
 
     IntDomain Qdom;
@@ -370,10 +370,7 @@ public class Alldistinct extends Constraint
     Iterator<IntVar> iter = fdvs.iterator();
 
     if (debugAll) {
-      log.debug("Before");
-      log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
-      log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
-      log.debug(MAXIMUM_MATCHING, matching);
+      debugConsistencyBefore();
     }
 
     while (iter.hasNext()) {
@@ -382,8 +379,7 @@ public class Alldistinct extends Constraint
       IntDomain vPrunedDomain = V.recentDomainPruning();
 
       if (debugAll) {
-        log.debug("Variable changed {}", V);
-        log.debug("Pruned Domain {}", vPrunedDomain);
+        debugConsistencyVariableChanged(V, vPrunedDomain);
       }
 
       if (!vPrunedDomain.isEmpty()) {
@@ -398,12 +394,7 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          log.debug(
-              " V {} matchedValue {} prunedDom {}contains? {}",
-              V,
-              matchedValue,
-              vPrunedDomain,
-              vPrunedDomain.contains(matchedValue));
+          debugConsistencyMatchedValue(V, matchedValue, vPrunedDomain);
         }
 
         for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
@@ -449,21 +440,16 @@ public class Alldistinct extends Constraint
         }
 
       } else if (debugAll) {
-        log.debug(
-            "There was an Variable which was marked as changed but there is no difference in domain{}",
-            V);
-        log.debug("Most probably the result of current implementation of variableQueue signals");
+        debugConsistencyNoDifferenceInDomain(V);
       }
     }
 
     if (debugAll) {
-      log.debug("After");
-      log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
-      log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
+      debugConsistencyAfter();
     }
 
     if (debugAll) {
-      log.debug("Looking Maximum Matching ");
+      debugConsistencyLookingMatching();
     }
 
     // Remove singletons from changed variables as no pruning
@@ -540,13 +526,13 @@ public class Alldistinct extends Constraint
         it.remove();
 
         if (debugAll) {
-          log.debug("Tarjan start, changed variabled {}", changedVariable);
+          debugConsistencyTarjanStartRevisit(changedVariable);
         }
 
         revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
 
         if (debugAll) {
-          log.debug("Tarjan end");
+          debugConsistencyTarjanEnd();
         }
       }
 
@@ -563,8 +549,7 @@ public class Alldistinct extends Constraint
       for (int i = 0; i <= lastNotGroundedVariable; i++) {
 
         if (debugAll) {
-          log.debug("Tarjan start, changed variabled {}", list[i]);
-          log.debug("Tarjan start, value mapping {}", valueMapVariable);
+          debugConsistencyTarjanStartVisit(list[i]);
         }
 
         if (scc.get(list[i]) == null) {
@@ -572,12 +557,12 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          log.debug("Tarjan end");
+          debugConsistencyTarjanEnd();
         }
       }
 
       if (debugAll) {
-        log.debug("Tarjan end state {}", scc);
+        debugConsistencyTarjanEndState();
       }
 
       // Update stamps for new matching
@@ -635,10 +620,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      log.debug("All reached variables {}", variablesReachableFromFreeValues);
-
-      log.debug(
-          "Check for All NOT reached variables if there is an edge from matched variable to a different");
+      debugConsistencyAllReached(variablesReachableFromFreeValues);
     }
 
     IntVar variable;
@@ -653,13 +635,13 @@ public class Alldistinct extends Constraint
       variable = list[j];
 
       if (debugAll) {
-        log.debug("Variable {} is considered ", variable);
+        debugConsistencyVariableConsidered(variable);
       }
 
       if (!variablesReachableFromFreeValues.contains(variable)) {
 
         if (debugPruning) {
-          log.debug("Variable {} is not reached by free values ", variable);
+          debugPruningNotReached(variable);
         }
 
         variableComponentId = sccStamp.get(variable).value();
@@ -673,7 +655,7 @@ public class Alldistinct extends Constraint
         lastPosition = stamp.value();
 
         if (debugAll) {
-          log.debug("currentList {} stamp {}", currentList, lastPosition);
+          debugConsistencyCurrentListStamp(currentList, lastPosition);
         }
 
         // If permutation constraint
@@ -684,7 +666,7 @@ public class Alldistinct extends Constraint
         if (lastPosition == 0 && permutationConsistency) {
 
           if (debugPruning) {
-            log.debug("Value {} has only this variable possible {}", matched, variable);
+            debugPruningValueOnlyVariable(matched, variable);
           }
 
           variable.domain.inValue(store.level, variable, matched);
@@ -703,10 +685,7 @@ public class Alldistinct extends Constraint
           if (variableComponentId != sccStamp.get(possibleDifferentComponentVariable).value()) {
 
             if (debugPruning) {
-              log.debug(
-                  "\n\n\n\n\nVariable {}can not take value {}\n\n\n\n",
-                  possibleDifferentComponentVariable,
-                  matched);
+              debugPruningVariableCannotTake(possibleDifferentComponentVariable, matched);
             }
 
             possibleDifferentComponentVariable.domain.inComplement(
@@ -770,7 +749,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      log.debug("Consistency technique has finished execution ");
+      debugConsistencyFinished();
     }
   }
 
@@ -848,7 +827,7 @@ public class Alldistinct extends Constraint
       LinkedList<Object> path = new LinkedList<>();
 
       if (debugAll) {
-        log.debug("Non Free Values{}", nonFreeValues);
+        debugHopcroftNonFreeValues(nonFreeValues);
       }
 
       Set<IntVar> visitedVariables = HashSet.newHashSet(matching.size());
@@ -874,7 +853,7 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          log.debug("First element of the path {}", path);
+          debugHopcroftFirstElementPath(path);
         }
 
         if (path.isEmpty()) {
@@ -905,15 +884,15 @@ public class Alldistinct extends Constraint
           // variable to be used.
 
           if (debugAll) {
-            log.debug("Visited variables {}", visitedVariables);
+            debugHopcroftVisitedVariables(visitedVariables);
           }
 
           if (debugAll) {
-            log.debug("Free variables {}", freeVariables);
+            debugHopcroftFreeVariables();
           }
 
           if (debugAll) {
-            log.debug("Values for last path element {}", valueMapVariable.get(top));
+            debugHopcroftValuesForLastPathElement(top);
           }
 
           // MAKE SURE you have increase level before worrying about
@@ -923,7 +902,7 @@ public class Alldistinct extends Constraint
           int notYetUsedVariable = notYetUsedVariablePointer.get(top);
 
           if (debugAll) {
-            log.debug("notYetUsedVariable {}", notYetUsedVariable);
+            debugHopcroftNotYetUsedVariable(notYetUsedVariable);
           }
 
           if (notYetUsedVariable == -1) {
@@ -931,12 +910,12 @@ public class Alldistinct extends Constraint
               break;
             } else {
               if (debugAll) {
-                log.debug("Path to shorten {}", path);
+                debugHopcroftPathToShorten(path);
               }
               path.removeLast();
               path.removeLast();
               if (debugAll) {
-                log.debug("Shorten path{}", path);
+                debugHopcroftShortenPath(path);
               }
               top = (Integer) path.getLast();
               continue;
@@ -955,7 +934,7 @@ public class Alldistinct extends Constraint
             visitedVariables.add(first);
 
             if (debugAll) {
-              log.debug("Current path {}", path);
+              debugHopcroftCurrentPath(path);
             }
 
             // if first is free variable then path
@@ -971,7 +950,7 @@ public class Alldistinct extends Constraint
           }
 
           if (debugAll) {
-            log.debug("Current path {}", path);
+            debugHopcroftCurrentPath(path);
           }
         }
 
@@ -998,11 +977,11 @@ public class Alldistinct extends Constraint
         // path
 
         if (debugAll) {
-          log.debug("Free variables {}", freeVariables);
+          debugHopcroftFreeVariables();
         }
 
         if (debugAll) {
-          log.debug("Allpaths {}", allpaths);
+          debugHopcroftAllpaths(allpaths);
         }
 
         if (freeVariables.size() == allpaths.size()) {
@@ -1012,7 +991,7 @@ public class Alldistinct extends Constraint
       }
 
       if (debugAll) {
-        log.debug("Allpaths {}", allpaths);
+        debugHopcroftAllpaths(allpaths);
       }
 
       if (allpaths.isEmpty()) {
@@ -1186,6 +1165,170 @@ public class Alldistinct extends Constraint
     variableQueue.add((IntVar) v);
   }
 
+  private void debugConsistencyChangedVars() {
+    log.debug("Changed Variables {}", variableQueue);
+  }
+
+  private void debugConsistencyBefore() {
+    log.debug("Before");
+    log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
+    log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
+    log.debug(MAXIMUM_MATCHING, matching);
+  }
+
+  private void debugConsistencyVariableChanged(IntVar v, IntDomain vPrunedDomain) {
+    log.debug("Variable changed {}", v);
+    log.debug("Pruned Domain {}", vPrunedDomain);
+  }
+
+  private void debugConsistencyMatchedValue(
+      IntVar v, Integer matchedValue, IntDomain vPrunedDomain) {
+    log.debug(
+        " V {} matchedValue {} prunedDom {}contains? {}",
+        v,
+        matchedValue,
+        vPrunedDomain,
+        vPrunedDomain.contains(matchedValue));
+  }
+
+  private void debugConsistencyNoDifferenceInDomain(IntVar v) {
+    log.debug(
+        "There was an Variable which was marked as changed but there is no difference in domain{}",
+        v);
+    log.debug("Most probably the result of current implementation of variableQueue signals");
+  }
+
+  private void debugConsistencyAfter() {
+    log.debug("After");
+    log.debug(MAPPING_VALUE_TO_VARIABLE, valueMapVariable);
+    log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
+  }
+
+  private void debugConsistencyLookingMatching() {
+    log.debug("Looking Maximum Matching ");
+  }
+
+  private void debugConsistencyTarjanStartRevisit(IntVar changedVariable) {
+    log.debug("Tarjan start, changed variabled {}", changedVariable);
+  }
+
+  private void debugConsistencyTarjanEnd() {
+    log.debug("Tarjan end");
+  }
+
+  private void debugConsistencyTarjanStartVisit(IntVar var) {
+    log.debug("Tarjan start, changed variabled {}", var);
+    log.debug("Tarjan start, value mapping {}", valueMapVariable);
+  }
+
+  private void debugConsistencyTarjanEndState() {
+    log.debug("Tarjan end state {}", scc);
+  }
+
+  private void debugConsistencyAllReached(LinkedHashSet<IntVar> variablesReachableFromFreeValues) {
+    log.debug("All reached variables {}", variablesReachableFromFreeValues);
+    log.debug(
+        "Check for All NOT reached variables if there is an edge from matched variable to a different");
+  }
+
+  private void debugConsistencyVariableConsidered(IntVar variable) {
+    log.debug("Variable {} is considered ", variable);
+  }
+
+  private void debugConsistencyCurrentListStamp(ArrayList<IntVar> currentList, int lastPosition) {
+    log.debug("currentList {} stamp {}", currentList, lastPosition);
+  }
+
+  private void debugConsistencyFinished() {
+    log.debug("Consistency technique has finished execution ");
+  }
+
+  private void debugPruningNotReached(IntVar variable) {
+    log.debug("Variable {} is not reached by free values ", variable);
+  }
+
+  private void debugPruningValueOnlyVariable(Integer matched, IntVar variable) {
+    log.debug("Value {} has only this variable possible {}", matched, variable);
+  }
+
+  private void debugPruningVariableCannotTake(
+      IntVar possibleDifferentComponentVariable, Integer matched) {
+    log.debug(
+        "\n\n\n\n\nVariable {}can not take value {}\n\n\n\n",
+        possibleDifferentComponentVariable,
+        matched);
+  }
+
+  private void debugHopcroftNonFreeValues(Set<Integer> nonFreeValues) {
+    log.debug("Non Free Values{}", nonFreeValues);
+  }
+
+  private void debugHopcroftFirstElementPath(LinkedList<Object> path) {
+    log.debug("First element of the path {}", path);
+  }
+
+  private void debugHopcroftVisitedVariables(Set<IntVar> visitedVariables) {
+    log.debug("Visited variables {}", visitedVariables);
+  }
+
+  private void debugHopcroftFreeVariables() {
+    log.debug("Free variables {}", freeVariables);
+  }
+
+  private void debugHopcroftValuesForLastPathElement(Integer top) {
+    log.debug("Values for last path element {}", valueMapVariable.get(top));
+  }
+
+  private void debugHopcroftNotYetUsedVariable(int notYetUsedVariable) {
+    log.debug("notYetUsedVariable {}", notYetUsedVariable);
+  }
+
+  private void debugHopcroftPathToShorten(LinkedList<Object> path) {
+    log.debug("Path to shorten {}", path);
+  }
+
+  private void debugHopcroftShortenPath(LinkedList<Object> path) {
+    log.debug("Shorten path{}", path);
+  }
+
+  private void debugHopcroftCurrentPath(LinkedList<Object> path) {
+    log.debug("Current path {}", path);
+  }
+
+  private void debugHopcroftAllpaths(List<LinkedList<Object>> allpaths) {
+    log.debug("Allpaths {}", allpaths);
+  }
+
+  private void debugRevisitTarjanInvocation(
+      IntVar x, Map<IntVar, Integer> low, Map<IntVar, Integer> dfsnum) {
+    log.debug("Invocation {} Low values for it {}", x, low);
+    log.debug("Invocation {} Dfsnum values for it {}", x, dfsnum);
+  }
+
+  private void debugComponentFound() {
+    log.debug("Component found  ");
+  }
+
+  private void debugComponentPart(Object component, int lowx) {
+    log.debug("Component part  {}id {}", component, lowx);
+  }
+
+  private void debugVisitTarjanComponentPart(IntVar component) {
+    log.debug("Component part  {}", component);
+  }
+
+  private void debugEstimatePruningSingleNull() {
+    log.debug("{}", this);
+    log.debug("StampValues - 1 {}", stampValues.value() - 1);
+    log.debug("Not grounded Var {}", stampNotGroundedVariables.value());
+    int lastNotGroundedVariable = stampNotGroundedVariables.value();
+    for (int l = 0; l <= lastNotGroundedVariable; l++) {
+      IntVar variable = list[l];
+      log.debug("Stamp for {} {}", variable, sccStamp.get(variable).value());
+      log.debug("Matching {}", matching.get(variable).value());
+    }
+  }
+
   /**
    * Helper method to initialize Tarjan visit: set dfsnum/low and add to stack.
    *
@@ -1310,8 +1453,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      log.debug("Invocation {} Low values for it {}", x, low);
-      log.debug("Invocation {} Dfsnum values for it {}", x, dfsnum);
+      debugRevisitTarjanInvocation(x, low, dfsnum);
     }
 
     int lowx = low.get(x);
@@ -1332,7 +1474,7 @@ public class Alldistinct extends Constraint
   private void popAndStampSccComponentRevisit(
       IntVar x, List<IntVar> l, int lowx, LinkedHashSet<IntVar> fdvs) {
     if (debugAll) {
-      log.debug("Component found  ");
+      debugComponentFound();
     }
 
     Var component;
@@ -1341,7 +1483,7 @@ public class Alldistinct extends Constraint
       component = l.removeLast();
 
       if (debugAll) {
-        log.debug("Component part  {}id {}", component, lowx);
+        debugComponentPart(component, lowx);
       }
 
       sccStamp.get(component).update(lowx);
@@ -1382,15 +1524,19 @@ public class Alldistinct extends Constraint
 
     buf.append(" : alldistinct([");
 
+    appendListVarsTo(buf);
+
+    buf.append("]");
+    return buf.toString();
+  }
+
+  private void appendListVarsTo(StringBuilder buf) {
     for (int i = 0; i < list.length; i++) {
       buf.append(list[i]);
       if (i < list.length - 1) {
         buf.append(", ");
       }
     }
-
-    buf.append("]");
-    return buf.toString();
   }
 
   private void visitTarjan(
@@ -1426,8 +1572,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      log.debug("Invocation {} Low values for it {}", x, low);
-      log.debug("Invocation {} Dfsnum values for it {}", x, dfsnum);
+      debugRevisitTarjanInvocation(x, low, dfsnum);
     }
 
     int lowx = low.get(x);
@@ -1446,14 +1591,14 @@ public class Alldistinct extends Constraint
    */
   private void popAndStampSccComponentVisit(IntVar x, List<IntVar> l, int lowx) {
     if (debugAll) {
-      log.debug("Component found  ");
+      debugComponentFound();
     }
 
     while (true) {
       IntVar component = l.removeLast();
 
       if (debugAll) {
-        log.debug("Component part  {}", component);
+        debugVisitTarjanComponentPart(component);
       }
 
       scc.put(component, lowx);
@@ -1787,18 +1932,7 @@ public class Alldistinct extends Constraint
             }
 
             if (single && singleVar == null) {
-              log.debug("{}", this);
-              log.debug("StampValues - 1 {}", stampValues.value() - 1);
-              log.debug("Not grounded Var {}", stampNotGroundedVariables.value());
-
-              int lastNotGroundedVariable = stampNotGroundedVariables.value();
-              Var variable;
-
-              for (int l = 0; l <= lastNotGroundedVariable; l++) {
-                variable = list[l];
-                log.debug("Stamp for {} {}", variable, sccStamp.get(variable).value());
-                log.debug("Matching {}", matching.get(variable).value());
-              }
+              debugEstimatePruningSingleNull();
             }
 
             if (single && singleVar != null) {

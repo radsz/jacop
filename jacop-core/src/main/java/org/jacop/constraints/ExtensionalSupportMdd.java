@@ -158,41 +158,38 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
       return false;
     }
 
+    boolean result = seekSupportInLoop(nodeId, level);
+    recordSeekSupportResult(nodeId, result);
+    return result;
+  }
+
+  private boolean seekSupportInLoop(int nodeId, int level) {
     boolean result = false;
-
-    // optimization possible if variable level-th did not change
-
     for (int i = 0; i < mdd.domainLimits[level]; i++) {
       int shift = nodeId + i;
-      // ith-value has a support
-      // returns true is new support was found
-      // it always checks the preliminary finish condition
-      // at least once if new support was found.
-      if (mdd.diagram[shift] != Mdd.NOEDGE
-          && views[level].contains(i)
-          && (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1))
-          && (!views[level].setSupport(i) || !result)) {
-
+      if (valueHasSupport(shift, level, i, result)) {
         result = true;
-
-        // TODO: check if allIndexesSupported needs updating
-        // if it needs updating check the break condition below.
-        // have all values been signaled as already supported
-        // notSupportYet is empty for all variables level..vars.length
-
         if (allIndexesSupportedFrom(level)) {
           break;
         }
       }
     }
+    return result;
+  }
 
+  private boolean valueHasSupport(int shift, int level, int i, boolean resultSoFar) {
+    return mdd.diagram[shift] != Mdd.NOEDGE
+        && views[level].contains(i)
+        && (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1))
+        && (!views[level].setSupport(i) || !resultSoFar);
+  }
+
+  private void recordSeekSupportResult(int nodeId, boolean result) {
     if (result) {
       gYes.addMember(nodeId);
     } else {
       gNo.addMember(nodeId);
     }
-
-    return result;
   }
 
   private boolean allIndexesSupportedFrom(int level) {

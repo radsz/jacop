@@ -429,8 +429,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         "objects",
         Arrays.stream(objects).flatMap(obj -> obj.getVariables().stream()).toArray(IntVar[]::new));
 
-    // This comes from the frame computation for NonOverlapping external constraint.
-
     assert objects.length > 0 : "empty collection of objects";
     assert shapes.length > 0 : "empty collection of shapes";
     assert constraints.length > 0 : "empty collection of constraints";
@@ -438,10 +436,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     this.queueIndex = 2;
     this.objects = objects.clone();
     this.externalConstraints = constraints.clone();
-
     this.numberId = idNumber.incrementAndGet();
     this.variableQueue = new LinkedHashSet<>();
-
     objectQueue = new LinkedHashSet<>(objects.length);
     objectQueue.addAll(Arrays.asList(objects));
 
@@ -452,43 +448,49 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     objectConstraints = new Set[idMax + 1];
     domainHolesConstraints = new DomainHoles[idMax + 1];
-
     pruneIfGrounded = new boolean[idMax + 1];
     Arrays.fill(pruneIfGrounded, false);
+    shapeRegister = buildShapeRegisterArray(idShapeMap);
+    fullyPruned = partialShapeSweep ? new boolean[idMax + 1] : null;
 
-    shapeRegister = new Shape[idShapeMap.size()];
-
-    for (Map.Entry<Integer, Shape> e : idShapeMap.entrySet()) {
-      assert e.getKey() < idShapeMap.size()
-          : "Shapes do not have unique ids between 0 and n-1, where n is number of shapes.";
-      shapeRegister[e.getKey()] = e.getValue();
-    }
-
-    if (partialShapeSweep) {
-      fullyPruned = new boolean[idMax + 1];
-    } else {
-      fullyPruned = null;
-    }
-
-    // make sure the Dbox pool is correctly initialized
     Dbox.supportDimension(dimension);
-    Dbox.supportDimension(dimension + 1); // one more slot for time
-
+    Dbox.supportDimension(dimension + 1);
     shapeIdsToPrune = new int[shapeRegister.length];
 
     assert dimension > 0 : "No dimensions";
 
-    // one extra dimension for time
     c = new int[dimension + 1];
     n = new int[dimension + 1];
 
-    // use an ordering based on average box sizes: longer dimension first
+    double[] averageSizes = computeAverageSizes(objects);
+    order = new PredefinedOrder(computeDimensionOrdering(averageSizes), 0);
+
+    variableObjectMap = Var.createEmptyPositioning();
+    buildVariableObjectMap(objects);
+
+    inConsistency = false;
+    temporaryObjectSet = new LinkedHashSet<>();
+    backtracking = false;
+    workingList = new ArrayList<>();
+    assert checkInvariants() == null : checkInvariants();
+    groundedVars = new ArrayList<>();
+    setScope(variableObjectMap.keySet());
+  }
+
+  private static Shape[] buildShapeRegisterArray(Map<Integer, Shape> idShapeMap) {
+    Shape[] register = new Shape[idShapeMap.size()];
+    for (Map.Entry<Integer, Shape> e : idShapeMap.entrySet()) {
+      assert e.getKey() < idShapeMap.size()
+          : "Shapes do not have unique ids between 0 and n-1, where n is number of shapes.";
+      register[e.getKey()] = e.getValue();
+    }
+    return register;
+  }
+
+  private double[] computeAverageSizes(GeostObject[] objects) {
     int[] shapeNb = new int[shapeRegister.length];
     int totShapes = 0;
-
-    // compute cumulated box sizes
     double[] averageSizes = new double[dimension + 1];
-
     Arrays.fill(shapeNb, 0);
 
     for (GeostObject o : objects) {
@@ -509,16 +511,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     for (int j = 0; j < averageSizes.length - 1; j++) {
       averageSizes[j] /= totShapes;
     }
-
     averageSizes[dimension] /= objects.length;
+    return averageSizes;
+  }
 
-    // now, averageSizes contains, for each dimension, the average box size
-    // we can now get the corresponding ordering of dimensions
-
-    // smallest dimension first
+  private int[] computeDimensionOrdering(double[] averageSizes) {
     int[] ordering = new int[dimension + 1];
     for (int i = 0; i < ordering.length; i++) {
-      // find smallest value
       double smallestYet = Double.MAX_VALUE;
       int smallestIndex = 0;
       for (int j = 0; j < ordering.length; j++) {
@@ -530,12 +529,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       ordering[i] = smallestIndex;
       averageSizes[smallestIndex] = Double.MAX_VALUE;
     }
+    return ordering;
+  }
 
-    // ordering now corresponds to average box sizes, smallest first
-    order = new PredefinedOrder(ordering, 0);
-
-    variableObjectMap = Var.createEmptyPositioning();
-
+  private void buildVariableObjectMap(GeostObject[] objects) {
     for (GeostObject o : objects) {
       for (Var v : o.getVariables()) {
         if (!v.singleton()) {
@@ -545,21 +542,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         }
       }
     }
-
-    inConsistency = false;
-
-    temporaryObjectSet = new LinkedHashSet<>();
-
-    backtracking = false;
-    workingList = new ArrayList<>();
-
-    assert checkInvariants() == null : checkInvariants();
-
-    groundedVars = new ArrayList<>();
-
-    setScope(variableObjectMap.keySet());
-
-    // boxDisplay = new BoxDisplay(20, "inside");
   }
 
   private static Map<Integer, Shape> buildIdShapeMap(Shape[] shapes) {

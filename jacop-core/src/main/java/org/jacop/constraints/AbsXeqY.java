@@ -296,23 +296,28 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
     do {
       store.propagationHasOccurred = false;
-
-      if (y.singleton()) {
-
-        x.domain.inComplement(store.level, x, y.value());
-        x.domain.inComplement(store.level, x, -y.value());
-      }
-
-      if (x.singleton()) {
-
-        if (x.value() >= 0) {
-          y.domain.inComplement(store.level, y, x.value());
-        } else {
-          y.domain.inComplement(store.level, y, -x.value());
-        }
-      }
-
+      applyNotConsistencyWhenYSingleton(store);
+      applyNotConsistencyWhenXSingleton(store);
     } while (store.propagationHasOccurred);
+  }
+
+  private void applyNotConsistencyWhenYSingleton(Store store) {
+    if (!y.singleton()) {
+      return;
+    }
+    x.domain.inComplement(store.level, x, y.value());
+    x.domain.inComplement(store.level, x, -y.value());
+  }
+
+  private void applyNotConsistencyWhenXSingleton(Store store) {
+    if (!x.singleton()) {
+      return;
+    }
+    if (x.value() >= 0) {
+      y.domain.inComplement(store.level, y, x.value());
+    } else {
+      y.domain.inComplement(store.level, y, -x.value());
+    }
   }
 
   @Override
