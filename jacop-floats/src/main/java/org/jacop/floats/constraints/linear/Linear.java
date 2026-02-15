@@ -391,8 +391,15 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     variableQueue.add((FloatVar) v);
   }
 
-  @Override
-  public boolean satisfied() {
+  /**
+   * Checks reified constraint state and returns the entailment result.
+   *
+   * @param rel the relation type to check entailment for.
+   * @param failResult the value to return when propagation fails or was already diagnosed as not
+   *     satisfied.
+   * @return whether the constraint is satisfied/notSatisfied according to the given relation.
+   */
+  private boolean checkReifiedEntailment(byte rel, boolean failResult) {
 
     if (reified) {
 
@@ -400,7 +407,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       if (noSat.stamp() < store.level) {
         noSat.update(false);
       } else if (noSat.stamp() == store.level && noSat.value() == true) {
-        return false;
+        return failResult;
       }
       // ==========
 
@@ -408,35 +415,21 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         propagate(variableQueue);
       } catch (FailException _) {
         noSat.update(true);
-        return false;
+        return failResult;
       }
     }
 
-    return entailed(relationType);
+    return entailed(rel);
+  }
+
+  @Override
+  public boolean satisfied() {
+    return checkReifiedEntailment(relationType, false);
   }
 
   @Override
   public boolean notSatisfied() {
-
-    if (reified) {
-
-      // check whether constraint has been already diagnosed as not satisfied at this level
-      if (noSat.stamp() < store.level) {
-        noSat.update(false);
-      } else if (noSat.stamp() == store.level && noSat.value() == true) {
-        return true;
-      }
-      // ==========
-
-      try {
-        propagate(variableQueue);
-      } catch (FailException _) {
-        noSat.update(true);
-        return true;
-      }
-    }
-
-    return entailed(NEG_REL[relationType]);
+    return checkReifiedEntailment(NEG_REL[relationType], true);
   }
 
   private boolean entailed(byte rel) {

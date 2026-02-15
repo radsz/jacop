@@ -361,26 +361,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.debug()) {
-      String solve =
-          switch (solveKind) {
-            case 0 -> "%% satisfy"; // satisfy
-            case 1 -> {
-              Var costMin =
-                  getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null
-                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-              yield "%% minimize(" + costMin + ") ";
-            }
-            case 2 -> {
-              Var costMax =
-                  getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null
-                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-              yield "%% maximize(" + costMax + ") ";
-            }
-            default -> throw new RuntimeException("Internal error in " + getClass().getName());
-          };
-      IO.println(solve + " : " + si);
+      printSolveKindDebug(solveKind, kind, si);
     }
 
     label = null;
@@ -478,13 +459,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     list_seq_searches.getLast();
 
-    // Lds & Credit heuristic search
-    if ("lds".equals(si.exploration())) {
-      lds_search(label, si.ldsValue);
-      // Credit heuristic search
-    } else if ("credit".equals(si.exploration())) {
-      credit_search(label, si.creditValue, si.bbsValue);
-    }
+    applyHeuristicSearch(label, si);
 
     result = false;
 
@@ -620,55 +595,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solveType the solve type string for debug output ("satisfy", "minimize", "maximize")
    * @return true if a solution was found, false otherwise
    */
-  @SuppressWarnings("unchecked")
   private boolean executeSearch(DepthFirstSearch<T> label, Var costVar, String solveType) {
-    if (!options.runSearch()) {
-      flatzincDfs = label;
-      flatzincVariableSelection = variable_selection;
-      flatzincCost = costVar;
-      return false;
-    }
+    return executeSearch(label, variable_selection, costVar, solveType);
+  }
 
-    try {
-      if (restartCalculator != null) {
-        if (options.debug()) {
-          IO.print("% RestartSearch(" + restartCalculator + "), ");
-          label.setSelectChoicePoint(variable_selection);
-          IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
-          printSearch(label);
-        }
+  /**
+   * Resolves the cost variable for a given solve expression, trying int first, then float.
+   *
+   * @param kind the solve kind AST node
+   * @return the resolved cost variable
+   */
+  private Var resolveCostVar(SimpleNode kind) {
+    Var cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
+    return cost != null ? cost : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+  }
 
-        rs =
-            new RestartSearch<>(
-                store,
-                label,
-                variable_selection,
-                restartCalculator,
-                costVar != null ? (T) costVar : null);
-        rs.setRestartsLimit(options.getRestartLimit());
-        setSearchTimeout(rs);
-
-        if (relaxVars != null) {
-          rs.setRelaxAndReconstruct(relaxVars, probability);
-        }
-
-        return rs.labeling();
-      } else {
-        if (options.debug()) {
-          label.setSelectChoicePoint(variable_selection);
-          IO.print("% " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
-          printSearch(label);
-        }
-
-        if (costVar != null) {
-          return label.labeling(store, variable_selection, costVar);
-        } else {
-          return label.labeling(store, variable_selection);
-        }
-      }
-    } catch (NumberSolutionsReached _) {
-      return numberSolutions > 0;
-    }
+  /**
+   * Prints debug output showing the solve kind and search items.
+   *
+   * @param solveKind the solve kind (0=satisfy, 1=minimize, 2=maximize)
+   * @param kind the AST node for the solve expression
+   * @param si the search items
+   */
+  private void printSolveKindDebug(int solveKind, SimpleNode kind, SearchItem<T> si) {
+    String solve =
+        switch (solveKind) {
+          case 0 -> "%% satisfy";
+          case 1 -> "%% minimize(" + resolveCostVar(kind) + ") ";
+          case 2 -> "%% maximize(" + resolveCostVar(kind) + ") ";
+          default -> throw new RuntimeException("Internal error in " + getClass().getName());
+        };
+    IO.println(solve + " : " + si);
   }
 
   /**
@@ -1148,26 +1105,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.debug()) {
-      String solve =
-          switch (solveKind) {
-            case 0 -> "%% satisfy"; // satisfy
-            case 1 -> {
-              Var costMin =
-                  getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null
-                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-              yield "%% minimize(" + costMin + ") ";
-            }
-            case 2 -> {
-              Var costMax =
-                  getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null
-                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-              yield "%% maximize(" + costMax + ") ";
-            }
-            default -> throw new RuntimeException("Internal error in " + getClass().getName());
-          };
-      IO.println(solve + " : " + si);
+      printSolveKindDebug(solveKind, kind, si);
     }
 
     DepthFirstSearch<T> masterLabel = null;
@@ -1411,16 +1349,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // Lds heuristic search
-        if ("lds".equals(si.exploration())) {
-          lds_search(label, si.ldsValue);
-          heuristicSeqSearch = true;
-        }
-        // Credit heuristic search
-        if ("credit".equals(si.exploration())) {
-          credit_search(label, si.creditValue, si.bbsValue);
-          heuristicSeqSearch = true;
-        }
+        heuristicSeqSearch |= applyHeuristicSearch(label, si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
       }
@@ -1430,17 +1359,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // Lds heuristic search
-        if ("lds".equals(si.exploration())) {
-          lds_search(label, si.ldsValue);
-          heuristicSeqSearch = true;
-        }
-        // Credit heuristic search
-        if ("credit".equals(si.exploration())) {
-          credit_search(label, si.creditValue, si.bbsValue);
-          heuristicSeqSearch = true;
-        }
-
+        heuristicSeqSearch |= applyHeuristicSearch(label, si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
       }
@@ -1476,16 +1395,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // Lds heuristic search
-        if ("lds".equals(si.exploration())) {
-          lds_search(label, si.ldsValue);
-          heuristicSeqSearch = true;
-        }
-        // Credit heuristic search
-        if ("credit".equals(si.exploration())) {
-          credit_search(label, si.creditValue, si.bbsValue);
-          heuristicSeqSearch = true;
-        }
+        heuristicSeqSearch |= applyHeuristicSearch(label, si);
         list_seq_searches.add(label);
         label.setPrintInfo(false);
       }
@@ -1849,6 +1759,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (debug) {
       IO.println(c);
     }
+  }
+
+  /**
+   * Applies LDS or Credit heuristic search exploration if configured on the search item.
+   *
+   * @param label the search to apply heuristic to
+   * @param si the search item with exploration configuration
+   * @return true if a heuristic was applied, false otherwise
+   */
+  boolean applyHeuristicSearch(DepthFirstSearch<T> label, SearchItem<T> si) {
+    if ("lds".equals(si.exploration())) {
+      lds_search(label, si.ldsValue);
+      return true;
+    }
+    if ("credit".equals(si.exploration())) {
+      credit_search(label, si.creditValue, si.bbsValue);
+      return true;
+    }
+    return false;
   }
 
   void lds_search(DepthFirstSearch<T> label, int ldsValue) {

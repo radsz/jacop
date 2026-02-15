@@ -323,6 +323,132 @@ public class SmallDenseDomain extends IntDomain {
     }
   }
 
+  /**
+   * Notifies the variable of a domain change using the appropriate event type.
+   *
+   * @param isSingleton true if the domain is now a singleton.
+   * @param boundEvent true if a bound (min or max) has changed.
+   * @param v the variable to notify.
+   */
+  private static void notifyEvent(boolean isSingleton, boolean boundEvent, Var v) {
+    if (isSingleton) {
+      v.domainHasChanged(GROUND);
+    } else {
+      if (boundEvent) {
+        v.domainHasChanged(BOUND);
+      } else {
+        v.domainHasChanged(ANY);
+      }
+    }
+  }
+
+  /**
+   * Computes the event type based on whether the domain is a singleton or whether bounds changed.
+   *
+   * @param isSingleton true if the domain is now a singleton.
+   * @param previousMin the previous minimum value.
+   * @param currentMin the current minimum value.
+   * @param previousMax the previous maximum value.
+   * @param currentMax the current maximum value.
+   * @return the event type (GROUND, BOUND, or ANY).
+   */
+  private static int computeEventType(
+      boolean isSingleton, int previousMin, int currentMin, int previousMax, int currentMax) {
+    if (isSingleton) {
+      return GROUND;
+    } else {
+      if (previousMin != currentMin || previousMax != currentMax) {
+        return BOUND;
+      } else {
+        return ANY;
+      }
+    }
+  }
+
+  /**
+   * Applies complement operation when stamp == storeLevel. Modifies this domain in place and
+   * notifies the variable.
+   *
+   * @param bitsResult the resulting bits after complement operation.
+   * @param newSize the new domain size.
+   * @param complementMin the minimum of the complement range.
+   * @param complementMax the maximum of the complement range.
+   * @param previousMin the previous minimum value.
+   * @param previousMax the previous maximum value.
+   * @param v the variable to notify.
+   */
+  private void applyComplementInPlace(
+      long bitsResult,
+      int newSize,
+      int complementMin,
+      int complementMax,
+      int previousMin,
+      int previousMax,
+      Var v) {
+    bits = bitsResult;
+    size = newSize;
+    if (newSize == 1) {
+      singleton = true;
+    }
+
+    boolean boundEvent = false;
+    if (this.minBound == complementMin) {
+      boundEvent = true;
+      adaptMin();
+    }
+    if (this.max == complementMax) {
+      this.max = previousValue(complementMax);
+      boundEvent = true;
+    }
+
+    assert max <= previousMax : "Domain update incorrect.";
+    assert minBound >= previousMin : "Domain update incorrect.";
+    assert checkInvariants() == null : checkInvariants();
+
+    notifyEvent(singleton, boundEvent, v);
+  }
+
+  /**
+   * Applies complement operation when stamp != storeLevel. Creates a new result domain, installs
+   * it, and notifies the variable.
+   *
+   * @param bitsResult the resulting bits after complement operation.
+   * @param newSize the new domain size.
+   * @param complementMin the minimum of the complement range.
+   * @param complementMax the maximum of the complement range.
+   * @param storeLevel the current store level.
+   * @param v the variable to notify.
+   */
+  private void applyComplementNewLevel(
+      long bitsResult, int newSize, int complementMin, int complementMax, int storeLevel, Var v) {
+    SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
+
+    boolean boundEvent = false;
+    if (this.minBound == complementMin) {
+      result.adaptMin();
+      boundEvent = true;
+    }
+
+    if (this.max == complementMax) {
+      result.max = result.previousValue(max);
+      boundEvent = true;
+    }
+
+    if (newSize == 1) {
+      result.singleton = true;
+    }
+
+    assert result.max <= max : "Domain update incorrect.";
+    assert result.minBound >= minBound : "Domain update incorrect.";
+
+    installResultDomain(result, storeLevel, v);
+
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+
+    notifyEvent(result.singleton(), boundEvent, v);
+  }
+
   /** It creates an empty domain. */
   public SmallDenseDomain() {
 
@@ -836,16 +962,7 @@ public class SmallDenseDomain extends IntDomain {
 
       assert checkInvariants() == null : checkInvariants();
 
-      if (singleton) {
-        v.domainHasChanged(GROUND);
-      } else {
-
-        if (previousMin != minBound || previousMax != max) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
+      notifyEvent(singleton, previousMin != minBound || previousMax != max, v);
 
     } else {
 
@@ -959,79 +1076,10 @@ public class SmallDenseDomain extends IntDomain {
 
     // Pruning has occurred.
 
-    final int previousMin = minBound;
-    final int previousMax = max;
-    boolean boundEvent = false;
-
     if (stamp == storeLevel) {
-
-      bits = bitsResult;
-      size = newSize;
-      if (newSize == 1) {
-        singleton = true;
-      }
-
-      if (this.minBound == complement) {
-        boundEvent = true;
-        adaptMin();
-      }
-      // 2. Find new max.
-      if (this.max == complement) {
-        this.max = previousValue(complement);
-        boundEvent = true;
-      }
-
-      assert max <= previousMax : "Domain update incorrect.";
-      assert minBound >= previousMin : "Domain update incorrect.";
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (singleton) {
-        v.domainHasChanged(GROUND);
-      } else {
-        if (boundEvent) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
-
+      applyComplementInPlace(bitsResult, newSize, complement, complement, minBound, max, v);
     } else {
-
-      SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
-
-      // 1. Find new min.
-      if (this.minBound == complement) {
-        result.adaptMin();
-        boundEvent = true;
-      }
-
-      if (this.max == complement) {
-        result.max = result.previousValue(max);
-        boundEvent = true;
-      }
-
-      if (newSize == 1) {
-        result.singleton = true;
-      }
-
-      assert result.max <= max : "Domain update incorrect.";
-      assert result.minBound >= minBound : "Domain update incorrect.";
-
-      installResultDomain(result, storeLevel, v);
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        if (boundEvent) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
+      applyComplementNewLevel(bitsResult, newSize, complement, complement, storeLevel, v);
     }
   }
 
@@ -1077,79 +1125,10 @@ public class SmallDenseDomain extends IntDomain {
 
     // Pruning has occurred.
 
-    final int previousMin = minBound;
-    final int previousMax = max;
-    boolean boundEvent = false;
-
     if (stamp == storeLevel) {
-
-      bits = bitsResult;
-      size = newSize;
-      if (newSize == 1) {
-        singleton = true;
-      }
-
-      if (this.minBound == minComplement) {
-        boundEvent = true;
-        adaptMin();
-      }
-      // 2. Find new max.
-      if (this.max == maxComplement) {
-        this.max = previousValue(maxComplement);
-        boundEvent = true;
-      }
-
-      assert max <= previousMax : "Domain update incorrect.";
-      assert minBound >= previousMin : "Domain update incorrect.";
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (singleton) {
-        v.domainHasChanged(GROUND);
-      } else {
-        if (boundEvent) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
-
+      applyComplementInPlace(bitsResult, newSize, minComplement, maxComplement, minBound, max, v);
     } else {
-
-      SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
-
-      // 1. Find new min.
-      if (this.minBound == minComplement) {
-        result.adaptMin();
-        boundEvent = true;
-      }
-
-      if (this.max == maxComplement) {
-        result.max = result.previousValue(max);
-        boundEvent = true;
-      }
-
-      if (newSize == 1) {
-        result.singleton = true;
-      }
-
-      assert result.max <= max : "Domain update incorrect.";
-      assert result.minBound >= minBound : "Domain update incorrect.";
-
-      installResultDomain(result, storeLevel, v);
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(GROUND);
-      } else {
-        if (boundEvent) {
-          v.domainHasChanged(BOUND);
-        } else {
-          v.domainHasChanged(ANY);
-        }
-      }
+      applyComplementNewLevel(bitsResult, newSize, minComplement, maxComplement, storeLevel, v);
     }
   }
 
@@ -1382,16 +1361,7 @@ public class SmallDenseDomain extends IntDomain {
 
       assert checkInvariants() == null : checkInvariants();
 
-      if (singleton) {
-        return GROUND;
-      } else {
-
-        if (previousMin != minBound || previousMax != max) {
-          return BOUND;
-        } else {
-          return ANY;
-        }
-      }
+      return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
@@ -1414,16 +1384,7 @@ public class SmallDenseDomain extends IntDomain {
         return GROUND;
       }
 
-      if (singleton) {
-        return GROUND;
-      } else {
-
-        if (previousMin != minBound || previousMax != max) {
-          return BOUND;
-        } else {
-          return ANY;
-        }
-      }
+      return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
@@ -1440,16 +1401,7 @@ public class SmallDenseDomain extends IntDomain {
         return GROUND;
       }
 
-      if (singleton) {
-        return GROUND;
-      } else {
-
-        if (previousMin != minBound || previousMax != max) {
-          return BOUND;
-        } else {
-          return ANY;
-        }
-      }
+      return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
     // TODO: used by in functions of BoundSetDomain.

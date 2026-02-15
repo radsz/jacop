@@ -51,6 +51,12 @@ public class CosPeqR extends AbstractTrigConstraint
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  private static final int INCREASING = 0;
+  private static final int DECREASING = 1;
+  private static final int PEAK = 2;
+  private static final int TROUGH = 3;
+  private static final int FULL_RANGE = 4;
+
   /**
    * It constructs cos(P) = Q constraints.
    *
@@ -84,93 +90,30 @@ public class CosPeqR extends AbstractTrigConstraint
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
 
+      int category = classifyBounds(intervalForMin, intervalForMax);
       double qMin;
       double qMax;
-      switch (intervalForMin) {
-        case 1:
-          switch (intervalForMax) {
-            case 1:
-              qMin = Math.cos(max);
-              qMax = Math.cos(min);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 2:
-              qMin = -1.0;
-              qMax = Math.max(Math.cos(min), Math.cos(max));
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 3:
-            case 4:
-              qMin = -1.0;
-              qMax = 1.0;
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+      switch (category) {
+        case INCREASING:
+          qMin = FloatDomain.down(Math.cos(min));
+          qMax = FloatDomain.up(Math.cos(max));
           break;
-
-        case 2:
-          switch (intervalForMax) {
-            case 2:
-              qMin = Math.cos(min);
-              qMax = Math.cos(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 3:
-              qMin = Math.min(Math.cos(min), Math.cos(max));
-              qMax = 1.0;
-              qMin = FloatDomain.down(qMin);
-              break;
-            case 4:
-              qMin = -1.0;
-              qMax = 1.0;
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case DECREASING:
+          qMin = FloatDomain.down(Math.cos(max));
+          qMax = FloatDomain.up(Math.cos(min));
           break;
-
-        case 3:
-          switch (intervalForMax) {
-            case 3:
-              qMin = Math.cos(max);
-              qMax = Math.cos(min);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 4:
-              qMin = -1.0;
-              qMax = Math.max(Math.cos(min), Math.cos(max));
-              qMax = FloatDomain.up(qMax);
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case PEAK:
+          qMin = FloatDomain.down(Math.min(Math.cos(min), Math.cos(max)));
+          qMax = 1.0;
           break;
-
-        case 4:
-          switch (intervalForMax) {
-            case 4:
-              qMin = Math.cos(min);
-              qMax = Math.cos(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case TROUGH:
+          qMin = -1.0;
+          qMax = FloatDomain.up(Math.max(Math.cos(min), Math.cos(max)));
           break;
-
-        default:
-          throw new InternalException(
-              "Selected impossible case in sin, cos, asin or acos constraint");
+        default: // FULL_RANGE
+          qMin = -1.0;
+          qMax = 1.0;
+          break;
       }
 
       q.domain.in(store.level, q, qMin, qMax);
@@ -179,6 +122,27 @@ public class CosPeqR extends AbstractTrigConstraint
       updatePDomain(store, qMin, qMax, Math::acos, 0.0, FloatDomain.PI);
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Classifies the bound-computation pattern for a pair of cos intervals.
+   *
+   * <p>Even intervals (2, 4) are increasing; odd intervals (1, 3) are decreasing. When min and max
+   * fall in the same interval the function is monotone. Adjacent intervals cross a peak
+   * (even-to-odd) or trough (odd-to-even). Wider spans cover the full range.
+   */
+  private static int classifyBounds(int intervalForMin, int intervalForMax) {
+    if (intervalForMax < intervalForMin) {
+      throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+    }
+    int diff = intervalForMax - intervalForMin;
+    if (diff == 0) {
+      return (intervalForMin % 2 == 0) ? INCREASING : DECREASING;
+    }
+    if (diff == 1) {
+      return (intervalForMin % 2 == 0) ? PEAK : TROUGH;
+    }
+    return FULL_RANGE;
   }
 
   int intervalNo(double d) {
@@ -222,9 +186,9 @@ public class CosPeqR extends AbstractTrigConstraint
     if (f.equals(q)) {
       // f = cos(p)
       // f' = -sin(p) * d(p)
-      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
+      FloatVar v2 = newDeriv(store);
       Derivative.poseDerivativeConstraint(new SinPeqR(p, v1));
       Derivative.poseDerivativeConstraint(new PmulCeqR(v1, -1.0, v2));
       Derivative.poseDerivativeConstraint(
@@ -233,11 +197,11 @@ public class CosPeqR extends AbstractTrigConstraint
     } else if (f.equals(p)) {
       // f = acos(q)
       // f' = d(q) * (-1/sqrt(1-q^2))
-      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v4 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
+      FloatVar v2 = newDeriv(store);
+      FloatVar v3 = newDeriv(store);
+      FloatVar v4 = newDeriv(store);
       Derivative.poseDerivativeConstraint(new PmulQeqR(q, q, v1));
       Derivative.poseDerivativeConstraint(new PminusQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
       Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));

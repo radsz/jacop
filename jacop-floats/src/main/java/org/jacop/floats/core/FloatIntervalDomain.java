@@ -69,6 +69,20 @@ public class FloatIntervalDomain extends FloatDomain {
    * Copies metadata from this domain into the result domain and installs it on the variable. Sets
    * prevDomain to this.
    */
+  /**
+   * Clones this domain and installs the clone on the variable, returning the clone for further
+   * modification.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the clone on
+   * @return the cloned domain
+   */
+  private FloatIntervalDomain cloneAndInstall(int storeLevel, Var v) {
+    FloatIntervalDomain result = this.cloneLight();
+    installResultDomain(result, storeLevel, v);
+    return result;
+  }
+
   private void installResultDomain(FloatIntervalDomain result, int storeLevel, Var v) {
     result.modelConstraints = modelConstraints;
     result.searchConstraints = searchConstraints;
@@ -91,6 +105,50 @@ public class FloatIntervalDomain extends FloatDomain {
       System.arraycopy(source.intervals, 0, intervals, 0, source.size);
     }
     size = source.size;
+  }
+
+  /**
+   * Applies a computed intersection result to the current domain or installs it as a new domain,
+   * then notifies the variable of the change.
+   *
+   * @param result the intersection result domain
+   * @param storeLevel the current store level
+   * @param v the variable being updated
+   * @param event the domain change event to fire
+   */
+  private void applyResultAndNotify(FloatIntervalDomain result, int storeLevel, Var v, int event) {
+    if (stamp == storeLevel) {
+      adoptIntervalsFrom(result);
+    } else {
+      assert stamp < storeLevel;
+      installResultDomain(result, storeLevel, v);
+    }
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    v.domainHasChanged(event);
+  }
+
+  /**
+   * Determines the appropriate event for a new-level complement result and notifies the variable.
+   *
+   * @param result the result domain after complement
+   * @param v the variable to notify
+   * @param counter the interval index where the change occurred
+   * @param isLow true if the change is at the low end of the interval (min was removed)
+   */
+  private static void notifyComplementEvent(
+      FloatIntervalDomain result, Var v, int counter, boolean isLow) {
+    assert result.checkInvariants() == null : result.checkInvariants();
+    if (result.singleton()) {
+      v.domainHasChanged(IntDomain.GROUND);
+      return;
+    }
+    int boundaryIndex = isLow ? 0 : result.size - 1;
+    if (counter == boundaryIndex) {
+      v.domainHasChanged(IntDomain.BOUND);
+    } else {
+      v.domainHasChanged(IntDomain.ANY);
+    }
   }
 
   /**
@@ -2234,21 +2292,8 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain result = computeRangeIntersection(min, max);
 
-    if (stamp == storeLevel) {
-      adoptIntervalsFrom(result);
-    } else {
-      assert stamp < storeLevel;
-      installResultDomain(result, storeLevel, v);
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-
-    if (result.singleton()) {
-      v.domainHasChanged(IntDomain.GROUND);
-    } else {
-      v.domainHasChanged(IntDomain.BOUND);
-    }
+    applyResultAndNotify(
+        result, storeLevel, v, result.singleton() ? IntDomain.GROUND : IntDomain.BOUND);
   }
 
   /**
@@ -2278,21 +2323,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-
-    int returnedEvent = computeEvent(result);
-
-    if (stamp == storeLevel) {
-      adoptIntervalsFrom(result);
-    } else {
-      assert stamp < storeLevel;
-      installResultDomain(result, storeLevel, v);
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-
-    v.domainHasChanged(returnedEvent);
+    applyResultAndNotify(result, storeLevel, v, computeEvent(result));
   }
 
   /** It returns the number intervals into which this domain is split. */
@@ -2401,45 +2432,18 @@ public class FloatIntervalDomain extends FloatDomain {
         if (intervals[counter].max() != complement) {
 
           System.arraycopy(intervals, 0, result.intervals, 0, size);
-
           result.intervals[counter] =
               new FloatInterval(next(complement), result.intervals[counter].max());
-
           result.size = size;
-
-          assert result.checkInvariants() == null : result.checkInvariants();
           assert checkInvariants() == null : checkInvariants();
+          notifyComplementEvent(result, v, counter, true);
 
-          if (result.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          if (counter == 0) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
           System.arraycopy(intervals, 0, result.intervals, 0, counter);
-
           System.arraycopy(intervals, counter + 1, result.intervals, counter, size - counter - 1);
-
           result.size = size - 1;
-
-          assert result.checkInvariants() == null : result.checkInvariants();
-
-          if (result.singleton()) {
-            v.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          if (counter == 0 || counter == size - 1) {
-            v.domainHasChanged(IntDomain.BOUND);
-          } else {
-            v.domainHasChanged(IntDomain.ANY);
-          }
+          notifyComplementEvent(result, v, counter, true);
         }
         return;
       }
@@ -2450,24 +2454,11 @@ public class FloatIntervalDomain extends FloatDomain {
         // care of above.
 
         System.arraycopy(intervals, 0, result.intervals, 0, size);
-
         result.intervals[counter] =
             new FloatInterval(result.intervals[counter].min(), previous(complement));
-
         result.size = size;
-
         assert checkInvariants() == null : checkInvariants();
-        assert result.checkInvariants() == null : result.checkInvariants();
-
-        if (result.singleton()) {
-          v.domainHasChanged(IntDomain.GROUND);
-          return;
-        }
-        if (counter == size - 1) {
-          v.domainHasChanged(IntDomain.BOUND);
-        } else {
-          v.domainHasChanged(IntDomain.ANY);
-        }
+        notifyComplementEvent(result, v, counter, false);
         return;
       }
 
@@ -2729,19 +2720,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-
-    int returnedEvent = computeEvent(result);
-
-    if (stamp == storeLevel) {
-      adoptIntervalsFrom(result);
-    } else {
-      assert stamp < storeLevel;
-      installResultDomain(result, storeLevel, v);
-    }
-
-    v.domainHasChanged(returnedEvent);
+    applyResultAndNotify(result, storeLevel, v, computeEvent(result));
   }
 
   /** It specifies if the domain type is more suited to representing sparse domain. */
@@ -2845,12 +2824,7 @@ public class FloatIntervalDomain extends FloatDomain {
   public void removeSearchConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
-
-      FloatIntervalDomain result = this.cloneLight();
-
-      installResultDomain(result, storeLevel, v);
-
-      result.removeSearchConstraint(storeLevel, v, constraint);
+      cloneAndInstall(storeLevel, v).removeSearchConstraint(storeLevel, v, constraint);
       return;
     }
 
@@ -2881,12 +2855,7 @@ public class FloatIntervalDomain extends FloatDomain {
   public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
-
-      FloatIntervalDomain result = this.cloneLight();
-
-      installResultDomain(result, storeLevel, v);
-
-      result.removeSearchConstraint(storeLevel, v, position, constraint);
+      cloneAndInstall(storeLevel, v).removeSearchConstraint(storeLevel, v, position, constraint);
       return;
     }
 

@@ -52,12 +52,7 @@ object NetExample extends App with jacop {
   assignment()
 
 
-  def simpleNet(): Unit = {
-    var T1: Long = 0
-    var T2: Long = 0
-    var T: Long = 0
-    T1 = System.currentTimeMillis()
-
+  def simpleNet(): Unit = timed {
 
     val x = new Array[IntVar](8)
 
@@ -95,41 +90,11 @@ object NetExample extends App with jacop {
     net.arc(B, sink, 0, x(6))
     net.arc(D, sink, 0, x(7))
 
-    val cost = new IntVar("cost", 0, 1000)
-    net.cost(cost)
-    COST = cost
-
-    network_flow(net)
-
-    vars = x
-
     numberSolutions(3)
-    val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
-      search(List(cost), input_order, indomain_min)),
-      cost,
-      printCost(), printSol())
-    statistics()
-
-    if (Result) {
-      System.out.println("*** Yes")
-      System.out.println(cost)
-    }
-    else
-      System.out.println("*** No")
-
-    T2 = System.currentTimeMillis()
-    T = T2 - T1
-    println("\n\t*** Execution time = " + T + " ms")
-
-
+    solveNetworkFlow(net, x)
   }
 
-  def transportationProblem(): Unit = {
-    var T1: Long = 0
-    var T2: Long = 0
-    var T: Long = 0
-    T1 = System.currentTimeMillis()
-
+  def transportationProblem(): Unit = timed {
 
     var net = new network
 
@@ -182,41 +147,10 @@ object NetExample extends App with jacop {
     net.arc(E, sinkE, 0, x(11))
     net.arc(F, sinkF, 0, x(12))
 
-    val cost = new IntVar("cost", 0, 1000)
-    net.cost(cost)
-    COST = cost
-
-
-    network_flow(net)
-
-    vars = x
-
-    val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
-      search(List(cost), input_order, indomain_min)),
-      cost,
-      printCost(), printSol())
-
-    statistics()
-
-    if (Result) {
-      System.out.println("*** Yes")
-      System.out.println(cost)
-    }
-    else
-      System.out.println("*** No")
-
-    T2 = System.currentTimeMillis()
-    T = T2 - T1
-    System.out.println("\n\t*** Execution time = " + T + " ms")
+    solveNetworkFlow(net, x)
   }
 
-  def assignment(): Unit = {
-
-    var T1: Long = 0
-    var T2: Long = 0
-    var T: Long = 0
-    T1 = System.currentTimeMillis()
-
+  def assignment(): Unit = timed {
 
     var net = new network
 
@@ -261,6 +195,17 @@ object NetExample extends App with jacop {
     net.arc(D, n3, 13, x(10))
     net.arc(D, n4, 17, x(11))
 
+    solveNetworkFlow(net, x)
+  }
+
+  private def timed(block: => Unit): Unit = {
+    val t1 = System.currentTimeMillis()
+    block
+    val t2 = System.currentTimeMillis()
+    System.out.println("\n\t*** Execution time = " + (t2 - t1) + " ms")
+  }
+
+  private def solveNetworkFlow(net: network, x: Array[IntVar]): Unit = {
     val cost = new IntVar("cost", 0, 1000)
     net.cost(cost)
     COST = cost
@@ -269,25 +214,19 @@ object NetExample extends App with jacop {
 
     vars = x
 
-    // numberSolutions(2)
-    val Result = minimize_seq(List(search(x.toList, input_order, indomain_min),
+    val result = minimize_seq(List(search(x.toList, input_order, indomain_min),
       search(List(cost), input_order, indomain_min)),
       cost,
       printCost(), printSol())
 
     statistics()
 
-    if (Result) {
+    if (result) {
       System.out.println("*** Yes")
       System.out.println(cost)
     }
     else
       System.out.println("*** No")
-
-    T2 = System.currentTimeMillis()
-    T = T2 - T1
-    System.out.println("\n\t*** Execution time = " + T + " ms")
-
   }
 
   def printCost() = () => {

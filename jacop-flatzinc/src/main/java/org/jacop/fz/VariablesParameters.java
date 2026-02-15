@@ -96,6 +96,72 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   /**
+   * Initializes the dictionary and annotations for a generation method.
+   *
+   * @param table the table to use as dictionary
+   */
+  private void initContext(Tables table) {
+    dictionary = table;
+    annotations = new HashSet<>();
+  }
+
+  /**
+   * Validates and adjusts float interval bounds, printing warnings if they exceed MIN_FLOAT or
+   * MAX_FLOAT.
+   *
+   * @param ident the variable identifier for error messages
+   * @param varKind the kind of variable (e.g., "float variable" or "array float variable")
+   */
+  private void validateFloatInterval(String ident, String varKind) {
+    if (lowFloatInterval > highFloatInterval) {
+      throw Store.failException;
+    }
+    if (lowFloatInterval < MIN_FLOAT) {
+      System.err.println(
+          "Minimal value for " + varKind + " " + ident + " too low; changed to " + MIN_FLOAT);
+      lowFloatInterval = MIN_FLOAT;
+    }
+    if (highFloatInterval > MAX_FLOAT) {
+      System.err.println(
+          "Maximal value for " + varKind + " " + ident + " too high; changed to " + MAX_FLOAT);
+      highFloatInterval = MAX_FLOAT;
+    }
+  }
+
+  /**
+   * Extracts and validates an integer interval from an AST node, storing the result in
+   * lowInterval/highInterval.
+   *
+   * @param tail the AST node containing interval bounds
+   */
+  private void extractIntInterval(ASTIntTiExprTail tail) {
+    lowInterval = tail.getLow();
+    highInterval = tail.getHigh();
+    if (CHECK_BOUNDS) {
+      if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
+        throw new ArithmeticException(
+            "Too large bounds on intervals " + lowInterval + ".." + highInterval);
+      }
+    }
+  }
+
+  /**
+   * Extracts and validates an integer list from an AST node, storing the result in intList.
+   *
+   * @param intLiterals the AST node containing the list of integers
+   */
+  private void extractIntList(ASTIntLiterals intLiterals) {
+    intList = intLiterals.getList();
+    if (CHECK_BOUNDS) {
+      for (Integer e : intList) {
+        if (e < IntDomain.MIN_INT || e > IntDomain.MAX_INT) {
+          throw new ArithmeticException("Too large element in set " + e);
+        }
+      }
+    }
+  }
+
+  /**
    * It generates a parameter from a given node and stores information about it in the table.
    *
    * @param node the node from which the parameter is being generated.
@@ -103,8 +169,7 @@ public class VariablesParameters implements ParserTreeConstants {
    */
   void generateParameters(SimpleNode node, Tables table) {
 
-    dictionary = table;
-    annotations = new HashSet<>();
+    initContext(table);
 
     int type = getType(node);
 
@@ -143,8 +208,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
   void generateVariables(SimpleNode node, Tables table, Store store) {
 
-    dictionary = table;
-    annotations = new HashSet<>();
+    initContext(table);
     boolean outputVar = false;
 
     int type = getType(node);
@@ -251,19 +315,7 @@ public class VariablesParameters implements ParserTreeConstants {
         break;
       case 9: // float interval
         ident = ((ASTVarDeclItem) node).getIdent();
-        if (lowFloatInterval > highFloatInterval) {
-          throw Store.failException;
-        }
-        if (lowFloatInterval < MIN_FLOAT) {
-          System.err.println(
-              "Minimal value for float variable " + ident + " too low; changed to " + MIN_FLOAT);
-          lowFloatInterval = MIN_FLOAT;
-        }
-        if (highFloatInterval > MAX_FLOAT) {
-          System.err.println(
-              "Maximal value for float variable " + ident + " too high; changed to " + MAX_FLOAT);
-          highFloatInterval = MAX_FLOAT;
-        }
+        validateFloatInterval(ident, "float variable");
         varFloat = new FloatVar(store, ident, lowFloatInterval, highFloatInterval);
         initAndRegisterFloatVar(store, ident, varFloat, node, initChild, table, outputVar);
         break;
@@ -374,8 +426,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
   void generateArrayParameters(SimpleNode node, Tables table) {
 
-    dictionary = table;
-    annotations = new HashSet<>();
+    initContext(table);
 
     int type = getType(node);
 
@@ -418,8 +469,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
   void generateArrayVariables(SimpleNode node, Tables table, Store store) {
 
-    dictionary = table;
-    annotations = new HashSet<>();
+    initContext(table);
     indexBounds = new ArrayList<>();
     boolean outputArray = false;
     OutputArrayAnnotation outArrayAnn = null;
@@ -611,25 +661,7 @@ public class VariablesParameters implements ParserTreeConstants {
         break;
       case 9: // array of float interval
         size = computeArraySize(node);
-        if (lowFloatInterval > highFloatInterval) {
-          throw Store.failException;
-        }
-        if (lowFloatInterval < MIN_FLOAT) {
-          System.err.println(
-              "Minimal value for array float variable "
-                  + ident
-                  + " too low; changed to "
-                  + MIN_FLOAT);
-          lowFloatInterval = MIN_FLOAT;
-        }
-        if (highFloatInterval > MAX_FLOAT) {
-          System.err.println(
-              "Maximal value for array float variable "
-                  + ident
-                  + " too high; changed to "
-                  + MAX_FLOAT);
-          highFloatInterval = MAX_FLOAT;
-        }
+        validateFloatInterval(ident, "array float variable");
         if (initChild < node.jjtGetNumChildren()) {
           varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
         } else {
@@ -700,25 +732,10 @@ public class VariablesParameters implements ParserTreeConstants {
         case 0: // int
           break;
         case 1: // int interval
-          lowInterval = ((ASTIntTiExprTail) child).getLow();
-          highInterval = ((ASTIntTiExprTail) child).getHigh();
-          if (CHECK_BOUNDS) {
-            if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
-              throw new ArithmeticException(
-                  "Too large bounds on intervals " + lowInterval + ".." + highInterval);
-            }
-          }
+          extractIntInterval((ASTIntTiExprTail) child);
           break;
         case 2: // int list
-          SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
-          intList = ((ASTIntLiterals) grand_child).getList();
-          if (CHECK_BOUNDS) {
-            for (Integer e : intList) {
-              if (e < IntDomain.MIN_INT || e > IntDomain.MAX_INT) {
-                throw new ArithmeticException("Too large element in set " + e);
-              }
-            }
-          }
+          extractIntList((ASTIntLiterals) child.jjtGetChild(0));
           break;
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
@@ -735,25 +752,10 @@ public class VariablesParameters implements ParserTreeConstants {
           case 0: // int
             break;
           case 1: // int interval
-            lowInterval = ((ASTIntTiExprTail) grand_child).getLow();
-            highInterval = ((ASTIntTiExprTail) grand_child).getHigh();
-            if (CHECK_BOUNDS) {
-              if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
-                throw new ArithmeticException(
-                    "Too large bounds on intervals " + lowInterval + ".." + highInterval);
-              }
-            }
+            extractIntInterval((ASTIntTiExprTail) grand_child);
             break;
           case 2: // int list
-            SimpleNode grand_grand_child = (SimpleNode) grand_child.jjtGetChild(0);
-            intList = ((ASTIntLiterals) grand_grand_child).getList();
-            if (CHECK_BOUNDS) {
-              for (Integer e : intList) {
-                if (e < IntDomain.MIN_INT || e > IntDomain.MAX_INT) {
-                  throw new ArithmeticException("Too large element in set " + e);
-                }
-              }
-            }
+            extractIntList((ASTIntLiterals) grand_child.jjtGetChild(0));
             break;
           case 3: // range set
             rangeDomain = new IntervalDomain();

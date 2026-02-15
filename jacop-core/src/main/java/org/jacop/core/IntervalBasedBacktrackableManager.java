@@ -478,60 +478,31 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       return true;
     }
 
-    if (trailContainsAllChanges) {
-
-      if (addingToIntervals) {
-
-        // trail used interval description.
-        int[] trailLevel = trail.getLast();
-
-        for (int i = 0; i < trailLevel.length; ) {
-          if (trailLevel[i] <= index && index <= trailLevel[i + 1]) {
-            // within a hole.
-            return false;
-          }
-          if (trailLevel[i] > index) {
-            // before a hole.
-            return true;
-          }
-          i += 2;
-        }
-        // it did not hit any hole.
-        return true;
-      }
-
-      // number of changes was too small to use intervals, just a list is used.
-      int[] trailLevel = trail.getLast();
-
-      for (int i : trailLevel) {
-        if (i == index) {
-          return true;
-        }
-      }
-
-      return false;
-
-    } else {
-
-      if (addingToIntervals) {
-
-        for (int i = 0; i < currentIntervals.length; ) {
-          if (currentIntervals[i] <= index && index <= currentIntervals[i + 1]) {
-            // within a hole.
-            return false;
-          }
-          if (currentIntervals[i] > index) {
-            // before a hole.
-            return true;
-          }
-          i += 2;
-        }
-        // it did not hit any hole.
-        return true;
-      }
-
-      // SparseSet contains all changes for the current level.
-      return currentlyChanged.isMember(index);
+    if (addingToIntervals) {
+      int[] intervals = trailContainsAllChanges ? trail.getLast() : currentIntervals;
+      return !isInHole(intervals, index);
     }
+
+    return super.isRecognizedAsChanged(index);
+  }
+
+  /**
+   * Checks whether the given index falls within a "hole" (unchanged region) in the interval
+   * representation.
+   *
+   * @param intervals the interval array (pairs of [start, end])
+   * @param index the index to check
+   * @return true if the index is within a hole (i.e., unchanged), false otherwise
+   */
+  private static boolean isInHole(int[] intervals, int index) {
+    for (int i = 0; i < intervals.length; i += 2) {
+      if (intervals[i] <= index && index <= intervals[i + 1]) {
+        return true;
+      }
+      if (intervals[i] > index) {
+        return false;
+      }
+    }
+    return false;
   }
 }

@@ -227,6 +227,16 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
     return IntDomain.BOUND;
   }
 
+  /**
+   * Creates a new derivative variable with full float range.
+   *
+   * @param store the constraint store
+   * @return a new FloatVar with Derivative min/max bounds
+   */
+  protected static FloatVar newDeriv(Store store) {
+    return new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+  }
+
   @Override
   public abstract String toString();
 }

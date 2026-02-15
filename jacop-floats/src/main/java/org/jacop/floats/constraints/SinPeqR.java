@@ -215,9 +215,4 @@ public class SinPeqR extends AbstractTrigConstraint
 
     return null;
   }
-
-  /** Creates a new derivative variable with full float range. */
-  private static FloatVar newDeriv(Store store) {
-    return new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-  }
 }

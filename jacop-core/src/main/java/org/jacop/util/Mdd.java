@@ -496,13 +496,13 @@ public class Mdd {
   }
 
   /**
-   * It finds a position of a value inside the array.
+   * Performs binary search on the given array, returning the left and right boundary positions.
    *
-   * @param value the value being searched.
-   * @param values the array in which the value is being searched for.
-   * @return position of the value in the array.
+   * @param value the value to search for.
+   * @param values the array to search in.
+   * @return an array of two elements: [left, right] boundary positions after the search.
    */
-  public int findPosition(int value, int[] values) {
+  private int[] binarySearchBounds(int value, int[] values) {
 
     int left = 0;
     int right = values.length - 1;
@@ -531,12 +531,26 @@ public class Mdd {
       position = (left + right) >> 1;
     }
 
-    if (values[left] == value) {
-      return left;
+    return new int[] {left, right};
+  }
+
+  /**
+   * It finds a position of a value inside the array.
+   *
+   * @param value the value being searched.
+   * @param values the array in which the value is being searched for.
+   * @return position of the value in the array.
+   */
+  public int findPosition(int value, int[] values) {
+
+    int[] bounds = binarySearchBounds(value, values);
+
+    if (values[bounds[0]] == value) {
+      return bounds[0];
     }
 
-    if (values[right] == value) {
-      return right;
+    if (values[bounds[1]] == value) {
+      return bounds[1];
     }
 
     return -1;
@@ -551,37 +565,12 @@ public class Mdd {
    */
   protected int findRange(int value, int[] values) {
 
-    int left = 0;
-    int right = values.length - 1;
+    int[] bounds = binarySearchBounds(value, values);
 
-    int position = (left + right) >> 1;
-
-    if (DEBUG_ALL) {
-      log.debug("Looking for {}", value);
-      for (int v : values) {
-        log.debug("val {}", v);
-      }
-    }
-
-    while (!(left + 1 >= right)) {
-
-      if (DEBUG_ALL) {
-        log.debug("left {} right {} position {}", left, right, position);
-      }
-
-      if (values[position] > value) {
-        right = position;
-      } else {
-        left = position;
-      }
-
-      position = (left + right) >> 1;
-    }
-
-    if (values[right] <= value) {
-      return right;
+    if (values[bounds[1]] <= value) {
+      return bounds[1];
     } else {
-      return left;
+      return bounds[0];
     }
   }
 

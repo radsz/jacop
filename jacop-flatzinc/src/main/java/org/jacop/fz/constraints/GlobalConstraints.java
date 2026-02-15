@@ -163,6 +163,43 @@ class GlobalConstraints implements ParserTreeConstants {
     this.support = support;
   }
 
+  /**
+   * Filters out entries where the boolean variable is false (max == 0) from parallel arrays.
+   *
+   * @param b the boolean variable array
+   * @param x the corresponding value array
+   * @return a pair of filtered arrays: [filteredB, filteredX]
+   */
+  private static IntVar[][] filterFalseEntries(IntVar[] b, IntVar[] x) {
+    ArrayList<IntVar> bn = new ArrayList<>();
+    ArrayList<IntVar> xn = new ArrayList<>();
+    for (int i = 0; i < b.length; i++) {
+      if (b[i].max() != 0) {
+        bn.add(b[i]);
+        xn.add(x[i]);
+      }
+    }
+    return new IntVar[][] {bn.toArray(new IntVar[0]), xn.toArray(new IntVar[0])};
+  }
+
+  /**
+   * Checks for duplicate variables in the given array and throws a FailException if any are found.
+   *
+   * @param vars the array of variables to check
+   */
+  private static void checkForDuplicateVariables(IntVar[] vars) {
+    HashSet<IntVar> varSet = new HashSet<>();
+    for (IntVar value : vars) {
+      if (varSet.contains(value)) {
+        // problem unsatisfied since the same variables are on the list;
+        // cannot get different values.
+        throw Store.failException;
+      } else {
+        varSet.add(value);
+      }
+    }
+  }
+
   void gen_jacop_cumulative(SimpleNode node) {
 
     // possible to control when edge find algorithm is used for Cumulative constraint
@@ -374,16 +411,7 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
-    HashSet<IntVar> varSet = new HashSet<>();
-    for (IntVar value : v) {
-      if (varSet.contains(value)) {
-        // problem unsatisfied since the same variables are on the list;
-        // cannot get different values.
-        throw Store.failException;
-      } else {
-        varSet.add(value);
-      }
-    }
+    checkForDuplicateVariables(v);
 
     IntervalDomain dom = new IntervalDomain();
     for (IntVar vv : v) {
@@ -445,16 +473,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // we do not not pose Alldistinct directly because of possible inconsistency with its
     // intiallization; we collect all vectors and pose it at the end when all constraints are posed
 
-    HashSet<IntVar> varSet = new HashSet<>();
-    for (IntVar intVar : v) {
-      if (varSet.contains(intVar)) {
-        // problem unsatisfied since the same variables are on the list;
-        // cannot get different values.
-        throw Store.failException;
-      } else {
-        varSet.add(intVar);
-      }
-    }
+    checkForDuplicateVariables(v);
 
     support.parameterListForAlldistincts.add(v);
   }
@@ -1230,6 +1249,61 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
   }
 
+  /**
+   * Builds a DFA with the given number of states, initial state, and final states.
+   *
+   * @param Q the number of states
+   * @param q0 the initial state (1-based)
+   * @param F the set of final states (1-based)
+   * @return a pair of [Fsm dfa, FsmState[] states]
+   */
+  private static Object[] buildDfaStructure(int Q, int q0, IntDomain F) {
+    Fsm dfa = new Fsm();
+    FsmState[] s = new FsmState[Q];
+    for (int i = 0; i < s.length; i++) {
+      s[i] = new FsmState();
+      dfa.allStates.add(s[i]);
+    }
+    dfa.initState = s[q0 - 1];
+    ValueEnumeration finalStates = F.valueEnumeration();
+    while (finalStates.hasMoreElements()) {
+      dfa.finalStates.add(s[finalStates.nextElement() - 1]);
+    }
+    return new Object[] {dfa, s};
+  }
+
+  /**
+   * Adds transitions from a condition map to a state.
+   *
+   * @param state the source state
+   * @param condition the map of next-state index to transition domain
+   * @param states the array of all states
+   */
+  private static void addTransitionsFromCondition(
+      FsmState state, Map<Integer, IntDomain> condition, FsmState[] states) {
+    for (Map.Entry<Integer, IntDomain> e : condition.entrySet()) {
+      state.transitions.add(new FsmTransition(e.getValue(), states[e.getKey()]));
+    }
+  }
+
+  /**
+   * Adds a transition value to the condition map, merging into existing domains.
+   *
+   * @param condition the condition map
+   * @param nextState the next state index
+   * @param transitionValue the transition value
+   */
+  private static void addTransitionValue(
+      Map<Integer, IntDomain> condition, int nextState, int transitionValue) {
+    if (condition.containsKey(nextState)) {
+      IntervalDomain c = (IntervalDomain) condition.get(nextState);
+      c.addLastElement(transitionValue);
+      condition.put(nextState, c);
+    } else {
+      condition.put(nextState, new IntervalDomain(transitionValue, transitionValue));
+    }
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int Q = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -1244,43 +1318,19 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    // Build DFA
-    Fsm dfa = new Fsm();
-    FsmState[] s = new FsmState[Q];
-    for (int i = 0; i < s.length; i++) {
-      s[i] = new FsmState();
-      dfa.allStates.add(s[i]);
-    }
-    dfa.initState = s[q0 - 1];
-    ValueEnumeration final_states = F.valueEnumeration(); // new SetValueEnumeration(F);
-    while (final_states.hasMoreElements()) {
-      dfa.finalStates.add(s[final_states.nextElement() - 1]);
-    }
+    Object[] dfaParts = buildDfaStructure(Q, q0, F);
+    Fsm dfa = (Fsm) dfaParts[0];
+    FsmState[] s = (FsmState[]) dfaParts[1];
 
     for (int i = 0; i < Q; i++) {
-      // mapping current -> next & tarnasition condition
+      // mapping current -> next & transition condition
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S; j++) {
         if (d[i * S + j] != 0) {
-          int nextState = d[i * S + j] - minIndex;
-          if (condition.containsKey(nextState)) {
-            IntervalDomain c = (IntervalDomain) condition.get(nextState);
-            c.addLastElement(j + minIndex);
-            condition.put(nextState, c);
-          } else {
-            condition.put(nextState, new IntervalDomain(j + minIndex, j + minIndex));
-          }
+          addTransitionValue(condition, d[i * S + j] - minIndex, j + minIndex);
         }
       }
-
-      Set<Map.Entry<Integer, IntDomain>> entries = condition.entrySet();
-
-      for (Map.Entry<Integer, IntDomain> e : entries) {
-        int nextState = e.getKey();
-        IntDomain transition = e.getValue();
-
-        s[i].transitions.add(new FsmTransition(transition, s[nextState]));
-      }
+      addTransitionsFromCondition(s[i], condition, s);
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
@@ -1300,46 +1350,21 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    // Build DFA
-    Fsm dfa = new Fsm();
-    FsmState[] s = new FsmState[Q];
-    for (int i = 0; i < s.length; i++) {
-      s[i] = new FsmState();
-      dfa.allStates.add(s[i]);
-    }
-    dfa.initState = s[q0 - 1];
-    ValueEnumeration final_states = F.valueEnumeration();
-    while (final_states.hasMoreElements()) {
-      dfa.finalStates.add(s[final_states.nextElement() - 1]);
-    }
+    Object[] dfaParts = buildDfaStructure(Q, q0, F);
+    Fsm dfa = (Fsm) dfaParts[0];
+    FsmState[] s = (FsmState[]) dfaParts[1];
 
     for (int i = 0; i < Q; i++) {
-
-      // mapping current -> next & tarnasition condition
+      // mapping current -> next & transition condition
       ValueEnumeration valueTransition = S.valueEnumeration();
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S.getSize(); j++) {
         int valTran = valueTransition.nextElement();
         if (d[i * S.getSize() + j] != 0) {
-          int nextState = d[i * S.getSize() + j] - minIndex;
-          if (condition.containsKey(nextState)) {
-            IntervalDomain c = (IntervalDomain) condition.get(nextState);
-            c.addLastElement(valTran);
-            condition.put(nextState, c);
-          } else {
-            condition.put(nextState, new IntervalDomain(valTran, valTran));
-          }
+          addTransitionValue(condition, d[i * S.getSize() + j] - minIndex, valTran);
         }
       }
-
-      Set<Map.Entry<Integer, IntDomain>> entries = condition.entrySet();
-
-      for (Map.Entry<Integer, IntDomain> e : entries) {
-        int nextState = e.getKey();
-        IntDomain transition = e.getValue();
-
-        s[i].transitions.add(new FsmTransition(transition, s[nextState]));
-      }
+      addTransitionsFromCondition(s[i], condition, s);
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
@@ -1662,16 +1687,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     // filter false values of b
-    ArrayList<IntVar> bn = new ArrayList<>();
-    ArrayList<IntVar> xn = new ArrayList<>();
-    for (int i = 0; i < b.length; i++) {
-      if (b[i].max() != 0) {
-        bn.add(b[i]);
-        xn.add(x[i]);
-      }
-    }
-    b = bn.toArray(new IntVar[0]);
-    x = xn.toArray(new IntVar[0]);
+    IntVar[][] filtered = filterFalseEntries(b, x);
+    b = filtered[0];
+    x = filtered[1];
 
     int n = x.length;
     if (n == 2) {
@@ -1706,16 +1724,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     // filter false values of b
-    ArrayList<IntVar> bn = new ArrayList<>();
-    ArrayList<IntVar> xn = new ArrayList<>();
-    for (int i = 0; i < b.length; i++) {
-      if (b[i].max() != 0) {
-        bn.add(b[i]);
-        xn.add(x[i]);
-      }
-    }
-    b = bn.toArray(new IntVar[0]);
-    x = xn.toArray(new IntVar[0]);
+    IntVar[][] filtered = filterFalseEntries(b, x);
+    b = filtered[0];
+    x = filtered[1];
 
     int n = x.length;
     if (n == 2) {
@@ -1867,8 +1878,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     IntVar one = support.dictionary.getConstant(1);
-    IntVar[] ones = new IntVar[str.length];
-    Arrays.fill(ones, one);
+    IntVar[] ones = createFilledArray(one, str.length);
 
     support.pose(new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true));
   }
@@ -1879,11 +1889,16 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     IntVar one = support.dictionary.getConstant(1);
-    IntVar[] ones = new IntVar[str.length];
-    Arrays.fill(ones, one);
+    IntVar[] ones = createFilledArray(one, str.length);
 
     support.pose(
         Diffn.builder().origin1(str).origin2(ones).length1(dur).length2(opt).strict(true).build());
+  }
+
+  private static IntVar[] createFilledArray(IntVar value, int length) {
+    IntVar[] array = new IntVar[length];
+    Arrays.fill(array, value);
+    return array;
   }
 
   IntVar[] removeDuplicates(IntVar[] x) {
