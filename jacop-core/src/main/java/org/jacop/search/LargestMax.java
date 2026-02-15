@@ -42,7 +42,9 @@ import org.jacop.core.IntVar;
 public class LargestMax<T extends IntVar> implements ComparatorVariable<T> {
 
   /** It constructs variable comparator with priority based on the largest maximal value. */
-  public LargestMax() {}
+  public LargestMax() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's maximum domain value.

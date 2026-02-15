@@ -43,7 +43,9 @@ import org.jacop.core.IntVar;
 public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {
 
   /** It constructs the variable comparator based on the smallest maximal value from the domain. */
-  public SmallestMax() {}
+  public SmallestMax() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's maximum domain value.

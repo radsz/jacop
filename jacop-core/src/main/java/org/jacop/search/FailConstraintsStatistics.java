@@ -92,10 +92,14 @@ public class FailConstraintsStatistics implements ConsistencyListener {
   }
 
   /** {@inheritDoc} */
-  public void setChildrenListeners(ConsistencyListener[] children) {}
+  public void setChildrenListeners(ConsistencyListener[] children) {
+    // No-op: this listener does not use child listeners.
+  }
 
   /** {@inheritDoc} */
-  public void setChildrenListeners(ConsistencyListener child) {}
+  public void setChildrenListeners(ConsistencyListener child) {
+    // No-op: this listener does not use child listeners.
+  }
 
   void collectFailStatistics(Constraint currentConstraint) {
 

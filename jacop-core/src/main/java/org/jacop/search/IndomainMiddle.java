@@ -45,7 +45,9 @@ import org.jacop.core.IntervalDomain;
 public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
   /** It creates Indomain heuristic which chooses the middle value. */
-  public IndomainMiddle() {}
+  public IndomainMiddle() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /** It requires IntVar variable. */
   public int indomain(IntVar v) {

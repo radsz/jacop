@@ -159,18 +159,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // use restart search if defined by options in command line;
     // default "none"
     switch (opt.getRestartType()) {
-      case none:
+      case NONE:
         break;
-      case constant:
+      case CONSTANT:
         restartCalculator = new ConstantCalculator(opt.getRestartScale());
         break;
-      case linear:
+      case LINEAR:
         restartCalculator = new LinearCalculator(opt.getRestartScale());
         break;
-      case luby:
+      case LUBY:
         restartCalculator = new LubyCalculator(opt.getRestartScale());
         break;
-      case geometric:
+      case GEOMETRIC:
         restartCalculator = new GeometricCalculator(opt.getRestartBase(), opt.getRestartScale());
         break;
       default:
@@ -1299,7 +1299,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.debug()) {
       String s = "% " + failStatistics.toString();
-      IO.println(s.replaceAll("\n", "\n% "));
+      IO.println(s.replace("\n", "\n% "));
     }
   }
 

@@ -43,7 +43,9 @@ import org.jacop.core.IntVar;
 public class IndomainMax<T extends IntVar> implements Indomain<T> {
 
   /** It creates an IndomainMax heuristic. */
-  public IndomainMax() {}
+  public IndomainMax() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * It returns the maximal value from the domain of the variable.

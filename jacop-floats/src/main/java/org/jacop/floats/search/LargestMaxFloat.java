@@ -43,7 +43,9 @@ import org.jacop.search.ComparatorVariable;
 public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T> {
 
   /** It constructs variable comparator with priority based on the largest maximal value. */
-  public LargestMaxFloat() {}
+  public LargestMaxFloat() {
+    // Default constructor; no state to initialize.
+  }
 
   /**
    * Compares a metric value with a variable's maximum domain value.

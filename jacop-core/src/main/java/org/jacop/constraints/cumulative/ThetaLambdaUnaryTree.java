@@ -48,7 +48,9 @@ class ThetaLambdaUnaryTree extends ThetaTree {
   // list of ordered tasks
   TaskView[] orderedTasks;
 
-  public ThetaLambdaUnaryTree() {}
+  public ThetaLambdaUnaryTree() {
+    // Intentionally empty: default constructor; tree is built via buildTree().
+  }
 
   public void buildTree(TaskView[] task) {
     n = task.length;

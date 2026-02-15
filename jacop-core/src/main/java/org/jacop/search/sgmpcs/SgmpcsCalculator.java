@@ -78,12 +78,16 @@ public class SgmpcsCalculator<T extends Var> implements ConsistencyListener {
    *
    * @param children the array of consistency listeners to be set as children.
    */
-  public void setChildrenListeners(ConsistencyListener[] children) {}
+  public void setChildrenListeners(ConsistencyListener[] children) {
+    // No-op: this calculator does not use child listeners.
+  }
 
   /**
    * Sets a single child consistency listener.
    *
    * @param child the consistency listener to be set as a child.
    */
-  public void setChildrenListeners(ConsistencyListener child) {}
+  public void setChildrenListeners(ConsistencyListener child) {
+    // No-op: this calculator does not use child listeners.
+  }
 }

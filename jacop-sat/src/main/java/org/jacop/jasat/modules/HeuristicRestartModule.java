@@ -92,7 +92,9 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
    * @param oldLevel the decision level before the backjump
    * @param newLevel the decision level after the backjump
    */
-  public void onBackjump(int oldLevel, int newLevel) {}
+  public void onBackjump(int oldLevel, int newLevel) {
+    // Restart heuristic does not need to react to backjump; only onRestart is used.
+  }
 
   /**
    * Called when the solver restarts from a given decision level.

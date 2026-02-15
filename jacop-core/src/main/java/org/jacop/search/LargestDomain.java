@@ -43,7 +43,9 @@ import org.jacop.core.Var;
 public class LargestDomain<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs variable comparator based on the largest domain priority. */
-  public LargestDomain() {}
+  public LargestDomain() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's domain size.

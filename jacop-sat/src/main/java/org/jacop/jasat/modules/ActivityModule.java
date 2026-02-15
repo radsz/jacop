@@ -105,7 +105,9 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    * @param oldLevel the decision level before the backjump
    * @param newLevel the decision level after the backjump
    */
-  public void onBackjump(int oldLevel, int newLevel) {}
+  public void onBackjump(int oldLevel, int newLevel) {
+    // Activity does not depend on decision level; no update needed on backjump.
+  }
 
   /**
    * Called when the solver restarts from a given decision level.

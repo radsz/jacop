@@ -99,7 +99,9 @@ public final class SwitchesPruningLogging {
    * @param pattern the message pattern
    * @param args the arguments for the pattern
    */
-  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object[] args) {}
+  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object[] args) {
+    // No-op: stub implementation when pruning trace logging is disabled.
+  }
 
   /**
    * Logs a message if the given switch is enabled.
@@ -109,7 +111,9 @@ public final class SwitchesPruningLogging {
    * @param pattern the message pattern
    * @param arg1 the first argument for the pattern
    */
-  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object arg1) {}
+  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object arg1) {
+    // No-op: stub implementation when pruning trace logging is disabled.
+  }
 
   /**
    * Logs a message if the given switch is enabled.
@@ -121,5 +125,7 @@ public final class SwitchesPruningLogging {
    * @param arg2 the second argument for the pattern
    */
   public static void log(
-      boolean isEnabled, Class<?> fromClass, String pattern, Object arg1, Object arg2) {}
+      boolean isEnabled, Class<?> fromClass, String pattern, Object arg1, Object arg2) {
+    // No-op: stub implementation when pruning trace logging is disabled.
+  }
 }

@@ -77,7 +77,9 @@ public final class SearchModule
   private MapClause clauseToLearn;
 
   /** Search implementation, without timeout (search until solution is found). */
-  public SearchModule() {}
+  public SearchModule() {
+    // Default constructor; timeout and other fields are set by the solver.
+  }
 
   /**
    * Called when a conflict explanation clause is generated.

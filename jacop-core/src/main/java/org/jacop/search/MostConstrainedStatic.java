@@ -44,7 +44,9 @@ import org.jacop.core.Var;
 public class MostConstrainedStatic<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs MostConstraintStatic comparator. */
-  public MostConstrainedStatic() {}
+  public MostConstrainedStatic() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's original constraint count.

@@ -44,7 +44,9 @@ import org.jacop.core.Var;
 public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs MostConstrainedDynamic Comparator. */
-  public MostConstrainedDynamic() {}
+  public MostConstrainedDynamic() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's dynamic constraint count.

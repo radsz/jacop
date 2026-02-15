@@ -43,7 +43,9 @@ import org.jacop.core.IntVar;
 public class LargestMin<T extends IntVar> implements ComparatorVariable<T> {
 
   /** It constructs LargestMin Comparator. */
-  public LargestMin() {}
+  public LargestMin() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's minimum domain value.

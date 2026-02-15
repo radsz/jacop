@@ -44,7 +44,9 @@ import org.jacop.search.ComparatorVariable;
 public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs variable comparator based on the largest domain priority. */
-  public LargestDomainFloat() {}
+  public LargestDomainFloat() {
+    // Default constructor; no state to initialize.
+  }
 
   /**
    * Compares a metric value with a variable's domain size.

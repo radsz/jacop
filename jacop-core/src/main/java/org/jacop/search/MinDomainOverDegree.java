@@ -45,7 +45,9 @@ import org.jacop.core.Var;
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs MinDomainOverDegree Comparator. */
-  public MinDomainOverDegree() {}
+  public MinDomainOverDegree() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's domain-to-degree ratio.

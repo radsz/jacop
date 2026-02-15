@@ -39,6 +39,7 @@ import java.util.Stack;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -197,7 +198,7 @@ public class Derivative {
               resolved.add(cc);
             }
           } else if (cc instanceof LinearFloat float1) {
-            if (float1.relationType == LinearFloat.EQ) {
+            if (float1.relationType == Linear.EQ) {
               double[] ws = float1.weights;
               FloatVar[] ls = float1.list;
               for (int i = 0; i < ls.length; i++) {

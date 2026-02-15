@@ -44,7 +44,9 @@ import org.jacop.search.ComparatorVariable;
 public class SmallestDomainFloat<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs a smallest domain variable comparator. */
-  public SmallestDomainFloat() {}
+  public SmallestDomainFloat() {
+    // Default constructor; no state to initialize.
+  }
 
   /**
    * Compares a metric value with a variable's domain size.

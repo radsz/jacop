@@ -667,7 +667,7 @@ public class Support implements ParserTreeConstants {
       store.impose(c);
       if (options.debug()) {
         String s = "% " + c;
-        IO.println(s.replaceAll("\n", "\n% "));
+        IO.println(s.replace("\n", "\n% "));
       }
     }
     poseAlldistinctConstraints();
@@ -684,7 +684,7 @@ public class Support implements ParserTreeConstants {
       store.impose(ad);
       if (options.debug()) {
         String s = "% " + ad;
-        IO.println(s.replaceAll("\n", "\n% "));
+        IO.println(s.replace("\n", "\n% "));
       }
     }
   }
@@ -711,7 +711,7 @@ public class Support implements ParserTreeConstants {
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
       String s = "% " + c;
-      IO.println(s.replaceAll("\n", "\n% "));
+      IO.println(s.replace("\n", "\n% "));
     }
   }
 
@@ -725,7 +725,7 @@ public class Support implements ParserTreeConstants {
 
     if (options.debug()) {
       String s = "% " + c;
-      IO.println(s.replaceAll("\n", "\n% "));
+      IO.println(s.replace("\n", "\n% "));
     }
   }
 

@@ -43,7 +43,9 @@ import org.jacop.core.Var;
 public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs a smallest domain variable comparator. */
-  public SmallestDomain() {}
+  public SmallestDomain() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's domain size.

@@ -33,6 +33,7 @@ package org.jacop.floats.core;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.ValueEnumeration;
@@ -739,7 +740,7 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatDomain result = union(union);
 
     if (((FloatIntervalDomain) result).getSizeFloat() == getSizeFloat()) {
-      return IntDomain.NONE;
+      return Domain.NONE;
     } else {
       setDomain(result);
       // FIXME, how to setup events for domain extending events?
@@ -2986,7 +2987,7 @@ public class FloatIntervalDomain extends FloatDomain {
     assert checkInvariants() == null : checkInvariants();
 
     if (size == 0) {
-      return IntDomain.NONE;
+      return Domain.NONE;
     }
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
@@ -3001,7 +3002,7 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);
 
     if (result == null) {
-      return IntDomain.NONE;
+      return Domain.NONE;
     }
 
     if (result.isEmpty()) {
@@ -3040,7 +3041,7 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     if (min <= intervals[0].min() && max >= currentMax) {
-      return IntDomain.NONE;
+      return Domain.NONE;
     }
 
     FloatIntervalDomain result = computeRangeIntersection(min, max);

@@ -1,5 +1,5 @@
 /*
- * IndomainMin.java
+ * AbstractArithmeticConstraint.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -28,34 +28,36 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-package org.jacop.search;
+package org.jacop.constraints;
 
-import org.jacop.core.IntVar;
+import org.jacop.core.IntDomain;
 
 /**
- * IndomainMin - implements enumeration method based on the selection of the minimal value in the
- * domain of variable.
+ * Abstract base class for arithmetic constraints that use bound consistency. Provides default
+ * implementations for pruning event methods that all return {@link IntDomain#BOUND}.
  *
- * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IndomainMin<T extends IntVar> implements Indomain<T> {
+public abstract class AbstractArithmeticConstraint extends PrimitiveConstraint {
 
-  /**
-   * It creates Indomain heuristic, which will choose the minimal value from the variable domain.
-   */
-  public IndomainMin() {
-    // Intentionally empty: default constructor requires no initialization.
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
-  /**
-   * It returns the minimal value from the domain of the variable.
-   *
-   * @param v the variable for which a value is being selected.
-   * @return the minimal value in the variable domain.
-   */
-  public int indomain(IntVar v) {
-    return v.min();
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 }

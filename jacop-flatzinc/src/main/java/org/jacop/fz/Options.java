@@ -44,7 +44,7 @@ import org.jacop.floats.core.FloatDomain;
  */
 public class Options {
 
-  public RestartType restartType = RestartType.none;
+  public RestartType restartType = RestartType.NONE;
   FileInputStream file;
   String fileName;
   boolean all;
@@ -237,19 +237,19 @@ public class Options {
             String type = args[++i];
             switch (type) {
               case "none":
-                restartType = RestartType.none;
+                restartType = RestartType.NONE;
                 break;
               case "constant":
-                restartType = RestartType.constant;
+                restartType = RestartType.CONSTANT;
                 break;
               case "linear":
-                restartType = RestartType.linear;
+                restartType = RestartType.LINEAR;
                 break;
               case "luby":
-                restartType = RestartType.luby;
+                restartType = RestartType.LUBY;
                 break;
               case "geometric":
-                restartType = RestartType.geometric;
+                restartType = RestartType.GEOMETRIC;
                 break;
               default:
                 throw new IllegalArgumentException(
@@ -469,10 +469,10 @@ public class Options {
 
   /** Restart strategy types for search. */
   public enum RestartType {
-    none,
-    constant,
-    linear,
-    luby,
-    geometric
+    NONE,
+    CONSTANT,
+    LINEAR,
+    LUBY,
+    GEOMETRIC
   }
 }

@@ -48,7 +48,9 @@ import org.jacop.core.ValueEnumeration;
 public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
   /** It creates Indomain heuristic which chooses the middle value. */
-  public IndomainMedian() {}
+  public IndomainMedian() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /** It requires IntVar variable. */
   public int indomain(IntVar v) {

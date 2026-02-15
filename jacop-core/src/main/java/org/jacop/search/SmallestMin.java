@@ -43,7 +43,9 @@ import org.jacop.core.IntVar;
 public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {
 
   /** It constructs SmallestMin Comparator. */
-  public SmallestMin() {}
+  public SmallestMin() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a variable's minimum domain value.

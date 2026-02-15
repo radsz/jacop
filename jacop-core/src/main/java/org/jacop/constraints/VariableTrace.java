@@ -106,7 +106,9 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
-  public void consistency(Store store) {}
+  public void consistency(Store store) {
+    // No-op: this constraint only traces variable changes and does not perform propagation.
+  }
 
   /** {@inheritDoc} */
   public void queueVariable(int level, Var v) {
@@ -119,7 +121,9 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
-  public void removeConstraint() {}
+  public void removeConstraint() {
+    // Intentionally empty: no cleanup required when this tracing constraint is removed.
+  }
 
   /**
    * Checks whether this tracing constraint is definitely satisfied.
@@ -143,5 +147,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
-  public void increaseWeight() {}
+  public void increaseWeight() {
+    // No-op: this daemon constraint does not participate in weight-based heuristics.
+  }
 }

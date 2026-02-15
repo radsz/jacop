@@ -40,7 +40,9 @@ package org.jacop.fz;
 public class TrivialSolution extends RuntimeException {
 
   /** Constructs a TrivialSolution exception. */
-  public TrivialSolution() {}
+  public TrivialSolution() {
+    // Default constructor; no fields to initialize for this signal exception.
+  }
 
   /** {@inheritDoc} */
   @Override

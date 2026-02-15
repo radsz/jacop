@@ -46,7 +46,9 @@ import org.jacop.search.ComparatorVariable;
 public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T> {
 
   /** It constructs MaxRegretFloat comparator. */
-  public MaxRegretFloat() {}
+  public MaxRegretFloat() {
+    // Default constructor; no state to initialize.
+  }
 
   /**
    * Compares a metric value with a variable's regret (difference between smallest and second

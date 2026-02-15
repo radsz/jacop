@@ -610,7 +610,9 @@ public final class SatWrapper extends Constraint
 
   /** {@inheritDoc} */
   @Override
-  public void increaseWeight() {}
+  public void increaseWeight() {
+    // Weight is not used for this constraint; no-op to satisfy interface.
+  }
 
   /** {@inheritDoc} */
   @Override
@@ -809,7 +811,9 @@ public final class SatWrapper extends Constraint
   }
 
   /** Called when the SAT solver stops. */
-  public void onStop() {}
+  public void onStop() {
+    // No cleanup or notification needed when the solver stops.
+  }
 
   /**
    * Initializes the wrapper with the specified SAT core.

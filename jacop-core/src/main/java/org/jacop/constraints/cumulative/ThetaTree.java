@@ -50,7 +50,9 @@ class ThetaTree extends Tree {
   // list of ordered tasks
   private TaskView[] orderedTasks;
 
-  public ThetaTree() {}
+  public ThetaTree() {
+    // Intentionally empty: default constructor; tree is built via buildTree().
+  }
 
   public void buildTree(TaskView[] task) {
     leafCount = task.length;

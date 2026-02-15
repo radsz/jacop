@@ -270,7 +270,9 @@ class BoolConstraints implements ParserTreeConstants {
     clause_generation(node);
   }
 
-  void gen_bool2int(SimpleNode node) {}
+  void gen_bool2int(SimpleNode node) {
+    // bool2int is a no-op in this encoding; no constraint to generate.
+  }
 
   void clause_generation(SimpleNode node) {
 

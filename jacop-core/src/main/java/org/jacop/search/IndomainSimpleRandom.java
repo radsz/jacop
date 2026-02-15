@@ -44,7 +44,9 @@ import org.jacop.core.IntVar;
 public class IndomainSimpleRandom<T extends IntVar> implements Indomain<T> {
 
   /** It does not achieve uniform probability but it does work faster than IndomainRandom. */
-  public IndomainSimpleRandom() {}
+  public IndomainSimpleRandom() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * It returns a randomly selected value from the domain of the variable. This method is faster

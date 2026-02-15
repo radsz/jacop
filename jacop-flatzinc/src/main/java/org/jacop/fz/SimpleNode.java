@@ -34,10 +34,14 @@ public class SimpleNode implements Node {
   }
 
   /** {@inheritDoc} */
-  public void jjtOpen() {}
+  public void jjtOpen() {
+    // Optional lifecycle hook; no action needed for this node type.
+  }
 
   /** {@inheritDoc} */
-  public void jjtClose() {}
+  public void jjtClose() {
+    // Optional lifecycle hook; no action needed for this node type.
+  }
 
   /** {@inheritDoc} */
   public void jjtSetParent(Node n) {

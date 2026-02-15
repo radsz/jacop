@@ -824,7 +824,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (m == ub.length && z == lb.length) {
       if (support.options.debug()) {
         String s = "% SKIPPED " + new CountValuesBounds(x, lb, ub, values);
-        IO.println(s.replaceAll("\n", "\n% "));
+        IO.println(s.replace("\n", "\n% "));
       }
       return;
     }

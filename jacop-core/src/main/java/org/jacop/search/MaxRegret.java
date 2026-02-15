@@ -46,7 +46,9 @@ import org.jacop.core.ValueEnumeration;
 public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
   /** It constructs MaxRegret comparator. */
-  public MaxRegret() {}
+  public MaxRegret() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value (regret) with a variable's regret value.

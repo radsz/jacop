@@ -88,7 +88,9 @@ public class VariablesParameters implements ParserTreeConstants {
   boolean debug;
 
   /** It constructs variables parameters. */
-  public VariablesParameters() {}
+  public VariablesParameters() {
+    // Default constructor; fields are initialized by setters and initContext.
+  }
 
   void setOptions(Options options) {
     this.options = options;

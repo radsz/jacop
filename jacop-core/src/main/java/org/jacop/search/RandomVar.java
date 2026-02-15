@@ -43,7 +43,9 @@ import org.jacop.core.Var;
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
   /** It constructs RandomVar Comparator. */
-  public RandomVar() {}
+  public RandomVar() {
+    // Intentionally empty: default constructor requires no initialization.
+  }
 
   /**
    * Compares a metric value with a randomly generated value for a variable.
