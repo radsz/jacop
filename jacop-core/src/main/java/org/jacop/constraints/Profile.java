@@ -149,82 +149,54 @@ public class Profile extends ArrayList<ProfileItem> {
               i++;
             }
           } else {
-            ProfileItem new1 = new ProfileItem(type);
-            ProfileItem new2 = new ProfileItem(type);
-            ProfileItem new3 = new ProfileItem(type);
-            p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
-
-            if (TRACE_ENABLED) {
-              log.debug(
-                  "Overlap of [{}..{})={} and {}\nResult = {}, {}, {}",
-                  a,
-                  b,
-                  val,
-                  p,
-                  new1,
-                  new2,
-                  new3);
-            }
-
-            remove(i);
-
-            if (new1.min != -1) {
-              ProfileItem previous;
-              if (i != 0) {
-                previous = get(i - 1);
-              } else {
-                previous = new ProfileItem(type);
-              }
-              if (previous.max == new1.min && previous.value == new1.value) {
-                if (TRACE_ENABLED) {
-                  log.debug(
-                      "4a. Change [{}..{})={} at position {}", previous.min, new1.max, val, i);
-                }
-                previous.setMax(new1.max);
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("4b. Adding {}", new1);
-                }
-                add(i, new1);
-                if (maxProfileItemHeight < new1.value) {
-                  maxProfileItemHeight = new1.value;
-                }
-                i++;
-              }
-            }
-
-            if (new2.min != -1) {
-              ProfileItem previous;
-              if (i != 0) {
-                previous = get(i - 1);
-              } else {
-                previous = new ProfileItem(type);
-              }
-              if (previous.max == new2.min && previous.value == new2.value) {
-                if (TRACE_ENABLED) {
-                  log.debug(
-                      "5a. Change [{}..{})={} at position {}", previous.min, new2.max, val, i);
-                }
-                previous.setMax(new2.max);
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("5b. Adding {}", new2);
-                }
-                add(i, new2);
-                if (maxProfileItemHeight < new2.value) {
-                  maxProfileItemHeight = new2.value;
-                }
-                i++;
-              }
-            }
-            if (new3.min != -1 && new3.min != new3.max) {
-              addToProfile(new3.min, new3.max, new3.value);
-            }
+            handleOverlapAt(i, a, b, val, p);
             notFound = false;
           }
         }
       }
     }
+  }
+
+  private void handleOverlapAt(int i, int a, int b, int val, ProfileItem p) {
+    ProfileItem new1 = new ProfileItem(type);
+    ProfileItem new2 = new ProfileItem(type);
+    ProfileItem new3 = new ProfileItem(type);
+    p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
+
+    if (TRACE_ENABLED) {
+      log.debug(
+          "Overlap of [{}..{})={} and {}\nResult = {}, {}, {}", a, b, val, p, new1, new2, new3);
+    }
+
+    remove(i);
+    i = addOverlapPart(i, new1, val);
+    i = addOverlapPart(i, new2, val);
+    if (new3.min != -1 && new3.min != new3.max) {
+      addToProfile(new3.min, new3.max, new3.value);
+    }
+  }
+
+  private int addOverlapPart(int i, ProfileItem part, int val) {
+    if (part.min == -1) {
+      return i;
+    }
+    ProfileItem previous = (i != 0) ? get(i - 1) : new ProfileItem(type);
+    if (previous.max == part.min && previous.value == part.value) {
+      if (TRACE_ENABLED) {
+        log.debug("4a/5a. Change [{}..{})={} at position {}", previous.min, part.max, val, i);
+      }
+      previous.setMax(part.max);
+    } else {
+      if (TRACE_ENABLED) {
+        log.debug("4b/5b. Adding {}", part);
+      }
+      add(i, part);
+      if (maxProfileItemHeight < part.value) {
+        maxProfileItemHeight = part.value;
+      }
+      i++;
+    }
+    return i;
   }
 
   /**

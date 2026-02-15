@@ -73,60 +73,81 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
       while (i < size() && notFound) {
         p = get(i);
         if (b <= p.min) {
-          if (a != b) {
-            if (b == p.min && val == p.value) {
-              if (TRACE_ENABLED) {
-                log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
-              }
-              // !!!! b==p.Min
-              // p.Min = a;
-              int[] r = {index, val};
-              add(i + 1, new ProfileItemCondition(a, b, val, r));
-            } else {
-              // b < p.Min
-              if (i > 0) {
-                int[] r = {index, val}; // OK
-                add(i, new ProfileItemCondition(a, b, val, r));
-              } else {
-                if (TRACE_ENABLED) {
-                  log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
-                }
-                int[] r = {index, val}; // OK
-                add(i, new ProfileItemCondition(a, b, val, r));
-              }
-            }
-          }
+          i = handleInsertBeforeCurrent(index, a, b, val, i, p);
           notFound = false;
-          i++;
-          if (MaxProfile < val) {
-            MaxProfile = val;
-          }
+        } else if (p.max <= a) {
+          InsertResult res = handleInsertAfterCurrent(index, a, b, val, i);
+          i = res.newI();
+          notFound = res.notFound();
         } else {
-          // b > p.Min
-          if (p.max <= a) {
-            if (i == size() - 1) {
-              if (a != b) {
-                if (TRACE_ENABLED) {
-                  log.debug("3. Add [{}..{})={} at position {}", a, b, val, i + 1);
-                }
-                int[] r = {index, val}; // OK
-                add(i + 1, new ProfileItemCondition(a, b, val, r));
-              }
-              i++;
-              notFound = false;
-            } else {
-              i++;
-            }
-          } else {
-            i = handleOverlapAt(i, index, a, b, val, p, exList);
-            notFound = false;
-          }
+          i = handleOverlapAt(i, index, a, b, val, p, exList);
+          notFound = false;
         }
       }
     }
     if (TRACE_ENABLED) {
       log.debug("########\n{}", this);
     }
+  }
+
+  private static final class InsertResult {
+    final int newI;
+    final boolean notFound;
+
+    InsertResult(int newI, boolean notFound) {
+      this.newI = newI;
+      this.notFound = notFound;
+    }
+
+    int newI() {
+      return newI;
+    }
+
+    boolean notFound() {
+      return notFound;
+    }
+  }
+
+  private int handleInsertBeforeCurrent(
+      int index, int a, int b, int val, int i, ProfileItemCondition p) {
+    if (a != b) {
+      if (b == p.min && val == p.value) {
+        if (TRACE_ENABLED) {
+          log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
+        }
+        int[] r = {index, val};
+        add(i + 1, new ProfileItemCondition(a, b, val, r));
+      } else {
+        if (i > 0) {
+          int[] r = {index, val};
+          add(i, new ProfileItemCondition(a, b, val, r));
+        } else {
+          if (TRACE_ENABLED) {
+            log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
+          }
+          int[] r = {index, val};
+          add(i, new ProfileItemCondition(a, b, val, r));
+        }
+      }
+    }
+    if (MaxProfile < val) {
+      MaxProfile = val;
+    }
+    return i + 1;
+  }
+
+  private InsertResult handleInsertAfterCurrent(int index, int a, int b, int val, int i) {
+    if (i == size() - 1) {
+      if (a != b) {
+        if (TRACE_ENABLED) {
+          log.debug("3. Add [{}..{})={} at position {}", a, b, val, i + 1);
+        }
+        int[] r = {index, val};
+        add(i + 1, new ProfileItemCondition(a, b, val, r));
+      }
+      return new InsertResult(i + 1, false);
+    }
+    return new InsertResult(i + 1, true);
   }
 
   private int handleOverlapAt(

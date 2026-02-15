@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -107,36 +106,34 @@ public class SumBool extends AbstractSum {
   }
 
   private void prune(byte rel) {
-    int min = 0;
-    int max = 0;
-    for (int i = 0; i < l; i++) {
-      IntDomain xd = x[i].dom();
-      min += xd.min();
-      max += xd.max();
-    }
+    int min = sumMin();
+    int max = sumMax();
 
     switch (rel) {
-      case EQ:
-        pruneEq(min, max);
-        break;
-      case LE:
-        pruneLe(min, max);
-        break;
-      case LT:
-        pruneLt(min, max);
-        break;
-      case NE:
-        pruneNe(min, max);
-        break;
-      case GT:
-        pruneGt(min, max);
-        break;
-      case GE:
-        pruneGe(min, max);
-        break;
-      default:
-        throw new RuntimeException("Internal error in SumBool");
+      case EQ -> pruneEq(min, max);
+      case LE -> pruneLe(min, max);
+      case LT -> pruneLt(min, max);
+      case NE -> pruneNe(min, max);
+      case GT -> pruneGt(min, max);
+      case GE -> pruneGe(min, max);
+      default -> throw new RuntimeException("Internal error in SumBool");
     }
+  }
+
+  private int sumMin() {
+    int min = 0;
+    for (int i = 0; i < l; i++) {
+      min += x[i].dom().min();
+    }
+    return min;
+  }
+
+  private int sumMax() {
+    int max = 0;
+    for (int i = 0; i < l; i++) {
+      max += x[i].dom().max();
+    }
+    return max;
   }
 
   private void pruneEq(int min, int max) {
@@ -238,21 +235,14 @@ public class SumBool extends AbstractSum {
 
   private boolean entailed(byte rel) {
 
-    int min = 0;
-    int max = 0;
-
-    for (int i = 0; i < l; i++) {
-      IntDomain xd = x[i].dom();
-      min += xd.min();
-      max += xd.max();
-    }
+    int min = sumMin();
+    int max = sumMax();
 
     return switch (rel) {
       case EQ -> sum.singleton(min) && min == max;
       case LT -> max < sum.min();
       case LE -> max <= sum.min();
-      case NE ->
-          sum.min() > max || sum.max() < min; // sum.singleton() && min == max && sum.min() != min;
+      case NE -> sum.min() > max || sum.max() < min;
       case GT -> min > sum.max();
       case GE -> min >= sum.max();
       default -> false;

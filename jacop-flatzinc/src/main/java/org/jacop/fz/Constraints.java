@@ -179,11 +179,17 @@ public class Constraints implements ParserTreeConstants {
 
     if (isBoolClauseConstraint(p)) {
       boolClauses++;
-    } else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+      return;
+    }
+    if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
       handleBool2IntAlias(node);
-    } else if (p.startsWith("int_eq_reif")) {
+      return;
+    }
+    if (p.startsWith("int_eq_reif")) {
       handleIntEqReif(node);
-    } else if (p.startsWith("int_eq_imp")) {
+      return;
+    }
+    if (p.startsWith("int_eq_imp")) {
       handleIntEqImp(node);
     }
   }

@@ -184,21 +184,22 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
       Node[] d = valueGraph(xVars, doms)[1];
       Node t = addNode("sink", -n);
 
+      connectValuesToSink(d, t, n, m, vm);
+    }
+
+    private void connectValuesToSink(Node[] d, Node t, int n, int m, ViolationMeasure vm) {
       if (vm == ViolationMeasure.VARIABLE_BASED) {
-        // connect values to sink
         for (int j = 0; j < m; j++) {
           addArc(d[j], t, 0, 1);
           addArc(d[j], t, 1);
         }
       } else if (vm == ViolationMeasure.DECOMPOSITION_BASED) {
-        // connect values to sink
         for (int j = 0; j < m; j++) {
           for (int cost = 0; cost < n; cost++) {
             addArc(d[j], t, cost, 0, 1);
           }
         }
       } else {
-
         throw new UnsupportedOperationException("Unknown violation measure : " + vm);
       }
     }

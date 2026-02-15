@@ -255,34 +255,38 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
     int[][] tuplesForGivenVariableValuePair =
         tuples[varPosition][findPosition(value, values[varPosition])];
 
+    int index = binarySearchAllowedTuple(t, tuplesForGivenVariableValuePair);
+    if (index < 0) {
+      return null;
+    }
+    System.arraycopy(tuplesForGivenVariableValuePair[index], 0, t, 0, list.length);
+    return t;
+  }
+
+  private int binarySearchAllowedTuple(int[] t, int[][] tuplesForGivenVariableValuePair) {
     int left = 0;
     int right = tuplesForGivenVariableValuePair.length - 1;
 
     if (!(smaller(t, tuplesForGivenVariableValuePair[right])
         || arraysEqual(t, tuplesForGivenVariableValuePair[right]))) {
-      return null;
+      return -1;
     }
 
     int position = (left + right) >> 1;
 
     while (left + 1 < right) {
-
       if (smaller(t, tuplesForGivenVariableValuePair[position])) {
         right = position;
       } else {
         left = position;
       }
-
       position = (left + right) >> 1;
     }
 
     if (smaller(t, tuplesForGivenVariableValuePair[left])
         || arraysEqual(t, tuplesForGivenVariableValuePair[left])) {
-      System.arraycopy(tuplesForGivenVariableValuePair[left], 0, t, 0, list.length);
-      return t;
-    } else {
-      System.arraycopy(tuplesForGivenVariableValuePair[right], 0, t, 0, list.length);
-      return t;
+      return left;
     }
+    return right;
   }
 }

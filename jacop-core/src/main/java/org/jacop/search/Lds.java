@@ -85,21 +85,29 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
   private boolean handleLeftChildFailureVar(T v, int value) {
     noDiscrepancies++;
     if (noDiscrepancies >= maxNoDiscrepancies) {
-      notifyExitChildListenersVar(v, value);
-      noDiscrepancies--;
-      return false;
+      return whenMaxDiscrepanciesReachedVar(v, value);
     }
     if (exitChildListeners != null) {
-      boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(v, value, false);
-      }
-      if (!code) {
-        noDiscrepancies--;
-      }
-      return code;
+      return delegateToListenersLeftVar(v, value);
     }
     return true;
+  }
+
+  private boolean whenMaxDiscrepanciesReachedVar(T v, int value) {
+    notifyExitChildListenersVar(v, value);
+    noDiscrepancies--;
+    return false;
+  }
+
+  private boolean delegateToListenersLeftVar(T v, int value) {
+    boolean code = false;
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      code |= exitChildListener.leftChild(v, value, false);
+    }
+    if (!code) {
+      noDiscrepancies--;
+    }
+    return code;
   }
 
   private void notifyExitChildListenersVar(T v, int value) {
@@ -128,21 +136,29 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
   private boolean handleLeftChildFailureChoice(PrimitiveConstraint choice) {
     noDiscrepancies++;
     if (noDiscrepancies >= maxNoDiscrepancies) {
-      notifyExitChildListenersChoice(choice);
-      noDiscrepancies--;
-      return false;
+      return whenMaxDiscrepanciesReachedChoice(choice);
     }
     if (exitChildListeners != null) {
-      boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(choice, false);
-      }
-      if (!code) {
-        noDiscrepancies--;
-      }
-      return code;
+      return delegateToListenersLeftChoice(choice);
     }
     return true;
+  }
+
+  private boolean whenMaxDiscrepanciesReachedChoice(PrimitiveConstraint choice) {
+    notifyExitChildListenersChoice(choice);
+    noDiscrepancies--;
+    return false;
+  }
+
+  private boolean delegateToListenersLeftChoice(PrimitiveConstraint choice) {
+    boolean code = false;
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      code |= exitChildListener.leftChild(choice, false);
+    }
+    if (!code) {
+      noDiscrepancies--;
+    }
+    return code;
   }
 
   private void notifyExitChildListenersChoice(PrimitiveConstraint choice) {

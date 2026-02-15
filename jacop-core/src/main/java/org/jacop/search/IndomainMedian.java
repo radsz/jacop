@@ -60,11 +60,13 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         : "It is not possible to use BoundDomain";
 
     int position = medianPosition(v.getSize());
+    return medianForDomain(v, position);
+  }
 
+  private int medianForDomain(IntVar v, int position) {
     if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       return medianFromIntervalDomain((IntervalDomain) v.domain, position);
     }
-
     IntDomain dom = v.dom();
     if (dom.isSparseRepresentation()) {
       return medianFromSparseDomain(dom, position);

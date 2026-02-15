@@ -84,21 +84,27 @@ public class NoGoodsCollector<T extends IntVar>
   public boolean leftChild(T v, int value, boolean status) {
 
     if (timeOut) {
-      for (List<T> noGood : noGoodsVariables) {
-        noGood.add(v);
-      }
-
-      for (List<Integer> noGood : noGoodsValues) {
-        noGood.add(value);
-      }
-
-      notifyExitChildListenersLeft(v, value, status);
-      return false;
+      return handleLeftChildOnTimeOut(v, value, status);
     }
 
     if (exitChildListeners == null) {
       return true;
     }
+    return delegateLeftChildToListeners(v, value, status);
+  }
+
+  private boolean handleLeftChildOnTimeOut(T v, int value, boolean status) {
+    for (List<T> noGood : noGoodsVariables) {
+      noGood.add(v);
+    }
+    for (List<Integer> noGood : noGoodsValues) {
+      noGood.add(value);
+    }
+    notifyExitChildListenersLeft(v, value, status);
+    return false;
+  }
+
+  private boolean delegateLeftChildToListeners(T v, int value, boolean status) {
     boolean code = false;
     for (ExitChildListener<T> exitChildListener : exitChildListeners) {
       code |= exitChildListener.leftChild(v, value, status);

@@ -153,10 +153,7 @@ public class RestartSearch<T extends Var> {
 
       result = runOneRestartIteration();
 
-      if (rarVars != null) {
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-      }
+      cleanupAfterIterationIfRar();
 
       if (restartsLimit > 0 && numberRestarts > restartsLimit) {
         break;
@@ -182,6 +179,13 @@ public class RestartSearch<T extends Var> {
     store.removeLevel(store.level);
     store.setLevel(store.level - 1);
     return true;
+  }
+
+  private void cleanupAfterIterationIfRar() {
+    if (rarVars != null) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
   }
 
   private boolean runOneRestartIteration() {

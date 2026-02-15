@@ -121,27 +121,7 @@ public class LengauerTarjan {
     }
 
     for (int i = n - 1; i > 0; i--) {
-
-      int w = vertex[i];
-
-      // step_2:
-      BitSet pw = pred[w];
-      for (int v = pw.nextSetBit(0); v >= 0; v = pw.nextSetBit(v + 1)) {
-        int u = eval(v);
-        if (semi[u] < semi[w]) {
-          semi[w] = semi[u];
-        }
-      }
-      bucket[vertex[semi[w]]].set(w);
-
-      link(parent[w], w);
-
-      // step_3:
-      BitSet bs = bucket[parent[w]];
-      for (int v = bs.nextSetBit(0); v >= 0; v = bs.nextSetBit(v + 1)) {
-        int u = eval(v);
-        dom[v] = semi[u] < semi[v] ? u : parent[w];
-      }
+      processVertexForDominators(i);
     }
 
     completeDominators();
@@ -151,6 +131,27 @@ public class LengauerTarjan {
     transitiveClosure(root, domClosure[root]);
 
     return true;
+  }
+
+  private void processVertexForDominators(int i) {
+    int w = vertex[i];
+
+    BitSet pw = pred[w];
+    for (int v = pw.nextSetBit(0); v >= 0; v = pw.nextSetBit(v + 1)) {
+      int u = eval(v);
+      if (semi[u] < semi[w]) {
+        semi[w] = semi[u];
+      }
+    }
+    bucket[vertex[semi[w]]].set(w);
+
+    link(parent[w], w);
+
+    BitSet bs = bucket[parent[w]];
+    for (int v = bs.nextSetBit(0); v >= 0; v = bs.nextSetBit(v + 1)) {
+      int u = eval(v);
+      dom[v] = semi[u] < semi[v] ? u : parent[w];
+    }
   }
 
   private void completeDominators() {

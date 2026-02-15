@@ -103,38 +103,40 @@ public class ArgMax extends AbstractArgMinMax {
     }
 
     do {
-
       store.propagationHasOccurred = false;
-
-      int[] lbUbPos = findLbUbPosForMax();
-      int lb = lbUbPos[0];
-      int ub = lbUbPos[1];
-      int pos = lbUbPos[2];
-
-      if (lb == ub) {
-        extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
-      }
-
-      IntervalDomain idxDomain = buildIdxDomainForMax(lb);
-      if (idxDomain.isEmpty()) {
-        throw Store.failException;
-      }
-      extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
-
-      int[] ubPos = findUbPosForMax();
-      int ub2 = ubPos[0];
-      int pos2 = ubPos[1];
-      if (list[pos2].singleton()) {
-        extremeIndex.domain.in(
-            store.level, extremeIndex, pos2 + 1 + indexOffset, pos2 + 1 + indexOffset);
-      }
-
-      if (extremeIndex.singleton()) {
-        pruneWhenExtremeIndexSingletonMax(store);
-      } else {
-        pruneWhenExtremeIndexNotSingletonMax(store, ub2);
-      }
+      propagateMax(store);
     } while (store.propagationHasOccurred);
+  }
+
+  private void propagateMax(Store store) {
+    int[] lbUbPos = findLbUbPosForMax();
+    int lb = lbUbPos[0];
+    int ub = lbUbPos[1];
+    int pos = lbUbPos[2];
+
+    if (lb == ub) {
+      extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
+    }
+
+    IntervalDomain idxDomain = buildIdxDomainForMax(lb);
+    if (idxDomain.isEmpty()) {
+      throw Store.failException;
+    }
+    extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
+
+    int[] ubPos = findUbPosForMax();
+    int ub2 = ubPos[0];
+    int pos2 = ubPos[1];
+    if (list[pos2].singleton()) {
+      extremeIndex.domain.in(
+          store.level, extremeIndex, pos2 + 1 + indexOffset, pos2 + 1 + indexOffset);
+    }
+
+    if (extremeIndex.singleton()) {
+      pruneWhenExtremeIndexSingletonMax(store);
+    } else {
+      pruneWhenExtremeIndexNotSingletonMax(store, ub2);
+    }
   }
 
   private int[] findLbUbPosForMax() {

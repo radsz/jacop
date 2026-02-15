@@ -128,10 +128,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
   @Override
   public void consistency(Store store) {
-    if (debugAll) {
-      log.debug("LEVEL : {}", store.level);
-      log.debug("{}", this);
-    }
+    logLevelAndConstraintIfDebug(store);
 
     int currentLb = lowerBorder.value();
     int currentUb = upperBorder.value();
@@ -142,26 +139,40 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     variableQueue.clear();
 
-    if (debugAll) {
-      log.debug("lbS = {}", currentLb);
-      log.debug("ubS = {}", currentUb);
-      log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLb, currentUb);
-    }
+    logBordersIfDebug(currentLb, currentUb);
 
     if (currentLb > currentUb) {
       throw Store.failException;
     }
 
-    n.domain.in(store.level, n, currentLb, currentUb);
-    upperBorder.update(currentUb);
-    lowerBorder.update(currentLb);
-
+    updateDomainAndBorders(store, currentLb, currentUb);
     pruneWhenLbEqualsN(store, currentLb, currentUb);
     pruneWhenUbEqualsN(store, currentLb, currentUb);
 
     if (debugAll) {
       log.debug("{}", this);
     }
+  }
+
+  private void logLevelAndConstraintIfDebug(Store store) {
+    if (debugAll) {
+      log.debug("LEVEL : {}", store.level);
+      log.debug("{}", this);
+    }
+  }
+
+  private void logBordersIfDebug(int currentLb, int currentUb) {
+    if (debugAll) {
+      log.debug("lbS = {}", currentLb);
+      log.debug("ubS = {}", currentUb);
+      log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLb, currentUb);
+    }
+  }
+
+  private void updateDomainAndBorders(Store store, int currentLb, int currentUb) {
+    n.domain.in(store.level, n, currentLb, currentUb);
+    upperBorder.update(currentUb);
+    lowerBorder.update(currentLb);
   }
 
   private int[] processVariableQueue(int currentLb, int currentUb) {

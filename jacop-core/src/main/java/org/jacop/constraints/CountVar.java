@@ -93,6 +93,24 @@ public class CountVar extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
+    CountState state = countEqualAndMaybe();
+
+    if (state.numberMayBe == counter.min() - state.numberEq) {
+      if (applyWhenMayBeTight(store, state.start, state.numberEq, state.numberMayBe)) {
+        return;
+      }
+    } else if (state.numberEq == counter.max()) {
+      if (applyWhenEqMax(store, state.start, state.numberEq)) {
+        return;
+      }
+    }
+
+    updateState(state.numberEq, state.start);
+
+    counter.domain.in(store.level, counter, state.numberEq, state.numberEq + state.numberMayBe);
+  }
+
+  private CountState countEqualAndMaybe() {
     int numberEq = equal.value();
     int numberMayBe = 0;
     int start = position.value();
@@ -106,26 +124,15 @@ public class CountVar extends AbstractCount {
         } else {
           numberMayBe++;
         }
-      } else { // does not have the value in its domain
+      } else {
         swap(start, i);
         start++;
       }
     }
-
-    if (numberMayBe == counter.min() - numberEq) {
-      if (applyWhenMayBeTight(store, start, numberEq, numberMayBe)) {
-        return;
-      }
-    } else if (numberEq == counter.max()) {
-      if (applyWhenEqMax(store, start, numberEq)) {
-        return;
-      }
-    }
-
-    updateState(numberEq, start);
-
-    counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+    return new CountState(numberEq, numberMayBe, start);
   }
+
+  private record CountState(int numberEq, int numberMayBe, int start) {}
 
   /**
    * Applies pruning when numberMayBe == counter.min() - numberEq; returns true if constraint

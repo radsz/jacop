@@ -159,12 +159,8 @@ public class OrBoolVector extends AbstractBoolVector {
     if (result.max() == 0) {
       return satisfiedWhenResultZero(start);
     }
-
     if (result.min() == 1) {
-      if (satisfiedWhenResultOne(start)) {
-        return true;
-      }
-      return false;
+      return satisfiedWhenResultOne(start);
     }
     position.update(start);
     return false;

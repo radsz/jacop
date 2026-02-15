@@ -236,31 +236,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
     if (vars == null) {
-
-      Map<T, Integer> position = select.getVariablesMapping();
-
-      if (position.isEmpty()) {
-        vars = null;
-      } else {
-        // Always use Var.class as the component type since all T extend Var
-        // This ensures compatibility with all variable types (IntVar, FloatVar, SetVar, etc.)
-        // and avoids ArrayStoreException when variables of different concrete types are present
-        @SuppressWarnings("unchecked")
-        T[] array = (T[]) Array.newInstance(Var.class, position.size());
-        vars = array;
-
-        // Populate the array
-        for (Map.Entry<T, Integer> entry : position.entrySet()) {
-          T current = entry.getKey();
-          Integer value = entry.getValue();
-          vars[value] = current;
-        }
-      }
-
-      if (vars != null) {
-        solutions = new Domain[1][vars.length];
-        parentSolutionNo = new int[1];
-      }
+      initializeVarsFromSelect(select);
     }
 
     if (vars != null) {
@@ -268,14 +244,36 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     }
 
     if (childrenSolutionListeners != null) {
-      boolean code = false;
-      for (SolutionListener<T> childrenSolutionListener : childrenSolutionListeners) {
-        code |= childrenSolutionListener.executeAfterSolution(search, select);
-      }
-      return code && (solutionLimit <= noSolutions);
+      return executeChildrenAndCheckLimit(search, select);
     }
 
     return solutionLimit <= noSolutions;
+  }
+
+  @SuppressWarnings("unchecked")
+  private void initializeVarsFromSelect(SelectChoicePoint<T> select) {
+    Map<T, Integer> position = select.getVariablesMapping();
+    if (position.isEmpty()) {
+      vars = null;
+    } else {
+      T[] array = (T[]) Array.newInstance(Var.class, position.size());
+      vars = array;
+      for (Map.Entry<T, Integer> entry : position.entrySet()) {
+        vars[entry.getValue()] = entry.getKey();
+      }
+    }
+    if (vars != null) {
+      solutions = new Domain[1][vars.length];
+      parentSolutionNo = new int[1];
+    }
+  }
+
+  private boolean executeChildrenAndCheckLimit(Search<T> search, SelectChoicePoint<T> select) {
+    boolean code = false;
+    for (SolutionListener<T> childrenSolutionListener : childrenSolutionListeners) {
+      code |= childrenSolutionListener.executeAfterSolution(search, select);
+    }
+    return code && (solutionLimit <= noSolutions);
   }
 
   /**
@@ -377,27 +375,19 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    */
   public PrimitiveConstraint[] returnSolution(int number) {
 
-    PrimitiveConstraint[] result;
-
-    if (vars != null) {
-
-      result = new PrimitiveConstraint[vars.length];
-
-      int no = 0;
-
-      for (int i = 0; i < vars.length; i++) {
-
-        if (vars[i] instanceof IntVar v) {
-          result[no] = new XeqC(v, ((IntDomain) solutions[i][number]).min());
-        }
-
-        no++;
-      }
-
-      return result;
+    if (vars == null) {
+      return null;
     }
 
-    return null;
+    PrimitiveConstraint[] result = new PrimitiveConstraint[vars.length];
+    int no = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] instanceof IntVar v) {
+        result[no] = new XeqC(v, ((IntDomain) solutions[i][number]).min());
+      }
+      no++;
+    }
+    return result;
   }
 
   public boolean isRecordingSolutions() {

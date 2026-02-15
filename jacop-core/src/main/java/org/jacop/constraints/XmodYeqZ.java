@@ -68,34 +68,38 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     y.domain.inComplement(store.level, y, 0);
 
     do {
-
       store.propagationHasOccurred = false;
-
-      int[] reminderBounds = computeReminderBounds();
-      int reminderMin = reminderBounds[0];
-      int reminderMax = reminderBounds[1];
-
-      z.domain.in(store.level, z, reminderMin, reminderMax);
-
-      if (y.singleton()) {
-        propagateWhenYSingleton(store, reminderMin, reminderMax);
-      }
-
-      if (x.singleton()) {
-        propagateWhenXSingleton(store);
-      }
-
-      reminderMin = z.min();
-      reminderMax = z.max();
-
-      if (!(y.min() <= 0 && y.max() >= 0)) {
-        resultMin = propagateNonZeroY(store, resultMin, resultMax, reminderMin, reminderMax);
-        resultMax = resultMaxFromLastPropagate;
-      }
-
+      int[] result = propagateOneRound(store, resultMin, resultMax);
+      resultMin = result[0];
+      resultMax = result[1];
     } while (store.propagationHasOccurred);
 
     assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
+  }
+
+  private int[] propagateOneRound(Store store, int resultMin, int resultMax) {
+    int[] reminderBounds = computeReminderBounds();
+    int reminderMin = reminderBounds[0];
+    int reminderMax = reminderBounds[1];
+
+    z.domain.in(store.level, z, reminderMin, reminderMax);
+
+    if (y.singleton()) {
+      propagateWhenYSingleton(store, reminderMin, reminderMax);
+    }
+
+    if (x.singleton()) {
+      propagateWhenXSingleton(store);
+    }
+
+    reminderMin = z.min();
+    reminderMax = z.max();
+
+    if (!(y.min() <= 0 && y.max() >= 0)) {
+      resultMin = propagateNonZeroY(store, resultMin, resultMax, reminderMin, reminderMax);
+      resultMax = resultMaxFromLastPropagate;
+    }
+    return new int[] {resultMin, resultMax};
   }
 
   private int resultMaxFromLastPropagate;

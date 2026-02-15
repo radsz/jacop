@@ -112,20 +112,22 @@ public class Values extends Constraint implements SatisfiedPresent {
 
       ValuesConsistencyState state = buildAdjAndCounts();
 
-      if (DEBUG) {
-        log.debug("Minimum number of different values = {}", state.minNumberDifferent);
-        log.debug("Maximum number of different values = {}", state.maxNumberDifferent);
-        log.debug(
-            "Number singleton values = {} Values = {}",
-            state.numberSingleton,
-            state.singletonValues);
-      }
+      logStateIfDebug(state);
 
       count.domain.in(store.level, count, state.minNumberDifferent, state.maxNumberDifferent);
 
       applyCountPruning(store, state);
 
     } while (store.propagationHasOccurred);
+  }
+
+  private void logStateIfDebug(ValuesConsistencyState state) {
+    if (DEBUG) {
+      log.debug("Minimum number of different values = {}", state.minNumberDifferent);
+      log.debug("Maximum number of different values = {}", state.maxNumberDifferent);
+      log.debug(
+          "Number singleton values = {} Values = {}", state.numberSingleton, state.singletonValues);
+    }
   }
 
   private static class ValuesConsistencyState {

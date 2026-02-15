@@ -181,32 +181,24 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
    */
   private boolean checkIfThenBoolSatisfaction(boolean negated) {
 
-    if (!x.singleton()) {
-      return false;
-    }
-    if (!z.singleton()) {
+    if (!x.singleton() || !z.singleton()) {
       return false;
     }
 
-    if (negated) {
-      if (x.singleton(0) && z.singleton(0)) {
-        return true;
-      }
-    } else {
-      if (x.singleton(0) && z.singleton(1)) {
-        return true;
-      }
+    if (negated && (x.singleton(0) && z.singleton(0))) {
+      return true;
+    }
+    if (!negated && (x.singleton(0) && z.singleton(1))) {
+      return true;
     }
 
     if (!y.singleton()) {
       return false;
     }
 
-    if (negated) {
-      return x.singleton(1) && y.singleton(1) && z.singleton(0);
-    } else {
-      return x.singleton(1) && y.singleton(1) && z.singleton(1);
-    }
+    return negated
+        ? (x.singleton(1) && y.singleton(1) && z.singleton(0))
+        : (x.singleton(1) && y.singleton(1) && z.singleton(1));
   }
 
   @Override

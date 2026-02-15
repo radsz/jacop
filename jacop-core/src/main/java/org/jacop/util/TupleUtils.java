@@ -114,83 +114,85 @@ public class TupleUtils {
       return recordTuplesIntoEmptyStore(sortedTs);
     }
 
+    InsertPlan plan = buildInsertPlan(sortedTs);
+    if (plan.insertNo == 0) {
+      return plan.reusedTuples;
+    }
+
+    return applyInsertPlan(sortedTs, plan);
+  }
+
+  private record InsertPlan(int[] position, boolean[] insert, int insertNo, int[][] reusedTuples) {}
+
+  private InsertPlan buildInsertPlan(int[][] sortedTs) {
     int[] position = new int[sortedTs.length];
     boolean[] insert = new boolean[sortedTs.length];
     int insertNo = 0;
-
     int[][] reusedTuples = new int[sortedTs.length][];
 
     for (int i = 0; i < sortedTs.length; i++) {
       position[i] = findPositionForInsert(sortedTs[i]);
-
       insert[i] =
           !smallerEqualTuple(tuples[position[i]], sortedTs[i])
               || !smallerEqualTuple(sortedTs[i], tuples[position[i]]);
-
       if (insert[i]) {
         insertNo++;
       } else {
         reusedTuples[i] = tuples[position[i]];
       }
     }
+    return new InsertPlan(position, insert, insertNo, reusedTuples);
+  }
 
-    if (insertNo == 0) {
-      return reusedTuples;
-    }
-
+  private int[][] applyInsertPlan(int[][] sortedTs, InsertPlan plan) {
     int[][] tuplesBeforeExtension = tuples;
 
-    if (tupleNumber + insertNo > tuples.length) {
+    if (tupleNumber + plan.insertNo > tuples.length) {
       tuples = new int[tuples.length * 2][];
     } else {
       tuples = new int[tuples.length][];
     }
 
-    int previousPosition = 0;
+    int previousPosition = findFirstInsertIndex(plan.insert);
 
-    for (; previousPosition < insert.length; previousPosition++) {
-      if (insert[previousPosition]) {
-        break;
-      }
-    }
+    System.arraycopy(tuplesBeforeExtension, 0, tuples, 0, plan.position[previousPosition]);
 
-    System.arraycopy(tuplesBeforeExtension, 0, tuples, 0, position[previousPosition]);
-
-    tuplesBeforeExtension[position[previousPosition]] = new int[sortedTs[previousPosition].length];
+    tuplesBeforeExtension[plan.position[previousPosition]] =
+        new int[sortedTs[previousPosition].length];
 
     System.arraycopy(
         sortedTs[previousPosition],
         0,
-        tuplesBeforeExtension[position[previousPosition]],
+        tuplesBeforeExtension[plan.position[previousPosition]],
         0,
         sortedTs[previousPosition].length);
 
-    reusedTuples[previousPosition] = tuplesBeforeExtension[position[previousPosition]];
+    plan.reusedTuples[previousPosition] = tuplesBeforeExtension[plan.position[previousPosition]];
 
     int performedInserts = 1;
     for (int i = previousPosition + 1; i < sortedTs.length; i++) {
 
-      if (!insert[i]) {
+      if (!plan.insert[i]) {
         continue;
       }
 
       System.arraycopy(
           tuplesBeforeExtension,
-          position[previousPosition], // source
+          plan.position[previousPosition],
           tuples,
-          position[previousPosition] + performedInserts, // target
-          position[i] - position[previousPosition]); // quantity
+          plan.position[previousPosition] + performedInserts,
+          plan.position[i] - plan.position[previousPosition]);
 
-      tuplesBeforeExtension[position[i] + performedInserts] = new int[sortedTs[i].length];
+      tuplesBeforeExtension[plan.position[i] + performedInserts] = new int[sortedTs[i].length];
 
       System.arraycopy(
           sortedTs[i],
           0,
-          tuplesBeforeExtension[position[i] + performedInserts],
+          tuplesBeforeExtension[plan.position[i] + performedInserts],
           0,
           sortedTs[i].length);
 
-      reusedTuples[i] = tuplesBeforeExtension[position[i] + performedInserts];
+      plan.reusedTuples[i] = tuplesBeforeExtension[plan.position[i] + performedInserts];
 
       performedInserts++;
       previousPosition = i;
@@ -198,14 +200,23 @@ public class TupleUtils {
 
     System.arraycopy(
         tuplesBeforeExtension,
-        position[previousPosition], // source
+        plan.position[previousPosition],
         tuples,
-        position[previousPosition] + performedInserts, // target
-        tupleNumber - position[previousPosition]); // quantity
+        plan.position[previousPosition] + performedInserts,
+        tupleNumber - plan.position[previousPosition]);
 
     tupleNumber += performedInserts;
 
-    return reusedTuples;
+    return plan.reusedTuples;
+  }
+
+  private int findFirstInsertIndex(boolean[] insert) {
+    for (int i = 0; i < insert.length; i++) {
+      if (insert[i]) {
+        return i;
+      }
+    }
+    return insert.length;
   }
 
   private int[][] recordTuplesIntoEmptyStore(int[][] sortedTs) {

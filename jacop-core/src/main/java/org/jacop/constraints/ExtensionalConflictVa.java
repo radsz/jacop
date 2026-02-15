@@ -117,23 +117,36 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
     int[] lastofsequenceVarValue = lastofsequence[varPosition][pos];
 
     while (true) {
-      int position = isDisallowed(varPosition, value, t);
-      if (position == -1) {
-        recordSupport(varPosition, value, t);
-        return t;
+      int[] next =
+          seekNextSupportTuple(varPosition, value, t, tuplesVarValue, lastofsequenceVarValue);
+      if (next != null) {
+        return next;
       }
-      if (lastofsequenceVarValue[position] != position) {
-        System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
-      }
-      int invalidPosition = seekInvalidPosition(t);
-      boolean advanced =
-          invalidPosition == -1
-              ? advanceTupleFromEnd(t, varPosition)
-              : advanceTupleFromInvalidPosition(t, varPosition, invalidPosition);
+      boolean advanced = advanceSupportTuple(t, varPosition);
       if (!advanced) {
         return null;
       }
     }
+  }
+
+  private int[] seekNextSupportTuple(
+      int varPosition, int value, int[] t, int[][] tuplesVarValue, int[] lastofsequenceVarValue) {
+    int position = isDisallowed(varPosition, value, t);
+    if (position == -1) {
+      recordSupport(varPosition, value, t);
+      return t;
+    }
+    if (lastofsequenceVarValue[position] != position) {
+      System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
+    }
+    return null;
+  }
+
+  private boolean advanceSupportTuple(int[] t, int varPosition) {
+    int invalidPosition = seekInvalidPosition(t);
+    return invalidPosition == -1
+        ? advanceTupleFromEnd(t, varPosition)
+        : advanceTupleFromInvalidPosition(t, varPosition, invalidPosition);
   }
 
   private int[] getInitialSupportTuple(int varPosition, int value) {

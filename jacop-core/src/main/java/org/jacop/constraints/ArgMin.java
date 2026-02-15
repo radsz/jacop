@@ -103,38 +103,40 @@ public class ArgMin extends AbstractArgMinMax {
     }
 
     do {
-
       store.propagationHasOccurred = false;
-
-      int[] lbUbPos = findLbUbPosForMin();
-      int lb = lbUbPos[0];
-      int ub = lbUbPos[1];
-      int pos = lbUbPos[2];
-
-      if (lb == ub) {
-        extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
-      }
-
-      IntervalDomain idxDomain = buildIdxDomainForMin(ub);
-      if (idxDomain.isEmpty()) {
-        throw Store.failException;
-      }
-      extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
-
-      int[] lbPos = findLbPosForMin();
-      int lb2 = lbPos[0];
-      int pos2 = lbPos[1];
-      if (list[pos2].singleton()) {
-        extremeIndex.domain.in(
-            store.level, extremeIndex, pos2 + 1 + indexOffset, pos2 + 1 + indexOffset);
-      }
-
-      if (extremeIndex.singleton()) {
-        pruneWhenExtremeIndexSingletonMin(store);
-      } else {
-        pruneWhenExtremeIndexNotSingletonMin(store, lb2);
-      }
+      propagateMin(store);
     } while (store.propagationHasOccurred);
+  }
+
+  private void propagateMin(Store store) {
+    int[] lbUbPos = findLbUbPosForMin();
+    int lb = lbUbPos[0];
+    int ub = lbUbPos[1];
+    int pos = lbUbPos[2];
+
+    if (lb == ub) {
+      extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
+    }
+
+    IntervalDomain idxDomain = buildIdxDomainForMin(ub);
+    if (idxDomain.isEmpty()) {
+      throw Store.failException;
+    }
+    extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
+
+    int[] lbPos = findLbPosForMin();
+    int lb2 = lbPos[0];
+    int pos2 = lbPos[1];
+    if (list[pos2].singleton()) {
+      extremeIndex.domain.in(
+          store.level, extremeIndex, pos2 + 1 + indexOffset, pos2 + 1 + indexOffset);
+    }
+
+    if (extremeIndex.singleton()) {
+      pruneWhenExtremeIndexSingletonMin(store);
+    } else {
+      pruneWhenExtremeIndexNotSingletonMin(store, lb2);
+    }
   }
 
   private int[] findLbUbPosForMin() {

@@ -311,11 +311,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       decomposition = new ArrayList<>();
       buildValueBasedDecomposition(store, decomposition);
       return decomposition;
-    } else {
-      List<Constraint> result = new ArrayList<>();
-      buildValueBasedDecomposition(store, result);
-      return result;
     }
+    List<Constraint> result = new ArrayList<>();
+    buildValueBasedDecomposition(store, result);
+    return result;
   }
 
   private void buildValueBasedDecomposition(Store store, List<Constraint> target) {
@@ -386,29 +385,26 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   public List<Constraint> decompose(Store store) {
 
     if (decomposition == null || decomposition.size() > 1) {
-
       decomposition = new ArrayList<>();
-
-      // compute union of all domains
-      IntDomain all = new IntervalDomain();
-      for (int value : countedValue) {
-        all.unionAdapt(value);
-      }
-
-      // create values
-      int d = all.getSize();
-      IntDomain[] doms = new IntDomain[d];
-      ValueEnumeration it = all.valueEnumeration();
-      for (int i = 0; it.hasMoreElements(); i++) {
-        int value = it.nextElement();
-        doms[i] = new IntervalDomain(value, value);
-      }
-
-      // create constraint
-      decomposition.add(new SoftGCCBuilder(all, doms, violationMeasure).build());
+      decomposition.add(buildSoftGCCConstraint());
     }
 
     return decomposition;
+  }
+
+  private Constraint buildSoftGCCConstraint() {
+    IntDomain all = new IntervalDomain();
+    for (int value : countedValue) {
+      all.unionAdapt(value);
+    }
+    int d = all.getSize();
+    IntDomain[] doms = new IntDomain[d];
+    ValueEnumeration it = all.valueEnumeration();
+    for (int i = 0; it.hasMoreElements(); i++) {
+      int value = it.nextElement();
+      doms[i] = new IntervalDomain(value, value);
+    }
+    return new SoftGCCBuilder(all, doms, violationMeasure).build();
   }
 
   @Override
