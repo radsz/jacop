@@ -124,7 +124,7 @@ public final class RunSolver {
           return e;
         }
       };
-  private static String filename;
+  private String filename;
 
   static {
     parser.setHelp(HELP_STRING);
@@ -139,7 +139,7 @@ public final class RunSolver {
    *
    * @return an input stream for the content of the file
    */
-  private static InputStream readFile() {
+  private InputStream readFile() {
     try {
       File file = new File(filename);
       if (!file.exists()) {

@@ -59,7 +59,7 @@ public interface ExternalConstraint {
    * @param geost the geost kernel that will use the generated constraint
    * @return the collection of internal constraints which correspond to this external constraint
    */
-  Collection<? extends InternalConstraint> genInternalConstraints(Geost geost);
+  Collection<InternalConstraint> genInternalConstraints(Geost geost);
 
   /**
    * It provides the collection of internal constraints that the given object has to satisfy. For
@@ -72,7 +72,7 @@ public interface ExternalConstraint {
    * @param o the geost object that needs to be constrained
    * @return the collection of internal constraints acting on the given object
    */
-  Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o);
+  Collection<InternalConstraint> getObjectConstraints(GeostObject o);
 
   /**
    * It adds to the accumulator collection the objects that are likely to be pruned if the given

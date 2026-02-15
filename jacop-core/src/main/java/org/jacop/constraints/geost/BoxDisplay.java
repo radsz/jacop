@@ -61,8 +61,8 @@ public class BoxDisplay extends JFrame {
   /** It defines the shift in y dimension for drawing. */
   int yCellsShift;
 
-  private Image bufferImage;
-  private Image displayImgae; // page flipping
+  private transient Image bufferImage;
+  private transient Image displayImgae; // page flipping
 
   /**
    * It constructs a display to visualize Geost objects/constraint.

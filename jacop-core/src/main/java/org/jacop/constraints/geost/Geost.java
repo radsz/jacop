@@ -657,7 +657,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     for (ExternalConstraint ec : externalConstraints) {
 
-      final Collection<? extends InternalConstraint> ics = ec.genInternalConstraints(this);
+      final Collection<InternalConstraint> ics = ec.genInternalConstraints(this);
 
       // prepare all data structures
       for (GeostObject o : objects) {

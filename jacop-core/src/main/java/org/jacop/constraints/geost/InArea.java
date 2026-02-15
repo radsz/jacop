@@ -121,7 +121,7 @@ public class InArea implements ExternalConstraint {
   }
 
   /** {@inheritDoc} */
-  public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
+  public Collection<InternalConstraint> getObjectConstraints(GeostObject o) {
     // all objects are in the scope of this constraint and each object is constrained in the same
     // manner.
     return constraints;

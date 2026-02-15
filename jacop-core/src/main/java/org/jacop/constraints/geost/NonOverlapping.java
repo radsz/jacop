@@ -59,7 +59,7 @@ public class NonOverlapping implements ExternalConstraint {
   // For a moment not really needed, if the dead code inside function
   // isInternalConstraintApplicableTo
   // is removed then this attribute can be removed too.
-  Set<ObstacleObjectFrame> constraints;
+  Set<InternalConstraint> constraints;
 
   /**
    * It creates an external constraint to make sure that specified set of objects does not overlap
@@ -113,7 +113,7 @@ public class NonOverlapping implements ExternalConstraint {
   }
 
   /** {@inheritDoc} */
-  public Collection<ObstacleObjectFrame> genInternalConstraints(Geost geost) {
+  public Collection<InternalConstraint> genInternalConstraints(Geost geost) {
 
     if (objectConstraintMap == null) {
 
@@ -158,7 +158,7 @@ public class NonOverlapping implements ExternalConstraint {
   }
 
   /** {@inheritDoc} */
-  public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
+  public Collection<InternalConstraint> getObjectConstraints(GeostObject o) {
 
     Collection<InternalConstraint> relatedConstraints = new ArrayList<>();
 

@@ -61,7 +61,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
   static final boolean DISPLAY_FRAME = false;
 
-  static BoxDisplay display;
+  // Non-static: set from instance method computeFrame; shared-display concerns are handled
+  // externally.
+  BoxDisplay display;
 
   // TODO: remove if not needed anymore, or better separate from other code by putting it inside
   // functions.
