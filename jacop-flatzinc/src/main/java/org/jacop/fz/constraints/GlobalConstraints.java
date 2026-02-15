@@ -989,9 +989,29 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int size = v.length;
-
-    // create tuples for the constraint; remove non feasible tuples
     int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+
+    int[][] t = filterFeasibleTuples(tbl, v, size);
+
+    TableVarsTuples reduced = removeGroundVariablesFromTable(v, t, size);
+    v = reduced.vars;
+    t = reduced.tuples;
+
+    if (v.length == 0) {
+      return;
+    }
+
+    t = deduplicateTableRows(t);
+
+    int[] vu = uniqueIndex(v);
+    if (vu.length != v.length) {
+      poseTableWithUniqueVars(v, t, vu);
+    } else {
+      poseTableBySize(v, t);
+    }
+  }
+
+  private int[][] filterFeasibleTuples(int[] tbl, IntVar[] v, int size) {
     int[][] t = new int[tbl.length / size][size];
     boolean[] tuplesToRemove = new boolean[t.length];
     int n = 0;
@@ -1014,11 +1034,13 @@ class GlobalConstraints implements ParserTreeConstants {
         newT[m++] = t[i];
       }
     }
-    t = newT;
+    return newT;
+  }
 
-    // remove ground variables and their respective values in touples
-    boolean[] toRemove = new boolean[t[0].length];
-    // Arrays.fill(toRemove, false);  // initialized by default to false
+  private record TableVarsTuples(IntVar[] vars, int[][] tuples) {}
+
+  private TableVarsTuples removeGroundVariablesFromTable(IntVar[] v, int[][] t, int size) {
+    boolean[] toRemove = new boolean[v.length];
     int numberToRemove = 0;
     for (int i = 0; i < v.length; i++) {
       if (v[i].singleton()) {
@@ -1026,7 +1048,7 @@ class GlobalConstraints implements ParserTreeConstants {
         numberToRemove++;
       }
     }
-    newT = new int[k][size - numberToRemove];
+    int[][] newT = new int[t.length][size - numberToRemove];
     for (int i = 0; i < t.length; i++) {
       int l = 0;
       for (int j = 0; j < size; j++) {
@@ -1044,14 +1066,10 @@ class GlobalConstraints implements ParserTreeConstants {
         newV[l++] = v[i];
       }
     }
-    t = newT;
-    v = newV;
+    return new TableVarsTuples(newV, newT);
+  }
 
-    if (v.length == 0) {
-      return;
-    }
-
-    // ========== remove duplicated tuples in the table =============
+  private int[][] deduplicateTableRows(int[][] t) {
     ArrayList<Integer>[] tl = new ArrayList[t.length];
     for (int i = 0; i < t.length; i++) {
       ArrayList<Integer> tmp = new ArrayList<>(t.length);
@@ -1061,7 +1079,6 @@ class GlobalConstraints implements ParserTreeConstants {
       tl[i] = tmp;
     }
     Arrays.sort(tl, 0, tl.length, rowComparator);
-
     t = toIntArray(tl);
 
     int[][] dt = new int[t.length][t[0].length];
@@ -1074,16 +1091,7 @@ class GlobalConstraints implements ParserTreeConstants {
         rc = t[i];
       }
     }
-
-    t = Arrays.copyOf(dt, kk);
-    // ============================
-
-    int[] vu = uniqueIndex(v);
-    if (vu.length != v.length) {
-      poseTableWithUniqueVars(v, t, vu);
-    } else {
-      poseTableBySize(v, t);
-    }
+    return Arrays.copyOf(dt, kk);
   }
 
   private void poseTableWithUniqueVars(IntVar[] v, int[][] t, int[] vu) {
@@ -1752,32 +1760,43 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    // filter false values of b
     IntVar[][] filtered = filterFalseEntries(b, x);
     b = filtered[0];
     x = filtered[1];
 
     int n = x.length;
-    if (n == 2) {
-      if (support.options.useSat()
-          && x[0].min() >= 0
-          && x[0].max() <= 1
-          && x[1].min() >= 0
-          && x[1].max() <= 1
-          && y.singleton(1)) {
-        support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
-        return;
-      } else if (b[0].singleton(1)) {
-        support.pose(new XeqY(x[0], y));
-        return;
-      } else if (b[0].singleton(0) && b[1].singleton(1)) {
-        support.pose(new XeqY(x[1], y));
-        return;
-      }
+    if (n == 2 && tryEarlyReturnForIfThenElseIntTwoBranches(b, x, y)) {
+      return;
     }
 
-    PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
-    for (int i = 0; i < n; i++) {
+    PrimitiveConstraint[] cs = createIntEqualityConstraintsForConditional(x, y);
+    poseIntConditionalConstraint(b, cs, n);
+  }
+
+  private boolean tryEarlyReturnForIfThenElseIntTwoBranches(IntVar[] b, IntVar[] x, IntVar y) {
+    if (support.options.useSat()
+        && x[0].min() >= 0
+        && x[0].max() <= 1
+        && x[1].min() >= 0
+        && x[1].max() <= 1
+        && y.singleton(1)) {
+      support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
+      return true;
+    }
+    if (b[0].singleton(1)) {
+      support.pose(new XeqY(x[0], y));
+      return true;
+    }
+    if (b[0].singleton(0) && b[1].singleton(1)) {
+      support.pose(new XeqY(x[1], y));
+      return true;
+    }
+    return false;
+  }
+
+  private PrimitiveConstraint[] createIntEqualityConstraintsForConditional(IntVar[] x, IntVar y) {
+    PrimitiveConstraint[] cs = new PrimitiveConstraint[x.length];
+    for (int i = 0; i < x.length; i++) {
       if (y.singleton()) {
         cs[i] = new XeqC(x[i], y.value());
       } else if (x[i].singleton()) {
@@ -1786,10 +1805,13 @@ class GlobalConstraints implements ParserTreeConstants {
         cs[i] = new XeqY(y, x[i]);
       }
     }
+    return cs;
+  }
+
+  private void poseIntConditionalConstraint(IntVar[] b, PrimitiveConstraint[] cs, int n) {
     if (n == 2) {
       if (cs[1].satisfied()) {
-        if (cs[0].satisfied()) {
-        } else {
+        if (!cs[0].satisfied()) {
           support.pose(new IfThen(new XeqC(b[0], 1), cs[0]));
         }
       } else {

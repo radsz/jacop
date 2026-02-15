@@ -83,6 +83,11 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     boundConsistency(store);
   }
 
+  private static boolean isTanSingularityInRange(double min, double max) {
+    return (FloatDomain.PI / 2 >= min && FloatDomain.PI / 2 <= max)
+        || (-FloatDomain.PI / 2 >= min && -FloatDomain.PI / 2 <= max);
+  }
+
   void boundConsistency(Store store) {
 
     if (p.max() - p.min() >= FloatDomain.PI) {
@@ -105,11 +110,8 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
       }
 
       FloatInterval minMax = new FloatInterval(min, max);
-      if (minMax.singleton()) {
-        if ((FloatDomain.PI / 2 >= min && FloatDomain.PI / 2 <= max)
-            || (-FloatDomain.PI / 2 >= min && -FloatDomain.PI / 2 <= max)) {
-          throw Store.failException;
-        }
+      if (minMax.singleton() && isTanSingularityInRange(min, max)) {
+        throw Store.failException;
       }
 
       double[] qBounds = computeTanQBounds(min, max);

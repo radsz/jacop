@@ -853,18 +853,20 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     store.removeLevel(depth);
     logRightBranch(choice == null, fdv, val, choice);
-
-    if (choice != null) {
-      consistent = doRightBranchChoice(choice, firstVariable);
-    } else if (!fdv.dom().singleton()) {
-      consistent = doRightBranchVariable(fdv, val, firstVariable);
-    } else {
-      consistent = false;
-    }
-
+    consistent = doRightBranch(choice, fdv, val, firstVariable);
     store.setLevel(--depth);
     depthExcludePaths--;
     return consistent;
+  }
+
+  private boolean doRightBranch(PrimitiveConstraint choice, T fdv, int val, int firstVariable) {
+    if (choice != null) {
+      return doRightBranchChoice(choice, firstVariable);
+    }
+    if (!fdv.dom().singleton()) {
+      return doRightBranchVariable(fdv, val, firstVariable);
+    }
+    return false;
   }
 
   /**

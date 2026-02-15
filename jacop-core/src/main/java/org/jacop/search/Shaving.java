@@ -239,6 +239,26 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     return true;
   }
 
+  /** Returns true if store became inconsistent. */
+  private boolean processShavablePair(
+      Map<IntVar, LinkedHashSet<Integer>> shavableCurrent,
+      Map<IntVar, LinkedHashSet<Integer>> notShavable,
+      IntVar shaveVar,
+      Integer shaveVal) {
+    boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
+    if (shavablePair) {
+      LinkedHashSet<Integer> shaveVarList =
+          shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
+      shaveVarList.add(shaveVal);
+      store.impose(new XneqC(shaveVar, shaveVal));
+      return !store.consistency();
+    }
+    LinkedHashSet<Integer> notShaveVarList =
+        notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
+    notShaveVarList.add(shaveVal);
+    return false;
+  }
+
   /**
    * Processes shavable neighbours from previous levels. Returns false if store became inconsistent.
    */
@@ -257,23 +277,9 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
           if (!shaveVar.domain.contains(shaveVal) || shaveVar.singleton()) {
             continue;
           }
-
-          boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
-
-          if (shavablePair) {
-            LinkedHashSet<Integer> shaveVarList =
-                shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
-            shaveVarList.add(shaveVal);
-
-            store.impose(new XneqC(shaveVar, shaveVal));
-            if (!store.consistency()) {
-              depth++;
-              return false;
-            }
-          } else {
-            LinkedHashSet<Integer> notShaveVarList =
-                notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
-            notShaveVarList.add(shaveVal);
+          if (processShavablePair(shavableCurrent, notShavable, shaveVar, shaveVal)) {
+            depth++;
+            return false;
           }
         }
       }
@@ -282,43 +288,46 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     return true;
   }
 
+  /** Returns true if store became inconsistent. */
+  private boolean processShavingConstraint(
+      Map<IntVar, LinkedHashSet<Integer>> shavableCurrent,
+      Constraint g,
+      IntVar shaveVar,
+      int shaveVal) {
+    LinkedHashSet<Integer> notShavableListShaveVar = notShavable.get(shaveVar);
+    if (notShavableListShaveVar != null && notShavableListShaveVar.remove(shaveVal)) {
+      return false;
+    }
+    boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
+    if (shavablePair) {
+      LinkedHashSet<Integer> shaveVarList =
+          shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
+      shaveVarList.add(shaveVal);
+      store.impose(new XneqC(shaveVar, shaveVal));
+      return !store.consistency();
+    }
+    LinkedHashSet<Integer> notShaveVarList =
+        notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
+    notShaveVarList.add(shaveVal);
+    return false;
+  }
+
   /** Processes shaving constraints. Returns false if store became inconsistent. */
   private boolean processShavingConstraints(Map<IntVar, LinkedHashSet<Integer>> shavableCurrent) {
     for (Constraint g : shavingConstraints) {
       if (onlyFailedConstraint && recentlyFailedConstraint != g) {
         continue;
       }
-
       IntVar shaveVar = (T) g.getGuideVariable();
       if (shaveVar == null) {
         continue;
       }
-
       int shaveVal = g.getGuideValue();
       if (onlyIntVarsOfFailedConstraint && !varsOfFailedConstraint.contains(shaveVar)) {
         continue;
       }
-
-      LinkedHashSet<Integer> notShavableListShaveVar = notShavable.get(shaveVar);
-      if (notShavableListShaveVar != null && notShavableListShaveVar.remove(shaveVal)) {
-        continue;
-      }
-
-      boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
-
-      if (shavablePair) {
-        LinkedHashSet<Integer> shaveVarList =
-            shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
-        shaveVarList.add(shaveVal);
-
-        store.impose(new XneqC(shaveVar, shaveVal));
-        if (!store.consistency()) {
-          return false;
-        }
-      } else {
-        LinkedHashSet<Integer> notShaveVarList =
-            notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
-        notShaveVarList.add(shaveVal);
+      if (processShavingConstraint(shavableCurrent, g, shaveVar, shaveVal)) {
+        return false;
       }
     }
     return true;

@@ -871,27 +871,36 @@ public class Support implements ParserTreeConstants {
       return;
     }
     if (b.max() == 0) {
-      if (isReified) {
-        if (y.singleton()) {
-          x.domain.inComplement(store.level, x, y.value());
-          removeConstraint.run();
-        }
-        if (x.singleton()) {
-          y.domain.inComplement(store.level, y, x.value());
-          removeConstraint.run();
-        }
-      } else {
-        removeConstraint.run();
-      }
+      propagateFzXeqYWhenBZero(store, x, y, isReified, removeConstraint);
       return;
     }
     if (b.min() == 1) {
-      do {
-        x.domain.in(store.level, x, y.domain);
-        store.propagationHasOccurred = false;
-        y.domain.in(store.level, y, x.domain);
-      } while (store.propagationHasOccurred);
+      propagateFzXeqYWhenBOne(store, x, y);
     }
+  }
+
+  private void propagateFzXeqYWhenBZero(
+      Store store, IntVar x, IntVar y, boolean isReified, Runnable removeConstraint) {
+    if (isReified) {
+      if (y.singleton()) {
+        x.domain.inComplement(store.level, x, y.value());
+        removeConstraint.run();
+      }
+      if (x.singleton()) {
+        y.domain.inComplement(store.level, y, x.value());
+        removeConstraint.run();
+      }
+    } else {
+      removeConstraint.run();
+    }
+  }
+
+  private void propagateFzXeqYWhenBOne(Store store, IntVar x, IntVar y) {
+    do {
+      x.domain.in(store.level, x, y.domain);
+      store.propagationHasOccurred = false;
+      y.domain.in(store.level, y, x.domain);
+    } while (store.propagationHasOccurred);
   }
 
   Constraint fzXeqC(IntVar x, int c, IntVar b, boolean isReified) {

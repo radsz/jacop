@@ -203,10 +203,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
       T v = searchVariables.get(currentPosition).get(pivotPosition);
 
       if (v.singleton()) {
-        List<T> row = searchVariables.get(currentPosition);
-        if (isRowAllGrounded(row)) {
-          searchVariables.set(currentPosition, searchVariables.get(firstVariable));
-          searchVariables.set(firstVariable, row);
+        if (trySwapGroundedRow(firstVariable, currentPosition, optimalPosition)) {
           if (optimalPosition == firstVariable) {
             optimalPosition = currentPosition;
           }
@@ -257,6 +254,17 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
       firstVariable++;
     }
     return null;
+  }
+
+  /** Returns true if row was all grounded and was swapped with firstVariable row. */
+  private boolean trySwapGroundedRow(int firstVariable, int currentPosition, int optimalPosition) {
+    List<T> row = searchVariables.get(currentPosition);
+    if (!isRowAllGrounded(row)) {
+      return false;
+    }
+    searchVariables.set(currentPosition, searchVariables.get(firstVariable));
+    searchVariables.set(firstVariable, row);
+    return true;
   }
 
   /**

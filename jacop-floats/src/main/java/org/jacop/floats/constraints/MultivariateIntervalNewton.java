@@ -284,6 +284,10 @@ public class MultivariateIntervalNewton {
     return Derivative.resolveConstraint(v, list);
   }
 
+  private boolean shouldIncludeConstraint(Constraint c) {
+    return eval.search(c) == -1 && !Derivative.derivateConstraints.contains(c);
+  }
+
   private List<Constraint> collectConstraintsForVariable(FloatVar v) {
     List<Constraint> list = new ArrayList<>();
     for (int i = 0; i < v.dom().modelConstraints.length; i++) {
@@ -291,19 +295,11 @@ public class MultivariateIntervalNewton {
         continue;
       }
       for (int j = 0; j < v.dom().modelConstraints[i].length; j++) {
-        if (v.dom().modelConstraints[i][j] == null) {
-          continue;
-        }
         Constraint c = v.dom().modelConstraints[i][j];
-        if (eval.search(c) != -1) {
+        if (c == null || !shouldIncludeConstraint(c) || list.contains(c)) {
           continue;
         }
-        if (Derivative.derivateConstraints.contains(c)) {
-          continue;
-        }
-        if (!list.contains(c)) {
-          list.add(c);
-        }
+        list.add(c);
       }
     }
     return list;

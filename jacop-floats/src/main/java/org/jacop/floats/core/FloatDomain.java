@@ -386,27 +386,21 @@ public abstract class FloatDomain extends Domain {
    * @param d the maximum value of the second interval
    * @return the interval domain representing the result of the multiplication
    */
-  public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
-
-    if (c == 1.0 && d == 1.0) {
-      return new FloatIntervalDomain(a, b);
-    }
-    if (c == -1.0 && d == -1.0) {
-      return new FloatIntervalDomain(-b, -a);
-    }
-
-    boolean m1 = a < 0 && b > 0;
-    boolean p0_1 = a == 0 && b > 0;
-    boolean p1_1 = a > 0 && b > 0;
-    boolean n0_1 = a < 0 && b == 0;
-    boolean n1_1 = a < 0 && b < 0;
-
-    boolean m2 = c < 0 && d > 0;
-    boolean p0_2 = c == 0 && d > 0;
-    boolean p1_2 = c > 0 && d > 0;
-    boolean n0_2 = c < 0 && d == 0;
-    boolean n1_2 = c < 0 && d < 0;
-
+  private static FloatIntervalDomain mulBoundsDispatch(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m1,
+      boolean p0_1,
+      boolean p1_1,
+      boolean n0_1,
+      boolean n1_1,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
     if (p1_1) {
       return mulBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
@@ -423,6 +417,32 @@ public abstract class FloatDomain extends Domain {
       return mulBoundsN0(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
     return new FloatIntervalDomain(0.0, 0.0);
+  }
+
+  public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
+
+    if (c == 1.0 && d == 1.0) {
+      return new FloatIntervalDomain(a, b);
+    }
+    if (c == -1.0 && d == -1.0) {
+      return new FloatIntervalDomain(-b, -a);
+    }
+
+    return mulBoundsDispatch(
+        a,
+        b,
+        c,
+        d,
+        a < 0 && b > 0,
+        a == 0 && b > 0,
+        a > 0 && b > 0,
+        a < 0 && b == 0,
+        a < 0 && b < 0,
+        c < 0 && d > 0,
+        c == 0 && d > 0,
+        c > 0 && d > 0,
+        c < 0 && d == 0,
+        c < 0 && d < 0);
   }
 
   private static FloatIntervalDomain mulBoundsP1(
@@ -556,28 +576,22 @@ public abstract class FloatDomain extends Domain {
    * @param d the maximum value of the second interval
    * @return the interval domain representing the result of the division
    */
-  public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
-
-    if (c == 1.0 && d == 1.0) {
-      return new FloatIntervalDomain(a, b);
-    }
-    if (c == -1.0 && d == -1.0) {
-      return new FloatIntervalDomain(-b, -a);
-    }
-
-    boolean m1 = a < 0 && b > 0;
-    boolean z1 = a == 0 && b == 0;
-    boolean p0_1 = a == 0 && b > 0;
-    boolean p1_1 = a > 0 && b > 0;
-    boolean n0_1 = a < 0 && b == 0;
-    boolean n1_1 = a < 0 && b < 0;
-
-    boolean m2 = c < 0 && d > 0;
-    boolean p0_2 = c == 0 && d > 0;
-    boolean p1_2 = c > 0 && d > 0;
-    boolean n0_2 = c < 0 && d == 0;
-    boolean n1_2 = c < 0 && d < 0;
-
+  private static FloatIntervalDomain divBoundsDispatch(
+      double a,
+      double b,
+      double c,
+      double d,
+      boolean m1,
+      boolean z1,
+      boolean p0_1,
+      boolean p1_1,
+      boolean n0_1,
+      boolean n1_1,
+      boolean m2,
+      boolean p0_2,
+      boolean p1_2,
+      boolean n0_2,
+      boolean n1_2) {
     if (p1_1) {
       return divBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
@@ -597,6 +611,33 @@ public abstract class FloatDomain extends Domain {
       return divBoundsZ(p1_2, n1_2);
     }
     return null;
+  }
+
+  public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
+
+    if (c == 1.0 && d == 1.0) {
+      return new FloatIntervalDomain(a, b);
+    }
+    if (c == -1.0 && d == -1.0) {
+      return new FloatIntervalDomain(-b, -a);
+    }
+
+    return divBoundsDispatch(
+        a,
+        b,
+        c,
+        d,
+        a < 0 && b > 0,
+        a == 0 && b == 0,
+        a == 0 && b > 0,
+        a > 0 && b > 0,
+        a < 0 && b == 0,
+        a < 0 && b < 0,
+        c < 0 && d > 0,
+        c == 0 && d > 0,
+        c > 0 && d > 0,
+        c < 0 && d == 0,
+        c < 0 && d < 0);
   }
 
   private static FloatIntervalDomain divBoundsP1(

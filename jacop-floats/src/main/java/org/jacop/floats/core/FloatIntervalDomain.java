@@ -386,6 +386,35 @@ public class FloatIntervalDomain extends FloatDomain {
     return result;
   }
 
+  /** Advances pointer1, updates interval1, returns true if loop should break. */
+  private boolean computeIntersectionAdvanceP1(
+      int[] pointer1, double[] interval1Min, double[] interval1Max) {
+    pointer1[0]++;
+    if (pointer1[0] < size) {
+      interval1Min[0] = intervals[pointer1[0]].min();
+      interval1Max[0] = intervals[pointer1[0]].max();
+      return false;
+    }
+    return true;
+  }
+
+  /** Advances pointer2, updates interval2, returns true if loop should break. */
+  private boolean computeIntersectionAdvanceP2(
+      FloatInterval[] inputIntervals,
+      int inputSize,
+      double shift,
+      int[] pointer2,
+      double[] interval2Min,
+      double[] interval2Max) {
+    pointer2[0]++;
+    if (pointer2[0] < inputSize) {
+      interval2Min[0] = inputIntervals[pointer2[0]].min() + shift;
+      interval2Max[0] = inputIntervals[pointer2[0]].max() + shift;
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Performs one step of the intersection loop: advance pointers or add overlapping interval.
    * Updates state in place. Returns true if the loop should break.
@@ -402,73 +431,59 @@ public class FloatIntervalDomain extends FloatDomain {
       double[] interval2Min,
       double[] interval2Max) {
     if (interval1Max[0] < interval2Min[0]) {
-      pointer1[0]++;
-      if (pointer1[0] < size) {
-        interval1Min[0] = intervals[pointer1[0]].min();
-        interval1Max[0] = intervals[pointer1[0]].max();
-        return false;
-      }
-      return true;
+      return computeIntersectionAdvanceP1(pointer1, interval1Min, interval1Max);
     }
     if (interval2Max[0] < interval1Min[0]) {
-      pointer2[0]++;
-      if (pointer2[0] < inputSize) {
-        interval2Min[0] = inputIntervals[pointer2[0]].min() + shift;
-        interval2Max[0] = inputIntervals[pointer2[0]].max() + shift;
-        return false;
-      }
-      return true;
+      return computeIntersectionAdvanceP2(
+          inputIntervals, inputSize, shift, pointer2, interval2Min, interval2Max);
     }
     if (interval1Min[0] <= interval2Min[0]) {
-      if (interval1Max[0] <= interval2Max[0]) {
-        result.unionAdapt(new FloatInterval(interval2Min[0], interval1Max[0]));
-        pointer1[0]++;
-        if (pointer1[0] < size) {
-          interval1Min[0] = intervals[pointer1[0]].min();
-          interval1Max[0] = intervals[pointer1[0]].max();
-          return false;
-        }
-        return true;
-      }
-      result.unionAdapt(
-          new FloatInterval(
-              inputIntervals[pointer2[0]].min() + shift,
-              inputIntervals[pointer2[0]].max() + shift));
-      pointer2[0]++;
-      if (pointer2[0] < inputSize) {
-        interval2Min[0] = inputIntervals[pointer2[0]].min() + shift;
-        interval2Max[0] = inputIntervals[pointer2[0]].max() + shift;
-        return false;
-      }
-      return true;
+      return computeIntersectionStepInterval1MinLte(
+          result,
+          inputIntervals,
+          inputSize,
+          shift,
+          pointer1,
+          pointer2,
+          interval1Min,
+          interval1Max,
+          interval2Min,
+          interval2Max);
     }
     if (interval2Max[0] <= interval1Max[0]) {
       result.unionAdapt(new FloatInterval(interval1Min[0], interval2Max[0]));
       if (interval2Max[0] >= interval1Max[0]) {
-        pointer1[0]++;
-        if (pointer1[0] < size) {
-          interval1Min[0] = intervals[pointer1[0]].min();
-          interval1Max[0] = intervals[pointer1[0]].max();
-        } else {
+        if (computeIntersectionAdvanceP1(pointer1, interval1Min, interval1Max)) {
           return true;
         }
       }
-      pointer2[0]++;
-      if (pointer2[0] < inputSize) {
-        interval2Min[0] = inputIntervals[pointer2[0]].min() + shift;
-        interval2Max[0] = inputIntervals[pointer2[0]].max() + shift;
-        return false;
-      }
-      return true;
+      return computeIntersectionAdvanceP2(
+          inputIntervals, inputSize, shift, pointer2, interval2Min, interval2Max);
     }
     result.unionAdapt(intervals[pointer1[0]]);
-    pointer1[0]++;
-    if (pointer1[0] < size) {
-      interval1Min[0] = intervals[pointer1[0]].min();
-      interval1Max[0] = intervals[pointer1[0]].max();
-      return false;
+    return computeIntersectionAdvanceP1(pointer1, interval1Min, interval1Max);
+  }
+
+  private boolean computeIntersectionStepInterval1MinLte(
+      FloatIntervalDomain result,
+      FloatInterval[] inputIntervals,
+      int inputSize,
+      double shift,
+      int[] pointer1,
+      int[] pointer2,
+      double[] interval1Min,
+      double[] interval1Max,
+      double[] interval2Min,
+      double[] interval2Max) {
+    if (interval1Max[0] <= interval2Max[0]) {
+      result.unionAdapt(new FloatInterval(interval2Min[0], interval1Max[0]));
+      return computeIntersectionAdvanceP1(pointer1, interval1Min, interval1Max);
     }
-    return true;
+    result.unionAdapt(
+        new FloatInterval(
+            inputIntervals[pointer2[0]].min() + shift, inputIntervals[pointer2[0]].max() + shift));
+    return computeIntersectionAdvanceP2(
+        inputIntervals, inputSize, shift, pointer2, interval2Min, interval2Max);
   }
 
   private FloatIntervalDomain computeIntersection(
@@ -1218,6 +1233,49 @@ public class FloatIntervalDomain extends FloatDomain {
     return p1[0] >= size1;
   }
 
+  /** Result of one intersect loop iteration: new pointer, new interval, whether to break. */
+  private static final class IntersectIterResult {
+    int pointer;
+    FloatInterval interval;
+    boolean doBreak;
+
+    IntersectIterResult(int pointer, FloatInterval interval, boolean doBreak) {
+      this.pointer = pointer;
+      this.interval = interval;
+      this.doBreak = doBreak;
+    }
+  }
+
+  private IntersectIterResult intersectProcessInterval(
+      FloatIntervalDomain temp, int pointer1, FloatInterval interval1, double min, double max) {
+    if (interval1.max() < min) {
+      pointer1++;
+      return new IntersectIterResult(
+          pointer1, pointer1 < size ? intervals[pointer1] : null, pointer1 >= size);
+    }
+    if (max < interval1.min()) {
+      return new IntersectIterResult(pointer1, interval1, true);
+    }
+    if (interval1.min() <= min) {
+      if (interval1.max() <= max) {
+        temp.unionAdapt(new FloatInterval(min, interval1.max()));
+        pointer1++;
+        return new IntersectIterResult(
+            pointer1, pointer1 < size ? intervals[pointer1] : null, pointer1 >= size);
+      }
+      temp.unionAdapt(new FloatInterval(min, max));
+      return new IntersectIterResult(pointer1, interval1, true);
+    }
+    if (max <= interval1.max()) {
+      temp.unionAdapt(new FloatInterval(interval1.min(), max));
+      return new IntersectIterResult(pointer1, interval1, true);
+    }
+    temp.unionAdapt(new FloatInterval(interval1.min(), interval1.max()));
+    pointer1++;
+    return new IntersectIterResult(
+        pointer1, pointer1 < size ? intervals[pointer1] : null, pointer1 >= size);
+  }
+
   /** In intersects current domain with the domain min..max. */
   @Override
   public FloatDomain intersect(double min, double max) {
@@ -1234,41 +1292,13 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatInterval interval1 = intervals[pointer1];
 
     while (true) {
-      if (interval1.max() < min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-        } else {
-          break;
-        }
-      } else if (max < interval1.min()) {
+      IntersectIterResult r = intersectProcessInterval(temp, pointer1, interval1, min, max);
+      pointer1 = r.pointer;
+      interval1 = r.interval;
+      if (r.doBreak) {
         break;
-      } else if (interval1.min() <= min) {
-        if (interval1.max() <= max) {
-          temp.unionAdapt(new FloatInterval(min, interval1.max()));
-          pointer1++;
-          if (pointer1 < size) {
-            interval1 = intervals[pointer1];
-          } else {
-            break;
-          }
-        } else {
-          temp.unionAdapt(new FloatInterval(min, max));
-          break;
-        }
-      } else {
-        if (max <= interval1.max()) {
-          temp.unionAdapt(new FloatInterval(interval1.min(), max));
-          break;
-        }
-        temp.unionAdapt(new FloatInterval(interval1.min(), interval1.max()));
-        pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-        } else {
-          break;
-        }
       }
+      assert interval1 != null;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -1366,6 +1396,21 @@ public class FloatIntervalDomain extends FloatDomain {
         && c <= intervals[0].max();
   }
 
+  private void subtractValueFromInterval(
+      FloatIntervalDomain result, int pointer1, FloatInterval interval1, double value) {
+    if (interval1.min() != value) {
+      double oldMax = interval1.max();
+      result.intervals[pointer1] = new FloatInterval(interval1.min(), previous(value));
+      if (value != oldMax) {
+        result.unionAdapt(next(value), oldMax);
+      }
+    } else if (interval1.max() != value) {
+      result.intervals[pointer1] = new FloatInterval(next(value), interval1.max());
+    } else {
+      result.removeInterval(pointer1);
+    }
+  }
+
   @Override
   public FloatDomain subtract(double value) {
 
@@ -1382,39 +1427,16 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatInterval interval1 = intervals[pointer1];
 
     while (true) {
-
       if (interval1.max() < value) {
         pointer1++;
         if (pointer1 < size) {
           interval1 = intervals[pointer1];
           continue;
-        } else {
-          break;
         }
+        break;
       }
-
-      if (!(interval1.min() > value)) {
-
-        if (interval1.min() != value) {
-
-          double oldMax = interval1.max();
-          // replace min..max with interval1.min..value-1
-          result.intervals[pointer1] = new FloatInterval(interval1.min(), previous(value));
-          pointer1++;
-
-          if (value != oldMax) {
-            // add domain value+1..oldMax
-            result.unionAdapt(next(value), oldMax);
-            pointer1++;
-          }
-
-        } else if (interval1.max() != value) {
-          // replace value..max with value+1..interval1.max
-          result.intervals[pointer1] = new FloatInterval(next(value), interval1.max());
-          pointer1++;
-        } else {
-          result.removeInterval(pointer1);
-        }
+      if (interval1.min() <= value) {
+        subtractValueFromInterval(result, pointer1, interval1, value);
       }
       break;
     }
@@ -1626,6 +1648,47 @@ public class FloatIntervalDomain extends FloatDomain {
     return result;
   }
 
+  /** Result of one subtract(min,max) loop iteration. */
+  private static final class SubtractRangeIterResult {
+    int i1;
+    FloatInterval currentInterval1;
+    boolean doBreak;
+
+    SubtractRangeIterResult(int i1, FloatInterval currentInterval1, boolean doBreak) {
+      this.i1 = i1;
+      this.currentInterval1 = currentInterval1;
+      this.doBreak = doBreak;
+    }
+  }
+
+  private SubtractRangeIterResult subtractRangeProcessInterval(
+      FloatIntervalDomain result, int i1, FloatInterval currentInterval1, double min, double max) {
+    if (currentInterval1.max() < min) {
+      result.unionAdapt(intervals[i1]);
+      i1++;
+      return new SubtractRangeIterResult(i1, i1 < size ? intervals[i1] : null, i1 >= size);
+    }
+    if (max < currentInterval1.min()) {
+      return new SubtractRangeIterResult(i1, currentInterval1, true);
+    }
+    if (currentInterval1.min() >= min) {
+      if (currentInterval1.max() <= max) {
+        i1++;
+        return new SubtractRangeIterResult(i1, i1 < size ? intervals[i1] : null, i1 >= size);
+      }
+      result.unionAdapt(new FloatInterval(next(max), currentInterval1.max()));
+      return new SubtractRangeIterResult(i1 + 1, null, true);
+    }
+    if (currentInterval1.max() <= max) {
+      result.unionAdapt(new FloatInterval(currentInterval1.min(), previous(min)));
+      i1++;
+      return new SubtractRangeIterResult(i1, i1 < size ? intervals[i1] : null, i1 >= size);
+    }
+    result.unionAdapt(currentInterval1.min(), previous(min));
+    result.unionAdapt(next(max), currentInterval1.max());
+    return new SubtractRangeIterResult(i1 + 1, null, true);
+  }
+
   /** It subtracts min..max from current domain and returns the result. */
   @Override
   public FloatIntervalDomain subtract(double min, double max) {
@@ -1638,83 +1701,17 @@ public class FloatIntervalDomain extends FloatDomain {
       return emptyDomain;
     }
 
-    // interval under the analysis
     int i1 = 0;
-    // place for next interval in subtracted domain
     FloatInterval currentInterval1 = intervals[i1];
-
     FloatIntervalDomain result = new FloatIntervalDomain(intervals.length + 1);
 
     while (true) {
-
-      if (currentInterval1.max() < min) {
-        result.unionAdapt(intervals[i1]);
-        i1++;
-        if (i1 == size) {
-          break;
-        }
-        currentInterval1 = intervals[i1];
-        continue;
-      }
-
-      if (max < currentInterval1.min()) {
+      SubtractRangeIterResult r =
+          subtractRangeProcessInterval(result, i1, currentInterval1, min, max);
+      i1 = r.i1;
+      currentInterval1 = r.currentInterval1;
+      if (r.doBreak) {
         break;
-      }
-
-      if (currentInterval1.min() >= min) {
-
-        // currentDomain1.max >= min
-        // max >= currentDomain1.min
-
-        if (currentInterval1.max() <= max) {
-          // Skip current interval of i1 completely
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentInterval1 = intervals[i1];
-
-        } else {
-
-          // interval of dom2 ends before interval of dom1 ends
-          // currentDomain2.max+1 .. currentDomain1.max
-          // BUT next currentdomain2.min needs to be larger than
-          // currentDomain1.max
-
-          result.unionAdapt(new FloatInterval(next(max), currentInterval1.max()));
-
-          i1++;
-          break;
-        }
-      } else {
-
-        // currentDomain1.min < min
-        // currentDomain1.max >= min
-        // max >= currentDomain1.min
-
-        if (currentInterval1.max() <= max) {
-
-          result.unionAdapt(new FloatInterval(currentInterval1.min(), previous(min)));
-
-          i1++;
-
-          if (i1 == size) {
-            break;
-          }
-          currentInterval1 = intervals[i1];
-          // next intervals of the domain may be before max.
-
-        } else {
-
-          // interval of min..max ends before interval of dom1 ends
-          // max+1 .. currentDomain1.max
-
-          result.unionAdapt(currentInterval1.min(), previous(min));
-          result.unionAdapt(next(max), currentInterval1.max());
-
-          i1++;
-          break;
-        }
       }
     }
 
@@ -1727,10 +1724,11 @@ public class FloatIntervalDomain extends FloatDomain {
     return result;
   }
 
-  /**
-   * Advances i1/i2 and current intervals while both intervals overlap. Updates i1Ref, i2Ref,
-   * cur1Ref, cur2Ref in place.
-   */
+  private static boolean intervalsOverlapOrAdjacent(FloatInterval a, FloatInterval b) {
+    return (FloatDomain.next(a.max()) >= b.min() && a.min() <= b.min())
+        || (FloatDomain.next(b.max()) >= a.min() && b.min() <= a.min());
+  }
+
   private void unionDomainAdvanceOverlapping(
       FloatIntervalDomain intervalDomain,
       int max1,
@@ -1741,10 +1739,7 @@ public class FloatIntervalDomain extends FloatDomain {
       FloatInterval[] cur2Ref) {
     FloatInterval currentDomain1 = cur1Ref[0];
     FloatInterval currentDomain2 = cur2Ref[0];
-    while ((next(currentDomain1.max()) >= currentDomain2.min()
-            && currentDomain1.min() <= currentDomain2.min())
-        || (next(currentDomain2.max()) >= currentDomain1.min()
-            && currentDomain2.min() <= currentDomain1.min())) {
+    while (intervalsOverlapOrAdjacent(currentDomain1, currentDomain2)) {
       if (currentDomain1.max() <= currentDomain2.max()) {
         i1Ref[0]++;
         if (i1Ref[0] == max1) {
@@ -1935,6 +1930,33 @@ public class FloatIntervalDomain extends FloatDomain {
     return result;
   }
 
+  private int unionMinMaxHandleOverlap(
+      FloatIntervalDomain result,
+      int i1,
+      FloatInterval currentInterval1,
+      double tempMin,
+      double min,
+      double max) {
+    if (currentInterval1.max() > max) {
+      result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
+      return i1 + 1;
+    }
+    while (currentInterval1.max() <= max) {
+      i1++;
+      if (i1 == size) {
+        result.unionAdapt(new FloatInterval(tempMin, max));
+        return i1;
+      }
+      currentInterval1 = intervals[i1];
+    }
+    if (next(max) >= currentInterval1.min()) {
+      result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
+      return i1 + 1;
+    }
+    result.unionAdapt(new FloatInterval(tempMin, max));
+    return i1;
+  }
+
   /** It computes union of current domain and an interval min..max;. */
   @Override
   public FloatDomain union(double min, double max) {
@@ -1946,14 +1968,10 @@ public class FloatIntervalDomain extends FloatDomain {
     assert checkInvariants() == null : checkInvariants();
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
-
     int i1 = 0;
-
     FloatInterval currentInterval1 = intervals[i1];
 
     while (true) {
-
-      // all intervals before and not glued (min..max) are included
       if (next(currentInterval1.max()) < min) {
         result.unionAdapt(currentInterval1);
         i1++;
@@ -1964,46 +1982,12 @@ public class FloatIntervalDomain extends FloatDomain {
         currentInterval1 = intervals[i1];
         continue;
       }
-
-      // currentInterval if after and not glued
       if (next(max) < currentInterval1.min()) {
         result.unionAdapt(new FloatInterval(min, max));
         break;
       }
-
-      // current interval is glued or intersects with (min..max).
-
-      double tempMin;
-
-      if (currentInterval1.min() < min) {
-        tempMin = currentInterval1.min();
-      } else {
-        tempMin = min;
-      }
-
-      if (currentInterval1.max() > max) {
-        result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
-        i1++;
-      } else {
-
-        // (min..max) can cover multiple intervals.
-        while (currentInterval1.max() <= max) {
-          i1++;
-          if (i1 == size) {
-            result.unionAdapt(new FloatInterval(tempMin, max));
-            break;
-          }
-          currentInterval1 = intervals[i1];
-        }
-
-        // if current interval is glued or intersects with (min..max)
-        if (next(max) >= currentInterval1.min()) {
-          result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
-          i1++;
-        } else {
-          result.unionAdapt(new FloatInterval(tempMin, max));
-        }
-      }
+      double tempMin = currentInterval1.min() < min ? currentInterval1.min() : min;
+      i1 = unionMinMaxHandleOverlap(result, i1, currentInterval1, tempMin, min, max);
       break;
     }
 
@@ -2018,6 +2002,18 @@ public class FloatIntervalDomain extends FloatDomain {
     return result;
   }
 
+  private int unionValueMergeWithInterval(
+      FloatIntervalDomain result, int i1, FloatInterval currentInterval, double value) {
+    double tempMin = currentInterval.min() < value ? currentInterval.min() : value;
+    double tempMax = currentInterval.max() > value ? currentInterval.max() : value;
+    if (i1 + 1 < size && next(tempMax) == intervals[i1 + 1].min()) {
+      tempMax = intervals[i1 + 1].max();
+      i1++;
+    }
+    result.unionAdapt(new FloatInterval(tempMin, tempMax));
+    return i1 + 1;
+  }
+
   /** It computes union of dom1 and value and returns the result. */
   @Override
   public FloatDomain union(double value) {
@@ -2029,48 +2025,23 @@ public class FloatIntervalDomain extends FloatDomain {
     assert checkInvariants() == null : checkInvariants();
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
-
     int i1 = 0;
-
     FloatInterval currentInterval = intervals[i1];
 
-    while (true) {
-
-      if (next(currentInterval.max()) < value) {
-        result.unionAdapt(currentInterval);
-        i1++;
-        if (i1 == size) {
-          result.unionAdapt(new FloatInterval(value, value));
-          return result;
-        }
-        currentInterval = intervals[i1];
-      } else {
-        break;
+    while (next(currentInterval.max()) < value) {
+      result.unionAdapt(currentInterval);
+      i1++;
+      if (i1 == size) {
+        result.unionAdapt(new FloatInterval(value, value));
+        return result;
       }
+      currentInterval = intervals[i1];
     }
 
     if (next(value) < currentInterval.min()) {
       result.unionAdapt(new FloatInterval(value, value));
     } else {
-
-      double tempMin = value;
-      double tempMax = value;
-
-      if (currentInterval.min() < value) {
-        tempMin = currentInterval.min();
-      }
-
-      if (currentInterval.max() > value) {
-        tempMax = currentInterval.max();
-      }
-
-      if (i1 + 1 < size && next(tempMax) == intervals[i1 + 1].min()) {
-        tempMax = intervals[i1 + 1].max();
-        i1++;
-      }
-
-      result.unionAdapt(new FloatInterval(tempMin, tempMax));
-      i1++;
+      i1 = unionValueMergeWithInterval(result, i1, currentInterval, value);
     }
 
     if (i1 < size) {
@@ -2164,6 +2135,14 @@ public class FloatIntervalDomain extends FloatDomain {
    * It updates the domain according to the minimum value and stamp value. It informs the variable
    * of a change if it occurred.
    */
+  private void notifyInMinMaxChange(Var v, boolean isSingleton) {
+    if (isSingleton) {
+      v.domainHasChanged(IntDomain.GROUND);
+    } else {
+      v.domainHasChanged(IntDomain.BOUND);
+    }
+  }
+
   @Override
   public void inMin(int storeLevel, Var v, double min) {
 
@@ -2178,65 +2157,39 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     if (stamp == storeLevel) {
-
       int pointer = 0;
-
       while (intervals[pointer].max() < min) {
         pointer++;
       }
-
       int i = 0;
       if (intervals[pointer].min() < min) {
         intervals[0] = new FloatInterval(min, intervals[pointer].max());
         pointer++;
         i++;
       }
-
       for (; pointer < size; i++, pointer++) {
         intervals[i] = intervals[pointer];
       }
-      // intervals[pointer] = null;
-
       size = i;
-
       assert checkInvariants() == null : checkInvariants();
-
-      if (singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-      } else {
-        v.domainHasChanged(IntDomain.BOUND);
-      }
-
+      notifyInMinMaxChange(v, singleton());
     } else {
-
       assert stamp < storeLevel;
-
       FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
       int pointer = 0;
-
-      // pointer is always smaller than size as domains intersect
       while (intervals[pointer].max() < min) {
         pointer++;
       }
-
       if (intervals[pointer].min() < min) {
         result.unionAdapt(new FloatInterval(min, intervals[pointer++].max()));
       }
-
       for (; pointer < size; pointer++) {
         result.unionAdapt(intervals[pointer]);
       }
-
       installResultDomain(result, storeLevel, v);
-
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-      } else {
-        v.domainHasChanged(IntDomain.BOUND);
-      }
+      notifyInMinMaxChange(v, result.singleton());
     }
   }
 
@@ -2254,7 +2207,6 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     double currentMax = intervals[size - 1].max();
-
     if (max >= currentMax) {
       return;
     }
@@ -2262,56 +2214,33 @@ public class FloatIntervalDomain extends FloatDomain {
     int pointer = size - 1;
 
     if (stamp == storeLevel) {
-
       while (intervals[pointer].min() > max) {
-        // intervals[pointer] = null;
         pointer--;
       }
-
       if (intervals[pointer].max() > max) {
         intervals[pointer] = new FloatInterval(intervals[pointer].min(), max);
       }
-
       size = pointer + 1;
-
       assert checkInvariants() == null : checkInvariants();
-
-      if (singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-      } else {
-        v.domainHasChanged(IntDomain.BOUND);
-      }
-
+      notifyInMinMaxChange(v, singleton());
     } else {
-
       assert stamp < storeLevel;
-
       while (intervals[pointer].min() > max) {
         pointer--;
       }
-
       FloatIntervalDomain result = new FloatIntervalDomain(pointer + 1);
-
       for (int i = 0; i < pointer; i++) {
         result.unionAdapt(intervals[i]);
       }
-
       if (intervals[pointer].max() > max) {
         result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
       } else {
         result.unionAdapt(intervals[pointer]);
       }
-
       installResultDomain(result, storeLevel, v);
-
       assert result.checkInvariants() == null : result.checkInvariants();
       assert checkInvariants() == null : checkInvariants();
-
-      if (result.singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-      } else {
-        v.domainHasChanged(IntDomain.BOUND);
-      }
+      notifyInMinMaxChange(v, result.singleton());
     }
   }
 
@@ -2409,6 +2338,17 @@ public class FloatIntervalDomain extends FloatDomain {
     return intervals[position];
   }
 
+  private void notifyInComplementEvent(
+      Var v, boolean minEquals, boolean maxEquals, int originalCounter) {
+    if (minEquals && !maxEquals) {
+      v.domainHasChanged(originalCounter == 0 ? IntDomain.BOUND : IntDomain.ANY);
+    } else if (maxEquals) {
+      v.domainHasChanged(originalCounter == size - 1 ? IntDomain.BOUND : IntDomain.ANY);
+    } else {
+      v.domainHasChanged(IntDomain.ANY);
+    }
+  }
+
   /**
    * It updates the domain to not contain the value complement. It informs the variable of a change
    * if it occurred.
@@ -2442,25 +2382,7 @@ public class FloatIntervalDomain extends FloatDomain {
         return;
       }
 
-      // Determine event type based on where the change occurred
-      if (minEquals && !maxEquals) {
-        // Value was at min, interval trimmed
-        if (originalCounter == 0) {
-          v.domainHasChanged(IntDomain.BOUND);
-        } else {
-          v.domainHasChanged(IntDomain.ANY);
-        }
-      } else if (maxEquals) {
-        // Value was at max, interval trimmed
-        if (originalCounter == size - 1) {
-          v.domainHasChanged(IntDomain.BOUND);
-        } else {
-          v.domainHasChanged(IntDomain.ANY);
-        }
-      } else {
-        // Interval was split (value in middle)
-        v.domainHasChanged(IntDomain.ANY);
-      }
+      notifyInComplementEvent(v, minEquals, maxEquals, originalCounter);
 
     } else {
       inComplementToNewDomain(storeLevel, v, complement, counter);
@@ -2556,13 +2478,7 @@ public class FloatIntervalDomain extends FloatDomain {
       v.domainHasChanged(IntDomain.GROUND);
       return;
     }
-    if (originalCounter == 0) {
-      v.domainHasChanged(IntDomain.BOUND);
-    } else if (max() > max || min <= min()) {
-      v.domainHasChanged(IntDomain.BOUND);
-    } else {
-      v.domainHasChanged(IntDomain.ANY);
-    }
+    notifyInComplementRangeEvent(v, false, originalCounter == 0 || max() > max || min <= min());
   }
 
   private void inComplementRangeToResult(
@@ -3097,6 +3013,68 @@ public class FloatIntervalDomain extends FloatDomain {
     return tempRef[0];
   }
 
+  /** Result for sizeOfIntersection step: new interval1, new interval2, or null to break. */
+  private static final class SizeOfIntersectionStepResult {
+    final FloatInterval interval1;
+    final FloatInterval interval2;
+    final boolean done;
+
+    SizeOfIntersectionStepResult(FloatInterval i1, FloatInterval i2, boolean done) {
+      this.interval1 = i1;
+      this.interval2 = i2;
+      this.done = done;
+    }
+  }
+
+  private SizeOfIntersectionStepResult sizeOfIntersectionStep(
+      FloatIntervalDomain input,
+      int size1,
+      int size2,
+      int[] pointer1,
+      int[] pointer2,
+      int[] tempRef,
+      FloatInterval interval1,
+      FloatInterval interval2) {
+    if (interval1.max() < interval2.min()) {
+      pointer1[0]++;
+      return new SizeOfIntersectionStepResult(
+          pointer1[0] < size1 ? intervals[pointer1[0]] : null, interval2, pointer1[0] >= size1);
+    }
+    if (interval2.max() < interval1.min()) {
+      pointer2[0]++;
+      return new SizeOfIntersectionStepResult(
+          interval1,
+          pointer2[0] < size2 ? input.intervals[pointer2[0]] : null,
+          pointer2[0] >= size2);
+    }
+    if (interval1.min() <= interval2.min()) {
+      if (interval1.max() <= interval2.max()) {
+        tempRef[0] += next(interval1.max() - interval2.min());
+        pointer1[0]++;
+        return new SizeOfIntersectionStepResult(
+            pointer1[0] < size1 ? intervals[pointer1[0]] : null, interval2, pointer1[0] >= size1);
+      }
+      tempRef[0] += next(interval2.max() - interval2.min());
+      pointer2[0]++;
+      return new SizeOfIntersectionStepResult(
+          interval1,
+          pointer2[0] < size2 ? input.intervals[pointer2[0]] : null,
+          pointer2[0] >= size2);
+    }
+    if (interval2.max() <= interval1.max()) {
+      tempRef[0] += next(interval2.max() - interval1.min());
+      pointer2[0]++;
+      return new SizeOfIntersectionStepResult(
+          interval1,
+          pointer2[0] < size2 ? input.intervals[pointer2[0]] : null,
+          pointer2[0] >= size2);
+    }
+    tempRef[0] += next(interval1.max() - interval1.min());
+    pointer1[0]++;
+    return new SizeOfIntersectionStepResult(
+        pointer1[0] < size1 ? intervals[pointer1[0]] : null, interval2, pointer1[0] >= size1);
+  }
+
   /**
    * Accumulates intersection size into tempRef while advancing pointer1/pointer2 over the two
    * interval arrays.
@@ -3111,57 +3089,14 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatInterval interval1 = intervals[pointer1[0]];
     FloatInterval interval2 = input.intervals[pointer2[0]];
     while (true) {
-      if (interval1.max() < interval2.min()) {
-        pointer1[0]++;
-        if (pointer1[0] < size1) {
-          interval1 = intervals[pointer1[0]];
-        } else {
-          return;
-        }
-      } else if (interval2.max() < interval1.min()) {
-        pointer2[0]++;
-        if (pointer2[0] < size2) {
-          interval2 = input.intervals[pointer2[0]];
-        } else {
-          return;
-        }
-      } else if (interval1.min() <= interval2.min()) {
-        if (interval1.max() <= interval2.max()) {
-          tempRef[0] += next(interval1.max() - interval2.min());
-          pointer1[0]++;
-          if (pointer1[0] < size1) {
-            interval1 = intervals[pointer1[0]];
-          } else {
-            return;
-          }
-        } else {
-          tempRef[0] += next(interval2.max() - interval2.min());
-          pointer2[0]++;
-          if (pointer2[0] < size2) {
-            interval2 = input.intervals[pointer2[0]];
-          } else {
-            return;
-          }
-        }
-      } else {
-        if (interval2.max() <= interval1.max()) {
-          tempRef[0] += next(interval2.max() - interval1.min());
-          pointer2[0]++;
-          if (pointer2[0] < size2) {
-            interval2 = input.intervals[pointer2[0]];
-          } else {
-            return;
-          }
-        } else {
-          tempRef[0] += next(interval1.max() - interval1.min());
-          pointer1[0]++;
-          if (pointer1[0] < size1) {
-            interval1 = intervals[pointer1[0]];
-          } else {
-            return;
-          }
-        }
+      SizeOfIntersectionStepResult r =
+          sizeOfIntersectionStep(
+              input, size1, size2, pointer1, pointer2, tempRef, interval1, interval2);
+      if (r.done) {
+        return;
       }
+      interval1 = r.interval1;
+      interval2 = r.interval2;
     }
   }
 }

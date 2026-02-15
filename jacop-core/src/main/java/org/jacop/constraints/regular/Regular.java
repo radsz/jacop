@@ -912,41 +912,39 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     this.list[level].domain.in(store.level, list[level], varDom);
   }
 
+  private int findFirstLevelHadChanged(int start, int end) {
+    for (int i = start; i < end; i++) {
+      if (levelHadChanged[i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   private void updateLeftChangeFromLevelHadChanged(Store store) {
-    if (leftChange.stamp() < store.level) {
-      for (int i = 0; i < levelHadChanged.length; i++) {
-        if (levelHadChanged[i]) {
-          leftChange.update(i);
-          return;
-        }
-      }
-    } else {
-      int leftEnd = leftChange.value();
-      for (int i = 0; i < leftEnd; i++) {
-        if (levelHadChanged[i]) {
-          leftChange.update(i);
-          return;
-        }
-      }
+    int start = leftChange.stamp() < store.level ? 0 : 0;
+    int end = leftChange.stamp() < store.level ? levelHadChanged.length : leftChange.value();
+    int found = findFirstLevelHadChanged(start, end);
+    if (found >= 0) {
+      leftChange.update(found);
     }
   }
 
+  private int findLastLevelHadChanged(int start, int end) {
+    for (int i = start; i > end; i--) {
+      if (levelHadChanged[i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   private void updateRightChangeFromLevelHadChanged(Store store) {
-    if (rightChange.stamp() < store.level) {
-      for (int i = levelHadChanged.length - 1; i >= 0; i--) {
-        if (levelHadChanged[i]) {
-          rightChange.update(i);
-          return;
-        }
-      }
-    } else {
-      int rightEnd = rightChange.value();
-      for (int i = levelHadChanged.length - 1; i > rightEnd; i--) {
-        if (levelHadChanged[i]) {
-          rightChange.update(i);
-          return;
-        }
-      }
+    int start = levelHadChanged.length - 1;
+    int end = rightChange.stamp() < store.level ? -1 : rightChange.value();
+    int found = findLastLevelHadChanged(start, end);
+    if (found >= 0) {
+      rightChange.update(found);
     }
   }
 
