@@ -676,7 +676,6 @@ marathon2/marathon2
 mario/mario_easy_2
 mario/mario_easy_4
 mario/mario_easy_5
-mario/mario_t_hard_1
 market_split/s3-01
 market_split/s3-02
 market_split/s3-03
