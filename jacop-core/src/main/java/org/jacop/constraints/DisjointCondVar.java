@@ -95,10 +95,10 @@ class DisjointCondVar implements MutableVar {
 
   @Override
   public String toString() {
-    String S = "DisjointCondVar[" + index + "] = [";
+    String result = "DisjointCondVar[" + index + "] = [";
     DisjointCondVarValue val = value;
-    S = S + val + "]";
-    return S;
+    result = result + val + "]";
+    return result;
   }
 
   public void update(MutableVarValue val) {

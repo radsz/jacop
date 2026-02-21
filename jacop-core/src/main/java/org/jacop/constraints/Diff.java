@@ -895,8 +895,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
-    int[] r_min = new int[dim];
-    int[] r_max = new int[dim];
+    int[] rMin = new int[dim];
+    int[] rMax = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MAX_INT;
@@ -904,8 +904,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       minLength[i] = rLengthDom.min();
 
       IntDomain rOriginDom = r.origin[i].dom();
-      r_min[i] = rOriginDom.min();
-      r_max[i] = rOriginDom.max() + rLengthDom.max();
+      rMin[i] = rOriginDom.min();
+      rMax[i] = rOriginDom.max() + rLengthDom.max();
     }
 
     for (Rectangle s : rectsToCheck) {
@@ -915,14 +915,14 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         boolean sChanged = containsChangedVariable(s, fdvQueue);
 
-        IntRectangle Use = new IntRectangle(dim);
+        IntRectangle useRect = new IntRectangle(dim);
         long sArea = 1;
         long partialCommonArea = 1;
 
         boolean use = true;
         boolean minLength0 = false;
-        int s_min;
-        int s_max;
+        int sMin;
+        int sMax;
         int start;
         int stop;
         int m = 0;
@@ -937,20 +937,20 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           IntDomain sLengthIdom = s.length[m].dom();
           final int sLengthiMin = sLengthIdom.min();
           int sOriginiMax = sOriginIdom.max();
-          s_min = sOriginIdom.min();
-          s_max = sOriginiMax + sLengthIdom.max();
-          overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
+          sMin = sOriginIdom.min();
+          sMax = sOriginiMax + sLengthIdom.max();
+          overlap = intervalOverlap(rMin[m], rMax[m], sMin, sMax);
 
           // min start, max stop and min length
-          sOriginMin[m] = s_min;
+          sOriginMin[m] = sMin;
           sOriginMax[m] = sOriginiMax + sLengthiMin;
           sLengthMin[m] = sLengthiMin;
 
           // check if s occupies some space
           start = sOriginiMax;
-          stop = s_min + sLengthiMin;
+          stop = sMin + sLengthiMin;
           if (allowZeroLength ? start <= stop : start < stop) {
-            Use.add(start, stop - start);
+            useRect.add(start, stop - start);
             j++;
           } else {
             use = false;
@@ -968,7 +968,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           }
 
           if (use) { // rectangles taking space
-            usedRect.add(Use);
+            usedRect.add(useRect);
             contains = contains || sChanged;
           }
 
@@ -998,21 +998,21 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
           // calculate area within rectangle r possible placement
           for (int i = 0; i < dim; i++) {
-            if (sOriginMin[i] <= r_min[i]) {
-              if (sOriginMax[i] <= r_max[i]) {
-                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+            if (sOriginMin[i] <= rMin[i]) {
+              if (sOriginMax[i] <= rMax[i]) {
+                int distance1 = sOriginMin[i] + sLengthMin[i] - rMin[i];
                 sLengthMin[i] = Math.max(distance1, 0);
               } else {
-                // sOriginMax[i] > r_max[i])
+                // sOriginMax[i] > rMax[i])
                 int rmax = r.origin[i].max() + r.length[i].min();
 
-                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+                int distance1 = sOriginMin[i] + sLengthMin[i] - rMin[i];
                 int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
-                if (distance1 > rmax - r_min[i]) {
-                  distance1 = rmax - r_min[i];
+                if (distance1 > rmax - rMin[i]) {
+                  distance1 = rmax - rMin[i];
                 }
-                if (distance2 > rmax - r_min[i]) {
-                  distance2 = rmax - r_min[i];
+                if (distance2 > rmax - rMin[i]) {
+                  distance2 = rmax - rMin[i];
                 }
                 if (distance1 < distance2) {
                   sLengthMin[i] = Math.max(distance1, 0);
@@ -1024,8 +1024,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                   sLengthMin[i] = 0;
                 }
               }
-            } else // sOriginMin[i] > r_min[i]
-            if (sOriginMax[i] > r_max[i]) {
+            } else // sOriginMin[i] > rMin[i]
+            if (sOriginMax[i] > rMax[i]) {
               int distance2 =
                   sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
               if (distance2 > 0) {
@@ -1041,7 +1041,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           commonArea += partialCommonArea;
         }
         if (checkAreaAlways
-            && commonArea + r.minArea() > (long) (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
+            && commonArea + r.minArea() > (long) (rMax[0] - rMin[0]) * (rMax[1] - rMin[1])) {
           throw Store.failException;
         }
       }

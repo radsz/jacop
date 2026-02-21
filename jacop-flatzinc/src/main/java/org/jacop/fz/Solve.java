@@ -144,8 +144,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private static final String COMPLETE = "complete";
   // Solve kind literals
   private static final String SATISFY = "satisfy";
-  private static final String MINIMIZE = "minimize";
-  private static final String MAXIMIZE = "maximize";
+  private static final String MINIMIZE_LITERAL = "minimize";
+  private static final String MAXIMIZE_LITERAL = "maximize";
   // Output message literals
   private static final String SEPARATOR_LINE = "==========";
   private static final String TIME_OUT_MSG = "%% =====TIME-OUT=====";
@@ -471,10 +471,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           solveType = SATISFY;
           break;
         case 1:
-          solveType = MINIMIZE;
+          solveType = MINIMIZE_LITERAL;
           break;
         case 2:
-          solveType = MAXIMIZE;
+          solveType = MAXIMIZE_LITERAL;
           break;
         default:
           throw new IllegalArgumentException(
@@ -1254,13 +1254,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         for (Search<T> list_seq_searche : list_seq_searches) {
           list_seq_searche.setOptimize(true);
         }
-        yield MINIMIZE;
+        yield MINIMIZE_LITERAL;
       }
       case 2 -> {
         for (Search<T> list_seq_searche : list_seq_searches) {
           list_seq_searche.setOptimize(true);
         }
-        yield MAXIMIZE;
+        yield MAXIMIZE_LITERAL;
       }
       default ->
           throw new IllegalArgumentException(
@@ -1759,10 +1759,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       case SATISFY ->
           // 0 = satisfy
           0;
-      case MINIMIZE ->
+      case MINIMIZE_LITERAL ->
           // 1 = minimize
           1;
-      case MAXIMIZE ->
+      case MAXIMIZE_LITERAL ->
           // 2 = maximize
           2;
       default ->

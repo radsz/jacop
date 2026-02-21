@@ -172,27 +172,27 @@ public class Alldiff extends Alldifferent {
     int min = minsorted[0].v.min();
     int max = maxsorted[0].v.max() + 1;
     int last = min - 2;
-    int nb = 0;
+    int numBounds = 0;
     bounds[0] = last;
     int i = 0;
     int j = 0;
     while (true) {
       if (i < n && min <= max) {
         if (min != last) {
-          bounds[++nb] = last = min;
+          bounds[++numBounds] = last = min;
         }
 
-        minsorted[i].minrank = nb;
+        minsorted[i].minrank = numBounds;
         if (++i < n) {
           min = minsorted[i].v.min();
         }
 
       } else {
         if (max != last) {
-          bounds[++nb] = last = max;
+          bounds[++numBounds] = last = max;
         }
 
-        maxsorted[j].maxrank = nb;
+        maxsorted[j].maxrank = numBounds;
         if (++j == n) {
           break;
         }
@@ -200,8 +200,8 @@ public class Alldiff extends Alldifferent {
         max = maxsorted[j].v.max() + 1;
       }
     }
-    this.nb = nb;
-    bounds[nb + 1] = bounds[nb] + 2;
+    this.nb = numBounds;
+    bounds[numBounds + 1] = bounds[numBounds] + 2;
   }
 
   /**

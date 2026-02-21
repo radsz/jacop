@@ -231,21 +231,21 @@ public class Assignment extends Constraint
     }
   }
 
-  private void propagateFromPrunedVariable(Store store, IntVar V) {
-    IntDomain vPrunedDomain = V.recentDomainPruning();
+  private void propagateFromPrunedVariable(Store store, IntVar v) {
+    IntDomain vPrunedDomain = v.recentDomainPruning();
     if (vPrunedDomain.isEmpty()) {
       return;
     }
-    Integer position = xs.get(V);
+    Integer position = xs.get(v);
     if (position == null) {
-      propagateFromPrunedD(store, V, vPrunedDomain);
+      propagateFromPrunedD(store, v, vPrunedDomain);
     } else {
-      propagateFromPrunedX(store, V, vPrunedDomain, position);
+      propagateFromPrunedX(store, v, vPrunedDomain, position);
     }
   }
 
-  private void propagateFromPrunedD(Store store, IntVar V, IntDomain vPrunedDomain) {
-    Integer position = ds.get(V);
+  private void propagateFromPrunedD(Store store, IntVar v, IntDomain vPrunedDomain) {
+    Integer position = ds.get(v);
     vPrunedDomain = vPrunedDomain.intersect(rangeX);
     if (vPrunedDomain.isEmpty()) {
       return;
@@ -256,13 +256,13 @@ public class Assignment extends Constraint
         x[dValue].domain.inComplement(store.level, x[dValue], position);
       }
     }
-    if (V.singleton()) {
-      x[V.value() - shiftX].domain.in(store.level, x[V.value() - shiftX], position, position);
+    if (v.singleton()) {
+      x[v.value() - shiftX].domain.in(store.level, x[v.value() - shiftX], position, position);
     }
   }
 
   private void propagateFromPrunedX(
-      Store store, IntVar V, IntDomain vPrunedDomain, Integer position) {
+      Store store, IntVar v, IntDomain vPrunedDomain, Integer position) {
     vPrunedDomain = vPrunedDomain.intersect(rangeD);
     if (vPrunedDomain.isEmpty()) {
       return;
@@ -273,8 +273,8 @@ public class Assignment extends Constraint
         d[xValue].domain.inComplement(store.level, d[xValue], position);
       }
     }
-    if (V.singleton()) {
-      d[V.value() - shiftD].domain.in(store.level, d[V.value() - shiftD], position, position);
+    if (v.singleton()) {
+      d[v.value() - shiftD].domain.in(store.level, d[v.value() - shiftD], position, position);
     }
   }
 

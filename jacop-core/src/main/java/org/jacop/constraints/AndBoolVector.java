@@ -86,9 +86,6 @@ public class AndBoolVector extends AbstractBoolVector {
   }
 
   private void propagateAndVector(Store store, boolean negated) {
-
-    // When negated: result.max()==0 triggers all-ones; finding a zero sets result to 1;
-    // all-ones sets result to 0; result.max()==0 with one remaining sets it to 1.
     int allTrueVal = negated ? 0 : 1;
     int foundFalseVal = negated ? 1 : 0;
     int lastRemainingVal = negated ? 1 : 0;

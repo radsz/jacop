@@ -443,42 +443,40 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         log.debug("est0 = {}\n=================", est0);
       }
 
-      // Create S = {t|EST(t) >= est0}
-      // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-      List<Task> S = new ArrayList<>(ts.length);
-      List<Task> L = new ArrayList<>(ts.length);
+      List<Task> setS = new ArrayList<>(ts.length);
+      List<Task> setL = new ArrayList<>(ts.length);
       for (Task t : ts) {
         if (t.nonZeroTask()) {
           if (t.est() >= est0) {
-            S.add(t);
-          } else if (t.lct() > est0) { // tt.est() < est0 &&
-            L.add(t);
+            setS.add(t);
+          } else if (t.lct() > est0) {
+            setL.add(t);
           }
         }
       }
       if (debugEnabled) {
-        log.debug("S = {}", S);
-        log.debug("L = {}", L);
+        log.debug("S = {}", setS);
+        log.debug("L = {}", setL);
       }
 
       // update upper bound if tt cannot be the last in S
-      for (Task t : S) {
-        notLast(store, t, S);
+      for (Task t : setS) {
+        notLast(store, t, setS);
       }
 
-      if (!S.isEmpty() && !fitTasksAfter(S, est0)) {
+      if (!setS.isEmpty() && !fitTasksAfter(setS, est0)) {
         throw Store.failException;
       }
 
-      while (!S.isEmpty() && !L.isEmpty()) {
-        int indexOfl = maxArea(L);
-        Task l = L.get(indexOfl);
-        processDownL(store, S, L, indexOfl, l);
+      while (!setS.isEmpty() && !setL.isEmpty()) {
+        int indexOfl = maxArea(setL);
+        Task l = setL.get(indexOfl);
+        processDownL(store, setS, setL, indexOfl, l);
       }
     }
   }
 
-  private void processDownL(Store store, List<Task> S, List<Task> L, int indexOfl, Task l) {
+  private void processDownL(Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l) {
     int lLct = l.lct();
     final int limitMax = limit.max();
     int startOfS = IntDomain.MAX_INT;
@@ -486,9 +484,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long area1 = 0;
     long area2 = 0;
     if (debugEnabled) {
-      log.debug("Checking if {} can be after {}", l, S);
+      log.debug("Checking if {} can be after {}", l, setS);
     }
-    for (Task t : S) {
+    for (Task t : setS) {
       startOfS = Math.min(startOfS, t.est());
       completionOfS = Math.max(completionOfS, t.lct());
       area1 += t.areaMin();
@@ -501,21 +499,21 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     boolean between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 
     if (after && between) {
-      L.remove(indexOfl);
-      removeFromSlct(S);
+      setL.remove(indexOfl);
+      removeFromSlct(setS);
     } else if (between) {
-      updateDownLBetween(store, S, L, indexOfl, l, totalArea, estS, lLct);
+      updateDownLBetween(store, setS, setL, indexOfl, l, totalArea, estS, lLct);
     } else if (after) {
-      L.remove(indexOfl);
+      setL.remove(indexOfl);
     } else {
-      propagateDownLBefore(store, S, L, indexOfl, l);
+      propagateDownLBefore(store, setS, setL, indexOfl, l);
     }
   }
 
   private void updateDownLBetween(
       Store store,
-      List<Task> S,
-      List<Task> L,
+      List<Task> setS,
+      List<Task> setL,
       int indexOfl,
       Task l,
       long totalArea,
@@ -525,10 +523,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     final int maxuse = limitMax - l.res().min();
     long slack = (long) (lLct - estS) * limitMax - totalArea - l.areaMin();
     int j = 0;
-    Task[] tasks = new Task[S.size()];
+    Task[] tasks = new Task[setS.size()];
     int tasksLength = 0;
-    while (slack < 0 && j < S.size()) {
-      Task t = S.get(j);
+    while (slack < 0 && j < setS.size()) {
+      Task t = setS.get(j);
       if (t.res().min() <= maxuse || lLct <= t.lst()) {
         slack += t.areaMin();
       } else {
@@ -560,20 +558,21 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         l.start().domain.inMax(store.level, l.start(), newStartl);
       }
     }
-    if (before(l, S)) {
-      L.remove(indexOfl);
+    if (before(l, setS)) {
+      setL.remove(indexOfl);
     } else {
-      removeFromSlct(S);
+      removeFromSlct(setS);
     }
   }
 
-  private void propagateDownLBefore(Store store, List<Task> S, List<Task> L, int indexOfl, Task l) {
+  private void propagateDownLBefore(
+      Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l) {
     if (debugEnabled) {
       log.debug("after={} between={}!!!", false, false);
     }
     long areaOfS = 0;
     int compl = 0;
-    for (Task t : S) {
+    for (Task t : setS) {
       areaOfS += t.areaMin();
       if (t.lct() > compl) {
         compl = t.lct();
@@ -585,14 +584,14 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         log.debug(
             "{} must be before\n{}\n>>> Cumulative EF <<< 3. Narrowed {} in {}..{}",
             l,
-            S,
+            setS,
             l.start(),
             IntDomain.MIN_INT,
             finish);
       }
       l.start().domain.inMax(store.level, l.start(), (int) finish);
     }
-    L.remove(indexOfl);
+    setL.remove(indexOfl);
   }
 
   private void edgeFindingUp(Store store) {
@@ -616,42 +615,40 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         log.debug("lct0 = {}\n=================", lct0);
       }
 
-      // Create S = {t|EST(t) <= lct0}
-      // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-      List<Task> S = new ArrayList<>(ts.length);
-      List<Task> L = new ArrayList<>(ts.length);
+      List<Task> setS = new ArrayList<>(ts.length);
+      List<Task> setL = new ArrayList<>(ts.length);
       for (Task t : ts) {
         if (t.nonZeroTask()) {
           if (t.lct() <= lct0) {
-            S.add(t);
-          } else if (t.est() < lct0) { // && tt.lct() > lct0
-            L.add(t);
+            setS.add(t);
+          } else if (t.est() < lct0) {
+            setL.add(t);
           }
         }
       }
       if (debugEnabled) {
-        log.debug("\nS = {}", S);
-        log.debug("L = {}", L);
+        log.debug("\nS = {}", setS);
+        log.debug("L = {}", setL);
       }
 
       // update lower bound if tt cannot be the first in S
-      for (Task t : S) {
-        notFirst(store, t, S);
+      for (Task t : setS) {
+        notFirst(store, t, setS);
       }
 
-      if (!S.isEmpty() && !fitTasksBefore(S, lct0)) {
+      if (!setS.isEmpty() && !fitTasksBefore(setS, lct0)) {
         throw Store.failException;
       }
 
-      while (!S.isEmpty() && !L.isEmpty()) {
-        int indexOfl = maxArea(L);
-        Task l = L.get(indexOfl);
-        processUpL(store, S, L, indexOfl, l);
+      while (!setS.isEmpty() && !setL.isEmpty()) {
+        int indexOfl = maxArea(setL);
+        Task l = setL.get(indexOfl);
+        processUpL(store, setS, setL, indexOfl, l);
       }
     }
   }
 
-  private void processUpL(Store store, List<Task> S, List<Task> L, int indexOfl, Task l) {
+  private void processUpL(Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l) {
     int lEst = l.est();
     final int limitMax = limit.max();
     int completionOfS = IntDomain.MIN_INT;
@@ -659,9 +656,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long area1 = 0;
     long area2 = 0;
     if (debugEnabled) {
-      log.debug("Checking if {} can be before or between tasks in {}", l, S);
+      log.debug("Checking if {} can be before or between tasks in {}", l, setS);
     }
-    for (Task t : S) {
+    for (Task t : setS) {
       completionOfS = Math.max(completionOfS, t.lct());
       startOfS = Math.min(startOfS, t.est());
       area1 += t.areaMin();
@@ -682,26 +679,26 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           startOfS,
           area2,
           larea,
-          S,
+          setS,
           l);
     }
 
     if (before && between) {
-      L.remove(indexOfl);
-      removeFromSest(S);
+      setL.remove(indexOfl);
+      removeFromSest(setS);
     } else if (between) {
-      updateUpLBetween(store, S, L, indexOfl, l, totalArea, lctS, lEst);
+      updateUpLBetween(store, setS, setL, indexOfl, l, totalArea, lctS, lEst);
     } else if (before) {
-      L.remove(indexOfl);
+      setL.remove(indexOfl);
     } else {
-      propagateUpLAfter(store, S, L, indexOfl, l, startOfS);
+      propagateUpLAfter(store, setS, setL, indexOfl, l, startOfS);
     }
   }
 
   private void updateUpLBetween(
       Store store,
-      List<Task> S,
-      List<Task> L,
+      List<Task> setS,
+      List<Task> setL,
       int indexOfl,
       Task l,
       long totalArea,
@@ -711,10 +708,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     final int maxuse = limitMax - l.res().min();
     long slack = (long) (lctS - lEst) * limitMax - totalArea - l.areaMin();
     int j = 0;
-    Task[] tasks = new Task[S.size()];
+    Task[] tasks = new Task[setS.size()];
     int tasksLength = 0;
-    while (slack < 0 && j < S.size()) {
-      Task t = S.get(j);
+    while (slack < 0 && j < setS.size()) {
+      Task t = setS.get(j);
       if (t.res().min() <= maxuse || lEst >= t.ect()) {
         slack += t.areaMin();
       } else {
@@ -743,20 +740,20 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       }
       l.start().domain.inMin(store.level, l.start(), newStartl);
     }
-    if (after(l, S)) {
-      L.remove(indexOfl);
+    if (after(l, setS)) {
+      setL.remove(indexOfl);
     } else {
-      removeFromSest(S);
+      removeFromSest(setS);
     }
   }
 
   private void propagateUpLAfter(
-      Store store, List<Task> S, List<Task> L, int indexOfl, Task l, int startOfS) {
+      Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l, int startOfS) {
     if (debugEnabled) {
       log.debug("before={} between={}!!!", false, false);
     }
     long areaOfS = 0;
-    for (Task t : S) {
+    for (Task t : setS) {
       areaOfS += t.areaMin();
     }
     int start = startOfS + (int) (areaOfS / limit.max());
@@ -765,14 +762,14 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         log.debug(
             "{} must be after\n{}\n>>> Cumulative EF <<< 1. Narrowed {} in {}..{}",
             l,
-            S,
+            setS,
             l.start(),
             start,
             IntDomain.MAX_INT);
       }
       l.start().domain.inMin(store.level, l.start(), start);
     }
-    L.remove(indexOfl);
+    setL.remove(indexOfl);
   }
 
   private int est(List<Task> tasks) {
@@ -792,7 +789,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int lctOfS = IntDomain.MIN_INT;
     int minDur = IntDomain.MAX_INT;
     int minRes = IntDomain.MAX_INT;
-    boolean FitAfter;
+    boolean fitAfter;
 
     for (Task t : s) {
       int dur = t.dur().min();
@@ -810,12 +807,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     if (debugEnabled) {
       log.debug("Fit tasks of {} after {} = {}", s, est0, availableArea >= areaS);
     }
-    FitAfter = availableArea >= areaS;
+    fitAfter = availableArea >= areaS;
 
-    if (FitAfter) {
-      FitAfter = (lctOfS - est0) / minDur * (limitMax / minRes) >= s.size();
+    if (fitAfter) {
+      fitAfter = (lctOfS - est0) / minDur * (limitMax / minRes) >= s.size();
     }
-    return FitAfter;
+    return fitAfter;
   }
 
   private boolean fitTasksBefore(List<Task> s, int lct0) {
@@ -823,7 +820,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int estOfS = IntDomain.MAX_INT;
     int minDur = IntDomain.MAX_INT;
     int minRes = IntDomain.MAX_INT;
-    boolean FitBefore;
+    boolean fitBefore;
 
     for (Task t : s) {
       int dur = t.dur().min();
@@ -843,11 +840,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           "Fit tasks of {} before {} = Available are: {} Area: {}", s, lct0, availableArea, areaS);
     }
 
-    FitBefore = availableArea >= areaS;
-    if (FitBefore) {
-      FitBefore = (lct0 - estOfS) / minDur * (limitMax / minRes) >= s.size();
+    fitBefore = availableArea >= areaS;
+    if (fitBefore) {
+      fitBefore = (lct0 - estOfS) / minDur * (limitMax / minRes) >= s.size();
     }
-    return FitBefore;
+    return fitBefore;
   }
 
   @Override
@@ -1279,8 +1276,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void removeFromSest(List<Task> s) {
-
-    // s = s \ {t in s | est(t) = est(s)}
     int estS = est(s);
     int l = s.size();
     int i = 0;
@@ -1296,8 +1291,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void removeFromSlct(List<Task> s) {
-
-    // s = s \ {t in s | lct(t) = lct(s)}
     int lctS = lct(s);
     int l = s.size();
     int i = 0;

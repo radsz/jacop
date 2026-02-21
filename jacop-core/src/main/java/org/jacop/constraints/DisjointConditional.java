@@ -315,7 +315,7 @@ public class DisjointConditional extends Diff {
     }
 
     queueIndex = 2;
-    IntVar[] R;
+    IntVar[] rectVars;
 
     int size = rectangles[0].length;
     this.rectangles = new Rectangle[rectangles.length];
@@ -324,9 +324,9 @@ public class DisjointConditional extends Diff {
       if (rectangles[i] == null) {
         throw new IllegalArgumentException(i + "-th list within rectangles list is null");
       }
-      R = rectangles[i];
-      if (R.length == size) {
-        Rectangle rect = new Rectangle(R);
+      rectVars = rectangles[i];
+      if (rectVars.length == size) {
+        Rectangle rect = new Rectangle(rectVars);
         this.rectangles[i] = rect;
       } else {
         String s = "\nNot equal sizes of rectangle vectors in Diff";

@@ -175,11 +175,11 @@ public class Circuit extends Alldiff implements Stateful {
       dom = v.dom();
       if (dom.singleton()) {
         updateChains(v);
-        int Qmin = dom.min();
+        int qMin = dom.min();
 
         chainLength = 0;
-        int lastInChain = lastNode(Qmin);
-        int firstInChain = firstNode(Qmin);
+        int lastInChain = lastNode(qMin);
+        int firstInChain = firstNode(qMin);
         if (chainLength < list.length - 1) {
           list[lastInChain - 1].domain.inComplement(
               store.level, list[lastInChain - 1], firstInChain);

@@ -59,10 +59,10 @@ class Diff2VarValue implements MutableVarValue {
   @Override
   public Diff2VarValue copy() {
 
-    Diff2VarValue Val = new Diff2VarValue(rects);
-    Val.stamp = stamp;
-    Val.previousDiff2VarValue = previousDiff2VarValue;
-    return Val;
+    Diff2VarValue val = new Diff2VarValue(rects);
+    val.stamp = stamp;
+    val.previousDiff2VarValue = previousDiff2VarValue;
+    return val;
   }
 
   public MutableVarValue previous() {

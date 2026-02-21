@@ -195,9 +195,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (n.domain.singleton()) {
-      if (applyNSingletonPruningForX(store, lbSdom, lb0, ub0)) {
-        return;
-      }
+      applyNSingletonPruningForX(store, lbSdom, lb0, ub0);
     }
   }
 
@@ -318,29 +316,29 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    */
   public void consistencyForY(Store store) {
 
-    IntDomain K = buildKFromGroundedX();
-    if (K == null) {
+    IntDomain k = buildKFromGroundedX();
+    if (k == null) {
       return;
     }
 
     IntDomain lbSdom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
     IntDomain futureDomain = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
-    IntDomain U = computeU(lbSdom, futureDomain);
+    IntDomain u = computeU(lbSdom, futureDomain);
 
     if (DEBUG_ALL) {
       log.debug("-------------Consistency FOR Y -------------");
       log.debug(DEBUG_LEVEL, store.level);
       log.debug("{}", this);
-      log.debug("--x formed K = {}", K);
-      log.debug("--y formed U = {}", U);
+      log.debug("--x formed K = {}", k);
+      log.debug("--y formed U = {}", u);
       log.debug(DEBUG_SEPARATOR);
     }
 
     int yGr = this.yGrounded.value();
     int ub0 = this.ub0Ts.value();
 
-    int countCoverMin = countXCoveredByU(ub0, U);
-    int[] yCounts = countYCoverStats(yGr, ub0, K, U);
+    int countCoverMin = countXCoveredByU(ub0, u);
+    int[] yCounts = countYCoverStats(yGr, k, u);
 
     int noRoleY = yCounts[0];
     int alreadyCover = yCounts[1];
@@ -370,43 +368,43 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       n.domain.inValue(store.level, n, countCoverMin);
     }
 
-    K = K.subtract(U);
+    k = k.subtract(u);
 
     if ((countCoverMin == n.min()) && n.singleton()) {
       if (DEBUG_ALL) {
-        log.debug("--K \\ U = {}", K);
+        log.debug("--K \\ U = {}", k);
       }
-      pruneYSubtractK(store, yGr, K);
+      pruneYSubtractK(store, yGr, k);
       return;
     }
 
     int mayLeftToCover = listOfX.length - ub0;
     for (int i = 0; i < ub0; i++) {
-      if (K.contains(listOfX[i].min())) {
+      if (k.contains(listOfX[i].min())) {
         mayLeftToCover++;
       }
     }
 
-    if (K.getSize() == mayLeftToCover) {
+    if (k.getSize() == mayLeftToCover) {
       n.domain.in(store.level, n, countCoverMin + disjointCover, countCoverMin + potentialCover);
     }
 
     if (n.singleton()) {
-      pruneYWhenNSingleton(store, yGr, K, countCoverMin, potentialCover, mayLeftToCover);
+      pruneYWhenNSingleton(store, yGr, k, countCoverMin, potentialCover, mayLeftToCover);
     }
   }
 
   private IntDomain buildKFromGroundedX() {
-    IntDomain K = new IntervalDomain();
+    IntDomain k = new IntervalDomain();
     for (IntVar x : listOfX) {
       if (x.singleton()) {
-        K = K.union(x.min());
+        k = k.union(x.min());
       } else {
         assert false : "consistencyForY is called without all X being grounded";
         return null;
       }
     }
-    return K;
+    return k;
   }
 
   private IntDomain computeU(IntDomain lbSdom, IntDomain futureDomain) {
@@ -419,22 +417,22 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     return new IntervalDomain();
   }
 
-  private int countXCoveredByU(int ub0, IntDomain U) {
+  private int countXCoveredByU(int ub0, IntDomain u) {
     int countCoverMin = 0;
     for (int i = 0; i < ub0; i++) {
-      if (U.contains(listOfX[i].value())) {
+      if (u.contains(listOfX[i].value())) {
         countCoverMin++;
       }
     }
     return countCoverMin;
   }
 
-  private int[] countYCoverStats(int yGr, int ub0, IntDomain K, IntDomain U) {
+  private int[] countYCoverStats(int yGr, IntDomain k, IntDomain u) {
     int noRoleY = 0;
     int alreadyCover = 0;
     for (int i = 0; i < yGr; i++) {
       IntVar y = listOfY[i];
-      if (K.contains(y.domain)) {
+      if (k.contains(y.domain)) {
         alreadyCover++;
       } else {
         noRoleY++;
@@ -446,13 +444,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     for (int i = yGr; i < listOfY.length; i++) {
       IntVar y = listOfY[i];
       if (y.singleton()) {
-        if (K.contains(y.domain)) {
+        if (k.contains(y.domain)) {
           alreadyCover++;
         } else {
           noRoleY++;
         }
       } else {
-        IntDomain intersectK = y.domain.intersect(K).subtract(U);
+        IntDomain intersectK = y.domain.intersect(k).subtract(u);
         if (intersectK.getSize() == 0) {
           noRoleY++;
         } else if (intersectK.getSize() == y.domain.getSize()) {
@@ -469,11 +467,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     return new int[] {noRoleY, alreadyCover, potentialCover, disjointCover};
   }
 
-  private void pruneYSubtractK(Store store, int yGr, IntDomain K) {
+  private void pruneYSubtractK(Store store, int yGr, IntDomain k) {
     for (int i = yGr; i < listOfY.length; i++) {
       IntVar y = listOfY[i];
-      if (y.domain.isIntersecting(K)) {
-        y.domain.in(store.level, y, y.domain.subtract(K));
+      if (y.domain.isIntersecting(k)) {
+        y.domain.in(store.level, y, y.domain.subtract(k));
       }
     }
   }
@@ -481,25 +479,25 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   private void pruneYWhenNSingleton(
       Store store,
       int yGr,
-      IntDomain K,
+      IntDomain k,
       int countCoverMin,
       int potentialCover,
       int mayLeftToCover) {
-    if (potentialCover <= K.getSize()
+    if (potentialCover <= k.getSize()
         && mayLeftToCover == (n.min() - countCoverMin)
-        && K.getSize() == mayLeftToCover) {
+        && k.getSize() == mayLeftToCover) {
       for (int i = yGr; i < listOfY.length; i++) {
         IntVar y = listOfY[i];
-        if (y.domain.isIntersecting(K)) {
-          y.domain.in(store.level, y, K);
+        if (y.domain.isIntersecting(k)) {
+          y.domain.in(store.level, y, k);
         }
       }
     }
-    if (potentialCover == n.min() - countCoverMin && K.getSize() == mayLeftToCover) {
+    if (potentialCover == n.min() - countCoverMin && k.getSize() == mayLeftToCover) {
       for (int i = yGr; i < listOfY.length; i++) {
         IntVar y = listOfY[i];
-        if (y.domain.isIntersecting(K)) {
-          y.domain.in(store.level, y, K);
+        if (y.domain.isIntersecting(k)) {
+          y.domain.in(store.level, y, k);
         }
       }
     }
@@ -526,7 +524,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         for (int i = yGrounded.value(); i < listOfY.length; i++) {
           IntVar y = listOfY[i];
           if (y.singleton() && y.min() == v) {
-            mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.subtract(v, v);
+            mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
             cardinalityV = -1;
             break;
           }
@@ -549,7 +547,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           swapYtoFront(last, lastIndex);
           lastIndex++;
           yLast.domain.inValue(store.level, yLast, v);
-          mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.subtract(v, v);
+          mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
         }
       }
     }
@@ -911,7 +909,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
               int cardinalityV = 0;
               int last = -1;
-              IntVar y_last;
+              IntVar yLast;
               for (int i = this.yGrounded.value(); i < this.listOfY.length; i++) {
                 y = this.listOfY[i];
 
@@ -922,21 +920,21 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               }
 
               if (cardinalityV == 1) {
-                y_last = this.listOfY[last];
-                if (!y_last.singleton()) {
-                  y_last = this.listOfY[last];
+                yLast = this.listOfY[last];
+                if (!yLast.singleton()) {
+                  yLast = this.listOfY[last];
 
                   if (DEBUG_ALL) {
-                    log.debug("Only {} can cover {} so I ground it", y_last.id, v);
+                    log.debug("Only {} can cover {} so I ground it", yLast.id, v);
                   }
 
                   mustBeCoveredNow =
-                      (IntervalDomain) mustBeCoveredNow.union(y_last.domain.subtract(v, v));
+                      (IntervalDomain) mustBeCoveredNow.union(yLast.domain.subtract(v, v));
 
                   swapYtoFront(last, lastIndex);
                   lastIndex++;
 
-                  y_last.domain.in(store.level, y_last, v, v);
+                  yLast.domain.in(store.level, yLast, v, v);
                 }
               } else {
                 if (cardinalityV == 0) {

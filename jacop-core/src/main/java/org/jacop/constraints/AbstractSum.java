@@ -56,14 +56,7 @@ public abstract class AbstractSum extends PrimitiveConstraint {
   static final byte GE = 5;
 
   /** Defines negated relations. */
-  static final byte[] NEG_REL = {
-    NE, // EQ=0,
-    GT, // LE=1,
-    GE, // LT=2,
-    EQ, // NE=3,
-    LE, // GT=4,
-    LT // GE=5;
-  };
+  static final byte[] NEG_REL = {NE, GT, GE, EQ, LE, LT};
 
   /** It specifies what relation is used by this constraint. */
   protected final byte relationType;

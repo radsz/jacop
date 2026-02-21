@@ -99,10 +99,9 @@ public class CountVar extends AbstractCount {
       if (applyWhenMayBeTight(store, state.start, state.numberEq, state.numberMayBe)) {
         return;
       }
-    } else if (state.numberEq == counter.max()) {
-      if (applyWhenEqMax(store, state.start, state.numberEq)) {
-        return;
-      }
+    } else if (state.numberEq == counter.max()
+        && applyWhenEqMax(store, state.start, state.numberEq)) {
+      return;
     }
 
     updateState(state.numberEq, state.start);

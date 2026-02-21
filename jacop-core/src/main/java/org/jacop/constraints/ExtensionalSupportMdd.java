@@ -224,5 +224,3 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
     return result.toString();
   }
 }
-
-}

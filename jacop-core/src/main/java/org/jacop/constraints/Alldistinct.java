@@ -292,7 +292,7 @@ public class Alldistinct extends Constraint
       debugConsistencyChangedVars();
     }
 
-    IntDomain Qdom;
+    IntDomain qDom;
     Integer zero = 0;
     ArrayList<IntVar> currentList;
     TimeStamp<Integer> stamp;
@@ -304,8 +304,8 @@ public class Alldistinct extends Constraint
       variableQueue = new LinkedHashSet<>();
 
       for (IntVar Q : fdvs) {
-        Qdom = Q.dom();
-        if (Qdom.singleton()) {
+        qDom = Q.dom();
+        if (qDom.singleton()) {
 
           int qValue = Q.value();
 
@@ -1212,8 +1212,8 @@ public class Alldistinct extends Constraint
     log.debug("Tarjan end");
   }
 
-  private void debugConsistencyTarjanStartVisit(IntVar var) {
-    log.debug("Tarjan start, changed variabled {}", var);
+  private void debugConsistencyTarjanStartVisit(IntVar changedVar) {
+    log.debug("Tarjan start, changed variabled {}", changedVar);
     log.debug("Tarjan start, value mapping {}", valueMapVariable);
   }
 
@@ -1421,7 +1421,6 @@ public class Alldistinct extends Constraint
     n = initializeTarjanVisit(x, dfsnum, low, l, n);
 
     Object[] matchedData = getTarjanMatchedData(x);
-    Integer matchedValue = (Integer) matchedData[0];
     int lastPosition = (Integer) matchedData[1];
     @SuppressWarnings("unchecked")
     ArrayList<IntVar> currentList = (ArrayList<IntVar>) matchedData[2];
