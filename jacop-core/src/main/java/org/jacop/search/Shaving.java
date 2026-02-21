@@ -341,7 +341,6 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     int depth = store.level;
 
     store.setLevel(++depth);
-    // store.currentConstraint = null;
 
     v.domain.in(store.level, v, val, val);
 

@@ -48,8 +48,6 @@ public abstract class BinaryNode {
   BinaryNode left;
   BinaryNode right;
 
-  // BinaryNode sibling = null;  // currently not used
-
   abstract void propagateAndPrune();
 
   abstract void prune();

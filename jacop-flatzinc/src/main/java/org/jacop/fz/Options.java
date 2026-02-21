@@ -51,16 +51,16 @@ public class Options {
   boolean verbose;
   boolean statistics;
   boolean freeSearch;
-  int time_out;
-  int number_solutions = -1;
+  int timeOut;
+  int numberSolutions = -1;
   boolean interval;
   boolean precisionDefined;
   double precision;
   double format;
   boolean boundConsistency;
   boolean runSearch = true;
-  boolean use_sat;
-  boolean complementary_search;
+  boolean useSat;
+  boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
   boolean debug;
@@ -176,8 +176,8 @@ public class Options {
 
   private int handleAllSolutions(int i) {
     all = true;
-    if (number_solutions == -1) {
-      number_solutions = Integer.MAX_VALUE;
+    if (numberSolutions == -1) {
+      numberSolutions = Integer.MAX_VALUE;
     } else {
       System.err.println(
           "%% Option -a ignored since number of solutions has been specified by option -n");
@@ -186,7 +186,7 @@ public class Options {
   }
 
   private int handleTimeOut(String[] args, int i) {
-    time_out = Integer.parseInt(args[++i]);
+    timeOut = Integer.parseInt(args[++i]);
     return i + 1;
   }
 
@@ -201,17 +201,17 @@ public class Options {
   }
 
   private int handleSat(int i) {
-    use_sat = true;
+    useSat = true;
     return i + 1;
   }
 
   private int handleNumSolutions(String[] args, int i) {
-    if (number_solutions == Integer.MAX_VALUE) {
+    if (numberSolutions == Integer.MAX_VALUE) {
       System.err.println(
           "%% Option -a ignored since number of solutions has been specified by option -n");
     }
-    number_solutions = Integer.parseInt(args[++i]);
-    if (number_solutions > 1) {
+    numberSolutions = Integer.parseInt(args[++i]);
+    if (numberSolutions > 1) {
       all = true;
     }
     return i + 1;
@@ -257,7 +257,7 @@ public class Options {
   }
 
   private int handleComplementarySearch(int i) {
-    complementary_search = true;
+    complementarySearch = true;
     return i + 1;
   }
 
@@ -386,7 +386,7 @@ public class Options {
    * @return the value of the timeOut (in seconds), 0 if no time-out was set.
    */
   public int getTimeOut() {
-    return time_out;
+    return timeOut;
   }
 
   /**
@@ -395,7 +395,7 @@ public class Options {
    * @return the number of solutions the search should search for.
    */
   public int getNumberSolutions() {
-    return number_solutions;
+    return numberSolutions;
   }
 
   /**
@@ -454,12 +454,12 @@ public class Options {
    * @return true sat is used, false otherwise
    */
   public boolean useSat() {
-    return use_sat;
+    return useSat;
   }
 
   /** Sat is used. */
   public void setSat() {
-    use_sat = true;
+    useSat = true;
   }
 
   /**
@@ -496,7 +496,7 @@ public class Options {
    *     collect all non introduced variables (true)
    */
   public boolean complementarySearch() {
-    return complementary_search;
+    return complementarySearch;
   }
 
   public RestartType getRestartType() {

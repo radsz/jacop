@@ -236,21 +236,21 @@ class ThetaLambdaTree extends Tree {
     // Cut
     // v is the rightmost node in the alpha subtree
 
-    long e_alpha = tree[v].e;
-    long env_alpha = tree[v].env;
-    long e_beta = 0L;
+    long eAlpha = tree[v].e;
+    long envAlpha = tree[v].env;
+    long eBeta = 0L;
 
     while (!isRoot(v)) {
       if (isLeft(v)) {
-        e_beta += tree[siblingRight(v)].e;
+        eBeta += tree[siblingRight(v)].e;
       } else { // isRight(v)
-        env_alpha = Math.max(plus(tree[siblingLeft(v)].env, e_alpha), env_alpha);
-        e_alpha += tree[siblingLeft(v)].e;
+        envAlpha = Math.max(plus(tree[siblingLeft(v)].env, eAlpha), envAlpha);
+        eAlpha += tree[siblingLeft(v)].e;
       }
       v = parent(v);
     }
 
-    return plus(env_alpha, e_beta);
+    return plus(envAlpha, eBeta);
   }
 
   IntVar getCapacity() {

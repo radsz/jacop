@@ -102,9 +102,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   final Tables dictionary;
   final Store store;
 
-  final ArrayList<SearchItem<T>> search_seq = new ArrayList<>();
-  Var[] search_variables;
-  String search_type;
+  final ArrayList<SearchItem<T>> searchSeq = new ArrayList<>();
+  Var[] searchVariables;
+  String searchType;
   String explore = COMPLETE;
   String indomain;
   String var_selection_heuristic;
@@ -189,12 +189,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   void searchParameters(SimpleNode node, int n) {
 
     ASTAnnotation ann = (ASTAnnotation) node.jjtGetChild(n);
-    search_type = ann.getAnnId();
+    searchType = ann.getAnnId();
 
-    switch (search_type) {
+    switch (searchType) {
       case "int_search", "bool_search" -> {
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        search_variables = getVarArray(expr1);
+        searchVariables = getVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(1);
         var_selection_heuristic = getVarSelectHeuristic(expr2);
@@ -207,7 +207,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
       case "set_search" -> {
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        search_variables = getSetVarArray(expr1);
+        searchVariables = getSetVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(1);
         var_selection_heuristic = getVarSelectHeuristic(expr2);
@@ -222,7 +222,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         floatSearch = true;
 
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        search_variables = getFloatVarArray(expr1);
+        searchVariables = getFloatVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(2);
         var_selection_heuristic = getVarSelectHeuristic(expr2);
@@ -238,7 +238,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
       case SEQ_SEARCH -> {
         SimpleNode body = (SimpleNode) ann.jjtGetChild(0);
-        search_type = SEQ_SEARCH;
+        searchType = SEQ_SEARCH;
 
         makeVectorOfSearches(body);
       }
@@ -247,7 +247,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         prioritySearch = true;
 
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        search_variables = getVarArray(expr1);
+        searchVariables = getVarArray(expr1);
 
         SimpleNode searches = (SimpleNode) ann.jjtGetChild(1);
         makeVectorOfSearches(searches);
@@ -272,7 +272,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
         probability = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
       }
-      case null, default -> IO.println("% Warning: Ignored search annotation " + search_type);
+      case null, default -> IO.println("% Warning: Ignored search annotation " + searchType);
     }
 
     // compilation aborted.");
@@ -280,7 +280,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   private void handleWarmStart(ASTAnnotation ann) {
     SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-    search_variables = getVarArray(expr1);
+    searchVariables = getVarArray(expr1);
     SimpleNode expr2 = (SimpleNode) ann.jjtGetChild(1);
     int[] values;
     try {
@@ -289,7 +289,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "%Not supported types of values in warm_start; compilation aborted");
     }
-    if (search_variables == null || values == null) {
+    if (searchVariables == null || values == null) {
       throw new IllegalArgumentException(
           "Not supported variable and/or value type in warm_start; compilation aborted.");
     }
@@ -297,7 +297,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     int max = 0;
     int min = 0;
     for (int i = 0; i < values.length; i++) {
-      IntVar v = (IntVar) search_variables[i];
+      IntVar v = (IntVar) searchVariables[i];
       int val = values[i];
       if (v.domain.contains(val)) {
         if (preferedValues.get(v) != null && preferedValues.get(v) != val) {
@@ -372,12 +372,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         subSearch.searchParameters(body, i);
 
         if (SEQ_SEARCH.equals(ann.getAnnId())) {
-          search_seq.add(subSearch);
+          searchSeq.add(subSearch);
           continue;
         }
 
-        if (subSearch.search_variables != null && subSearch.search_variables.length > 0) {
-          search_seq.add(subSearch);
+        if (subSearch.searchVariables != null && subSearch.searchVariables.length > 0) {
+          searchSeq.add(subSearch);
         }
       }
     } else {
@@ -491,14 +491,14 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
       subSearch.searchParameters(node, i);
 
-      if (search_type == null && WARM_START.equals(subSearch.search_type)) {
-        search_seq.addFirst(subSearch);
+      if (searchType == null && WARM_START.equals(subSearch.searchType)) {
+        searchSeq.addFirst(subSearch);
       } else {
-        search_seq.add(subSearch);
+        searchSeq.add(subSearch);
       }
     }
 
-    search_type = SEQ_SEARCH;
+    searchType = SEQ_SEARCH;
   }
 
   /**
@@ -513,7 +513,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             ? new IndomainDefaultValue<>(preferedValues, new IndomainMin<>())
             : new IndomainDefaultValue<>(preferedValues, new IndomainMax<>());
     ArrayList<IntVar> sv = new ArrayList<>();
-    for (Var searchVariable : search_variables) {
+    for (Var searchVariable : searchVariables) {
       if (preferedValues.containsKey(searchVariable)) {
         sv.add((IntVar) searchVariable);
       }
@@ -556,19 +556,19 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return splitSelect;
     }
     if (INPUT_ORDER.equals(var_selection_heuristic)) {
-      return new InputOrderSelect<>(store, (IntVar[]) search_variables, getIndomain(indomain));
+      return new InputOrderSelect<>(store, (IntVar[]) searchVariables, getIndomain(indomain));
     }
     Indomain<IntVar> indom = getIndomain(indomain);
     if (tieBreaking == null) {
-      return new SimpleSelect<>((IntVar[]) search_variables, var_sel, indom);
+      return new SimpleSelect<>((IntVar[]) searchVariables, var_sel, indom);
     }
-    return new SimpleSelect<>((IntVar[]) search_variables, var_sel, tieBreaking, indom);
+    return new SimpleSelect<>((IntVar[]) searchVariables, var_sel, tieBreaking, indom);
   }
 
   private IntVar[] copyToIntVarArray() {
-    IntVar[] searchVars = new IntVar[search_variables.length];
-    for (int i = 0; i < search_variables.length; i++) {
-      searchVars[i] = (IntVar) search_variables[i];
+    IntVar[] searchVars = new IntVar[searchVariables.length];
+    for (int i = 0; i < searchVariables.length; i++) {
+      searchVars[i] = (IntVar) searchVariables[i];
     }
     return searchVars;
   }
@@ -628,9 +628,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   private FloatVar[] copyToFloatVarArray() {
-    FloatVar[] searchVars = new FloatVar[search_variables.length];
-    for (int i = 0; i < search_variables.length; i++) {
-      searchVars[i] = (FloatVar) search_variables[i];
+    FloatVar[] searchVars = new FloatVar[searchVariables.length];
+    for (int i = 0; i < searchVariables.length; i++) {
+      searchVars[i] = (FloatVar) searchVariables[i];
     }
     return searchVars;
   }
@@ -694,9 +694,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         tieBreakingSet == null ? vs.getTieSel() : tieBreakingSet;
 
     Indomain<SetVar> indom = getIndomain4Set(indomain);
-    SetVar[] searchVars = new SetVar[search_variables.length];
-    for (int i = 0; i < search_variables.length; i++) {
-      searchVars[i] = (SetVar) search_variables[i];
+    SetVar[] searchVars = new SetVar[searchVariables.length];
+    for (int i = 0; i < searchVariables.length; i++) {
+      searchVars[i] = (SetVar) searchVariables[i];
     }
 
     if (tieBreaking == null) {
@@ -1174,7 +1174,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @return the search type
    */
   public String type() {
-    return search_type;
+    return searchType;
   }
 
   /**
@@ -1183,7 +1183,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @param st the search type to set
    */
   public void setSearchType(String st) {
-    search_type = st;
+    searchType = st;
   }
 
   /**
@@ -1219,7 +1219,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @return the array of search variables
    */
   public Var[] vars() {
-    return search_variables;
+    return searchVariables;
   }
 
   /**
@@ -1228,7 +1228,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @return the list of search items
    */
   ArrayList<SearchItem<T>> getSearchItems() {
-    return search_seq;
+    return searchSeq;
   }
 
   /**
@@ -1274,13 +1274,13 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   private void applyTieBreakTieBreaking() {
-    if ("int_search".equals(search_type) || "bool_search".equals(search_type)) {
+    if ("int_search".equals(searchType) || "bool_search".equals(searchType)) {
       tieBreakingInt = getVarSelect().getVarSel();
-    } else if ("set_search".equals(search_type)) {
+    } else if ("set_search".equals(searchType)) {
       tieBreakingSet = getSetVarSelect().getVarSel();
-    } else if ("float_search".equals(search_type)) {
+    } else if ("float_search".equals(searchType)) {
       tieBreakingFloat = getFloatVarSelect().getVarSel();
-    } else if ("priority_search".equals(search_type)) {
+    } else if ("priority_search".equals(searchType)) {
       tieBreakingInt = getVarSelect().getVarSel();
     }
   }
@@ -1291,7 +1291,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @param si the search item to add
    */
   public void addSearch(SearchItem<T> si) {
-    search_seq.add(si);
+    searchSeq.add(si);
   }
 
   /**
@@ -1299,16 +1299,16 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    *
    * @return the number of search items in the sequence
    */
-  public int search_seqSize() {
-    return search_seq.size();
+  public int searchSeqSize() {
+    return searchSeq.size();
   }
 
   /** {@inheritDoc} */
   public String toString() {
     StringBuilder s = new StringBuilder();
-    if (search_type == null) {
+    if (searchType == null) {
       s.append("defult_search\n");
-    } else if (search_seq.isEmpty()) {
+    } else if (searchSeq.isEmpty()) {
       appendSingleSearchToString(s);
     } else if (prioritySearch) {
       appendPrioritySearchToString(s);
@@ -1319,15 +1319,15 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   private void appendSingleSearchToString(StringBuilder s) {
-    s.append(search_type).append("(");
-    if (search_variables == null) {
+    s.append(searchType).append("(");
+    if (searchVariables == null) {
       s.append("[]");
     } else {
       s.append("array1d(1..")
-          .append(search_variables.length)
+          .append(searchVariables.length)
           .append(", ")
-          .append(Arrays.asList(search_variables));
-      if (WARM_START.equals(search_type)) {
+          .append(Arrays.asList(searchVariables));
+      if (WARM_START.equals(searchType)) {
         s.append(", ").append(preferedValues);
       }
     }
@@ -1346,9 +1346,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   private void appendPrioritySearchToString(StringBuilder s) {
     s.append("priority_search(");
     s.append("array1d(1..")
-        .append(search_variables.length)
+        .append(searchVariables.length)
         .append(", ")
-        .append(Arrays.asList(search_variables));
+        .append(Arrays.asList(searchVariables));
     s.append(", [");
     appendSearchSeqItems(s);
     s.append("]");
@@ -1363,11 +1363,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   private void appendSearchSeqItems(StringBuilder s) {
-    for (int i = 0; i < search_seq.size(); i++) {
-      if (i == search_seq.size() - 1) {
-        s.append(search_seq.get(i));
+    for (int i = 0; i < searchSeq.size(); i++) {
+      if (i == searchSeq.size() - 1) {
+        s.append(searchSeq.get(i));
       } else {
-        s.append(search_seq.get(i)).append(", ");
+        s.append(searchSeq.get(i)).append(", ");
       }
     }
   }

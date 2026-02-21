@@ -371,26 +371,26 @@ public class Alldistinct extends Constraint
 
     while (iter.hasNext()) {
 
-      IntVar V = iter.next();
-      IntDomain vPrunedDomain = V.recentDomainPruning();
+      IntVar currentVar = iter.next();
+      IntDomain vPrunedDomain = currentVar.recentDomainPruning();
 
       if (debugAll) {
-        debugConsistencyVariableChanged(V, vPrunedDomain);
+        debugConsistencyVariableChanged(currentVar, vPrunedDomain);
       }
 
       if (!vPrunedDomain.isEmpty()) {
 
         // Check if any removed value was a edge in maximum matching
-        Integer matchedValue = matching.get(V).value();
+        Integer matchedValue = matching.get(currentVar).value();
 
         // vPrunedDomain contains edge in maximum matching
         // this variable needs recomputation
         if (vPrunedDomain.contains(matchedValue)) {
-          freeVariables.add(V);
+          freeVariables.add(currentVar);
         }
 
         if (debugAll) {
-          debugConsistencyMatchedValue(V, matchedValue, vPrunedDomain);
+          debugConsistencyMatchedValue(currentVar, matchedValue, vPrunedDomain);
         }
 
         for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
@@ -406,7 +406,7 @@ public class Alldistinct extends Constraint
 
           int positionV = -1;
           for (int k = 0; k <= lastPosition; k++) {
-            if (currentList.get(k) == V) {
+            if (currentList.get(k) == currentVar) {
               positionV = k;
               break;
             }
@@ -421,7 +421,7 @@ public class Alldistinct extends Constraint
             stamp.update(lastPosition - 1);
 
             currentList.set(positionV, currentList.get(lastPosition));
-            currentList.set(lastPosition, V);
+            currentList.set(lastPosition, currentVar);
 
             continue;
           }
@@ -436,7 +436,7 @@ public class Alldistinct extends Constraint
         }
 
       } else if (debugAll) {
-        debugConsistencyNoDifferenceInDomain(V);
+        debugConsistencyNoDifferenceInDomain(currentVar);
       }
     }
 

@@ -424,8 +424,8 @@ public class DisjointConditional extends Diff {
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
-    int[] r_min = new int[dim];
-    int[] r_max = new int[dim];
+    int[] rMin = new int[dim];
+    int[] rMax = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MAX_INT;
@@ -433,14 +433,13 @@ public class DisjointConditional extends Diff {
       minLength[i] = rLengthDom.min();
 
       IntDomain rOriginDom = r.origin[i].dom();
-      r_min[i] = rOriginDom.min();
-      r_max[i] = rOriginDom.max() + rLengthDom.max();
+      rMin[i] = rOriginDom.min();
+      rMax[i] = rOriginDom.max() + rLengthDom.max();
     }
 
     for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).rects) {
       FindRectanglesResult one =
-          processOneRectangleForFind(
-              s, r, dim, r_min, r_max, startMin, stopMax, minLength, fdvQueue);
+          processOneRectangleForFind(s, r, dim, rMin, rMax, startMin, stopMax, minLength, fdvQueue);
       if (one.overlap) {
         if (s.condition() == null || s.condition().max() != 0) {
           overlappingRects.add(s);

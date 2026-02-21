@@ -856,19 +856,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int maxYreachedFromS = -1;
     int maxYreachesS = -1;
     for (int i = 0; i < ySize; i++) {
-      int C = compOfY[i];
-      assert C >= 0;
-      assert C <= sccNb;
+      int c = compOfY[i];
+      assert c >= 0;
+      assert c <= sccNb;
       if (maxYreachedFromS >= i) {
-        reachedFromS[C] = true;
+        reachedFromS[c] = true;
       }
-      if (reachedFromS[C]) {
-        maxYreachedFromS = Math.max(maxYreachedFromS, compReachesRight[C]);
+      if (reachedFromS[c]) {
+        maxYreachedFromS = Math.max(maxYreachedFromS, compReachesRight[c]);
       }
-      if (compReachesLeft[C] <= maxYreachesS) {
-        reachesS[C] = true;
+      if (compReachesLeft[c] <= maxYreachesS) {
+        reachesS[c] = true;
       }
-      if (reachesS[C]) {
+      if (reachesS[c]) {
         maxYreachesS = Math.max(maxYreachesS, i);
       }
     }
@@ -883,19 +883,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int minYreachedFromS = ySize;
     int minYreachesS = ySize;
     for (int i = ySize - 1; i >= 0; i--) {
-      int C = compOfY[i];
-      assert C >= 0;
-      assert C <= sccNb;
+      int c = compOfY[i];
+      assert c >= 0;
+      assert c <= sccNb;
       if (minYreachedFromS <= i) {
-        reachedFromS[C] = true;
+        reachedFromS[c] = true;
       }
-      if (reachedFromS[C]) {
-        minYreachedFromS = Math.min(minYreachedFromS, compReachesLeft[C]);
+      if (reachedFromS[c]) {
+        minYreachedFromS = Math.min(minYreachedFromS, compReachesLeft[c]);
       }
-      if (compReachesRight[C] >= minYreachesS) {
-        reachesS[C] = true;
+      if (compReachesRight[c] >= minYreachesS) {
+        reachesS[c] = true;
       }
-      if (reachesS[C]) {
+      if (reachesS[c]) {
         minYreachesS = Math.min(minYreachesS, i);
       }
     }
@@ -1029,18 +1029,18 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   // ---------------------------COUNT_BOUND_CONCISTENCY-----------------------//
 
   private void countBoundConsistency(Store store) {
-    int[] max_u = new int[ySize];
-    Arrays.fill(max_u, ySize - 1);
+    int[] maxU = new int[ySize];
+    Arrays.fill(maxU, ySize - 1);
 
     int[] min_l = new int[ySize];
     Arrays.fill(min_l, 0);
 
-    upperCount(max_u);
+    upperCount(maxU);
     lowerCount(min_l);
 
-    logMaxUAndMinLDebug(max_u, min_l);
+    logMaxUAndMinLDebug(maxU, min_l);
     for (int i = 0; i < ySize; i++) {
-      applyYDomainPruningForI(i, max_u, min_l);
+      applyYDomainPruningForI(i, maxU, min_l);
     }
     // add the rest of nodes not treated in this pass that was already singleton
     if (DEBUG) {
@@ -1067,7 +1067,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private void logMaxUAndMinLDebug(int[] maxU, int[] minL) {
     if (DEBUG) {
-      StringBuilder sb = new StringBuilder("max_u ");
+      StringBuilder sb = new StringBuilder("maxU ");
       for (int aMax_u : maxU) {
         sb.append(aMax_u).append(" ");
       }

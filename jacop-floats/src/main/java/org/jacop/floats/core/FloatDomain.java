@@ -1404,8 +1404,6 @@ public abstract class FloatDomain extends Domain {
     return 0;
   }
 
-  // public abstract int getElementAt(int index);
-
   /**
    * It computes an intersection with a given domain and stores it in this domain.
    *

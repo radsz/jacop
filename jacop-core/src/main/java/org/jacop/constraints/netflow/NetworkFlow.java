@@ -71,7 +71,6 @@ public class NetworkFlow extends Constraint
   private static final boolean SHOW_LEVEL = false;
 
   /** The network. */
-  // public final Network network;
   private final Pruning network;
 
   /** The variables and their handlers. */

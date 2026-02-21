@@ -97,9 +97,6 @@ public final class SatWrapper extends Constraint
   private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<>();
   // sat solver instance
   public Core core;
-  // association from CP variables to boolean variables
-  // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
-  // new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
   // keep track of literals activity, and give search advices (optional)
   public ActivityModule activity;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
@@ -122,7 +119,6 @@ public final class SatWrapper extends Constraint
   // the trail of the solver
   private Trail trail;
 
-  // private final ArrayList<Var> registeredVarsArray = new ArrayList<Var>();
   // current level for SAT solver
   private int currentSatLevel;
   // next literals to assert during consistency()

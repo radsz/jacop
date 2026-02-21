@@ -66,7 +66,7 @@ public class Subcircuit extends Alldiff {
   int sccLength;
   int firstConsistencyLevel;
   int sccCounter;
-  int stack_pointer;
+  int stackPointer;
   BitSet cycleVar;
 
   /**
@@ -93,7 +93,7 @@ public class Subcircuit extends Alldiff {
     val = new int[list.length];
 
     stack = new int[list.length];
-    stack_pointer = 0;
+    stackPointer = 0;
 
     String scc = System.getProperty("sub_circuit_scc_pruning");
     String dominance = System.getProperty("sub_circuit_dominance_pruning");
@@ -299,7 +299,7 @@ public class Subcircuit extends Alldiff {
     int min = idd;
 
     // stack push
-    stack[stack_pointer++] = k;
+    stack[stackPointer++] = k;
 
     for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
 
@@ -324,7 +324,7 @@ public class Subcircuit extends Alldiff {
       int n;
       do {
         // stack pop
-        n = stack[--stack_pointer];
+        n = stack[--stackPointer];
         cycleVar.set(n);
 
         val[n] = list.length + 1;

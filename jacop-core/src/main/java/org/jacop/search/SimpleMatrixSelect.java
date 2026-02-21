@@ -69,7 +69,6 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public boolean inputOrderTieBreaking = true;
 
-  // int subListSize;
   /** It specifies the pivot position (first element has index 0). */
   public int pivotPosition;
 

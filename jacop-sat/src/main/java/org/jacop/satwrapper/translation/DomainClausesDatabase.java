@@ -68,9 +68,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   // sat wrapper
   private SatWrapper wrapper;
 
-  // cache of literals we do not need to check
-  // private BitSet ignoreCache = new BitSet();
-
   // for each literal propagated by this database, the asserted literal that
   // is the cause for the propagation
   private int[] propagationCauses = new int[40];

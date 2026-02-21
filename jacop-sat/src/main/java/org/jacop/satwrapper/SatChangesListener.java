@@ -63,7 +63,6 @@ public final class SatChangesListener
   // the wrapper
   private SatWrapper wrapper;
 
-  // private IntSet[] excludedValues = new IntSet[5];
   // the core of the SAT solver
   private Core core;
 

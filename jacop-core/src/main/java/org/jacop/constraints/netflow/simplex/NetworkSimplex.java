@@ -63,7 +63,6 @@ public class NetworkSimplex {
   public static final int LARGE_COST = 100000; // 1 << 29; // or 28 ?
 
   public static final int TREE_ARC = -1;
-  // public static final int OTHER_ARC = -2;
   public static final int DELETED_ARC = -3;
 
   // 'nodes' does NOT contain the root
@@ -116,11 +115,6 @@ public class NetworkSimplex {
       node.toParent = arc;
       arc.index = TREE_ARC;
       arc.sister.index = TREE_ARC;
-
-      // node.toParent = arc;
-      // arc.index = arc.sister.index = -1;
-      // node.toParent = arc.sister;
-      // arc.index = arc.sister.index = -1;
 
       // register infeasible nodes
       if (node.deltaBalance != 0) {

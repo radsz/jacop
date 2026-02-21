@@ -56,7 +56,6 @@ public class DomainStructure implements VarHandler {
   final IntVar variable;
   final Arc[] arcs;
   final IntDomain[] domains;
-  // public final int[] supports;
   final Behavior behavior;
   int notGrounded;
 
@@ -101,7 +100,6 @@ public class DomainStructure implements VarHandler {
     this.variable = variable;
     this.arcs = arcs;
     this.domains = domains;
-    // this.supports = new int[arcs.length];
     this.notGrounded = arcs.length;
     this.behavior = behavior;
 
@@ -116,7 +114,6 @@ public class DomainStructure implements VarHandler {
       }
       arcs[id].companion.structure = this;
       arcs[id].companion.arcId = id;
-      // supports[id] = domains[id].min();
     }
   }
 

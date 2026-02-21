@@ -90,7 +90,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   static final String P = System.getProperty("fz_system_timer");
   final Store store;
   final boolean debug = false;
-  final boolean print_search_info = false;
+  final boolean printSearchInfo = false;
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
@@ -101,8 +101,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   long startCpu;
   long initTime;
   long searchTime;
-  SelectChoicePoint<T> variable_selection;
-  ArrayList<Search<T>> list_seq_searches;
+  SelectChoicePoint<T> variableSelection;
+  ArrayList<Search<T>> listSeqSearches;
   boolean heuristicSeqSearch;
   Var costVariable;
   // restart search
@@ -118,9 +118,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   boolean defaultSearch;
   DepthFirstSearch<T> label;
   // --------
-  DepthFirstSearch<T>[] final_search;
+  DepthFirstSearch<T>[] finalSearch;
   // sequence search
-  Search<T> final_search_seq;
+  Search<T> finalSearchSeq;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -284,7 +284,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SearchItem<T> si = new SearchItem<>(store, dictionary);
     si.searchParametersForSeveralAnnotations(node, 0);
 
-    ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.search_seq);
+    ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
 
     if (nsi.size() == 1) {
       runSingleOrSequenceSearch(node, si, nsi.getFirst());
@@ -294,7 +294,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void runSingleOrSequenceSearch(ASTSolveItem node, SearchItem<T> si, SearchItem<T> fs) {
-    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
     solveKind = getKind(kind.getKind());
     if (SEQ_SEARCH.equals(fs.type())) {
       run_sequence_search(solveKind, kind, fs);
@@ -305,7 +305,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void runSequenceSearchFromMultiple(
       ASTSolveItem node, SearchItem<T> si, ArrayList<SearchItem<T>> nsi) {
-    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
     solveKind = getKind(kind.getKind());
 
     SearchItem<T> siq = new SearchItem<>(store, dictionary);
@@ -358,7 +358,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (SearchItem<T> s : searchSeq) {
       if (!handleSearchAnnotation(s, ns)) {
         System.err.println(
-            "%% Warning: Not supported search annotation: " + s.search_type + "; ignored.");
+            "%% Warning: Not supported search annotation: " + s.searchType + "; ignored.");
       }
     }
 
@@ -366,28 +366,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private boolean handleSearchAnnotation(SearchItem<T> s, ArrayList<SearchItem<T>> ns) {
-    if ("restart_none".equals(s.search_type)) {
+    if ("restart_none".equals(s.searchType)) {
       return true;
     }
-    if ("restart_constant".equals(s.search_type)
-        || "restart_linear".equals(s.search_type)
-        || "restart_geometric".equals(s.search_type)
-        || "restart_luby".equals(s.search_type)) {
+    if ("restart_constant".equals(s.searchType)
+        || "restart_linear".equals(s.searchType)
+        || "restart_geometric".equals(s.searchType)
+        || "restart_luby".equals(s.searchType)) {
       if (!options.freeSearch()) {
         restartCalculator = s.restartCalculator;
       }
       return true;
     }
-    if ("relax_and_reconstruct".equals(s.search_type)) {
+    if ("relax_and_reconstruct".equals(s.searchType)) {
       relaxVars = s.relax_and_reconstruct_variables;
       probability = s.probability;
       return true;
     }
-    if (s.search_type.endsWith("_search")) {
+    if (s.searchType.endsWith("_search")) {
       ns.add(s);
       return true;
     }
-    if (s.search_type.endsWith(WARM_START)) {
+    if (s.searchType.endsWith(WARM_START)) {
       ns.addFirst(s);
       return true;
     }
@@ -413,7 +413,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     label = null;
     optimization = solveKind > 0;
-    list_seq_searches = new ArrayList<>();
+    listSeqSearches = new ArrayList<>();
 
     label = null;
     si = applySearchItemToLabel(si);
@@ -425,21 +425,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     // adds child search for cost; to be sure that all variables get a value
-    final_search = setSubSearchForAll(label, options);
+    finalSearch = setSubSearchForAll(label, options);
 
     if (si == null) {
       defaultSearch = true;
       si = new SearchItem<>(store, dictionary);
       si.explore = COMPLETE;
-      resolveLabelFromFinalSearch(final_search);
+      resolveLabelFromFinalSearch(finalSearch);
     } else {
-      for (DepthFirstSearch<T> s : final_search) {
+      for (DepthFirstSearch<T> s : finalSearch) {
         if (s != null) {
-          list_seq_searches.add(s);
+          listSeqSearches.add(s);
         }
       }
     }
-    list_seq_searches.getLast();
+    listSeqSearches.getLast();
 
     applyHeuristicSearch(label, si);
 
@@ -526,7 +526,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
     }
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     label.setPrintInfo(false);
     setSearchTimeout(label);
     return si;
@@ -543,10 +543,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void assignLabelFromFinalSearch(DepthFirstSearch<T>[] finalSearch, int primary) {
     label = finalSearch[primary];
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     for (int i = primary + 1; i < finalSearch.length; i++) {
       if (finalSearch[i] != null) {
-        list_seq_searches.add(finalSearch[i]);
+        listSeqSearches.add(finalSearch[i]);
       }
     }
   }
@@ -630,7 +630,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return true if a solution was found, false otherwise
    */
   private boolean executeSearch(DepthFirstSearch<T> label, Var costVar, String solveType) {
-    return executeSearch(label, variable_selection, costVar, solveType);
+    return executeSearch(label, variableSelection, costVar, solveType);
   }
 
   /**
@@ -894,7 +894,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       solutions = label.getSolutionListener().solutionsNo();
     }
 
-    for (DepthFirstSearch<T> l : final_search) {
+    for (DepthFirstSearch<T> l : finalSearch) {
       if (l != null) {
         nodes += l.getNodes();
         wrong += l.getWrongDecisions();
@@ -959,8 +959,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   set_search_variables, new AfcMaxDeg<>(store), new IndomainSetMin<>())
               : new SimpleSelect<>(set_search_variables, null, new IndomainSetMin<>());
 
-      if (variable_selection == null) {
-        variable_selection = (SelectChoicePoint<T>) setSelect;
+      if (variableSelection == null) {
+        variableSelection = (SelectChoicePoint<T>) setSelect;
       }
       setSearch.setSelectChoicePoint((SelectChoicePoint<T>) setSelect);
       setSearch.setPrintInfo(false);
@@ -992,8 +992,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   int_search_variables, new AfcMaxDeg<>(store), new IndomainMin<>())
               : new SimpleSelect<>(int_search_variables, null, new IndomainMin<>());
 
-      if (variable_selection == null) {
-        variable_selection = (SelectChoicePoint<T>) intSelect;
+      if (variableSelection == null) {
+        variableSelection = (SelectChoicePoint<T>) intSelect;
       }
       intSearch.setSelectChoicePoint((SelectChoicePoint<T>) intSelect);
       intSearch.setPrintInfo(false);
@@ -1028,8 +1028,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               ? new SimpleSelect<>(bool_search_variables, new AfcMax<>(store), new IndomainMin<>())
               : new SimpleSelect<>(bool_search_variables, null, new IndomainMin<>());
 
-      if (variable_selection == null) {
-        variable_selection = (SelectChoicePoint<T>) boolSelect;
+      if (variableSelection == null) {
+        variableSelection = (SelectChoicePoint<T>) boolSelect;
       }
       boolSearch.setSelectChoicePoint((SelectChoicePoint<T>) boolSelect);
       boolSearch.setPrintInfo(false);
@@ -1068,8 +1068,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               ? new SplitSelectFloat<>(store, float_search_variables, new LargestDomainFloat<>())
               : new SplitSelectFloat<>(store, float_search_variables, null);
 
-      if (variable_selection == null) {
-        variable_selection = (SelectChoicePoint<T>) floatSelect;
+      if (variableSelection == null) {
+        variableSelection = (SelectChoicePoint<T>) floatSelect;
       }
       floatSearch.setSelectChoicePoint((SelectChoicePoint<T>) floatSelect);
       floatSearch.setPrintInfo(false);
@@ -1169,14 +1169,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> masterLabel = null;
     DepthFirstSearch<T> last_search = null;
     SelectChoicePoint<T> masterSelect = null;
-    list_seq_searches = new ArrayList<>();
+    listSeqSearches = new ArrayList<>();
 
     for (int i = 0; i < si.getSearchItems().size(); i++) {
       if (i == 0) {
         masterLabel = sub_search(si.getSearchItems().get(i), null, true);
         last_search = getLastSearch(masterLabel);
-        masterSelect = variable_selection;
-        if (!print_search_info) {
+        masterSelect = variableSelection;
+        if (!printSearchInfo) {
           masterLabel.setPrintInfo(false);
         }
       } else {
@@ -1192,8 +1192,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T>[] complementary_search = setSubSearchForAll(last_search, options);
     for (DepthFirstSearch<T> aComplementary_search : complementary_search) {
       if (aComplementary_search != null) {
-        list_seq_searches.add(aComplementary_search);
-        if (!print_search_info) {
+        listSeqSearches.add(aComplementary_search);
+        if (!printSearchInfo) {
           aComplementary_search.setPrintInfo(false);
         }
       }
@@ -1202,13 +1202,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     result = false;
     optimization = solveKind > 0;
 
-    final_search_seq = list_seq_searches.getLast();
+    finalSearchSeq = listSeqSearches.getLast();
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;
     startCpu = currentTime;
 
-    setSearchTimeout(list_seq_searches);
+    setSearchTimeout(listSeqSearches);
 
     if (si.exploration() == null || COMPLETE.equals(si.exploration())) {
       FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
@@ -1251,14 +1251,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return switch (solveKind) {
       case 0 -> SATISFY;
       case 1 -> {
-        for (Search<T> list_seq_searche : list_seq_searches) {
-          list_seq_searche.setOptimize(true);
+        for (Search<T> seqSearch : listSeqSearches) {
+          seqSearch.setOptimize(true);
         }
         yield MINIMIZE_LITERAL;
       }
       case 2 -> {
-        for (Search<T> list_seq_searche : list_seq_searches) {
-          list_seq_searche.setOptimize(true);
+        for (Search<T> seqSearch : listSeqSearches) {
+          seqSearch.setOptimize(true);
         }
         yield MAXIMIZE_LITERAL;
       }
@@ -1273,7 +1273,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> label = sub_search(item, lastSearch, false);
     lastSearch.addChildSearch(label);
     DepthFirstSearch<T> newLast = getLastSearch(label);
-    if (!print_search_info) {
+    if (!printSearchInfo) {
       newLast.setPrintInfo(false);
     }
     return newLast;
@@ -1301,12 +1301,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
-    if (list_seq_searches == null) {
+    if (listSeqSearches == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
       return;
     }
 
-    boolean timeoutOccurred = anyTimeOutOccured(list_seq_searches);
+    boolean timeoutOccurred = anyTimeOutOccured(listSeqSearches);
     printResultStatus(interrupted, result, timeoutOccurred, !heuristicSeqSearch);
 
     if (options.getStatistics()) {
@@ -1320,7 +1320,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int wrong = 0;
     int depth = 0;
     int solutions = 0;
-    for (Search<T> searchLabel : list_seq_searches) {
+    for (Search<T> searchLabel : listSeqSearches) {
       nodes += searchLabel.getNodes();
       wrong += searchLabel.getWrongDecisions();
       depth += searchLabel.getMaximumDepth();
@@ -1424,10 +1424,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private DepthFirstSearch<T> subSearchIntOrBool(SearchItem<T> si, boolean master) {
     DepthFirstSearch<T> label = int_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variable_selection);
+      label.setSelectChoicePoint(variableSelection);
     }
     heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     label.setPrintInfo(false);
     return label;
   }
@@ -1435,24 +1435,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private DepthFirstSearch<T> subSearchSet(SearchItem<T> si, boolean master) {
     DepthFirstSearch<T> label = set_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variable_selection);
+      label.setSelectChoicePoint(variableSelection);
     }
     heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     label.setPrintInfo(false);
     return label;
   }
 
   private DepthFirstSearch<T> subSearchPriority(SearchItem<T> si) {
     DepthFirstSearch<T> label = priority_search(si);
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     return label;
   }
 
   private DepthFirstSearch<T> subSearchWarmStart(SearchItem<T> si, boolean master) {
     DepthFirstSearch<T> label = warm_start_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variable_selection);
+      label.setSelectChoicePoint(variableSelection);
     }
     return label;
   }
@@ -1474,10 +1474,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private DepthFirstSearch<T> subSearchFloat(SearchItem<T> si, boolean master) {
     DepthFirstSearch<T> label = float_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variable_selection);
+      label.setSelectChoicePoint(variableSelection);
     }
     heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    list_seq_searches.add(label);
+    listSeqSearches.add(label);
     label.setPrintInfo(false);
     return label;
   }
@@ -1502,7 +1502,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> int_search(SearchItem<T> si) {
 
-    variable_selection = (SelectChoicePoint<T>) si.getIntSelect();
+    variableSelection = (SelectChoicePoint<T>) si.getIntSelect();
     DepthFirstSearch<T> label = new DepthFirstSearch<>();
     label.setAssignSolution(false);
 
@@ -1516,7 +1516,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> warm_start_search(SearchItem<T> si) {
 
-    variable_selection = (SelectChoicePoint<T>) si.getWarmStartSelect();
+    variableSelection = (SelectChoicePoint<T>) si.getWarmStartSelect();
     DepthFirstSearch<T> label = new DepthFirstSearch<>();
     label.setAssignSolution(false);
     label.setPrintInfo(false);
@@ -1531,7 +1531,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> set_search(SearchItem<T> si) {
 
-    variable_selection = (SelectChoicePoint<T>) si.getSetSelect();
+    variableSelection = (SelectChoicePoint<T>) si.getSetSelect();
     DepthFirstSearch<T> label = new DepthFirstSearch<>();
     label.setAssignSolution(false);
 
@@ -1544,7 +1544,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> float_search(SearchItem<T> si) {
-    variable_selection = (SelectChoicePoint<T>) si.getFloatSelect();
+    variableSelection = (SelectChoicePoint<T>) si.getFloatSelect();
     DepthFirstSearch<T> label = new DepthFirstSearch<>();
     label.setAssignSolution(false);
 
@@ -1563,7 +1563,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> createPrioritySubSearch(SearchItem<T> s) {
-    return switch (s.search_type) {
+    return switch (s.searchType) {
       case INT_SEARCH, BOOL_SEARCH -> int_search(s);
       case SET_SEARCH -> set_search(s);
       case FLOAT_SEARCH -> float_search(s);
@@ -1580,7 +1580,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       default ->
           throw new RuntimeException(
               "Error: Not supported search type "
-                  + s.search_type
+                  + s.searchType
                   + "in priority_search; execution aborted");
     };
   }
@@ -1609,7 +1609,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int i = 0;
     for (SearchItem<T> s : items) {
       DepthFirstSearch<T> subSearch = createPrioritySubSearch(s);
-      subSearch.setSelectChoicePoint(variable_selection);
+      subSearch.setSelectChoicePoint(variableSelection);
       subSearch.setPrintInfo(false);
       searches[i++] = subSearch;
     }

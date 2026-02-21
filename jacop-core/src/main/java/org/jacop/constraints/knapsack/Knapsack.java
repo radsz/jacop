@@ -558,8 +558,6 @@ public class Knapsack extends Constraint
       return;
     }
 
-    // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
-    //         tree.alreadyObtainedProfit - knapsackProfit.min();
     // rounding errors may suggest that there is too little slack for an item.
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
 
@@ -621,8 +619,6 @@ public class Knapsack extends Constraint
       return;
     }
 
-    // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
-    //         tree.alreadyObtainedProfit - knapsackProfit.min();
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
 
     while (true) {

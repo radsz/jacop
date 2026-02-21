@@ -55,7 +55,7 @@ public class LengauerTarjan {
   final BitSet[] domTreeSucc;
   final BitSet[] domClosure;
   int root;
-  int dfs_n;
+  int dfsN;
 
   /**
    * Constructs a LengauerTarjan instance for a directed graph with the given number of nodes.
@@ -113,10 +113,10 @@ public class LengauerTarjan {
     // step_1:
     Arrays.fill(semi, NIL);
 
-    dfs_n = 0;
+    dfsN = 0;
     dfs(r);
 
-    if (dfs_n != n) {
+    if (dfsN != n) {
       return false;
     }
 
@@ -170,12 +170,12 @@ public class LengauerTarjan {
 
   private void dfs(int v) {
 
-    semi[v] = dfs_n;
-    vertex[dfs_n] = v;
+    semi[v] = dfsN;
+    vertex[dfsN] = v;
     label[v] = v;
     ancestor[v] = NIL;
 
-    dfs_n++;
+    dfsN++;
 
     BitSet sc = succ[v];
     for (int w = sc.nextSetBit(0); w >= 0; w = sc.nextSetBit(w + 1)) {

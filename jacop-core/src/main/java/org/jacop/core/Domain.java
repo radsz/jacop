@@ -273,8 +273,6 @@ public abstract class Domain {
    */
   public abstract void putSearchConstraint(int storeLevel, Var v, Constraint constraint);
 
-  // public abstract Domain recentDomainPruning(int currentStoreLevel);
-
   /**
    * It returns all constraints which are associated with variable, even the ones which are already
    * satisfied.

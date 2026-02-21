@@ -142,7 +142,6 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
       int lastLevel = levelInfo.removeLast();
 
       assert lastLevel == currentLevel;
-      // currentLevel = lastLevel;
 
       int[] lastTrail = trail.removeLast();
 

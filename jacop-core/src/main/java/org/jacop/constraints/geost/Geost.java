@@ -259,7 +259,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   final ArrayList<GeostObject> objectList4Flush = new ArrayList<>();
 
-  // int lowerBound;
   /**
    * It stores all generated internal constraints for all objects/constraints. It is used to speed
    * up some visualization functions. If not for that reason it could have been a local variable

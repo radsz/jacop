@@ -520,37 +520,37 @@ public class Binpacking extends Constraint
       return false;
     }
 
-    int sum_a = 0;
-    int sum_b;
-    int sum_c = 0;
+    int sumA = 0;
+    int sumB;
+    int sumC = 0;
     int k = 0;
     int kPrime = 0;
-    int N = x.length - 1; // |x|
+    int n = x.length - 1; // |x|
 
-    while (sum_c + x[N - kPrime] < alpha) {
-      sum_c += x[N - kPrime];
+    while (sumC + x[n - kPrime] < alpha) {
+      sumC += x[n - kPrime];
       kPrime++;
     }
 
-    sum_b = x[N - kPrime];
-    while (sum_a < alpha && sum_b <= beta) {
-      sum_a += x[k++];
-      if (sum_a < alpha) {
+    sumB = x[n - kPrime];
+    while (sumA < alpha && sumB <= beta) {
+      sumA += x[k++];
+      if (sumA < alpha) {
         kPrime--;
-        sum_b += x[N - kPrime];
-        sum_c -= x[N - kPrime];
-        while (sum_a + sum_c >= alpha) {
+        sumB += x[n - kPrime];
+        sumC -= x[n - kPrime];
+        while (sumA + sumC >= alpha) {
           kPrime--;
-          sum_c -= x[N - kPrime];
-          sum_b += x[N - kPrime] - x[N - kPrime - k - 1];
+          sumC -= x[n - kPrime];
+          sumB += x[n - kPrime] - x[n - kPrime - k - 1];
         }
       }
     }
 
-    alphaP = sum_a + sum_c;
-    betaP = sum_b;
+    alphaP = sumA + sumC;
+    betaP = sumB;
 
-    return sum_a < alpha;
+    return sumA < alpha;
   }
 
   private int sum(int[] x) {
@@ -570,8 +570,8 @@ public class Binpacking extends Constraint
       throw Store.failException;
     }
 
-    for (int K = 0; K <= capacity / 2; K++) {
-      int currentLb = computeLbForK(x, nn, capacity, K);
+    for (int k = 0; k <= capacity / 2; k++) {
+      int currentLb = computeLbForK(x, nn, capacity, k);
       if (currentLb > lb) {
         lb = currentLb;
       }
@@ -581,11 +581,11 @@ public class Binpacking extends Constraint
     }
   }
 
-  private int computeLbForK(int[] x, int nn, int capacity, int K) {
+  private int computeLbForK(int[] x, int nn, int capacity, int k) {
     int N1 = 0;
     int N2 = 0;
     int i = 0;
-    while (i < nn && x[i] > capacity - K) {
+    while (i < nn && x[i] > capacity - k) {
       N1++;
       i++;
     }
@@ -596,7 +596,7 @@ public class Binpacking extends Constraint
       i++;
     }
     int sizeInN3 = 0;
-    while (i < nn && x[i] >= K) {
+    while (i < nn && x[i] >= k) {
       sizeInN3 += x[i];
       i++;
     }

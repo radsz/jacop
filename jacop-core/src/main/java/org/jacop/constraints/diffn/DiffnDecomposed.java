@@ -53,8 +53,6 @@ import org.jacop.core.Var;
  */
 public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
-  // private int numberArgs;
-
   protected final List<Var> auxVar = new ArrayList<>();
   final IntVar[] x;
   final IntVar[] y;
@@ -110,8 +108,6 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     if (size == origin2.length && size == length1.length && size == length2.length) {
 
       this.queueIndex = 2;
-
-      // this.numberArgs = (short) (size * 4);
 
       x = new IntVar[origin1.length];
       y = new IntVar[origin2.length];
