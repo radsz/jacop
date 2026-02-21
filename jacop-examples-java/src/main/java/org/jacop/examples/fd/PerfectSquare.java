@@ -69,9 +69,6 @@ import org.jacop.search.SmallestMin;
  */
 public class PerfectSquare extends ExampleFd {
 
-  /** It specifies which of the pre-defined problems should be solved. */
-  // public static int problemNo = 0;
-
   IntVar[] varsX;
 
   IntVar[] varsY;
@@ -1578,14 +1575,14 @@ public class PerfectSquare extends ExampleFd {
 
       int sqSize = squares()[problemNo][1][j];
 
-      IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
+      IntVar x = new IntVar(store, "x" + j, 0, masterSize - sqSize);
 
-      IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
+      IntVar y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
 
       size[j] = new IntVar(store, sqSize, sqSize);
 
-      varsX[j] = X;
-      varsY[j] = Y;
+      varsX[j] = x;
+      varsY[j] = y;
 
       IO.print(sqSize + " ");
     }
@@ -1679,18 +1676,18 @@ public class PerfectSquare extends ExampleFd {
 
       int sqSize = squares()[problemNo][1][j];
 
-      IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
+      IntVar x = new IntVar(store, "x" + j, 0, masterSize - sqSize);
 
-      IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
+      IntVar y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
 
       size[j] = new IntVar(store, "s" + j, sqSize, sqSize);
 
-      IntVar[] jthRectangle = {X, Y, size[j], size[j]};
+      IntVar[] jthRectangle = {x, y, size[j], size[j]};
 
       rectangles[j] = jthRectangle;
 
-      varsX[j] = X;
-      varsY[j] = Y;
+      varsX[j] = x;
+      varsY[j] = y;
 
       IO.print(sqSize + " ");
     }
@@ -1740,9 +1737,9 @@ public class PerfectSquare extends ExampleFd {
 
       int sqSize = squares()[problemNo][1][j];
 
-      IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
-      IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
-      final IntVar S = new IntVar(store, "s" + j, j, j);
+      IntVar x = new IntVar(store, "x" + j, 0, masterSize - sqSize);
+      IntVar y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
+      final IntVar s = new IntVar(store, "s" + j, j, j);
 
       final IntVar startGeost = new IntVar(store, "start" + j, 0, 0);
       final IntVar durationGeost = new IntVar(store, "duration" + j, 1, 1);
@@ -1750,18 +1747,18 @@ public class PerfectSquare extends ExampleFd {
 
       size[j] = new IntVar(store, sqSize, sqSize);
 
-      IntVar[] jthRectangle = {X, Y, size[j], size[j]};
+      IntVar[] jthRectangle = {x, y, size[j], size[j]};
 
       rectangles[j] = jthRectangle;
 
-      varsX[j] = X;
-      varsY[j] = Y;
+      varsX[j] = x;
+      varsY[j] = y;
 
       IO.print(sqSize + " ");
 
-      IntVar[] coords = {X, Y};
+      IntVar[] coords = {x, y};
 
-      GeostObject o = new GeostObject(j, coords, S, startGeost, durationGeost, endGeost);
+      GeostObject o = new GeostObject(j, coords, s, startGeost, durationGeost, endGeost);
       objects.add(o);
 
       int[] origin = {0, 0};
@@ -1793,9 +1790,9 @@ public class PerfectSquare extends ExampleFd {
   @Override
   public boolean search() {
 
-    final long T1 = System.currentTimeMillis();
-    final long T2;
-    final long T;
+    final long t1 = System.currentTimeMillis();
+    final long t2;
+    final long t;
 
     store.consistency();
     boolean result;
@@ -1815,10 +1812,10 @@ public class PerfectSquare extends ExampleFd {
 
     result = labelMaster.labeling(store, selectMaster);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
 
-    String s = "%.2f".formatted((float) T / 1000);
+    String s = "%.2f".formatted((float) t / 1000);
     IO.println("\n\t*** Execution time = " + s + " s");
 
     if (result) {

@@ -72,19 +72,19 @@ public class FurnitureMoving extends ExampleFd {
    */
   static void main(String[] args) {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
 
     FurnitureMoving example = new FurnitureMoving();
     example.model();
 
     example.searchSpecific();
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 
   @Override
@@ -96,17 +96,17 @@ public class FurnitureMoving extends ExampleFd {
     final IntVar maxTime = new IntVar(store, "maxTime", 60, 60);
 
     // Start times
-    IntVar Sp = new IntVar(store, "Sp", 0, 60); // Piano
-    IntVar Sc = new IntVar(store, "Sc", 0, 60); // Chair
-    IntVar Sb = new IntVar(store, "Sb", 0, 60); // Bed
-    IntVar St = new IntVar(store, "St", 0, 60); // Table
+    IntVar sp = new IntVar(store, "Sp", 0, 60); // Piano
+    IntVar sc = new IntVar(store, "Sc", 0, 60); // Chair
+    IntVar sb = new IntVar(store, "Sb", 0, 60); // Bed
+    IntVar st = new IntVar(store, "St", 0, 60); // Table
     final IntVar sumStartTimes = new IntVar(store, "SumStartTimes", 0, 1000);
 
     starts = new IntVar[4];
-    starts[0] = Sp;
-    starts[1] = Sc;
-    starts[2] = Sb;
-    starts[3] = St;
+    starts[0] = sp;
+    starts[1] = sc;
+    starts[2] = sb;
+    starts[3] = st;
 
     store.impose(new SumInt(starts, "==", sumStartTimes));
 

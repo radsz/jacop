@@ -66,7 +66,7 @@ public class CpvizNetworkFlow {
 
   /** Creates and solves a transportation problem using network flow constraints. */
   void transportationProblem() {
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     store = new Store();
 
@@ -149,18 +149,18 @@ public class CpvizNetworkFlow {
     label.setAssignSolution(true);
     label.setPrintInfo(true);
 
-    boolean Result = label.labeling(store, select, cost);
+    boolean result = label.labeling(store, select, cost);
 
-    if (Result) {
+    if (result) {
       IO.println("*** Yes");
       IO.println(cost);
     } else {
       IO.println("*** No");
     }
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 
   /** Listener for network flow solutions. */

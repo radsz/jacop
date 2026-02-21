@@ -186,10 +186,10 @@ public class GeostExample extends ExampleFd {
   @Override
   public boolean search() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
 
     boolean result = store.consistency();
 
@@ -200,9 +200,9 @@ public class GeostExample extends ExampleFd {
       IO.println("*** No");
     }
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
+    IO.println("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

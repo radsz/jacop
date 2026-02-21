@@ -448,16 +448,6 @@ public class Pruning extends Network {
         throw new AssertionError();
       }
     }
-    /*
-     * if (maxWeight != Integer.MAX_VALUE || wVar != null) { // if
-     * (flowAtMaxWeight != baseFlow || !arc.forward) { // if
-     * (flowAtMaxWeight > baseFlow && arc.forward) { // int max = wVar.min()
-     * + maxWeight; // wVar.domain.inMax(store.level, wVar, max); //
-     * System.out.println("LOL"); // } if (flowAtMaxWeight > baseFlow &&
-     * !arc.forward) { int max = wVar.min() + maxWeight;
-     * wVar.domain.inMax(store.level, wVar, max); System.out.println("LOL");
-     * } }
-     */
 
     arc.addFlow(flow);
 

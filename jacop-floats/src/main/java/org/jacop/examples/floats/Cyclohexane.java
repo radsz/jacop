@@ -60,8 +60,8 @@ public class Cyclohexane {
 
   void cyclohexane() {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long startTime;
+    startTime = System.currentTimeMillis();
 
     IO.println("========= cyclohexane =========");
 
@@ -152,9 +152,9 @@ public class Cyclohexane {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    long endTime = System.currentTimeMillis();
+    long elapsed = endTime - startTime;
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + elapsed + " ms");
   }
 }

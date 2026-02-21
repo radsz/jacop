@@ -53,21 +53,21 @@ public class Laplace {
   }
 
   private static FloatVar createGridCell(
-      Store store, int i, int j, int r, int c, double Z, double M) {
+      Store store, int i, int j, int r, int c, double z, double m) {
     if (i == 0) {
-      return new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
+      return new FloatVar(store, "r[" + i + "][" + j + "]", z, z);
     }
     if (i == r || j == 0 || j == c) {
-      return new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
+      return new FloatVar(store, "r[" + i + "][" + j + "]", m, m);
     }
-    return new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
+    return new FloatVar(store, "r[" + i + "][" + j + "]", z, m);
   }
 
-  private static FloatVar[][] createGrid(Store store, int r, int c, double Z, double M) {
+  private static FloatVar[][] createGrid(Store store, int r, int c, double z, double m) {
     FloatVar[][] x = new FloatVar[r + 1][c + 1];
     for (int i = 0; i < r + 1; i++) {
       for (int j = 0; j < c + 1; j++) {
-        x[i][j] = createGridCell(store, i, j, r, c, Z, M);
+        x[i][j] = createGridCell(store, i, j, r, c, z, m);
       }
     }
     return x;
@@ -97,10 +97,10 @@ public class Laplace {
 
     int r = 10;
     int c = 10;
-    double Z = 0.0;
-    double M = 100.0;
+    double z = 0.0;
+    double m = 100.0;
 
-    FloatVar[][] x = createGrid(store, r, c, Z, M);
+    FloatVar[][] x = createGrid(store, r, c, z, m);
     imposeLaplaceEquations(store, x, r, c);
 
     FloatVar[] xs = new FloatVar[(r + 1) * (c + 1)];

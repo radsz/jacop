@@ -276,9 +276,9 @@ public class ConferenceTalkPlacement {
    */
   public boolean searchMaxRegretForMatrixOptimal(int timeOutSeconds) {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     searchLabel = new DepthFirstSearch<>();
     PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
@@ -295,8 +295,8 @@ public class ConferenceTalkPlacement {
 
     boolean result = searchLabel.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    t2 = System.currentTimeMillis();
+    long t = t2 - t1;
 
     if (result) {
       IO.println("Variables : " + vars);
@@ -304,7 +304,7 @@ public class ConferenceTalkPlacement {
       IO.println("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }
@@ -322,9 +322,9 @@ public class ConferenceTalkPlacement {
       store.impose(new XlteqC(cost, maxCostAllowed));
     }
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     searchLabel = new DepthFirstSearch<>();
 
@@ -339,8 +339,8 @@ public class ConferenceTalkPlacement {
 
     boolean result = searchLabel.labeling(store, select);
 
-    T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    t2 = System.currentTimeMillis();
+    long t = t2 - t1;
 
     if (result) {
       IO.println("Variables : " + vars);
@@ -348,7 +348,7 @@ public class ConferenceTalkPlacement {
       IO.println("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

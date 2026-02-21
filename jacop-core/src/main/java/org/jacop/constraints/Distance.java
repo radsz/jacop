@@ -220,13 +220,13 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
 
   @Override
   public boolean satisfied() {
-    IntDomain Xdom = x.dom();
-    IntDomain Ydom = y.dom();
-    IntDomain Zdom = z.dom();
-    return Xdom.singleton()
-        && Ydom.singleton()
-        && Zdom.singleton()
-        && Math.abs(Xdom.min() - Ydom.min()) == Zdom.min();
+    IntDomain xDom = x.dom();
+    IntDomain yDom = y.dom();
+    IntDomain zDom = z.dom();
+    return xDom.singleton()
+        && yDom.singleton()
+        && zDom.singleton()
+        && Math.abs(xDom.min() - yDom.min()) == zDom.min();
   }
 
   @Override
@@ -238,13 +238,13 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
   @Override
   public boolean notSatisfied() {
 
-    IntDomain Xdom = x.dom();
-    IntDomain Ydom = y.dom();
-    IntDomain Zdom = z.dom();
-    return Xdom.singleton()
-        && Ydom.singleton()
-        && Zdom.singleton()
-        && Math.abs(Xdom.min() - Ydom.min()) != Zdom.min();
+    IntDomain xDom = x.dom();
+    IntDomain yDom = y.dom();
+    IntDomain zDom = z.dom();
+    return xDom.singleton()
+        && yDom.singleton()
+        && zDom.singleton()
+        && Math.abs(xDom.min() - yDom.min()) != zDom.min();
   }
 
   @Override

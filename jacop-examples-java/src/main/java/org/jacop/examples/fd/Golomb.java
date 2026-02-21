@@ -220,9 +220,9 @@ public class Golomb extends ExampleFd {
    */
   public boolean searchOptimalInfo() {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new InputOrderSelect<>(store, vars.toArray(new IntVar[1]), new IndomainMin<>());
@@ -238,9 +238,9 @@ public class Golomb extends ExampleFd {
       store.print();
     }
 
-    T2 = System.currentTimeMillis();
+    t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }

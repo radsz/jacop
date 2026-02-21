@@ -282,7 +282,7 @@ public class Qcp extends ExampleFd {
    */
   public boolean searchAllTransform() {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     TransformExtensional transform = new TransformExtensional();
 
@@ -311,9 +311,9 @@ public class Qcp extends ExampleFd {
 
     boolean result = searchLabel.labeling(store, select);
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+    IO.println("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

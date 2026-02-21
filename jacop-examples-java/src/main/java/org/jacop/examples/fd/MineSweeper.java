@@ -389,16 +389,16 @@ public class MineSweeper extends ExampleFd {
    */
   static void main(String[] args) {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
 
     MineSweeper minesweeper = new MineSweeper();
 
     for (int i = 0; i < problems().length; i++) {
 
-      T1 = System.currentTimeMillis();
+      t1 = System.currentTimeMillis();
 
       minesweeper.problem = MineSweeper.readFromArray(problems()[i]);
 
@@ -406,9 +406,9 @@ public class MineSweeper extends ExampleFd {
 
       minesweeper.searchSpecific(true);
 
-      T2 = System.currentTimeMillis();
-      T = T2 - T1;
-      IO.println("\n\t*** Execution time = " + T + " ms");
+      t2 = System.currentTimeMillis();
+      t = t2 - t1;
+      IO.println("\n\t*** Execution time = " + t + " ms");
     }
 
     if (args.length > 0) {
@@ -426,9 +426,9 @@ public class MineSweeper extends ExampleFd {
     minesweeper.model();
     minesweeper.searchSpecific(true);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
+    IO.println("\n\t*** Execution time = " + t + " ms");
   } // end main
 
   @Override

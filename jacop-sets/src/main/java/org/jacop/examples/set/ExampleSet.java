@@ -287,7 +287,7 @@ public abstract class ExampleSet {
    */
   public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     Search<SetVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectSlave =
@@ -311,7 +311,7 @@ public abstract class ExampleSet {
     if (result) {
       store.print();
     }
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     return result;
   }
 

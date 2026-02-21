@@ -56,7 +56,7 @@ public class In extends PrimitiveConstraint {
   private final IntDomain dom;
 
   /** It specifies all the values which can not be taken by a variable. */
-  private final IntDomain DomComplement;
+  private final IntDomain domComplement;
 
   /**
    * It constructs an In constraint to restrict the domain of the variable.
@@ -72,7 +72,7 @@ public class In extends PrimitiveConstraint {
 
     this.x = x;
     this.dom = dom;
-    this.DomComplement = dom.complement();
+    this.domComplement = dom.complement();
 
     setScope(x);
   }
@@ -91,7 +91,7 @@ public class In extends PrimitiveConstraint {
 
   @Override
   public void notConsistency(Store store) {
-    x.domain.in(store.level, x, DomComplement);
+    x.domain.in(store.level, x, domComplement);
   }
 
   @Override

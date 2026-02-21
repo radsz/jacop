@@ -123,7 +123,7 @@ public class SocialGolfer extends ExampleSet {
   /** Creates the constraint model for the social golfer problem. */
   public void model() {
 
-    final int N = groups * players;
+    final int n = groups * players;
 
     int[] weights = computeWeights(players);
 
@@ -135,15 +135,15 @@ public class SocialGolfer extends ExampleSet {
 
     vars = new ArrayList<>();
 
-    imposeGroupCardinalityConstraints(N);
+    imposeGroupCardinalityConstraints(n);
 
     imposeDisjointConstraints();
 
-    imposeUnionConstraints(N);
+    imposeUnionConstraints(n);
 
-    imposeIntersectionConstraints(N);
+    imposeIntersectionConstraints(n);
 
-    imposeMatchAndOrderingConstraints(N, weights);
+    imposeMatchAndOrderingConstraints(n, weights);
   }
 
   private int[] computeWeights(int playerCount) {

@@ -64,8 +64,8 @@ public class SixHumpCamelFunction {
 
   void sixHumpCamelFunction() {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long t1;
+    t1 = System.currentTimeMillis();
 
     IO.println("========= Six Hump Camel Function =========");
 
@@ -142,9 +142,9 @@ public class SixHumpCamelFunction {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 }

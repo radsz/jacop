@@ -527,9 +527,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
 
     ComparatorsVar<IntVar> vs = getVarSelect();
-    ComparatorVariable<IntVar> var_sel = vs.getVarSel();
+    ComparatorVariable<IntVar> varSel = vs.getVarSel();
 
-    return new SimpleSelect<>(searchVars, var_sel, indom);
+    return new SimpleSelect<>(searchVars, varSel, indom);
   }
 
   /**
@@ -545,13 +545,13 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
 
     ComparatorsVar<IntVar> vs = getVarSelect();
-    ComparatorVariable<IntVar> var_sel = vs.getVarSel();
+    ComparatorVariable<IntVar> varSel = vs.getVarSel();
     ComparatorVariable<IntVar> tieBreaking =
         tieBreakingInt == null ? vs.getTieSel() : tieBreakingInt;
     IntVar[] searchVars = copyToIntVarArray();
 
     SelectChoicePoint<IntVar> splitSelect =
-        getIntSelectForSplitIndomain(searchVars, var_sel, tieBreaking);
+        getIntSelectForSplitIndomain(searchVars, varSel, tieBreaking);
     if (splitSelect != null) {
       return splitSelect;
     }
@@ -560,9 +560,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
     Indomain<IntVar> indom = getIndomain(indomain);
     if (tieBreaking == null) {
-      return new SimpleSelect<>((IntVar[]) searchVariables, var_sel, indom);
+      return new SimpleSelect<>((IntVar[]) searchVariables, varSel, indom);
     }
-    return new SimpleSelect<>((IntVar[]) searchVariables, var_sel, tieBreaking, indom);
+    return new SimpleSelect<>((IntVar[]) searchVariables, varSel, tieBreaking, indom);
   }
 
   private IntVar[] copyToIntVarArray() {
@@ -575,36 +575,36 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   private SelectChoicePoint<IntVar> getIntSelectForSplitIndomain(
       IntVar[] searchVars,
-      ComparatorVariable<IntVar> var_sel,
+      ComparatorVariable<IntVar> varSel,
       ComparatorVariable<IntVar> tieBreaking) {
     if ("indomain_split".equals(indomain)) {
       return tieBreaking == null
-          ? new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>())
-          : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
+          ? new SplitSelect<>(searchVars, varSel, new IndomainMiddle<>())
+          : new SplitSelect<>(searchVars, varSel, tieBreaking, new IndomainMiddle<>());
     }
     if ("indomain_split_random".equals(indomain)) {
       return tieBreaking == null
-          ? new SplitRandomSelect<>(searchVars, var_sel, new IndomainMiddle<>())
-          : new SplitRandomSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
+          ? new SplitRandomSelect<>(searchVars, varSel, new IndomainMiddle<>())
+          : new SplitRandomSelect<>(searchVars, varSel, tieBreaking, new IndomainMiddle<>());
     }
     if ("indomain_reverse_split".equals(indomain)) {
       SplitSelect<IntVar> sel =
           tieBreaking == null
-              ? new SplitSelect<>(searchVars, var_sel, new IndomainMiddle<>())
-              : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMiddle<>());
+              ? new SplitSelect<>(searchVars, varSel, new IndomainMiddle<>())
+              : new SplitSelect<>(searchVars, varSel, tieBreaking, new IndomainMiddle<>());
       sel.leftFirst = false;
       return sel;
     }
     if ("outdomain_max".equals(indomain)) {
       return tieBreaking == null
-          ? new SplitSelect<>(searchVars, var_sel, new IndomainMax<>())
-          : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMax<>());
+          ? new SplitSelect<>(searchVars, varSel, new IndomainMax<>())
+          : new SplitSelect<>(searchVars, varSel, tieBreaking, new IndomainMax<>());
     }
     if ("outdomain_min".equals(indomain)) {
       SplitSelect<IntVar> sel =
           tieBreaking == null
-              ? new SplitSelect<>(searchVars, var_sel, new IndomainMin<>())
-              : new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMin<>());
+              ? new SplitSelect<>(searchVars, varSel, new IndomainMin<>())
+              : new SplitSelect<>(searchVars, varSel, tieBreaking, new IndomainMin<>());
       sel.leftFirst = false;
       return sel;
     }
@@ -619,12 +619,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   SelectChoicePoint<FloatVar> getFloatSelect() {
 
     ComparatorsVar<FloatVar> vs = getFloatVarSelect();
-    ComparatorVariable<FloatVar> var_sel = vs.getVarSel();
+    ComparatorVariable<FloatVar> varSel = vs.getVarSel();
     ComparatorVariable<FloatVar> tieBreaking =
         tieBreakingFloat == null ? vs.getTieSel() : tieBreakingFloat;
     FloatVar[] searchVars = copyToFloatVarArray();
 
-    return createFloatSelectForIndomain(searchVars, var_sel, tieBreaking);
+    return createFloatSelectForIndomain(searchVars, varSel, tieBreaking);
   }
 
   private FloatVar[] copyToFloatVarArray() {
@@ -637,14 +637,13 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   private SelectChoicePoint<FloatVar> createFloatSelectForIndomain(
       FloatVar[] searchVars,
-      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> varSel,
       ComparatorVariable<FloatVar> tieBreaking) {
     return switch (indomain) {
-      case "indomain_split" -> createSplitSelectFloat(searchVars, var_sel, tieBreaking);
-      case "indomain_split_random" ->
-          createSplitRandomSelectFloat(searchVars, var_sel, tieBreaking);
+      case "indomain_split" -> createSplitSelectFloat(searchVars, varSel, tieBreaking);
+      case "indomain_split_random" -> createSplitRandomSelectFloat(searchVars, varSel, tieBreaking);
       case "indomain_reverse_split" ->
-          createReverseSplitSelectFloat(searchVars, var_sel, tieBreaking);
+          createReverseSplitSelectFloat(searchVars, varSel, tieBreaking);
       case null, default ->
           throw new IllegalArgumentException(
               "Wrong parameters for float_search. Only indomain_split, indomain_reverse_split or indomain_split_random are allowed.");
@@ -653,30 +652,30 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   private SelectChoicePoint<FloatVar> createSplitSelectFloat(
       FloatVar[] searchVars,
-      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> varSel,
       ComparatorVariable<FloatVar> tieBreaking) {
     return tieBreaking == null
-        ? new SplitSelectFloat<>(store, searchVars, var_sel)
-        : new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+        ? new SplitSelectFloat<>(store, searchVars, varSel)
+        : new SplitSelectFloat<>(store, searchVars, varSel, tieBreaking);
   }
 
   private SelectChoicePoint<FloatVar> createSplitRandomSelectFloat(
       FloatVar[] searchVars,
-      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> varSel,
       ComparatorVariable<FloatVar> tieBreaking) {
     return tieBreaking == null
-        ? new SplitRandomSelectFloat<>(store, searchVars, var_sel)
-        : new SplitRandomSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+        ? new SplitRandomSelectFloat<>(store, searchVars, varSel)
+        : new SplitRandomSelectFloat<>(store, searchVars, varSel, tieBreaking);
   }
 
   private SelectChoicePoint<FloatVar> createReverseSplitSelectFloat(
       FloatVar[] searchVars,
-      ComparatorVariable<FloatVar> var_sel,
+      ComparatorVariable<FloatVar> varSel,
       ComparatorVariable<FloatVar> tieBreaking) {
     SplitSelectFloat<FloatVar> sel =
         tieBreaking == null
-            ? new SplitSelectFloat<>(store, searchVars, var_sel)
-            : new SplitSelectFloat<>(store, searchVars, var_sel, tieBreaking);
+            ? new SplitSelectFloat<>(store, searchVars, varSel)
+            : new SplitSelectFloat<>(store, searchVars, varSel, tieBreaking);
     sel.leftFirst = false;
     return sel;
   }
@@ -689,7 +688,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   SelectChoicePoint<SetVar> getSetSelect() {
 
     ComparatorsVar<SetVar> vs = getSetVarSelect();
-    ComparatorVariable<SetVar> var_sel = vs.getVarSel();
+    ComparatorVariable<SetVar> varSel = vs.getVarSel();
     ComparatorVariable<SetVar> tieBreaking =
         tieBreakingSet == null ? vs.getTieSel() : tieBreakingSet;
 
@@ -700,9 +699,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
 
     if (tieBreaking == null) {
-      return new SimpleSelect<>(searchVars, var_sel, indom);
+      return new SimpleSelect<>(searchVars, varSel, indom);
     } else {
-      return new SimpleSelect<>(searchVars, var_sel, tieBreaking, indom);
+      return new SimpleSelect<>(searchVars, varSel, tieBreaking, indom);
     }
   }
 
@@ -1203,7 +1202,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    *
    * @return the variable selection heuristic name
    */
-  public String var_selection() {
+  public String varSelection() {
     return varSelectionHeuristic;
   }
 
@@ -1301,7 +1300,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   public String toString() {
     StringBuilder s = new StringBuilder();
     if (searchType == null) {
-      s.append("defult_search\n");
+      s.append("default_search\n");
     } else if (searchSeq.isEmpty()) {
       appendSingleSearchToString(s);
     } else if (prioritySearch) {

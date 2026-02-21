@@ -115,8 +115,8 @@ public class CpvizGardner {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    boolean Result = store.consistency();
-    IO.println("*** consistency = " + Result);
+    boolean result = store.consistency();
+    IO.println("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<>();
 
@@ -130,9 +130,9 @@ public class CpvizGardner {
     SelectChoicePoint<SetVar> select = new TraceGenerator<>(label, varSelect); // , days);
     // <---
 
-    Result = label.labeling(store, select);
+    result = label.labeling(store, select);
 
-    if (Result) {
+    if (result) {
       IO.println("*** Yes");
       for (SetVar day : days) {
         IO.println(day);

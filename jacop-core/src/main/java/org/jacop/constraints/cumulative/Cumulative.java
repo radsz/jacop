@@ -358,7 +358,7 @@ public class Cumulative extends CumulativeBasic {
 
   private void edgeFindQuad(Store store, TaskView[] tn) {
 
-    final long C = limit.max();
+    final long capacity = limit.max();
     TaskView[] ts = filterZeroTasks(tn);
     if (ts == null) {
       return;
@@ -391,7 +391,7 @@ public class Cumulative extends CumulativeBasic {
     Arrays.sort(t2, Comparator.comparingInt((Integer o) -> ts[o].est()));
 
     for (TaskView u : ts) {
-      edgeFindQuadProcessU(ts, u, t1, t2, C, lb, Dupd, SlUpd, E);
+      edgeFindQuadProcessU(ts, u, t1, t2, capacity, lb, Dupd, SlUpd, E);
     }
 
     // update LB's

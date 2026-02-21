@@ -403,11 +403,11 @@ public class Nonogram extends ExampleFd {
 
     IO.println("Search has begun ...");
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     boolean result = searchLabel.labeling(store, select);
 
-    long T2 = System.currentTimeMillis();
+    long t2 = System.currentTimeMillis();
 
     if (result) {
       IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
@@ -416,7 +416,7 @@ public class Nonogram extends ExampleFd {
       IO.println("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }

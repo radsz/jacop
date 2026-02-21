@@ -130,10 +130,10 @@ public class Tsp extends ExampleFd {
    */
   public boolean searchMaxRegretForMatrixOptimal() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
 
     searchLabel = new DepthFirstSearch<>();
 
@@ -144,8 +144,8 @@ public class Tsp extends ExampleFd {
 
     boolean result = searchLabel.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
 
     if (result) {
       IO.println("Variables " + store.toStringOrderedVars());
@@ -153,7 +153,7 @@ public class Tsp extends ExampleFd {
       IO.println("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

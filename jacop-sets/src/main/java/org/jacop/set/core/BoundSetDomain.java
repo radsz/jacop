@@ -231,8 +231,6 @@ public class BoundSetDomain extends SetDomain {
     this.lubDomain = lub.cloneLight();
     this.cardDomain = new IntervalDomain(glb.getSize(), lub.getSize());
 
-    // this.cardDomain = new SmallDenseDomain(glb.getSize(), lub.getSize());
-
     initCommonFields();
   }
 

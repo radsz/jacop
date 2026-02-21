@@ -107,10 +107,10 @@ public class Tunapalooza extends ExampleFd {
     vars = new ArrayList<>();
 
     // names
-    final int Ellyfish = 1;
-    final int Korrupt = 2;
-    final int Retread = 3;
-    final int Yellow = 4;
+    final int ellyfish = 1;
+    final int korrupt = 2;
+    final int retread = 3;
+    final int yellow = 4;
 
     // types
     IntVar country = new IntVar(store, "country", 1, 4);
@@ -136,12 +136,12 @@ public class Tunapalooza extends ExampleFd {
 
     // 1. Korrupt isn't a country or grunge music band.
 
-    store.impose(new And(new XneqC(country, Korrupt), new XneqC(grunge, Korrupt)));
+    store.impose(new And(new XneqC(country, korrupt), new XneqC(grunge, korrupt)));
 
     // 2. Tim and Kerri won't meet at the carnival games during Ellyfish's
     // performance.
 
-    store.impose(new XneqC(carnival, Ellyfish));
+    store.impose(new XneqC(carnival, ellyfish));
 
     // 3. The pair won't meet at the T-shirt vendor during the reggae band's
     // show.
@@ -159,9 +159,9 @@ public class Tunapalooza extends ExampleFd {
     IntVar statement2 = new IntVar(store, "s2", 0, 1);
     IntVar statement3 = new IntVar(store, "s3", 0, 1);
 
-    store.impose(new Reified(new XeqC(grunge, Ellyfish), statement1));
-    store.impose(new Reified(new XneqC(information, Retread), statement2));
-    store.impose(new Reified(new XneqC(vendor, Yellow), statement3));
+    store.impose(new Reified(new XeqC(grunge, ellyfish), statement1));
+    store.impose(new Reified(new XneqC(information, retread), statement2));
+    store.impose(new Reified(new XneqC(vendor, yellow), statement3));
 
     IntVar two = new IntVar(store, "2", 2, 2);
     IntVar[] sum = {statement1, statement2, statement3};
@@ -174,14 +174,14 @@ public class Tunapalooza extends ExampleFd {
     // and the act during which Tim and Kerri will meet at the mosh pit.
 
     store.impose(new Or(new XeqY(country, mosh), new XeqY(metal, mosh)));
-    store.impose(new Or(new XeqC(country, Retread), new XeqC(metal, Retread)));
-    store.impose(new XneqC(mosh, Retread));
+    store.impose(new Or(new XeqC(country, retread), new XeqC(metal, retread)));
+    store.impose(new XneqC(mosh, retread));
 
     // 6. The reggae band is neither Korrupt nor the act during which Tim
     // and
     // Kerri will meet at the information booth.
 
-    store.impose(new XneqC(reggae, Korrupt));
+    store.impose(new XneqC(reggae, korrupt));
     store.imposeWithConsistency(new XneqY(reggae, information));
   }
 }

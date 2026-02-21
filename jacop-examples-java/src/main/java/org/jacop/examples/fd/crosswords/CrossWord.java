@@ -102,15 +102,15 @@ public class CrossWord extends ExampleFd {
 
     m.model();
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     m.searchAllAtOnceNoRecord();
 
-    T2 = System.currentTimeMillis();
+    t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
   } // end main
 
   /** Model(). */
@@ -279,8 +279,8 @@ public class CrossWord extends ExampleFd {
    */
   public boolean searchAllAtOnceNoRecord() {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long t1;
+    t1 = System.currentTimeMillis();
 
     searchLabel = new DepthFirstSearch<>();
     searchLabel.setSolutionListener(new PrintListener<>(crosswordTemplate));
@@ -294,7 +294,7 @@ public class CrossWord extends ExampleFd {
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
     boolean result = searchLabel.labeling(store, select);
 
-    long T2 = System.currentTimeMillis();
+    long t2 = System.currentTimeMillis();
 
     if (result) {
       IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
@@ -303,7 +303,7 @@ public class CrossWord extends ExampleFd {
       IO.println("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }

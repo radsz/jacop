@@ -55,8 +55,8 @@ public class SinCosExample {
 
   void model() {
 
-    long T1;
-    T1 = System.currentTimeMillis();
+    long t1;
+    t1 = System.currentTimeMillis();
 
     IO.println("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
 
@@ -97,9 +97,9 @@ public class SinCosExample {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 }

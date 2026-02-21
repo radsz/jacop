@@ -446,7 +446,7 @@ public class FilterBenchmark {
    */
   static void main(String[] args) {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     schedule();
 
@@ -456,9 +456,9 @@ public class FilterBenchmark {
 
     pipelineSchedule();
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
   }
 
   /**

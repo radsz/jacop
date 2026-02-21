@@ -294,13 +294,13 @@ public class SiblingUproar extends ExampleFd {
     store.impose(Element.choose(someone, angryat, reason[ihogged_television]));
     vars.add(someone);
 
-    IntVar Z = new IntVar(store, "Z", 1, 5);
-    store.impose(new XneqY(Z, way[iremoved_light_bulbs]));
-    store.impose(new XneqY(Z, way[ihid_violin]));
-    vars.add(Z);
+    IntVar z = new IntVar(store, "Z", 1, 5);
+    store.impose(new XneqY(z, way[iremoved_light_bulbs]));
+    store.impose(new XneqY(z, way[ihid_violin]));
+    vars.add(z);
 
     IntVar[] all = {
-      children[iPaula], angryat[jPaula], reason[ihogged_television], chore[icleaning_the_attic], Z
+      children[iPaula], angryat[jPaula], reason[ihogged_television], chore[icleaning_the_attic], z
     }; // piatka
     // rodzenstwa
     store.impose(new Alldifferent(all));

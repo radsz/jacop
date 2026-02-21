@@ -122,9 +122,9 @@ public abstract class ExampleFd {
    */
   public boolean search() {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
@@ -137,7 +137,7 @@ public abstract class ExampleFd {
       store.print();
     }
 
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     printSearchStats();
     return result;
   }
@@ -150,9 +150,9 @@ public abstract class ExampleFd {
    */
   public boolean searchOptimal() {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
@@ -165,7 +165,7 @@ public abstract class ExampleFd {
       store.print();
     }
 
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     return result;
   }
 
@@ -176,7 +176,7 @@ public abstract class ExampleFd {
    */
   public boolean searchAllOptimal() {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
@@ -187,9 +187,9 @@ public abstract class ExampleFd {
 
     boolean result = searchLabel.labeling(store, select, cost);
 
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
 
     return result;
   }
@@ -203,7 +203,7 @@ public abstract class ExampleFd {
    */
   public boolean searchSmallestDomain(boolean optimal) {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -219,7 +219,7 @@ public abstract class ExampleFd {
 
     final boolean result = false;
     printSearchStats();
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     return result;
   }
 
@@ -232,7 +232,7 @@ public abstract class ExampleFd {
    */
   public boolean searchWeightedDegree() {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -248,7 +248,7 @@ public abstract class ExampleFd {
     if (result) {
       store.print();
     }
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     return result;
   }
 
@@ -282,7 +282,7 @@ public abstract class ExampleFd {
    */
   public boolean searchAllAtOnce() {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -301,7 +301,7 @@ public abstract class ExampleFd {
     } else {
       IO.println(FAILED_TO_FIND_SOLUTION);
     }
-    printExecutionTime(T1);
+    printExecutionTime(t1);
     return result;
   }
 
@@ -535,10 +535,10 @@ public abstract class ExampleFd {
    */
   public boolean searchMaxRegretOptimal() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
 
     searchLabel = new DepthFirstSearch<>();
 
@@ -547,8 +547,8 @@ public abstract class ExampleFd {
 
     boolean result = searchLabel.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    t2 = System.currentTimeMillis();
+    t = t2 - t1;
 
     if (result) {
       IO.println("Variables : " + vars);
@@ -556,7 +556,7 @@ public abstract class ExampleFd {
       IO.println(FAILED_TO_FIND_SOLUTION);
     }
 
-    IO.println(EXECUTION_TIME_PREFIX + T + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
 
     return result;
   }
@@ -652,7 +652,7 @@ public abstract class ExampleFd {
    */
   public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
 
-    final long T1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     Search<IntVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave =
@@ -677,9 +677,9 @@ public abstract class ExampleFd {
       store.print();
     }
 
-    long T2 = System.currentTimeMillis();
+    long t2 = System.currentTimeMillis();
 
-    IO.println(EXECUTION_TIME_PREFIX + (T2 - T1) + " ms");
+    IO.println(EXECUTION_TIME_PREFIX + (t2 - t1) + " ms");
 
     return result;
   }

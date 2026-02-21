@@ -114,9 +114,9 @@ public class SurvoPuzzle extends ExampleFd {
 
     m.model();
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
 
     boolean result = m.searchWithMaxRegret();
 
@@ -126,9 +126,9 @@ public class SurvoPuzzle extends ExampleFd {
       printMatrix(m.x, m.r, m.c);
     }
 
-    T2 = System.currentTimeMillis();
+    t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
   } // end main
 
   /** Model(). */

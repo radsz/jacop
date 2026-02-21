@@ -87,9 +87,6 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected int[][] watchLists = new int[10][];
 
-  // the other way to have watches
-  // protected IntHashMap<int[]> watches = new IntHashMap<int[]>();
-
   /**
    * Indicates how much this database is optimized for this clause. The Database that gives the
    * higher rank will get the clause.

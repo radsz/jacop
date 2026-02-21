@@ -154,9 +154,9 @@ public class XmulYeqC extends AbstractConstraintXandY {
 
   @Override
   public boolean notSatisfied() {
-    IntDomain Xdom = x.dom();
-    IntDomain Ydom = y.dom();
-    return Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c;
+    IntDomain xDom = x.dom();
+    IntDomain yDom = y.dom();
+    return xDom.max() * yDom.max() < c || xDom.min() * yDom.min() > c;
   }
 
   @Override

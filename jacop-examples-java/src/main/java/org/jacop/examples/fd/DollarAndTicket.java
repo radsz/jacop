@@ -161,12 +161,12 @@ public class DollarAndTicket extends ExampleFd {
     // 3. The player from the Wolves sold at least twice as
     // many books as Ott.
     // Auxilary variable is created.
-    IntVar X = new IntVar(store, "X", 0, 50);
+    IntVar x = new IntVar(store, "X", 0, 50);
 
     // Since there is no constraint XmulCgteqY then it must be splitted into
     // two constraints.
-    store.impose(new XmulCeqZ(surname[iott], 2, X));
-    store.impose(new XgteqY(team[iwolves], X));
+    store.impose(new XmulCeqZ(surname[iott], 2, x));
+    store.impose(new XgteqY(team[iwolves], x));
 
     // 4. Borecki isn't on the Kickers.
     store.impose(new XneqY(surname[iborecki], team[ikickers]));
