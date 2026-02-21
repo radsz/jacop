@@ -96,8 +96,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     this.modifiedArcs = new ArrayList<>();
     this.lastModifiedArcs = new LinkedHashSet<>();
     this.costOffset = 0L;
-    // this.isMinimizing = true;
-
   }
 
   /**

@@ -61,8 +61,7 @@ class ThetaLambdaNode extends TreeNode {
         + e
         + "\nenv = "
         + env
-        + // "\nbase_envC = "+base_envC+
-        "\nenvC = "
+        + "\nenvC = "
         + envC
         + "\neLambda = "
         + eLambda

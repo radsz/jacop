@@ -1393,7 +1393,7 @@ public class VariablesParameters implements ParserTreeConstants {
       return aa;
     } else {
       throw new IllegalArgumentException(
-          "Different size declaration and intiallization of int array; compilation aborted.");
+          "Different size declaration and initialization of int array; compilation aborted.");
     }
   }
 
@@ -1408,7 +1408,7 @@ public class VariablesParameters implements ParserTreeConstants {
       return aa;
     } else {
       throw new IllegalArgumentException(
-          "Different size declaration and intiallization of float array; compilation aborted.");
+          "Different size declaration and initialization of float array; compilation aborted.");
     }
   }
 

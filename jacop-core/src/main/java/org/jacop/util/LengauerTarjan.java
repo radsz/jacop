@@ -274,7 +274,7 @@ public class LengauerTarjan {
 
       p.println("}");
 
-      // p.close(); not needed; aouto close
+      // not needed; auto close
     } catch (Exception _) {
       log.error("Error writing to file");
     }

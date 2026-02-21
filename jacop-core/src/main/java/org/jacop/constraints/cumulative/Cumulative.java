@@ -179,7 +179,6 @@ public class Cumulative extends CumulativeBasic {
       profileProp(store);
 
       if (!store.propagationHasOccurred && doEdgeFind) {
-        // overloadCheck();  // not needed if profile propagator is used
         if (doQuadraticEdgeFind) {
           edgeFindQuad(store);
         } else {

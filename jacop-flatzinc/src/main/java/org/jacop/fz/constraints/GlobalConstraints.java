@@ -479,7 +479,7 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_alldistinct(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // we do not not pose Alldistinct directly because of possible inconsistency with its
-    // intiallization; we collect all vectors and pose it at the end when all constraints are posed
+    // initialization; we collect all vectors and pose it at the end when all constraints are posed
 
     checkForDuplicateVariables(v);
 
@@ -489,7 +489,7 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_alldifferent_except_0(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    // no diplicated variables allowed in this constraint and,
+    // no duplicated variables allowed in this constraint and,
     // if present, they get value 0 (the only allowed to be duplicated)
     IntVar[] xs = new IntVar[x.length];
     HashSet<IntVar> varSet = new HashSet<>();
@@ -512,7 +512,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntDomain s = support.getSetLiteral(node, 1);
 
-    // no diplicated variables allowed in this constraint and,
+    // no duplicated variables allowed in this constraint and,
     // if present, they get value 0 (the only allowed to be duplicated)
     IntVar[] xs = new IntVar[x.length];
     HashSet<IntVar> varSet = new HashSet<>();
@@ -537,7 +537,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     // we do not not pose AmongVar directly because of possible inconsistency with its
-    // intiallization; we collect all constraints and pose them at the end when all other
+    // initialization; we collect all constraints and pose them at the end when all other
     // constraints are posed
 
     // ---- KK, 2015-10-17
@@ -1259,7 +1259,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int index_invf = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     // we do not not pose Assignment directly because of possible inconsistency with its
-    // intiallization; we collect all constraints and pose them at the end when all other
+    // initialization; we collect all constraints and pose them at the end when all other
     // constraints are posed
 
     if (support.domainConsistency
@@ -1330,8 +1330,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int Q = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
-    int S = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int alphabetSize = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
@@ -1342,16 +1342,16 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(Q, q0, F);
+    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
     Fsm dfa = (Fsm) dfaParts[0];
     FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < Q; i++) {
+    for (int i = 0; i < numStates; i++) {
       // mapping current -> next & transition condition
       Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < S; j++) {
-        if (d[i * S + j] != 0) {
-          addTransitionValue(condition, d[i * S + j] - minIndex, j + minIndex);
+      for (int j = 0; j < alphabetSize; j++) {
+        if (d[i * alphabetSize + j] != 0) {
+          addTransitionValue(condition, d[i * alphabetSize + j] - minIndex, j + minIndex);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -1362,7 +1362,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_regular_set(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int Q = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
     IntDomain S = support.getSetLiteral(node, 2);
     int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
@@ -1374,11 +1374,11 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(Q, q0, F);
+    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
     Fsm dfa = (Fsm) dfaParts[0];
     FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < Q; i++) {
+    for (int i = 0; i < numStates; i++) {
       // mapping current -> next & transition condition
       ValueEnumeration valueTransition = S.valueEnumeration();
       Map<Integer, IntDomain> condition = new HashMap<>();
@@ -1954,7 +1954,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   IntVar[] removeDuplicates(IntVar[] x) {
 
-    // no diplicated variables allowed in a constraint and
+    // no duplicated variables allowed in a constraint and
     // we create a new vector with all different variables
     IntVar[] xs = new IntVar[x.length];
     HashSet<IntVar> varSet = new HashSet<>();

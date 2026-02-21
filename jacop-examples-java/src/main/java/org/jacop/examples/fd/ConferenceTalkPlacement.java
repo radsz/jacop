@@ -100,8 +100,6 @@ public class ConferenceTalkPlacement {
 
     example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
 
-    // example.store.print(); // Useful for small examples.
-
     // If you get the first time out then it means that the problem gets too difficult or you have
     // setup the
     // maximum cost too low.
@@ -116,8 +114,6 @@ public class ConferenceTalkPlacement {
     }
 
     // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
-
-    // example.store.print(); // Useful for small examples.
   }
 
   /**

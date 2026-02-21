@@ -216,7 +216,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     // I check the consistency of the x and y variable
     if (d.getSize() != counters.length && (d.max() - d.min() + 1) != counters.length) {
-      // if there are more y variable than x variable there is a mistake of conseption
+      // if there are more y variable than x variable there is a mistake of conception
       // as the rest of y variables are 0 in any case. The problem is to know which y variable
       // should not be here. With normalization we assume that it is the last ones in the
       // list but it is an assumption, it's better to throw an exception there and let the
@@ -468,7 +468,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     // I check the consistency of the x and y variable
     if (d.getSize() != ySize) {
-      // if there are more y variable than x variable there is a mistake of conseption
+      // if there are more y variable than x variable there is a mistake of conception
       // as the rest of y variables are 0 in any case. The problem is to know which y variable
       // should not be here. With normalization we assume that it is the last ones in the
       // list but it is an assumption, it's better to throw an exception there and let the

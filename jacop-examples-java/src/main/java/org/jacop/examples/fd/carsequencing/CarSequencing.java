@@ -331,7 +331,6 @@ public class CarSequencing extends ExampleFd {
       if (i == 0)
         union = counter;
       else
-        //union = union.concatenation( counter );
         union = union.union( counter );
 
       System.out.println("Union +++++++++++ " + union);
@@ -376,8 +375,6 @@ public class CarSequencing extends ExampleFd {
 
         result.add(str);
       } // end while
-
-      // inr.close(); not needed; auto close
 
     } catch (IOException e) {
       IO.println(e);

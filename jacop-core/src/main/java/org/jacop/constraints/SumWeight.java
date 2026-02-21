@@ -85,7 +85,7 @@ public class SumWeight extends Constraint
   /**
    * SumWeight constraint implements the weighted summation over several variables.
    *
-   * @param list the list of varibales
+   * @param list the list of variables
    * @param weights the list of weights
    * @param sum the resulting sum
    */
@@ -96,7 +96,7 @@ public class SumWeight extends Constraint
   /**
    * SumWeight constraint implements the weighted summation over several variables.
    *
-   * @param list the list of varibales
+   * @param list the list of variables
    * @param weights the list of weights
    * @param equalTo the value to which SumWeight is equal to.
    */

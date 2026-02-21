@@ -135,7 +135,6 @@ abstract class Tree {
     try (PrintStream out =
         new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
       out.print(toGraph(name));
-      // out.close(); not needed; auto close
     } catch (IOException _) {
       throw new RuntimeException("IO exception; ignored");
     }

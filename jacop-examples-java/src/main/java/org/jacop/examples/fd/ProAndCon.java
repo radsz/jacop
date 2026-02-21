@@ -205,8 +205,6 @@ public class ProAndCon extends ExampleFd {
     store.impose(new LinearInt(vote[iChatham], weights, "==", weightedVotes[iChatham]));
     store.impose(new LinearInt(vote[iDuval], weights, "==", weightedVotes[iDuval]));
     store.impose(new LinearInt(vote[iEtting], weights, "==", weightedVotes[iEtting]));
-    // store.impose(new SumWeight(vote[iEtting], weights,
-    //     weightedVotes[iEtting]));
 
     // All weightes votes must be different.
     store.impose(new Alldifferent(weightedVotes));

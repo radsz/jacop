@@ -47,7 +47,7 @@ public class IntervalGaussSeidel {
 
   static final boolean DEBUG = false;
 
-  final int MaxIterations = 100;
+  final int maxIterations = 100;
 
   FloatInterval[][] A;
   double[] b;
@@ -148,7 +148,7 @@ public class IntervalGaussSeidel {
    *     solved
    */
   public FloatInterval[] solve() {
-    int N = 0;
+    int n = 0;
     FloatInterval[] x = new FloatInterval[b.length];
     FloatInterval[] previousX = new FloatInterval[x.length];
     Arrays.fill(x, new FloatInterval(0.0, 0.0));
@@ -165,16 +165,16 @@ public class IntervalGaussSeidel {
       performGaussSeidelIteration(x);
 
       if (DEBUG) {
-        debugPrintIteration(N, x);
+        debugPrintIteration(n, x);
       }
 
-      if (N == 0) {
-        N++;
+      if (n == 0) {
+        n++;
         copyToPrevious(x, previousX);
         continue;
       }
-      N++;
-      if (N == MaxIterations) {
+      n++;
+      if (n == maxIterations) {
         break;
       }
 
@@ -246,8 +246,8 @@ public class IntervalGaussSeidel {
     }
   }
 
-  private void debugPrintIteration(int N, FloatInterval[] x) {
-    IO.print("iteration " + N + ": {");
+  private void debugPrintIteration(int n, FloatInterval[] x) {
+    IO.print("iteration " + n + ": {");
     for (int i = 0; i < x.length; i++) {
       if (i == x.length - 1) {
         IO.print(x[i]);

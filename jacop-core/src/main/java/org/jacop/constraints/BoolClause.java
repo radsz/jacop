@@ -41,7 +41,7 @@ import org.jacop.core.TimeStamp;
 
 /**
  * I defines a boolean clause for 0/1 variables x_i and y_i. The clause is fulfilled if at least one
- * varibale x_i = 1 or at least one varibale y_i = 0, that is it defines (x_1 \/ x_2 \/ ... x_n) \/
+ * variable x_i = 1 or at least one variable y_i = 0, that is it defines (x_1 \/ x_2 \/ ... x_n) \/
  * (not y_1 \/ not y_2 \/ ... not y_n) It restricts the domain of all x as well as result to be
  * between 0 and 1.
  *

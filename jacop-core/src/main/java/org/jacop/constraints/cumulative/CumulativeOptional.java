@@ -110,7 +110,6 @@ public class CumulativeOptional extends Cumulative {
       up.sweepPruning(store, taskNormal, opt);
 
       if (!store.propagationHasOccurred && doEdgeFind) {
-        // overloadCheck();  // not needed if profile propagator is used
         if (doQuadraticEdgeFind) {
           edgeFindQuad(store);
         } else {

@@ -255,7 +255,7 @@ public class NetworkBuilder {
    * Returns two arrays containing the nodes for each variable and the nodes for each domain,
    * respectively.
    *
-   * @param vars varibales for nodes
+   * @param vars variables for nodes
    * @param domains nodes for each variable
    * @return two arrays containing the nodes for each variable and the nodes for each domain,
    *     respectively
@@ -474,7 +474,6 @@ public class NetworkBuilder {
       list.add(new XeqY(result, vars.getFirst()));
     } else {
       list.add(new SumInt(vars, "==", result));
-      // list.add(new Sum(vars, result)); deprecated
     }
   }
 }

@@ -54,7 +54,7 @@ public final class SatChangesListener
     implements AssertionListener, PropagateListener, BackjumpListener {
 
   /*
-   * invariant: upperBounds.lenght == lowerBounds.length == excludedValues.length
+   * invariant: upperBounds.length == lowerBounds.length == excludedValues.length
    */
 
   // set of variables to update

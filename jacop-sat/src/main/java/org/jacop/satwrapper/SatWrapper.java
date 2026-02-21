@@ -114,7 +114,7 @@ public final class SatWrapper extends Constraint
   // maps SAT levels to CP levels and conversely
   public Integer[] satToCpLevels = new Integer[5];
   public Integer[] cpToSatLevels = new Integer[5];
-  // empty == true if no cluases has been added
+  // empty == true if no clauses has been added
   boolean empty = true;
   // the trail of the solver
   private Trail trail;

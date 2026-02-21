@@ -1323,8 +1323,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       variableQueue.clear();
 
       objectQueue.clear();
-      // objectQueue.clear();//may not be empty if an exception was raised
-
     }
   }
 
@@ -1680,8 +1678,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     removeLimit = lastLevelLastVar.value();
-
-    // lowerBound = setStart.value();
   }
 
   @Override

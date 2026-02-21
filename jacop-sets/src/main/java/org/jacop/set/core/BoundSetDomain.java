@@ -1018,9 +1018,6 @@ public class BoundSetDomain extends SetDomain {
 
     if (stamp == level) {
 
-      // IntDomain.INTERVAL_DOMAIN_ID) {
-      //       event = replacement.intersectAdapt(lub);
-      //       lubDomain = replacement;
       int event = lubDomain.intersectAdapt(intersect);
 
       if (event != Domain.NONE) {

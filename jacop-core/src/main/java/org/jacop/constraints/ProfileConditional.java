@@ -46,7 +46,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
 
   static final boolean TRACE_ENABLED = false;
   @Serial private static final long serialVersionUID = 8683452581100000010L;
-  int MaxProfile;
+  int maxProfile;
 
   ProfileConditional() {}
 
@@ -71,8 +71,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     }
     int[] r = {index, val};
     add(new ProfileItemCondition(a, b, val, r));
-    if (MaxProfile < val) {
-      MaxProfile = val;
+    if (maxProfile < val) {
+      maxProfile = val;
     }
   }
 
@@ -135,8 +135,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
         }
       }
     }
-    if (MaxProfile < val) {
-      MaxProfile = val;
+    if (maxProfile < val) {
+      maxProfile = val;
     }
     return i + 1;
   }
@@ -200,15 +200,15 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
         part.rectangles = p.rectangles;
       }
       add(i, part);
-      if (MaxProfile < part.value) {
-        MaxProfile = part.value;
+      if (maxProfile < part.value) {
+        maxProfile = part.value;
       }
     }
     return i + 1;
   }
 
   int max() {
-    return MaxProfile;
+    return maxProfile;
   }
 
   @Override

@@ -1126,7 +1126,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     } else if (node.getType() == 3) { // array access
       return dictionary.getSetVariableArray(node.getIdent())[node.getInt()];
     } else {
-      throw new IllegalArgumentException("Wrong parameter on list of search set varibales" + node);
+      throw new IllegalArgumentException("Wrong parameter on list of search set variables" + node);
     }
   }
 
