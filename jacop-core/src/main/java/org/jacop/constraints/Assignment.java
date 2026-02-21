@@ -178,8 +178,8 @@ public class Assignment extends Constraint
 
       variableQueue = new LinkedHashSet<>();
 
-      for (IntVar V : fdvs) {
-        propagateFromPrunedVariable(store, V);
+      for (IntVar v : fdvs) {
+        propagateFromPrunedVariable(store, v);
       }
     }
   }

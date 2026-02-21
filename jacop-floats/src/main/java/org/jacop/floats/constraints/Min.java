@@ -107,11 +107,11 @@ public class Min extends Constraint implements SatisfiedPresent {
         v.domain.inMin(store.level, v, minMin);
 
         vDom = v.dom();
-        double VdomMin = vDom.min();
-        double VdomMax = vDom.max();
-        minValue = Math.min(minValue, VdomMin);
+        double vDomMin = vDom.min();
+        double vDomMax = vDom.max();
+        minValue = Math.min(minValue, vDomMin);
 
-        maxValue = Math.min(maxValue, VdomMax);
+        maxValue = Math.min(maxValue, vDomMax);
       }
 
       min.domain.in(store.level, min, minValue, maxValue);

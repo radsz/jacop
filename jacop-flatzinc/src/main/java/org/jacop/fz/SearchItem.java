@@ -107,7 +107,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   String searchType;
   String explore = COMPLETE;
   String indomain;
-  String var_selection_heuristic;
+  String varSelectionHeuristic;
 
   boolean floatSearch;
   double precision = 0.0; // for float_search
@@ -165,7 +165,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       "Warning: Not implemented indomain method \"";
 
   // relax and reconstruct
-  IntVar[] relax_and_reconstruct_variables;
+  IntVar[] relaxAndReconstructVariables;
   int probability;
 
   /**
@@ -197,7 +197,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         searchVariables = getVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(1);
-        var_selection_heuristic = getVarSelectHeuristic(expr2);
+        varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
         indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
@@ -210,7 +210,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         searchVariables = getSetVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(1);
-        var_selection_heuristic = getVarSelectHeuristic(expr2);
+        varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
         indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
@@ -225,7 +225,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         searchVariables = getFloatVarArray(expr1);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(2);
-        var_selection_heuristic = getVarSelectHeuristic(expr2);
+        varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(3).jjtGetChild(0);
         indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
@@ -253,7 +253,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         makeVectorOfSearches(searches);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(2);
-        var_selection_heuristic = getVarSelectHeuristic(expr2);
+        varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnotation expr3 = (ASTAnnotation) ann.jjtGetChild(3);
         explorationType(expr3);
@@ -268,7 +268,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       case "restart_geometric" -> handleRestartGeometric(ann);
       case "relax_and_reconstruct" -> {
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-        relax_and_reconstruct_variables = getVarArray(expr1);
+        relaxAndReconstructVariables = getVarArray(expr1);
         ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
         probability = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
       }
@@ -322,7 +322,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             "% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
       }
     }
-    var_selection_heuristic = INPUT_ORDER;
+    varSelectionHeuristic = INPUT_ORDER;
     indomain = max > min ? INDOMAIN_MAX : INDOMAIN_MIN;
   }
 
@@ -539,7 +539,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   SelectChoicePoint<IntVar> getIntSelect() {
 
-    if (RANDOM.equals(var_selection_heuristic)) {
+    if (RANDOM.equals(varSelectionHeuristic)) {
       Indomain<IntVar> indom = getIndomain(indomain);
       return new RandomSelect<>(copyToIntVarArray(), indom);
     }
@@ -555,7 +555,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     if (splitSelect != null) {
       return splitSelect;
     }
-    if (INPUT_ORDER.equals(var_selection_heuristic)) {
+    if (INPUT_ORDER.equals(varSelectionHeuristic)) {
       return new InputOrderSelect<>(store, (IntVar[]) searchVariables, getIndomain(indomain));
     }
     Indomain<IntVar> indom = getIndomain(indomain);
@@ -760,10 +760,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   public ComparatorsVar<IntVar> getVarSelect() {
 
-    if (var_selection_heuristic == null) {
+    if (varSelectionHeuristic == null) {
       return new ComparatorsVar<>(null);
     } else {
-      return switch (var_selection_heuristic) {
+      return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>());
@@ -808,9 +808,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
         default -> {
           System.err.println(
-              WARNING_VAR_HEURISTIC_PREFIX
-                  + var_selection_heuristic
-                  + WARNING_VAR_HEURISTIC_SUFFIX);
+              WARNING_VAR_HEURISTIC_PREFIX + varSelectionHeuristic + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield null;
         }
@@ -825,10 +823,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   public ComparatorsVar<FloatVar> getFloatVarSelect() {
 
-    if (var_selection_heuristic == null) {
+    if (varSelectionHeuristic == null) {
       return new ComparatorsVar<>(null);
     } else {
-      return switch (var_selection_heuristic) {
+      return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomainFloat<>());
         case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new LargestDomainFloat<>());
@@ -870,9 +868,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
-              WARNING_VAR_HEURISTIC_PREFIX
-                  + var_selection_heuristic
-                  + WARNING_VAR_HEURISTIC_SUFFIX);
+              WARNING_VAR_HEURISTIC_PREFIX + varSelectionHeuristic + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield new ComparatorsVar<>(null);
         }
@@ -887,10 +883,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   ComparatorsVar<SetVar> getSetVarSelect() {
 
-    if (var_selection_heuristic == null) {
+    if (varSelectionHeuristic == null) {
       return new ComparatorsVar<>(null);
     } else {
-      return switch (var_selection_heuristic) {
+      return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case FIRST_FAIL -> new ComparatorsVar<>(new MinCardDiff<>());
         case SMALLEST -> new ComparatorsVar<>(new MinGlbCard<>());
@@ -929,9 +925,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
-              WARNING_VAR_HEURISTIC_PREFIX
-                  + var_selection_heuristic
-                  + WARNING_VAR_HEURISTIC_SUFFIX);
+              WARNING_VAR_HEURISTIC_PREFIX + varSelectionHeuristic + WARNING_VAR_HEURISTIC_SUFFIX);
 
           yield new ComparatorsVar<>(null);
         }
@@ -1210,7 +1204,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @return the variable selection heuristic name
    */
   public String var_selection() {
-    return var_selection_heuristic;
+    return varSelectionHeuristic;
   }
 
   /**
@@ -1262,7 +1256,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     String varSel1 =
         ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).jjtGetChild(0))
             .getIdent();
-    var_selection_heuristic =
+    varSelectionHeuristic =
         ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(1).jjtGetChild(0).jjtGetChild(0))
             .getIdent();
     applyTieBreakTieBreaking();
@@ -1332,7 +1326,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
     }
     s.append(", ")
-        .append(var_selection_heuristic)
+        .append(varSelectionHeuristic)
         .append(", ")
         .append(indomain)
         .append(", ")
@@ -1352,7 +1346,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     s.append(", [");
     appendSearchSeqItems(s);
     s.append("]");
-    s.append(", ").append(var_selection_heuristic).append(", ").append(explore).append(")");
+    s.append(", ").append(varSelectionHeuristic).append(", ").append(explore).append(")");
     s.append(")");
   }
 

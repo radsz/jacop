@@ -96,8 +96,6 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
    * It specifies for each value what are the possible values of the index variable (it takes into
    * account indexOffset.
    */
-  // Hashtable<Integer, IntDomain> mappingValuesToIndex = new Hashtable<Integer, IntDomain>();
-
   boolean indexHasChanged = true;
 
   boolean valueHasChanged = true;

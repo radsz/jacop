@@ -130,18 +130,18 @@ class GraphConstraints implements ParserTreeConstants {
     int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
+    int indexMin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
 
     try {
       IntVar[] matchVars;
-      if (index_min == 0) {
+      if (indexMin == 0) {
         matchVars = match;
       } else {
         int upperBound = (useTargetTypeForBound ? target_type.length : pattern_type.length) - 1;
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
           matchVars[i] = new IntVar(store, "node_" + i, 0, upperBound);
-          support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+          support.pose(new XplusCeqZ(matchVars[i], indexMin, match[i]));
         }
       }
 
@@ -158,7 +158,7 @@ class GraphConstraints implements ParserTreeConstants {
               boolean.class);
       Object constraint =
           cons.newInstance(
-              store, t, p, target_type, pattern_type, index_min, matchVars, isUndirected);
+              store, t, p, target_type, pattern_type, indexMin, matchVars, isUndirected);
       support.pose((Constraint) constraint);
 
     } catch (ClassNotFoundException
@@ -177,7 +177,7 @@ class GraphConstraints implements ParserTreeConstants {
   void gen_jacop_clique(SimpleNode node) {
     int[] g = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int indexMin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     String cName = "Clique";
 
     int[] type = new int[c.length];
@@ -185,17 +185,12 @@ class GraphConstraints implements ParserTreeConstants {
 
     IntVar cost = new IntVar(store, 0, IntDomain.MAX_INT);
 
-    // // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
-    // // support.poseDc(ctr);
-
-    // the same as pattern graph");
-
     try {
       Class<?> cls = Class.forName(GRAPH_PACKAGE_PREFIX + cName);
       Constructor<?> cons =
           cls.getConstructor(
               Store.class, int[].class, int[].class, int.class, IntVar[].class, IntVar.class);
-      Object constraint = cons.newInstance(store, g, type, index_min, c, cost);
+      Object constraint = cons.newInstance(store, g, type, indexMin, c, cost);
       support.pose((Constraint) constraint);
 
     } catch (ClassNotFoundException

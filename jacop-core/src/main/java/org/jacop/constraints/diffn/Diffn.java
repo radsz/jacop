@@ -283,8 +283,8 @@ public class Diffn extends Nooverlap {
     }
 
     final int limit = limitOut[0];
-    int N = es.length;
-    Arrays.sort(es, 0, N, eventComparator);
+    int n = es.length;
+    Arrays.sort(es, 0, n, eventComparator);
 
     if (DEBUG_NARR) {
       log.debug("===========================");
@@ -301,9 +301,9 @@ public class Diffn extends Nooverlap {
     int[] lastBarier = new int[] {Integer.MAX_VALUE};
     boolean[] considerR = new boolean[] {false};
 
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < n; i++) {
       Event e = es[i];
-      Event ne = (i < N - 1) ? es[i + 1] : null;
+      Event ne = (i < n - 1) ? es[i + 1] : null;
 
       switch (e.type()) {
         case PROFILE_SUBTRACT:

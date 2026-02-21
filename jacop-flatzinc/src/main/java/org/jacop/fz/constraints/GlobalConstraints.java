@@ -467,12 +467,12 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_softgcc(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    IntVar[] hard_counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] hardCounters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] soft_counters = support.getVarArray((SimpleNode) node.jjtGetChild(3));
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
 
     SoftGCC sgcc =
-        new SoftGCC(x, hard_counters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
+        new SoftGCC(x, hardCounters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
     support.poseDc(sgcc);
   }
 
@@ -604,39 +604,39 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_gcc(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    int index_max = index_min + c.length - 1;
+    int indexMin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int indexMax = indexMin + c.length - 1;
 
     for (IntVar intVar : x) {
-      if (index_min > intVar.max() || index_max < intVar.min()) {
+      if (indexMin > intVar.max() || indexMax < intVar.min()) {
         throw new IllegalArgumentException("%% ERROR: gcc domain error in variable " + intVar);
       }
-      if (index_min > intVar.min() && index_min < intVar.max()) {
-        intVar.domain.inMin(store.level, intVar, index_min);
+      if (indexMin > intVar.min() && indexMin < intVar.max()) {
+        intVar.domain.inMin(store.level, intVar, indexMin);
       }
-      if (index_max < intVar.max() && index_max > intVar.min()) {
-        intVar.domain.inMax(store.level, intVar, index_max);
+      if (indexMax < intVar.max() && indexMax > intVar.min()) {
+        intVar.domain.inMax(store.level, intVar, indexMax);
       }
     }
 
     // =========> remove all non-existing-values counters
-    IntDomain gcc_dom = new IntervalDomain();
+    IntDomain gccDom = new IntervalDomain();
     for (IntVar v : x) {
-      gcc_dom = gcc_dom.union(v.dom());
+      gccDom = gccDom.union(v.dom());
     }
-    ArrayList<Var> c_list = new ArrayList<>();
+    ArrayList<Var> cList = new ArrayList<>();
     for (int i = 0; i < c.length; i++) {
-      if (gcc_dom.contains(i + index_min)) {
-        c_list.add(c[i]);
+      if (gccDom.contains(i + indexMin)) {
+        cList.add(c[i]);
       } else {
         support.pose(new XeqC(c[i], 0));
       }
     }
-    IntVar[] c_array = new IntVar[c_list.size()];
-    c_array = c_list.toArray(c_array);
+    IntVar[] cArray = new IntVar[cList.size()];
+    cArray = cList.toArray(cArray);
     // =========>
 
-    support.pose(new GCC(x, c_array));
+    support.pose(new GCC(x, cArray));
   }
 
   void gen_jacop_global_cardinality_closed(SimpleNode node) {
@@ -644,12 +644,12 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] cover = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] counter = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-    IntDomain gcc_dom = new IntervalDomain();
+    IntDomain gccDom = new IntervalDomain();
     for (int e : cover) {
-      gcc_dom = gcc_dom.union(e);
+      gccDom = gccDom.union(e);
     }
     for (IntVar v : x) {
-      v.domain.in(store.level, v, gcc_dom);
+      v.domain.in(store.level, v, gccDom);
     }
 
     support.pose(new GCC(x, counter));
@@ -661,7 +661,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] low = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
 
-    IntDomain gcc_dom = new IntervalDomain();
+    IntDomain gccDom = new IntervalDomain();
     int[] newCover = new int[cover.length];
     int n = 0;
     for (int i = 0; i < cover.length; i++) {
@@ -672,11 +672,11 @@ class GlobalConstraints implements ParserTreeConstants {
         throw Store.failException;
       }
 
-      gcc_dom = gcc_dom.union(e);
+      gccDom = gccDom.union(e);
     }
 
     for (IntVar v : x) {
-      v.domain.in(store.level, v, gcc_dom);
+      v.domain.in(store.level, v, gccDom);
     }
 
     IntVar[] counter = new IntVar[n];
@@ -1255,8 +1255,8 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_assignment(SimpleNode node) {
     IntVar[] f = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] invf = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int index_f = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    int index_invf = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int indexF = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int indexInvf = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     // we do not not pose Assignment directly because of possible inconsistency with its
     // initialization; we collect all constraints and pose them at the end when all other
@@ -1270,7 +1270,7 @@ class GlobalConstraints implements ParserTreeConstants {
       support.parameterListForAlldistincts.add(f);
     }
 
-    support.delayedConstraints.add(new Assignment(f, invf, index_f, index_invf));
+    support.delayedConstraints.add(new Assignment(f, invf, indexF, indexInvf));
   }
 
   /**
@@ -1575,7 +1575,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] bin = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] capacity = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int[] w = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int minBin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     // ---- KK, 2023-06-21
     // binpacking must not have duplicated variables there
@@ -1584,7 +1584,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] cc = removeDuplicates(capacity);
 
     Constraint binPack =
-        Binpacking.builder().bin(bin).load(cc).w(w).minBin(min_bin).lbPruning(true).build();
+        Binpacking.builder().bin(bin).load(cc).w(w).minBin(minBin).lbPruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 
@@ -1592,7 +1592,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] bin = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int[] capacity = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     int[] w = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int minBin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     IntVar[] load = new IntVar[capacity.length];
     for (int i = 0; i < load.length; i++) {
@@ -1600,7 +1600,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     Constraint binPack =
-        Binpacking.builder().bin(bin).load(load).w(w).minBin(min_bin).lbPruning(true).build();
+        Binpacking.builder().bin(bin).load(load).w(w).minBin(minBin).lbPruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 
@@ -1628,8 +1628,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void buildGeost(SimpleNode node, boolean withBoundingBox) {
     int dim = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(0));
-    int[] rect_size = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    int[] rect_offset = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int[] rectSize = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] rectOffset = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntDomain[] shape = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
@@ -1653,7 +1653,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // create all shapes (starting with id=1)
     for (int i = 0; i < shape.length; i++) {
-      ArrayList<Dbox> shape_i = new ArrayList<>();
+      ArrayList<Dbox> shapeI = new ArrayList<>();
 
       for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
         int j = e.nextElement();
@@ -1662,12 +1662,12 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] size = new int[dim];
 
         for (int k = 0; k < dim; k++) {
-          offset[k] = rect_offset[(j - 1) * dim + k];
-          size[k] = rect_size[(j - 1) * dim + k];
+          offset[k] = rectOffset[(j - 1) * dim + k];
+          size[k] = rectSize[(j - 1) * dim + k];
         }
-        shape_i.add(new Dbox(offset, size));
+        shapeI.add(new Dbox(offset, size));
       }
-      shapes.add(new Shape((i + 1), shape_i));
+      shapes.add(new Shape((i + 1), shapeI));
     }
 
     ArrayList<GeostObject> objects = new ArrayList<>();

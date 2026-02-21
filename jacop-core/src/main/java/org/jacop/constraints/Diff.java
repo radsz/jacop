@@ -1091,8 +1091,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     result.append(" : diff (");
 
     int i = 0;
-    for (Rectangle R : rectangles) {
-      result.append(R);
+    for (Rectangle r : rectangles) {
+      result.append(r);
       if (i < rectangles.length - 1) {
         result.append(", ");
       }

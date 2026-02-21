@@ -291,8 +291,8 @@ public class CumulativeBasic extends Constraint {
       }
     }
 
-    int N = j;
-    Arrays.sort(es, 0, N, eventComparator);
+    int n = j;
+    Arrays.sort(es, 0, n, eventComparator);
 
     if (debugNarr) {
       log.debug("{}", Arrays.asList(es));
@@ -319,11 +319,11 @@ public class CumulativeBasic extends Constraint {
     boolean[] barier = new boolean[tasks.length];
 
     int curProfile = 0;
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < n; i++) {
 
       E e = es[i];
       E ne = null; // next event
-      if (i < N - 1) {
+      if (i < n - 1) {
         ne = es[i + 1];
       }
 

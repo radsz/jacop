@@ -890,11 +890,11 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private int getTypeFromSetTail(SimpleNode child) {
-    SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
-    if (grand_child.getId() == JJTINTTIEXPRTAIL) {
-      return getSetTypeFromIntTail(grand_child);
+    SimpleNode grandChild = (SimpleNode) child.jjtGetChild(0);
+    if (grandChild.getId() == JJTINTTIEXPRTAIL) {
+      return getSetTypeFromIntTail(grandChild);
     }
-    if (grand_child.getId() == JJTBOOLTIEXPRTAIL) {
+    if (grandChild.getId() == JJTBOOLTIEXPRTAIL) {
       return 7;
     }
     return -1;
@@ -1061,8 +1061,8 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private IntDomain parseSetLiteralInterval(SimpleNode setLiteral) {
-    int s_n = setLiteral.jjtGetNumChildren();
-    if (s_n != 2) {
+    int sn = setLiteral.jjtGetNumChildren();
+    if (sn != 2) {
       throw new IllegalArgumentException(
           "Unexpected set literal in " + OUTPUT_ARRAY + " annotation; execution aborted");
     }
@@ -1072,9 +1072,9 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private IntDomain parseSetLiteralList(SimpleNode setLiteral) {
-    int s_n = setLiteral.jjtGetNumChildren();
+    int sn = setLiteral.jjtGetNumChildren();
     IntDomain indexes = new IntervalDomain();
-    for (int k = 0; k < s_n; k++) {
+    for (int k = 0; k < sn; k++) {
       int el = ((ASTScalarFlatExpr) setLiteral.jjtGetChild(k)).getInt();
       indexes.unionAdapt(el);
     }
@@ -1433,11 +1433,11 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   private IntDomain getSetLiteralInterval(ASTSetLiteral child) {
-    SimpleNode grand_child_1 = (SimpleNode) child.jjtGetChild(0);
-    SimpleNode grand_child_2 = (SimpleNode) child.jjtGetChild(1);
-    if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
-      int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
-      int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
+    SimpleNode grandChild1 = (SimpleNode) child.jjtGetChild(0);
+    SimpleNode grandChild2 = (SimpleNode) child.jjtGetChild(1);
+    if (grandChild1.getId() == JJTINTFLATEXPR && grandChild2.getId() == JJTINTFLATEXPR) {
+      int i1 = ((ASTIntFlatExpr) grandChild1).getInt();
+      int i2 = ((ASTIntFlatExpr) grandChild2).getInt();
       return i1 > i2 ? new IntervalDomain() : new IntervalDomain(i1, i2);
     }
     return new IntervalDomain();

@@ -946,14 +946,18 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return completionS;
   }
 
-  private long computeNotFirstArea(Task s, List<Task> tasks) {
+  private long sumAreaMinExcluding(Task exclude, List<Task> tasks) {
     long a = 0;
     for (Task t : tasks) {
-      if (t != s) {
+      if (t != exclude) {
         a += t.areaMin();
       }
     }
     return a;
+  }
+
+  private long computeNotFirstArea(Task s, List<Task> tasks) {
+    return sumAreaMinExcluding(s, tasks);
   }
 
   private long computeNotFirstSlack(Task s, List<Task> tasks, int sEst) {
@@ -1042,13 +1046,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private long computeNotLastArea(Task s, List<Task> tasks) {
-    long a = 0;
-    for (Task t : tasks) {
-      if (t != s) {
-        a += t.areaMin();
-      }
-    }
-    return a;
+    return sumAreaMinExcluding(s, tasks);
   }
 
   private int fillNotLastTaskArray(

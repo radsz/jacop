@@ -123,15 +123,15 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     LinkedHashSet<IntVar> fdvs = variableQueue;
     variableQueue = new LinkedHashSet<>();
 
-    for (IntVar Q : fdvs) {
-      if (!Q.singleton()) {
+    for (IntVar q : fdvs) {
+      if (!q.singleton()) {
         continue;
       }
-      int qPos = positionMapping.get(Q);
+      int qPos = positionMapping.get(q);
       if (qPos > groundPos) {
         list[qPos] = list[groundPos];
-        list[groundPos] = Q;
-        positionMapping.put(Q, groundPos);
+        list[groundPos] = q;
+        positionMapping.put(q, groundPos);
         positionMapping.put(list[qPos], qPos);
         groundPos++;
       } else if (qPos == groundPos) {
@@ -139,7 +139,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       } else {
         continue;
       }
-      removeValueFromOthersIfNotException(store, groundPos, Q.min());
+      removeValueFromOthersIfNotException(store, groundPos, q.min());
     }
     return groundPos;
   }

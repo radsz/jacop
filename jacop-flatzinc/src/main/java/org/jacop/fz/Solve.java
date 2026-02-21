@@ -318,27 +318,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void runSearchForSingleAnnotation(
       Options opt, ASTSolveKind kind, int solveKind, SearchItem<T> si, SimpleNode node) {
-    String search_type = si.type();
+    String searchType = si.type();
     if (opt.freeSearch()) {
       run_single_search(solveKind, kind, null);
       return;
     }
-    if (INT_SEARCH.equals(search_type)
-        || SET_SEARCH.equals(search_type)
-        || BOOL_SEARCH.equals(search_type)
-        || FLOAT_SEARCH.equals(search_type)
-        || PRIORITY_SEARCH.equals(search_type)
-        || WARM_START.equals(search_type)
-        || (search_type != null && search_type.startsWith("restart_"))) {
+    if (INT_SEARCH.equals(searchType)
+        || SET_SEARCH.equals(searchType)
+        || BOOL_SEARCH.equals(searchType)
+        || FLOAT_SEARCH.equals(searchType)
+        || PRIORITY_SEARCH.equals(searchType)
+        || WARM_START.equals(searchType)
+        || (searchType != null && searchType.startsWith("restart_"))) {
       run_single_search(solveKind, kind, si);
       return;
     }
-    if (SEQ_SEARCH.equals(search_type)) {
+    if (SEQ_SEARCH.equals(searchType)) {
       run_sequence_search(solveKind, kind, si);
       return;
     }
-    String warnType = search_type;
-    if ("$expr".equals(search_type)) {
+    String warnType = searchType;
+    if ("$expr".equals(searchType)) {
       warnType = ((ASTScalarFlatExpr) node.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0)).getIdent();
     }
     System.err.println(
@@ -379,7 +379,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return true;
     }
     if ("relax_and_reconstruct".equals(s.searchType)) {
-      relaxVars = s.relax_and_reconstruct_variables;
+      relaxVars = s.relaxAndReconstructVariables;
       probability = s.probability;
       return true;
     }
@@ -917,21 +917,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       searchVars.outputVars();
     }
 
-    IntVar[] int_search_variables = searchVars.getIntVars();
-    SetVar[] set_search_variables = searchVars.getSetVars();
-    BooleanVar[] bool_search_variables = searchVars.getBoolVars();
-    FloatVar[] float_search_variables = searchVars.getFloatVars();
+    IntVar[] intSearchVariables = searchVars.getIntVars();
+    SetVar[] setSearchVariables = searchVars.getSetVars();
+    BooleanVar[] boolSearchVariables = searchVars.getBoolVars();
+    FloatVar[] floatSearchVariables = searchVars.getFloatVars();
 
     if (shouldUseDefaultSearchVars(
-        int_search_variables,
-        bool_search_variables,
-        set_search_variables,
-        float_search_variables)) {
+        intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
       searchVars.defaultVars();
-      int_search_variables = searchVars.getIntVars();
-      set_search_variables = searchVars.getSetVars();
-      bool_search_variables = searchVars.getBoolVars();
-      float_search_variables = searchVars.getFloatVars();
+      intSearchVariables = searchVars.getIntVars();
+      setSearchVariables = searchVars.getSetVars();
+      boolSearchVariables = searchVars.getBoolVars();
+      floatSearchVariables = searchVars.getFloatVars();
     }
 
     if (opt.debug()) {
@@ -945,7 +942,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intSearch.setConsistencyListener(failStatistics);
     }
 
-    if (set_search_variables.length != 0) {
+    if (setSearchVariables.length != 0) {
       // add set search containing all variables to be sure that they get a value
       DepthFirstSearch<T> setSearch = new DepthFirstSearch<>();
 
@@ -956,8 +953,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<SetVar> setSelect =
           options.freeSearch() || options.complementarySearch()
               ? new SimpleSelect<>(
-                  set_search_variables, new AfcMaxDeg<>(store), new IndomainSetMin<>())
-              : new SimpleSelect<>(set_search_variables, null, new IndomainSetMin<>());
+                  setSearchVariables, new AfcMaxDeg<>(store), new IndomainSetMin<>())
+              : new SimpleSelect<>(setSearchVariables, null, new IndomainSetMin<>());
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) setSelect;
@@ -968,9 +965,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lastSearch.addChildSearch(setSearch);
       }
       lastSearch = setSearch;
-      if (int_search_variables.length == 0
-          && bool_search_variables.length == 0
-          && float_search_variables.length == 0) {
+      if (intSearchVariables.length == 0
+          && boolSearchVariables.length == 0
+          && floatSearchVariables.length == 0) {
         setSearch.setSolutionListener(new CostListener<>());
       }
 
@@ -984,13 +981,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[0] = setSearch;
     }
 
-    if (int_search_variables.length != 0) {
+    if (intSearchVariables.length != 0) {
       // add search containing int variables to be sure that they get a value
       SelectChoicePoint<IntVar> intSelect =
           options.freeSearch() || options.complementarySearch()
-              ? new SimpleSelect<>(
-                  int_search_variables, new AfcMaxDeg<>(store), new IndomainMin<>())
-              : new SimpleSelect<>(int_search_variables, null, new IndomainMin<>());
+              ? new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>())
+              : new SimpleSelect<>(intSearchVariables, null, new IndomainMin<>());
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) intSelect;
@@ -1001,7 +997,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lastSearch.addChildSearch(intSearch);
       }
       lastSearch = intSearch;
-      if (bool_search_variables.length == 0 && float_search_variables.length == 0) {
+      if (boolSearchVariables.length == 0 && floatSearchVariables.length == 0) {
         intSearch.setSolutionListener(new CostListener<>());
 
         if (costVariable != null) {
@@ -1021,12 +1017,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolSearch.setConsistencyListener(failStatistics);
     }
 
-    if (bool_search_variables.length != 0) {
+    if (boolSearchVariables.length != 0) {
       // add search containing boolean variables to be sure that they get a value
       SelectChoicePoint<BooleanVar> boolSelect =
           options.freeSearch() || options.complementarySearch()
-              ? new SimpleSelect<>(bool_search_variables, new AfcMax<>(store), new IndomainMin<>())
-              : new SimpleSelect<>(bool_search_variables, null, new IndomainMin<>());
+              ? new SimpleSelect<>(boolSearchVariables, new AfcMax<>(store), new IndomainMin<>())
+              : new SimpleSelect<>(boolSearchVariables, null, new IndomainMin<>());
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) boolSelect;
@@ -1037,7 +1033,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lastSearch.addChildSearch(boolSearch);
       }
       lastSearch = boolSearch;
-      if (float_search_variables.length == 0) {
+      if (floatSearchVariables.length == 0) {
         boolSearch.setSolutionListener(new CostListener<>());
 
         if (costVariable != null) {
@@ -1055,7 +1051,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[2] = boolSearch;
     }
 
-    if (float_search_variables.length != 0) {
+    if (floatSearchVariables.length != 0) {
       // add float search containing all variables to be sure that they get a value
       DepthFirstSearch<T> floatSearch = new DepthFirstSearch<>();
 
@@ -1065,8 +1061,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       SelectChoicePoint<Var> floatSelect =
           options.freeSearch() || options.complementarySearch()
-              ? new SplitSelectFloat<>(store, float_search_variables, new LargestDomainFloat<>())
-              : new SplitSelectFloat<>(store, float_search_variables, null);
+              ? new SplitSelectFloat<>(store, floatSearchVariables, new LargestDomainFloat<>())
+              : new SplitSelectFloat<>(store, floatSearchVariables, null);
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) floatSelect;
@@ -1089,10 +1085,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (noSearchVariables(
-        int_search_variables,
-        bool_search_variables,
-        set_search_variables,
-        float_search_variables)) {
+        intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
       handleTrivialSolution();
     }
 
@@ -1189,12 +1182,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       costVar = setupCostVariable(kind, solveKind);
     }
 
-    DepthFirstSearch<T>[] complementary_search = setSubSearchForAll(last_search, options);
-    for (DepthFirstSearch<T> aComplementary_search : complementary_search) {
-      if (aComplementary_search != null) {
-        listSeqSearches.add(aComplementary_search);
+    DepthFirstSearch<T>[] complementarySearch = setSubSearchForAll(last_search, options);
+    for (DepthFirstSearch<T> aComplementarySearch : complementarySearch) {
+      if (aComplementarySearch != null) {
+        listSeqSearches.add(aComplementarySearch);
         if (!printSearchInfo) {
-          aComplementary_search.setPrintInfo(false);
+          aComplementarySearch.setPrintInfo(false);
         }
       }
     }

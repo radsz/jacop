@@ -119,9 +119,9 @@ public class DisjointConditional extends Diff {
 
     int i = 0;
 
-    for (List<? extends IntVar> R : rectangles) {
-      if (R.size() == size) {
-        Rectangle rect = new Rectangle(R);
+    for (List<? extends IntVar> r : rectangles) {
+      if (r.size() == size) {
+        Rectangle rect = new Rectangle(r);
         this.rectangles[i] = rect;
         i++;
       } else {

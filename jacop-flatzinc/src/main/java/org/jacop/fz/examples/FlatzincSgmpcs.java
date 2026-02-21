@@ -54,7 +54,7 @@ public class FlatzincSgmpcs {
 
   void ex(String[] args) {
 
-    long T1 = System.currentTimeMillis();
+    long t1 = System.currentTimeMillis();
 
     if (args.length == 0) {
       args = new String[2];
@@ -89,7 +89,7 @@ public class FlatzincSgmpcs {
     boolean result = label.search();
     printSgmpcsResult(result, label);
 
-    printExecutionTime(T1);
+    printExecutionTime(t1);
   }
 
   /** Prints store statistics. */
@@ -134,8 +134,8 @@ public class FlatzincSgmpcs {
 
   /** Prints execution time. */
   private void printExecutionTime(long startTime) {
-    long T2 = System.currentTimeMillis();
-    long T = T2 - startTime;
-    IO.println("\n\t*** Execution time = " + T + " ms");
+    long t2 = System.currentTimeMillis();
+    long t = t2 - startTime;
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 }

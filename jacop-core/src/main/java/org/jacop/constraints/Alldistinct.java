@@ -261,12 +261,12 @@ public class Alldistinct extends Constraint
 
       LinkedHashSet<IntVar> copy = (LinkedHashSet<IntVar>) variableQueue.clone();
 
-      for (IntVar Q : copy) {
-        if (Q.singleton()) {
-          int qValue = Q.min();
+      for (IntVar q : copy) {
+        if (q.singleton()) {
+          int qValue = q.min();
           int lastNotGround = stampNotGroundedVariables.value();
           for (int i = 0; i <= lastNotGround; i++) {
-            if (list[i] != Q) {
+            if (list[i] != q) {
               list[i].domain.inComplement(store.level, list[i], qValue);
             }
           }
@@ -303,19 +303,19 @@ public class Alldistinct extends Constraint
 
       variableQueue = new LinkedHashSet<>();
 
-      for (IntVar Q : fdvs) {
-        qDom = Q.dom();
+      for (IntVar q : fdvs) {
+        qDom = q.dom();
         if (qDom.singleton()) {
 
-          int qValue = Q.value();
+          int qValue = q.value();
 
-          singletons.add(Q);
+          singletons.add(q);
 
           int lastNotGroundedVariable = stampNotGroundedVariables.value();
           for (int i = 0; i <= lastNotGroundedVariable; i++) {
-            if (list[i] == Q) {
+            if (list[i] == q) {
               list[i] = list[lastNotGroundedVariable];
-              list[lastNotGroundedVariable] = Q;
+              list[lastNotGroundedVariable] = q;
               stampNotGroundedVariables.update(lastNotGroundedVariable - 1);
               break;
             }
@@ -330,7 +330,7 @@ public class Alldistinct extends Constraint
 
           int lastPosition = stamp.value();
 
-          int positionV = currentList.indexOf(Q);
+          int positionV = currentList.indexOf(q);
 
           // It has to set position to variable which has
           // Qvalue in its domain to value 0 since only
@@ -340,7 +340,7 @@ public class Alldistinct extends Constraint
           if (positionV > 0) {
 
             currentList.set(positionV, currentList.getFirst());
-            currentList.set(0, Q);
+            currentList.set(0, q);
           }
 
           // All Variable which still had qValue in its domain

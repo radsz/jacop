@@ -410,18 +410,18 @@ public class Cumulative extends CumulativeBasic {
       int[] Dupd,
       int[] SlUpd,
       long[] E) {
-    long Energy = 0;
+    long energy = 0;
     long maxEnergy = 0;
     int rr = Integer.MIN_VALUE;
 
     for (int i : t1) {
       TaskView t = ts[i];
       if (t.lct() <= u.lct()) {
-        Energy += t.energy();
+        energy += t.energy();
         if (rr == Integer.MIN_VALUE
-            || (float) Energy / (float) (u.lct() - t.est())
+            || (float) energy / (float) (u.lct() - t.est())
                 > (float) maxEnergy / ((float) u.lct() - (float) rr)) {
-          maxEnergy = Energy;
+          maxEnergy = energy;
           rr = t.est();
         }
       } else if (rr != Integer.MIN_VALUE) {
@@ -433,7 +433,7 @@ public class Cumulative extends CumulativeBasic {
           lb[i] = Math.max(lb[i], Dupd[i]);
         }
       }
-      E[i] = Energy;
+      E[i] = energy;
     }
 
     long minSl = Integer.MAX_VALUE;
