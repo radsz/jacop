@@ -79,7 +79,7 @@ public class NonOverlapping implements ExternalConstraint {
     System.arraycopy(selectedDimensions, 0, this.selectedDimensions, 0, selectedDimensions.length);
     Arrays.sort(this.selectedDimensions);
 
-    objectConstraintMap = null; // TODO: replace by an array/ArrayList
+    objectConstraintMap = null;
     constraints = null;
   }
 

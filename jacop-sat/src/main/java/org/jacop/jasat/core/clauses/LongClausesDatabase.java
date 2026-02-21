@@ -35,10 +35,6 @@ import java.io.BufferedWriter;
 import org.jacop.core.Store;
 import org.jacop.jasat.utils.Utils;
 
-/*
- * TODO : code bcp, and maybe reuse watch node lists in some other databases
- */
-
 /**
  * A pool of long clauses, implemented with two watched an blocking literals to minimize cache
  * misses.
@@ -67,7 +63,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    * @return the unique ID of the added clause
    */
   public int addClause(int[] clause, boolean isModel) {
-    // TODO: reuse empty slots ?
     assert clause.length > 2 * SIZE_OF_CLAUSE_CACHE;
 
     int newIndex = currentIndex++;
@@ -212,10 +207,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    *
    * @param clauseId the unique ID of the clause to remove
    */
-  public void removeClause(int clauseId) {
-    // TODO: Auto-generated method stub
-
-  }
+  public void removeClause(int clauseId) {}
 
   /**
    * Checks if a clause can be removed from the database.
@@ -224,7 +216,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    * @return true if the clause can be removed
    */
   public boolean canRemove(int clauseId) {
-    // TODO: Auto-generated method stub
     return false;
   }
 
@@ -236,7 +227,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    * @return the resulting clause after resolution
    */
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
-    // TODO: Auto-generated method stub
     return null;
   }
 
@@ -245,10 +235,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    *
    * @param level the level to backjump to
    */
-  public void backjump(int level) {
-    // TODO: Auto-generated method stub
-
-  }
+  public void backjump(int level) {}
 
   /**
    * Rates how well this database can handle the given clause.
@@ -271,7 +258,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    * @return the number of clauses
    */
   public int size() {
-    // TODO: Auto-generated method stub
     return 0;
   }
 

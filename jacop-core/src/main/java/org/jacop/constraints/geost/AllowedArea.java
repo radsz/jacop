@@ -44,7 +44,6 @@ import org.jacop.core.Var;
  */
 public class AllowedArea extends InternalConstraint {
 
-  // TODO: What is the reason for using it? What are the limitation of using this solution?
   private static final int HALF_MAX = (Integer.MAX_VALUE - 1) / 2;
 
   final Geost geost;
@@ -93,7 +92,6 @@ public class AllowedArea extends InternalConstraint {
 
   @Override
   public int cardInfeasible() {
-    // TODO: change it to Geost constant, capable of generating outboxes.
     return 10; // non zero since it can generate outboxes
   }
 
@@ -104,32 +102,6 @@ public class AllowedArea extends InternalConstraint {
       GeostObject o,
       int currentShape,
       int[] c) {
-
-    /*
-     * TODO improve this implementation, which is slightly inefficient when c will
-     * need to move next to the allowed area during a sweep. Indeed, this
-     * will cause (at least) 2 steps to be used, but a box could be created
-     * to skip it all in a single step.
-     * This is possible because the sweep direction is provided by the order parameter
-     *
-     * current:
-     *
-     *               |
-     *    ------     ------
-     *    |    |     |    |
-     *    |    |   x |    |
-     * - -------     ------
-     *  x |          |
-     *
-     *  better:
-     *
-     *    |
-     *    ------
-     *    |    |
-     *    |    |
-     *    ------
-     *  x |
-     */
 
     /* we can use the bounding box in this case, since the allowed area
      * is a non complex box

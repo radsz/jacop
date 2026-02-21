@@ -37,7 +37,6 @@ import org.jacop.jasat.utils.Utils;
 
 /*
  * Radek:
- * TODO
  * Math.abs() is quite inefficient implementation,
  * maybe there is some simple bit operation assuming
  * that our ints will not be very close to the limit of int?
@@ -65,7 +64,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
   /**
    * It accepts binary or longer clauses. Should we assume that clauses are at least length 4? Does
-   * it make the code quicker? @TODO efficiency.
+   * it make the code quicker?
    */
   private static final int DEFAULT_INITIAL_NUMBER_OF_CLAUSES = 100;
 
@@ -513,12 +512,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     return null;
   }
-
-  /*
-   * TODO: seriously improve performances. This code has been written to
-   * be correct (because it is not that trivial and it is 2:30AM) but
-   * it probably could be faster.
-   */
 
   /**
    * Assuming i != j, this modifies clause so that the elements that were at position i and j will

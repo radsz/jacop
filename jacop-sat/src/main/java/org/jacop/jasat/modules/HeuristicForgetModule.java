@@ -39,10 +39,6 @@ import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.ForgetListener;
 
-/*
- * TODO : finish the implementation
- */
-
 /**
  * A component that selects clauses to forget when solver.forget() is called. It may also call
  * forget() after a restart. Heuristic is from glucose.
@@ -125,10 +121,6 @@ public final class HeuristicForgetModule
       int lbd = Math.min(computeLbd(explanation), learntClauses.length - 1);
 
       assert lbd > 0 && lbd < learntClauses.length;
-
-      // TODO: try to bind it with the ID of the clause, because it
-      // will be added soon
-      // learntClauses[lbd].add(42);
     }
   }
 
@@ -161,7 +153,6 @@ public final class HeuristicForgetModule
    * @return the LBD of this clause
    */
   private int computeLbd(MapClause clause) {
-    // TODO: compute the number
 
     return 0;
   }

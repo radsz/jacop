@@ -794,7 +794,6 @@ public abstract class FloatDomain extends Domain {
       return Domain.NONE;
     } else {
       setDomain(result);
-      // FIXME, how to setup events for domain extending events?
       return FloatDomain.ANY;
     }
   }
@@ -914,8 +913,6 @@ public abstract class FloatDomain extends Domain {
    *
    * @return valueEnumeration which can be used to enumerate one by one value from this domain.
    */
-
-  /* TODO: Value enumeration for floats */
   public abstract ValueEnumeration valueEnumeration();
 
   /**

@@ -205,7 +205,6 @@ public class Store {
    * imposed with queue index greater or equal this number.
    */
 
-  // TODO: create setQueue function so all data structures are properly updated
   // upon changing the number of queues.
   public int queueNo = 5;
 
@@ -1080,7 +1079,6 @@ public class Store {
       }
     }
 
-    // TODO: added functionality.
     trailManager.removeLevel(level);
 
     for (int i = mutableVariables.size() - 1; i >= 0; i--) {
@@ -1112,7 +1110,6 @@ public class Store {
    */
   public void setLevel(int levelSetTo) {
 
-    // TODO: functionality added.
     trailManager.setLevel(levelSetTo);
 
     if (level == levelSetTo) {

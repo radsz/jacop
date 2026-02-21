@@ -133,13 +133,6 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     this(a, a.domain.lub().toIntArray(), weights, totalWeight);
   }
 
-  // FIXME, TODO, Analyse all set constraints fixpoints.
-
-  // FIXME, TODO, implement also cardinality reasoning for increasingCosts = false.
-  // For example a simple approach could sort weights and ignore elements being removed from lub.
-  // More elaborate approach, sort weights, for each weight keep an element responsible for this
-  // weight.
-  // before considering weight in any calculation check if that element is still in the lub.
   @Override
   public void consistency(Store store) {
 

@@ -45,8 +45,6 @@ import org.jacop.set.core.SetVar;
  */
 public class AinB extends PrimitiveConstraint {
 
-  // FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
-
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
@@ -92,8 +90,6 @@ public class AinB extends PrimitiveConstraint {
 
   @Override
   public void consistency(Store store) {
-
-    // FIXME, take into account strict relation.
 
     if (strict) {
       if (b.domain.isEmpty()) {

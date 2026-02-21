@@ -36,21 +36,6 @@ import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ConflictListener;
 
-/*
- * TODO: some idea about the heuristic:
- * do not decide to restart only depending on some variable and the number of
- * conflicts since the last restart; instead, use some "scheme".
- *
- * This scheme would be :
- * 1) restart often (like, every 500 conflicts) for some
- * number of times N. This aims at finding good activities about literals.
- * 2) Then, perform a long run without restart (or maybe 2 runs ?),
- * to try to reach a solution (too frequent restarts predate termination),
- * like 2000 or 3000 conflicts at most.
- *
- * If it fails, do the same thing with a slightly higher value of N.
- */
-
 /**
  * A module that indicates if a restart would be useful now. Currently based on number of conflicts
  * since last restart. Each restart makes the next restart twice harder to reach.

@@ -660,12 +660,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // constraints
     stillUsefulInternalConstraints = internalConstraints.toArray(new InternalConstraint[0]);
 
-    /*
-     * TODO reuse different scopes if equal so that quadratic use of memory is avoided
-     *
-     * For a moment a simple solution is implemented: simple case where all constraints apply to all objects
-     */
-
     // find out if all constraints apply on the whole collection of objects
     Set<Object> scope = new HashSet<>();
     allLinked = computeAllLinked(scope);
@@ -1310,10 +1304,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       // backtracking data storage
       if (!updatedObjectSet.isEmpty()) {
 
-        // TODO: think of easy way of preventing multiple objects being put to the list at the same
-        // level.
-        // need to create the set for this level
-        // flush last set
         for (GeostObject uo : updatedObjectSet) {
           objectList.add(uo);
         }
@@ -1768,7 +1758,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
   @Override
   public String toString() {
-    // TODO: proper string representation of the constraint.
     return "Geost("
         + Arrays.asList(objects)
         + ", "

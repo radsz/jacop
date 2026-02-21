@@ -43,20 +43,6 @@ import org.jacop.jasat.utils.Utils;
  */
 public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
-  /**
-   * TODO: Radek, just curious.
-   *
-   * <p>how is the conflict raised by this database? how is the propagation done? After clauses are
-   * added, how is the unit propagation taking place?
-   *
-   * <p>=> conflicts are only raised when a clause is added, because either we propagate the only
-   * literal of the clause, either it is false (=> conflict) However, a good question is: what if we
-   * add such a clause at level > 0 and some backjump goes under this level, maybe we should watch
-   * literals after all. ==> FIXME
-   *
-   * <p>Is the addClause a right place to do above? Would it cause troubles for consistency of state
-   * of different components?
-   */
   private static final int INITIAL_SIZE = 100;
 
   // the clauses
@@ -70,9 +56,6 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
   /**
    * Adds a unary clause to the database.
-   *
-   * <p>TODO: Radek, why would you bother with having any code for removal when nothing is being
-   * actually removed. Why not disallow removal altogether and call it StaticUnaryClausesDatabase?
    *
    * @param clause the clause to add (must be of length 1)
    * @param isModel true if this is a model clause

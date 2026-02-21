@@ -131,8 +131,6 @@ public class SinA extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    // TODO: test it properly.
-
     if (set.getSize() > a.domain.lub().getSize() + 1) {
       return;
     }

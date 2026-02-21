@@ -188,8 +188,6 @@ public class Circuit extends Alldiff implements Stateful {
     }
   }
 
-  // @todo, what if there is a small circuit ending with zero, it is not consistent but can be
-  // satisfied.
   // redesign satisfied function since the implementation of alldiff has changed.
   @Override
   public boolean satisfied() {

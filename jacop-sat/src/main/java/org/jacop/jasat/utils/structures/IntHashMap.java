@@ -412,7 +412,6 @@ public final class IntHashMap<E> {
     }
 
     public void remove() {
-      // TODO: verify this more precisely
       IntHashMap.this.remove(current);
     }
 

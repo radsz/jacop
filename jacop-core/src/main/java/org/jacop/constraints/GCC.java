@@ -120,22 +120,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         return 0;
       };
 
-  /**
-   * TODO An improvement to increase the incrementality even further.
-   *
-   * <p>1. The first matching uses minimal values. Remember which minimal value has changed which
-   * removed from the domain the value which was used in the matching. Reuse from old matching 1 all
-   * values smaller than the minimal which has changed.
-   *
-   * <p>Similar principle applies to matching 2 (skip the positions (variables) until the first
-   * index for which m1 did change or for which the m2 value is no longer in the domain.
-   *
-   * <p>2. Use IndexDomainView instead of local solution.
-   *
-   * <p>3. boolean variable first - is it only once in the consistency function? Then this
-   * functionality can be moved out of the while(newPropagation), if it should be executed every
-   * time consistency is executed then (it should be setup to true somewhere).
-   */
   boolean firstConsistencyCheck = true;
 
   TimeStamp<Integer> stamp;

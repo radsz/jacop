@@ -61,30 +61,10 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 /**
- * TODO TraceGenerator should accept as input to constructor a Search object. It should get all the
- * previous listeners and establish itself as the parent of those listeners and substitute them for
- * itself in the search provided. It should ask them to get the proper return value for listener
- * functions which are returning a code.
+ * Trace generator for CPviz visualization of search trees.
  *
- * <p>It should later act as suggested by those listeners. This way there may be no need for
- * checking/informing trace if we search for all solutions or just one.
- *
- * <p>However, on safety side before TraceGenerator object is created and search object passed to it
- * maybe search object should be already properly set.
- *
- * <p>Can we wrap one TraceGenerator within another TraceGenerator? It should be possible.
- *
- * <p>getChoiceVariable in TraceGenerator assumes that the internal select choice point does not
- * return choice point as primitive constraint. It incorrectly assumes that if no variable is given
- * by getChoiceVariable then the search is finished. We need all check that getChoiceConstraint
- * returns false.
- *
- * <p>Can CPviz handle search for Set variables handle correctly 100%? If not maybe we should just
- * make {@code TraceGenerator<T extends IntVar>}?
- *
- * <p>FilterDom should not use string representation of the domain just use Enumeration to get
- * values within domain and create required String. It should be more or less the same what
- * toString() of domain is doing.
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
  */
 @Slf4j
 public class TraceGenerator<T extends Var>
@@ -801,9 +781,6 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", ATTR_PARENT, ATTR_TYPE_CDATA, "" + parentNode);
       atts.addAttribute("", "", "name", ATTR_TYPE_CDATA, name);
       atts.addAttribute("", "", "size", ATTR_TYPE_CDATA, "" + size);
-      // TODO: BUG? Why in the function above generateTrycNode, originally function filter*(dom) was
-      // called and here
-      // our toString() for dom is being called.
       atts.addAttribute("", "", ATTR_CHOICE, ATTR_TYPE_CDATA, "" + dom);
       hdTree.startElement("", "", ELEMENT_FAILC, atts);
       hdTree.endElement("", "", ELEMENT_FAILC);
@@ -979,9 +956,6 @@ public class TraceGenerator<T extends Var>
       return "";
     }
   }
-
-  // TODO: what happens if DepthFirstSearch first evaluates x != v branch before evaluating x = v
-  // branch?
 
   static class SearchNode {
 

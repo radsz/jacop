@@ -39,9 +39,7 @@ package org.jacop.jasat.core.clauses;
  */
 public final class ClauseState {
 
-  /**
-   * TODO, Radek : I would put this in AbstractClausesDatabase as only ClausesDatabases uses this.
-   */
+  /** */
   public static final int UNKNOWN_CLAUSE = 0; // too much non affected literals
 
   public static final int UNSATISFIABLE_CLAUSE = 1; // unsatisfiable clause

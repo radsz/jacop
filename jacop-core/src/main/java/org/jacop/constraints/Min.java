@@ -83,10 +83,6 @@ public class Min extends AbstractMinMax {
       IntVar v;
       IntDomain vDom;
 
-      // @todo keep one variable with the smallest value as watched variable
-      // only check for other support if that smallest value is no longer part
-      // of the variable domain.
-
       int minValue = IntDomain.MAX_INT;
       int maxValue = IntDomain.MAX_INT;
 

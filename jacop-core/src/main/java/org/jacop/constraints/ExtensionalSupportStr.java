@@ -140,7 +140,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
    */
   private boolean backtrackOccured;
 
-  // FIXME, remove the need for this attribute.
   Store store;
   // for each variable computes the domain as given by all tuples.
   IntervalDomain[] valuesInFocus;

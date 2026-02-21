@@ -112,7 +112,6 @@ public class SimpleCpVarDomain extends SatCpBridge {
     int varIdx = Math.abs(literal);
 
     return ((varIdx - firstVar) & 0x1) == 0; // modulo 2
-    // TODO: later, use parity (be sure the equality literal is even)
   }
 
   @Override

@@ -360,7 +360,6 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         System.arraycopy(currentlyChanged.dense, 0, trailLevel, 0, currentlyChanged.members);
         trail.add(trailLevel);
       } else {
-        // @TODO: later implement intervals functionality.
         if (!currentlyChanged.isEmpty()) {
           trail.add(fullLevel);
         } else {

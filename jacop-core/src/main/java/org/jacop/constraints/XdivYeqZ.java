@@ -70,7 +70,6 @@ public class XdivYeqZ extends AbstractXopYeqZ {
 
       store.propagationHasOccurred = false;
 
-      // @todo, why remainderMin does not depend on z.min? the same for remainderMax.
       if (x.min() >= 0) {
         reminderMin = 0;
         reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;

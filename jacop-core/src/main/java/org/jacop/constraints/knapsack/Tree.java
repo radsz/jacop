@@ -504,7 +504,6 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
-      // @TODO: commented out below
       // currentWeight += (int) Math.floor( lastWeight );
 
     } else {
@@ -515,7 +514,6 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
-      // @TODO: commented out below
       // currentWeight += (int) Math.floor( lastWeight );
     }
     return currentWeight + (int) Math.ceil(lastWeight);

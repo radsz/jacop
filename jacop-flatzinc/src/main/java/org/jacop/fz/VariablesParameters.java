@@ -51,9 +51,6 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * TODO, a short description what it does and how it is used. Remark, it would be beneficial if all
- * the methods were described, like generateParameters(...) below.
- *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */

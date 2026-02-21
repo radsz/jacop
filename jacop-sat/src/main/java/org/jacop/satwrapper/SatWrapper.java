@@ -66,15 +66,6 @@ import org.jacop.satwrapper.translation.DomainTranslator;
 import org.jacop.satwrapper.translation.SatCpBridge;
 import org.jacop.satwrapper.translation.SimpleCpVarDomain;
 
-/*
- * Global TODO:
- * - special database for AllDifferent constraint (efficient propagation without
- * a clique of n^2 clauses to represent difference on n variables). To explain
- * propagations, this database could use a bijection f from NxN to N, in order
- * to be able to retrieve the assertion 'x!=y' from f(x,y) to get efficient
- * resolution (and hence learning).
- */
-
 /**
  * Wrapper to communicate between SAT solver and CP solver. It listens for SAT conflicts, so that it
  * can force the CP solver to backtrack until the conflict is resolved in SAT. It listens to
@@ -109,10 +100,6 @@ public final class SatWrapper extends Constraint
   // association from CP variables to boolean variables
   // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
   // new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
-  // TODO: find more efficient ? hard, because IntVar has no unique ID
-  /*
-   * TODO : a way to add those only if needed
-   */
   // keep track of literals activity, and give search advices (optional)
   public ActivityModule activity;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
@@ -286,7 +273,6 @@ public final class SatWrapper extends Constraint
       core.unitPropagate();
     }
 
-    // TODO: some flag to disable queueVariable() during propagation ?
     // XXX NOTE : remember to set this flag to false in case of conflict
 
     /*
@@ -356,8 +342,6 @@ public final class SatWrapper extends Constraint
   /** Adds one level for SAT side, and remembers the association between CP and SAT levels. */
   private void addSatLevel() {
     currentSatLevel++;
-
-    // TODO: inline the resizing of arrays
 
     // store the associations
     cpToSatLevels = Utils.ensure(cpToSatLevels, store.level);

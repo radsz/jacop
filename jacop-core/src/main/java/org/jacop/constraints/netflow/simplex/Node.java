@@ -61,7 +61,7 @@ public final class Node {
 
   // we use the parent-thread-depth data structure to store the spanning tree
   public Arc toParent;
-  public Node parent; // TODO: useful (?) redundancy: parent == toParent.head
+  public Node parent;
   public Node thread;
   public int depth;
 
@@ -171,7 +171,6 @@ public final class Node {
    * @return string describing the node with its balance, delta, and potential.
    */
   public String toString() {
-    // TODO: only for debugging, otherwise we would use StringBuilder
     return "[node: "
         + name
         + ", balance="

@@ -100,11 +100,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
 
-  /**
-   * Queue of changed variables. TODO try to use PriorityQueue based on the number of states for a
-   * given variable or a domain size to pickup first variables which may result in failure faster.
-   * It does not have to be fully correct ordering.
-   */
+  /** Queue of changed variables. */
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   /**
@@ -616,7 +612,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    *
    * @param sucPrevLimit previous number of states at a given level.
    * @param level level for which the backward sweep is computed.
-   * @return level at which the sweep has ended. TODO return value is not used.
+   * @return level at which the sweep has ended.
    */
   public int unreachBackwardLoop(int sucPrevLimit, int level) {
 
@@ -663,8 +659,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /**
    * Forward part deletes the outgoing edges of the damaged state and watch whether the successors
    * are still active (in-degree {@literal >} 0 ), otherwise we collect it and continue the loop.
-   *
-   * <p>TODO return value is not used.
    *
    * @param end the position of the last active state at a given level.
    * @param level level being examined.
@@ -719,7 +713,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             // changed to directl disableState(int, int).
             assert suc.level == level + 1;
             disableState(level + 1, suc.pos);
-            // @todo levelHasChanged[level+1] = true
             cont = true;
           }
         }

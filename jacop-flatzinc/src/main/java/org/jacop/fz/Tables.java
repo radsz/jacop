@@ -271,7 +271,6 @@ public class Tables {
    * @param array the array being stored.
    */
   public void addIntArray(String ident, int[] array) {
-    // TODO: asserts to prevent multiple array being put with the same identity?
     // already exists ";
     intArrayTable.put(ident, array);
   }
@@ -333,7 +332,6 @@ public class Tables {
    * @param array the float array being stored
    */
   public void addFloatArray(String ident, double[] array) {
-    // TODO: asserts to prevent multiple array being put with the same identity?
     // already exists ";
     floatArrayTable.put(ident, array);
   }

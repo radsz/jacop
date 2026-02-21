@@ -234,7 +234,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       }
 
       // process changes on s-variable
-      // TODO: already done by queue variable ?
       if (updated) {
         structure.processEvent(structure.variable, network);
       }

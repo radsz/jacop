@@ -34,9 +34,6 @@ import java.util.Iterator;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 
-// TODO: test default function which use sparse (dense) representation. Default code if
-// domain is neither Interval nor Bound domain.
-
 /**
  * Defines interval of numbers which is part of FDV definition which consist of one or several
  * intervals.
@@ -46,9 +43,6 @@ import org.jacop.constraints.Constraint;
  */
 @Slf4j
 public class IntervalDomain extends IntDomain {
-
-  // FIXME, implement all already implemented functions from IntDomain
-  // so it is more efficient, for example public int lex(IntDomain s).
 
   /** An empty domain, so no constant creation of empty domains is required. */
   public static final IntervalDomain emptyDomain = new IntervalDomain(0);
@@ -191,7 +185,6 @@ public class IntervalDomain extends IntDomain {
 
   /** Empty constructor, does not initialize anything. */
   public IntervalDomain() {
-    // FIXME, check what is calling it and maybe remove some inappropriate callers.
     this(0);
   }
 
@@ -257,7 +250,6 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void unionAdapt(Interval i) {
 
-    // TODO: Move all check invariant code into Aspect CheckInvariants.
     assert checkInvariants() == null : checkInvariants();
 
     ensureCapacity();
@@ -374,14 +366,12 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int unionAdapt(IntDomain union) {
 
-    // FIXME, implement this in more specialized manner.
     IntDomain result = union(union);
 
     if (result.getSize() == getSize()) {
       return NONE;
     } else {
       setDomain(result);
-      // FIXME, how to setup events for domain extending events?
       return ANY;
     }
   }
@@ -632,9 +622,6 @@ public class IntervalDomain extends IntDomain {
 
     IntervalDomain cloned = new IntervalDomain(this.intervals.length);
 
-    // FIXME, use empty constructor and use the line below.
-    // cloned.intervals = new Interval[this.intervals.length];
-
     System.arraycopy(intervals, 0, cloned.intervals, 0, size);
 
     cloned.size = size;
@@ -673,8 +660,6 @@ public class IntervalDomain extends IntDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    // FIXME, check that FD(int) part does not assume to have different
-    // answers to this input conditions.
     if (isEmpty()) {
       return domain.isEmpty();
     }
@@ -682,8 +667,6 @@ public class IntervalDomain extends IntDomain {
     if (domain.isEmpty()) {
       return true;
     }
-
-    // TODO: CRUCIAL implement SmallDenseDomain case.
 
     if (domain.isSparseRepresentation()) {
 
@@ -861,8 +844,6 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
-      // TODO: CRUCIAL, create special code for SmallDenseDomain.
-
       return domain.eq(this);
     }
 
@@ -915,8 +896,6 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
-      // TODO: CRUCIAL implement proper SmallDenseDomain case.
-
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       return this.intersect(input.toIntervalDomain());
@@ -926,7 +905,6 @@ public class IntervalDomain extends IntDomain {
       return intersectFromSparse(domain);
     } else {
 
-      // TODO: check correctness.
       IntervalDomain temp = new IntervalDomain(size);
 
       int pointer1 = 0;
@@ -1317,7 +1295,6 @@ public class IntervalDomain extends IntDomain {
       return subtractFromSparse(domain);
     } else {
 
-      // TODO: Check.
       if (domain.noIntervals() == 0) {
         return cloneLight();
       }
@@ -1592,7 +1569,6 @@ public class IntervalDomain extends IntDomain {
     if (domain.isSparseRepresentation()) {
       return unionFromSparse(domain);
     } else {
-      // TODO: work with dense domain
 
       if (domain.noIntervals() == 0) {
         return cloneLight();
@@ -1812,7 +1788,6 @@ public class IntervalDomain extends IntDomain {
     return result;
   }
 
-  // TODO: write Junit tests.
   @Override
   public IntDomain union(int value) {
 
@@ -2259,7 +2234,6 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    // TODO: test special code for SmallDenseDomain.
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -2549,8 +2523,6 @@ public class IntervalDomain extends IntDomain {
 
     return intervals[position];
   }
-
-  // TODO: check and test inComplement below.
 
   @Override
   public void inComplement(int storeLevel, Var v, int complement) {
@@ -3230,7 +3202,6 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    // TODO: Test SmallDenseDomain input.
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -3912,8 +3883,6 @@ public class IntervalDomain extends IntDomain {
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      // TODO: use contains.
 
       if (input.isEmpty()) {
         size = 0;

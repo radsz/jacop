@@ -43,10 +43,6 @@ import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.PropagateListener;
 import org.jacop.satwrapper.translation.SatCpBridge;
 
-/*
- * TODO: many efficiency improvements!!!
- */
-
 /**
  * This class listens to changes in literals in SAT solver, and reminds what changes this implies
  * for CP variables.
@@ -84,8 +80,6 @@ public final class SatChangesListener
   /** Clears all sets, so that elements occurring in them later result only from later events. */
   public void clear() {
     assert lowerBounds.length == upperBounds.length;
-
-    // TODO: optimize clear(), which is often called
 
     Arrays.fill(upperBounds, null);
     Arrays.fill(lowerBounds, null);

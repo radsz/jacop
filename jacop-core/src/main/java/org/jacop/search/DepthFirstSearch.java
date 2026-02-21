@@ -58,7 +58,6 @@ import org.jacop.core.Var;
 @Slf4j
 public class DepthFirstSearch<T extends Var> implements Search<T> {
 
-  // @todo make DEBUG_ALL be used in printing statements.
   static final boolean DEBUG_ALL = true;
   static final AtomicInteger no = new AtomicInteger(0);
 

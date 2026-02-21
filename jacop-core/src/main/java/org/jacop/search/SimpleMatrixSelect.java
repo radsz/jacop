@@ -52,7 +52,6 @@ import org.jacop.core.Var;
  */
 public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
-  /// TODO: implement subListSize functionality or remove it from the description.
   static final boolean DEBUG_ALL = false;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
@@ -172,8 +171,6 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    * which have been return by this SelectChoicePoint object which has not been backtracked upon
    * yet.
    */
-
-  // @todo is this specialtiebreaking (lexdynamic actually employed)?
   public T getChoiceVariable(int firstVariable) {
 
     assert searchVariables.size() > firstVariable

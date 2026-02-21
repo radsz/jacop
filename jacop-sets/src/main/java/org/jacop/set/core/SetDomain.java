@@ -377,7 +377,6 @@ public abstract class SetDomain extends Domain {
 
     Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
-    // FIXME, do not create a new array every time a new constraint is attached.
     if (pruningEventConstraints != null) {
 
       boolean alreadyImposed = false;
@@ -812,7 +811,6 @@ public abstract class SetDomain extends Domain {
    *
    * @return the number of constraints attached to this domain.
    */
-  // FIXME, how to deal with repeated constraints without penalty hit.
   public int noConstraints() {
     return searchConstraintsToEvaluate
         + modelConstraintsToEvaluate[GROUND]

@@ -56,8 +56,6 @@ public class AintersectBeqC extends AbstractSetOpBeqC {
     super(idNumber, a, b, c);
   }
 
-  // FIXME, TODO, implement cardinality reasoning as specified in the comments.
-
   @Override
   protected void propagateOperation(
       Store store, boolean aHasChanged, boolean bHasChanged, boolean cHasChanged) {

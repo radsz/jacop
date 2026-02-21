@@ -79,10 +79,6 @@ public interface ExternalConstraint {
    * object changes. For instance, in the case of the non-overlapping constraint, these would be the
    * objects that are close to the given object.
    *
-   * <p>TODO, optimize all the code around this functionality, avoid situation when accumulator has
-   * all objects anyway and external constraints are continuously queried to add objects and keep
-   * adding objects which are already in the set.
-   *
    * @param o the object that was pruned
    * @param accumulator the set of objects to add the object to
    * @return true if a value was added, false otherwise

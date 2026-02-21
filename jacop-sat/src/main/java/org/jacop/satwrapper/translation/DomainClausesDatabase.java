@@ -68,7 +68,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   // sat wrapper
   private SatWrapper wrapper;
 
-  // cache of literals we do not need to check (TODO: replace by IntSet ?)
+  // cache of literals we do not need to check
   // private BitSet ignoreCache = new BitSet();
 
   // for each literal propagated by this database, the asserted literal that
@@ -116,7 +116,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
      */
 
     // clause index to give as an explanation for this propagation
-    int clauseIndex = trail.size(); // TODO: faster?
+    int clauseIndex = trail.size();
     int clauseId = indexToUniqueId(clauseIndex);
     int varIdx = Math.abs(literal);
 
@@ -160,7 +160,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       propagationCauses[varIdx] = assertedLiteral;
 
       // invariant : the explanation is equal to the depth in trail stack
-      // FIXME : check it
       assert trail.assertionStack.array[clauseIndex] == varIdx;
       assert trail.values[varIdx] == literal;
       assert clauseId == trail.getExplanation(varIdx);
@@ -222,7 +221,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
   @Override
   public int size() {
-    // TODO: compute the number of clauses that *would* be needed
     return 0; // 0 clauses, always !
   }
 
@@ -257,7 +255,5 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     if (!wrapper.registeredVars.equals(wrapper.domainTranslator.translatedVars)) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-
-    // TODO: perform translation for toCNF operation only.
   }
 }

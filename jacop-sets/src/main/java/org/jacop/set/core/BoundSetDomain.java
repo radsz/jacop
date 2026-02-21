@@ -53,7 +53,6 @@ public class BoundSetDomain extends SetDomain {
   /** It specifies an empty set domain. */
   public static final SetDomain EMPTY = emptyDomain;
 
-  // FIXME do not use emptySet to assign to lub, glb.
   /** The greatest lower bound of the domain. */
   public IntDomain glbDomain;
 
@@ -232,7 +231,6 @@ public class BoundSetDomain extends SetDomain {
     this.lubDomain = lub.cloneLight();
     this.cardDomain = new IntervalDomain(glb.getSize(), lub.getSize());
 
-    // TODO: test the replacement of intervaldomain when possible by SmallDenseDomain.
     // this.cardDomain = new SmallDenseDomain(glb.getSize(), lub.getSize());
 
     initCommonFields();
@@ -355,7 +353,6 @@ public class BoundSetDomain extends SetDomain {
    * @return return a clone of the domain. It aims at getting domain of the proper class type.
    */
   public SetDomain cloneLight() {
-    // FIXME, why no glb and lub cloning is safe?
     return new BoundSetDomain(glbDomain, lubDomain, cardDomain);
   }
 
@@ -365,9 +362,6 @@ public class BoundSetDomain extends SetDomain {
    * @return it returns the complement of this domain.
    */
   public SetDomain complement() {
-    // FIXME, is it right?
-    // FIXME, it is not possible to express the complement of the set interval using just one set,
-    // right?
     return new BoundSetDomain(this.lubDomain.complement(), this.glbDomain.complement());
   }
 
@@ -622,7 +616,6 @@ public class BoundSetDomain extends SetDomain {
    *
    * @return true if the given domain intersects this domain.
    */
-  // FIXME, improve the implementation.
   public boolean isIntersecting(SetDomain domain) {
     return !this.intersect(domain).isEmpty();
   }
@@ -634,7 +627,6 @@ public class BoundSetDomain extends SetDomain {
    * @param max the right bound of the interval (inclusive)
    * @return the intersection between the specified interval and this domain.
    */
-  // FIXME, improve the implementation.
   public boolean isIntersecting(int min, int max) {
     return lubDomain.isIntersecting(new IntervalDomain(min, max));
   }
@@ -681,15 +673,13 @@ public class BoundSetDomain extends SetDomain {
     this.lubDomain = domain.lub();
   }
 
-  /** It sets the domain to the the set {min..max}. It grounds it. FIXME should it be grounded? */
+  /** It sets the domain to the the set {min..max}. It grounds it. */
   public void setDomain(int min, int max) {
 
     assert (min <= max);
-    // FIXME, BUG?
     this.lubDomain = new IntervalDomain(min, max);
     this.glbDomain = new IntervalDomain();
 
-    // FIXME, remove after checking.
     throw new RuntimeException("check that the caller of this function is using it as intended.");
   }
 
@@ -767,8 +757,7 @@ public class BoundSetDomain extends SetDomain {
   }
 
   /**
-   * It subtracts the set {value}. FIXME, it does not subtract set {value}, it subtracts value from
-   * the set domain.
+   * It subtracts value from the set domain.
    *
    * @return the result of the subtraction.
    */
@@ -843,7 +832,6 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(int min, int max) {
 
-    // FIXME, why not max >= min?
     assert max > min : "min value is larger than max value";
 
     IntDomain glbResult = glbDomain.union(min, max);
@@ -1007,7 +995,6 @@ public class BoundSetDomain extends SetDomain {
 
       assert stamp < level;
 
-      // FIXME, allow specification of the sets in parts, so no unnecessary copying occur.
       BoundSetDomain result = new BoundSetDomain(set, set);
       result.cardDomain = new IntervalDomain(set.getSize(), set.getSize());
 

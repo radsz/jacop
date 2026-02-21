@@ -568,7 +568,6 @@ public final class Core implements SolverComponent {
       triggerForgetEvent();
     }
 
-    // FIXME: is this correct? I guess so, but...
     triggerIdleEvent();
   }
 
@@ -678,7 +677,6 @@ public final class Core implements SolverComponent {
 
   /** Prints the current solution on standard output. */
   public void printSolution() {
-    // TODO: clean it (factor code, avoid repetition)
 
     assert hasSolution();
     IO.println("s " + SolverState.show(currentState));

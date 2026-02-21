@@ -127,7 +127,6 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     gNo.setSize(gNoSize.value());
 
-    // TODO: initialize notSupportedIndexesYes to 0..domainLimits
     for (IndexDomainView indexDomainView : views) {
       indexDomainView.intializeSupportSweep();
     }
@@ -224,4 +223,6 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     return result.toString();
   }
+}
+
 }

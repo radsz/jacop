@@ -39,9 +39,6 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
-// TODO: test default function which use sparse (dense) representation. Default code if
-// domain is neither Interval nor Bound domain.
-
 /**
  * Defines interval of numbers which is part of FDV definition which consist of one or several
  * intervals.
@@ -50,9 +47,6 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class FloatIntervalDomain extends FloatDomain {
-
-  // FIXME, implement all already implemented functions from IntDomain
-  // so it is more efficient, for example public int lex(IntDomain s).
 
   /** An empty domain, so no constant creation of empty domains is required. */
   public static final FloatIntervalDomain emptyDomain = new FloatIntervalDomain(0);
@@ -561,7 +555,6 @@ public class FloatIntervalDomain extends FloatDomain {
 
   /** Empty constructor, does not initialize anything. */
   public FloatIntervalDomain() {
-    // FIXME, check what is calling it and maybe remove some inappropriate callers.
     this(0);
   }
 
@@ -624,7 +617,6 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void unionAdapt(FloatInterval i) {
 
-    // TODO: Move all check invariant code into Aspect CheckInvariants.
     assert checkInvariants() == null : checkInvariants();
 
     if (size == intervals.length) {
@@ -745,14 +737,12 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public int unionAdapt(FloatDomain union) {
 
-    // FIXME, implement this in more specialized manner.
     FloatDomain result = union(union);
 
     if (((FloatIntervalDomain) result).getSizeFloat() == getSizeFloat()) {
       return Domain.NONE;
     } else {
       setDomain(result);
-      // FIXME, how to setup events for domain extending events?
       return IntDomain.ANY;
     }
   }
@@ -884,9 +874,6 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain cloned = new FloatIntervalDomain(this.intervals.length);
 
-    // FIXME, use empty constructor and use the line below.
-    // cloned.intervals = new Interval[this.intervals.length];
-
     System.arraycopy(intervals, 0, cloned.intervals, 0, size);
 
     cloned.size = size;
@@ -930,8 +917,6 @@ public class FloatIntervalDomain extends FloatDomain {
 
     assert checkInvariants() == null : checkInvariants();
 
-    // FIXME, check that FD(int) part does not assume to have different
-    // answers to this input conditions.
     if (isEmpty()) {
       return domain.isEmpty();
     }
@@ -2436,8 +2421,6 @@ public class FloatIntervalDomain extends FloatDomain {
     result.size = size + 1;
   }
 
-  // TODO: check and test inComplement below.
-
   private void notifyInComplementRangeEvent(Var v, boolean isSingleton, boolean boundChange) {
     if (isSingleton) {
       v.domainHasChanged(IntDomain.GROUND);
@@ -2729,8 +2712,6 @@ public class FloatIntervalDomain extends FloatDomain {
     assert (stamp == storeLevel);
 
     int i = 0;
-
-    // TODO: improve by using interval find function.
 
     while (i < searchConstraintsToEvaluate) {
       if (searchConstraints.get(i) == constraint) {

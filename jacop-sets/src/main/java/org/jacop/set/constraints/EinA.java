@@ -99,7 +99,6 @@ public class EinA extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    // FIXME, TODO, check notConsistency() functions in other set constraints.
     a.domain.inLubComplement(store.level, a, element);
   }
 

@@ -485,7 +485,6 @@ public class Knapsack extends Constraint
 
     assert checkInvariants();
 
-    // @TODO: possibly redundant check, going from the root.
     restrictItemQuantity(store, tree.root, knapsackCapacity.max() - tree.alreadyUsedCapacity);
 
     if (needUpdate) {
@@ -561,7 +560,6 @@ public class Knapsack extends Constraint
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
     //         tree.alreadyObtainedProfit - knapsackProfit.min();
-    // @TODO, check that lack of safe rounding (ceil) is not a problem
     // rounding errors may suggest that there is too little slack for an item.
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
 
@@ -625,8 +623,6 @@ public class Knapsack extends Constraint
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
     //         tree.alreadyObtainedProfit - knapsackProfit.min();
-    // @todo Test, that there is no rounding errors due to using double for
-    // profitSlack and not safe ceil(profitSlack).
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
 
     while (true) {

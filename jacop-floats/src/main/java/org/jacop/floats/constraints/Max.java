@@ -99,9 +99,6 @@ public class Max extends Constraint implements SatisfiedPresent {
 
       store.propagationHasOccurred = false;
 
-      // @todo, optimize, if there is no change on min.min() then
-      // the below inMin does not have to be executed.
-
       double minValue = FloatDomain.MIN_FLOAT;
       double maxValue = FloatDomain.MIN_FLOAT;
 

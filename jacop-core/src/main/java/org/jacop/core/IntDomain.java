@@ -44,9 +44,6 @@ import org.jacop.constraints.Constraint;
  */
 public abstract class IntDomain extends Domain {
 
-  // FIXME, implement as much as possible in general (inefficient) manner, but
-  // it will allow new IntDomain to quickly be employed within a solver.
-
   /** It specifies the minimum element in the domain. */
   public static final int MIN_INT = -536_870_910; // Integer.MIN_VALUE/4 + 2
 
@@ -440,7 +437,6 @@ public abstract class IntDomain extends Domain {
       return NONE;
     } else {
       setDomain(result);
-      // FIXME, how to setup events for domain extending events?
       return ANY;
     }
   }
@@ -1249,8 +1245,6 @@ public abstract class IntDomain extends Domain {
     assert stamp == storeLevel;
 
     int i = 0;
-
-    // TODO: improve by using interval find function.
 
     while (i < searchConstraintsToEvaluate) {
       if (searchConstraints.get(i) == c) {

@@ -45,8 +45,6 @@ import org.jacop.core.Var;
  * in case of domains with holes, when using the event point series to prune the set of internal
  * constraints
  *
- * <p>TODO implement outbox generation for time (if feasible)
- *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 5.0
  */

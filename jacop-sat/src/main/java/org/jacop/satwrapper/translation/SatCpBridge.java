@@ -36,10 +36,6 @@ import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
 
-/*
- * TODO: replace this by something embedded *inside* the CP variable itself
- */
-
 /**
  * Interface representing the domain of a CP variable as a range. It is used to provide literals to
  * represent assertions like 'X = v' or 'X{@literal <=} v' where X is the CP variable and v a value

@@ -47,7 +47,6 @@ public class OutputArrayAnnotation {
 
   final String id;
 
-  // TODO: ArrayList of Sets? Why? Is a set needed? Maybe just IntervalDomain suffices?
   final ArrayList<IntDomain> indexes;
   Var[] array;
 

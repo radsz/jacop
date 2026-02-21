@@ -45,28 +45,16 @@ import org.jacop.core.Var;
  * This version of the ObstacleObject internal constraint allows the use of multiple d-boxes per
  * shape.
  *
- * <p>TODO, description explaining how it works, what is it good for, etc...
- *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 5.0
  */
 public class ObstacleObjectFrame extends InternalConstraint {
-
-  // TODO: introduce boolean switch computeArea(Precisely) which if is set to false will not compute
-  // the area at all or precisely.
-  // Possibly, useful to set to 1 if greater than 1 and to 0 if empty.
-
-  // TODO: use << 2, instead of *4. Explain precisely why this scalling was needed in the first
-  // place.
 
   static final boolean DISPLAY_FRAME = false;
 
   // Non-static: set from instance method computeFrame; shared-display concerns are handled
   // externally.
   BoxDisplay display;
-
-  // TODO: remove if not needed anymore, or better separate from other code by putting it inside
-  // functions.
 
   /** It specifies the geost constraint to which this internal constraint belongs to. */
   final Geost geost;

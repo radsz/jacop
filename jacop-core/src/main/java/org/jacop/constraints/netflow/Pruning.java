@@ -222,8 +222,6 @@ public class Pruning extends Network {
   }
 
   void pruneNodesWithSmallDegree() {
-    // TODO: filter arcs with x-variables first ?
-    // It should work on fixpoint principle, so there is propagation in the chain of 2-degree nodes.
     for (Node node : nodes) {
       if (node.degree == 1) {
         pruneDegree1Node(node);

@@ -81,10 +81,6 @@ public final class ConflictLearning implements SolverComponent {
       }
     }
 
-    /*
-     * TODO: see if iterating over the clause would be more efficient
-     */
-
     // default case
     return 0;
   }
@@ -123,11 +119,6 @@ public final class ConflictLearning implements SolverComponent {
 
       startingPosition = lastLiteralPosition - 1;
     }
-
-    /*
-     * TODO : if the resulting clause is too complicated, use subsumption
-     * to get a simpler clause ?
-     */
   }
 
   /**
@@ -138,7 +129,6 @@ public final class ConflictLearning implements SolverComponent {
    * @return the last set literal of the clause, at current level, or 0 if none has been found
    */
   private int findPositionTopLiteral(MapClause explanationClause, int level, int startingPosition) {
-    // TODO: improve perfs.
 
     for (int i = startingPosition; i >= 0; i--) {
       int varIdx = trail.assertionStack.array[i];

@@ -1039,7 +1039,6 @@ class BoundDomain extends IntDomain {
     return this.minBound + index;
   }
 
-  // TODO: test it.
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 

@@ -59,11 +59,6 @@ public abstract class InternalConstraint {
    * lexicographically largest (resp. smallest) point included in the forbidden area, whatever the
    * lexical order is.
    *
-   * <p>TODO, is this function potentially still useful? If not remove, if yes then adapt the
-   * description about event point series. What is it used now for? I will keep it as it may be used
-   * later on, but for sure the code implementing those functions is not tested much or requires
-   * some cleaning.
-   *
    * <p>This allows to build an event point series that stays consistent whatever the lexical order
    * is, and whatever the object to place is (some shifting is applied to take the object's shape
    * into account)
@@ -82,26 +77,19 @@ public abstract class InternalConstraint {
    * same outboxes deeper in the tree, it should return false, so that jumps in the event point
    * series can be done.
    *
-   * <p>TODO the description above suggests that it should be called isDynamic as it returns false
-   * if the constraint outboxes stay the same.
-   *
    * <p>(not taking placed object into account; i.e. absInfeasible will always return the same
    * points)
    *
-   * @return TODO, proper description after fixing the above todo.
+   * @return true if the constraint outboxes may change, false if they stay the same
    */
   public abstract boolean isStatic();
 
   /**
    * In some cases, a constraint is used only once per sweep direction on a path from root to leaf
    * in the search tree. In that case, the constraint can be ignored if it was seen at some point.
+   * Use this function to provide the information to Geost.
    *
-   * <p>TODO, what is the example of such constraint?
-   *
-   * <p>Use this function to provide the information to Geost.
-   *
-   * @return TODO. Is this function used at all? It seems that all implementations return false and
-   *     nowhere in geost it is used.
+   * @return true if the constraint is single-use per sweep path, false otherwise
    */
   public abstract boolean isSingleUse();
 

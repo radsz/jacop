@@ -163,8 +163,6 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
     variableQueue.add((IntVar) v);
   }
 
-  // TODO: raiseLevelBeforeConsistency may not be needed by this constraint.
-
   /**
    * It seeks support for a given variable-value pair.
    *

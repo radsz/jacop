@@ -87,7 +87,6 @@ public class XplusYeqC extends AbstractConstraintXandY {
 
       store.propagationHasOccurred = false;
 
-      // FIXME, make propagation without object creation, scan x ->, and y <-, at the same time.
       IntDomain xDom = x.dom();
       IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
       for (int i = xDom.noIntervals() - 1; i >= 0; i--) {

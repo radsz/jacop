@@ -88,7 +88,6 @@ public abstract class Domain {
    * It specifies the level of this domain, which specifies at which store level it was created and
    * used. The domain is only valid (used) at a store level equal domain stamp.
    */
-  // TODO: change stamp name to level in ALL places, e.g. setStamp(int) too.
   @Setter public int stamp;
 
   /** It removes all elements. */

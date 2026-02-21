@@ -135,11 +135,6 @@ public final class Utils {
     }
   }
 
-  /*
-   * TODO: try to replace arithmetic negation by this var(), not() methods
-   * (which should be faster) about representation of signed literals
-   */
-
   /**
    * Ensures the array of HashSets has at least the given size, resizing if necessary.
    *

@@ -94,7 +94,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   // All variables attributes
   private Map<IntVar, Integer> xIndex;
   private Map<IntVar, Integer> yIndex;
-  // FIXME, check if timestamp over IntervalDomain is not better/cleaner.
   private MutableVar lbS;
   private MutableVar futureLbS;
   // Time stamps

@@ -223,7 +223,6 @@ public final class Arc {
   /** {@inheritDoc} */
   public String toString() {
 
-    // TODO: only for debugging, otherwise we would use StringBuilder
     Node tail = tail();
     int flow = sister.capacity;
     int total = capacity + flow;
@@ -253,7 +252,6 @@ public final class Arc {
    * @return a string showing tail, head, flow, capacity, and cost details.
    */
   public String toFlow() {
-    // TODO: only for debugging, otherwise we would use StringBuilder
     Node tail = tail();
     int flow = sister.capacity;
     int total = capacity + flow;

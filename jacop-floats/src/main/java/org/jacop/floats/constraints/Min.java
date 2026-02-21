@@ -93,16 +93,9 @@ public class Min extends Constraint implements SatisfiedPresent {
     FloatVar v;
     FloatDomain vDom;
 
-    // @todo keep one variable with the smallest value as watched variable
-    // only check for other support if that smallest value is no longer part
-    // of the variable domain.
-
     do {
 
       store.propagationHasOccurred = false;
-
-      // @todo, optimize, if there is no change on min.min() then
-      // the below inMin does not have to be executed.
 
       double minValue = FloatDomain.MAX_FLOAT;
       double maxValue = FloatDomain.MAX_FLOAT;

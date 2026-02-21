@@ -74,7 +74,6 @@ public class NetworkSimplex {
   public final Arc[] lower;
   // the set of nodes with non-zero balance
   public final Set<Node> infeasibleNodes;
-  // TODO: convenience or overhead ?
   public final List<Arc> allArcs;
   protected final PivotRule pivotRule;
   public int numArcs;
@@ -145,8 +144,6 @@ public class NetworkSimplex {
   }
 
   private void incrementDegree(Node node, Arc myArc) {
-
-    // TODO: CRUCIAL, BUG?, assert removed.
 
     if (node.degree < 2) {
       node.adjacencyList[node.degree] = myArc.forward ? myArc : myArc.sister;
@@ -469,9 +466,7 @@ public class NetworkSimplex {
   }
 
   /**
-   * TODO prove (or disprove) correctness (and efficiency).
-   *
-   * <p>Both arcs must form a cycle in the tree and point in the same direction on that cycle.
+   * Both arcs must form a cycle in the tree and point in the same direction on that cycle.
    *
    * @param leaving the tree arc that leaves the tree
    * @param entering the non-tree arc that enters the tree
@@ -535,12 +530,8 @@ public class NetworkSimplex {
   }
 
   /**
-   * TODO prove (or disprove) correctness.
-   *
-   * <p>TODO can be 'inlined' in updateTree (but that would decrease readability)
-   *
-   * <p>Changes the parent of a node and updates the thread data structure (This operation
-   * invalidates the depth values in the subtree)
+   * Changes the parent of a node and updates the thread data structure (This operation invalidates
+   * the depth values in the subtree)
    *
    * <p>Runs in O(T2) amortized time over all treeSwaps performed by an updateTree operation where
    * T2 is the size of the subtree that is being reversed.
@@ -569,9 +560,6 @@ public class NetworkSimplex {
    * Given an optimal flow that satisfies all feasibility constraints except mass balance on two
    * nodes, the parametric simplex algorithm tries to achieve feasibility while keeping the solution
    * optimal.
-   *
-   * <p>TODO do more tests TODO test whether non-feasibility can actually be detected due to the
-   * fact that we have 'artificial' arcs going to the root.
    *
    * @param source source node
    * @param sink sink node
@@ -609,7 +597,7 @@ public class NetworkSimplex {
       if (dualPivot(this.blocking)) {
         pivots++;
       } else {
-        return -2; // infeasible, TODO define error code or exception
+        return -2; // infeasible
       }
 
       // Augment flow

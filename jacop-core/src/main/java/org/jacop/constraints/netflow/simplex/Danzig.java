@@ -60,8 +60,5 @@ public record Danzig(NetworkSimplex network) implements PivotRule {
   }
 
   /** It resets the Danzig pivot selector. */
-  public void reset() {
-    // TODO: Auto-generated method stub
-
-  }
+  public void reset() {}
 }

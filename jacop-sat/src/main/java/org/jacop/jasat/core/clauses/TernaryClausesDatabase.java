@@ -44,8 +44,6 @@ import org.jacop.jasat.utils.Utils;
  * <p>Pros : no need to change watches. Cons : need to check the clause every time any literal
  * changes.
  *
- * <p>TODO, check if this the efficient way of dealing with ternary clauses.
- *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 5.0
  */

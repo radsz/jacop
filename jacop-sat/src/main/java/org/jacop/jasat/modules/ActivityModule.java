@@ -40,11 +40,6 @@ import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ClauseListener;
 import org.jacop.jasat.modules.interfaces.ConflictListener;
 
-/*
- * TODO : polarity caching
- * TODO : some nice data structure to have a real Priority queue
- */
-
 /**
  * Counts the activity of literals.
  *
@@ -284,7 +279,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     // RS: Rebasing should use shift operations instead of *
     // e.g. >> 20 (?)
-    // TODO: kind of integer log
     int rebaseFactor = 100 / value;
     for (int curVar = 1; curVar <= activitiesIndex; curVar++) {
       posActivities[curVar] = posActivities[curVar] * rebaseFactor;
@@ -311,7 +305,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     core.conflictModules[core.numConflictModules++] = this;
     core.restartModules[core.numRestartModules++] = this;
 
-    // FIXME: what if maxVariable() increases ? (with wrapper, for instance)
     activitiesIndex = Math.max(core.getMaxVariable(), 100);
     posActivities = new int[activitiesIndex + 1];
     negActivities = new int[activitiesIndex + 1];

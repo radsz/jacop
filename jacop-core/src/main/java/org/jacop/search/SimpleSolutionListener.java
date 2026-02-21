@@ -62,9 +62,6 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    * It is executed right after consistency of the current search node. The return code specifies if
    * the search should continue or exit.
    */
-
-  // TODO: change one solution only to limit of solutions.
-
   public T[] vars;
 
   /** It specifies the number of solutions we want to find. */

@@ -57,9 +57,6 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   /**
    * Adds a binary clause to the database.
    *
-   * <p>TODO Efficiency: Watches require a very large array, but there maybe not so many binary
-   * clauses. Maybe a hashmap, connecting variable and list of watched clauses is more appropriate.
-   *
    * @param clause the clause to add (must be of length 2)
    * @param isModel true if this is a model clause
    * @return the unique ID of the added clause

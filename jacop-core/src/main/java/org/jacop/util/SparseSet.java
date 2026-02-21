@@ -38,9 +38,6 @@ package org.jacop.util;
  */
 public class SparseSet {
 
-  // @todo Is it possible to change the functions slightly so dense[0] = -1; is
-  // not really required to make it possible to add 0 at the first position.
-
   /** Sparse array used within SparseSet functionality. */
   public final int[] sparse;
 
@@ -62,7 +59,6 @@ public class SparseSet {
     members = 0;
 
     // Added so value 0 can be added first.
-    // TODO: test if that is still necessary after fixing a rare bug with addition.
     dense[0] = -1;
   }
 

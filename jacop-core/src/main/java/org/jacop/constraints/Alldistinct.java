@@ -72,10 +72,6 @@ import org.jacop.core.Var;
 public class Alldistinct extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  /* @todo implement in alldistinct remark, that only variable
-   * with domain of size smaller equal n (number
-   * of variables) can contribute to any pruning. */
-
   static final boolean DEBUG_ALL = false;
   static boolean debugAll = DEBUG_ALL;
 
@@ -1849,7 +1845,6 @@ public class Alldistinct extends Constraint
       }
     }
 
-    // TODO: fix it, si does not return singleton variables.
     return guideVariable;
   }
 

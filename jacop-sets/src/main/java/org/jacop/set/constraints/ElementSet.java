@@ -133,14 +133,6 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
         if (el >= list.length) {
           break;
         }
-        // TODO: implement some support functionality
-        // e.g. values in valueLUB can be supported by element from the list
-        // if index has some value being removed from it then new supports
-        // for values from valueLUB may need to be found.
-        // This is a cheaper way of restricting valueLUB.
-        // Similarly for each value not present in valueGLB we keep support
-        // that removes the need of having this value. As soon as no element
-        // in the list supports removing it from glb then we put it in glb.
         newValueGlb = newValueGlb.intersect(list[el]);
         newValueLub.addDom(list[el]);
         if (valueDom.lub().contains(list[el]) && list[el].contains(valueDom.glb())) {

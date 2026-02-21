@@ -38,8 +38,6 @@ import org.jacop.core.IntDomain;
  * This version of the ObstacleObject internal constraint allows the use of multiple d-boxes per
  * shape.
  *
- * <p>TODO, describe how it works and what is the idea behind this implementation?
- *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 5.0
  */
@@ -126,8 +124,6 @@ public class ObstacleObject extends ObstacleObjectFrame {
   @Override
   public int[] absInfeasible(Geost.SweepDirection minlex) {
 
-    // TODO: implement,
-
     if (frameExists) {
       return super.absInfeasible(minlex);
     } else {
@@ -147,7 +143,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       return super.cardInfeasible();
     } else {
       // rough approximation, but consistent among ObstacleObject constraint
-      return 1; // TODO: correct
+      return 1;
     }
   }
 
@@ -290,7 +286,6 @@ public class ObstacleObject extends ObstacleObjectFrame {
       Dbox bb = geost.getShape(shapeId).boundingBox;
 
       for (int i = 0; i < obstacle.dimension; i++) {
-        // TODO: Are the max and min functions here, put correctly?
         upperAbsInsfeasible[i] = obstacle.coords[i].min() + bb.origin[i] + bb.length[i];
         lowerAbsInsfeasible[i] = obstacle.coords[i].max() + bb.origin[i];
       }

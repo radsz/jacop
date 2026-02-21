@@ -70,8 +70,6 @@ public class Shape {
     this.boxes = boxes;
     area = -1; // lazily initialized
 
-    // TODO: is it really lazily initialized?
-    // the bounding box is lazily initialized
     boundingBox = computeBoundingBox();
 
     assert checkInvariants() == null : checkInvariants();

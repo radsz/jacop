@@ -40,11 +40,6 @@ import java.util.Set;
  * InArea constraint allows on to define an area within which objects should be contained, as well
  * as a collection of "holes" within the area.
  *
- * <p>TODO implement the use of a subset of objects only. In some applications, classes of objects
- * may need to be placed in different portions of the space. Possibly, create class
- * InAreaSetOfObjects extending from InArea to allow specification of the objects in the focus of
- * the constraint.
- *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 5.0
  */

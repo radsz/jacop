@@ -102,8 +102,6 @@ public class BooleanVar extends IntVar {
    * @param name the name of the created variable.
    * @param dom the domain specifying the domain of the variable.
    */
-  // @FIXME, constructor uses an argument without copying, (dom)
-  // it will cause problems if dom is reused.
   public BooleanVar(Store store, String name, BoundDomain dom) {
 
     assert dom.min() >= 0 && dom.min() <= dom.max() && dom.max() <= 1
