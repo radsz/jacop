@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool_clause", "jacop_link_set_to_booleans", "set_card"],
+  "constraintFamilies": ["boolean", "set"],
+  "domains": []
+}

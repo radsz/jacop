@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element"],
+  "constraintFamilies": ["element"],
+  "domains": []
+}

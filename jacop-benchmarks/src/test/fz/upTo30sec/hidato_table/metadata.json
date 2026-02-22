@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "array_var_int_element", "int_lin_eq", "int_lin_ne"],
+  "constraintFamilies": ["element", "linear"],
+  "domains": []
+}

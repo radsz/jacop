@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_le", "int_lin_le"],
+  "constraintFamilies": ["comparison", "linear"],
+  "domains": []
+}

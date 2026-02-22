@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_cumulative"],
+  "constraintFamilies": ["cumulative"],
+  "domains": []
+}

@@ -45,3 +45,58 @@ It is encourated to run all tests before release, merging to a master branch.
 Directory test contains problems that have not been categorized yet and are awaiting categorization.
 Therefore, this minizinc based test suite will always be work in progress as one can continuously add
 new tests to improve the test coverage of this test suite.
+
+## Constraint-Based Test Selection
+
+In addition to time-based categorization, each benchmark directory contains a `metadata.json` file
+that records which FlatZinc builtins and JaCoP constraint families the benchmark exercises. This
+enables targeted test runs when a specific constraint implementation changes.
+
+### Running benchmarks by constraint family
+
+Use `MinizincByConstraintTest` with the `-DconstraintFilter` system property:
+
+    mvn -pl jacop-benchmarks -Dtest=MinizincByConstraintTest -DconstraintFilter=alldifferent test
+
+This runs all benchmarks (in the default time range upTo30sec) that use any constraint from the
+`alldifferent` family (Alldiff, Alldistinct, AlldifferentExceptZero, etc.).
+
+Multiple families can be combined (OR semantics, deduplicated):
+
+    mvn -pl jacop-benchmarks -Dtest=MinizincByConstraintTest -DconstraintFilter=cumulative,diffn test
+
+### Controlling the time range
+
+The `-DtimeFilter` property controls which time categories are included (cumulative). It defaults
+to `upTo30sec`.
+
+    mvn -pl jacop-benchmarks -Dtest=MinizincByConstraintTest -DconstraintFilter=alldifferent -DtimeFilter=upTo5sec test
+    mvn -pl jacop-benchmarks -Dtest=MinizincByConstraintTest -DconstraintFilter=alldifferent -DtimeFilter=upTo5min test
+    mvn -pl jacop-benchmarks -Dtest=MinizincByConstraintTest -DconstraintFilter=alldifferent -DtimeFilter=all test
+
+Each individual test gets a timeout matching its own time category (e.g. 20s for upTo5sec benchmarks).
+
+### Available constraint families
+
+The mapping from FlatZinc builtins to families is defined in `constraint-families.json`:
+
+    alldifferent, gcc, cumulative, circuit, element, table, regular, knapsack, binpacking,
+    diffn, linear, comparison, boolean, arithmetic, counting, ordering, networkflow, geost,
+    sequence, assignment, member, set, float, graph, channel, minmax
+
+### Generating or regenerating metadata
+
+Run the metadata generator to (re)populate all `metadata.json` files:
+
+    mvn -pl jacop-benchmarks -am -Dtest=BenchmarkMetadataGenerator#generateAllMetadata -Dsurefire.failIfNoSpecifiedTests=false test
+
+### Adding a new benchmark
+
+Use `BenchmarkAdder` to add a new MiniZinc problem:
+
+    java -cp <classpath> org.jacop.BenchmarkAdder model.mzn [data1.dzn data2.dzn ...]
+
+This compiles the model to FlatZinc using `minizinc --compile --solver org.jacop`, solves it with
+JaCoP to produce the golden output, categorizes by execution time, generates `metadata.json`, and
+updates `list.txt`. Requires MiniZinc to be installed and JaCoP registered as a solver (see the
+`run-minizinc-jacop` skill).

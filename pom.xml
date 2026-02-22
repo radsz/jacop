@@ -199,6 +199,9 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
                                 <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
                                 <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -230,6 +233,9 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
                                 <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
                                 <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -261,6 +267,9 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
                                 <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
                                 <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -292,6 +301,9 @@ setup to run configuration. -->
                                 <include>**/MinizincBasedUpTo1HoursTest.java</include>
                                 <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
                                 <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

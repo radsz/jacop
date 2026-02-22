@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_or", "bool_clause", "int_le_reif", "int_lin_le", "int_lin_le_reif", "int_times", "jacop_cumulative"],
+  "constraintFamilies": ["arithmetic", "boolean", "comparison", "cumulative", "linear"],
+  "domains": []
+}

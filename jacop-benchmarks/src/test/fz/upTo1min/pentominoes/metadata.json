@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_regular"],
+  "constraintFamilies": ["regular"],
+  "domains": []
+}
