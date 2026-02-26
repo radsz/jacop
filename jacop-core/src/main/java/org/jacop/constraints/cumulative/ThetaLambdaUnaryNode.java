@@ -46,6 +46,7 @@ class ThetaLambdaUnaryNode extends ThetaNode {
 
   ThetaLambdaUnaryNode() {}
 
+  @Override
   public String toString() {
     String taskNo = task != null ? "\ntask = " + task.index : "";
     return "node: "

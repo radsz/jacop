@@ -21,10 +21,9 @@ public class ASTIntFlatExpr extends SimpleNode {
 
   public void setInt(int i) {
     intValue = i;
-    //         System.err.println("Error: Too large or too small integer " + i +
-    //                "; execution aborted");
   }
 
+  @Override
   public String toString() {
     return super.toString() + ": " + intValue;
   }

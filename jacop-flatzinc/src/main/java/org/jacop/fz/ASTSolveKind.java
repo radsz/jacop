@@ -23,6 +23,7 @@ public class ASTSolveKind extends SimpleNode {
     kind = k;
   }
 
+  @Override
   public String toString() {
     return super.toString() + ": " + kind;
   }

@@ -383,6 +383,7 @@ public class RestartSearch<T extends Var> {
   public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
     /** {@inheritDoc} */
+    @Override
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);

@@ -34,8 +34,6 @@ public class ASTScalarFlatExpr extends SimpleNode {
 
   public void setInt(int i) {
     intValue = i;
-    //         System.err.println("Error: Too large or too small integer " + i +
-    //                "; execution aborted");
   }
 
   public double getFloat() {
@@ -62,6 +60,7 @@ public class ASTScalarFlatExpr extends SimpleNode {
     st = i;
   }
 
+  @Override
   public String toString() {
     String val = "";
 
@@ -75,7 +74,7 @@ public class ASTScalarFlatExpr extends SimpleNode {
             case 4 -> "(string): " + st;
             case 5 -> "(float): " + doubleValue;
             default ->
-                throw new RuntimeException("Internal parsing error; " + getClass().getName());
+                throw new IllegalStateException("Internal parsing error; " + getClass().getName());
           };
     }
 

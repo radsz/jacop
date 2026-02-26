@@ -375,12 +375,14 @@ public class BoxDisplay extends JFrame {
   }
 
   /** Paints all objects, repaint only if requested to. */
+  @Override
   public void paint(Graphics g) {
     super.paint(g);
     g.drawImage(displayImgae, 0, 0, null);
   }
 
   /** Same as paint. */
+  @Override
   public void update(Graphics g) {
     super.update(g);
     g.drawImage(displayImgae, 0, 0, null);

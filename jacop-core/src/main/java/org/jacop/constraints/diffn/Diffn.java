@@ -180,6 +180,7 @@ public class Diffn extends Nooverlap {
   }
 
   /** {@inheritDoc} */
+  @Override
   public void consistency(Store store) {
 
     this.store = store;
@@ -617,6 +618,7 @@ public class Diffn extends Nooverlap {
    *
    * @param store the constraint store to which the constraint is imposed to.
    */
+  @Override
   public void imposeDecomposition(Store store) {
 
     if (constraints == null) {
@@ -629,6 +631,7 @@ public class Diffn extends Nooverlap {
   }
 
   /** {@inheritDoc} */
+  @Override
   public List<Constraint> decompose(Store store) {
     constraints = new ArrayList<>();
 
@@ -702,6 +705,7 @@ public class Diffn extends Nooverlap {
   }
 
   /** {@inheritDoc} */
+  @Override
   public List<Var> auxiliaryVariables() {
     return auxVar;
   }

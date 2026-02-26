@@ -52,6 +52,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     // Intentionally empty: default constructor; tree is built via buildTree().
   }
 
+  @Override
   public void buildTree(TaskView[] task) {
     n = task.length;
     treeSize = (int) Math.pow(2, Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
@@ -80,6 +81,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     }
   }
 
+  @Override
   void computeLeaveVals(int i) {
     tree[i] = new ThetaLambdaUnaryNode();
     tree[i].index = i;
@@ -91,6 +93,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     tree[i].responsibleEctLambda = i;
   }
 
+  @Override
   void addToThetaInit(int i) {
     int t = i - (treeSize - n); // in our case we pass list of ordered tasks already
     tree[i].task = orderedTasks[t];
@@ -100,6 +103,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     tree[i].ect = tree[i].task.ect();
   }
 
+  @Override
   void computeNodeVals(int i) {
 
     if (!notExist(left(i)) && !notExist(right(i))) {
@@ -152,6 +156,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     return tree[0].ectLambda;
   }
 
+  @Override
   void clearNode(int i) {
     tree[i].p = 0;
     tree[i].ect = Integer.MIN_VALUE;
@@ -175,6 +180,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     updateTree(parent(i));
   }
 
+  @Override
   void updateTree(int i) {
     while (exist(i)) {
       computeNodeVals(i);
@@ -182,19 +188,23 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     }
   }
 
+  @Override
   ThetaLambdaUnaryNode leaf(int i) {
     return tree[leafIndex(i)];
   }
 
+  @Override
   boolean isLeaf(int i) {
     int l = tree[i].index;
     return l >= treeSize - n && l < treeSize;
   }
 
+  @Override
   ThetaLambdaUnaryNode rootNode() {
     return tree[root()];
   }
 
+  @Override
   ThetaLambdaUnaryNode get(int i) {
     return tree[i];
   }

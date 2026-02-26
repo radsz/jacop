@@ -55,6 +55,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    *
    * @param store the constraint store being initialized.
    */
+  @Override
   public void executedAtInitialize(Store store) {
     solutionFound = false;
   }
@@ -64,6 +65,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    *
    * @param children children listeners
    */
+  @Override
   public void setChildrenListeners(InitializeListener[] children) {
 
     childrenInitializeListeners = children;
@@ -74,6 +76,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    *
    * @param child the child of this initialize listener.
    */
+  @Override
   public void setChildrenListeners(InitializeListener child) {
 
     childrenInitializeListeners = new InitializeListener[1];
@@ -85,12 +88,14 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    *
    * @param child the consistency listener to set.
    */
+  @Override
   public void setChildrenListeners(ConsistencyListener child) {
 
     childrenConsistencyListeners = new ConsistencyListener[1];
     childrenConsistencyListeners[0] = child;
   }
 
+  @Override
   public void setChildrenListeners(ConsistencyListener[] children) {
     childrenConsistencyListeners = children;
   }
@@ -102,6 +107,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    * @param select the choice point selection strategy.
    * @return true if the search should continue, false otherwise.
    */
+  @Override
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
     boolean returnCode = super.executeAfterSolution(search, select);
@@ -118,6 +124,7 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    * @param consistent whether the current node is consistent.
    * @return false if a solution was already found, otherwise the consistency status.
    */
+  @Override
   public boolean executeAfterConsistency(boolean consistent) {
 
     if (solutionFound) {

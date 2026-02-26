@@ -40,6 +40,7 @@ public class ASTSolveExpr extends SimpleNode {
     ident = i;
   }
 
+  @Override
   public String toString() {
     String val = "";
 
@@ -49,7 +50,7 @@ public class ASTSolveExpr extends SimpleNode {
             case 0 -> "(ident): " + ident;
             case 1 -> "(array access): " + ident + "[" + index + "]";
             default ->
-                throw new RuntimeException("Internal parsing error; " + getClass().getName());
+                throw new IllegalStateException("Internal parsing error; " + getClass().getName());
           };
     }
 

@@ -46,6 +46,7 @@ public class ASTVarDeclItem extends SimpleNode {
     kind = t;
   }
 
+  @Override
   public String toString() {
     String limits = "";
     if (kind > 1) {
@@ -57,7 +58,8 @@ public class ASTVarDeclItem extends SimpleNode {
           case 1 -> "(non-var): ";
           case 2 -> "(array-var): ";
           case 3 -> "(array-non-var): ";
-          default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
+          default ->
+              throw new IllegalStateException("Internal parsing error; " + getClass().getName());
         };
     return super.toString() + kindS + identifier + limits;
   }

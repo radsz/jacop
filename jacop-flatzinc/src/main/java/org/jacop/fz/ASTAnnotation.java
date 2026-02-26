@@ -22,6 +22,7 @@ public class ASTAnnotation extends SimpleNode {
     return annotationId;
   }
 
+  @Override
   public String toString() {
     return super.toString() + ": " + annotationId;
   }

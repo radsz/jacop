@@ -45,6 +45,7 @@ public class RunWhenShuttingDown extends Thread {
   }
 
   /** {@inheritDoc} */
+  @Override
   public void run() {
 
     if (!parser.options.getAll() && parser.solver.lastSolution != null) {

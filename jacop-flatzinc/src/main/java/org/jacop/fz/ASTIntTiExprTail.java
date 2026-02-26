@@ -37,6 +37,7 @@ public class ASTIntTiExprTail extends SimpleNode {
     return high;
   }
 
+  @Override
   public String toString() {
     String limits = type == 1 ? low + ".." + high : "";
     String typeS =
@@ -45,7 +46,8 @@ public class ASTIntTiExprTail extends SimpleNode {
           case 1 -> "(interval): ";
           case 2 -> "(list): ";
           case 3 -> "(range): ";
-          default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
+          default ->
+              throw new IllegalStateException("Internal parsing error; " + getClass().getName());
         };
     return super.toString() + typeS + limits;
   }

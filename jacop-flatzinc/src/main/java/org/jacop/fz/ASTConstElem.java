@@ -22,6 +22,7 @@ public class ASTConstElem extends SimpleNode {
     name = n;
   }
 
+  @Override
   public String toString() {
     return super.toString() + ": " + name;
   }

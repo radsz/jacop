@@ -91,6 +91,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
    *
    * @param store the constraint store.
    */
+  @Override
   public void impose(Store store) {
 
     this.store = store;
@@ -106,11 +107,13 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
+  @Override
   public void consistency(Store store) {
     // No-op: this constraint only traces variable changes and does not perform propagation.
   }
 
   /** {@inheritDoc} */
+  @Override
   public void queueVariable(int level, Var v) {
     log.debug("Var: {}, level: {}, constraint: {}", v, level, store.currentConstraint);
   }
@@ -121,6 +124,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
+  @Override
   public void removeConstraint() {
     // Intentionally empty: no cleanup required when this tracing constraint is removed.
   }
@@ -147,6 +151,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /** {@inheritDoc} */
+  @Override
   public void increaseWeight() {
     // No-op: this daemon constraint does not participate in weight-based heuristics.
   }

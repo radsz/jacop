@@ -24,9 +24,16 @@ public class ASTSetLiteral extends SimpleNode {
     type = t;
   }
 
+  @Override
   public String toString() {
     String tt;
-    tt = type == 0 ? "interval" : type == 1 ? "list" : "range";
+    if (type == 0) {
+      tt = "interval";
+    } else if (type == 1) {
+      tt = "list";
+    } else {
+      tt = "range";
+    }
     return super.toString() + "(" + tt + ")";
   }
 }

@@ -37,13 +37,15 @@ public class ASTFloatTiExprTail extends SimpleNode {
     return high;
   }
 
+  @Override
   public String toString() {
     String limits = type == 1 ? low + ".." + high : "";
     String typeS =
         switch (type) {
           case 0 -> "(float): ";
           case 1 -> "(interval): ";
-          default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
+          default ->
+              throw new IllegalStateException("Internal parsing error; " + getClass().getName());
         };
     return super.toString() + typeS + limits;
   }
