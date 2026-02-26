@@ -31,6 +31,8 @@
 
 package org.jacop.satwrapper;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
@@ -78,7 +80,9 @@ public final class SatChangesListener
 
   /** Clears all sets, so that elements occurring in them later result only from later events. */
   public void clear() {
-    assert lowerBounds.length == upperBounds.length;
+    if (ASSERTS_ENABLED && !(lowerBounds.length == upperBounds.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     Arrays.fill(upperBounds, null);
     Arrays.fill(lowerBounds, null);
@@ -111,9 +115,15 @@ public final class SatChangesListener
    */
   private void onAssertion(int literal) {
 
-    assert wrapper.isVarLiteral(literal);
-    assert core.trail.isSet(Math.abs(literal));
-    assert core.trail.values[Math.abs(literal)] == literal;
+    if (ASSERTS_ENABLED && !(wrapper.isVarLiteral(literal))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(core.trail.isSet(Math.abs(literal)))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(core.trail.values[Math.abs(literal)] == literal)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int cpValue = wrapper.boolVarToCpValue(literal);
     IntVar cpVar = wrapper.boolVarToCpVar(literal);
@@ -193,12 +203,18 @@ public final class SatChangesListener
       return;
     }
 
-    assert wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate);
+    if (ASSERTS_ENABLED
+        && !(wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     updateIntVars(storeLevel);
     updateBooleanVars(storeLevel);
 
-    assert wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate);
+    if (ASSERTS_ENABLED
+        && !(wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   private void updateIntVars(int storeLevel) {
@@ -207,13 +223,16 @@ public final class SatChangesListener
         index = intVarsToUpdate.nextSetBit(index + 1)) {
       IntVar variable = (IntVar) wrapper.store.vars[index];
 
-      assert wrapper.log(
-          this,
-          "updating %s, with lower %s and upper %s, " + "excluded values are %s",
-          variable,
-          lowerBounds[index],
-          upperBounds[index],
-          excludedValues[index]);
+      if (ASSERTS_ENABLED
+          && !(wrapper.log(
+              this,
+              "updating %s, with lower %s and upper %s, " + "excluded values are %s",
+              variable,
+              lowerBounds[index],
+              upperBounds[index],
+              excludedValues[index]))) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       Integer lower = lowerBounds[index];
       Integer upper = upperBounds[index];
@@ -244,8 +263,12 @@ public final class SatChangesListener
       int isOneValue = core.trail.values[isOne];
       int isZeroValue = core.trail.values[isZero];
 
-      assert !(isZeroValue * isOneValue > 0);
-      assert !(isOneValue == 0 && isZeroValue == 0);
+      if (ASSERTS_ENABLED && !(!(isZeroValue * isOneValue > 0))) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(!(isOneValue == 0 && isZeroValue == 0))) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       if (isOneValue > 0 || isZeroValue < 0) {
         variable.domain.in(storeLevel, variable, 1, 1);

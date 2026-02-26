@@ -30,6 +30,8 @@
 
 package org.jacop.floats.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.IntervalEnumeration;
@@ -1077,8 +1079,10 @@ public abstract class FloatDomain extends Domain {
       throw new IllegalArgumentException("An argument should be a singleton domain");
     }
 
-    assert (value instanceof FloatDomain)
-        : "Can not compare int domains with other types of domains.";
+    if (ASSERTS_ENABLED && !((value instanceof FloatDomain))) {
+      throw new IllegalStateException(
+          String.valueOf("Can not compare int domains with other types of domains."));
+    }
 
     FloatDomain domain = (FloatDomain) value;
 
@@ -1636,7 +1640,10 @@ public abstract class FloatDomain extends Domain {
    */
   public double value() {
 
-    assert (singleton()) : "function value() called when domain is not a singleton domain.";
+    if (ASSERTS_ENABLED && !((singleton()))) {
+      throw new IllegalStateException(
+          String.valueOf("function value() called when domain is not a singleton domain."));
+    }
 
     return min();
   }

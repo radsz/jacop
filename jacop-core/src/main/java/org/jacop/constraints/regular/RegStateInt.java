@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.regular;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
@@ -96,8 +98,11 @@ public class RegStateInt extends RegState {
       return;
     }
 
-    assert false
-        : "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id;
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id));
+    }
   }
 
   @Override
@@ -134,8 +139,11 @@ public class RegStateInt extends RegState {
       return;
     }
 
-    assert false
-        : "State q_" + level + id + ": Successors on position " + pos + " is already removed";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "State q_" + level + id + ": Successors on position " + pos + " is already removed"));
+    }
   }
 
   @Override

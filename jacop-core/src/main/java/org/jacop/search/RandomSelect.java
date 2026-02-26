@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
@@ -64,7 +66,9 @@ public class RandomSelect<T extends Var> extends AbstractSelect<T> {
    */
   public T getChoiceVariable(int index) {
 
-    assert index < searchVariables.length;
+    if (ASSERTS_ENABLED && !(index < searchVariables.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (DEBUG_ALL) {
       log.debug("index = {}", index);

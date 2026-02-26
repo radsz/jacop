@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 
 /**
@@ -87,7 +89,9 @@ public class PredefinedOrder implements LexicographicalOrder {
     actualDimensionOrder = new int[ordering.length];
     recomputeActualDimensionOrder();
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -121,7 +125,9 @@ public class PredefinedOrder implements LexicographicalOrder {
       actualDimensionOrder[i] = masterOrdering[(i + shift) % k];
     }
 
-    assert actualDimensionOrder[0] == mostSignificantDimension : "wrong setup of precedence levels";
+    if (ASSERTS_ENABLED && !(actualDimensionOrder[0] == mostSignificantDimension)) {
+      throw new IllegalStateException(String.valueOf("wrong setup of precedence levels"));
+    }
   }
 
   /**
@@ -133,7 +139,9 @@ public class PredefinedOrder implements LexicographicalOrder {
    */
   public int compare(int[] p1, int[] p2) {
 
-    assert p1.length == p2.length : "dimension mismatch";
+    if (ASSERTS_ENABLED && !(p1.length == p2.length)) {
+      throw new IllegalStateException(String.valueOf("dimension mismatch"));
+    }
 
     for (int i = 0; i < masterOrdering.length; i++) {
       int lexI = actualDimensionOrder[i];
@@ -173,7 +181,9 @@ public class PredefinedOrder implements LexicographicalOrder {
       }
     }
 
-    assert false : "unreachable code";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(String.valueOf("unreachable code"));
+    }
     return 0;
   }
 
@@ -194,7 +204,9 @@ public class PredefinedOrder implements LexicographicalOrder {
   public void setMostSignificantDimension(int d) {
     this.mostSignificantDimension = d;
     recomputeActualDimensionOrder();
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /** {@inheritDoc} */

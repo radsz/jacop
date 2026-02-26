@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import org.jacop.jasat.core.Core;
@@ -72,14 +74,20 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
       i = i >>> 1; // divide by 2
     }
     // check  2^{logOfNumDatabases} == maxNumberOfDatabases
-    assert 1 << logOfNumDatabases == maxNumberOfDatabases
-        : "number" + " of databases must be a power of 2";
+    if (ASSERTS_ENABLED && !(1 << logOfNumDatabases == maxNumberOfDatabases)) {
+      throw new IllegalStateException(
+          String.valueOf("number" + " of databases must be a power of 2"));
+    }
 
     indexMask = Integer.MAX_VALUE >>> logOfNumDatabases;
     databasesMask = Integer.MAX_VALUE ^ indexMask;
     indexMaskNumBits = Integer.bitCount(indexMask);
-    assert Integer.bitCount(indexMask) == Integer.SIZE - logOfNumDatabases - 1;
-    assert Integer.bitCount(databasesMask ^ indexMask) == Integer.SIZE - 1;
+    if (ASSERTS_ENABLED && !(Integer.bitCount(indexMask) == Integer.SIZE - logOfNumDatabases - 1)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(Integer.bitCount(databasesMask ^ indexMask) == Integer.SIZE - 1)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**
@@ -91,7 +99,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    */
   public int addClause(int[] clause, boolean isModelClause) {
 
-    assert currentIndex > 0 : "must be at least one DB";
+    if (ASSERTS_ENABLED && !(currentIndex > 0)) {
+      throw new IllegalStateException(String.valueOf("must be at least one DB"));
+    }
 
     /*
      *  we do not simplify clauses by removing duplicates
@@ -164,7 +174,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param database the database to add
    */
   public void addDatabase(AbstractClausesDatabase database) {
-    assert currentIndex < maxNumberOfDatabases;
+    if (ASSERTS_ENABLED && !(currentIndex < maxNumberOfDatabases)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     databases[currentIndex] = database;
     database.setDatabaseIndex(currentIndex);
@@ -219,10 +231,16 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   public int uniqueIdToDb(int clauseId) {
     // is this >>> or >> ?
     int dbIndex = (clauseId & databasesMask) >>> indexMaskNumBits;
-    assert dbIndex >= 0;
-    assert dbIndex < currentIndex;
+    if (ASSERTS_ENABLED && !(dbIndex >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(dbIndex < currentIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int clauseIndex = uniqueIdToIndex(clauseId);
-    assert indexesToUniqueId(clauseIndex, dbIndex) == clauseId;
+    if (ASSERTS_ENABLED && !(indexesToUniqueId(clauseIndex, dbIndex) == clauseId)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return dbIndex;
   }
@@ -237,7 +255,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    */
   public int uniqueIdToIndex(int clauseId) {
     int index = clauseId & indexMask;
-    assert index >= 0;
+    if (ASSERTS_ENABLED && !(index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return index;
   }
@@ -250,13 +270,23 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @return unique id from a clause index
    */
   public int indexesToUniqueId(int clauseIndex, int databaseIndex) {
-    assert databaseIndex < currentIndex;
-    assert clauseIndex >= 0;
-    assert databaseIndex >= 0;
+    if (ASSERTS_ENABLED && !(databaseIndex < currentIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(clauseIndex >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(databaseIndex >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int clauseId = (databaseIndex << indexMaskNumBits) | clauseIndex;
-    assert ((clauseId & databasesMask) >>> indexMaskNumBits) == databaseIndex;
-    assert uniqueIdToIndex(clauseId) == clauseIndex;
+    if (ASSERTS_ENABLED && !(((clauseId & databasesMask) >>> indexMaskNumBits) == databaseIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(uniqueIdToIndex(clauseId) == clauseIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return clauseId;
   }

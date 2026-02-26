@@ -31,6 +31,8 @@
 
 package org.jacop.satwrapper.translation;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -64,7 +66,10 @@ public final class DomainTranslator implements WrapperComponent {
 
     if (!translatedVars.contains(variable)) {
 
-      assert wrapper.log(this, "translation of variable %s to clauses", variable);
+      if (ASSERTS_ENABLED
+          && !(wrapper.log(this, "translation of variable %s to clauses", variable))) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       translatedVars.add(variable);
 

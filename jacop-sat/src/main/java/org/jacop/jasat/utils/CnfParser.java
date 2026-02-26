@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -94,7 +96,9 @@ public final class CnfParser implements Iterable<IntVec> {
     if (c == -1) {
       throw new IOException();
     }
-    assert (c == '-') || (c >= '0' && c <= '9');
+    if (ASSERTS_ENABLED && !((c == '-') || (c >= '0' && c <= '9'))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     boolean negative = c == '-';
     if (negative) {
@@ -161,14 +165,22 @@ public final class CnfParser implements Iterable<IntVec> {
   private void readProblemDef() throws IOException {
 
     // read "p cnf"
-    assert c == 'p';
+    if (ASSERTS_ENABLED && !(c == 'p')) {
+      throw new IllegalStateException("Assertion failed");
+    }
     c = stream.read();
     skipSpaces();
-    assert c == 'c';
+    if (ASSERTS_ENABLED && !(c == 'c')) {
+      throw new IllegalStateException("Assertion failed");
+    }
     c = stream.read();
-    assert c == 'n';
+    if (ASSERTS_ENABLED && !(c == 'n')) {
+      throw new IllegalStateException("Assertion failed");
+    }
     c = stream.read();
-    assert c == 'f';
+    if (ASSERTS_ENABLED && !(c == 'f')) {
+      throw new IllegalStateException("Assertion failed");
+    }
     c = stream.read();
 
     // spaces -> int -> spaces -> int

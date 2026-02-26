@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 
@@ -59,7 +61,9 @@ public final class MemoryPool implements SolverComponent {
    */
   public int[] getNew(int size) {
 
-    assert size > 0 : "size must be > 0";
+    if (ASSERTS_ENABLED && !(size > 0)) {
+      throw new IllegalStateException(String.valueOf("size must be > 0"));
+    }
 
     int[] answer;
 
@@ -70,16 +74,24 @@ public final class MemoryPool implements SolverComponent {
       // no available arrays
       answer = new int[size];
     } else {
-      assert indexes[size] > 0;
-      assert indexes[size] <= stockSize;
+      if (ASSERTS_ENABLED && !(indexes[size] > 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(indexes[size] <= stockSize)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       // decrement and get this element (which slot is going to be free)
       int index = --indexes[size];
       answer = pool[size][index];
     }
 
-    assert answer != null : "returning a null array";
-    assert answer.length == size : "not the good length";
+    if (ASSERTS_ENABLED && !(answer != null)) {
+      throw new IllegalStateException(String.valueOf("returning a null array"));
+    }
+    if (ASSERTS_ENABLED && !(answer.length == size)) {
+      throw new IllegalStateException(String.valueOf("not the good length"));
+    }
 
     return answer;
   }
@@ -96,7 +108,9 @@ public final class MemoryPool implements SolverComponent {
     if (size >= pool.length) {
       return; // ignore this array, it is too long
     }
-    assert indexes[array.length] <= stockSize;
+    if (ASSERTS_ENABLED && !(indexes[array.length] <= stockSize)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (indexes[size] == stockSize) {
       return; // there are already enough arrays of this size

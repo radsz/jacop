@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -208,7 +210,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
       frameArea++;
     }
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   private void ensureDisplayReady() {
@@ -478,13 +482,17 @@ public class ObstacleObjectFrame extends InternalConstraint {
         // largest possible origin when objects begin to overlap (infeasible)
         timeSizeOrigin = obstacle.start.max() - o.duration.min() + 1;
         // smallest possible end is when placed after the obstacle (feasible)
-        assert obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min()
-            : "time constraint not valid: "
-                + obstacle.start
-                + " + "
-                + obstacle.duration
-                + " <= "
-                + obstacle.end;
+        if (ASSERTS_ENABLED
+            && !(obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min())) {
+          throw new IllegalStateException(
+              String.valueOf(
+                  "time constraint not valid: "
+                      + obstacle.start
+                      + " + "
+                      + obstacle.duration
+                      + " <= "
+                      + obstacle.end));
+        }
         timeSizeMax = obstacle.end.min();
       } else {
         // PRUNEMAX: the outbox has to mark the upper limit of the possible domain (end variable)
@@ -495,7 +503,10 @@ public class ObstacleObjectFrame extends InternalConstraint {
          */
 
         timeSizeOrigin = obstacle.start.max() + 1;
-        assert obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min();
+        if (ASSERTS_ENABLED
+            && !(obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min())) {
+          throw new IllegalStateException("Assertion failed");
+        }
         timeSizeMax = obstacle.end.min() + o.duration.min();
       }
 
@@ -583,7 +594,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
             outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
           }
         }
-        assert outBox.checkInvariants() == null : outBox.checkInvariants();
+        if (ASSERTS_ENABLED && !(outBox.checkInvariants() == null)) {
+          throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
+        }
         if (outBox.containsPoint(c)) {
           return outBox;
         }

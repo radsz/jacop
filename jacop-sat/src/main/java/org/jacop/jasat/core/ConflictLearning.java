@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.jasat.core.clauses.DatabasesStore;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.utils.structures.IntStack;
@@ -59,8 +61,12 @@ public final class ConflictLearning implements SolverComponent {
   public int getLevelToBackjump(MapClause explanationClause) {
 
     // this is a conflict, I hope
-    assert core.currentState == SolverState.CONFLICT;
-    assert core.currentLevel > 0 : "cannot backjump from level 0";
+    if (ASSERTS_ENABLED && !(core.currentState == SolverState.CONFLICT)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(core.currentLevel > 0)) {
+      throw new IllegalStateException(String.valueOf("cannot backjump from level 0"));
+    }
     // did we met the highest literal in the clause ?
     boolean firstOne = true;
 
@@ -94,8 +100,12 @@ public final class ConflictLearning implements SolverComponent {
    */
   public void applyExplainUip(MapClause explanationClause) {
 
-    assert !explanationClause.isEmpty();
-    assert explanationClause.isUnsatisfiableIn(trail);
+    if (ASSERTS_ENABLED && !(!explanationClause.isEmpty())) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(explanationClause.isUnsatisfiableIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // count how many literals from current level the clause contains
     int curLevel = core.currentLevel;
@@ -132,9 +142,13 @@ public final class ConflictLearning implements SolverComponent {
 
     for (int i = startingPosition; i >= 0; i--) {
       int varIdx = trail.assertionStack.array[i];
-      assert varIdx > 0;
+      if (ASSERTS_ENABLED && !(varIdx > 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
-      assert trail.isSet(varIdx);
+      if (ASSERTS_ENABLED && !(trail.isSet(varIdx))) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       // we reached the asserted literal -- the first set in its level
       if (trail.isAsserted(varIdx)) {
@@ -162,9 +176,15 @@ public final class ConflictLearning implements SolverComponent {
    * @param literal the literal that must be resolved
    */
   private void applyExplain(MapClause explanationClause, int literal) {
-    assert explanationClause.containsVariable(literal);
-    assert trail.isSet(Math.abs(literal));
-    assert !trail.isAsserted(Math.abs(literal));
+    if (ASSERTS_ENABLED && !(explanationClause.containsVariable(literal))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(trail.isSet(Math.abs(literal)))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(!trail.isAsserted(Math.abs(literal)))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // perform resolution
     int clauseId = trail.getExplanation(Math.abs(literal));

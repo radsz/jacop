@@ -30,6 +30,8 @@
 
 package org.jacop.set.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.jacop.constraints.Constraint;
@@ -501,14 +503,18 @@ public abstract class SetDomain extends Domain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    assert (this.stamp <= level);
+    if (ASSERTS_ENABLED && !((this.stamp <= level))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (this.stamp == level) {
 
       ((SetVar) v).domain = this.previousDomain;
     }
 
-    assert (v.level() < level);
+    if (ASSERTS_ENABLED && !((v.level() < level))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**
@@ -524,7 +530,9 @@ public abstract class SetDomain extends Domain {
       return;
     }
 
-    assert (stamp == storeLevel);
+    if (ASSERTS_ENABLED && !((stamp == storeLevel))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (position < searchConstraintsToEvaluate) {
 

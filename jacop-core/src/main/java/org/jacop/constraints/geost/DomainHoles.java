@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.Collection;
 import lombok.extern.slf4j.Slf4j;
@@ -156,8 +158,10 @@ public class DomainHoles extends InternalConstraint {
    */
   public boolean stillHasHole() {
 
-    assert object.dimension == object.coords.length
-        : "object dimension is not equal to dimension indicated by coords.";
+    if (ASSERTS_ENABLED && !(object.dimension == object.coords.length)) {
+      throw new IllegalStateException(
+          String.valueOf("object dimension is not equal to dimension indicated by coords."));
+    }
 
     IntVar[] vars = object.coords;
 
@@ -219,8 +223,9 @@ public class DomainHoles extends InternalConstraint {
       return false;
     }
 
-    assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
-        : "current point not located in a domain hole";
+    if (ASSERTS_ENABLED && !(dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d])) {
+      throw new IllegalStateException(String.valueOf("current point not located in a domain hole"));
+    }
 
     if (DEBUG) {
       log.debug("{} is in a hole of {}", Arrays.toString(c), o.coords[d]);
@@ -242,8 +247,12 @@ public class DomainHoles extends InternalConstraint {
       log.debug("forbidden domain: {}", forbiddenRegion);
     }
 
-    assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
-    assert forbiddenRegion.containsPoint(c) : "bad forbidden region, c is not contained";
+    if (ASSERTS_ENABLED && !(forbiddenRegion.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(forbiddenRegion.checkInvariants()));
+    }
+    if (ASSERTS_ENABLED && !(forbiddenRegion.containsPoint(c))) {
+      throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
+    }
     return true;
   }
 

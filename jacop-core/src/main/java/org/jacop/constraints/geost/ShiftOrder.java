@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * It provides a very simple lexicographical order based on the dimension ordering, with the
  * possibility to choose the most significant dimension.
@@ -64,7 +66,9 @@ public class ShiftOrder implements LexicographicalOrder {
       masterOrdering[i] = i;
     }
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -104,7 +108,9 @@ public class ShiftOrder implements LexicographicalOrder {
   /** {@inheritDoc} */
   public int compare(int[] p1, int[] p2) {
 
-    assert p1.length == p2.length : "dimension mismatch";
+    if (ASSERTS_ENABLED && !(p1.length == p2.length)) {
+      throw new IllegalStateException(String.valueOf("dimension mismatch"));
+    }
 
     for (int i = 0; i < noOfDimensions; i++) {
 
@@ -142,7 +148,9 @@ public class ShiftOrder implements LexicographicalOrder {
     this.mostSignificant = dimension;
     adjustOrderingToShift();
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /** {@inheritDoc} */

@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils.structures;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -111,8 +113,12 @@ public final class IntVec implements Iterable<Integer> {
    * @return the element at the index
    */
   public int get(int index) {
-    assert index >= 0;
-    assert index < numElem;
+    if (ASSERTS_ENABLED && !(index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(index < numElem)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return array[index];
   }
@@ -124,8 +130,12 @@ public final class IntVec implements Iterable<Integer> {
    * @param i the new value
    */
   public void set(int index, int i) {
-    assert index >= 0;
-    assert index < numElem;
+    if (ASSERTS_ENABLED && !(index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(index < numElem)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     array[index] = i;
   }
@@ -145,8 +155,12 @@ public final class IntVec implements Iterable<Integer> {
    * @param index the index of the element to remove
    */
   public void remove(int index) {
-    assert index >= 0;
-    assert index < numElem;
+    if (ASSERTS_ENABLED && !(index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(index < numElem)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // how many elements to move
     int numToCopy = numElem - index - 1;
@@ -162,8 +176,12 @@ public final class IntVec implements Iterable<Integer> {
    * @param index the index to remove
    */
   public void removeFast(int index) {
-    assert index >= 0;
-    assert index < numElem;
+    if (ASSERTS_ENABLED && !(index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(index < numElem)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     numElem--;
     // the last element ? easy !

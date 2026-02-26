@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -80,7 +82,10 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     super(vars, noOfObjects);
 
-    assert maxNoOfIntervals > 0 : "The maximal number of intervals must be positive integer.";
+    if (ASSERTS_ENABLED && !(maxNoOfIntervals > 0)) {
+      throw new IllegalStateException(
+          String.valueOf("The maximal number of intervals must be positive integer."));
+    }
 
     this.minHoleSize = Math.max(minHoleSize, minHoleSizeAfterSplit);
     this.maxNoOfIntervals = maxNoOfIntervals;
@@ -137,7 +142,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (trailContainsAllChanges && restoreFromTrailAndProcess(index)) {
-      assert isRecognizedAsChanged(index);
+      if (ASSERTS_ENABLED && !(isRecognizedAsChanged(index))) {
+        throw new IllegalStateException("Assertion failed");
+      }
       return;
     }
 
@@ -150,7 +157,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       }
     }
 
-    assert isRecognizedAsChanged(index);
+    if (ASSERTS_ENABLED && !(isRecognizedAsChanged(index))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   private void logSetLevelDebug(int level) {
@@ -194,7 +203,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     logSetLevelDebug(level);
 
-    assert level > this.currentLevel : "It is possible only to add higher levels";
+    if (ASSERTS_ENABLED && !(level > this.currentLevel)) {
+      throw new IllegalStateException(String.valueOf("It is possible only to add higher levels"));
+    }
 
     if (addingToIntervals) {
       intervalBasedTrail.add(valueTrue);
@@ -293,15 +304,22 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       log.debug("<{}Remove level {}", this, removedLevel);
     }
 
-    assert removedLevel >= currentLevel
-        : "It is only possible to remove the most recent not removed level";
+    if (ASSERTS_ENABLED && !(removedLevel >= currentLevel)) {
+      throw new IllegalStateException(
+          String.valueOf("It is only possible to remove the most recent not removed level"));
+    }
 
-    assert checkRemoveInvariant(removedLevel) == null : checkRemoveInvariant(removedLevel);
+    if (ASSERTS_ENABLED && !(checkRemoveInvariant(removedLevel) == null)) {
+      throw new IllegalStateException(String.valueOf(checkRemoveInvariant(removedLevel)));
+    }
   }
 
   private void removeLevelCoreFromTrail(int removedLevel) {
     int lastLevel = levelInfo.removeLast();
-    assert lastLevel == removedLevel : "It is only possible to remove recently added level";
+    if (ASSERTS_ENABLED && !(lastLevel == removedLevel)) {
+      throw new IllegalStateException(
+          String.valueOf("It is only possible to remove recently added level"));
+    }
     int[] lastTrail = trail.removeLast();
     if (intervalBasedTrail.removeLast()) {
       removeLevelFromIntervals(lastTrail, removedLevel);

@@ -30,6 +30,8 @@
 
 package org.jacop.floats.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Locale;
 
 /**
@@ -56,7 +58,10 @@ public record FloatInterval(double min, double max) {
    */
   public FloatInterval {
 
-    assert (min <= max) : "min value " + min + " is larger than max value " + max;
+    if (ASSERTS_ENABLED && !((min <= max))) {
+      throw new IllegalStateException(
+          String.valueOf("min value " + min + " is larger than max value " + max));
+    }
   }
 
   /**

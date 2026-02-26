@@ -30,6 +30,8 @@
 
 package org.jacop.floats.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -123,7 +125,9 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
       return null;
     }
 
-    assert (index >= 0);
+    if (ASSERTS_ENABLED && !((index >= 0))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     double value = (((FloatVar) v).min() + ((FloatVar) v).max()) / 2.0;
 
@@ -142,7 +146,9 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
   T roundRobinVarSelection(int index) {
 
-    assert (index < searchVariables.length);
+    if (ASSERTS_ENABLED && !((index < searchVariables.length))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int N = searchVariables.length;
 

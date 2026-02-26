@@ -31,6 +31,7 @@
 package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
+import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Collections;
 import java.util.List;
@@ -132,7 +133,9 @@ public class DomainStructure implements VarHandler {
 
       // arc already deleted ?
       if (arcs[id].index == DELETED_ARC) {
-        assert false;
+        if (ASSERTS_ENABLED && !(false)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         continue;
       }
 
@@ -152,7 +155,9 @@ public class DomainStructure implements VarHandler {
 
   private void groundArc(int arcId, boolean active, MutableNetwork network) {
 
-    assert arcId < notGrounded;
+    if (ASSERTS_ENABLED && !(arcId < notGrounded)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // prune domain of x variable
 
@@ -219,10 +224,14 @@ public class DomainStructure implements VarHandler {
    * @param arcId the index of the arc to unground.
    */
   public void ungroundArc(int arcId) {
-    assert arcId >= notGrounded;
+    if (ASSERTS_ENABLED && !(arcId >= notGrounded)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // add domain/arc pair
-    assert arcId == notGrounded;
+    if (ASSERTS_ENABLED && !(arcId == notGrounded)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     notGrounded++;
   }
 

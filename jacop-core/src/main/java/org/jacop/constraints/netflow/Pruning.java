@@ -32,6 +32,7 @@ package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
+import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -239,9 +240,13 @@ public class Pruning extends Network {
     }
     int flow = companion.flowOffset + arc.sister.capacity;
     if (arc.head == node) {
-      assert arc.sister.capacity == -node.balance : "\n" + node + "\n" + arc;
+      if (ASSERTS_ENABLED && !(arc.sister.capacity == -node.balance)) {
+        throw new IllegalStateException(String.valueOf("\n" + node + "\n" + arc));
+      }
     } else {
-      assert arc.sister.capacity == node.balance : "\n" + node + "\n" + arc;
+      if (ASSERTS_ENABLED && !(arc.sister.capacity == node.balance)) {
+        throw new IllegalStateException(String.valueOf("\n" + node + "\n" + arc));
+      }
     }
     nvarIn(companion, flow, flow);
   }
@@ -370,7 +375,9 @@ public class Pruning extends Network {
 
     int capacity = arc.capacity;
     int flow = analyzeArc(arc, costLimit);
-    assert arc.capacity == capacity - flow;
+    if (ASSERTS_ENABLED && !(arc.capacity == capacity - flow)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     final int _capacity = arc.capacity;
     final int _residual = arc.sister.capacity;
@@ -380,8 +387,12 @@ public class Pruning extends Network {
     if (arc.index == DELETED_ARC) {
       addArcWithFlow(arc);
     }
-    assert checkFlow(this);
-    assert checkStructure(this);
+    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (DO_INSTRUMENTATION) {
       if (_companion.xVar != null) {
@@ -403,11 +414,15 @@ public class Pruning extends Network {
     networkSimplex(999999);
 
     long cost = cost(Long.MAX_VALUE);
-    assert cost(Long.MAX_VALUE) == cost : cost(Long.MAX_VALUE) + " != " + cost;
+    if (ASSERTS_ENABLED && !(cost(Long.MAX_VALUE) == cost)) {
+      throw new IllegalStateException(String.valueOf(cost(Long.MAX_VALUE) + " != " + cost));
+    }
   }
 
   private int analyzeArc(Arc arc, int costLimit) {
-    assert arc.capacity > 0;
+    if (ASSERTS_ENABLED && !(arc.capacity > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // Remove arc from graph
     if (arc.index == TREE_ARC && !dualPivot(arc.sister)) {
@@ -457,7 +472,9 @@ public class Pruning extends Network {
   private void analyzeArcLoop(Arc arc, Node source, Node sink, int[] state) {
     while (state[1] > 0) {
       int unitCost = arc.reducedCost();
-      assert unitCost >= 0;
+      if (ASSERTS_ENABLED && !(unitCost >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       if (unitCost > 0) {
         int maxCapacity = state[2] / unitCost;
         if (state[1] > maxCapacity) {
@@ -512,7 +529,9 @@ public class Pruning extends Network {
   }
 
   private void pruneArc(int capacity, int residual, boolean forward, ArcCompanion companion) {
-    assert capacity > 0;
+    if (ASSERTS_ENABLED && !(capacity > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (forward) {
       pruneArcForward(residual, companion);

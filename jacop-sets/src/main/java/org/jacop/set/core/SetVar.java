@@ -30,6 +30,8 @@
 
 package org.jacop.set.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
@@ -68,7 +70,9 @@ public class SetVar extends Var {
     dom.modelConstraints = new Constraint[SetDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[SetDomain.eventsInclusion.length];
 
-    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
+    if (ASSERTS_ENABLED && !((name.lastIndexOf(" ") == -1))) {
+      throw new IllegalStateException(String.valueOf("Name can not contain space character"));
+    }
 
     id = name;
     domain = dom;
@@ -274,13 +278,16 @@ public class SetVar extends Var {
    */
   public void domainHasChanged(int event) {
 
-    assert ((event == SetDomain.LUB_EVENT && !singleton())
+    if (ASSERTS_ENABLED
+        && !(((event == SetDomain.LUB_EVENT && !singleton())
             || (event == SetDomain.GLB_EVENT && !singleton())
             || (event == SetDomain.ANY && !singleton())
             || (event == SetDomain.BOUND && !singleton())
             || (event == SetDomain.CARDINALITY_EVENT && !singleton())
-            || (event == SetDomain.GROUND && singleton()))
-        : "Wrong event generated " + event + "? " + singleton();
+            || (event == SetDomain.GROUND && singleton())))) {
+      throw new IllegalStateException(
+          String.valueOf("Wrong event generated " + event + "? " + singleton()));
+    }
 
     store.addChanged(this, event, Integer.MIN_VALUE);
   }

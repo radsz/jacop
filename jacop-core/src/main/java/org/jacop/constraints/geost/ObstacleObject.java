@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.jacop.core.IntDomain;
@@ -78,8 +80,11 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     preshiftedElems = new ArrayList<>();
 
-    assert obstacle.shapeId.singleton()
-        : "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead.";
+    if (ASSERTS_ENABLED && !(obstacle.shapeId.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead."));
+    }
 
     shapeId = obstacle.shapeId.value();
 
@@ -155,8 +160,10 @@ public class ObstacleObject extends ObstacleObjectFrame {
       int currentShape,
       int[] c) {
 
-    assert obstacle.shapeId.singleton()
-        : "no support for polymorphism. Use ObstacleObjectFrame instead.";
+    if (ASSERTS_ENABLED && !(obstacle.shapeId.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("no support for polymorphism. Use ObstacleObjectFrame instead."));
+    }
 
     if (frameExists) {
       return super.isFeasible(min, order, o, currentShape, c);
@@ -220,7 +227,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
     for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
       for (Dbox preshift : preshiftedElems) {
         boolean useless = fillOutBoxForPiecePair(outOrigin, outLength, constrainedPiece, preshift);
-        assert useless || outBox.checkInvariants() == null : outBox.checkInvariants();
+        if (ASSERTS_ENABLED && !(useless || outBox.checkInvariants() == null)) {
+          throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
+        }
         if (!useless && outBox.containsPoint(c)) {
           return outBox;
         }
@@ -297,6 +306,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
       frameExists = true;
     }
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 }

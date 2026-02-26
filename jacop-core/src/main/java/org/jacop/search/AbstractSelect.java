@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -93,9 +95,15 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
   @Override
   public int getChoiceValue() {
 
-    assert currentIndex >= 0;
-    assert currentIndex < searchVariables.length;
-    assert searchVariables[currentIndex].dom() != null;
+    if (ASSERTS_ENABLED && !(currentIndex >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(currentIndex < searchVariables.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(searchVariables[currentIndex].dom() != null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return valueOrdering.indomain(searchVariables[currentIndex]);
   }

@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.modules;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.Trail;
@@ -85,7 +87,9 @@ public final class HeuristicAssertionModule implements SolverComponent {
     }
 
     if (answer == 0) {
-      assert trail.size() == core.getMaxVariable();
+      if (ASSERTS_ENABLED && !(trail.size() == core.getMaxVariable())) {
+        throw new IllegalStateException("Assertion failed");
+      }
       core.triggerSatEvent();
     }
     return answer;

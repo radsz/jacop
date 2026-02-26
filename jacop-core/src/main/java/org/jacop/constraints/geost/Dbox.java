@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -70,7 +72,9 @@ public class Dbox {
     this.origin = origin;
     this.length = length;
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -223,7 +227,10 @@ public class Dbox {
       Collection<Dbox> source, Collection<Dbox> holes, Collection<Dbox> result) {
 
     if (result != source) {
-      assert result.isEmpty() : "the collection must be emptied before the call";
+      if (ASSERTS_ENABLED && !(result.isEmpty())) {
+        throw new IllegalStateException(
+            String.valueOf("the collection must be emptied before the call"));
+      }
 
       result.addAll(source);
     }
@@ -260,9 +267,12 @@ public class Dbox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
-        : // without this the assertion would fail when subtracting leaves nothing
-        "bad cleaning of the lists";
+    if (ASSERTS_ENABLED
+        && !(resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty())) {
+      throw new IllegalStateException(
+          String.valueOf( // without this the assertion would fail when subtracting leaves nothing
+              "bad cleaning of the lists"));
+    }
 
     if (result == resultStep) {
       // in that case we need to transfer the elements to the right list
@@ -291,7 +301,9 @@ public class Dbox {
      * to the temporary result.
      */
 
-    assert result.isEmpty() : "collection must be emptied before call";
+    if (ASSERTS_ENABLED && !(result.isEmpty())) {
+      throw new IllegalStateException(String.valueOf("collection must be emptied before call"));
+    }
 
     Collection<Dbox> resultWork = result;
     resultWork.add(this.copyInto(newBox(origin.length)));
@@ -313,7 +325,9 @@ public class Dbox {
 
       // the DBoxes contained in result can be reused
       for (Dbox piece : resultWork) {
-        assert piece != this : "dispatching this";
+        if (ASSERTS_ENABLED && !(piece != this)) {
+          throw new IllegalStateException(String.valueOf("dispatching this"));
+        }
         dispatchBox(piece);
       }
 
@@ -331,9 +345,12 @@ public class Dbox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
-        : // without this the assertion would fail when subtracting leaves nothing
-        "bad cleaning of the lists";
+    if (ASSERTS_ENABLED
+        && !(resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty())) {
+      throw new IllegalStateException(
+          String.valueOf( // without this the assertion would fail when subtracting leaves nothing
+              "bad cleaning of the lists"));
+    }
 
     if (result == resultStep) {
       // in that case we need to transfer the elements to the right list
@@ -374,7 +391,9 @@ public class Dbox {
    */
   public boolean containsPoint(int[] pointCoordinates) {
 
-    assert pointCoordinates.length <= origin.length : "dimension mismatch";
+    if (ASSERTS_ENABLED && !(pointCoordinates.length <= origin.length)) {
+      throw new IllegalStateException(String.valueOf("dimension mismatch"));
+    }
 
     int pointDim = pointCoordinates.length;
 
@@ -524,7 +543,9 @@ public class Dbox {
       sliceLength[j] = upperbound[j] - lowerbound[j];
     }
     sliceLength[i] = hole.origin[i] - lowerbound[i];
-    assert newBox.checkInvariants() == null : newBox.checkInvariants();
+    if (ASSERTS_ENABLED && !(newBox.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(newBox.checkInvariants()));
+    }
     difference.add(newBox);
     lowerbound[i] = hole.origin[i];
   }
@@ -546,7 +567,9 @@ public class Dbox {
     for (int j = dimension - 1; j >= 0; j--) {
       newBox.length[j] = upperbound[j] - sliceOrigin[j];
     }
-    assert newBox.checkInvariants() == null : newBox.checkInvariants();
+    if (ASSERTS_ENABLED && !(newBox.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(newBox.checkInvariants()));
+    }
     difference.add(newBox);
     upperbound[i] = hole.origin[i] + hole.length[i];
   }
@@ -581,7 +604,9 @@ public class Dbox {
      * overlap.
      */
 
-    assert difference != null : "accumulator must be initialized";
+    if (ASSERTS_ENABLED && !(difference != null)) {
+      throw new IllegalStateException(String.valueOf("accumulator must be initialized"));
+    }
 
     final int dimension = origin.length;
 
@@ -649,7 +674,9 @@ public class Dbox {
    */
   public final Dbox copyInto(Dbox box) {
 
-    assert box != null : "It is not possible to copy into null box";
+    if (ASSERTS_ENABLED && !(box != null)) {
+      throw new IllegalStateException(String.valueOf("It is not possible to copy into null box"));
+    }
 
     final int dimension = origin.length;
 

@@ -25,6 +25,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import lombok.Getter;
@@ -135,10 +137,14 @@ public class GeostObject {
    * @param variable variable being grounded.
    */
   public final void onGround(Var variable) {
-    assert variables.contains(variable)
-        : "grounding " + variable + ", not variable defining " + this;
+    if (ASSERTS_ENABLED && !(variables.contains(variable))) {
+      throw new IllegalStateException(
+          String.valueOf("grounding " + variable + ", not variable defining " + this));
+    }
     groundCount++;
-    assert groundCount <= variables.size();
+    if (ASSERTS_ENABLED && !(groundCount <= variables.size())) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**
@@ -148,10 +154,14 @@ public class GeostObject {
    * @param variable variable being ungrounded.
    */
   public final void onUnGround(Var variable) {
-    assert variables.contains(variable)
-        : "ungrounding " + variable + ", not variable defining " + this;
+    if (ASSERTS_ENABLED && !(variables.contains(variable))) {
+      throw new IllegalStateException(
+          String.valueOf("ungrounding " + variable + ", not variable defining " + this));
+    }
     groundCount--;
-    assert groundCount >= 0;
+    if (ASSERTS_ENABLED && !(groundCount >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**

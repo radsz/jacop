@@ -30,6 +30,8 @@
 
 package org.jacop.util;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
@@ -80,7 +82,11 @@ public class IndexDomainView {
 
       indexToValue = new int[v.domain.noIntervals()];
 
-      assert false : "Not implemented functionality. Only sparse index domain view is implemented.";
+      if (ASSERTS_ENABLED && !(false)) {
+        throw new IllegalStateException(
+            String.valueOf(
+                "Not implemented functionality. Only sparse index domain view is implemented."));
+      }
     }
 
     forRemoval = new boolean[indexToValue.length];
@@ -114,7 +120,10 @@ public class IndexDomainView {
   public void intializeSupportSweep() {
 
     if (!viewOfSparseDomain) {
-      assert false : "Not yet implemented functionality for non sparse representation";
+      if (ASSERTS_ENABLED && !(false)) {
+        throw new IllegalStateException(
+            String.valueOf("Not yet implemented functionality for non sparse representation"));
+      }
       return;
     }
 
@@ -202,7 +211,9 @@ public class IndexDomainView {
         return true;
       }
     } else {
-      assert false : "Not implemented yet";
+      if (ASSERTS_ENABLED && !(false)) {
+        throw new IllegalStateException(String.valueOf("Not implemented yet"));
+      }
       return false;
     }
   }
@@ -224,7 +235,9 @@ public class IndexDomainView {
       return true;
     } else {
 
-      assert false : "Not yet implemented functionality";
+      if (ASSERTS_ENABLED && !(false)) {
+        throw new IllegalStateException(String.valueOf("Not yet implemented functionality"));
+      }
       return false;
     }
   }
@@ -239,7 +252,9 @@ public class IndexDomainView {
 
     if (!viewOfSparseDomain) {
 
-      assert false : "Not yet implemented functionality";
+      if (ASSERTS_ENABLED && !(false)) {
+        throw new IllegalStateException(String.valueOf("Not yet implemented functionality"));
+      }
       return 0;
     }
 

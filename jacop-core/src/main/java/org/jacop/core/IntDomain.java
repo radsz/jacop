@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import org.jacop.constraints.Constraint;
 
@@ -732,7 +734,10 @@ public abstract class IntDomain extends Domain {
       throw new IllegalArgumentException("An argument should be a singleton domain");
     }
 
-    assert value instanceof IntDomain : "Can not compare int domains with other types of domains.";
+    if (ASSERTS_ENABLED && !(value instanceof IntDomain)) {
+      throw new IllegalStateException(
+          String.valueOf("Can not compare int domains with other types of domains."));
+    }
 
     IntDomain domain = (IntDomain) value;
 
@@ -1242,7 +1247,9 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    assert stamp == storeLevel;
+    if (ASSERTS_ENABLED && !(stamp == storeLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int i = 0;
 
@@ -1268,10 +1275,14 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    assert stamp == storeLevel;
+    if (ASSERTS_ENABLED && !(stamp == storeLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
-    assert searchConstraints.get(position) == c
-        : "Position of the removed constraint not specified properly";
+    if (ASSERTS_ENABLED && !(searchConstraints.get(position) == c)) {
+      throw new IllegalStateException(
+          String.valueOf("Position of the removed constraint not specified properly"));
+    }
 
     if (position < searchConstraintsToEvaluate) {
 
@@ -1422,7 +1433,10 @@ public abstract class IntDomain extends Domain {
    */
   public int value() {
 
-    assert singleton() : "function value() called when domain is not a singleton domain.";
+    if (ASSERTS_ENABLED && !(singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("function value() called when domain is not a singleton domain."));
+    }
 
     return min();
   }

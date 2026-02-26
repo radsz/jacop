@@ -31,6 +31,7 @@
 package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
+import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -114,7 +115,10 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    */
   public void changeCapacity(int min, int max) {
 
-    assert min <= max : "min value must be smaller or equal the maximum value";
+    if (ASSERTS_ENABLED && !(min <= max)) {
+      throw new IllegalStateException(
+          String.valueOf("min value must be smaller or equal the maximum value"));
+    }
 
     // the order only matters if intervals (before & after) are
     // non-overlapping
@@ -137,8 +141,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    */
   public void changeMinCapacity(int min) {
 
-    assert min >= 0;
-    assert min <= flowOffset + arc.capacity + arc.sister.capacity;
+    if (ASSERTS_ENABLED && !(min >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(min <= flowOffset + arc.capacity + arc.sister.capacity)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int delta = min - flowOffset;
     if (delta != 0) {
@@ -151,7 +159,9 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // repair flow if lower bound raises above current flow
       if (arc.sister.capacity < 0) {
         setFlow(min);
-        assert arc.sister.capacity == 0;
+        if (ASSERTS_ENABLED && !(arc.sister.capacity == 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
       }
     }
   }
@@ -163,7 +173,9 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    */
   public void changeMaxCapacity(int max) {
 
-    assert max >= flowOffset;
+    if (ASSERTS_ENABLED && !(max >= flowOffset)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int residual = arc.capacity;
     int total = flowOffset + residual + arc.sister.capacity;
@@ -176,7 +188,9 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // repair flow if upper bound falls below current flow
       if (arc.capacity < 0) {
         setFlow(max);
-        assert arc.capacity == 0;
+        if (ASSERTS_ENABLED && !(arc.capacity == 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
       }
     }
   }
@@ -300,8 +314,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   public void setFlow(int flow) {
 
     int currentFlow = flowOffset + arc.sister.capacity;
-    assert flowOffset <= flow;
-    assert flow <= currentFlow + arc.capacity;
+    if (ASSERTS_ENABLED && !(flowOffset <= flow)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(flow <= currentFlow + arc.capacity)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int delta = flow - currentFlow;
 

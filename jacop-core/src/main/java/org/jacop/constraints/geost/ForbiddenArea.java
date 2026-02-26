@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import org.jacop.core.Var;
@@ -70,7 +72,9 @@ public class ForbiddenArea extends InternalConstraint {
     }
     area = total;
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -131,7 +135,9 @@ public class ForbiddenArea extends InternalConstraint {
       outOrigin[dimension] = -Integer.MAX_VALUE / 2;
       outLength[dimension] = Integer.MAX_VALUE;
 
-      assert outBox.checkInvariants() == null : outBox.checkInvariants();
+      if (ASSERTS_ENABLED && !(outBox.checkInvariants() == null)) {
+        throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
+      }
 
       if (outBox.containsPoint(c)) {
         return outBox;

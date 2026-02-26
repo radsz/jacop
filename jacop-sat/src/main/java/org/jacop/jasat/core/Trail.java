@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
@@ -65,7 +67,9 @@ public final class Trail implements SolverComponent {
    */
   public void addVariable(int varIdx) {
 
-    assert varIdx > 0;
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     ensureCapacity(varIdx);
 
     values[varIdx] = 0;
@@ -79,8 +83,12 @@ public final class Trail implements SolverComponent {
    */
   public void ensureCapacity(int numVar) {
 
-    assert values.length == explanations.length;
-    assert values.length == levels.length;
+    if (ASSERTS_ENABLED && !(values.length == explanations.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(values.length == levels.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (values.length <= numVar) {
       // resize (enlarge) if necessary
@@ -105,12 +113,18 @@ public final class Trail implements SolverComponent {
    */
   public void assertLiteral(int literal, int level) {
 
-    assert level >= 0;
+    if (ASSERTS_ENABLED && !(level >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int varIdx = Math.abs(literal);
 
-    assert varIdx < values.length;
-    assert !isSet(varIdx) : "variable already set !";
+    if (ASSERTS_ENABLED && !(varIdx < values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(!isSet(varIdx))) {
+      throw new IllegalStateException(String.valueOf("variable already set !"));
+    }
 
     assertLit(varIdx, literal, level, true);
 
@@ -126,7 +140,9 @@ public final class Trail implements SolverComponent {
    */
   public void assertLiteral(int literal, int level, int causeId) {
 
-    assert causeId >= 0;
+    if (ASSERTS_ENABLED && !(causeId >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int varIdx = Math.abs(literal);
 
     assertLit(varIdx, literal, level, false);
@@ -137,8 +153,12 @@ public final class Trail implements SolverComponent {
 
   /** Real assignment of literal at level. */
   private void assertLit(int varIdx, int literal, int level, boolean asserted) {
-    assert values.length > varIdx;
-    assert values[varIdx] == 0;
+    if (ASSERTS_ENABLED && !(values.length > varIdx)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(values[varIdx] == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // remember value
     values[varIdx] = literal;
@@ -157,9 +177,15 @@ public final class Trail implements SolverComponent {
    * @param varIdx the SAT variable index to unset. Must be positive.
    */
   public void unset(int varIdx) {
-    assert varIdx > 0;
-    assert varIdx < values.length;
-    assert isSet(varIdx) : "varIdx must be set";
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(varIdx < values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(isSet(varIdx))) {
+      throw new IllegalStateException(String.valueOf("varIdx must be set"));
+    }
 
     values[varIdx] = 0;
   }
@@ -171,14 +197,22 @@ public final class Trail implements SolverComponent {
    * @param level the level to jump to.
    */
   public void backjump(int level) {
-    assert explanations.length == values.length;
-    assert level >= 0;
+    if (ASSERTS_ENABLED && !(explanations.length == values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(level >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // remove all asserted items above level
     while (!assertionStack.isEmpty()) {
       int varIdx = assertionStack.peek();
-      assert varIdx > 0;
-      assert varIdx < values.length;
+      if (ASSERTS_ENABLED && !(varIdx > 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(varIdx < values.length)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       int currentLevel = getLevel(varIdx);
 
       if (currentLevel > level) {
@@ -204,9 +238,15 @@ public final class Trail implements SolverComponent {
    */
   public int getLevel(int varIdx) {
 
-    assert varIdx > 0;
-    assert varIdx < values.length;
-    assert isSet(varIdx);
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(varIdx < values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(isSet(varIdx))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return levels[varIdx] & LEVEL_MASK;
   }
@@ -219,11 +259,21 @@ public final class Trail implements SolverComponent {
    */
   public int getExplanation(int varIdx) {
 
-    assert varIdx > 0;
-    assert explanations.length == values.length;
-    assert varIdx < explanations.length;
-    assert isSet(varIdx);
-    assert !isAsserted(varIdx) : "only propagated literals have explanations";
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(explanations.length == values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(varIdx < explanations.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(isSet(varIdx))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(!isAsserted(varIdx))) {
+      throw new IllegalStateException(String.valueOf("only propagated literals have explanations"));
+    }
 
     return explanations[varIdx];
   }
@@ -236,8 +286,12 @@ public final class Trail implements SolverComponent {
    */
   public boolean isAsserted(int varIdx) {
 
-    assert varIdx > 0;
-    assert isSet(varIdx) : "varIdx must be set";
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(isSet(varIdx))) {
+      throw new IllegalStateException(String.valueOf("varIdx must be set"));
+    }
 
     // isAsserted is encoded together with other data, for cache issues
     int value = levels[varIdx];
@@ -251,8 +305,12 @@ public final class Trail implements SolverComponent {
    * @return true if the variable is set.
    */
   public boolean isSet(int varIdx) {
-    assert varIdx > 0;
-    assert varIdx < values.length;
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(varIdx < values.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int value = values[varIdx];
     return value != 0;

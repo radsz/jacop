@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.regular;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
@@ -104,7 +106,9 @@ public class RegStateDom extends RegState {
       log.error("State q_{}{}: Successors on position {} is already removed", level, id, pos);
     }
 
-    assert false;
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   @Override
@@ -125,7 +129,9 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    assert false;
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   @Override
@@ -146,7 +152,9 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    assert false;
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   @Override

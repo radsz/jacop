@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.netflow;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -68,8 +70,12 @@ public class Assert {
       sum += n.balance;
     }
 
-    assert sum == 0 : "sum != 0";
-    assert g.root.balance == 0 : "root balance != 0";
+    if (ASSERTS_ENABLED && !(sum == 0)) {
+      throw new IllegalStateException(String.valueOf("sum != 0"));
+    }
+    if (ASSERTS_ENABLED && !(g.root.balance == 0)) {
+      throw new IllegalStateException(String.valueOf("root balance != 0"));
+    }
 
     for (Node n : g.nodes) {
       FlowCounts counts = computeFlowCountsForNode(n, allArcsForDebug);
@@ -82,38 +88,45 @@ public class Assert {
   }
 
   private static void assertNodeBalance(Node n, FlowCounts counts) {
-    assert n.balance == counts.out - counts.in
-        : "Balance on node\n"
-            + "out = "
-            + counts.out
-            + ", in = "
-            + counts.in
-            + BALANCE_EQUALS
-            + n.balance
-            + "\n"
-            + n
-            + "\n";
+    if (ASSERTS_ENABLED && !(n.balance == counts.out - counts.in)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Balance on node\n"
+                  + "out = "
+                  + counts.out
+                  + ", in = "
+                  + counts.in
+                  + BALANCE_EQUALS
+                  + n.balance
+                  + "\n"
+                  + n
+                  + "\n"));
+    }
 
-    assert n.initialBalance - n.balance - n.deltaBalance == counts.delOut - counts.delIn
-        : "Balance on deleted node\n"
-            + "out = "
-            + counts.delOut
-            + ", in = "
-            + counts.delIn
-            + BALANCE_EQUALS
-            + n.balance
-            + ", delta = "
-            + n.deltaBalance
-            + ", initial = "
-            + n.initialBalance
-            + "\n"
-            + "  out-in = "
-            + (counts.delOut - counts.delIn)
-            + ", initial-balance-delta = "
-            + (n.initialBalance - n.balance - n.deltaBalance)
-            + "\n"
-            + n
-            + "\n";
+    if (ASSERTS_ENABLED
+        && !(n.initialBalance - n.balance - n.deltaBalance == counts.delOut - counts.delIn)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Balance on deleted node\n"
+                  + "out = "
+                  + counts.delOut
+                  + ", in = "
+                  + counts.delIn
+                  + BALANCE_EQUALS
+                  + n.balance
+                  + ", delta = "
+                  + n.deltaBalance
+                  + ", initial = "
+                  + n.initialBalance
+                  + "\n"
+                  + "  out-in = "
+                  + (counts.delOut - counts.delIn)
+                  + ", initial-balance-delta = "
+                  + (n.initialBalance - n.balance - n.deltaBalance)
+                  + "\n"
+                  + n
+                  + "\n"));
+    }
   }
 
   private static FlowCounts computeFlowCountsForNode(Node n, List<Arc> allArcsForDebug) {
@@ -168,17 +181,20 @@ public class Assert {
       }
     }
 
-    assert 0 == out - in
-        : "Balance on node (root)\n"
-            + "in = "
-            + out
-            + ", out = "
-            + in
-            + BALANCE_EQUALS
-            + 0
-            + "\n"
-            + g.root
-            + "\n";
+    if (ASSERTS_ENABLED && !(0 == out - in)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Balance on node (root)\n"
+                  + "in = "
+                  + out
+                  + ", out = "
+                  + in
+                  + BALANCE_EQUALS
+                  + 0
+                  + "\n"
+                  + g.root
+                  + "\n"));
+    }
   }
 
   private static final class FlowCounts {
@@ -204,17 +220,29 @@ public class Assert {
    */
   public static boolean checkBeforeUpdate(Arc leaving, Arc entering) {
 
-    assert leaving.index == -1;
-    assert entering.index >= 0;
+    if (ASSERTS_ENABLED && !(leaving.index == -1)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(entering.index >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     Node k = entering.sister.head;
     Node l = entering.head;
     Node p = leaving.sister.head;
     Node q = leaving.head;
 
-    assert q == p.parent : "\nexpected: q is the parent of p\n";
-    assert p == p.lca(k) : "\nexpected: {p,k} are in the same subtree\n";
-    assert p != p.lca(l) : "\nexpected: {p,l} are not in the same subtree\n";
+    if (ASSERTS_ENABLED && !(q == p.parent)) {
+      throw new IllegalStateException(String.valueOf("\nexpected: q is the parent of p\n"));
+    }
+    if (ASSERTS_ENABLED && !(p == p.lca(k))) {
+      throw new IllegalStateException(
+          String.valueOf("\nexpected: {p,k} are in the same subtree\n"));
+    }
+    if (ASSERTS_ENABLED && !(p != p.lca(l))) {
+      throw new IllegalStateException(
+          String.valueOf("\nexpected: {p,l} are not in the same subtree\n"));
+    }
 
     return true;
   }
@@ -231,9 +259,15 @@ public class Assert {
 
     long delCost = collectArcsAndValidate(g, allArcsForDebug, tree);
     int n = g.nodes.length + 1;
-    assert n - 1 == tree.size();
-    assert n - 1 == allArcsForDebug.size() - g.lower.length;
-    assert ((Network) g).costOffset == delCost;
+    if (ASSERTS_ENABLED && !(n - 1 == tree.size())) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(n - 1 == allArcsForDebug.size() - g.lower.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(((Network) g).costOffset == delCost)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     assertLowerArcsCapacityZero(g);
     assertRootInvariants(g);
@@ -266,44 +300,83 @@ public class Assert {
     Node j = arc.head;
     Node i = arc.sister.head;
     if (i.toParent == arc) {
-      assert j == i.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+      if (ASSERTS_ENABLED && !(j == i.parent)) {
+        throw new IllegalStateException(
+            String.valueOf(MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n"));
+      }
     } else {
-      assert arc.sister == j.toParent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
-      assert i == j.parent : MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n";
+      if (ASSERTS_ENABLED && !(arc.sister == j.toParent)) {
+        throw new IllegalStateException(
+            String.valueOf(MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n"));
+      }
+      if (ASSERTS_ENABLED && !(i == j.parent)) {
+        throw new IllegalStateException(
+            String.valueOf(MSG_I + i + MSG_J + j + MSG_IJ + arc + "\n"));
+      }
     }
   }
 
   private static void assertNonTreeArcConsistency(NetworkSimplex g, Arc arc) {
-    assert arc.index == arc.sister.index;
-    assert 0 <= arc.index && arc.index < g.numArcs : g.numArcs + ", " + arc;
+    if (ASSERTS_ENABLED && !(arc.index == arc.sister.index)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(0 <= arc.index && arc.index < g.numArcs)) {
+      throw new IllegalStateException(String.valueOf(g.numArcs + ", " + arc));
+    }
     if (arc.capacity > 0) {
-      assert 0 == arc.sister.capacity : "\n" + arc;
-      assert arc == g.lower[arc.index] : "\n" + arc;
+      if (ASSERTS_ENABLED && !(0 == arc.sister.capacity)) {
+        throw new IllegalStateException(String.valueOf("\n" + arc));
+      }
+      if (ASSERTS_ENABLED && !(arc == g.lower[arc.index])) {
+        throw new IllegalStateException(String.valueOf("\n" + arc));
+      }
     } else if (arc.sister.capacity > 0) {
-      assert 0 == arc.capacity;
-      assert arc.sister == g.lower[arc.index];
+      if (ASSERTS_ENABLED && !(0 == arc.capacity)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(arc.sister == g.lower[arc.index])) {
+        throw new IllegalStateException("Assertion failed");
+      }
     } else {
-      assert arc.capacity == 0;
-      assert arc.sister.capacity == 0;
+      if (ASSERTS_ENABLED && !(arc.capacity == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(arc.sister.capacity == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       boolean b1 = arc.sister == g.lower[arc.index];
       boolean b2 = arc == g.lower[arc.index];
-      assert b1 ^ b2;
+      if (ASSERTS_ENABLED && !(b1 ^ b2)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
   }
 
   private static void assertLowerArcsCapacityZero(NetworkSimplex g) {
     for (int i = 0; i < g.numArcs; i++) {
       Arc arc = g.lower[i];
-      assert arc.sister.capacity == 0;
+      if (ASSERTS_ENABLED && !(arc.sister.capacity == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
   }
 
   private static void assertRootInvariants(NetworkSimplex g) {
-    assert g.root.parent == null;
-    assert g.root.toParent == null;
-    assert 0 == g.root.balance;
-    assert 0 == g.root.potential;
-    assert 0 == g.root.depth;
+    if (ASSERTS_ENABLED && !(g.root.parent == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(g.root.toParent == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(0 == g.root.balance)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(0 == g.root.potential)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(0 == g.root.depth)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   private static void assertThreadAndTreeConsistency(
@@ -312,15 +385,27 @@ public class Assert {
     for (Node i = g.root.thread; i != g.root; i = i.thread) {
       x++;
       Node p = i.parent;
-      assert p.depth + 1 == i.depth : MSG_I + i + MSG_P + p + "\n";
-      assert i == i.toParent.sister.head : MSG_I + i + MSG_P + p + "\n";
-      assert p == i.toParent.head : MSG_I + i + MSG_P + p + "\n";
-      assert 0 == i.toParent.reducedCost() : MSG_I + i + MSG_P + p + "\n";
+      if (ASSERTS_ENABLED && !(p.depth + 1 == i.depth)) {
+        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
+      }
+      if (ASSERTS_ENABLED && !(i == i.toParent.sister.head)) {
+        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
+      }
+      if (ASSERTS_ENABLED && !(p == i.toParent.head)) {
+        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
+      }
+      if (ASSERTS_ENABLED && !(0 == i.toParent.reducedCost())) {
+        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
+      }
       boolean b1 = tree.contains(i.toParent);
       boolean b2 = tree.contains(i.toParent.sister);
-      assert b1 ^ b2 : MSG_I + i + MSG_P + p + "\n";
+      if (ASSERTS_ENABLED && !(b1 ^ b2)) {
+        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
+      }
     }
-    assert expectedCount == x;
+    if (ASSERTS_ENABLED && !(expectedCount == x)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   private static void assertNodeDegreeConsistent(Node node, List<Arc> allArcsForDebug) {
@@ -330,17 +415,25 @@ public class Assert {
         count++;
       }
     }
-    assert count == node.degree;
+    if (ASSERTS_ENABLED && !(count == node.degree)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     if (node.degree <= 2) {
       int count2 = 0;
       for (Arc arc : node.adjacencyList) {
         if (arc != null) {
-          assert (arc.head == node) ^ (arc.tail() == node);
-          assert arc.index != NetworkSimplex.DELETED_ARC;
+          if (ASSERTS_ENABLED && !((arc.head == node) ^ (arc.tail() == node))) {
+            throw new IllegalStateException("Assertion failed");
+          }
+          if (ASSERTS_ENABLED && !(arc.index != NetworkSimplex.DELETED_ARC)) {
+            throw new IllegalStateException("Assertion failed");
+          }
           count2++;
         }
       }
-      assert count == count2;
+      if (ASSERTS_ENABLED && !(count == count2)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
   }
 
@@ -366,7 +459,9 @@ public class Assert {
         s.append("\n").append(arc);
       }
     }
-    assert s.isEmpty() : "non-optimal arcs:" + s;
+    if (ASSERTS_ENABLED && !(s.isEmpty())) {
+      throw new IllegalStateException(String.valueOf("non-optimal arcs:" + s));
+    }
 
     return true;
   }
@@ -381,9 +476,13 @@ public class Assert {
 
     for (Node node : g.nodes) {
       if (node.deltaBalance == 0) {
-        assert !g.infeasibleNodes.contains(node) : "" + node;
+        if (ASSERTS_ENABLED && !(!g.infeasibleNodes.contains(node))) {
+          throw new IllegalStateException(String.valueOf("" + node));
+        }
       } else {
-        assert g.infeasibleNodes.contains(node) : "" + node;
+        if (ASSERTS_ENABLED && !(g.infeasibleNodes.contains(node))) {
+          throw new IllegalStateException(String.valueOf("" + node));
+        }
       }
     }
 
@@ -395,7 +494,9 @@ public class Assert {
   public static void forceAsserts() {
 
     boolean asserts = false;
-    assert asserts = true;
+    if (ASSERTS_ENABLED && !(asserts = true)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**

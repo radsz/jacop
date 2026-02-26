@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.knapsack;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -322,7 +324,9 @@ public class Knapsack extends Constraint
 
           IntVar quantity = ((TreeLeaf) current).quantity;
 
-          assert quantity.min() == ((TreeLeaf) current).slice : "Quantity.min is not equal slice.";
+          if (ASSERTS_ENABLED && !(quantity.min() == ((TreeLeaf) current).slice)) {
+            throw new IllegalStateException(String.valueOf("Quantity.min is not equal slice."));
+          }
 
           quantity.domain.inMax(
               store.level,
@@ -346,7 +350,9 @@ public class Knapsack extends Constraint
 
           IntVar quantity = leaf.quantity;
 
-          assert quantity.min() == leaf.slice : "Quantity.min is not equal slice.";
+          if (ASSERTS_ENABLED && !(quantity.min() == leaf.slice)) {
+            throw new IllegalStateException(String.valueOf("Quantity.min is not equal slice."));
+          }
 
           quantity.domain.inMax(currentLevel, quantity, quantity.min() + maxNoOfAllowed);
 
@@ -474,7 +480,9 @@ public class Knapsack extends Constraint
       log.debug("{}", displayQuantitiesInEfficiencyOrder());
     }
 
-    assert sliceInvariant();
+    if (ASSERTS_ENABLED && !(sliceInvariant())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (DEBUG_ALL) {
       log.debug("Tree root \n{}", tree.root);
@@ -483,13 +491,17 @@ public class Knapsack extends Constraint
     // it checks if not too many items exceeding the capacity constraints
     // have been put in knapsack.
 
-    assert checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     restrictItemQuantity(store, tree.root, knapsackCapacity.max() - tree.alreadyUsedCapacity);
 
     if (needUpdate) {
       blockUpdate();
-      assert sliceInvariant();
+      if (ASSERTS_ENABLED && !(sliceInvariant())) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
 
     if (DEBUG_ALL) {
@@ -500,7 +512,9 @@ public class Knapsack extends Constraint
       log.debug("Tree root \n{}", tree.root);
     }
 
-    assert checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     /* compute mandatory items using jump */
     if (needMandatory) {
@@ -509,8 +523,12 @@ public class Knapsack extends Constraint
 
     blockUpdate();
 
-    assert checkInvariants();
-    assert sliceInvariant();
+    if (ASSERTS_ENABLED && !(checkInvariants())) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(sliceInvariant())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     /* compute forbidden items using jump */
     if (needForbidden) {
@@ -518,7 +536,9 @@ public class Knapsack extends Constraint
     }
 
     blockUpdate();
-    assert checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     needConsistency = false;
     needUpdate = false;
@@ -877,11 +897,15 @@ public class Knapsack extends Constraint
       }
     }
 
-    assert alreadyObtainedProfit == tree.alreadyObtainedProfit
-        : "Already obtained profit is not correctly maintained.";
+    if (ASSERTS_ENABLED && !(alreadyObtainedProfit == tree.alreadyObtainedProfit)) {
+      throw new IllegalStateException(
+          String.valueOf("Already obtained profit is not correctly maintained."));
+    }
 
-    assert alreadyUsedCapacity == tree.alreadyUsedCapacity
-        : "Already used capacity is not correctly maintained.";
+    if (ASSERTS_ENABLED && !(alreadyUsedCapacity == tree.alreadyUsedCapacity)) {
+      throw new IllegalStateException(
+          String.valueOf("Already used capacity is not correctly maintained."));
+    }
 
     return true;
   }
@@ -907,8 +931,10 @@ public class Knapsack extends Constraint
   private boolean checkInvariants() {
 
     for (TreeLeaf leaf : leaves) {
-      assert leaf.slice == leaf.quantity.min()
-          : "Slice variable has not been adjusted to leaf quantity" + leaf;
+      if (ASSERTS_ENABLED && !(leaf.slice == leaf.quantity.min())) {
+        throw new IllegalStateException(
+            String.valueOf("Slice variable has not been adjusted to leaf quantity" + leaf));
+      }
     }
 
     int overallProfit = 0;
@@ -921,12 +947,21 @@ public class Knapsack extends Constraint
       maxLeafCapacity = Math.max(maxLeafCapacity, leaf.getWMax());
     }
 
-    assert overallProfit == tree.root.getPSum()
-        : "Sum of profits for the tree does not reflect the quantity variables state";
-    assert overallCapacity == tree.root.getWSum()
-        : "Sum of capacities for the tree does not reflect the quantity variables state";
-    assert maxLeafCapacity == tree.root.getWMax()
-        : "Max of capacities for the tree does not reflect the quantity variables state";
+    if (ASSERTS_ENABLED && !(overallProfit == tree.root.getPSum())) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Sum of profits for the tree does not reflect the quantity variables state"));
+    }
+    if (ASSERTS_ENABLED && !(overallCapacity == tree.root.getWSum())) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Sum of capacities for the tree does not reflect the quantity variables state"));
+    }
+    if (ASSERTS_ENABLED && !(maxLeafCapacity == tree.root.getWMax())) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Max of capacities for the tree does not reflect the quantity variables state"));
+    }
 
     return true;
   }

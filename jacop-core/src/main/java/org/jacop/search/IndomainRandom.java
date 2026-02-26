@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.security.SecureRandom;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
@@ -75,7 +77,10 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
    */
   public int indomain(IntVar v) {
 
-    assert !v.singleton() : "Indomain should not be called with singleton domain";
+    if (ASSERTS_ENABLED && !(!v.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("Indomain should not be called with singleton domain"));
+    }
 
     IntDomain dom = v.domain;
 
@@ -106,7 +111,9 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
     }
 
     // Only to satisfy the compiler.
-    assert false : "Error. This code should not be reached.";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(String.valueOf("Error. This code should not be reached."));
+    }
     return Integer.MAX_VALUE;
   }
 }

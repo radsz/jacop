@@ -30,6 +30,8 @@
 
 package org.jacop.util;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -121,8 +123,10 @@ public class Mdd {
 
     for (int i = 0; i < vars.length; i++) {
       this.views[i] = new IndexDomainView(vars[i], true);
-      assert domainLimits[i] >= vars[i].getSize()
-          : i + "-th variable has a size larger than its domain limit size";
+      if (ASSERTS_ENABLED && !(domainLimits[i] >= vars[i].getSize())) {
+        throw new IllegalStateException(
+            String.valueOf(i + "-th variable has a size larger than its domain limit size"));
+      }
       if (domainLimits[i] < vars[i].domain.getSize()) {
         throw new IllegalArgumentException(
             "domain limites are smaller than actual domain of an mdd.");
@@ -322,7 +326,9 @@ public class Mdd {
       } else {
         indexOfValue = findPosition(value, views[varNo].indexToValue);
       }
-      assert indexOfValue != -1;
+      if (ASSERTS_ENABLED && !(indexOfValue != -1)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       nodePosition += indexOfValue;
       varNo++;
 
@@ -351,7 +357,10 @@ public class Mdd {
    */
   public void addTuple(int[] tuple) {
 
-    assert extendable : "Mdd can not be extended after shrinking operation was performed";
+    if (ASSERTS_ENABLED && !(extendable)) {
+      throw new IllegalStateException(
+          String.valueOf("Mdd can not be extended after shrinking operation was performed"));
+    }
 
     addTupleToDiagram(tuple, null);
   }
@@ -448,7 +457,9 @@ public class Mdd {
 
     for (int[] tuple : table) {
 
-      assert tuple.length == positions.length : "Tuples have different length.";
+      if (ASSERTS_ENABLED && !(tuple.length == positions.length)) {
+        throw new IllegalStateException(String.valueOf("Tuples have different length."));
+      }
 
       if (!fillPositionsForTuple(tuple, positions)) {
         continue;
@@ -479,12 +490,15 @@ public class Mdd {
     int nodePosition = 0;
     for (int i = 0; i < tuple.length; i++) {
 
-      assert positions[i] != -1
-          : "value specified by tuple "
-              + List.of(tuple)
-              + "for variable no. "
-              + i
-              + "is already outside its initial domain.";
+      if (ASSERTS_ENABLED && !(positions[i] != -1)) {
+        throw new IllegalStateException(
+            String.valueOf(
+                "value specified by tuple "
+                    + List.of(tuple)
+                    + "for variable no. "
+                    + i
+                    + "is already outside its initial domain."));
+      }
 
       nodePosition += positions[i];
 
@@ -688,7 +702,9 @@ public class Mdd {
    */
   public boolean checkIfAllowed(int[] tuple) {
 
-    assert tuple.length == vars.length;
+    if (ASSERTS_ENABLED && !(tuple.length == vars.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int position = views[0].indexOfValue(tuple[0]);
 

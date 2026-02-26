@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * Defines interval of numbers which is part of FDV definition which consist of one or several
  * intervals.
@@ -49,7 +51,10 @@ public record Interval(int min, int max) {
    */
   public Interval {
 
-    assert min <= max : "min value " + min + " is larger than max value " + max;
+    if (ASSERTS_ENABLED && !(min <= max)) {
+      throw new IllegalStateException(
+          String.valueOf("min value " + min + " is larger than max value " + max));
+    }
   }
 
   /**

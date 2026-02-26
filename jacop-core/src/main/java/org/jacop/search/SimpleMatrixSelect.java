@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -137,7 +139,9 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
       Indomain<T> indomain,
       int pivotPosition) {
 
-    assert pivotPosition >= 0 : "Pivot position must be equal or greater 0";
+    if (ASSERTS_ENABLED && !(pivotPosition >= 0)) {
+      throw new IllegalStateException(String.valueOf("Pivot position must be equal or greater 0"));
+    }
 
     this.mainComparator = mainComparator;
     this.tieBreakingComparator = tieBreakingComparator;
@@ -150,7 +154,9 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
       List<T> current = new ArrayList<>();
 
-      assert var.length > pivotPosition;
+      if (ASSERTS_ENABLED && !(var.length > pivotPosition)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       for (T t : var) {
         current.add(t);
@@ -172,8 +178,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int firstVariable) {
 
-    assert searchVariables.size() > firstVariable
-        : "The position of the first entity to check is larger than the array size";
+    if (ASSERTS_ENABLED && !(searchVariables.size() > firstVariable)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "The position of the first entity to check is larger than the array size"));
+    }
 
     int finalIndex = searchVariables.size();
 
@@ -320,8 +329,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    assert primaryIndex >= 0;
-    assert primaryIndex < searchVariables.size();
+    if (ASSERTS_ENABLED && !(primaryIndex >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(primaryIndex < searchVariables.size())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return valueOrdering.indomain(searchVariables.get(primaryIndex).get(secondaryIndex));
   }

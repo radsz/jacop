@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils.structures;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -232,7 +234,9 @@ public final class IntHashMap<E> {
 
   /** Double the size of the table. */
   private void doubleSize() {
-    assert tableValue.length == tableKey.length;
+    if (ASSERTS_ENABLED && !(tableValue.length == tableKey.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // new map for temporary use
     IntHashMap<E> temp = new IntHashMap<>(tableKey.length * 2);
@@ -250,7 +254,9 @@ public final class IntHashMap<E> {
     }
 
     // take fields from the temp map
-    assert cardinal == temp.cardinal;
+    if (ASSERTS_ENABLED && !(cardinal == temp.cardinal)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     tableKey = temp.tableKey;
     tableValue = temp.tableValue;
   }

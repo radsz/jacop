@@ -30,6 +30,8 @@
 
 package org.jacop.examples.fd;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.Alldiff;
@@ -93,8 +95,10 @@ public class Kakro extends ExampleFd {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         if (rowDescription[i][j] == 1) {
-          assert (columnDescription[i][j] == 1)
-              : "Contradiction between row and column descriptions.";
+          if (ASSERTS_ENABLED && !((columnDescription[i][j] == 1))) {
+            throw new IllegalStateException(
+                String.valueOf("Contradiction between row and column descriptions."));
+          }
           elements[i][j] = new IntVar(store, "f" + i + "-" + j, 1, 9);
           vars.add(elements[i][j]);
         } else {

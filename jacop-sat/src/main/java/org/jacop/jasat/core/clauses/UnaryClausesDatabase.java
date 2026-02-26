@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import org.jacop.jasat.utils.Utils;
@@ -63,7 +65,9 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    assert clause.length == 1;
+    if (ASSERTS_ENABLED && !(clause.length == 1)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int newIndex = currentIndex++;
     int newId = indexToUniqueId(newIndex);
@@ -89,7 +93,9 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
       conflictClause.addLiteral(literal);
       core.triggerConflictEvent(conflictClause);
     } else {
-      assert value == literal;
+      if (ASSERTS_ENABLED && !(value == literal)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
 
     return newId;
@@ -101,7 +107,9 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    * @param clauseId the unique ID of the clause to remove
    */
   public void removeClause(int clauseId) {
-    assert clauseId < currentIndex;
+    if (ASSERTS_ENABLED && !(clauseId < currentIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     numRemoved++;
     clauses[clauseId] = 0;
     // nothing to do (not worthy to remember empty slots)
@@ -126,7 +134,9 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-    assert clauseIndex < currentIndex;
+    if (ASSERTS_ENABLED && !(clauseIndex < currentIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int literal = clauses[clauseIndex];
     clause.partialResolveWith(literal);

@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.diffn;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -636,7 +638,9 @@ public class Diffn extends Nooverlap {
     IntVar[] ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      assert rectangle[i] != null : i + "-th rectangle in the list is null";
+      if (ASSERTS_ENABLED && !(rectangle[i] != null)) {
+        throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
+      }
 
       x[i] = rectangle[i].getOrigin(0);
       y[i] = rectangle[i].getOrigin(1);

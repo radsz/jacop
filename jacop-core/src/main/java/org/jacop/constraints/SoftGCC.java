@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.netflow.DomainStructure;
@@ -335,10 +337,16 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   private void buildValueBasedHardCountersSoftBounds(
       Store store, List<Constraint> target, List<IntVar> costs, int i) {
     target.add(new Count(xvars, hardCounters[i], countedValue[i]));
-    assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
-        : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-    assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
-        : "UpperBound for " + i + "-th element must be between 0 and number of variables";
+    if (ASSERTS_ENABLED && !(softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "LowerBound for " + i + "-th element must be between 0 and number of variables"));
+    }
+    if (ASSERTS_ENABLED && !(softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "UpperBound for " + i + "-th element must be between 0 and number of variables"));
+    }
     int[][] table = new int[xvars.length + 1][2];
     for (int j = 0; j <= xvars.length; j++) {
       table[j][0] = j;

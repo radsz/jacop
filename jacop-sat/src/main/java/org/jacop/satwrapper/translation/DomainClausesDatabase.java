@@ -31,6 +31,8 @@
 
 package org.jacop.satwrapper.translation;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import org.jacop.core.Store;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
@@ -91,7 +93,10 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     // get the value this literal corresponds to
     SatCpBridge domain = wrapper.boolVarToDomain(assertedLiteral);
     if (domain.isTranslated()) {
-      assert wrapper.log(this, "variable %s is ignored because translated", domain.variable);
+      if (ASSERTS_ENABLED
+          && !(wrapper.log(this, "variable %s is ignored because translated", domain.variable))) {
+        throw new IllegalStateException("Assertion failed");
+      }
       return;
     }
 
@@ -157,9 +162,15 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       propagationCauses[varIdx] = assertedLiteral;
 
       // invariant : the explanation is equal to the depth in trail stack
-      assert trail.assertionStack.array[clauseIndex] == varIdx;
-      assert trail.values[varIdx] == literal;
-      assert clauseId == trail.getExplanation(varIdx);
+      if (ASSERTS_ENABLED && !(trail.assertionStack.array[clauseIndex] == varIdx)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(trail.values[varIdx] == literal)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(clauseId == trail.getExplanation(varIdx))) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
   }
 
@@ -172,9 +183,14 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
    * To get a real clause to resolve with, we seek for the clause at the origin of the propagation.
    */
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
-    assert uniqueIdToIndex(clauseIndex) == clauseIndex;
+    if (ASSERTS_ENABLED && !(uniqueIdToIndex(clauseIndex) == clauseIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
-    assert wrapper.log(this, "asked resolution with (index %d) %s", clauseIndex, clause);
+    if (ASSERTS_ENABLED
+        && !(wrapper.log(this, "asked resolution with (index %d) %s", clauseIndex, clause))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // literal that has been propagated
     int propagatedVar = trail.assertionStack.array[clauseIndex];
@@ -182,19 +198,25 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     // literal that has been asserted, and propagated the previous one
     int assertedLiteral = propagationCauses[propagatedVar];
 
-    assert wrapper.log(
-        this,
-        "resolution with "
-            + propagatedLiteral
-            + " and "
-            + (-assertedLiteral)
-            + " meaning "
-            + wrapper.showLiteralMeaning(propagatedLiteral)
-            + " or "
-            + wrapper.showLiteralMeaning(-assertedLiteral));
+    if (ASSERTS_ENABLED
+        && !(wrapper.log(
+            this,
+            "resolution with "
+                + propagatedLiteral
+                + " and "
+                + (-assertedLiteral)
+                + " meaning "
+                + wrapper.showLiteralMeaning(propagatedLiteral)
+                + " or "
+                + wrapper.showLiteralMeaning(-assertedLiteral)))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
-    assert (!clause.containsLiteral(assertedLiteral))
-        || (!clause.containsLiteral(-propagatedLiteral));
+    if (ASSERTS_ENABLED
+        && !((!clause.containsLiteral(assertedLiteral))
+            || (!clause.containsLiteral(-propagatedLiteral)))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // resolve clause with [-assertedLiteral, propagatedLiteral]
     clause.partialResolveWith(-assertedLiteral);

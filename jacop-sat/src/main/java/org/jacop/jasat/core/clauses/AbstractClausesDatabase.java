@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Arrays;
@@ -166,7 +168,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void ensureWatch(int varIdx) {
 
-    assert varIdx > 0;
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // already has a watch-list
     if (watchLists.length > varIdx && watchLists[varIdx] != null) {
@@ -195,9 +199,15 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void addWatch(int literal, int clauseIndex) {
 
-    assert literal != 0;
-    assert dbStore.uniqueIdToIndex(clauseIndex) == clauseIndex;
-    assert !doesWatch(literal, clauseIndex);
+    if (ASSERTS_ENABLED && !(literal != 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(dbStore.uniqueIdToIndex(clauseIndex) == clauseIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(!doesWatch(literal, clauseIndex))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int varIdx = Math.abs(literal);
     // get the watched clauses for the variable varIdx
@@ -205,8 +215,12 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     int[] watchList = watchLists[varIdx];
 
-    assert watchList[0] <= watchList.length;
-    assert watchList[0] > 0;
+    if (ASSERTS_ENABLED && !(watchList[0] <= watchList.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(watchList[0] > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // resize if too small
     if (watchList[0] == watchList.length) {
@@ -227,7 +241,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void removeWatch(int literal, int clauseIndex) {
 
-    assert doesWatch(literal, clauseIndex);
+    if (ASSERTS_ENABLED && !(doesWatch(literal, clauseIndex))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int varIdx = Math.abs(literal);
     int[] watchList = watchLists[varIdx];
@@ -252,7 +268,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
       }
     }
 
-    assert !doesWatch(literal, clauseIndex);
+    if (ASSERTS_ENABLED && !(!doesWatch(literal, clauseIndex))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**

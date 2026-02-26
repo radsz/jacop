@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -57,8 +59,12 @@ public final class Utils {
    * @return a new int[] with required size, and elements from @param array
    */
   public static int[] resize(int[] array, int newSize, int size, MemoryPool pool) {
-    assert newSize > array.length : "resize to bigger size";
-    assert size <= array.length;
+    if (ASSERTS_ENABLED && !(newSize > array.length)) {
+      throw new IllegalStateException(String.valueOf("resize to bigger size"));
+    }
+    if (ASSERTS_ENABLED && !(size <= array.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // "allocate" from the pool
     int[] answer = pool.getNew(newSize);
@@ -112,7 +118,9 @@ public final class Utils {
    * @return a new array which first elements are the same as the ones in array
    */
   public static int[][] resize(int[][] array, int newSize, int size) {
-    assert size < newSize;
+    if (ASSERTS_ENABLED && !(size < newSize)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int[][] answer = new int[newSize][];
     System.arraycopy(array, 0, answer, 0, size);
     return answer;

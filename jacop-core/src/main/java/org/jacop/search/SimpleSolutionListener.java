@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
@@ -134,8 +136,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   /** It returns the solution number no. The first solution has an index 1. */
   public Domain[] getSolution(int no) {
 
-    assert no <= noSolutions;
-    assert recordSolutions;
+    if (ASSERTS_ENABLED && !(no <= noSolutions)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(recordSolutions)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return solutions[no - 1];
   }
@@ -303,13 +309,22 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       number = 0;
     }
 
-    assert number < noSolutions : "Smaller number of solutions were found.";
-    assert recordSolutions || number == 0 : "The solutions were not stored.";
-    assert solutions.length > number : "The solution of the given number was not stored.";
+    if (ASSERTS_ENABLED && !(number < noSolutions)) {
+      throw new IllegalStateException(String.valueOf("Smaller number of solutions were found."));
+    }
+    if (ASSERTS_ENABLED && !(recordSolutions || number == 0)) {
+      throw new IllegalStateException(String.valueOf("The solutions were not stored."));
+    }
+    if (ASSERTS_ENABLED && !(solutions.length > number)) {
+      throw new IllegalStateException(
+          String.valueOf("The solution of the given number was not stored."));
+    }
 
     if (vars != null) {
 
-      assert store.currentConstraint == null;
+      if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       for (int i = 0; i < vars.length; i++) {
         vars[i].dom().in(store.level, vars[i], solutions[number][i]);

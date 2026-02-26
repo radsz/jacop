@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils.structures;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.jasat.utils.MemoryPool;
 
 /**
@@ -101,7 +103,9 @@ public final class IntStack {
    */
   public int pop() {
 
-    assert currentIndex != 0;
+    if (ASSERTS_ENABLED && !(currentIndex != 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return array[--currentIndex];
   }
@@ -113,7 +117,9 @@ public final class IntStack {
    */
   public int peek() {
 
-    assert currentIndex != 0;
+    if (ASSERTS_ENABLED && !(currentIndex != 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return array[currentIndex - 1];
   }

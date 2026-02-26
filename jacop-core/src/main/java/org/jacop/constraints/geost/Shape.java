@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.geost;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -72,7 +74,9 @@ public class Shape {
 
     boundingBox = computeBoundingBox();
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -89,7 +93,9 @@ public class Shape {
 
     this.boundingBox = box;
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -108,7 +114,9 @@ public class Shape {
     boxes = new ArrayList<>(1);
     boxes.add(boundingBox);
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -299,7 +307,9 @@ public class Shape {
         Dbox.dispatchBox(hole);
       }
 
-      assert boundingBox.area() - holeArea > 0 : "negative area";
+      if (ASSERTS_ENABLED && !(boundingBox.area() - holeArea > 0)) {
+        throw new IllegalStateException(String.valueOf("negative area"));
+      }
 
       area = boundingBox.area() - holeArea;
     }

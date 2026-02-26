@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -261,7 +263,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     do {
       store.propagationHasOccurred = false;
       consistencyProcessChangedVariables();
-      assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+      if (ASSERTS_ENABLED && !(checkXorder())) {
+        throw new IllegalStateException(
+            String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
+      }
       stampValue = stamp.value();
       consistencyLogStampAndXdomain();
       consistencyUpdateXdomainAndYdomain();
@@ -296,7 +301,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
     firstConsistencyCheck = false;
     firstConsistencyLevel = store.level;
-    assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
+    if (ASSERTS_ENABLED && !(checkXorder())) {
+      throw new IllegalStateException(
+          String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
+    }
   }
 
   private void consistencyProcessChangedVariables() {
@@ -380,8 +388,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private void consistencyPruneXDomains(Store store) {
     for (int j = 0; j < stampValue; j++) {
-      assert match3[j] >= 0 && match3[j] < ySize;
-      assert compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize;
+      if (ASSERTS_ENABLED && !(match3[j] >= 0 && match3[j] < ySize)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       int cutMin = xDomain[j].min();
       int cutMax = xDomain[j].max();
       if (DEBUG) {
@@ -523,7 +535,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       while (position < count.length && domainHash[position] != xValue) {
         position++;
       }
-      assert position < count.length;
+      if (ASSERTS_ENABLED && !(position < count.length)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       count[position]++;
     }
 
@@ -573,24 +587,38 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     firstPass();
 
     // check we are in the good ranges for match1 and match1xOrder
-    assert checkFirstPass();
+    if (ASSERTS_ENABLED && !(checkFirstPass())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     secondPass();
 
-    assert checkSecondPass();
+    if (ASSERTS_ENABLED && !(checkSecondPass())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     thirdPass();
 
-    assert checkThirdPass();
+    if (ASSERTS_ENABLED && !(checkThirdPass())) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   private boolean checkFirstPass() {
 
     for (int j = 0; j < stampValue; j++) {
-      assert match1[j] >= 0;
-      assert match1[j] < ySize;
-      assert match1xOrder[j] >= 0;
-      assert match1xOrder[j] < stampValue;
+      if (ASSERTS_ENABLED && !(match1[j] >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(match1[j] < ySize)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(match1xOrder[j] >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(match1xOrder[j] < stampValue)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
 
     return true;
@@ -599,7 +627,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private boolean checkSecondPass() {
 
     for (int j = 1; j < stampValue; j++) {
-      assert match2[match2xOrder[j]] >= match2[match2xOrder[j - 1]];
+      if (ASSERTS_ENABLED && !(match2[match2xOrder[j]] >= match2[match2xOrder[j - 1]])) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
 
     return true;
@@ -608,8 +638,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private boolean checkThirdPass() {
 
     for (int j = 0; j < stampValue; j++) {
-      assert xDomain[j].min() <= match3[j];
-      assert xDomain[j].max() >= match3[j];
+      if (ASSERTS_ENABLED && !(xDomain[j].min() <= match3[j])) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(xDomain[j].max() >= match3[j])) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
 
     return true;
@@ -749,7 +783,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       e = nbOfMatchPerY[i] - yDomain[1][i]; // excess of y mates
       while (e > 0) {
 
-        assert match2[match2xOrder[xIndex]] == i;
+        if (ASSERTS_ENABLED && !(match2[match2xOrder[xIndex]] == i)) {
+          throw new IllegalStateException("Assertion failed");
+        }
 
         while (xIndex >= 0) {
           xIdx = match2xOrder[xIndex];
@@ -760,8 +796,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           }
         }
 
-        assert match1[xIdx] < i;
-        assert match2[xIdx] == i;
+        if (ASSERTS_ENABLED && !(match1[xIdx] < i)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(match2[xIdx] == i)) {
+          throw new IllegalStateException("Assertion failed");
+        }
 
         match3[xIdx] = match1[xIdx];
         nbOfMatchPerY[i]--;
@@ -836,8 +876,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void sccsInitReachedFromS(boolean[] reachedFromS, boolean[] reachesS, int sccNb) {
     for (int i = 0; i < ySize; i++) {
       int comp = compOfY[i];
-      assert comp >= 0;
-      assert comp <= sccNb;
+      if (ASSERTS_ENABLED && !(comp >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(comp <= sccNb)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       if (yDomain[0][i] < nbOfMatchPerY[i]) {
         reachedFromS[comp] = true;
       }
@@ -857,8 +901,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int maxYreachesS = -1;
     for (int i = 0; i < ySize; i++) {
       int c = compOfY[i];
-      assert c >= 0;
-      assert c <= sccNb;
+      if (ASSERTS_ENABLED && !(c >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(c <= sccNb)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       if (maxYreachedFromS >= i) {
         reachedFromS[c] = true;
       }
@@ -884,8 +932,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int minYreachesS = ySize;
     for (int i = ySize - 1; i >= 0; i--) {
       int c = compOfY[i];
-      assert c >= 0;
-      assert c <= sccNb;
+      if (ASSERTS_ENABLED && !(c >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(c <= sccNb)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       if (minYreachedFromS <= i) {
         reachedFromS[c] = true;
       }
@@ -955,7 +1007,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
               compReachesLeft, compReachesRight, yreachesLeft, yreachesRight, sccNb);
     }
 
-    assert S1.isEmpty();
+    if (ASSERTS_ENABLED && !(S1.isEmpty())) {
+      throw new IllegalStateException("Assertion failed");
+    }
     return sccNb;
   }
 
@@ -967,7 +1021,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       int sccNb) {
     compReachesLeft[sccNb] = ySize;
     compReachesRight[sccNb] = -1;
-    assert !S1.isEmpty();
+    if (ASSERTS_ENABLED && !(!S1.isEmpty())) {
+      throw new IllegalStateException("Assertion failed");
+    }
     Component C = S2.pop();
     while (!S1.isEmpty() && S1.peek() >= C.root && S1.peek() <= C.rightmostY) {
       int popY = S1.pop();
@@ -991,8 +1047,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // bondaries of these xs.
     for (int j = 0; j < stampValue; j++) {
       i = match3[j];
-      assert i >= 0;
-      assert i < ySize;
+      if (ASSERTS_ENABLED && !(i >= 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(i < ySize)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       yreachesLeft[i] = Math.min(yreachesLeft[i], xDomain[j].min());
       yreachesRight[i] = Math.max(yreachesRight[i], xDomain[j].max());
     }
@@ -1111,7 +1171,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
       maxU[i] = Math.min(yDomain[1][i], pCount.size());
       for (int l = 0; l < yDomain[0][i]; l++) {
-        assert !pCount.isEmpty();
+        if (ASSERTS_ENABLED && !(!pCount.isEmpty())) {
+          throw new IllegalStateException("Assertion failed");
+        }
         pCount.remove();
       }
 
@@ -1141,7 +1203,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
 
       for (int l = 0; l < yDomain[0][i]; l++) {
-        assert !pCount.isEmpty();
+        if (ASSERTS_ENABLED && !(!pCount.isEmpty())) {
+          throw new IllegalStateException("Assertion failed");
+        }
         pCount.remove();
         count++;
       }

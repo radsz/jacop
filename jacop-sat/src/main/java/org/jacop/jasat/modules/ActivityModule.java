@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.modules;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -71,9 +73,15 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    */
   private final Comparator<Integer> comparator =
       (i, j) -> {
-        assert Math.abs(i) <= posActivities.length + 1;
-        assert Math.abs(j) <= posActivities.length + 1;
-        assert posActivities.length == negActivities.length;
+        if (ASSERTS_ENABLED && !(Math.abs(i) <= posActivities.length + 1)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(Math.abs(j) <= posActivities.length + 1)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(posActivities.length == negActivities.length)) {
+          throw new IllegalStateException("Assertion failed");
+        }
 
         int activity_i = getLiteralActivity(Math.abs(i), i > 0);
         int activity_j = getLiteralActivity(Math.abs(j), j > 0);
@@ -212,7 +220,9 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    * @return the activity of this (variable, polarity)
    */
   private int getLiteralActivity(int varIdx, boolean polarity) {
-    assert varIdx > 0;
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (polarity) {
       return posActivities[varIdx];
@@ -246,8 +256,12 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
   // be sure the variable bump can be accessed safely
   private void ensureVarSize(int varIdx) {
-    assert varIdx > 0;
-    assert posActivities.length == negActivities.length;
+    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(posActivities.length == negActivities.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (varIdx > activitiesIndex) {
       if (varIdx >= posActivities.length) {

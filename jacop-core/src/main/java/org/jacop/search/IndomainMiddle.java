@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -52,10 +54,14 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
   /** It requires IntVar variable. */
   public int indomain(IntVar v) {
 
-    assert !v.singleton() : "indomain does not work with singleton variables.";
+    if (ASSERTS_ENABLED && !(!v.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("indomain does not work with singleton variables."));
+    }
 
-    assert v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
-        : "It is not possible to use BoundDomain";
+    if (ASSERTS_ENABLED && !(v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID)) {
+      throw new IllegalStateException(String.valueOf("It is not possible to use BoundDomain"));
+    }
 
     if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       return indomainIntervalDomain((IntervalDomain) v.domain);

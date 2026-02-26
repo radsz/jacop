@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -70,7 +72,9 @@ public abstract class AbstractBoolSimple extends PrimitiveConstraint {
     this.b = b;
     this.result = result;
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
 
     queueIndex = 0;
 

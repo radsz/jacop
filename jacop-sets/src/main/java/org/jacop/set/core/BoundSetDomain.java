@@ -30,6 +30,8 @@
 
 package org.jacop.set.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
@@ -274,7 +276,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public void addDom(IntDomain set) {
 
-    assert set.checkInvariants() == null : set.checkInvariants();
+    if (ASSERTS_ENABLED && !(set.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(set.checkInvariants()));
+    }
 
     this.lubDomain = this.lubDomain.union(set);
     this.cardDomain = new IntervalDomain(glbDomain.getSize(), lubDomain.getSize());
@@ -283,8 +287,12 @@ public class BoundSetDomain extends SetDomain {
   /** Adds a set to the domain. */
   public void addDom(SetDomain domain) {
 
-    assert domain.lub().checkInvariants() == null : domain.lub().checkInvariants();
-    assert domain.glb().checkInvariants() == null : domain.glb().checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.lub().checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.lub().checkInvariants()));
+    }
+    if (ASSERTS_ENABLED && !(domain.glb().checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.glb().checkInvariants()));
+    }
 
     lubDomain = lubDomain.union(domain.lub());
     glbDomain = glbDomain.intersect(domain.glb());
@@ -366,7 +374,9 @@ public class BoundSetDomain extends SetDomain {
   /** It checks if the supplied set or setDomain is a subset of this domain. */
   public boolean contains(IntDomain set) {
 
-    assert set.checkInvariants() == null : set.checkInvariants();
+    if (ASSERTS_ENABLED && !(set.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(set.checkInvariants()));
+    }
 
     return this.lubDomain.contains(set);
   }
@@ -379,7 +389,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public boolean contains(SetDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     return this.lubDomain.contains(domain.lub());
   }
@@ -498,7 +510,9 @@ public class BoundSetDomain extends SetDomain {
   }
 
   private void applyInAtNewLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
-    assert stamp < storeLevel;
+    if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     IntDomain resultGlb = glbDomain.cloneLight();
     int eventGlb = resultGlb.unionAdapt(inGlb);
@@ -565,7 +579,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain intersect(SetDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     IntDomain lub_i = lubDomain.intersect(domain.lub());
 
@@ -586,7 +602,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain intersect(IntDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     IntDomain lubResult = lubDomain.intersect(domain);
 
@@ -665,7 +683,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public void setDomain(SetDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     this.glbDomain = domain.glb();
     this.lubDomain = domain.lub();
@@ -674,7 +694,9 @@ public class BoundSetDomain extends SetDomain {
   /** It sets the domain to the the set {min..max}. It grounds it. */
   public void setDomain(int min, int max) {
 
-    assert (min <= max);
+    if (ASSERTS_ENABLED && !((min <= max))) {
+      throw new IllegalStateException("Assertion failed");
+    }
     this.lubDomain = new IntervalDomain(min, max);
     this.glbDomain = new IntervalDomain();
 
@@ -731,7 +753,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain subtract(SetDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     IntDomain glbResult = glbDomain.subtract(domain.lub());
     IntDomain lubResult = lubDomain.subtract(domain.glb());
@@ -773,7 +797,9 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public String toString() {
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
 
     if (this.glbDomain.eq(this.lubDomain)) {
       if (glbDomain.singleton()) {
@@ -813,7 +839,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(SetDomain domain) {
 
-    assert domain.checkInvariants() == null : domain.checkInvariants();
+    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
+    }
 
     IntDomain glbResult = glbDomain.intersect(domain.glb());
     IntDomain lubResult = lubDomain.union(domain.lub());
@@ -830,7 +858,9 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(int min, int max) {
 
-    assert max > min : "min value is larger than max value";
+    if (ASSERTS_ENABLED && !(max > min)) {
+      throw new IllegalStateException(String.valueOf("min value is larger than max value"));
+    }
 
     IntDomain glbResult = glbDomain.union(min, max);
     IntDomain lubResult = lubDomain.union(min, max);
@@ -903,7 +933,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       applyNewLevelGlbChange(level, v, glbDomain.union(element));
     }
   }
@@ -929,7 +961,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       applyNewLevelGlbChange(level, v, glbDomain.union(intersect));
     }
   }
@@ -959,7 +993,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       applyNewLevelLubChange(level, v, lubDomain.subtract(element));
     }
   }
@@ -991,7 +1027,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       BoundSetDomain result = new BoundSetDomain(set, set);
       result.cardDomain = new IntervalDomain(set.getSize(), set.getSize());
@@ -1024,7 +1062,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       applyNewLevelLubChange(level, v, lubDomain.intersect(intersect));
     }
   }
@@ -1074,7 +1114,9 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      assert stamp < level;
+      if (ASSERTS_ENABLED && !(stamp < level)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       BoundSetDomain result = new BoundSetDomain();
       IntDomain cloned = target.cloneLight();
@@ -1131,7 +1173,9 @@ public class BoundSetDomain extends SetDomain {
 
   /** Returns true if inValue was called (caller should skip CARDINALITY_EVENT). */
   private boolean applyInCardinalityAtNewLevel(int level, SetVar v, int min, int max) {
-    assert stamp < level;
+    if (ASSERTS_ENABLED && !(stamp < level)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     IntDomain resultCardinality = cardDomain.intersect(min, max);
 

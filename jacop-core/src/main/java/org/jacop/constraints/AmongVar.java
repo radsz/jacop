@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -400,7 +402,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (x.singleton()) {
         k = k.union(x.min());
       } else {
-        assert false : "consistencyForY is called without all X being grounded";
+        if (ASSERTS_ENABLED && !(false)) {
+          throw new IllegalStateException(
+              String.valueOf("consistencyForY is called without all X being grounded"));
+        }
         return null;
       }
     }
@@ -1143,8 +1148,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         return true;
       }
 
-      assert !allYsGrounded || !allXsGrounded || (n.value() == lb0)
-          : " Domain of N or value of timestamp LBoUTS was not maintenated properly";
+      if (ASSERTS_ENABLED && !(!allYsGrounded || !allXsGrounded || (n.value() == lb0))) {
+        throw new IllegalStateException(
+            String.valueOf(
+                " Domain of N or value of timestamp LBoUTS was not maintenated properly"));
+      }
     }
     return false;
   }

@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints.linear;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -57,7 +59,10 @@ class BoundsVar implements MutableVar {
   BoundsVar(Store store, double min, double max) {
     BoundsVarValue val = new BoundsVarValue();
 
-    assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+    if (ASSERTS_ENABLED && !((min <= max))) {
+      throw new IllegalStateException(
+          String.valueOf("Min value " + min + " greater than max value " + max + " in BoundsVar"));
+    }
 
     val.min = min;
     val.max = max;
@@ -69,7 +74,10 @@ class BoundsVar implements MutableVar {
   BoundsVar(Store store, double min, double max, double lb, double ub) {
     BoundsVarValue val = new BoundsVarValue();
 
-    assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+    if (ASSERTS_ENABLED && !((min <= max))) {
+      throw new IllegalStateException(
+          String.valueOf("Min value " + min + " greater than max value " + max + " in BoundsVar"));
+    }
 
     val.min = min;
     val.max = max;

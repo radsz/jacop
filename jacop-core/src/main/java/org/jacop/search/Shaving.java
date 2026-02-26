@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -335,8 +337,10 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
   boolean checkIfShavable(IntVar v, Integer val) {
 
-    assert v.domain.contains(val) && !v.domain.singleton()
-        : "var " + v + "val " + val + " should not be checked for shavability";
+    if (ASSERTS_ENABLED && !(v.domain.contains(val) && !v.domain.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("var " + v + "val " + val + " should not be checked for shavability"));
+    }
 
     int depth = store.level;
 

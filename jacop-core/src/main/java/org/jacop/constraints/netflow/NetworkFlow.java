@@ -32,6 +32,7 @@ package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
+import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -221,8 +222,12 @@ public class NetworkFlow extends Constraint
     network.pruneNodesWithSmallDegree();
     network.analyze(costLimit);
 
-    assert checkFlow(network);
-    assert checkStructure(network);
+    if (ASSERTS_ENABLED && !(checkFlow(network))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(checkStructure(network))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /** Prunes cost minimum from current flow cost, then if all vars are ground, prunes cost max. */

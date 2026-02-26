@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -129,7 +131,9 @@ public final class Core implements SolverComponent {
    */
   public Core(Config config) {
     // set the config
-    assert config.check();
+    if (ASSERTS_ENABLED && !(config.check())) {
+      throw new IllegalStateException("Assertion failed");
+    }
     this.config = config;
 
     // set some parameters
@@ -231,8 +235,12 @@ public final class Core implements SolverComponent {
    * @param newLevel the current search level
    */
   public void assertLiteral(int literal, int newLevel) {
-    assert newLevel > this.currentLevel;
-    assert Math.abs(literal) <= maxVariable;
+    if (ASSERTS_ENABLED && !(newLevel > this.currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(Math.abs(literal) <= maxVariable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     triggerAssertEvent(literal, newLevel);
   }
@@ -244,7 +252,9 @@ public final class Core implements SolverComponent {
    * @param level the level to return to
    */
   public void backjumpToLevel(int level) {
-    assert level < currentLevel;
+    if (ASSERTS_ENABLED && !(level < currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     triggerBackjumpEvent(level);
   }
@@ -303,7 +313,9 @@ public final class Core implements SolverComponent {
    *     CONFLICT.
    */
   public int getLevelToBackjump() {
-    assert explanationClause != null;
+    if (ASSERTS_ENABLED && !(explanationClause != null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     return conflictLearning.getLevelToBackjump(explanationClause);
   }
 
@@ -315,7 +327,9 @@ public final class Core implements SolverComponent {
    * @return a level lower than the current level
    */
   public int getLevelToBackjump(MapClause explanationClause) {
-    assert explanationClause != null;
+    if (ASSERTS_ENABLED && !(explanationClause != null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     return conflictLearning.getLevelToBackjump(explanationClause);
   }
 
@@ -387,7 +401,9 @@ public final class Core implements SolverComponent {
 
       // find the next literal to propagate
       int literalToPropagate = toPropagate.pop();
-      assert trail.values[Math.abs(literalToPropagate)] != -literalToPropagate;
+      if (ASSERTS_ENABLED && !(trail.values[Math.abs(literalToPropagate)] != -literalToPropagate)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       assignmentNum++;
 
@@ -401,7 +417,9 @@ public final class Core implements SolverComponent {
 
   /** Triggers an event of forget(). */
   private void triggerForgetEvent() {
-    assert currentState == SolverState.UNKNOWN;
+    if (ASSERTS_ENABLED && !(currentState == SolverState.UNKNOWN)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     for (int i = 0; i < numForgetModules; i++) {
       forgetModules[i].onForget();
@@ -415,9 +433,15 @@ public final class Core implements SolverComponent {
    * @param newLevel the new level, after assertion. It must be strictly greater than currentLevel.
    */
   private void triggerAssertEvent(int literal, int newLevel) {
-    assert newLevel > currentLevel;
-    assert currentState == SolverState.UNKNOWN;
-    assert Math.abs(literal) <= maxVariable;
+    if (ASSERTS_ENABLED && !(newLevel > currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(currentState == SolverState.UNKNOWN)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(Math.abs(literal) <= maxVariable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     currentLevel = newLevel;
 
@@ -442,7 +466,10 @@ public final class Core implements SolverComponent {
    */
   public void triggerIdleEvent() {
 
-    assert explanationClause.isEmpty() || !explanationClause.isUnsatisfiableIn(trail);
+    if (ASSERTS_ENABLED
+        && !(explanationClause.isEmpty() || !explanationClause.isUnsatisfiableIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     currentState = SolverState.UNKNOWN;
 
@@ -456,14 +483,18 @@ public final class Core implements SolverComponent {
    * @param clauseToLearn the clause which is learnt
    */
   public void triggerLearnEvent(MapClause clauseToLearn) {
-    assert currentState == SolverState.UNKNOWN;
+    if (ASSERTS_ENABLED && !(currentState == SolverState.UNKNOWN)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (clauseToLearn.isEmpty()) {
       logc("tried to learn an empty clause");
       return;
     }
 
-    assert !clauseToLearn.isUnsatisfiableIn(trail);
+    if (ASSERTS_ENABLED && !(!clauseToLearn.isUnsatisfiableIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // add the clauseToLearn
     addClause(clauseToLearn.toIntArray(pool), false);
@@ -478,8 +509,12 @@ public final class Core implements SolverComponent {
    * @param clause an unsatisfiable clause.
    */
   public void triggerConflictEvent(MapClause clause) {
-    assert currentState != SolverState.CONFLICT;
-    assert clause.isUnsatisfiableIn(trail);
+    if (ASSERTS_ENABLED && !(currentState != SolverState.CONFLICT)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(clause.isUnsatisfiableIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     currentState = SolverState.CONFLICT;
 
@@ -502,7 +537,9 @@ public final class Core implements SolverComponent {
       }
 
     } else {
-      assert currentLevel == 0;
+      if (ASSERTS_ENABLED && !(currentLevel == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       // conflict at level 0 is UNSAT !
       triggerUnsatEvent();
@@ -516,7 +553,9 @@ public final class Core implements SolverComponent {
    * @param unitClauseId the unique id of the unit clause that propagates
    */
   public void triggerPropagateEvent(int literal, int unitClauseId) {
-    assert Math.abs(literal) <= maxVariable;
+    if (ASSERTS_ENABLED && !(Math.abs(literal) <= maxVariable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // inform the trail now
     trail.assertLiteral(literal, currentLevel, unitClauseId);
@@ -536,7 +575,9 @@ public final class Core implements SolverComponent {
    * @param level the level to backjump to
    */
   public void triggerBackjumpEvent(int level) {
-    assert level < currentLevel;
+    if (ASSERTS_ENABLED && !(level < currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     for (int i = 0; i < numBackjumpModules; i++) {
       backjumpModules[i].onBackjump(currentLevel, level);
@@ -553,7 +594,9 @@ public final class Core implements SolverComponent {
 
   /** Triggers an event of restart. */
   public void triggerRestartEvent() {
-    assert currentLevel > 0;
+    if (ASSERTS_ENABLED && !(currentLevel > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int level = currentLevel;
 
     for (int i = 0; i < numRestartModules; i++) {
@@ -678,7 +721,9 @@ public final class Core implements SolverComponent {
   /** Prints the current solution on standard output. */
   public void printSolution() {
 
-    assert hasSolution();
+    if (ASSERTS_ENABLED && !(hasSolution())) {
+      throw new IllegalStateException("Assertion failed");
+    }
     IO.println("s " + SolverState.show(currentState));
 
     // for satisfiable instances, print certificate
@@ -736,6 +781,8 @@ public final class Core implements SolverComponent {
    * @param core the solver core (must be this instance)
    */
   public void initialize(Core core) {
-    assert core == this;
+    if (ASSERTS_ENABLED && !(core == this)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 }

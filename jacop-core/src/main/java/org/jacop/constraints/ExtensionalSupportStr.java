@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -243,8 +245,11 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void removeLevel(int level) {
 
-    assert level > firstConsistencyLevel
-        : "Constraint has the level at which it has computed its initial state being removed.";
+    if (ASSERTS_ENABLED && !(level > firstConsistencyLevel)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Constraint has the level at which it has computed its initial state being removed."));
+    }
 
     //   It is called upon removing level
 

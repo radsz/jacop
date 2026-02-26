@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.diffn;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.Constraint;
@@ -67,7 +69,9 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(IntVar[][] rectangle) {
 
-    assert rectangle != null : "Rectangles list is null";
+    if (ASSERTS_ENABLED && !(rectangle != null)) {
+      throw new IllegalStateException(String.valueOf("Rectangles list is null"));
+    }
 
     queueIndex = 2;
 
@@ -77,8 +81,13 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      assert rectangle[i] != null : i + "-th rectangle in the list is null";
-      assert rectangle[i].length != 4 : "The rectangle has to have exactly two dimensions";
+      if (ASSERTS_ENABLED && !(rectangle[i] != null)) {
+        throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
+      }
+      if (ASSERTS_ENABLED && !(rectangle[i].length != 4)) {
+        throw new IllegalStateException(
+            String.valueOf("The rectangle has to have exactly two dimensions"));
+      }
 
       x[i] = rectangle[i][0];
       y[i] = rectangle[i][1];
@@ -131,7 +140,9 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(List<? extends List<? extends IntVar>> rectangle) {
 
-    assert rectangle != null : "Rectangles list is null";
+    if (ASSERTS_ENABLED && !(rectangle != null)) {
+      throw new IllegalStateException(String.valueOf("Rectangles list is null"));
+    }
 
     this.queueIndex = 2;
 
@@ -141,8 +152,13 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.size()];
 
     for (int i = 0; i < rectangle.size(); i++) {
-      assert rectangle.get(i) != null : i + "-th rectangle in the list is null";
-      assert rectangle.get(i).size() != 4 : "The rectangle has to have exactly two dimensions";
+      if (ASSERTS_ENABLED && !(rectangle.get(i) != null)) {
+        throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
+      }
+      if (ASSERTS_ENABLED && !(rectangle.get(i).size() != 4)) {
+        throw new IllegalStateException(
+            String.valueOf("The rectangle has to have exactly two dimensions"));
+      }
 
       x[i] = rectangle.get(i).getFirst();
       y[i] = rectangle.get(i).get(1);

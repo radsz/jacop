@@ -65,6 +65,13 @@ public class Store {
   /** It specifies if some debugging information is printed. */
   public static final boolean DEBUG = true;
 
+  /**
+   * Global switch for runtime assertion-style checks migrated from Java {@code assert}.
+   *
+   * <p>Default is disabled unless JVM property {@code -Djacop.asserts.enabled=true} is provided.
+   */
+  public static final boolean ASSERTS_ENABLED = Boolean.getBoolean("jacop.asserts.enabled");
+
   /** It specifies the seed for random number generators. */
   static long seed;
 
@@ -725,7 +732,9 @@ public class Store {
    */
   public void impose(Constraint c, int queueIndex) {
 
-    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(queueIndex < queueNo)) {
+      throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
+    }
 
     c.impose(this, queueIndex);
   }
@@ -758,7 +767,9 @@ public class Store {
    */
   public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
 
-    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(queueIndex < queueNo)) {
+      throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
+    }
 
     c.impose(this, queueIndex);
 
@@ -790,7 +801,9 @@ public class Store {
   public <T extends Constraint> void imposeDecomposition(
       DecomposedConstraint<T> c, int queueIndex) {
 
-    assert queueIndex < queueNo : CONSTRAINT_QUEUE_TOO_LARGE;
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(queueIndex < queueNo)) {
+      throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
+    }
 
     c.imposeDecomposition(this, queueIndex);
   }
@@ -878,7 +891,10 @@ public class Store {
 
     Var previousVar = variablesHashMap.put(v.id(), v);
 
-    assert previousVar == null : "Two variables have the same id " + previousVar + " " + v;
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(previousVar == null)) {
+      throw new IllegalStateException(
+          String.valueOf("Two variables have the same id " + previousVar + " " + v));
+    }
 
     if (v.storeIndex != -1 && vars[v.storeIndex] == v) {
       throw new IllegalArgumentException("\nSetting Variable: Variable already exists: " + v.id());
@@ -949,8 +965,11 @@ public class Store {
       return;
     }
 
-    assert trailManager.getLevel() == level
-        : "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()";
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(trailManager.getLevel() == level)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()"));
+    }
 
     //                      || trailManager.levelInfo.get(trailManager.levelInfo.size() - 1) ==
     // level) :
@@ -1089,7 +1108,9 @@ public class Store {
       c.removeLevelLate(level);
     }
 
-    assert checkInvariants() == null : checkInvariants();
+    if (org.jacop.core.Store.ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
   }
 
   /**
@@ -1120,8 +1141,12 @@ public class Store {
 
       for (int i = 0; i < size; i++) {
 
-        assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].storeIndex)
-            : "Variable position " + i + " not properly recorded to have changed ";
+        if (org.jacop.core.Store.ASSERTS_ENABLED
+            && !(vars[i].level() < level
+                || trailManager.isRecognizedAsChanged(vars[i].storeIndex))) {
+          throw new IllegalStateException(
+              String.valueOf("Variable position " + i + " not properly recorded to have changed "));
+        }
       }
     }
 

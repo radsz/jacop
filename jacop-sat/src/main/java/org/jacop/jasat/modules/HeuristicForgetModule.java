@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.modules;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import org.jacop.jasat.core.Core;
@@ -67,7 +69,9 @@ public final class HeuristicForgetModule
    * i.e. that are : - not very active (useless) - not the explanation for a currently set literal
    */
   public void onForget() {
-    assert core.currentLevel == 0;
+    if (ASSERTS_ENABLED && !(core.currentLevel == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // delete at most half of the clauses
     int numClausesToRemove = core.dbStore.size() / 2;
@@ -120,7 +124,9 @@ public final class HeuristicForgetModule
 
       int lbd = Math.min(computeLbd(explanation), learntClauses.length - 1);
 
-      assert lbd > 0 && lbd < learntClauses.length;
+      if (ASSERTS_ENABLED && !(lbd > 0 && lbd < learntClauses.length)) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
   }
 

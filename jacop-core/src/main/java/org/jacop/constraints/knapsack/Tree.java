@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.knapsack;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -166,7 +168,9 @@ public class Tree {
       TreeLeaf[] leaves,
       IntVar zero) {
 
-    assert items.length > 1 : "Number of items must be greater than 1";
+    if (ASSERTS_ENABLED && !(items.length > 1)) {
+      throw new IllegalStateException(String.valueOf("Number of items must be greater than 1"));
+    }
 
     TreeLeaf nullLeaf = new TreeLeaf(zero, 1, 0, items.length);
     int totalLength = items.length + (items.length % 2 == 1 ? 1 : 0);
@@ -313,7 +317,9 @@ public class Tree {
 
     optimalProfit = obtainedProfit;
 
-    assert optimalProfit >= 0 : "The optimal profit is negative. ";
+    if (ASSERTS_ENABLED && !(optimalProfit >= 0)) {
+      throw new IllegalStateException(String.valueOf("The optimal profit is negative. "));
+    }
 
     criticalLeftLeaf = getCriticalPosition(capacity - root.getWMax());
     criticalRightLeaf = getCriticalPosition(capacity + root.getWMax());

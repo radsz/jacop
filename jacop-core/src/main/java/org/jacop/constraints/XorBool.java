@@ -31,6 +31,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -84,7 +86,9 @@ public class XorBool extends PrimitiveConstraint {
     this.x = Arrays.copyOf(x, x.length);
     this.y = y;
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
 
     if (x.length > 2) {
       queueIndex = 1;

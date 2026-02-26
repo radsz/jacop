@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import org.jacop.core.Var;
 
@@ -95,7 +97,9 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
    */
   public T getChoiceVariable(int index) {
 
-    assert index < searchVariables.length;
+    if (ASSERTS_ENABLED && !(index < searchVariables.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int finalIndex = searchVariables.length;
     T currentVariable;

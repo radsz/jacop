@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.regular;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -573,21 +575,29 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
         }
 
-        assert s.outDegree >= 0;
+        if (ASSERTS_ENABLED && !(s.outDegree >= 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         if (s.outDegree == 0) {
           if (DEBUG_ALL) {
             log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
           }
-          assert s.level == varIndex;
+          if (ASSERTS_ENABLED && !(s.level == varIndex)) {
+            throw new IllegalStateException("Assertion failed");
+          }
           disableState(varIndex, s.pos);
         }
 
-        assert suc.inDegree >= 0;
+        if (ASSERTS_ENABLED && !(suc.inDegree >= 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         if (suc.inDegree == 0) {
           if (DEBUG_ALL) {
             log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
           }
-          assert suc.level == varIndex + 1;
+          if (ASSERTS_ENABLED && !(suc.level == varIndex + 1)) {
+            throw new IllegalStateException("Assertion failed");
+          }
           disableState(nextVar, suc.pos);
           levelHadChanged[nextVar] = true;
         }
@@ -641,10 +651,15 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
 
-        assert s.outDegree >= 0 : "Negative successor number of q_" + s.level + s.id;
+        if (ASSERTS_ENABLED && !(s.outDegree >= 0)) {
+          throw new IllegalStateException(
+              String.valueOf("Negative successor number of q_" + s.level + s.id));
+        }
 
         if (s.outDegree == 0) {
-          assert s.level == level;
+          if (ASSERTS_ENABLED && !(s.level == level)) {
+            throw new IllegalStateException("Assertion failed");
+          }
           disableState(level, sPos);
           cont = true;
         }
@@ -704,14 +719,19 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 suc.id);
           }
 
-          assert suc.inDegree >= 0 : "Negative indegree of successor state" + suc.level + suc.id;
+          if (ASSERTS_ENABLED && !(suc.inDegree >= 0)) {
+            throw new IllegalStateException(
+                String.valueOf("Negative indegree of successor state" + suc.level + suc.id));
+          }
 
           if (suc.inDegree == 0) {
             if (DEBUG_ALL) {
               log.debug("> Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
             // changed to directl disableState(int, int).
-            assert suc.level == level + 1;
+            if (ASSERTS_ENABLED && !(suc.level == level + 1)) {
+              throw new IllegalStateException("Assertion failed");
+            }
             disableState(level + 1, suc.pos);
             cont = true;
           }
@@ -736,7 +756,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     int lim = activeLevels[level].value();
 
-    assert pos < lim;
+    if (ASSERTS_ENABLED && !(pos < lim)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     RegState s = stateLevels[level][pos];
 
@@ -753,8 +775,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public void removeLevel(int level) {
 
-    assert level > firstConsistencyLevel
-        : "Constraint has the level at which it has computed its initial state being removed.";
+    if (ASSERTS_ENABLED && !(level > firstConsistencyLevel)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Constraint has the level at which it has computed its initial state being removed."));
+    }
 
     this.variableQueue.clear();
 

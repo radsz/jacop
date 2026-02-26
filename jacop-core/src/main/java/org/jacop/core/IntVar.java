@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import org.jacop.constraints.Constraint;
 
@@ -130,7 +132,9 @@ public class IntVar extends Var {
     dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
 
-    assert name.lastIndexOf(" ") == -1 : "Name can not contain space character";
+    if (ASSERTS_ENABLED && !(name.lastIndexOf(" ") == -1)) {
+      throw new IllegalStateException(String.valueOf("Name can not contain space character"));
+    }
 
     id = name;
     domain = dom;
@@ -190,7 +194,10 @@ public class IntVar extends Var {
    */
   public int value() {
 
-    assert singleton() : "Request for a value of not grounded variable " + this;
+    if (ASSERTS_ENABLED && !(singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("Request for a value of not grounded variable " + this));
+    }
 
     return domain.min();
   }
@@ -320,10 +327,12 @@ public class IntVar extends Var {
    */
   public void domainHasChanged(int event) {
 
-    assert (event == IntDomain.ANY && !singleton())
+    if (ASSERTS_ENABLED
+        && !((event == IntDomain.ANY && !singleton())
             || (event == IntDomain.BOUND && !singleton())
-            || (event == IntDomain.GROUND && singleton())
-        : "Wrong event generated";
+            || (event == IntDomain.GROUND && singleton()))) {
+      throw new IllegalStateException(String.valueOf("Wrong event generated"));
+    }
 
     store.addChanged(this, event, Integer.MIN_VALUE);
   }

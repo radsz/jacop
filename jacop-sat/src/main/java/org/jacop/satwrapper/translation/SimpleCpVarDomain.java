@@ -31,6 +31,8 @@
 
 package org.jacop.satwrapper.translation;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
@@ -85,8 +87,12 @@ public class SimpleCpVarDomain extends SatCpBridge {
 
   @Override
   public final int cpValueToBoolVar(int value, boolean isEquality) {
-    assert value >= getMin();
-    assert value <= getMax();
+    if (ASSERTS_ENABLED && !(value >= getMin())) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(value <= getMax())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int offset = value - getMin();
 
@@ -100,15 +106,21 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public final int boolVarToCpValue(int literal) {
     int varIdx = Math.abs(literal);
-    assert varIdx >= firstVar;
-    assert varIdx <= firstVar + (getMax() - getMin() + 1) * 2;
+    if (ASSERTS_ENABLED && !(varIdx >= firstVar)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(varIdx <= firstVar + (getMax() - getMin() + 1) * 2)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return getMin() + (varIdx - firstVar) / 2;
   }
 
   @Override
   public final boolean isEqualityBoolVar(int literal) {
-    assert wrapper.boolVarToCpVar(literal) == this.variable;
+    if (ASSERTS_ENABLED && !(wrapper.boolVarToCpVar(literal) == this.variable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int varIdx = Math.abs(literal);
 
     return ((varIdx - firstVar) & 0x1) == 0; // modulo 2
@@ -142,12 +154,16 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public void propagate(int literal) {
 
-    assert isInThisRange(literal);
+    if (ASSERTS_ENABLED && !(isInThisRange(literal))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int value = boolVarToCpValue(literal);
     boolean isEquality = isEqualityBoolVar(literal);
 
-    assert getMax() >= getMin();
+    if (ASSERTS_ENABLED && !(getMax() >= getMin())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (getMax() == getMin()) {
       clauseDatabase.propagate(cpValueToBoolVar(getMin(), true), literal);
@@ -230,7 +246,9 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public void initialize(SatWrapper wrapper) {
     super.initialize(wrapper);
-    assert wrapper.domainDatabase != null : "DomainClausesDatabase is needed";
+    if (ASSERTS_ENABLED && !(wrapper.domainDatabase != null)) {
+      throw new IllegalStateException(String.valueOf("DomainClausesDatabase is needed"));
+    }
     this.clauseDatabase = wrapper.domainDatabase;
   }
 }

@@ -60,6 +60,7 @@ public class BenchmarkAdder {
   private static final Path FZ_ROOT = Path.of("src/test/fz");
 
   private static final long TIMEOUT_MS = 3_600_000;
+  private static final long MAX_FZN_SIZE_BYTES = 1_250_000;
 
   record TimeBucket(String dirName, long maxMillis) {}
 
@@ -96,6 +97,20 @@ public class BenchmarkAdder {
   private void addSingleInstance(
       Path fznFile, String problemName, String instanceName, Path mznFile, Path dznFile)
       throws Exception {
+
+    long fznSize = Files.size(fznFile);
+    if (fznSize > MAX_FZN_SIZE_BYTES) {
+      System.err.println(
+          "Skipping benchmark "
+              + fznFile
+              + " because .fzn size "
+              + fznSize
+              + " bytes exceeds limit "
+              + MAX_FZN_SIZE_BYTES
+              + " bytes.");
+      Files.deleteIfExists(fznFile);
+      return;
+    }
 
     System.out.println("Solving " + fznFile + " ...");
     long startMs = System.currentTimeMillis();
@@ -210,7 +225,12 @@ public class BenchmarkAdder {
         try (DirectoryStream<Path> fznFiles = Files.newDirectoryStream(problemDir, "*.fzn")) {
           for (Path fzn : fznFiles) {
             String name = fzn.getFileName().toString();
-            String entry = problemDir.getFileName() + "/" + name.substring(0, name.length() - 4);
+            String baseName = name.substring(0, name.length() - 4);
+            Path outFile = problemDir.resolve(baseName + ".out");
+            if (!Files.exists(outFile)) {
+              continue;
+            }
+            String entry = problemDir.getFileName() + "/" + baseName;
             entries.add(entry);
           }
         }

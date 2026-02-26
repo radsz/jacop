@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.utils.structures;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import org.jacop.jasat.utils.MemoryPool;
@@ -61,7 +63,9 @@ public final class IntQueue implements Iterable<Integer> {
    * @param pool the memory pool for allocating arrays
    */
   public IntQueue(MemoryPool pool) {
-    assert pool != null;
+    if (ASSERTS_ENABLED && !(pool != null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     this.pool = pool;
   }
 
@@ -104,7 +108,9 @@ public final class IntQueue implements Iterable<Integer> {
    * @return the first element of the array
    */
   public int peek() {
-    assert !isEmpty();
+    if (ASSERTS_ENABLED && !(!isEmpty())) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return array[start];
   }
@@ -115,7 +121,9 @@ public final class IntQueue implements Iterable<Integer> {
    * @return the first element from the FIFO queue
    */
   public int pop() {
-    assert start != stop;
+    if (ASSERTS_ENABLED && !(start != stop)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int answer = array[start];
     // increase start
@@ -142,7 +150,9 @@ public final class IntQueue implements Iterable<Integer> {
 
   /** Increase the size of the queue. */
   private void resize() {
-    assert start == stop;
+    if (ASSERTS_ENABLED && !(start == stop)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int newSize = 4 * array.length;
     int[] newArray = pool.getNew(newSize);

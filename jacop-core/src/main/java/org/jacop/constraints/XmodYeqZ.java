@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -74,7 +76,9 @@ public class XmodYeqZ extends AbstractXopYeqZ {
       resultMax = result[1];
     } while (store.propagationHasOccurred);
 
-    assert checkSolution(resultMin, resultMax) == null : checkSolution(resultMin, resultMax);
+    if (ASSERTS_ENABLED && !(checkSolution(resultMin, resultMax) == null)) {
+      throw new IllegalStateException(String.valueOf(checkSolution(resultMin, resultMax)));
+    }
   }
 
   private int[] propagateOneRound(Store store, int resultMin, int resultMax) {

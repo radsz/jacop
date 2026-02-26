@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import org.jacop.constraints.Constraint;
 
@@ -104,8 +106,10 @@ public class BooleanVar extends IntVar {
    */
   public BooleanVar(Store store, String name, BoundDomain dom) {
 
-    assert dom.min() >= 0 && dom.min() <= dom.max() && dom.max() <= 1
-        : "Boolean variable can only get value between 0..1";
+    if (ASSERTS_ENABLED && !(dom.min() >= 0 && dom.min() <= dom.max() && dom.max() <= 1)) {
+      throw new IllegalStateException(
+          String.valueOf("Boolean variable can only get value between 0..1"));
+    }
 
     dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[3][];

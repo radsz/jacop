@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
@@ -466,7 +468,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       return vars;
     }
 
-    assert false : "Fix it. Uncomment below.";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(String.valueOf("Fix it. Uncomment below."));
+    }
 
     return null;
   }
@@ -575,7 +579,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Applies the chosen value to the choice variable (left branch). */
   private void applyChoiceVariableValue(T fdv, int val) {
-    assert store.currentConstraint == null;
+    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     DomainOperationHandler domainHandler =
         SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
     if (domainHandler != null) {
@@ -596,7 +602,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Applies the choice constraint (left branch) and updates decisions/depthExcludePaths. */
   private void applyChoiceConstraint(PrimitiveConstraint choice) {
-    assert store.currentConstraint == null;
+    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     store.impose(choice);
     decisions++;
     updateDepthExcludePaths();
@@ -757,7 +765,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Executes right branch for constraint choice (Not(choice)), returns consistency result. */
   private boolean doRightBranchChoice(PrimitiveConstraint choice, int firstVariable) {
-    assert store.currentConstraint == null;
+    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     store.setLevel(store.level);
     store.impose(new Not(choice));
     boolean consistent = label(firstVariable);
@@ -773,7 +783,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Executes right branch for variable (inComplement), returns consistency result. */
   private boolean doRightBranchVariable(T fdv, int val, int firstVariable) {
-    assert store.currentConstraint == null;
+    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     store.setLevel(store.level);
     DomainOperationHandler domainHandler =
         SearchHandlerRegistry.getInstance().findDomainHandler(fdv);

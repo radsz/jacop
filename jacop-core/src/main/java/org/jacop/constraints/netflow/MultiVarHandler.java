@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.netflow;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,13 +68,17 @@ public class MultiVarHandler implements VarHandler {
    * @param handler the handler to add; must list the same variable as this handler.
    */
   public void add(VarHandler handler) {
-    assert handler.listVariables().contains(variable);
+    if (ASSERTS_ENABLED && !(handler.listVariables().contains(variable))) {
+      throw new IllegalStateException("Assertion failed");
+    }
     handlers.add(handler);
   }
 
   /** {@inheritDoc} */
   public int getPruningEvent(Var variable) {
-    assert this.variable == variable;
+    if (ASSERTS_ENABLED && !(this.variable == variable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int max = IntDomain.GROUND;
     for (VarHandler handler : handlers) {
       int event = handler.getPruningEvent(variable);
@@ -90,7 +96,9 @@ public class MultiVarHandler implements VarHandler {
 
   /** {@inheritDoc} */
   public void processEvent(IntVar variable, MutableNetwork network) {
-    assert this.variable == variable;
+    if (ASSERTS_ENABLED && !(this.variable == variable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     for (VarHandler handler : handlers) {
       handler.processEvent(variable, network);
     }

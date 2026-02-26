@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,7 +88,9 @@ public class BoolClause extends PrimitiveConstraint {
     this.x = Arrays.copyOf(x, x.length);
     this.y = Arrays.copyOf(y, y.length);
 
-    assert checkInvariants() == null : checkInvariants();
+    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
 
     if (lx + ly > 4) {
       queueIndex = 1;

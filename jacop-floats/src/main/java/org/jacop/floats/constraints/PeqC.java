@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -57,8 +59,10 @@ public class PeqC extends AbstractPcompC {
 
     super(idNumber, p, c);
 
-    assert c >= IntDomain.MIN_INT && c <= IntDomain.MAX_INT
-        : "Constant c " + c + " is not in the allowed range ";
+    if (ASSERTS_ENABLED && !(c >= IntDomain.MIN_INT && c <= IntDomain.MAX_INT)) {
+      throw new IllegalStateException(
+          String.valueOf("Constant c " + c + " is not in the allowed range "));
+    }
   }
 
   @Override

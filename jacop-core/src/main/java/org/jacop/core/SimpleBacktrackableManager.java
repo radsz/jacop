@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -105,7 +107,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    */
   public SimpleBacktrackableManager(Backtrackable[] vars, int noOfObjects) {
 
-    assert noOfObjects <= vars.length : "More objects than array is holding.";
+    if (ASSERTS_ENABLED && !(noOfObjects <= vars.length)) {
+      throw new IllegalStateException(String.valueOf("More objects than array is holding."));
+    }
 
     this.noOfObjects = noOfObjects;
     currentlyChanged = new SparseSet(vars.length);
@@ -117,7 +121,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     levelInfo = new ArrayList<>();
     emptyLevel = new int[0];
     fullLevel = new int[0];
-    assert emptyLevel != fullLevel : "Code needs to be changed.";
+    if (ASSERTS_ENABLED && !(emptyLevel != fullLevel)) {
+      throw new IllegalStateException(String.valueOf("Code needs to be changed."));
+    }
   }
 
   /**
@@ -141,7 +147,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
       int lastLevel = levelInfo.removeLast();
 
-      assert lastLevel == currentLevel;
+      if (ASSERTS_ENABLED && !(lastLevel == currentLevel)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       int[] lastTrail = trail.removeLast();
 
@@ -195,8 +203,10 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
       log.debug("<{}Remove level {}", this, removedLevel);
     }
 
-    assert removedLevel >= currentLevel
-        : "It is only possible to remove the most recent not removed level";
+    if (ASSERTS_ENABLED && !(removedLevel >= currentLevel)) {
+      throw new IllegalStateException(
+          String.valueOf("It is only possible to remove the most recent not removed level"));
+    }
   }
 
   private void removeLevelFromTrail(int removedLevel, int[] lastTrail) {
@@ -235,7 +245,10 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     if (trailContainsAllChanges) {
       int lastLevel = levelInfo.removeLast();
-      assert lastLevel == removedLevel : "It is only possible to remove recently added level";
+      if (ASSERTS_ENABLED && !(lastLevel == removedLevel)) {
+        throw new IllegalStateException(
+            String.valueOf("It is only possible to remove recently added level"));
+      }
       int[] lastTrail = trail.removeLast();
       removeLevelFromTrail(removedLevel, lastTrail);
     } else {
@@ -256,8 +269,10 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     noOfObjects = size;
     cutOffValue = Math.max(noOfObjects / 50, 20);
 
-    assert noOfObjects <= objects.length
-        : "It can not set the size larger than the length of the object array";
+    if (ASSERTS_ENABLED && !(noOfObjects <= objects.length)) {
+      throw new IllegalStateException(
+          String.valueOf("It can not set the size larger than the length of the object array"));
+    }
   }
 
   /**
@@ -349,7 +364,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
       log.debug(">{}Add level {}", this, level);
     }
 
-    assert level > this.currentLevel : "It is possible only to add higher levels";
+    if (ASSERTS_ENABLED && !(level > this.currentLevel)) {
+      throw new IllegalStateException(String.valueOf("It is possible only to add higher levels"));
+    }
 
     if (!trailContainsAllChanges) {
       // store old level
@@ -387,11 +404,17 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    */
   public void update(Backtrackable[] objects, int noOfObjects) {
 
-    assert noOfObjects <= objects.length : "More objects than array is holding.";
-    assert this.objects.length < objects.length
-        : "Can not update with a smaller array as trail will not work";
-    assert this.noOfObjects < noOfObjects
-        : "Making number of objects smaller will make trail work incorrectly.";
+    if (ASSERTS_ENABLED && !(noOfObjects <= objects.length)) {
+      throw new IllegalStateException(String.valueOf("More objects than array is holding."));
+    }
+    if (ASSERTS_ENABLED && !(this.objects.length < objects.length)) {
+      throw new IllegalStateException(
+          String.valueOf("Can not update with a smaller array as trail will not work"));
+    }
+    if (ASSERTS_ENABLED && !(this.noOfObjects < noOfObjects)) {
+      throw new IllegalStateException(
+          String.valueOf("Making number of objects smaller will make trail work incorrectly."));
+    }
 
     this.noOfObjects = noOfObjects;
 

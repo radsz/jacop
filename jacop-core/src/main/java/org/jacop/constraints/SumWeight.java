@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -211,7 +213,10 @@ public class SumWeight extends Constraint
 
       IntDomain currentDomain = list[i].domain;
 
-      assert !currentDomain.singleton() : "Singletons should not occur in this part of the array";
+      if (ASSERTS_ENABLED && !(!currentDomain.singleton())) {
+        throw new IllegalStateException(
+            String.valueOf("Singletons should not occur in this part of the array"));
+      }
 
       long mul1 = currentDomain.min() * weights[i];
       long mul2 = currentDomain.max() * weights[i];

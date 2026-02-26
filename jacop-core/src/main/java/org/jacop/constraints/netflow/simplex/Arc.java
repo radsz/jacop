@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.netflow.simplex;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.constraints.netflow.ArcCompanion;
 
 /**
@@ -142,8 +144,12 @@ public final class Arc {
     capacity -= delta;
     sister.capacity += delta;
 
-    assert sister.capacity >= 0 : delta + ", Bad capacity: " + this;
-    assert capacity >= 0 : delta + ", Bad capacity: " + this;
+    if (ASSERTS_ENABLED && !(sister.capacity >= 0)) {
+      throw new IllegalStateException(String.valueOf(delta + ", Bad capacity: " + this));
+    }
+    if (ASSERTS_ENABLED && !(capacity >= 0)) {
+      throw new IllegalStateException(String.valueOf(delta + ", Bad capacity: " + this));
+    }
   }
 
   /**
@@ -175,10 +181,18 @@ public final class Arc {
    */
   public void set(int newCost, int newCapacity) {
 
-    assert cost == 0;
-    assert sister.cost == 0;
-    assert capacity == 0;
-    assert sister.capacity == 0;
+    if (ASSERTS_ENABLED && !(cost == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(sister.cost == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(capacity == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(sister.capacity == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     cost = newCost;
     sister.cost = -newCost;

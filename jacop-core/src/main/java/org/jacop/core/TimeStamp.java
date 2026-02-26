@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -170,8 +172,11 @@ public class TimeStamp<T> implements Stateful {
    */
   public void update(T val) {
 
-    assert stamps[pointer4Last] <= store.level
-        : "Error - Timestamp" + this + "has greater level than store " + "- missing remove";
+    if (ASSERTS_ENABLED && !(stamps[pointer4Last] <= store.level)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Error - Timestamp" + this + "has greater level than store " + "- missing remove"));
+    }
 
     if (stamps[pointer4Last] == store.level) {
       if (DEBUG) {

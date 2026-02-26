@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import org.jacop.core.Store;
 import org.jacop.jasat.utils.Utils;
@@ -63,7 +65,9 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    * @return the unique ID of the added clause
    */
   public int addClause(int[] clause, boolean isModel) {
-    assert clause.length > 2 * SIZE_OF_CLAUSE_CACHE;
+    if (ASSERTS_ENABLED && !(clause.length > 2 * SIZE_OF_CLAUSE_CACHE)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int newIndex = currentIndex++;
 
@@ -74,7 +78,9 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     literalsCache[newIndex] = pool.getNew(SIZE_OF_CLAUSE_CACHE);
 
     // find watches for this clause
-    assert Math.abs(clause[0]) != Math.abs(clause[1]); // different watches
+    if (ASSERTS_ENABLED && !(Math.abs(clause[0]) != Math.abs(clause[1]))) {
+      throw new IllegalStateException("Assertion failed");
+    } // different watches
     addWatch(clause[0], newIndex);
     addWatch(clause[1], newIndex);
 
@@ -89,7 +95,9 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    */
   public void assertLiteral(int literal) {
 
-    assert literal != 0;
+    if (ASSERTS_ENABLED && !(literal != 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int varIdx = literal < 0 ? -literal : literal;
 
     if (watchLists.length <= varIdx || watchLists[varIdx] == null) {
@@ -106,8 +114,12 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
       int otherWatch = cache[1 - myWatchPos];
       int myWatch = cache[myWatchPos];
 
-      assert Math.abs(myWatch) == varIdx;
-      assert otherWatch * myWatch != 0;
+      if (ASSERTS_ENABLED && !(Math.abs(myWatch) == varIdx)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(otherWatch * myWatch != 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       if (cache[myWatchPos] == literal) {
         continue;
@@ -268,8 +280,12 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
    */
   public void ensureSize(int size) {
 
-    assert currentIndex <= clauses.length;
-    assert size >= 0;
+    if (ASSERTS_ENABLED && !(currentIndex <= clauses.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(size >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (size >= clauses.length) {
       int newSize = 2 * size; // take some safety margin

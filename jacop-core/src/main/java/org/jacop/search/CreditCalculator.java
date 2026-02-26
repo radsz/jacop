@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
@@ -79,7 +81,9 @@ public class CreditCalculator<T extends Var>
    */
   public CreditCalculator(int credit, int backtracks, int maxDepth) {
 
-    assert maxDepth >= 1;
+    if (ASSERTS_ENABLED && !(maxDepth >= 1)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     this.backtracks = backtracks;
     currentBacktracks = backtracks;

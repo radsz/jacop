@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import org.jacop.jasat.utils.Utils;
@@ -70,7 +72,9 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    assert clause.length == 3;
+    if (ASSERTS_ENABLED && !(clause.length == 3)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int clauseIndex = currentIndex++;
 
@@ -165,8 +169,12 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
    */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-    assert clauseIndex < currentIndex;
-    assert clause.isUnsatisfiableIn(trail);
+    if (ASSERTS_ENABLED && !(clauseIndex < currentIndex)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(clause.isUnsatisfiableIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int offset = clauseIndex * 3;
 

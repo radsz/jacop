@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * Defines a methods for enumerating values contain in the intersal domain. It implements the
  * interface Enumeration.
@@ -67,7 +69,9 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
       return domain.intervals[intervalNo];
     }
 
-    assert false;
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     return null;
   }
 }

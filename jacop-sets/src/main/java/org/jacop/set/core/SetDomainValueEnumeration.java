@@ -30,6 +30,8 @@
 
 package org.jacop.set.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
 
@@ -129,7 +131,9 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
       return ret;
     }
     int maxPlace = this.getMaxPascal(level);
-    assert (place <= maxPlace);
+    if (ASSERTS_ENABLED && !((place <= maxPlace))) {
+      throw new IllegalStateException("Assertion failed");
+    }
     int occLevel = this.maxLevel - 1;
     int occPlace = level;
     int occ = this.getPascalNbr(occLevel, occPlace);

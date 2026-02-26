@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.core.clauses;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import org.jacop.jasat.utils.Utils;
@@ -86,9 +88,13 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    */
   public void assertLiteral(int literal) {
 
-    assert trail.getLevel(Math.abs(literal)) == core.currentLevel;
+    if (ASSERTS_ENABLED && !(trail.getLevel(Math.abs(literal)) == core.currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
-    assert checkWatches4var(Math.abs(literal)) == null;
+    if (ASSERTS_ENABLED && !(checkWatches4var(Math.abs(literal)) == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     /* get the watched clauses for this literal;
      * for each such clause, find its state, and if needed, propagate,
@@ -105,7 +111,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     int[] watchList = watchLists[varIdx];
     // value of the literal in the trail
     int myValue = trail.values[varIdx];
-    assert myValue != 0;
+    if (ASSERTS_ENABLED && !(myValue != 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     // new watched clauses[], to replace the current one after propagation
     int newSize = Math.max(watchList[0], MINIMUM_VAR_WATCH_SIZE);
@@ -129,10 +137,18 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       int otherWatch = clause[1 - myWatchPos];
       int otherValue = trail.values[otherWatch < 0 ? -otherWatch : otherWatch];
 
-      assert Math.abs(myWatch) == varIdx;
-      assert otherWatch * myWatch != 0;
-      assert doesWatch(myWatch, clauseIndex);
-      assert doesWatch(otherWatch, clauseIndex);
+      if (ASSERTS_ENABLED && !(Math.abs(myWatch) == varIdx)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(otherWatch * myWatch != 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(doesWatch(myWatch, clauseIndex))) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(doesWatch(otherWatch, clauseIndex))) {
+        throw new IllegalStateException("Assertion failed");
+      }
 
       if (otherValue == otherWatch) {
         newWatchList[newWatchNum++] = clauseIndex;
@@ -158,7 +174,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         continue;
       }
 
-      assert otherValue == 0;
+      if (ASSERTS_ENABLED && !(otherValue == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       int[] newWatchNumRef = new int[] {newWatchNum};
       tryFindNewWatchOrUnitPropagate(
           clause, clauseIndex, myWatchPos, otherWatch, newWatchList, newWatchNumRef);
@@ -173,7 +191,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       watchLists[varIdx] = null;
       pool.storeOld(newWatchList); // useless because empty
     } else {
-      assert newWatchNum > 1;
+      if (ASSERTS_ENABLED && !(newWatchNum > 1)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       // save the length of the array, and the array itself
       newWatchList[0] = newWatchNum;
       watchLists[varIdx] = newWatchList;
@@ -182,7 +202,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     // recycle old watch list
     pool.storeOld(watchList);
 
-    assert checkWatches4var(Math.abs(literal)) == null;
+    if (ASSERTS_ENABLED && !(checkWatches4var(Math.abs(literal)) == null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**
@@ -217,27 +239,41 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         return false;
       }
     }
-    assert countWatches <= 2;
+    if (ASSERTS_ENABLED && !(countWatches <= 2)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     switch (countWatches) {
       case 0:
         newWatchList[newWatchNumRef[0]++] = clauseIndex;
         MapClause conflictClause = core.explanationClause;
         conflictClause.clear();
         conflictClause.addAll(clause);
-        assert conflictClause.isUnsatisfiableIn(trail);
+        if (ASSERTS_ENABLED && !(conflictClause.isUnsatisfiableIn(trail))) {
+          throw new IllegalStateException("Assertion failed");
+        }
         core.triggerConflictEvent(conflictClause);
         for (int j = currentIdx + 1; j < watchList[0]; j++) {
           newWatchList[newWatchNumRef[0]++] = watchList[j];
         }
         return true;
       case 1:
-        assert watch1pos != myWatchPos;
-        assert watch1pos >= 2;
-        assert trail.values[Math.abs(clause[watch1pos])] == 0;
+        if (ASSERTS_ENABLED && !(watch1pos != myWatchPos)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(watch1pos >= 2)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(trail.values[Math.abs(clause[watch1pos])] == 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         newWatchList[newWatchNumRef[0]++] = clauseIndex;
         int uniqueClauseId1 = indexToUniqueId(clauseIndex);
-        assert new MapClause(clause).isUnitIn(trail);
-        assert new MapClause(clause).isUnitIn(clause[watch1pos], trail);
+        if (ASSERTS_ENABLED && !(new MapClause(clause).isUnitIn(trail))) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(new MapClause(clause).isUnitIn(clause[watch1pos], trail))) {
+          throw new IllegalStateException("Assertion failed");
+        }
         core.triggerPropagateEvent(clause[watch1pos], uniqueClauseId1);
         return false;
       case 2:
@@ -246,8 +282,12 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         removeWatch(otherWatch, clauseIndex);
         addWatch(clause[0], clauseIndex);
         addWatch(clause[1], clauseIndex);
-        assert trail.values[Math.abs(clause[0])] == 0;
-        assert trail.values[Math.abs(clause[1])] == 0;
+        if (ASSERTS_ENABLED && !(trail.values[Math.abs(clause[0])] == 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(trail.values[Math.abs(clause[1])] == 0)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         return false;
       default:
         throw new AssertionError("wrong case!");
@@ -276,7 +316,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     }
     newWatchList[newWatchNumRef[0]++] = clauseIndex;
     int uniqueClauseId = indexToUniqueId(clauseIndex);
-    assert new MapClause(clause).isUnitIn(trail);
+    if (ASSERTS_ENABLED && !(new MapClause(clause).isUnitIn(trail))) {
+      throw new IllegalStateException("Assertion failed");
+    }
     core.triggerPropagateEvent(otherWatch, uniqueClauseId);
   }
 
@@ -289,7 +331,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    assert clause.length >= 2;
+    if (ASSERTS_ENABLED && !(clause.length >= 2)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int clauseIndex = currentIndex++;
     int clauseId = indexToUniqueId(clauseIndex);
@@ -304,7 +348,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     addWatch(clause[0], clauseIndex);
     addWatch(clause[1], clauseIndex);
 
-    assert (checkWatches4Clause(clauseIndex) == null);
+    if (ASSERTS_ENABLED && !((checkWatches4Clause(clauseIndex) == null))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return clauseId;
   }
@@ -346,8 +392,12 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         }
         numFoundWatch++;
       } else {
-        assert value == -literal;
-        assert highestLevel >= secondHighestLevel;
+        if (ASSERTS_ENABLED && !(value == -literal)) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        if (ASSERTS_ENABLED && !(highestLevel >= secondHighestLevel)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         int level = trail.getLevel(varIdx);
         if (level >= highestLevel) {
           secondHighestLevel = highestLevel;
@@ -367,21 +417,29 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       int[] clause, int clauseIndex, int clauseId, WatchSearchResult search) {
     switch (search.numFoundWatch) {
       case 2:
-        assert search.watch1pos != search.watch2pos;
+        if (ASSERTS_ENABLED && !(search.watch1pos != search.watch2pos)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         putAt0And1(clause, search.watch1pos, search.watch2pos);
         break;
       case 1:
-        assert search.watch2pos == -1;
+        if (ASSERTS_ENABLED && !(search.watch2pos == -1)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         putAt0And1(clause, search.watch1pos, search.highestPos);
         core.triggerPropagateEvent(clause[0], clauseId);
         break;
       case 0:
-        assert search.highestPos != search.secondHighestPos;
+        if (ASSERTS_ENABLED && !(search.highestPos != search.secondHighestPos)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         putAt0And1(clause, search.highestPos, search.secondHighestPos);
         MapClause conflictClause = core.explanationClause;
         conflictClause.clear();
         conflictClause.addAll(clause);
-        assert conflictClause.isUnsatisfiableIn(trail);
+        if (ASSERTS_ENABLED && !(conflictClause.isUnsatisfiableIn(trail))) {
+          throw new IllegalStateException("Assertion failed");
+        }
         core.triggerConflictEvent(conflictClause);
         break;
       default:
@@ -467,10 +525,16 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
   @SuppressWarnings("unused")
   private String checkWatches4Clause(int clauseIndex) {
     int[] clause = clauses[clauseIndex];
-    assert doesWatch(clause[0], clauseIndex);
-    assert doesWatch(clause[1], clauseIndex);
+    if (ASSERTS_ENABLED && !(doesWatch(clause[0], clauseIndex))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(doesWatch(clause[1], clauseIndex))) {
+      throw new IllegalStateException("Assertion failed");
+    }
     for (int j = 2; j < clause.length; j++) {
-      assert !doesWatch(clause[j], clauseIndex);
+      if (ASSERTS_ENABLED && !(!doesWatch(clause[j], clauseIndex))) {
+        throw new IllegalStateException("Assertion failed");
+      }
     }
     return null;
   }
@@ -497,16 +561,23 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       // the clause and its index
       int clauseIndex = watchList[i];
       int[] clause = clauses[clauseIndex];
-      assert doesWatch(clause[0], clauseIndex);
-      assert doesWatch(clause[1], clauseIndex);
+      if (ASSERTS_ENABLED && !(doesWatch(clause[0], clauseIndex))) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      if (ASSERTS_ENABLED && !(doesWatch(clause[1], clauseIndex))) {
+        throw new IllegalStateException("Assertion failed");
+      }
       for (int j = 2; j < clause.length; j++) {
-        assert !doesWatch(clause[j], clauseIndex)
-            : "Too many watches on variable "
-                + varIdx
-                + " watches also on "
-                + j
-                + " "
-                + new MapClause(clause);
+        if (ASSERTS_ENABLED && !(!doesWatch(clause[j], clauseIndex))) {
+          throw new IllegalStateException(
+              String.valueOf(
+                  "Too many watches on variable "
+                      + varIdx
+                      + " watches also on "
+                      + j
+                      + " "
+                      + new MapClause(clause)));
+        }
       }
     }
 
@@ -522,9 +593,15 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    * @param j the second index
    */
   private void putAt0And1(int[] clause, int i, int j) {
-    assert i >= 0 && i < clause.length;
-    assert j >= 0 && j < clause.length;
-    assert i != j;
+    if (ASSERTS_ENABLED && !(i >= 0 && i < clause.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(j >= 0 && j < clause.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(i != j)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (i == 0 && j == 1) {
       return;
@@ -561,8 +638,12 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    * @param size the number of clauses
    */
   public void ensureSize(int size) {
-    assert currentIndex <= clauses.length;
-    assert size >= 0;
+    if (ASSERTS_ENABLED && !(currentIndex <= clauses.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(size >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (size >= clauses.length) {
       int newSize = 2 * size; // take some safety margin

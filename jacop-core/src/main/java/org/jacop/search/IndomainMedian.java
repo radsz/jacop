@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -55,9 +57,13 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
   /** It requires IntVar variable. */
   public int indomain(IntVar v) {
 
-    assert !v.singleton() : "indomain does not work with singleton variables.";
-    assert v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID
-        : "It is not possible to use BoundDomain";
+    if (ASSERTS_ENABLED && !(!v.singleton())) {
+      throw new IllegalStateException(
+          String.valueOf("indomain does not work with singleton variables."));
+    }
+    if (ASSERTS_ENABLED && !(v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID)) {
+      throw new IllegalStateException(String.valueOf("It is not possible to use BoundDomain"));
+    }
 
     int position = medianPosition(v.getSize());
     return medianForDomain(v, position);
@@ -90,7 +96,9 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         return domain.intervals[i].min() + position;
       }
     }
-    assert false : "Indomain Median does not work properly.";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(String.valueOf("Indomain Median does not work properly."));
+    }
     return 0;
   }
 
@@ -114,7 +122,9 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         return next.min() + position;
       }
     }
-    assert false : "Indomain Median does not work properly.";
+    if (ASSERTS_ENABLED && !(false)) {
+      throw new IllegalStateException(String.valueOf("Indomain Median does not work properly."));
+    }
     return 0;
   }
 }

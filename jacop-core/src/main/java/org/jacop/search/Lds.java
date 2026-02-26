@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
@@ -63,7 +65,9 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
    */
   public Lds(int maxDiscrepancies) {
 
-    assert maxDiscrepancies >= 0;
+    if (ASSERTS_ENABLED && !(maxDiscrepancies >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     this.maxNoDiscrepancies = maxDiscrepancies;
   }

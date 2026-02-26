@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * Defines a methods for enumerating values contained in the BoundDomain.
  *
@@ -62,7 +64,9 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public int nextElement() {
-    assert current < max;
+    if (ASSERTS_ENABLED && !(current < max)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     return ++current;
   }
 

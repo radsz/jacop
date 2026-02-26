@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.Arrays;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -95,7 +97,9 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int index) {
 
-    assert index < searchVariables.length;
+    if (ASSERTS_ENABLED && !(index < searchVariables.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     int finalIndex = searchVariables.length;
 
@@ -115,9 +119,15 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    assert currentIndex.value() >= 0;
-    assert currentIndex.value() < searchVariables.length;
-    assert searchVariables[currentIndex.value()].dom() != null;
+    if (ASSERTS_ENABLED && !(currentIndex.value() >= 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(currentIndex.value() < searchVariables.length)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(searchVariables[currentIndex.value()].dom() != null)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     return valueOrdering.indomain(searchVariables[currentIndex.value()]);
   }

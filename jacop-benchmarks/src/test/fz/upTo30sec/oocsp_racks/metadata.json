@@ -1,5 +1,5 @@
 {
-  "fznBuiltins": ["array_bool_and", "array_bool_or", "bool2int", "bool_clause", "bool_eq_reif", "int_eq_reif", "int_le_reif", "int_lin_eq", "int_lin_le", "int_lin_le_reif", "int_ne_reif", "jacop_count", "set_in_reif"],
-  "constraintFamilies": ["boolean", "comparison", "counting", "linear", "set"],
+  "fznBuiltins": ["array_bool_and", "array_bool_or", "bool2int", "bool_clause", "bool_clause_reif", "bool_eq_reif", "bool_not", "int_eq_reif", "int_le_imp", "int_le_reif", "int_lin_eq", "int_lin_le", "int_lin_le_imp", "int_lin_le_reif", "int_ne_reif", "jacop_count", "jacop_count_values", "jacop_if_then_else_bool", "jacop_increasing", "set_in_reif"],
+  "constraintFamilies": ["boolean", "comparison", "counting", "linear", "ordering", "set"],
   "domains": []
 }

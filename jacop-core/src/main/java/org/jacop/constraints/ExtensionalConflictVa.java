@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -110,7 +112,9 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
     }
 
     int[] t = getInitialSupportTuple(varPosition, value);
-    assert t != null : " First valid tuple can not be null ";
+    if (ASSERTS_ENABLED && !(t != null)) {
+      throw new IllegalStateException(String.valueOf(" First valid tuple can not be null "));
+    }
 
     int pos = findPosition(value, values[varPosition]);
     int[][] tuplesVarValue = tuples[varPosition][pos];

@@ -31,6 +31,8 @@
 
 package org.jacop.jasat.modules;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 import java.util.TimerTask;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverState;
@@ -131,14 +133,20 @@ public final class SearchModule
 
   /** Handles conflict state: restart or backjump. Returns new current level. */
   private int handleConflict(int currentLevel) {
-    assert core.currentLevel > 0;
+    if (ASSERTS_ENABLED && !(core.currentLevel > 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     if (restartH.shouldRestart) {
       core.restart();
-      assert core.currentLevel == 0;
+      if (ASSERTS_ENABLED && !(core.currentLevel == 0)) {
+        throw new IllegalStateException("Assertion failed");
+      }
       return core.currentLevel;
     }
     int bjLevel = core.getLevelToBackjump();
-    assert bjLevel < currentLevel;
+    if (ASSERTS_ENABLED && !(bjLevel < currentLevel)) {
+      throw new IllegalStateException("Assertion failed");
+    }
     core.backjumpToLevel(bjLevel);
     core.triggerIdleEvent();
     if (clauseToLearn != null) {
@@ -159,7 +167,9 @@ public final class SearchModule
         currentLevel++;
         int nextLiteral = assertionH.findNextVar();
         if (nextLiteral == 0) {
-          assert core.hasSolution();
+          if (ASSERTS_ENABLED && !(core.hasSolution())) {
+            throw new IllegalStateException("Assertion failed");
+          }
           break;
         }
         core.assertLiteral(nextLiteral, currentLevel);

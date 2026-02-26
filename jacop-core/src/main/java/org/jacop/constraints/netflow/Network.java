@@ -32,6 +32,7 @@ package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
+import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -114,9 +115,13 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // adds an arc at its lower or upper bound
   private void add(Arc arc) {
 
-    assert arc.forward;
+    if (ASSERTS_ENABLED && !(arc.forward)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
-    assert arc.capacity == 0 || arc.sister.capacity == 0;
+    if (ASSERTS_ENABLED && !(arc.capacity == 0 || arc.sister.capacity == 0)) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (SHOW_CHANGES) {
       log.debug("Adding arc: {}", arc);
@@ -150,9 +155,15 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       arc = arc.sister;
     }
 
-    assert arc.capacity == 0 || arc.sister.capacity == 0 : "Arc not at lower or upper bound";
-    assert checkFlow(this);
-    assert checkStructure(this);
+    if (ASSERTS_ENABLED && !(arc.capacity == 0 || arc.sister.capacity == 0)) {
+      throw new IllegalStateException(String.valueOf("Arc not at lower or upper bound"));
+    }
+    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
 
     if (SHOW_CHANGES) {
       log.debug("Before removing arc: {}", arc);
@@ -166,7 +177,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       if (tail.parent == arc.head) {
         updateTree(arc.sister, tail.artificial);
       } else { // pointing downwards
-        assert arc.head.parent == tail;
+        if (ASSERTS_ENABLED && !(arc.head.parent == tail)) {
+          throw new IllegalStateException("Assertion failed");
+        }
         updateTree(arc, arc.head.artificial);
       }
     }
@@ -284,8 +297,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       }
     }
 
-    assert checkFlow(this);
-    assert checkStructure(this);
+    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+      throw new IllegalStateException("Assertion failed");
+    }
   }
 
   /**
