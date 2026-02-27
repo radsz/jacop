@@ -100,7 +100,7 @@ public class QueueForward<T extends Constraint> {
       // the ones that inherit from other constraints.
       constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
       return true;
-    } catch (NoSuchMethodException ignored) {
+    } catch (NoSuchMethodException _) {
       // constraint may use empty queueVariable provided by abstract class Constraint
       return false;
     }

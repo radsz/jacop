@@ -456,7 +456,7 @@ public class TraceGenerator<T extends Var>
             setDomainClass.getMethod("subtract", int.class, int.class);
         return (Domain) subtractMethod.invoke(dom, value, value);
       }
-    } catch (Exception ignored) {
+    } catch (Exception _) {
       // SetDomain not available - skip this operation
     }
     return null;
@@ -747,7 +747,7 @@ public class TraceGenerator<T extends Var>
             String domainStr = setDomainToStringReflective(dom);
             atts.addAttribute("", "", ATTR_CHOICE, ATTR_TYPE_CDATA, domainStr);
           }
-        } catch (Exception ignored) {
+        } catch (Exception _) {
           // SetDomain not available - skip this operation
         }
       }
@@ -882,7 +882,7 @@ public class TraceGenerator<T extends Var>
     try {
       java.lang.reflect.Method singletonMethod = v.getClass().getMethod("singleton");
       return (Boolean) singletonMethod.invoke(v);
-    } catch (Exception ignored) {
+    } catch (Exception _) {
       return false;
     }
   }
