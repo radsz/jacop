@@ -94,7 +94,10 @@ public class CumulativeBasic extends Constraint {
 
     checkInputForNullness(
         new String[] {"starts", "durations", "resources", "limit"},
-        new Object[][] {starts, durations, resources, {limit}});
+        starts,
+        durations,
+        resources,
+        new Object[] {limit});
     checkInput(durations, i -> i.min() >= 0, "durations cannot allow non-negative values");
     checkInput(resources, i -> i.min() >= 0, "resources cannot allow non-negative values");
 
@@ -629,8 +632,8 @@ public class CumulativeBasic extends Constraint {
   // (class)
   @SuppressWarnings("unchecked")
   private static <E> int getEventType(E event) {
-    if (event instanceof Event) {
-      return ((Event) event).type();
+    if (event instanceof Event typedEvent) {
+      return typedEvent.type();
     }
     // ProfileOptional.Event case - use reflection as fallback
     try {
@@ -642,8 +645,8 @@ public class CumulativeBasic extends Constraint {
 
   @SuppressWarnings("unchecked")
   private static <E> int getEventDate(E event) {
-    if (event instanceof Event) {
-      return ((Event) event).date();
+    if (event instanceof Event datedEvent) {
+      return datedEvent.date();
     }
     // ProfileOptional.Event case
     try {
@@ -655,8 +658,8 @@ public class CumulativeBasic extends Constraint {
 
   @SuppressWarnings("unchecked")
   private static <E> int getEventValue(E event) {
-    if (event instanceof Event) {
-      return ((Event) event).value();
+    if (event instanceof Event valuedEvent) {
+      return valuedEvent.value();
     }
     // ProfileOptional.Event case
     try {
@@ -668,8 +671,8 @@ public class CumulativeBasic extends Constraint {
 
   @SuppressWarnings("unchecked")
   private static <E> TaskView getEventTask(E event) {
-    if (event instanceof Event) {
-      return ((Event) event).task();
+    if (event instanceof Event taskEvent) {
+      return taskEvent.task();
     }
     // ProfileOptional.Event case
     try {
