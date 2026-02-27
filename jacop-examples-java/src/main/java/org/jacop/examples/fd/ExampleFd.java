@@ -123,7 +123,6 @@ public abstract class ExampleFd {
   public boolean search() {
 
     long t1;
-    long t2;
     t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -151,7 +150,6 @@ public abstract class ExampleFd {
   public boolean searchOptimal() {
 
     long t1;
-    long t2;
     t1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =

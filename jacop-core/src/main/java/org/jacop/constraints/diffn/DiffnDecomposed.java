@@ -193,6 +193,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    *
    * @param store the constraint store to which the constraint is imposed to.
    */
+  @Override
   public void imposeDecomposition(Store store) {
 
     if (constraints == null) {
@@ -211,6 +212,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    * @param store the constraint store
    * @return list of constraints representing the decomposition
    */
+  @Override
   public List<Constraint> decompose(Store store) {
     constraints = new ArrayList<>();
 
@@ -278,6 +280,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    *
    * @return list of auxiliary variables
    */
+  @Override
   public List<Var> auxiliaryVariables() {
     return auxVar;
   }
