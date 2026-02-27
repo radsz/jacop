@@ -171,13 +171,8 @@ public class NoGood extends Constraint {
   }
 
   private boolean isNoGoodSatisfiedByFirstOrSecondWatch() {
-    if (firstWatch.getSize() == 1 && firstWatch.value() != firstValue) {
-      return true;
-    }
-    if (secondWatch.getSize() == 1 && secondWatch.value() != secondValue) {
-      return true;
-    }
-    return false;
+    return (firstWatch.getSize() == 1 && firstWatch.value() != firstValue)
+        || (secondWatch.getSize() == 1 && secondWatch.value() != secondValue);
   }
 
   private boolean oneWatchIsSingletonAndSomeVarDisagrees() {

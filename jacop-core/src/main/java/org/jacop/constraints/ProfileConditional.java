@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Iterator;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -42,6 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  * @version 5.0
  */
 @Slf4j
+@EqualsAndHashCode(callSuper = true)
 class ProfileConditional extends ArrayList<ProfileItemCondition> {
 
   static final boolean TRACE_ENABLED = false;
