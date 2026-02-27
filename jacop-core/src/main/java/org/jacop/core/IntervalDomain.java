@@ -312,10 +312,10 @@ public class IntervalDomain extends IntDomain {
           if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
-          if (ASSERTS_ENABLED && !(contains(min))) {
+          if (ASSERTS_ENABLED && !contains(min)) {
             throw new IllegalStateException(String.valueOf(ASSERT_MIN_ADDED));
           }
-          if (ASSERTS_ENABLED && !(contains(max))) {
+          if (ASSERTS_ENABLED && !contains(max)) {
             throw new IllegalStateException(String.valueOf(ASSERT_MAX_ADDED));
           }
 
@@ -333,10 +333,10 @@ public class IntervalDomain extends IntDomain {
         if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
-        if (ASSERTS_ENABLED && !(contains(min))) {
+        if (ASSERTS_ENABLED && !contains(min)) {
           throw new IllegalStateException(String.valueOf(ASSERT_MIN_ADDED));
         }
-        if (ASSERTS_ENABLED && !(contains(max))) {
+        if (ASSERTS_ENABLED && !contains(max)) {
           throw new IllegalStateException(String.valueOf(ASSERT_MAX_ADDED));
         }
 
@@ -381,10 +381,10 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(contains(min))) {
+    if (ASSERTS_ENABLED && !contains(min)) {
       throw new IllegalStateException(String.valueOf(ASSERT_MIN_ADDED));
     }
-    if (ASSERTS_ENABLED && !(contains(max))) {
+    if (ASSERTS_ENABLED && !contains(max)) {
       throw new IllegalStateException(String.valueOf(ASSERT_MAX_ADDED));
     }
   }
@@ -523,7 +523,7 @@ public class IntervalDomain extends IntDomain {
         return false;
       }
       if (next >= intervals[i].min()) {
-        if (ASSERTS_ENABLED && !(isIntersecting(input.toIntervalDomain()))) {
+        if (ASSERTS_ENABLED && !isIntersecting(input.toIntervalDomain())) {
           throw new IllegalStateException(String.valueOf(IS_INTERSECTING_NOT_IMPLEMENTED));
         }
         return true;
@@ -2444,7 +2444,7 @@ public class IntervalDomain extends IntDomain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) v).domain = result;
 
-      if (ASSERTS_ENABLED && !(result.eq(this.intersect(input.toIntervalDomain())))) {
+      if (ASSERTS_ENABLED && !result.eq(this.intersect(input.toIntervalDomain()))) {
         throw new IllegalStateException(
             String.valueOf("In function improperly implemented." + result + "d " + input));
       }
@@ -3726,7 +3726,7 @@ public class IntervalDomain extends IntDomain {
       ((IntVar) v).domain = this.previousDomain;
     }
 
-    if (ASSERTS_ENABLED && !(((IntVar) v).domain.stamp < level)) {
+    if (ASSERTS_ENABLED && ((IntVar) v).domain.stamp >= level) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -4238,7 +4238,7 @@ public class IntervalDomain extends IntDomain {
         result.unionAdapt(min, current - 1);
       }
 
-      if (ASSERTS_ENABLED && !(this.intersect(input.toIntervalDomain()).eq(result))) {
+      if (ASSERTS_ENABLED && !this.intersect(input.toIntervalDomain()).eq(result)) {
         throw new IllegalStateException(
             String.valueOf("Improper intersection " + this + "d: " + domain + "r: " + result));
       }

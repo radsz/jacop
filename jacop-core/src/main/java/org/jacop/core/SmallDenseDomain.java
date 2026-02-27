@@ -600,7 +600,7 @@ public class SmallDenseDomain extends IntDomain {
 
     boolean result = super.contains(domain);
 
-    if (ASSERTS_ENABLED && !(result == this.toIntervalDomain().contains(domain))) {
+    if (ASSERTS_ENABLED && result != this.toIntervalDomain().contains(domain)) {
       throw new IllegalStateException(
           String.valueOf("Improper implementation of function contains " + this + "d" + domain));
     }
@@ -672,7 +672,7 @@ public class SmallDenseDomain extends IntDomain {
         }
       }
 
-      if (ASSERTS_ENABLED && !(super.eq(domain))) {
+      if (ASSERTS_ENABLED && !super.eq(domain)) {
         throw new IllegalStateException(
             String.valueOf("Incorrect implementation for IntervalDomain and SmallDenseDomain."));
       }
@@ -765,7 +765,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int getSize() {
 
-    if (ASSERTS_ENABLED && !(size == getSize(bits))) {
+    if (ASSERTS_ENABLED && size != getSize(bits)) {
       throw new IllegalStateException(
           String.valueOf("size cache was not updated before correctly"));
     }
@@ -1062,7 +1062,7 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(domain.max() - domain.min() + 1 == domain.getSize())) {
+    if (ASSERTS_ENABLED && domain.max() - domain.min() + 1 != domain.getSize()) {
       throw new IllegalStateException(String.valueOf("Loosing propagation" + domain));
     }
 
@@ -1071,7 +1071,7 @@ public class SmallDenseDomain extends IntDomain {
 
   private void adaptMin() {
 
-    if (ASSERTS_ENABLED && !(bits != 0)) {
+    if (ASSERTS_ENABLED && bits == 0) {
       throw new IllegalStateException(String.valueOf("Empty domain, min can not be adapted."));
     }
 
@@ -1243,7 +1243,7 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(domain.max() - domain.min() + 1 == domain.getSize())) {
+    if (ASSERTS_ENABLED && domain.max() - domain.min() + 1 != domain.getSize()) {
       throw new IllegalStateException(String.valueOf("Loosing propagation" + domain));
     }
 
@@ -1415,7 +1415,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = this.intersect(input, 0);
 
-      if (ASSERTS_ENABLED && !(result.eq(this.toIntervalDomain().intersect(input)))) {
+      if (ASSERTS_ENABLED && !result.eq(this.toIntervalDomain().intersect(input))) {
         throw new IllegalStateException(
             String.valueOf(
                 "Intersection not properly computed." + this + "i" + input + "r" + result));
@@ -1523,7 +1523,7 @@ public class SmallDenseDomain extends IntDomain {
       long inBits = alignBits(input) & bits;
 
       if (inBits != 0) {
-        if (ASSERTS_ENABLED && !(super.isIntersecting(domain))) {
+        if (ASSERTS_ENABLED && !super.isIntersecting(domain)) {
           throw new IllegalStateException(
               String.valueOf("isIntersecting not properly implemented"));
         }
@@ -1539,7 +1539,7 @@ public class SmallDenseDomain extends IntDomain {
 
     boolean result = super.isIntersecting(domain);
 
-    if (ASSERTS_ENABLED && !(result == this.toIntervalDomain().isIntersecting(domain))) {
+    if (ASSERTS_ENABLED && result != this.toIntervalDomain().isIntersecting(domain)) {
       throw new IllegalStateException(
           String.valueOf(
               "isIntersecting not properly implemented."
@@ -1589,7 +1589,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int max() {
 
-    if (ASSERTS_ENABLED && !(bits != 0)) {
+    if (ASSERTS_ENABLED && bits == 0) {
       throw new IllegalStateException(String.valueOf("max function called for an empty domain"));
     }
 
@@ -1599,7 +1599,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int min() {
 
-    if (ASSERTS_ENABLED && !((bits & TWO_N_ARRAY[63]) != 0)) {
+    if (ASSERTS_ENABLED && (bits & TWO_N_ARRAY[63]) == 0) {
       throw new IllegalStateException(
           String.valueOf("Inconsistent field min when compared to bits." + this));
     }
@@ -1917,7 +1917,7 @@ public class SmallDenseDomain extends IntDomain {
 
     IntDomain result = super.subtract(domain);
 
-    if (ASSERTS_ENABLED && !(result.eq(this.toIntervalDomain().subtract(domain)))) {
+    if (ASSERTS_ENABLED && !result.eq(this.toIntervalDomain().subtract(domain))) {
       throw new IllegalStateException(
           String.valueOf(
               "Subtraction not properly implemented " + this + "d " + domain + "res" + result));
@@ -2075,7 +2075,7 @@ public class SmallDenseDomain extends IntDomain {
 
     IntDomain result = super.union(domain);
 
-    if (ASSERTS_ENABLED && !(result.eq(this.toIntervalDomain().union(domain)))) {
+    if (ASSERTS_ENABLED && !result.eq(this.toIntervalDomain().union(domain))) {
       throw new IllegalStateException(
           String.valueOf("Union not properly implemented " + this + "d" + domain + "res" + result));
     }
@@ -2175,7 +2175,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public String checkInvariants() {
 
-    if (ASSERTS_ENABLED && !(singleton || getSize(bits) != 1)) {
+    if (ASSERTS_ENABLED && !singleton && getSize(bits) == 1) {
       throw new IllegalStateException(String.valueOf("Singleton value was not recognized"));
     }
 
@@ -2271,7 +2271,7 @@ public class SmallDenseDomain extends IntDomain {
       ((IntVar) v).domain = this.previousDomain;
     }
 
-    if (ASSERTS_ENABLED && !(((IntVar) v).domain.stamp < level)) {
+    if (ASSERTS_ENABLED && ((IntVar) v).domain.stamp >= level) {
       throw new IllegalStateException("Assertion failed");
     }
   }
