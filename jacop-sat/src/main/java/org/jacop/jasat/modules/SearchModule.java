@@ -133,18 +133,18 @@ public final class SearchModule
 
   /** Handles conflict state: restart or backjump. Returns new current level. */
   private int handleConflict(int currentLevel) {
-    if (ASSERTS_ENABLED && !(core.currentLevel > 0)) {
+    if (ASSERTS_ENABLED && core.currentLevel <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
     if (restartH.shouldRestart) {
       core.restart();
-      if (ASSERTS_ENABLED && !(core.currentLevel == 0)) {
+      if (ASSERTS_ENABLED && core.currentLevel != 0) {
         throw new IllegalStateException("Assertion failed");
       }
       return core.currentLevel;
     }
     int bjLevel = core.getLevelToBackjump();
-    if (ASSERTS_ENABLED && !(bjLevel < currentLevel)) {
+    if (ASSERTS_ENABLED && bjLevel >= currentLevel) {
       throw new IllegalStateException("Assertion failed");
     }
     core.backjumpToLevel(bjLevel);
@@ -167,7 +167,7 @@ public final class SearchModule
         currentLevel++;
         int nextLiteral = assertionH.findNextVar();
         if (nextLiteral == 0) {
-          if (ASSERTS_ENABLED && !(core.hasSolution())) {
+          if (ASSERTS_ENABLED && !core.hasSolution()) {
             throw new IllegalStateException("Assertion failed");
           }
           break;

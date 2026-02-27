@@ -73,13 +73,13 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    */
   private final Comparator<Integer> comparator =
       (i, j) -> {
-        if (ASSERTS_ENABLED && !(Math.abs(i) <= posActivities.length + 1)) {
+        if (ASSERTS_ENABLED && Math.abs(i) > posActivities.length + 1) {
           throw new IllegalStateException("Assertion failed");
         }
-        if (ASSERTS_ENABLED && !(Math.abs(j) <= posActivities.length + 1)) {
+        if (ASSERTS_ENABLED && Math.abs(j) > posActivities.length + 1) {
           throw new IllegalStateException("Assertion failed");
         }
-        if (ASSERTS_ENABLED && !(posActivities.length == negActivities.length)) {
+        if (ASSERTS_ENABLED && posActivities.length != negActivities.length) {
           throw new IllegalStateException("Assertion failed");
         }
 
@@ -220,7 +220,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    * @return the activity of this (variable, polarity)
    */
   private int getLiteralActivity(int varIdx, boolean polarity) {
-    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+    if (ASSERTS_ENABLED && varIdx <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -256,10 +256,10 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
   // be sure the variable bump can be accessed safely
   private void ensureVarSize(int varIdx) {
-    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+    if (ASSERTS_ENABLED && varIdx <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(posActivities.length == negActivities.length)) {
+    if (ASSERTS_ENABLED && posActivities.length != negActivities.length) {
       throw new IllegalStateException("Assertion failed");
     }
 

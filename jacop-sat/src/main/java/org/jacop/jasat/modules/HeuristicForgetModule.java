@@ -69,7 +69,7 @@ public final class HeuristicForgetModule
    * i.e. that are : - not very active (useless) - not the explanation for a currently set literal
    */
   public void onForget() {
-    if (ASSERTS_ENABLED && !(core.currentLevel == 0)) {
+    if (ASSERTS_ENABLED && core.currentLevel != 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -124,7 +124,7 @@ public final class HeuristicForgetModule
 
       int lbd = Math.min(computeLbd(explanation), learntClauses.length - 1);
 
-      if (ASSERTS_ENABLED && !(lbd > 0 && lbd < learntClauses.length)) {
+      if (ASSERTS_ENABLED && (lbd <= 0 || lbd >= learntClauses.length)) {
         throw new IllegalStateException("Assertion failed");
       }
     }

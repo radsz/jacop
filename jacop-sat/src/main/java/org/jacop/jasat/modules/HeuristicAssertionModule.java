@@ -87,7 +87,7 @@ public final class HeuristicAssertionModule implements SolverComponent {
     }
 
     if (answer == 0) {
-      if (ASSERTS_ENABLED && !(trail.size() == core.getMaxVariable())) {
+      if (ASSERTS_ENABLED && trail.size() != core.getMaxVariable()) {
         throw new IllegalStateException("Assertion failed");
       }
       core.triggerSatEvent();
