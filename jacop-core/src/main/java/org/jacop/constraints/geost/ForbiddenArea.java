@@ -72,7 +72,7 @@ public class ForbiddenArea extends InternalConstraint {
     }
     area = total;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -135,7 +135,7 @@ public class ForbiddenArea extends InternalConstraint {
       outOrigin[dimension] = -Integer.MAX_VALUE / 2;
       outLength[dimension] = Integer.MAX_VALUE;
 
-      if (ASSERTS_ENABLED && !(outBox.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && outBox.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
       }
 

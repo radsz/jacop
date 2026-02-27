@@ -66,7 +66,7 @@ public class ShiftOrder implements LexicographicalOrder {
       masterOrdering[i] = i;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -108,7 +108,7 @@ public class ShiftOrder implements LexicographicalOrder {
   /** {@inheritDoc} */
   public int compare(int[] p1, int[] p2) {
 
-    if (ASSERTS_ENABLED && !(p1.length == p2.length)) {
+    if (ASSERTS_ENABLED && p1.length != p2.length) {
       throw new IllegalStateException(String.valueOf("dimension mismatch"));
     }
 
@@ -148,7 +148,7 @@ public class ShiftOrder implements LexicographicalOrder {
     this.mostSignificant = dimension;
     adjustOrderingToShift();
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }

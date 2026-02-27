@@ -80,7 +80,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     preshiftedElems = new ArrayList<>();
 
-    if (ASSERTS_ENABLED && !(obstacle.shapeId.singleton())) {
+    if (ASSERTS_ENABLED && !obstacle.shapeId.singleton()) {
       throw new IllegalStateException(
           String.valueOf(
               "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead."));
@@ -160,7 +160,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       int currentShape,
       int[] c) {
 
-    if (ASSERTS_ENABLED && !(obstacle.shapeId.singleton())) {
+    if (ASSERTS_ENABLED && !obstacle.shapeId.singleton()) {
       throw new IllegalStateException(
           String.valueOf("no support for polymorphism. Use ObstacleObjectFrame instead."));
     }
@@ -227,7 +227,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
     for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
       for (Dbox preshift : preshiftedElems) {
         boolean useless = fillOutBoxForPiecePair(outOrigin, outLength, constrainedPiece, preshift);
-        if (ASSERTS_ENABLED && !(useless || outBox.checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && !useless && outBox.checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
         }
         if (!useless && outBox.containsPoint(c)) {
@@ -306,7 +306,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       frameExists = true;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }

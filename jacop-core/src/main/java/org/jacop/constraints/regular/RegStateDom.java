@@ -106,7 +106,7 @@ public class RegStateDom extends RegState {
       log.error("State q_{}{}: Successors on position {} is already removed", level, id, pos);
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -129,7 +129,7 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -152,7 +152,7 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException("Assertion failed");
     }
   }

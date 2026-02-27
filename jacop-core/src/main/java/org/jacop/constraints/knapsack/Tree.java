@@ -168,7 +168,7 @@ public class Tree {
       TreeLeaf[] leaves,
       IntVar zero) {
 
-    if (ASSERTS_ENABLED && !(items.length > 1)) {
+    if (ASSERTS_ENABLED && items.length <= 1) {
       throw new IllegalStateException(String.valueOf("Number of items must be greater than 1"));
     }
 
@@ -317,7 +317,7 @@ public class Tree {
 
     optimalProfit = obtainedProfit;
 
-    if (ASSERTS_ENABLED && !(optimalProfit >= 0)) {
+    if (ASSERTS_ENABLED && optimalProfit < 0) {
       throw new IllegalStateException(String.valueOf("The optimal profit is negative. "));
     }
 

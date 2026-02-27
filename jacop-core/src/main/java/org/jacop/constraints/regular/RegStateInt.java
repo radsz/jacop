@@ -98,7 +98,7 @@ public class RegStateInt extends RegState {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf(
               "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id));
@@ -139,7 +139,7 @@ public class RegStateInt extends RegState {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf(
               "State q_" + level + id + ": Successors on position " + pos + " is already removed"));

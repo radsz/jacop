@@ -72,7 +72,7 @@ public class Dbox {
     this.origin = origin;
     this.length = length;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -227,7 +227,7 @@ public class Dbox {
       Collection<Dbox> source, Collection<Dbox> holes, Collection<Dbox> result) {
 
     if (result != source) {
-      if (ASSERTS_ENABLED && !(result.isEmpty())) {
+      if (ASSERTS_ENABLED && !result.isEmpty()) {
         throw new IllegalStateException(
             String.valueOf("the collection must be emptied before the call"));
       }
@@ -301,7 +301,7 @@ public class Dbox {
      * to the temporary result.
      */
 
-    if (ASSERTS_ENABLED && !(result.isEmpty())) {
+    if (ASSERTS_ENABLED && !result.isEmpty()) {
       throw new IllegalStateException(String.valueOf("collection must be emptied before call"));
     }
 
@@ -325,7 +325,7 @@ public class Dbox {
 
       // the DBoxes contained in result can be reused
       for (Dbox piece : resultWork) {
-        if (ASSERTS_ENABLED && !(piece != this)) {
+        if (ASSERTS_ENABLED && piece == this) {
           throw new IllegalStateException(String.valueOf("dispatching this"));
         }
         dispatchBox(piece);
@@ -391,7 +391,7 @@ public class Dbox {
    */
   public boolean containsPoint(int[] pointCoordinates) {
 
-    if (ASSERTS_ENABLED && !(pointCoordinates.length <= origin.length)) {
+    if (ASSERTS_ENABLED && pointCoordinates.length > origin.length) {
       throw new IllegalStateException(String.valueOf("dimension mismatch"));
     }
 
@@ -543,7 +543,7 @@ public class Dbox {
       sliceLength[j] = upperbound[j] - lowerbound[j];
     }
     sliceLength[i] = hole.origin[i] - lowerbound[i];
-    if (ASSERTS_ENABLED && !(newBox.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && newBox.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(newBox.checkInvariants()));
     }
     difference.add(newBox);
@@ -567,7 +567,7 @@ public class Dbox {
     for (int j = dimension - 1; j >= 0; j--) {
       newBox.length[j] = upperbound[j] - sliceOrigin[j];
     }
-    if (ASSERTS_ENABLED && !(newBox.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && newBox.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(newBox.checkInvariants()));
     }
     difference.add(newBox);
@@ -604,7 +604,7 @@ public class Dbox {
      * overlap.
      */
 
-    if (ASSERTS_ENABLED && !(difference != null)) {
+    if (ASSERTS_ENABLED && difference == null) {
       throw new IllegalStateException(String.valueOf("accumulator must be initialized"));
     }
 
@@ -674,7 +674,7 @@ public class Dbox {
    */
   public final Dbox copyInto(Dbox box) {
 
-    if (ASSERTS_ENABLED && !(box != null)) {
+    if (ASSERTS_ENABLED && box == null) {
       throw new IllegalStateException(String.valueOf("It is not possible to copy into null box"));
     }
 

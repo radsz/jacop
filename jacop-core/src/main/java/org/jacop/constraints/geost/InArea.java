@@ -68,7 +68,7 @@ public class InArea implements ExternalConstraint {
     this.allowedArea = area;
     this.holes = Objects.requireNonNullElseGet(holes, () -> new ArrayList<>(0));
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }

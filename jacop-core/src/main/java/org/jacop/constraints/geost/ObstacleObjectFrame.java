@@ -210,7 +210,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
       frameArea++;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -594,7 +594,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
             outLength[i] = IntDomain.MAX_INT - IntDomain.MIN_INT;
           }
         }
-        if (ASSERTS_ENABLED && !(outBox.checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && outBox.checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(outBox.checkInvariants()));
         }
         if (outBox.containsPoint(c)) {

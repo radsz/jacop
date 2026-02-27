@@ -137,12 +137,12 @@ public class GeostObject {
    * @param variable variable being grounded.
    */
   public final void onGround(Var variable) {
-    if (ASSERTS_ENABLED && !(variables.contains(variable))) {
+    if (ASSERTS_ENABLED && !variables.contains(variable)) {
       throw new IllegalStateException(
           String.valueOf("grounding " + variable + ", not variable defining " + this));
     }
     groundCount++;
-    if (ASSERTS_ENABLED && !(groundCount <= variables.size())) {
+    if (ASSERTS_ENABLED && groundCount > variables.size()) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -154,12 +154,12 @@ public class GeostObject {
    * @param variable variable being ungrounded.
    */
   public final void onUnGround(Var variable) {
-    if (ASSERTS_ENABLED && !(variables.contains(variable))) {
+    if (ASSERTS_ENABLED && !variables.contains(variable)) {
       throw new IllegalStateException(
           String.valueOf("ungrounding " + variable + ", not variable defining " + this));
     }
     groundCount--;
-    if (ASSERTS_ENABLED && !(groundCount >= 0)) {
+    if (ASSERTS_ENABLED && groundCount < 0) {
       throw new IllegalStateException("Assertion failed");
     }
   }

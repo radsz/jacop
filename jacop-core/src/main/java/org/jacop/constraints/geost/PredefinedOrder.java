@@ -89,7 +89,7 @@ public class PredefinedOrder implements LexicographicalOrder {
     actualDimensionOrder = new int[ordering.length];
     recomputeActualDimensionOrder();
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -125,7 +125,7 @@ public class PredefinedOrder implements LexicographicalOrder {
       actualDimensionOrder[i] = masterOrdering[(i + shift) % k];
     }
 
-    if (ASSERTS_ENABLED && !(actualDimensionOrder[0] == mostSignificantDimension)) {
+    if (ASSERTS_ENABLED && actualDimensionOrder[0] != mostSignificantDimension) {
       throw new IllegalStateException(String.valueOf("wrong setup of precedence levels"));
     }
   }
@@ -139,7 +139,7 @@ public class PredefinedOrder implements LexicographicalOrder {
    */
   public int compare(int[] p1, int[] p2) {
 
-    if (ASSERTS_ENABLED && !(p1.length == p2.length)) {
+    if (ASSERTS_ENABLED && p1.length != p2.length) {
       throw new IllegalStateException(String.valueOf("dimension mismatch"));
     }
 
@@ -181,7 +181,7 @@ public class PredefinedOrder implements LexicographicalOrder {
       }
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("unreachable code"));
     }
     return 0;
@@ -204,7 +204,7 @@ public class PredefinedOrder implements LexicographicalOrder {
   public void setMostSignificantDimension(int d) {
     this.mostSignificantDimension = d;
     recomputeActualDimensionOrder();
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }

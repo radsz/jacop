@@ -575,27 +575,27 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
         }
 
-        if (ASSERTS_ENABLED && !(s.outDegree >= 0)) {
+        if (ASSERTS_ENABLED && s.outDegree < 0) {
           throw new IllegalStateException("Assertion failed");
         }
         if (s.outDegree == 0) {
           if (DEBUG_ALL) {
             log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
           }
-          if (ASSERTS_ENABLED && !(s.level == varIndex)) {
+          if (ASSERTS_ENABLED && s.level != varIndex) {
             throw new IllegalStateException("Assertion failed");
           }
           disableState(varIndex, s.pos);
         }
 
-        if (ASSERTS_ENABLED && !(suc.inDegree >= 0)) {
+        if (ASSERTS_ENABLED && suc.inDegree < 0) {
           throw new IllegalStateException("Assertion failed");
         }
         if (suc.inDegree == 0) {
           if (DEBUG_ALL) {
             log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
           }
-          if (ASSERTS_ENABLED && !(suc.level == varIndex + 1)) {
+          if (ASSERTS_ENABLED && suc.level != varIndex + 1) {
             throw new IllegalStateException("Assertion failed");
           }
           disableState(nextVar, suc.pos);
@@ -651,13 +651,13 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
 
-        if (ASSERTS_ENABLED && !(s.outDegree >= 0)) {
+        if (ASSERTS_ENABLED && s.outDegree < 0) {
           throw new IllegalStateException(
               String.valueOf("Negative successor number of q_" + s.level + s.id));
         }
 
         if (s.outDegree == 0) {
-          if (ASSERTS_ENABLED && !(s.level == level)) {
+          if (ASSERTS_ENABLED && s.level != level) {
             throw new IllegalStateException("Assertion failed");
           }
           disableState(level, sPos);
@@ -719,7 +719,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 suc.id);
           }
 
-          if (ASSERTS_ENABLED && !(suc.inDegree >= 0)) {
+          if (ASSERTS_ENABLED && suc.inDegree < 0) {
             throw new IllegalStateException(
                 String.valueOf("Negative indegree of successor state" + suc.level + suc.id));
           }
@@ -729,7 +729,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               log.debug("> Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
             // changed to directl disableState(int, int).
-            if (ASSERTS_ENABLED && !(suc.level == level + 1)) {
+            if (ASSERTS_ENABLED && suc.level != level + 1) {
               throw new IllegalStateException("Assertion failed");
             }
             disableState(level + 1, suc.pos);
@@ -756,7 +756,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     int lim = activeLevels[level].value();
 
-    if (ASSERTS_ENABLED && !(pos < lim)) {
+    if (ASSERTS_ENABLED && pos >= lim) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -775,7 +775,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public void removeLevel(int level) {
 
-    if (ASSERTS_ENABLED && !(level > firstConsistencyLevel)) {
+    if (ASSERTS_ENABLED && level <= firstConsistencyLevel) {
       throw new IllegalStateException(
           String.valueOf(
               "Constraint has the level at which it has computed its initial state being removed."));

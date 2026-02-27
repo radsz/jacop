@@ -158,7 +158,7 @@ public class DomainHoles extends InternalConstraint {
    */
   public boolean stillHasHole() {
 
-    if (ASSERTS_ENABLED && !(object.dimension == object.coords.length)) {
+    if (ASSERTS_ENABLED && object.dimension != object.coords.length) {
       throw new IllegalStateException(
           String.valueOf("object dimension is not equal to dimension indicated by coords."));
     }
@@ -223,7 +223,7 @@ public class DomainHoles extends InternalConstraint {
       return false;
     }
 
-    if (ASSERTS_ENABLED && !(dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d])) {
+    if (ASSERTS_ENABLED && (dom.nextValue(c[d]) == c[d] || dom.previousValue(c[d]) == c[d])) {
       throw new IllegalStateException(String.valueOf("current point not located in a domain hole"));
     }
 
@@ -247,10 +247,10 @@ public class DomainHoles extends InternalConstraint {
       log.debug("forbidden domain: {}", forbiddenRegion);
     }
 
-    if (ASSERTS_ENABLED && !(forbiddenRegion.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && forbiddenRegion.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(forbiddenRegion.checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(forbiddenRegion.containsPoint(c))) {
+    if (ASSERTS_ENABLED && !forbiddenRegion.containsPoint(c)) {
       throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
     }
     return true;

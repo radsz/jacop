@@ -74,7 +74,7 @@ public class Shape {
 
     boundingBox = computeBoundingBox();
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -93,7 +93,7 @@ public class Shape {
 
     this.boundingBox = box;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -114,7 +114,7 @@ public class Shape {
     boxes = new ArrayList<>(1);
     boxes.add(boundingBox);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -307,7 +307,7 @@ public class Shape {
         Dbox.dispatchBox(hole);
       }
 
-      if (ASSERTS_ENABLED && !(boundingBox.area() - holeArea > 0)) {
+      if (ASSERTS_ENABLED && boundingBox.area() - holeArea <= 0) {
         throw new IllegalStateException(String.valueOf("negative area"));
       }
 
