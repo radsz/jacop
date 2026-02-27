@@ -145,7 +145,7 @@ class CumulativePrimary extends Constraint {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
         durations.stream().mapToInt(i -> i).toArray(),
         resources.stream().mapToInt(i -> i).toArray(),
         limit);

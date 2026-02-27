@@ -154,9 +154,9 @@ public class Cumulative extends CumulativeBasic {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[0]),
-        durations.toArray(new IntVar[0]),
-        resources.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
         limit);
   }
 

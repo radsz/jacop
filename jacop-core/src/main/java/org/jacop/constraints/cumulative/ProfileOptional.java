@@ -201,7 +201,7 @@ public class ProfileOptional {
       return;
     }
 
-    int limit = this.limit.max();
+    int limitMax = this.limit.max();
     int n = utilizationProfile.size();
     int dur = tn[i].dur().min();
     int res = tn[i].res().min();
@@ -218,7 +218,7 @@ public class ProfileOptional {
         ok = true;
         break;
       }
-      if (u + res > limit && j + 1 < n) {
+      if (u + res > limitMax && j + 1 < n) {
         sMin = utilizationProfile.get(j + 1).date();
         if (sMin > sMax) {
           opt[i].domain.in(store.level, opt[i], 0, 0);

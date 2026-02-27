@@ -165,9 +165,9 @@ public class CumulativeUnary extends Cumulative {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[0]),
-        durations.toArray(new IntVar[0]),
-        resources.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
         limit);
   }
 
@@ -189,9 +189,9 @@ public class CumulativeUnary extends Cumulative {
       boolean doProfile) {
 
     this(
-        starts.toArray(new IntVar[0]),
-        durations.toArray(new IntVar[0]),
-        resources.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
         limit,
         doProfile);
   }

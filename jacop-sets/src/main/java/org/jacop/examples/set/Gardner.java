@@ -138,7 +138,7 @@ public class Gardner extends ExampleSet {
     Search<SetVar> label = new DepthFirstSearch<>();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<>(vars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
+        new SimpleSelect<>(vars.toArray(SetVar[]::new), null, new IndomainSetMin<>());
 
     label.getSolutionListener().searchAll(false);
     label.getSolutionListener().recordSolutions(false);

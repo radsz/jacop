@@ -291,12 +291,12 @@ public abstract class ExampleSet {
 
     Search<SetVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectSlave =
-        new SimpleSelect<>(slaveVars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
+        new SimpleSelect<>(slaveVars.toArray(SetVar[]::new), null, new IndomainSetMin<>());
     labelSlave.setSelectChoicePoint(selectSlave);
 
     Search<SetVar> labelMaster = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectMaster =
-        new SimpleSelect<>(masterVars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
+        new SimpleSelect<>(masterVars.toArray(SetVar[]::new), null, new IndomainSetMin<>());
 
     labelMaster.addChildSearch(labelSlave);
 

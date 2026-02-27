@@ -656,12 +656,12 @@ public abstract class ExampleFd {
 
     Search<IntVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave =
-        new SimpleSelect<>(slaveVars.toArray(new IntVar[0]), null, new IndomainMin<>());
+        new SimpleSelect<>(slaveVars.toArray(IntVar[]::new), null, new IndomainMin<>());
     labelSlave.setSelectChoicePoint(selectSlave);
 
     Search<IntVar> labelMaster = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectMaster =
-        new SimpleSelect<>(masterVars.toArray(new IntVar[0]), null, new IndomainMin<>());
+        new SimpleSelect<>(masterVars.toArray(IntVar[]::new), null, new IndomainMin<>());
 
     labelMaster.addChildSearch(labelSlave);
 

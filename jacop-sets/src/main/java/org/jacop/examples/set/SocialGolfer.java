@@ -255,7 +255,7 @@ public class SocialGolfer extends ExampleSet {
 
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(
-            vars.toArray(new SetVar[0]),
+            vars.toArray(SetVar[]::new),
             new MinLubCard<>(),
             new MaxGlbCard<>(),
             new IndomainSetMin<>());

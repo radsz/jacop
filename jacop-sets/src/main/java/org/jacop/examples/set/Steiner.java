@@ -155,7 +155,7 @@ public class Steiner extends ExampleSet {
 
       SelectChoicePoint<SetVar> select =
           new SimpleSelect<>(
-              vars.toArray(new SetVar[0]), new MaxCardDiff<>(), new IndomainSetMax<>());
+              vars.toArray(SetVar[]::new), new MaxCardDiff<>(), new IndomainSetMax<>());
 
       label.getSolutionListener().searchAll(true);
       label.getSolutionListener().recordSolutions(true);
