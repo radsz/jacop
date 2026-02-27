@@ -75,6 +75,7 @@ public class Bnode extends BinaryNode {
     bound = new BoundsVar(store, min, max, lb, ub);
   }
 
+  @Override
   void propagate() {
 
     FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
@@ -88,6 +89,7 @@ public class Bnode extends BinaryNode {
     updateBoundsAndPropagate(min, max, lb, ub, false);
   }
 
+  @Override
   void propagateAndPrune() {
 
     FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
@@ -130,6 +132,7 @@ public class Bnode extends BinaryNode {
     }
   }
 
+  @Override
   void prune() {
 
     double min = min();
@@ -203,22 +206,27 @@ public class Bnode extends BinaryNode {
     }
   }
 
+  @Override
   double min() {
     return ((BoundsVarValue) bound.value()).min;
   }
 
+  @Override
   double max() {
     return ((BoundsVarValue) bound.value()).max;
   }
 
+  @Override
   double lb() {
     return ((BoundsVarValue) bound.value()).lb;
   }
 
+  @Override
   double ub() {
     return ((BoundsVarValue) bound.value()).ub;
   }
 
+  @Override
   void updateBounds(double min, double max, double lb, double ub) {
     bound.update(min, max, lb, ub);
   }
@@ -228,6 +236,7 @@ public class Bnode extends BinaryNode {
    *
    * @return string representation including node id, stamp and bounds
    */
+  @Override
   public String toString() {
     return super.toString() + "(" + bound.stamp() + ")" + " : " + bound;
   }

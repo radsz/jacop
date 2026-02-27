@@ -74,6 +74,7 @@ public class Steiner extends ExampleSet {
   }
 
   /** Creates the constraint model for the Steiner problem. */
+  @Override
   public void model() {
 
     int t = n * (n - 1) / 6;
@@ -135,6 +136,7 @@ public class Steiner extends ExampleSet {
    *
    * @return true if a solution is found, false otherwise.
    */
+  @Override
   public boolean search() {
 
     long t1;

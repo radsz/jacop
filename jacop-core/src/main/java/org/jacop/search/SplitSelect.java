@@ -126,6 +126,7 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
    *
    * @return string describing the variables, ordering, and value selection heuristic.
    */
+  @Override
   public String toString() {
     return Arrays.asList((Var[]) searchVariables)
         + ", SplitSelect("

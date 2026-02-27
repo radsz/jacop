@@ -63,10 +63,12 @@ public class VarWeightNode extends VariableNode {
         FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT, FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
   }
 
+  @Override
   void propagate() {
     propagateInternal(false);
   }
 
+  @Override
   void propagateAndPrune() {
     propagateInternal(true);
   }
@@ -79,6 +81,7 @@ public class VarWeightNode extends VariableNode {
     updateBoundsAndPropagate(min, max, min, max, andPrune);
   }
 
+  @Override
   void prune() {
 
     double lMin = min();
@@ -91,22 +94,27 @@ public class VarWeightNode extends VariableNode {
     v.domain.in(store.level, v, divMin, divMax);
   }
 
+  @Override
   double min() {
     return ((BoundsVarValue) bound.value()).min;
   }
 
+  @Override
   double max() {
     return ((BoundsVarValue) bound.value()).max;
   }
 
+  @Override
   double lb() {
     return ((BoundsVarValue) bound.value()).lb;
   }
 
+  @Override
   double ub() {
     return ((BoundsVarValue) bound.value()).ub;
   }
 
+  @Override
   void updateBounds(double min, double max, double lb, double ub) {
 
     bound.update(min, max, lb, ub);
@@ -117,6 +125,7 @@ public class VarWeightNode extends VariableNode {
    *
    * @return string representation including relation, variable, weight, and bounds
    */
+  @Override
   public String toString() {
     return super.toString()
         + " (rel = "

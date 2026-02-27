@@ -50,38 +50,46 @@ public class VarNode extends VariableNode {
     this.v = v;
   }
 
+  @Override
   void propagateAndPrune() {
 
     parent.propagateAndPrune();
   }
 
+  @Override
   void prune() {
 
     // Pruning for variable is done in updateBounds since there is not weight
 
   }
 
+  @Override
   void propagate() {
 
     parent.propagate();
   }
 
+  @Override
   double min() {
     return v.min();
   }
 
+  @Override
   double max() {
     return v.max();
   }
 
+  @Override
   double lb() {
     return v.min();
   }
 
+  @Override
   double ub() {
     return v.max();
   }
 
+  @Override
   void updateBounds(double min, double max, double lb, double ub) {
 
     v.domain.in(store.level, v, min, max);
@@ -92,6 +100,7 @@ public class VarNode extends VariableNode {
    *
    * @return string representation including relation and variable
    */
+  @Override
   public String toString() {
     return super.toString() + " (rel = " + rel + ", " + v + ")";
   }

@@ -61,6 +61,7 @@ public class RootBnode extends Bnode {
     super(store, min, max);
   }
 
+  @Override
   void propagateAndPrune() {
 
     boolean changed = propagateForRoot();
@@ -73,6 +74,7 @@ public class RootBnode extends Bnode {
     }
   }
 
+  @Override
   void propagate() {
 
     propagateForRoot();
@@ -158,6 +160,7 @@ public class RootBnode extends Bnode {
     return false;
   }
 
+  @Override
   void prune() {
 
     double min = min();
@@ -210,6 +213,7 @@ public class RootBnode extends Bnode {
    *
    * @return string representation including relation and value
    */
+  @Override
   public String toString() {
     return super.toString() + " (rel = " + rel + ", val = " + val + ")";
   }

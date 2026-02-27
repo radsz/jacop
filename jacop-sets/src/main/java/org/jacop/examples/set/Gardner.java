@@ -69,6 +69,7 @@ public class Gardner extends ExampleSet {
   }
 
   /** Creates the constraint model for the Gardner dinner problem. */
+  @Override
   public void model() {
 
     final int num_days = 35;
@@ -122,6 +123,7 @@ public class Gardner extends ExampleSet {
    *
    * @return true if a solution is found, false otherwise.
    */
+  @Override
   public boolean search() {
 
     Thread tread = Thread.currentThread();

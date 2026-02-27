@@ -78,6 +78,7 @@ public class SqrtPeqR extends PmulQeqR {
    * @param x the variable with respect to which the derivative is computed
    * @return the derivative variable, or null if f is not part of this constraint
    */
+  @Override
   public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     if (f.equals(r)) {

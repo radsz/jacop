@@ -121,6 +121,7 @@ public class SocialGolfer extends ExampleSet {
   }
 
   /** Creates the constraint model for the social golfer problem. */
+  @Override
   public void model() {
 
     final int n = groups * players;
@@ -238,6 +239,7 @@ public class SocialGolfer extends ExampleSet {
    *
    * @return true if a solution is found, false otherwise.
    */
+  @Override
   public boolean search() {
 
     Thread tread = Thread.currentThread();

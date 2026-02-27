@@ -103,6 +103,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
    * @param failLimit the maximum number of allowed failures before the search stops.
    * @return true if a solution was found, false otherwise.
    */
+  @Override
   public boolean searchFromEmptySolution(int failLimit) {
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
@@ -136,6 +137,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
    * @param failLimit the maximum number of allowed failures before the search stops.
    * @return true if a solution was found, false otherwise.
    */
+  @Override
   public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
 
     Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
@@ -167,26 +169,32 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     return result;
   }
 
+  @Override
   public int getCurrentCost() {
     return searchCost;
   }
 
+  @Override
   public int[] getSolution() {
     return solution;
   }
 
+  @Override
   public int getNumberFails() {
     return failCalculator.getNumberFails();
   }
 
+  @Override
   public int getFailLimit() {
     return failCalculator.getFailLimit();
   }
 
+  @Override
   public void setPrintInfo(boolean print) {
     printInfo = print;
   }
 
+  @Override
   public void setTimeOut(long timeOut) {
     this.timeOut = timeOut;
   }
@@ -196,7 +204,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
    *
    * @author Krzysztof Kuchcinski
    */
-  public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
+  public class CostListener<U extends IntVar> extends SimpleSolutionListener<U> {
 
     /**
      * Executes after a solution is found, recording the cost of the current solution.
@@ -205,7 +213,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
      * @param select the choice point selection strategy.
      * @return true if the search should continue looking for better solutions.
      */
-    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+    @Override
+    public boolean executeAfterSolution(Search<U> search, SelectChoicePoint<U> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 

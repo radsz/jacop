@@ -209,6 +209,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
     } while (store.propagationHasOccurred);
   }
 
+  @Override
   TaskView[] filterZeroTasks(TaskView[] ts) {
 
     TaskView[] nonZeroTasks = new TaskView[ts.length];

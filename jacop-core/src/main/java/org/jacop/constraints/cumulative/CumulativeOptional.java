@@ -120,6 +120,7 @@ public class CumulativeOptional extends Cumulative {
     } while (store.propagationHasOccurred);
   }
 
+  @Override
   TaskView[] filterZeroTasks(TaskView[] ts) {
 
     TaskView[] nonZeroTasks = new TaskView[ts.length];
