@@ -517,7 +517,7 @@ public class IntervalDomain extends IntDomain {
         i++;
       }
       if (i == size) {
-        if (ASSERTS_ENABLED && !(!isIntersecting(input.toIntervalDomain()))) {
+        if (ASSERTS_ENABLED && isIntersecting(input.toIntervalDomain())) {
           throw new IllegalStateException(String.valueOf(IS_INTERSECTING_NOT_IMPLEMENTED));
         }
         return false;
@@ -529,7 +529,7 @@ public class IntervalDomain extends IntDomain {
         return true;
       }
     }
-    if (ASSERTS_ENABLED && !(!isIntersecting(input.toIntervalDomain()))) {
+    if (ASSERTS_ENABLED && isIntersecting(input.toIntervalDomain())) {
       throw new IllegalStateException(String.valueOf(IS_INTERSECTING_NOT_IMPLEMENTED));
     }
     return false;
@@ -4269,7 +4269,7 @@ public class IntervalDomain extends IntDomain {
       return returnedEvent;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf("Not implemented for other domain type " + domain.getClass()));
     }
@@ -4525,7 +4525,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf("Error in IndomainRandom. " + "Domain " + this + " value " + value));
     }

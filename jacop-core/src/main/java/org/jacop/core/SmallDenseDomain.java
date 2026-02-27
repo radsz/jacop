@@ -657,7 +657,7 @@ public class SmallDenseDomain extends IntDomain {
       IntervalDomain input = (IntervalDomain) domain;
 
       if (input.min() != this.minBound || input.max() != this.max || input.getSize() != this.size) {
-        if (ASSERTS_ENABLED && !(!super.eq(domain))) {
+        if (ASSERTS_ENABLED && super.eq(domain)) {
           throw new IllegalStateException("Assertion failed");
         }
         return false;
@@ -665,7 +665,7 @@ public class SmallDenseDomain extends IntDomain {
 
       for (int i = input.size - 1; i > 0; i--) {
         if (isIntersecting(input.intervals[i - 1].max() + 1, input.intervals[i].min() - 1)) {
-          if (ASSERTS_ENABLED && !(!super.eq(domain))) {
+          if (ASSERTS_ENABLED && super.eq(domain)) {
             throw new IllegalStateException("Assertion failed");
           }
           return false;
@@ -755,7 +755,7 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf("Interval with a given number does not exist."));
     }
@@ -1055,7 +1055,7 @@ public class SmallDenseDomain extends IntDomain {
 
       in(storeLevel, v, inBits);
 
-      if (ASSERTS_ENABLED && !(!domain.complement().isIntersecting((IntDomain) v.dom()))) {
+      if (ASSERTS_ENABLED && domain.complement().isIntersecting((IntDomain) v.dom())) {
         throw new IllegalStateException(String.valueOf("Error either in in or isIntersecting."));
       }
 
@@ -1337,7 +1337,7 @@ public class SmallDenseDomain extends IntDomain {
       return result;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf("Not implemented for class " + domain.getClass()));
     }
@@ -1453,7 +1453,7 @@ public class SmallDenseDomain extends IntDomain {
       return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(
           String.valueOf("Not implemented for class " + domain.getClass()));
     }
@@ -1529,7 +1529,7 @@ public class SmallDenseDomain extends IntDomain {
         }
         return true;
       } else {
-        if (ASSERTS_ENABLED && !(!super.isIntersecting(domain))) {
+        if (ASSERTS_ENABLED && super.isIntersecting(domain)) {
           throw new IllegalStateException(
               String.valueOf("isIntersecting not properly implemented"));
         }
@@ -1662,7 +1662,7 @@ public class SmallDenseDomain extends IntDomain {
       shift++;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("It should not be here."));
     }
     return minBound + shift;
@@ -1733,7 +1733,7 @@ public class SmallDenseDomain extends IntDomain {
           }
         }
 
-        if (ASSERTS_ENABLED && !(false)) {
+        if (ASSERTS_ENABLED) {
           throw new IllegalStateException(String.valueOf("It should not be here."));
         }
       }
@@ -2336,7 +2336,7 @@ public class SmallDenseDomain extends IntDomain {
       pos++;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException("Assertion failed");
     }
     return minBound;
