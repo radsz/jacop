@@ -74,7 +74,7 @@ public class Member extends PrimitiveConstraint {
    */
   public Member(IntVar[] list, IntVar e) {
 
-    checkInputForNullness(new String[] {"list", "e"}, new Object[][] {list, {e}});
+    checkInputForNullness(new String[] {"list", "e"}, list, new Object[] {e});
 
     this.e = e;
 

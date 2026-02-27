@@ -281,7 +281,7 @@ public class NoGood extends Constraint {
     secondWatch = firstWatch;
     secondValue = firstValue;
 
-    for (IntVar _ : listOfVars) {
+    for (var _ : listOfVars) {
       if (listOfVars[watchCount].getSize() == 1
           && listOfVars[watchCount].value() != listOfValues[watchCount]) {
         return;
