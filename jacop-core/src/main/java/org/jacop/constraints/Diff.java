@@ -554,7 +554,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   protected boolean needsStartNarrowing(
       ProfileItem p, int limit, IntVar resources, int dur, IntDomain startDom) {
     return limit - p.value < resources.min()
-        && !(p.min - dur + 1 > startDom.max() || p.max - 1 < startDom.min());
+        && p.min - dur + 1 <= startDom.max()
+        && p.max - 1 >= startDom.min();
   }
 
   /**

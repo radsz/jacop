@@ -267,8 +267,7 @@ public class Dbox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    if (ASSERTS_ENABLED
-        && !(resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty())) {
+    if (ASSERTS_ENABLED && !resultStep.isEmpty()) {
       throw new IllegalStateException(
           String.valueOf( // without this the assertion would fail when subtracting leaves nothing
               "bad cleaning of the lists"));
@@ -345,8 +344,7 @@ public class Dbox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    if (ASSERTS_ENABLED
-        && !(resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty())) {
+    if (ASSERTS_ENABLED && !resultStep.isEmpty()) {
       throw new IllegalStateException(
           String.valueOf( // without this the assertion would fail when subtracting leaves nothing
               "bad cleaning of the lists"));

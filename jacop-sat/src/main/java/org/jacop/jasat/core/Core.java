@@ -467,7 +467,8 @@ public final class Core implements SolverComponent {
   public void triggerIdleEvent() {
 
     if (ASSERTS_ENABLED
-        && !(explanationClause.isEmpty() || !explanationClause.isUnsatisfiableIn(trail))) {
+        && !explanationClause.isEmpty()
+        && explanationClause.isUnsatisfiableIn(trail)) {
       throw new IllegalStateException("Assertion failed");
     }
 
