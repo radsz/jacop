@@ -35,13 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-public class ExampleBasedTest {
+class ExampleBasedTest {
 
   private static final int TIMEOUT_MS = 10_000;
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testGardner() {
+  void testGardner() {
     Gardner example = new Gardner();
     example.model();
 
@@ -50,7 +50,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testSocialGolfer() {
+  void testSocialGolfer() {
     SocialGolfer example = new SocialGolfer();
 
     example.setup(3, 2, 2);
@@ -124,7 +124,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testSteiner() {
+  void testSteiner() {
     Steiner example = new Steiner();
     example.n = 7;
     example.model();

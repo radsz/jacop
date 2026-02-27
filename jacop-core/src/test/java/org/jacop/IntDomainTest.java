@@ -58,7 +58,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @version 5.0
  */
 @ExtendWith(MockitoExtension.class)
-public class IntDomainTest {
+class IntDomainTest {
 
   private Method prepareMethod;
   private @Mock IntVar v;
@@ -74,7 +74,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testContains(String prepareMethodName) throws Exception {
+  void testContains(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
@@ -92,7 +92,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testComplement(String prepareMethodName) throws Exception {
+  void testComplement(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -102,7 +102,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testGetElementAt(String prepareMethodName) throws Exception {
+  void testGetElementAt(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -112,7 +112,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testIntersect(String prepareMethodName) throws Exception {
+  void testIntersect(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
@@ -145,7 +145,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testIntersectAdapt(String prepareMethodName) throws Exception {
+  void testIntersectAdapt(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
@@ -250,7 +250,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testIsIntersecting(String prepareMethodName) throws Exception {
+  void testIsIntersecting(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
@@ -263,7 +263,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testSubtract(String prepareMethodName) throws Exception {
+  void testSubtract(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
@@ -291,7 +291,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testNextValue(String prepareMethodName) throws Exception {
+  void testNextValue(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     IntDomain goldenResultDomain =
@@ -301,7 +301,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testPreviousValue(String prepareMethodName) throws Exception {
+  void testPreviousValue(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -309,13 +309,13 @@ public class IntDomainTest {
   }
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     intDomain = new IntervalDomain();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval(String prepareMethodName)
+  void testinterval(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -327,7 +327,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval2(String prepareMethodName)
+  void testinterval2(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -339,7 +339,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval3(String prepareMethodName)
+  void testinterval3(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -352,7 +352,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval4(String prepareMethodName)
+  void testinterval4(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -364,7 +364,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval5(String prepareMethodName)
+  void testinterval5(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -377,7 +377,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval6(String prepareMethodName)
+  void testinterval6(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -388,7 +388,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval7(String prepareMethodName)
+  void testinterval7(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -401,7 +401,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval8(String prepareMethodName)
+  void testinterval8(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -415,7 +415,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval9(String prepareMethodName)
+  void testinterval9(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -428,7 +428,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval10(String prepareMethodName)
+  void testinterval10(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -442,7 +442,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval11(String prepareMethodName)
+  void testinterval11(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -456,7 +456,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval12(String prepareMethodName)
+  void testinterval12(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -469,7 +469,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval13(String prepareMethodName)
+  void testinterval13(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -482,7 +482,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval14(String prepareMethodName)
+  void testinterval14(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -494,7 +494,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval15(String prepareMethodName)
+  void testinterval15(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -506,7 +506,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval16(String prepareMethodName)
+  void testinterval16(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -519,7 +519,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval17(String prepareMethodName)
+  void testinterval17(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -531,7 +531,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval18(String prepareMethodName)
+  void testinterval18(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -544,7 +544,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval19(String prepareMethodName)
+  void testinterval19(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -556,7 +556,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval20(String prepareMethodName)
+  void testinterval20(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -567,7 +567,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval21(String prepareMethodName)
+  void testinterval21(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain =
@@ -580,7 +580,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval22(String prepareMethodName)
+  void testinterval22(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
     intDomain =
@@ -594,7 +594,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval23(String prepareMethodName)
+  void testinterval23(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -607,7 +607,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval24(String prepareMethodName)
+  void testinterval24(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -620,7 +620,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval25a(String prepareMethodName)
+  void testinterval25a(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -634,7 +634,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval25b(String prepareMethodName)
+  void testinterval25b(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -647,7 +647,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testintervalNoEventGenerated(String prepareMethodName)
+  void testintervalNoEventGenerated(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -662,7 +662,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval27(String prepareMethodName)
+  void testinterval27(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -675,7 +675,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval28(String prepareMethodName)
+  void testinterval28(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -691,7 +691,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval29(String prepareMethodName)
+  void testinterval29(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -704,7 +704,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval30(String prepareMethodName)
+  void testinterval30(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -716,7 +716,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval31(String prepareMethodName)
+  void testinterval31(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -728,7 +728,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval32(String prepareMethodName)
+  void testinterval32(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -740,7 +740,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval33(String prepareMethodName)
+  void testinterval33(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -752,7 +752,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval34(String prepareMethodName)
+  void testinterval34(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -764,7 +764,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval35(String prepareMethodName)
+  void testinterval35(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -776,7 +776,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval36(String prepareMethodName)
+  void testinterval36(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -788,7 +788,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval37(String prepareMethodName)
+  void testinterval37(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -800,7 +800,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval38(String prepareMethodName)
+  void testinterval38(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -812,7 +812,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval39(String prepareMethodName)
+  void testinterval39(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -823,7 +823,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval40(String prepareMethodName)
+  void testinterval40(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -835,7 +835,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval41(String prepareMethodName)
+  void testinterval41(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -848,7 +848,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval42(String prepareMethodName)
+  void testinterval42(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -860,7 +860,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval43(String prepareMethodName)
+  void testinterval43(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 
@@ -874,7 +874,7 @@ public class IntDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  public void testinterval44(String prepareMethodName)
+  void testinterval44(String prepareMethodName)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
     setupPrepareMethod(prepareMethodName);
 

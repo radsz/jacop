@@ -36,7 +36,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-public class ExampleBasedTest {
+class ExampleBasedTest {
 
   private static final int TIMEOUT_MS = 15_000;
   private static final int TIMEOUT_LONG_MS = 60_000;
@@ -48,142 +48,142 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testConcert() {
+  void testConcert() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/concert.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testCurveFitting2() {
+  void testCurveFitting2() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/curve_fitting2.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testFilter() {
+  void testFilter() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/filter.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testGardnerDinner() {
+  void testGardnerDinner() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/gardner_dinner.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testJobshop() {
+  void testJobshop() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/jobshop.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testRostering() {
+  void testRostering() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/rostering.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testTinyTsp() {
+  void testTinyTsp() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/tiny_tsp.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testWilkinson() {
+  void testWilkinson() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/wilkinson.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincAr() {
+  void testMinizincAr() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/ar.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincAssignment() {
+  void testMinizincAssignment() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/assignment.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincBinpack() {
+  void testMinizincBinpack() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/binpack.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincDct() {
+  void testMinizincDct() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/dct.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincDfq() {
+  void testMinizincDfq() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/dfq.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincEwf() {
+  void testMinizincEwf() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/ewf.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincFir() {
+  void testMinizincFir() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincFir16() {
+  void testMinizincFir16() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/fir16.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincParcel() {
+  void testMinizincParcel() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/parcel.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_LONG_MS)
-  public void testMinizincPerfectSquare() {
+  void testMinizincPerfectSquare() {
     assertDoesNotThrow(
         () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/perfect_square.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincTransistors() {
+  void testMinizincTransistors() {
     assertDoesNotThrow(
         () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/transistors.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincTransportation() {
+  void testMinizincTransportation() {
     assertDoesNotThrow(
         () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/transportation.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincTsp() {
+  void testMinizincTsp() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincTsp1() {
+  void testMinizincTsp1() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp1.fzn"));
   }
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinizincTsp2() {
+  void testMinizincTsp2() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp2.fzn"));
   }
 }

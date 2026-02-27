@@ -8,10 +8,10 @@ import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
-public class ConstraintStatusKnownAtImposition {
+class ConstraintStatusKnownAtImposition {
 
   @Test
-  public void testSimpleFailSetupAtImpositionKnapsack() {
+  void testSimpleFailSetupAtImpositionKnapsack() {
 
     Store store = new Store();
 
@@ -34,7 +34,7 @@ public class ConstraintStatusKnownAtImposition {
   }
 
   @Test
-  public void testSimpleAlreadySatisfiedSetupAtImpositionConflictVA() {
+  void testSimpleAlreadySatisfiedSetupAtImpositionConflictVA() {
     Store store = new Store();
 
     IntVar v1 = new IntVar(store, "v1", 0, 0);

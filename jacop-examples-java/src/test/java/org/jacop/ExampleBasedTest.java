@@ -97,10 +97,10 @@ import org.junit.jupiter.api.Test;
  * @version 5.0
  */
 @Slf4j
-public class ExampleBasedTest {
+class ExampleBasedTest {
 
   @Test
-  public void testCarSequencing() {
+  void testCarSequencing() {
 
     CarSequencing example = new CarSequencing();
 
@@ -119,7 +119,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testCrossWord() {
+  void testCrossWord() {
 
     CrossWord crossWord = new CrossWord();
     crossWord.defaultDictionary = "src/test/resources/words";
@@ -132,7 +132,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testMUCA() {
+  void testMUCA() {
 
     Muca problem = new Muca();
     problem.filename = "src/test/resources/testset3.auct";
@@ -160,7 +160,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testNonogram() {
+  void testNonogram() {
 
     Nonogram example = new Nonogram();
 
@@ -204,7 +204,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testQCP() {
+  void testQCP() {
 
     log.info("Solving Qcp with restart search.");
     Qcp example = new Qcp();
@@ -224,7 +224,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testArchFriends() {
+  void testArchFriends() {
 
     ArchFriends example = new ArchFriends();
     example.model();
@@ -234,7 +234,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBabySitting() {
+  void testBabySitting() {
 
     BabySitting example = new BabySitting();
 
@@ -245,7 +245,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBasicLogicPascal() {
+  void testBasicLogicPascal() {
 
     BasicLogicPascal example = new BasicLogicPascal();
 
@@ -256,7 +256,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBIBD() {
+  void testBIBD() {
 
     Bibd example = new Bibd();
 
@@ -273,7 +273,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBlueberryMuffins() {
+  void testBlueberryMuffins() {
 
     BlueberryMuffins example = new BlueberryMuffins();
 
@@ -284,7 +284,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBreakingNews() {
+  void testBreakingNews() {
 
     BreakingNews example = new BreakingNews();
 
@@ -295,7 +295,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testBuildingBlocks() {
+  void testBuildingBlocks() {
 
     BuildingBlocks example = new BuildingBlocks();
 
@@ -306,7 +306,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testCalendarMenBasicModel() {
+  void testCalendarMenBasicModel() {
 
     CalendarMen exampleBasic = new CalendarMen();
 
@@ -323,7 +323,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testCalendarMen() {
+  void testCalendarMen() {
 
     CalendarMen example = new CalendarMen();
 
@@ -341,7 +341,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testConference() {
+  void testConference() {
 
     Conference example = new Conference();
 
@@ -352,7 +352,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testCryptogram() {
+  void testCryptogram() {
 
     String[][] lines = {
       {"CRACK", "HACK", "ERROR"},
@@ -387,7 +387,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testDebruijnSequence() {
+  void testDebruijnSequence() {
 
     DeBruijn example = new DeBruijn();
     example.base = 2;
@@ -420,7 +420,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testDietSumWeight() {
+  void testDietSumWeight() {
 
     log.info("Searching for all solutions using sum weight constraints");
 
@@ -436,7 +436,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testDiet() {
+  void testDiet() {
 
     log.info("Searching for all solutions using knapsack constraints");
     Diet exampleKnapsack = new Diet();
@@ -451,7 +451,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testDolarAndTicket() {
+  void testDolarAndTicket() {
 
     DollarAndTicket example = new DollarAndTicket();
 
@@ -462,7 +462,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testDonaldGeraldRobert() {
+  void testDonaldGeraldRobert() {
 
     DonaldGeraldRobert example = new DonaldGeraldRobert();
 
@@ -473,7 +473,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testExodus() {
+  void testExodus() {
 
     Exodus example = new Exodus();
 
@@ -484,7 +484,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testFittingNumbers() {
+  void testFittingNumbers() {
 
     FittingNumbers example = new FittingNumbers();
 
@@ -495,7 +495,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testFlowers() {
+  void testFlowers() {
 
     Flowers example = new Flowers();
     example.model();
@@ -505,7 +505,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testFourIslands() {
+  void testFourIslands() {
 
     FourIslands example = new FourIslands();
     example.model();
@@ -515,7 +515,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testFurnitureMoving() {
+  void testFurnitureMoving() {
 
     FurnitureMoving example = new FurnitureMoving();
     example.model();
@@ -525,7 +525,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testGatesUsingDefaultTable() {
+  void testGatesUsingDefaultTable() {
 
     Gates example = new Gates();
     example.model();
@@ -535,7 +535,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testGatesUsingExtensionalSTR() {
+  void testGatesUsingExtensionalSTR() {
 
     Gates example = new Gates();
     example.model(Gates::tableConstraintProviderUsingExtensionalStr);
@@ -545,7 +545,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testGolf() {
+  void testGolf() {
 
     Golf example = new Golf();
     example.model();
@@ -555,7 +555,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testGolomb() {
+  void testGolomb() {
 
     Golomb example = new Golomb();
     example.model();
@@ -573,7 +573,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testHistoricHomes() {
+  void testHistoricHomes() {
 
     HistoricHomes example = new HistoricHomes();
     example.model();
@@ -583,7 +583,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testKakro() {
+  void testKakro() {
 
     Kakro example = new Kakro();
 
@@ -594,7 +594,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testKnapsack() {
+  void testKnapsack() {
 
     KnapsackExample example = new KnapsackExample();
 
@@ -605,7 +605,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testLangford() {
+  void testLangford() {
 
     Langford example = new Langford();
     example.n = 3;
@@ -625,7 +625,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testLectureSeries() {
+  void testLectureSeries() {
 
     LectureSeries example = new LectureSeries();
 
@@ -636,7 +636,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testMagicSquares() {
+  void testMagicSquares() {
 
     MagicSquares example = new MagicSquares();
 
@@ -647,7 +647,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testMasterClass() {
+  void testMasterClass() {
 
     MasterClass example = new MasterClass();
     example.model();
@@ -657,7 +657,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testMineSweeper() {
+  void testMineSweeper() {
 
     MineSweeper minesweeper = new MineSweeper();
 
@@ -690,7 +690,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testNewspaper() {
+  void testNewspaper() {
 
     Newspaper example = new Newspaper();
 
@@ -706,7 +706,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testNonTransitiveDice() {
+  void testNonTransitiveDice() {
 
     boolean firstSolutionFound = false;
 
@@ -765,7 +765,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testParcel() {
+  void testParcel() {
 
     Parcel example = new Parcel();
 
@@ -783,7 +783,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testPerfectSquare() {
+  void testPerfectSquare() {
 
     PerfectSquare example = new PerfectSquare();
 
@@ -817,7 +817,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testPigeonHole() {
+  void testPigeonHole() {
 
     PigeonHole example = new PigeonHole();
     example.model();
@@ -831,7 +831,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testProAndCon() {
+  void testProAndCon() {
 
     ProAndCon example = new ProAndCon();
 
@@ -849,7 +849,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testQueens() {
+  void testQueens() {
 
     Queens example = new Queens();
     example.numberQ = 7;
@@ -869,7 +869,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testSendMoreMoney() {
+  void testSendMoreMoney() {
 
     SendMoreMoney exampleBasic = new SendMoreMoney();
 
@@ -901,7 +901,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testSiblingUproar() {
+  void testSiblingUproar() {
 
     SiblingUproar example = new SiblingUproar();
 
@@ -919,7 +919,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testSleepingArrangements() {
+  void testSleepingArrangements() {
 
     SleepingArrangements example = new SleepingArrangements();
 
@@ -937,7 +937,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testStonesOfHeaven() {
+  void testStonesOfHeaven() {
 
     StonesOfHeaven example = new StonesOfHeaven();
 
@@ -955,7 +955,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testSudoku() {
+  void testSudoku() {
 
     Sudoku example = new Sudoku();
 
@@ -987,7 +987,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testSurvoPuzzle() {
+  void testSurvoPuzzle() {
 
     SurvoPuzzle survoPuzzle = new SurvoPuzzle();
     survoPuzzle.model();
@@ -1007,7 +1007,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testTSP() {
+  void testTSP() {
 
     Tsp example = new Tsp();
 
@@ -1025,7 +1025,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testTunapalooza() {
+  void testTunapalooza() {
 
     Tunapalooza example = new Tunapalooza();
 
@@ -1043,7 +1043,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testWhoKilledAgatha() {
+  void testWhoKilledAgatha() {
 
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
@@ -1056,7 +1056,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testWolfGoatCabbage() {
+  void testWolfGoatCabbage() {
 
     WolfGoatCabbage example = null;
     int numberInnerMoves = 1;
@@ -1088,7 +1088,7 @@ public class ExampleBasedTest {
   }
 
   @Test
-  public void testZebra() {
+  void testZebra() {
 
     Zebra example = new Zebra();
 

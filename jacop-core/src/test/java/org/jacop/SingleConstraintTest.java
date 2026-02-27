@@ -97,10 +97,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  */
 @ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
 @Slf4j
-public class SingleConstraintTest extends TestHelper {
+class SingleConstraintTest extends TestHelper {
 
   @Test
-  public void testAnonymousConstraint() {
+  void testAnonymousConstraint() {
 
     Function<IntVar[], Constraint> listXeqY =
         (IntVar[] list) ->
@@ -141,7 +141,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testNegatedIfThen() {
+  void testNegatedIfThen() {
 
     Store store = new Store();
 
@@ -161,7 +161,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidTable() {
+  void testInvalidTable() {
 
     Store store = new Store();
 
@@ -174,7 +174,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidSimpleTable() {
+  void testInvalidSimpleTable() {
 
     Store store = new Store();
 
@@ -188,7 +188,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testSimpleTable() {
+  void testSimpleTable() {
 
     Store store = new Store();
 
@@ -207,7 +207,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testBinpacking() {
+  void testBinpacking() {
 
     Store store = new Store();
 
@@ -229,7 +229,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testCheckForInputDuplicationSkippsingSingletons2() {
+  void testCheckForInputDuplicationSkippsingSingletons2() {
 
     Store store = new Store();
     int xLength = 4;
@@ -245,7 +245,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testCheckForInputDuplicationSkippsingSingletons1() {
+  void testCheckForInputDuplicationSkippsingSingletons1() {
 
     Store store = new Store();
     int xLength = 4;
@@ -261,7 +261,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testSubcircuit() {
+  void testSubcircuit() {
 
     Store store = new Store();
 
@@ -278,7 +278,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidSubcircuit() {
+  void testInvalidSubcircuit() {
 
     Store store = new Store();
     IntVar[] list = getIntVars(store, "list", 3, 3);
@@ -287,14 +287,14 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidStretch() {
+  void testInvalidStretch() {
     IntVar[] list = null;
     assertThatThrownBy(() -> new Stretch(null, null, null, list))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void testStretch() {
+  void testStretch() {
 
     Store store = new Store();
 
@@ -316,7 +316,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidElementVariable() {
+  void testInvalidElementVariable() {
 
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 0, 4);
@@ -326,7 +326,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidAmong3() {
+  void testInvalidAmong3() {
 
     Store store = new Store();
     IntVar min = new IntVar(store, "x", 0, 4);
@@ -337,7 +337,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidAmong2() {
+  void testInvalidAmong2() {
 
     Store store = new Store();
 
@@ -347,7 +347,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidAmong1() {
+  void testInvalidAmong1() {
 
     Store store = new Store();
 
@@ -358,7 +358,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidMin2() {
+  void testInvalidMin2() {
 
     Store store = new Store();
 
@@ -369,7 +369,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidMin1() {
+  void testInvalidMin1() {
 
     Store store = new Store();
 
@@ -380,7 +380,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testInvalidAbs() {
+  void testInvalidAbs() {
 
     Store store = new Store();
 
@@ -391,7 +391,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testExtensionalConflictVA() {
+  void testExtensionalConflictVA() {
 
     Store store = new Store();
 
@@ -411,7 +411,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testIfThenBool() {
+  void testIfThenBool() {
 
     Store store = new Store();
 
@@ -430,7 +430,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testXor() {
+  void testXor() {
 
     Store store = new Store();
 
@@ -450,7 +450,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testXexpYeqZ() {
+  void testXexpYeqZ() {
 
     Store store = new Store();
 
@@ -469,7 +469,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testXmulYeqC() {
+  void testXmulYeqC() {
 
     Store store = new Store();
 
@@ -488,7 +488,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testAlldiff() {
+  void testAlldiff() {
 
     Store store = new Store();
 
@@ -507,7 +507,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
+  void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
 
     Store store = new Store();
 
@@ -526,7 +526,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
+  void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
 
     Store store = new Store();
 
@@ -545,7 +545,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testArgMin() {
+  void testArgMin() {
 
     Store store = new Store();
 
@@ -567,7 +567,7 @@ public class SingleConstraintTest extends TestHelper {
   // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
   // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy
   // scenario.
-  public void testArgMax() {
+  void testArgMax() {
 
     Store store = new Store();
 
@@ -586,7 +586,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testSum() {
+  void testSum() {
 
     Store store = new Store();
 
@@ -606,7 +606,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testLinear() {
+  void testLinear() {
 
     Store store = new Store();
 
@@ -625,7 +625,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testIfThenElse() {
+  void testIfThenElse() {
 
     Store store = new Store();
 
@@ -649,7 +649,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testElementIntegerFast() {
+  void testElementIntegerFast() {
 
     Store store = new Store();
 
@@ -671,7 +671,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testEqBool() {
+  void testEqBool() {
 
     Store store = new Store();
 
@@ -689,7 +689,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testLex() {
+  void testLex() {
 
     Store store = new Store();
 
@@ -709,7 +709,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testGCC() {
+  void testGCC() {
 
     Store store = new Store();
 
@@ -730,7 +730,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testAmongVar() {
+  void testAmongVar() {
 
     Store store = new Store();
 
@@ -753,7 +753,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testDiff() {
+  void testDiff() {
 
     Store store = new Store();
 
@@ -778,7 +778,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testDisjoint() {
+  void testDisjoint() {
 
     Store store = new Store();
 
@@ -803,7 +803,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testDiff2() {
+  void testDiff2() {
 
     Store store = new Store();
 
@@ -828,7 +828,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testDisjointConditional() {
+  void testDisjointConditional() {
 
     Store store = new Store();
 
@@ -867,7 +867,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testValues() {
+  void testValues() {
 
     Store store = new Store();
 
@@ -886,7 +886,7 @@ public class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  public void testValues2() {
+  void testValues2() {
 
     Store store = new Store();
 

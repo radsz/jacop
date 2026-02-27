@@ -55,12 +55,12 @@ import org.junit.jupiter.api.Test;
  * @version 5.0
  */
 @Slf4j
-public class QueueForwardTest {
+class QueueForwardTest {
 
   String nl = "\n";
 
   @Test
-  public void testQueueForwardNot() {
+  void testQueueForwardNot() {
 
     Store store = new Store();
 
@@ -91,7 +91,7 @@ public class QueueForwardTest {
   }
 
   @Test
-  public void testQueueForwardReified() {
+  void testQueueForwardReified() {
 
     Store store = new Store();
 
@@ -123,7 +123,7 @@ public class QueueForwardTest {
   }
 
   @Test
-  public void testQueueForwardNestedReifiedNot() {
+  void testQueueForwardNestedReifiedNot() {
 
     Store store = new Store();
 

@@ -35,13 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-public class ExampleBasedTest {
+class ExampleBasedTest {
 
   private static final int TIMEOUT_MS = 15_000;
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testWilkinson() {
+  void testWilkinson() {
     Wilkinson example = new Wilkinson();
 
     assertDoesNotThrow(() -> example.wilkinson());
@@ -49,7 +49,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testRosenbrock() {
+  void testRosenbrock() {
     Rosenbrock example = new Rosenbrock();
 
     assertDoesNotThrow(() -> example.rosenbrock());
@@ -57,7 +57,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMinCostFlow() {
+  void testMinCostFlow() {
     MinCostFlow example = new MinCostFlow();
 
     assertDoesNotThrow(() -> example.minCostFlow());
@@ -65,7 +65,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testCircleIntersection() {
+  void testCircleIntersection() {
     CircleIntersection example = new CircleIntersection();
 
     assertDoesNotThrow(() -> example.circleIntersection());
@@ -73,7 +73,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testCyclohexane() {
+  void testCyclohexane() {
     Cyclohexane example = new Cyclohexane();
 
     assertDoesNotThrow(() -> example.cyclohexane());
@@ -81,7 +81,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testSixHumpCamelFunction() {
+  void testSixHumpCamelFunction() {
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
     assertDoesNotThrow(() -> example.sixHumpCamelFunction());
@@ -89,7 +89,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testCurveFitting() {
+  void testCurveFitting() {
     CurveFitting example = new CurveFitting();
 
     assertDoesNotThrow(() -> example.curveFitting3());
@@ -97,7 +97,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testTinyTSP() {
+  void testTinyTSP() {
     TinyTsp example = new TinyTsp();
 
     assertDoesNotThrow(() -> example.tinyTsp());
@@ -105,7 +105,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testSinCosExample() {
+  void testSinCosExample() {
     SinCosExample example = new SinCosExample();
 
     assertDoesNotThrow(() -> example.model());
@@ -113,7 +113,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testTanExample() {
+  void testTanExample() {
     TanExample example = new TanExample();
 
     assertDoesNotThrow(() -> example.model());
@@ -121,7 +121,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testLaplace() {
+  void testLaplace() {
     Laplace example = new Laplace();
 
     assertDoesNotThrow(() -> example.laplace());
@@ -129,7 +129,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testMarkov() {
+  void testMarkov() {
     Markov example = new Markov();
 
     assertDoesNotThrow(() -> example.markovChainsTaha());
@@ -137,7 +137,7 @@ public class ExampleBasedTest {
 
   @Test
   @Timeout(TIMEOUT_MS)
-  public void testLoan() {
+  void testLoan() {
     Loan example = new Loan();
 
     double i = Double.parseDouble("0.04");
