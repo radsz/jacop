@@ -136,8 +136,6 @@ public class BenchmarkMetadataGenerator {
     Set<String> mergedFamilies = new TreeSet<>(families);
 
     if (Files.exists(metadataFile)) {
-      Set<String> existingBuiltins = existing.getOrDefault("fznBuiltins", Set.of());
-      Set<String> existingFamilies = existing.getOrDefault("constraintFamilies", Set.of());
       for (Path otherFzn : listFznFiles(fznFile.getParent())) {
         if (!otherFzn.equals(fznFile)) {
           Set<String> otherBuiltins = extractConstraints(otherFzn);

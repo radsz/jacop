@@ -106,7 +106,7 @@ public class LinearInt extends PrimitiveConstraint {
   /*
    * It specifies "variability" of each variable
    */
-  long[] I;
+  long[] variability;
 
   /*
    * It specifies sum of lower bounds (min values) and sum of upper bounds (max values)
@@ -205,7 +205,7 @@ public class LinearInt extends PrimitiveConstraint {
     fillCoefficientArrays(parameters);
 
     this.l = x.length;
-    this.I = new long[l];
+    this.variability = new long[l];
 
     checkForOverflow();
 
@@ -403,16 +403,16 @@ public class LinearInt extends PrimitiveConstraint {
       max = (long) xd.max() * a[i];
       f += min;
       e += max;
-      I[i] = max - min;
+      variability[i] = max - min;
     }
     // negative weights
     for (; i < l; i++) {
       IntDomain xd = x[i].dom();
-      min = (long) xd.max() * a[i];
-      max = (long) xd.min() * a[i];
+      min = xd.max() * a[i];
+      max = xd.min() * a[i];
       f += min;
       e += max;
-      I[i] = max - min;
+      variability[i] = max - min;
     }
     sumMin = f;
     sumMax = e;
@@ -429,25 +429,25 @@ public class LinearInt extends PrimitiveConstraint {
     int i = 0;
     // positive weights
     for (; i < pos; i++) {
-      if (I[i] > b - sumMin) {
+      if (variability[i] > b - sumMin) {
         min = x[i].min() * a[i];
-        max = min + I[i];
+        max = min + variability[i];
         if (pruneMax(x[i], IntDomain.divRoundDown(b - sumMin + min, a[i]))) {
-          long newMax = (long) x[i].max() * a[i];
+          long newMax = x[i].max() * a[i];
           sumMax -= max - newMax;
-          I[i] = newMax - min;
+          variability[i] = newMax - min;
         }
       }
     }
     // negative weights
     for (; i < l; i++) {
-      if (I[i] > b - sumMin) {
+      if (variability[i] > b - sumMin) {
         min = x[i].max() * a[i];
-        max = min + I[i];
+        max = min + variability[i];
         if (pruneMin(x[i], IntDomain.divRoundUp(-(b - sumMin + min), -a[i]))) {
-          long newMax = (long) x[i].min() * a[i];
+          long newMax = x[i].min() * a[i];
           sumMax -= max - newMax;
-          I[i] = newMax - min;
+          variability[i] = newMax - min;
         }
       }
     }
@@ -464,25 +464,25 @@ public class LinearInt extends PrimitiveConstraint {
     int i = 0;
     // positive weights
     for (; i < pos; i++) {
-      if (I[i] > -(b - sumMax)) {
+      if (variability[i] > -(b - sumMax)) {
         max = x[i].max() * a[i];
-        min = max - I[i];
+        min = max - variability[i];
         if (pruneMin(x[i], IntDomain.divRoundUp(b - sumMax + max, a[i]))) {
-          long nmin = (long) x[i].min() * a[i];
+          long nmin = x[i].min() * a[i];
           sumMin += nmin - min;
-          I[i] = max - nmin;
+          variability[i] = max - nmin;
         }
       }
     }
     // negative weights
     for (; i < l; i++) {
-      if (I[i] > -(b - sumMax)) {
+      if (variability[i] > -(b - sumMax)) {
         max = x[i].min() * a[i];
-        min = max - I[i];
+        min = max - variability[i];
         if (pruneMax(x[i], IntDomain.divRoundDown(-(b - sumMax + max), -a[i]))) {
-          long newMin = (long) x[i].max() * a[i];
+          long newMin = x[i].max() * a[i];
           sumMin += newMin - min;
-          I[i] = max - newMin;
+          variability[i] = max - newMin;
         }
       }
     }
@@ -500,27 +500,27 @@ public class LinearInt extends PrimitiveConstraint {
     // positive weights
     for (; i < pos; i++) {
       min = x[i].min() * a[i];
-      max = min + I[i];
+      max = min + variability[i];
 
       if (pruneNe(x[i], b - sumMax + max, b - sumMin + min, a[i])) {
-        long newMin = (long) x[i].min() * a[i];
-        long newMax = (long) x[i].max() * a[i];
+        long newMin = x[i].min() * a[i];
+        long newMax = x[i].max() * a[i];
         sumMin += newMin - min;
         sumMax += newMax - max;
-        I[i] = newMax - newMin;
+        variability[i] = newMax - newMin;
       }
     }
     // negative weights
     for (; i < l; i++) {
       min = x[i].max() * a[i];
-      max = min + I[i];
+      max = min + variability[i];
 
       if (pruneNe(x[i], b - sumMin + min, b - sumMax + max, a[i])) {
-        long newMin = (long) x[i].max() * a[i];
-        long newMax = (long) x[i].min() * a[i];
+        long newMin = x[i].max() * a[i];
+        long newMax = x[i].min() * a[i];
         sumMin += newMin - min;
         sumMax += newMax - max;
-        I[i] = newMax - newMin;
+        variability[i] = newMax - newMin;
       }
     }
   }
@@ -568,12 +568,12 @@ public class LinearInt extends PrimitiveConstraint {
     long sMax = 0L;
     int i = 0;
     for (; i < pos; i++) {
-      sMin += (long) x[i].min() * a[i];
-      sMax += (long) x[i].max() * a[i];
+      sMin += x[i].min() * a[i];
+      sMax += x[i].max() * a[i];
     }
     for (; i < l; i++) {
-      sMin += (long) x[i].max() * a[i];
-      sMax += (long) x[i].min() * a[i];
+      sMin += x[i].max() * a[i];
+      sMax += x[i].min() * a[i];
     }
     return new SumBounds(sMin, sMax);
   }
@@ -587,10 +587,10 @@ public class LinearInt extends PrimitiveConstraint {
     long sMax = 0L;
     int i = 0;
     for (; i < pos; i++) {
-      sMax += (long) x[i].max() * a[i];
+      sMax += x[i].max() * a[i];
     }
     for (; i < l; i++) {
-      sMax += (long) x[i].min() * a[i];
+      sMax += x[i].min() * a[i];
     }
     return sMax;
   }
@@ -604,10 +604,10 @@ public class LinearInt extends PrimitiveConstraint {
     long sMin = 0L;
     int i = 0;
     for (; i < pos; i++) {
-      sMin += (long) x[i].min() * a[i];
+      sMin += x[i].min() * a[i];
     }
     for (; i < l; i++) {
-      sMin += (long) x[i].max() * a[i];
+      sMin += x[i].max() * a[i];
     }
     return sMin;
   }

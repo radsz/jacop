@@ -319,8 +319,7 @@ public class BenchmarkImporter {
       ProcessBuilder pb = new ProcessBuilder(cmd);
       pb.redirectErrorStream(true);
       Process process = pb.start();
-      String compileOutput =
-          new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+      new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
       boolean finished = process.waitFor(120, TimeUnit.SECONDS);
       if (!finished) {
         process.destroyForcibly();
@@ -341,9 +340,8 @@ public class BenchmarkImporter {
         return null;
       }
       return outputFzn;
-    } catch (Exception e) {
-      System.out.println(
-          "    " + candidate.instanceName() + ": compilation error: " + e.getMessage());
+    } catch (Exception _) {
+      System.out.println("    " + candidate.instanceName() + ": compilation error");
       return null;
     }
   }
@@ -360,7 +358,7 @@ public class BenchmarkImporter {
       System.setErr(new PrintStream(new ByteArrayOutputStream()));
       Fz2jacop fz2jacop = new Fz2jacop();
       fz2jacop.callMain(new String[] {"-t", String.valueOf(HARD_TIMEOUT_MS), fznFile.toString()});
-    } catch (Throwable e) {
+    } catch (Throwable _) {
       timedOut = true;
     } finally {
       System.setOut(originalOut);
@@ -528,7 +526,7 @@ public class BenchmarkImporter {
   private long fileSize(Path p) {
     try {
       return Files.size(p);
-    } catch (IOException e) {
+    } catch (IOException _) {
       return Long.MAX_VALUE;
     }
   }

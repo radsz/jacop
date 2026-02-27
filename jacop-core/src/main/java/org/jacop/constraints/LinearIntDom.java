@@ -60,7 +60,7 @@ public class LinearIntDom extends LinearInt {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Limit on the product of sizes of domains when domain consistency is carried out. */
-  final double limitDomainPruning = 1e+7;
+  private static final double LIMIT_DOMAIN_PRUNING = 1e+7;
 
   /** Defines support (valid values) for each variable. */
   IntervalDomain[] support;
@@ -145,7 +145,7 @@ public class LinearIntDom extends LinearInt {
 
     switch (rel) {
       case EQ:
-        if (domainSize() < limitDomainPruning) {
+        if (domainSize() < LIMIT_DOMAIN_PRUNING) {
           computeInit();
           pruneEq(); // domain consistency
         } else {
@@ -156,7 +156,7 @@ public class LinearIntDom extends LinearInt {
         break;
 
       case NE:
-        if (domainSize() < limitDomainPruning) {
+        if (domainSize() < LIMIT_DOMAIN_PRUNING) {
           computeInit();
           pruneNeq();
 
@@ -257,7 +257,6 @@ public class LinearIntDom extends LinearInt {
     }
 
     IntDomain currentDom = x[index].dom();
-    long newPartialSum;
     long w = a[index];
 
     // Bounds calculation differs based on positive/negative phase
@@ -383,37 +382,29 @@ public class LinearIntDom extends LinearInt {
       int newIndex,
       boolean useOuterLoop) {
     long elementValue = (long) element * w;
-    long newPartialSum;
-    boolean shouldBreak = false;
-
     // Loop control differs based on positive/negative phase
     if (positive) {
       if (elementValue < lb) {
         return false; // continue
       } else if (elementValue > ub) {
         return true; // break
-      } else {
-        newPartialSum = partialSum + elementValue;
       }
     } else {
       if (elementValue < lb) {
         return true; // break
       } else if (elementValue > ub) {
         return false; // continue
-      } else {
-        newPartialSum = partialSum + elementValue;
       }
     }
 
+    long newPartialSum = partialSum + elementValue;
     assignments[index] = element;
 
     // Recursion differs based on positive/negative phase
-    if (positive) {
-      if (newIndex < pos) {
-        findSupport(true, newIndex, newPartialSum);
-      } else {
-        findSupport(false, newIndex, newPartialSum);
-      }
+    if (!positive) {
+      findSupport(false, newIndex, newPartialSum);
+    } else if (newIndex < pos) {
+      findSupport(true, newIndex, newPartialSum);
     } else {
       findSupport(false, newIndex, newPartialSum);
     }
