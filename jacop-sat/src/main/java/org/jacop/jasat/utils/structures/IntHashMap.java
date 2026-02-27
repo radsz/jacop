@@ -304,10 +304,12 @@ public final class IntHashMap<E> {
   public Set<Integer> keySet() {
     return new Set<>() {
 
+      @Override
       public Iterator<Integer> iterator() {
         return new KeysIterator();
       }
 
+      @Override
       public boolean add(Integer arg0) {
         if (containsKey(arg0)) {
           return true;
@@ -316,6 +318,7 @@ public final class IntHashMap<E> {
         return false;
       }
 
+      @Override
       public boolean addAll(Collection<? extends Integer> arg0) {
         boolean and = true;
         for (int i : arg0) {
@@ -324,14 +327,17 @@ public final class IntHashMap<E> {
         return and;
       }
 
+      @Override
       public void clear() {
         IntHashMap.this.clear();
       }
 
+      @Override
       public boolean contains(Object arg0) {
         return containsKey(arg0);
       }
 
+      @Override
       public boolean containsAll(Collection<?> arg0) {
         for (Object o : arg0) {
           if (!containsKey(o)) {
@@ -341,10 +347,12 @@ public final class IntHashMap<E> {
         return true;
       }
 
+      @Override
       public boolean isEmpty() {
         return IntHashMap.this.isEmpty();
       }
 
+      @Override
       public boolean remove(Object arg0) {
         if (arg0 instanceof Integer) {
           int i = (Integer) arg0;
@@ -353,6 +361,7 @@ public final class IntHashMap<E> {
         return false;
       }
 
+      @Override
       public boolean removeAll(Collection<?> arg0) {
         boolean or = false;
         for (Object o : arg0) {
@@ -361,18 +370,22 @@ public final class IntHashMap<E> {
         return or;
       }
 
+      @Override
       public boolean retainAll(Collection<?> arg0) {
         throw new AssertionError("not implemented");
       }
 
+      @Override
       public int size() {
         return IntHashMap.this.size();
       }
 
+      @Override
       public Object[] toArray() {
         throw new AssertionError("not implemented");
       }
 
+      @Override
       public <T> T[] toArray(T[] arg0) {
         throw new AssertionError("not implemented");
       }
@@ -403,10 +416,12 @@ public final class IntHashMap<E> {
       findNext();
     }
 
+    @Override
     public boolean hasNext() {
       return hasNext;
     }
 
+    @Override
     public Integer next() {
       if (!hasNext) {
         throw new NoSuchElementException();
@@ -417,6 +432,7 @@ public final class IntHashMap<E> {
       return answer;
     }
 
+    @Override
     public void remove() {
       IntHashMap.this.remove(current);
     }
@@ -449,10 +465,12 @@ public final class IntHashMap<E> {
       findNext();
     }
 
+    @Override
     public boolean hasNext() {
       return hasNext;
     }
 
+    @Override
     public Map.Entry<Integer, E> next() {
       if (!hasNext) {
         throw new NoSuchElementException();
@@ -463,14 +481,17 @@ public final class IntHashMap<E> {
             final int key = current;
             final E value = currentValue;
 
+            @Override
             public Integer getKey() {
               return key;
             }
 
+            @Override
             public E getValue() {
               return value;
             }
 
+            @Override
             public E setValue(E arg0) {
               throw new AssertionError("not implemented");
             }
@@ -479,6 +500,7 @@ public final class IntHashMap<E> {
       return answer;
     }
 
+    @Override
     public void remove() {
       IntHashMap.this.remove(current);
     }

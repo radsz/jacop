@@ -194,6 +194,7 @@ public final class IntQueue implements Iterable<Integer> {
    *
    * @return an iterator over the elements in this queue
    */
+  @Override
   public Iterator<Integer> iterator() {
     return new QueueIterator();
   }
@@ -207,10 +208,12 @@ public final class IntQueue implements Iterable<Integer> {
       hasNext = start != stop; // only if not empty
     }
 
+    @Override
     public boolean hasNext() {
       return hasNext;
     }
 
+    @Override
     public Integer next() {
       if (!hasNext) {
         throw new NoSuchElementException();
@@ -220,6 +223,7 @@ public final class IntQueue implements Iterable<Integer> {
       return answer;
     }
 
+    @Override
     public void remove() {
       throw new AssertionError("not implemented");
     }

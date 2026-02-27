@@ -342,6 +342,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /** (slow) iterate over literals of the clause. */
+  @Override
   public Iterator<Integer> iterator() {
     return new ClauseIterator();
   }
@@ -353,16 +354,19 @@ public final class MapClause implements Iterable<Integer> {
       it = literals.keySet().iterator();
     }
 
+    @Override
     public boolean hasNext() {
       return it.hasNext();
     }
 
+    @Override
     public Integer next() {
       int e = it.next();
       boolean value = literals.get(e);
       return value ? e : -e;
     }
 
+    @Override
     public void remove() {
       it.remove();
     }
