@@ -76,7 +76,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
    */
   public Sum(IntVar[] list, IntVar sum) {
 
-    checkInputForNullness(new String[] {"list", "sum"}, new Object[][] {list, {sum}});
+    checkInputForNullness(new String[] {"list", "sum"}, list, new Object[] {sum});
 
     queueIndex = 1;
     numberId = idNumber.incrementAndGet();

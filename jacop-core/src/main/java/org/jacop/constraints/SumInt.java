@@ -75,7 +75,8 @@ public class SumInt extends AbstractSum {
    */
   public SumInt(IntVar[] list, String rel, IntVar sum) {
     super(parseRelation(rel), sum.getStore(), Arrays.copyOf(list, list.length), sum, list.length);
-    checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+    checkInputForNullness(
+        new String[] {"list", "rel", "sum"}, list, new Object[] {rel}, new Object[] {sum});
 
     numberId = idNumber.incrementAndGet();
 

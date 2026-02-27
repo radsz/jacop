@@ -78,7 +78,7 @@ public class XorBool extends PrimitiveConstraint {
    */
   public XorBool(IntVar[] x, IntVar y) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, {y}});
+    checkInputForNullness(new String[] {"x", "y"}, x, new Object[] {y});
 
     queueIndex = 0;
     numberId = idNumber.incrementAndGet();

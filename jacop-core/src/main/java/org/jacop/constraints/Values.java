@@ -75,7 +75,7 @@ public class Values extends Constraint implements SatisfiedPresent {
    */
   public Values(IntVar[] list, IntVar count) {
 
-    checkInputForNullness(new String[] {"list", "count"}, new Object[][] {list, {count}});
+    checkInputForNullness(new String[] {"list", "count"}, list, new Object[] {count});
 
     this.queueIndex = 2;
 

@@ -108,7 +108,7 @@ public class SumWeight extends Constraint
 
   private SumWeight(IntVar[] list, int[] weights, IntVar sum, int equalTo) {
 
-    checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
+    checkInputForNullness(new String[] {"list", "weights"}, list, new Object[] {weights});
 
     if (list.length != weights.length) {
       throw new IllegalArgumentException(

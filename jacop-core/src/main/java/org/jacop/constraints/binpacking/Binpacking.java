@@ -101,7 +101,7 @@ public class Binpacking extends Constraint
    */
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
 
-    checkInputForNullness(new String[] {"bin", "load", "w"}, new Object[][] {bin, load, {w}});
+    checkInputForNullness(new String[] {"bin", "load", "w"}, bin, load, new Object[] {w});
     checkInputForDuplication("load", load);
     checkInput(w, t -> t >= 0, "weight for item is not >=0");
 

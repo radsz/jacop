@@ -69,7 +69,8 @@ public class SumBool extends AbstractSum {
         filterAndOverflowStatic(list),
         sum,
         filterAndOverflowStatic(list).length);
-    checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+    checkInputForNullness(
+        new String[] {"list", "rel", "sum"}, list, new Object[] {rel}, new Object[] {sum});
     checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
 
     numberId = idNumber.incrementAndGet();
