@@ -440,8 +440,6 @@ public class Pruning extends Network {
     int[] state = new int[] {flow, capacity, costLimit};
     analyzeArcLoop(arc, source, sink, state);
     flow = state[0];
-    capacity = state[1];
-    costLimit = state[2];
 
     IntVar wVar = arc.getCompanion().wVar;
 
@@ -557,6 +555,7 @@ public class Pruning extends Network {
     }
 
     /** Initializes the strategy by counting active arcs and computing the pruning limit. */
+    @Override
     public void init() {
       int numActiveArcs = 0;
       for (ArcCompanion c : queue) {
@@ -575,6 +574,7 @@ public class Pruning extends Network {
      *
      * @return the next arc companion, or null if no more arcs should be examined.
      */
+    @Override
     public ArcCompanion next() {
       if (i < limit) {
         ArcCompanion companion = queue.poll();
@@ -589,6 +589,7 @@ public class Pruning extends Network {
     }
 
     /** Restores all examined arc companions back into the priority queue. */
+    @Override
     public void close() {
       queue.addAll(seen);
       seen.clear();

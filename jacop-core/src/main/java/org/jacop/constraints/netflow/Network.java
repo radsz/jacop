@@ -149,6 +149,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
    *
    * @param arc the arc to remove from the network.
    */
+  @Override
   public void remove(Arc arc) {
 
     if (!arc.forward) {
@@ -214,6 +215,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
    *
    * @param companion the arc companion associated with the modified arc.
    */
+  @Override
   public void modified(ArcCompanion companion) {
 
     if (lastModifiedArcs.add(companion)) {
@@ -316,6 +318,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     return costOffset + super.cost(cutoff - costOffset);
   }
 
+  @Override
   public int getStoreLevel() {
     return store.level;
   }
