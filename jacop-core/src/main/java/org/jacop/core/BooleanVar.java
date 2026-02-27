@@ -106,7 +106,7 @@ public class BooleanVar extends IntVar {
    */
   public BooleanVar(Store store, String name, BoundDomain dom) {
 
-    if (ASSERTS_ENABLED && !(dom.min() >= 0 && dom.min() <= dom.max() && dom.max() <= 1)) {
+    if (ASSERTS_ENABLED && (dom.min() < 0 || dom.min() > dom.max() || dom.max() > 1)) {
       throw new IllegalStateException(
           String.valueOf("Boolean variable can only get value between 0..1"));
     }

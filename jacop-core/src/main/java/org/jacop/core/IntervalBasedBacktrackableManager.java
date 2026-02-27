@@ -82,7 +82,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     super(vars, noOfObjects);
 
-    if (ASSERTS_ENABLED && !(maxNoOfIntervals > 0)) {
+    if (ASSERTS_ENABLED && maxNoOfIntervals <= 0) {
       throw new IllegalStateException(
           String.valueOf("The maximal number of intervals must be positive integer."));
     }
@@ -142,7 +142,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (trailContainsAllChanges && restoreFromTrailAndProcess(index)) {
-      if (ASSERTS_ENABLED && !(isRecognizedAsChanged(index))) {
+      if (ASSERTS_ENABLED && !isRecognizedAsChanged(index)) {
         throw new IllegalStateException("Assertion failed");
       }
       return;
@@ -157,7 +157,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       }
     }
 
-    if (ASSERTS_ENABLED && !(isRecognizedAsChanged(index))) {
+    if (ASSERTS_ENABLED && !isRecognizedAsChanged(index)) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -203,7 +203,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     logSetLevelDebug(level);
 
-    if (ASSERTS_ENABLED && !(level > this.currentLevel)) {
+    if (ASSERTS_ENABLED && level <= this.currentLevel) {
       throw new IllegalStateException(String.valueOf("It is possible only to add higher levels"));
     }
 
@@ -304,19 +304,19 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       log.debug("<{}Remove level {}", this, removedLevel);
     }
 
-    if (ASSERTS_ENABLED && !(removedLevel >= currentLevel)) {
+    if (ASSERTS_ENABLED && removedLevel < currentLevel) {
       throw new IllegalStateException(
           String.valueOf("It is only possible to remove the most recent not removed level"));
     }
 
-    if (ASSERTS_ENABLED && !(checkRemoveInvariant(removedLevel) == null)) {
+    if (ASSERTS_ENABLED && checkRemoveInvariant(removedLevel) != null) {
       throw new IllegalStateException(String.valueOf(checkRemoveInvariant(removedLevel)));
     }
   }
 
   private void removeLevelCoreFromTrail(int removedLevel) {
     int lastLevel = levelInfo.removeLast();
-    if (ASSERTS_ENABLED && !(lastLevel == removedLevel)) {
+    if (ASSERTS_ENABLED && lastLevel != removedLevel) {
       throw new IllegalStateException(
           String.valueOf("It is only possible to remove recently added level"));
     }

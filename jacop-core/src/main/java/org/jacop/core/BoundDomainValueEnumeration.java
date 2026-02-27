@@ -64,7 +64,7 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public int nextElement() {
-    if (ASSERTS_ENABLED && !(current < max)) {
+    if (ASSERTS_ENABLED && current >= max) {
       throw new IllegalStateException("Assertion failed");
     }
     return ++current;

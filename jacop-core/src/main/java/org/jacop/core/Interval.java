@@ -51,7 +51,7 @@ public record Interval(int min, int max) {
    */
   public Interval {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("min value " + min + " is larger than max value " + max));
     }

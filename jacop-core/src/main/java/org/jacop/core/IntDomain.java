@@ -1247,7 +1247,7 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(stamp == storeLevel)) {
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1275,11 +1275,11 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(stamp == storeLevel)) {
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
-    if (ASSERTS_ENABLED && !(searchConstraints.get(position) == c)) {
+    if (ASSERTS_ENABLED && searchConstraints.get(position) != c) {
       throw new IllegalStateException(
           String.valueOf("Position of the removed constraint not specified properly"));
     }
@@ -1433,7 +1433,7 @@ public abstract class IntDomain extends Domain {
    */
   public int value() {
 
-    if (ASSERTS_ENABLED && !(singleton())) {
+    if (ASSERTS_ENABLED && !singleton()) {
       throw new IllegalStateException(
           String.valueOf("function value() called when domain is not a singleton domain."));
     }

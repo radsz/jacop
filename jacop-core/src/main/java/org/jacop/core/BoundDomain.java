@@ -111,7 +111,7 @@ class BoundDomain extends IntDomain {
    */
   public BoundDomain(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -327,7 +327,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -343,7 +343,7 @@ class BoundDomain extends IntDomain {
       applyInPlace(min, max);
       notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInResult(min, max);
@@ -375,7 +375,7 @@ class BoundDomain extends IntDomain {
       this.maxBound = value;
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -415,7 +415,7 @@ class BoundDomain extends IntDomain {
       }
       notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInComplementResult(complement);
@@ -434,7 +434,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void inComplement(int storeLevel, Var v, int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -462,7 +462,7 @@ class BoundDomain extends IntDomain {
       }
       notifyDomainChange(v, this.minBound == this.maxBound);
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInComplementResult(min, max);
@@ -495,7 +495,7 @@ class BoundDomain extends IntDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -534,7 +534,7 @@ class BoundDomain extends IntDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -692,7 +692,7 @@ class BoundDomain extends IntDomain {
 
   @Override
   public int leftElement(int intervalNo) {
-    if (ASSERTS_ENABLED && !(intervalNo == 0)) {
+    if (ASSERTS_ENABLED && intervalNo != 0) {
       throw new IllegalStateException("Assertion failed");
     }
     return this.minBound;
@@ -756,7 +756,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    if (ASSERTS_ENABLED && !(this.stamp <= level)) {
+    if (ASSERTS_ENABLED && this.stamp > level) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -765,14 +765,14 @@ class BoundDomain extends IntDomain {
       ((IntVar) v).domain = this.previousDomain;
     }
 
-    if (ASSERTS_ENABLED && !(v.level() < level)) {
+    if (ASSERTS_ENABLED && v.level() >= level) {
       throw new IllegalStateException("Assertion failed");
     }
   }
 
   @Override
   public int rightElement(int intervalNo) {
-    if (ASSERTS_ENABLED && !(intervalNo == 0)) {
+    if (ASSERTS_ENABLED && intervalNo != 0) {
       throw new IllegalStateException("Assertion failed");
     }
     return maxBound;
@@ -797,7 +797,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void setDomain(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1090,7 +1090,7 @@ class BoundDomain extends IntDomain {
       result += max - min + 1;
     }
 
-    if (ASSERTS_ENABLED && !(result <= this.getSize())) {
+    if (ASSERTS_ENABLED && result > this.getSize()) {
       throw new IllegalStateException(String.valueOf("Invariant violated. Check the code."));
     }
     return result;
