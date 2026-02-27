@@ -982,7 +982,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public boolean contains(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1358,7 +1358,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatDomain intersect(double min, double max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1378,15 +1378,15 @@ public class FloatIntervalDomain extends FloatDomain {
       if (r.doBreak) {
         break;
       }
-      if (ASSERTS_ENABLED && !(interval1 != null)) {
+      if (ASSERTS_ENABLED && interval1 == null) {
         throw new IllegalStateException("Assertion failed");
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(temp.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && temp.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(temp.checkInvariants()));
     }
 
@@ -1403,11 +1403,11 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public double max() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1418,11 +1418,11 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public double min() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1436,14 +1436,14 @@ public class FloatIntervalDomain extends FloatDomain {
    */
   public void removeInterval(int position) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(position < size)) {
+    if (ASSERTS_ENABLED && position >= size) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(position >= 0)) {
+    if (ASSERTS_ENABLED && position < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1454,7 +1454,7 @@ public class FloatIntervalDomain extends FloatDomain {
       position++;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -1463,7 +1463,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void setDomain(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1474,7 +1474,7 @@ public class FloatIntervalDomain extends FloatDomain {
     intervals = new FloatInterval[intervalDomain.intervals.length];
     System.arraycopy(intervalDomain.intervals, 0, intervals, 0, size);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -1495,7 +1495,7 @@ public class FloatIntervalDomain extends FloatDomain {
   /** It returns true if given domain has only one element equal c. */
   @Override
   public boolean singleton(double c) {
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     return size == 1
@@ -1522,7 +1522,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatDomain subtract(double value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1551,10 +1551,10 @@ public class FloatIntervalDomain extends FloatDomain {
       break;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     return result;
@@ -1664,7 +1664,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatDomain subtract(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1674,7 +1674,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
-    if (ASSERTS_ENABLED && !(intervalDomain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && intervalDomain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(intervalDomain.checkInvariants()));
     }
 
@@ -1760,10 +1760,10 @@ public class FloatIntervalDomain extends FloatDomain {
       i1++;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -1815,7 +1815,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatIntervalDomain subtract(double min, double max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1845,10 +1845,10 @@ public class FloatIntervalDomain extends FloatDomain {
       result.unionAdapt(intervals[i]);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     return result;
@@ -1956,13 +1956,13 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatDomain union(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
     FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;
 
-    if (ASSERTS_ENABLED && !(intervalDomain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && intervalDomain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(intervalDomain.checkInvariants()));
     }
 
@@ -2059,7 +2059,7 @@ public class FloatIntervalDomain extends FloatDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -2101,7 +2101,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return new FloatIntervalDomain(min, max);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2135,10 +2135,10 @@ public class FloatIntervalDomain extends FloatDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     return result;
@@ -2164,7 +2164,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return new FloatIntervalDomain(value, value);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2194,10 +2194,10 @@ public class FloatIntervalDomain extends FloatDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     return result;
@@ -2294,7 +2294,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void inMin(int storeLevel, Var v, double min) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2321,12 +2321,12 @@ public class FloatIntervalDomain extends FloatDomain {
         intervals[i] = intervals[pointer];
       }
       size = i;
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       notifyInMinMaxChange(v, singleton());
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
@@ -2341,10 +2341,10 @@ public class FloatIntervalDomain extends FloatDomain {
         result.unionAdapt(intervals[pointer]);
       }
       installResultDomain(result, storeLevel, v);
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
       notifyInMinMaxChange(v, result.singleton());
@@ -2358,7 +2358,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void inMax(int storeLevel, Var v, double max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2381,12 +2381,12 @@ public class FloatIntervalDomain extends FloatDomain {
         intervals[pointer] = new FloatInterval(intervals[pointer].min(), max);
       }
       size = pointer + 1;
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       notifyInMinMaxChange(v, singleton());
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       while (intervals[pointer].min() > max) {
@@ -2402,10 +2402,10 @@ public class FloatIntervalDomain extends FloatDomain {
         result.unionAdapt(intervals[pointer]);
       }
       installResultDomain(result, storeLevel, v);
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       notifyInMinMaxChange(v, result.singleton());
@@ -2419,7 +2419,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void in(int storeLevel, Var v, double min, double max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2454,17 +2454,17 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void in(int storeLevel, Var v, FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(this.stamp <= storeLevel)) {
+    if (ASSERTS_ENABLED && this.stamp > storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
-    if (ASSERTS_ENABLED && !(input.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && input.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(input.checkInvariants()));
     }
 
@@ -2472,7 +2472,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2539,7 +2539,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void inComplement(int storeLevel, Var v, double complement) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2583,7 +2583,7 @@ public class FloatIntervalDomain extends FloatDomain {
     if (singleton(complement)) {
       throw failException;
     }
-    if (ASSERTS_ENABLED && !(storeLevel > stamp)) {
+    if (ASSERTS_ENABLED && storeLevel <= stamp) {
       throw new IllegalStateException("Assertion failed");
     }
     FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
@@ -2594,7 +2594,7 @@ public class FloatIntervalDomain extends FloatDomain {
         result.intervals[counter] =
             new FloatInterval(next(complement), result.intervals[counter].max());
         result.size = size;
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
         notifyComplementEvent(result, v, counter, true);
@@ -2611,7 +2611,7 @@ public class FloatIntervalDomain extends FloatDomain {
       result.intervals[counter] =
           new FloatInterval(result.intervals[counter].min(), previous(complement));
       result.size = size;
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       notifyComplementEvent(result, v, counter, false);
@@ -2656,7 +2656,7 @@ public class FloatIntervalDomain extends FloatDomain {
         intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
       }
       size++;
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       v.domainHasChanged(IntDomain.ANY);
@@ -2664,7 +2664,7 @@ public class FloatIntervalDomain extends FloatDomain {
     }
     int originalCounter = counter;
     removeRangeFromIntervals(counter, min, max);
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (singleton()) {
@@ -2676,7 +2676,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
   private void inComplementRangeToResult(
       int counter, double min, double max, int storeLevel, Var v) {
-    if (ASSERTS_ENABLED && !(storeLevel > stamp)) {
+    if (ASSERTS_ENABLED && storeLevel <= stamp) {
       throw new IllegalStateException("Assertion failed");
     }
     FloatIntervalDomain result = new FloatIntervalDomain(this.size + 1);
@@ -2692,10 +2692,10 @@ public class FloatIntervalDomain extends FloatDomain {
         result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
         result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
         result.size++;
-        if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && result.checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(result.checkInvariants()));
         }
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
         v.domainHasChanged(IntDomain.ANY);
@@ -2723,10 +2723,10 @@ public class FloatIntervalDomain extends FloatDomain {
           new FloatInterval(next(max), intervals[counter + noRemoved].max());
     }
     result.size -= noRemoved;
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     notifyInComplementRangeEvent(v, result.singleton(), result.max() > max);
@@ -2740,10 +2740,10 @@ public class FloatIntervalDomain extends FloatDomain {
             intervals, counter + 1, result.intervals, counter + 1, size - (counter + 1));
       }
       result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
       if (result.singleton()) {
@@ -2765,10 +2765,10 @@ public class FloatIntervalDomain extends FloatDomain {
         result.intervals[counter] =
             new FloatInterval(next(max), intervals[counter + noRemoved].max());
       }
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
       notifyInComplementRangeEvent(v, result.singleton(), result.max() >= max || min <= min());
@@ -2778,7 +2778,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void inComplement(int storeLevel, Var v, double min, double max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2814,10 +2814,10 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void inShift(int storeLevel, Var v, FloatDomain domain, double shift) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(this.stamp <= storeLevel)) {
+    if (ASSERTS_ENABLED && this.stamp > storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2827,7 +2827,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -3141,7 +3141,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public int intersectAdapt(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3151,7 +3151,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
-    if (ASSERTS_ENABLED && !(input.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && input.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(input.checkInvariants()));
     }
 
@@ -3171,10 +3171,10 @@ public class FloatIntervalDomain extends FloatDomain {
       return IntDomain.GROUND;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -3182,7 +3182,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     adoptIntervalsFrom(result);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3192,7 +3192,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public int intersectAdapt(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3220,10 +3220,10 @@ public class FloatIntervalDomain extends FloatDomain {
 
     adoptIntervalsFrom(result);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -3233,7 +3233,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public int sizeOfIntersection(FloatDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3243,7 +3243,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
 
-    if (ASSERTS_ENABLED && !(input.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && input.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(input.checkInvariants()));
     }
 
