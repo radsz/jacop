@@ -168,7 +168,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void ensureWatch(int varIdx) {
 
-    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+    if (ASSERTS_ENABLED && varIdx <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -199,13 +199,13 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void addWatch(int literal, int clauseIndex) {
 
-    if (ASSERTS_ENABLED && !(literal != 0)) {
+    if (ASSERTS_ENABLED && literal == 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(dbStore.uniqueIdToIndex(clauseIndex) == clauseIndex)) {
+    if (ASSERTS_ENABLED && dbStore.uniqueIdToIndex(clauseIndex) != clauseIndex) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(!doesWatch(literal, clauseIndex))) {
+    if (ASSERTS_ENABLED && doesWatch(literal, clauseIndex)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -215,10 +215,10 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     int[] watchList = watchLists[varIdx];
 
-    if (ASSERTS_ENABLED && !(watchList[0] <= watchList.length)) {
+    if (ASSERTS_ENABLED && watchList[0] > watchList.length) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(watchList[0] > 0)) {
+    if (ASSERTS_ENABLED && watchList[0] <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -241,7 +241,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void removeWatch(int literal, int clauseIndex) {
 
-    if (ASSERTS_ENABLED && !(doesWatch(literal, clauseIndex))) {
+    if (ASSERTS_ENABLED && !doesWatch(literal, clauseIndex)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -268,7 +268,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
       }
     }
 
-    if (ASSERTS_ENABLED && !(!doesWatch(literal, clauseIndex))) {
+    if (ASSERTS_ENABLED && doesWatch(literal, clauseIndex)) {
       throw new IllegalStateException("Assertion failed");
     }
   }

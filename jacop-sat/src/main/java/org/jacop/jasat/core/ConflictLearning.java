@@ -61,10 +61,10 @@ public final class ConflictLearning implements SolverComponent {
   public int getLevelToBackjump(MapClause explanationClause) {
 
     // this is a conflict, I hope
-    if (ASSERTS_ENABLED && !(core.currentState == SolverState.CONFLICT)) {
+    if (ASSERTS_ENABLED && core.currentState != SolverState.CONFLICT) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(core.currentLevel > 0)) {
+    if (ASSERTS_ENABLED && core.currentLevel <= 0) {
       throw new IllegalStateException(String.valueOf("cannot backjump from level 0"));
     }
     // did we met the highest literal in the clause ?
@@ -100,10 +100,10 @@ public final class ConflictLearning implements SolverComponent {
    */
   public void applyExplainUip(MapClause explanationClause) {
 
-    if (ASSERTS_ENABLED && !(!explanationClause.isEmpty())) {
+    if (ASSERTS_ENABLED && explanationClause.isEmpty()) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(explanationClause.isUnsatisfiableIn(trail))) {
+    if (ASSERTS_ENABLED && !explanationClause.isUnsatisfiableIn(trail)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -142,11 +142,11 @@ public final class ConflictLearning implements SolverComponent {
 
     for (int i = startingPosition; i >= 0; i--) {
       int varIdx = trail.assertionStack.array[i];
-      if (ASSERTS_ENABLED && !(varIdx > 0)) {
+      if (ASSERTS_ENABLED && varIdx <= 0) {
         throw new IllegalStateException("Assertion failed");
       }
 
-      if (ASSERTS_ENABLED && !(trail.isSet(varIdx))) {
+      if (ASSERTS_ENABLED && !trail.isSet(varIdx)) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -176,13 +176,13 @@ public final class ConflictLearning implements SolverComponent {
    * @param literal the literal that must be resolved
    */
   private void applyExplain(MapClause explanationClause, int literal) {
-    if (ASSERTS_ENABLED && !(explanationClause.containsVariable(literal))) {
+    if (ASSERTS_ENABLED && !explanationClause.containsVariable(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(trail.isSet(Math.abs(literal)))) {
+    if (ASSERTS_ENABLED && !trail.isSet(Math.abs(literal))) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(!trail.isAsserted(Math.abs(literal)))) {
+    if (ASSERTS_ENABLED && trail.isAsserted(Math.abs(literal))) {
       throw new IllegalStateException("Assertion failed");
     }
 
