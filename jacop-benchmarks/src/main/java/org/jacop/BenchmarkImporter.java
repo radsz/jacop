@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.jacop.fz.Fz2jacop;
-import org.junit.jupiter.api.Test;
 
 /**
  * Batch-imports MiniZinc benchmarks from an external repository into the JaCoP benchmark suite.
@@ -566,14 +565,6 @@ public class BenchmarkImporter {
   record InstanceCandidate(Path mznFile, Path dznFile, String instanceName) {}
 
   record SolveResult(String output, long elapsedMs, boolean timedOut) {}
-
-  /** JUnit entry point for running the import via Maven Surefire. */
-  @Test
-  void runImport() throws Exception {
-    String src = System.getProperty("importSource", "C:/Users/rados/Repos/minizinc-benchmarks");
-    init(Path.of(src));
-    importAll();
-  }
 
   /**
    * Command-line entry point.

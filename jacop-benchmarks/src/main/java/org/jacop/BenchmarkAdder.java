@@ -47,8 +47,7 @@ import org.jacop.fz.Fz2jacop;
  * using MiniZinc with the JaCoP solver backend, solves with JaCoP to produce the golden output,
  * categorizes by execution time, generates constraint metadata, and updates {@code list.txt}.
  *
- * <p>Prerequisites: MiniZinc must be installed and JaCoP registered as a solver (see the {@code
- * run-minizinc-jacop} skill in {@code .cursor/skills/run-minizinc-jacop/SKILL.md}).
+ * <p>Prerequisites: MiniZinc must be installed and JaCoP registered as a solver.
  *
  * <p>Usage: {@code java org.jacop.BenchmarkAdder model.mzn [data1.dzn data2.dzn ...]}
  *

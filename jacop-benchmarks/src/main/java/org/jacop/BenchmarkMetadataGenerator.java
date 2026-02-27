@@ -51,9 +51,6 @@ import java.util.regex.Pattern;
  * Scans FlatZinc benchmark files and generates per-benchmark {@code metadata.json} files that
  * record which FlatZinc builtins and JaCoP constraint families each benchmark exercises.
  *
- * <p>Run as a standalone program or as a JUnit test via {@code mvn -pl jacop-benchmarks
- * -Dtest=BenchmarkMetadataGenerator#generateAll test}.
- *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -262,12 +259,6 @@ public class BenchmarkMetadataGenerator {
       }
     }
     return builtinToFamily;
-  }
-
-  /** JUnit entry point: generates metadata for all benchmarks. */
-  @org.junit.jupiter.api.Test
-  void generateAllMetadata() throws IOException {
-    generateAll();
   }
 
   public static void main(String[] args) throws IOException {
