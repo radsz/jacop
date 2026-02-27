@@ -144,10 +144,10 @@ public final class Arc {
     capacity -= delta;
     sister.capacity += delta;
 
-    if (ASSERTS_ENABLED && !(sister.capacity >= 0)) {
+    if (ASSERTS_ENABLED && sister.capacity < 0) {
       throw new IllegalStateException(String.valueOf(delta + ", Bad capacity: " + this));
     }
-    if (ASSERTS_ENABLED && !(capacity >= 0)) {
+    if (ASSERTS_ENABLED && capacity < 0) {
       throw new IllegalStateException(String.valueOf(delta + ", Bad capacity: " + this));
     }
   }
@@ -181,16 +181,16 @@ public final class Arc {
    */
   public void set(int newCost, int newCapacity) {
 
-    if (ASSERTS_ENABLED && !(cost == 0)) {
+    if (ASSERTS_ENABLED && cost != 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(sister.cost == 0)) {
+    if (ASSERTS_ENABLED && sister.cost != 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(capacity == 0)) {
+    if (ASSERTS_ENABLED && capacity != 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(sister.capacity == 0)) {
+    if (ASSERTS_ENABLED && sister.capacity != 0) {
       throw new IllegalStateException("Assertion failed");
     }
 

@@ -88,7 +88,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
     this.list = varSet.toArray(IntVar[]::new);
     this.result = result;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 

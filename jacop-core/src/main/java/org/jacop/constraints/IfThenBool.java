@@ -67,7 +67,7 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
 
     super(idNumber, x, y, z);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }

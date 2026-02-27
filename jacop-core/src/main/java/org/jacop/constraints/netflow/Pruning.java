@@ -240,11 +240,11 @@ public class Pruning extends Network {
     }
     int flow = companion.flowOffset + arc.sister.capacity;
     if (arc.head == node) {
-      if (ASSERTS_ENABLED && !(arc.sister.capacity == -node.balance)) {
+      if (ASSERTS_ENABLED && arc.sister.capacity != -node.balance) {
         throw new IllegalStateException(String.valueOf("\n" + node + "\n" + arc));
       }
     } else {
-      if (ASSERTS_ENABLED && !(arc.sister.capacity == node.balance)) {
+      if (ASSERTS_ENABLED && arc.sister.capacity != node.balance) {
         throw new IllegalStateException(String.valueOf("\n" + node + "\n" + arc));
       }
     }
@@ -375,7 +375,7 @@ public class Pruning extends Network {
 
     int capacity = arc.capacity;
     int flow = analyzeArc(arc, costLimit);
-    if (ASSERTS_ENABLED && !(arc.capacity == capacity - flow)) {
+    if (ASSERTS_ENABLED && arc.capacity != capacity - flow) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -387,10 +387,10 @@ public class Pruning extends Network {
     if (arc.index == DELETED_ARC) {
       addArcWithFlow(arc);
     }
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -414,13 +414,13 @@ public class Pruning extends Network {
     networkSimplex(999999);
 
     long cost = cost(Long.MAX_VALUE);
-    if (ASSERTS_ENABLED && !(cost(Long.MAX_VALUE) == cost)) {
+    if (ASSERTS_ENABLED && cost(Long.MAX_VALUE) != cost) {
       throw new IllegalStateException(String.valueOf(cost(Long.MAX_VALUE) + " != " + cost));
     }
   }
 
   private int analyzeArc(Arc arc, int costLimit) {
-    if (ASSERTS_ENABLED && !(arc.capacity > 0)) {
+    if (ASSERTS_ENABLED && arc.capacity <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -463,7 +463,7 @@ public class Pruning extends Network {
   private void analyzeArcLoop(Arc arc, Node source, Node sink, int[] state) {
     while (state[1] > 0) {
       int unitCost = arc.reducedCost();
-      if (ASSERTS_ENABLED && !(unitCost >= 0)) {
+      if (ASSERTS_ENABLED && unitCost < 0) {
         throw new IllegalStateException("Assertion failed");
       }
       if (unitCost > 0) {
@@ -520,7 +520,7 @@ public class Pruning extends Network {
   }
 
   private void pruneArc(int capacity, int residual, boolean forward, ArcCompanion companion) {
-    if (ASSERTS_ENABLED && !(capacity > 0)) {
+    if (ASSERTS_ENABLED && capacity <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
 

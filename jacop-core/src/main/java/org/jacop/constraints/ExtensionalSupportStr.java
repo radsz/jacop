@@ -245,7 +245,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void removeLevel(int level) {
 
-    if (ASSERTS_ENABLED && !(level > firstConsistencyLevel)) {
+    if (ASSERTS_ENABLED && level <= firstConsistencyLevel) {
       throw new IllegalStateException(
           String.valueOf(
               "Constraint has the level at which it has computed its initial state being removed."));

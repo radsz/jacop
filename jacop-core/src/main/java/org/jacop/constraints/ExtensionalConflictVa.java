@@ -112,7 +112,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
     }
 
     int[] t = getInitialSupportTuple(varPosition, value);
-    if (ASSERTS_ENABLED && !(t != null)) {
+    if (ASSERTS_ENABLED && t == null) {
       throw new IllegalStateException(String.valueOf(" First valid tuple can not be null "));
     }
 

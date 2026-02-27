@@ -151,16 +151,16 @@ public class Rectangle {
   public static Rectangle[] toArrayOf2dRectangles(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-    if (ASSERTS_ENABLED && !(origin1 != null)) {
+    if (ASSERTS_ENABLED && origin1 == null) {
       throw new IllegalStateException(String.valueOf("o1 list is null"));
     }
-    if (ASSERTS_ENABLED && !(origin2 != null)) {
+    if (ASSERTS_ENABLED && origin2 == null) {
       throw new IllegalStateException(String.valueOf("o2 list is null"));
     }
-    if (ASSERTS_ENABLED && !(length1 != null)) {
+    if (ASSERTS_ENABLED && length1 == null) {
       throw new IllegalStateException(String.valueOf("l1 list is null"));
     }
-    if (ASSERTS_ENABLED && !(length2 != null)) {
+    if (ASSERTS_ENABLED && length2 == null) {
       throw new IllegalStateException(String.valueOf("l2 list is null"));
     }
 
@@ -191,7 +191,7 @@ public class Rectangle {
    */
   public static Rectangle[] toArrayOf2dRectangles(IntVar[][] rectangles) {
 
-    if (ASSERTS_ENABLED && !(rectangles != null)) {
+    if (ASSERTS_ENABLED && rectangles == null) {
       throw new IllegalStateException(String.valueOf("Rectangles list is null"));
     }
 
@@ -199,7 +199,7 @@ public class Rectangle {
 
     for (int i = 0; i < rectangles.length; i++) {
 
-      if (ASSERTS_ENABLED && !(rectangles[i] != null)) {
+      if (ASSERTS_ENABLED && rectangles[i] == null) {
         throw new IllegalStateException(
             String.valueOf(i + "-th list within rectangles list is null"));
       }

@@ -115,11 +115,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // adds an arc at its lower or upper bound
   private void add(Arc arc) {
 
-    if (ASSERTS_ENABLED && !(arc.forward)) {
+    if (ASSERTS_ENABLED && !arc.forward) {
       throw new IllegalStateException("Assertion failed");
     }
 
-    if (ASSERTS_ENABLED && !(arc.capacity == 0 || arc.sister.capacity == 0)) {
+    if (ASSERTS_ENABLED && arc.capacity != 0 && arc.sister.capacity != 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -156,13 +156,13 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       arc = arc.sister;
     }
 
-    if (ASSERTS_ENABLED && !(arc.capacity == 0 || arc.sister.capacity == 0)) {
+    if (ASSERTS_ENABLED && arc.capacity != 0 && arc.sister.capacity != 0) {
       throw new IllegalStateException(String.valueOf("Arc not at lower or upper bound"));
     }
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -178,7 +178,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       if (tail.parent == arc.head) {
         updateTree(arc.sister, tail.artificial);
       } else { // pointing downwards
-        if (ASSERTS_ENABLED && !(arc.head.parent == tail)) {
+        if (ASSERTS_ENABLED && arc.head.parent != tail) {
           throw new IllegalStateException("Assertion failed");
         }
         updateTree(arc, arc.head.artificial);
@@ -296,10 +296,10 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
   }

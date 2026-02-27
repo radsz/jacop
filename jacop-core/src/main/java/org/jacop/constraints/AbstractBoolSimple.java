@@ -72,7 +72,7 @@ public abstract class AbstractBoolSimple extends PrimitiveConstraint {
     this.b = b;
     this.result = result;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 

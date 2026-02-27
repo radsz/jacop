@@ -196,16 +196,16 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
   }
 
   private void propagateWhenNoneSingleton(Store store) {
-    IntervalDomain Xdom1 = new IntervalDomain(y.min() - z.max(), y.max() - z.min());
-    Xdom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
-    x.domain.in(store.level, x, Xdom1);
+    IntervalDomain xDom1 = new IntervalDomain(y.min() - z.max(), y.max() - z.min());
+    xDom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
+    x.domain.in(store.level, x, xDom1);
     store.propagationHasOccurred = false;
-    IntervalDomain Ydom1 = new IntervalDomain(x.min() + z.min(), x.max() + z.max());
-    Ydom1.unionAdapt(x.min() - z.max(), x.max() - z.min());
-    y.domain.in(store.level, y, Ydom1);
-    IntervalDomain Zdom1 = new IntervalDomain(y.min() - x.max(), y.max() - x.min());
-    Zdom1.unionAdapt(x.min() - y.max(), x.max() - y.min());
-    z.domain.in(store.level, z, Zdom1);
+    IntervalDomain yDom1 = new IntervalDomain(x.min() + z.min(), x.max() + z.max());
+    yDom1.unionAdapt(x.min() - z.max(), x.max() - z.min());
+    y.domain.in(store.level, y, yDom1);
+    IntervalDomain zDom1 = new IntervalDomain(y.min() - x.max(), y.max() - x.min());
+    zDom1.unionAdapt(x.min() - y.max(), x.max() - y.min());
+    z.domain.in(store.level, z, zDom1);
   }
 
   @Override

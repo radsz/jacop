@@ -134,10 +134,10 @@ public class NetworkSimplex {
       incrementDegree(arc.tail(), arc);
     }
 
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -152,7 +152,7 @@ public class NetworkSimplex {
   }
 
   private void decrementDegree(Node node) {
-    if (ASSERTS_ENABLED && !(node != root)) {
+    if (ASSERTS_ENABLED && node == root) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -178,13 +178,13 @@ public class NetworkSimplex {
     int i = 0;
     for (Arc arc : allArcs) {
       if (arc.index != DELETED_ARC && (arc.head == node || arc.tail() == node)) {
-        if (ASSERTS_ENABLED && !(i < 2)) {
+        if (ASSERTS_ENABLED && i >= 2) {
           throw new IllegalStateException(String.valueOf(node + " has extra arc " + arc));
         }
         node.adjacencyList[i++] = arc;
       }
     }
-    if (ASSERTS_ENABLED && !(i == 2)) {
+    if (ASSERTS_ENABLED && i != 2) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -207,7 +207,7 @@ public class NetworkSimplex {
    * @param arc the network arc being added
    */
   protected void addArc(Arc arc) {
-    if (ASSERTS_ENABLED && !(arc.index == DELETED_ARC)) {
+    if (ASSERTS_ENABLED && arc.index != DELETED_ARC) {
       throw new IllegalStateException(String.valueOf(arc));
     }
     int index = numArcs++;
@@ -218,7 +218,7 @@ public class NetworkSimplex {
     } else {
       // arc at lower bound
       lower[index] = arc;
-      if (ASSERTS_ENABLED && !(arc.sister.capacity == 0)) {
+      if (ASSERTS_ENABLED && arc.sister.capacity != 0) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -237,7 +237,7 @@ public class NetworkSimplex {
    * @param arc the arc to add, which must currently be marked as deleted.
    */
   public void addArcWithFlow(Arc arc) {
-    if (ASSERTS_ENABLED && !(arc.index == DELETED_ARC)) {
+    if (ASSERTS_ENABLED && arc.index != DELETED_ARC) {
       throw new IllegalStateException(String.valueOf(arc));
     }
     int index = numArcs++;
@@ -252,7 +252,7 @@ public class NetworkSimplex {
       if (arc.sister.capacity > 0) {
         primalStep(arc.sister);
       }
-      if (ASSERTS_ENABLED && !(arc.sister.capacity == 0 || arc.index == TREE_ARC)) {
+      if (ASSERTS_ENABLED && (arc.sister.capacity != 0 && arc.index != TREE_ARC)) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -273,7 +273,7 @@ public class NetworkSimplex {
   public void removeArc(Arc arc) {
     // Remove arc from graph
     int index = arc.index;
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException(String.valueOf(arc.toString()));
     }
     if (index < --numArcs) {
@@ -301,16 +301,16 @@ public class NetworkSimplex {
    */
   public int networkSimplex(int maxPivots) {
 
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
 
     initializeArtificialArcs();
     root.computePotentials();
-    if (ASSERTS_ENABLED && !(checkInfeasibleNodes(this))) {
+    if (ASSERTS_ENABLED && !checkInfeasibleNodes(this)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -320,13 +320,13 @@ public class NetworkSimplex {
 
     root.computePotentials();
 
-    if (ASSERTS_ENABLED && !(checkFlow(this))) {
+    if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(this))) {
+    if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(pivots == -1 || failure || checkOptimality(this))) {
+    if (ASSERTS_ENABLED && pivots != -1 && !failure && !checkOptimality(this)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -347,7 +347,7 @@ public class NetworkSimplex {
       if (delta > 0) {
         Arc arc = node.artificial;
         arc.sister.set(-LARGE_COST, delta);
-        if (ASSERTS_ENABLED && !(arc.index != DELETED_ARC)) {
+        if (ASSERTS_ENABLED && arc.index == DELETED_ARC) {
           throw new IllegalStateException("Assertion failed");
         }
         if (arc.index != TREE_ARC) {
@@ -356,7 +356,7 @@ public class NetworkSimplex {
       } else if (delta < 0) {
         Arc arc = node.artificial;
         arc.set(-LARGE_COST, -delta);
-        if (ASSERTS_ENABLED && !(arc.index != DELETED_ARC)) {
+        if (ASSERTS_ENABLED && arc.index == DELETED_ARC) {
           throw new IllegalStateException("Assertion failed");
         }
         if (arc.index != TREE_ARC) {
@@ -394,7 +394,7 @@ public class NetworkSimplex {
         infeasibleFlow = arc.sister.capacity;
       } else {
         infeasibleFlow = -arc.capacity;
-        if (ASSERTS_ENABLED && !(delta != 0)) {
+        if (ASSERTS_ENABLED && delta == 0) {
           throw new IllegalStateException("Assertion failed");
         }
       }
@@ -465,7 +465,7 @@ public class NetworkSimplex {
    *     'blocking'.
    */
   public int augmentFlow(Node from, Node to, int delta) {
-    if (ASSERTS_ENABLED && !(delta >= 0)) {
+    if (ASSERTS_ENABLED && delta < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -528,7 +528,7 @@ public class NetworkSimplex {
       log.debug("entering = {}", entering);
     }
 
-    if (ASSERTS_ENABLED && !(checkBeforeUpdate(leaving, entering))) {
+    if (ASSERTS_ENABLED && !checkBeforeUpdate(leaving, entering)) {
       throw new IllegalStateException("Assertion failed");
     }
 
