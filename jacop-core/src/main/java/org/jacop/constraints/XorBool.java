@@ -203,11 +203,7 @@ public class XorBool extends PrimitiveConstraint {
       sum += e.value();
     }
 
-    if ((sum & 1) == 1 && y.min() == 1) {
-      return true;
-    } else {
-      return (sum & 1) == 0 && y.max() == 0;
-    }
+    return ((sum & 1) == 1 && y.min() == 1) || ((sum & 1) == 0 && y.max() == 0);
   }
 
   @Override
@@ -228,11 +224,7 @@ public class XorBool extends PrimitiveConstraint {
       sum += e.value();
     }
 
-    if ((sum & 1) == 1 && y.min() == 0) {
-      return true;
-    } else {
-      return (sum & 1) == 0 && y.min() == 1;
-    }
+    return ((sum & 1) == 1 && y.min() == 0) || ((sum & 1) == 0 && y.min() == 1);
   }
 
   @Override

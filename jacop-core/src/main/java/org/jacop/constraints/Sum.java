@@ -233,11 +233,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
   public Constraint getGuideConstraint() {
 
     IntVar proposedVariable = (IntVar) getGuideVariable();
-    if (proposedVariable != null) {
-      return new XeqC(proposedVariable, guideValue);
-    } else {
-      return null;
-    }
+    return proposedVariable != null ? new XeqC(proposedVariable, guideValue) : null;
   }
 
   @Override

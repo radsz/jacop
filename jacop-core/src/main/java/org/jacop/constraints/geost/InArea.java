@@ -129,11 +129,8 @@ public class InArea implements ExternalConstraint {
   /** {@inheritDoc} */
   public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
-    if (ic.getClass() != AllowedArea.class && ic.getClass() != ForbiddenArea.class) {
-      return false;
-    } else {
-      return constraints.contains(ic);
-    }
+    return (ic.getClass() == AllowedArea.class || ic.getClass() == ForbiddenArea.class)
+        && constraints.contains(ic);
   }
 
   /** {@inheritDoc} */
