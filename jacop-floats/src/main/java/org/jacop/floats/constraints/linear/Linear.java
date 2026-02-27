@@ -411,7 +411,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       // check whether constraint has been already diagnosed as not satisfied at this level
       if (noSat.stamp() < store.level) {
         noSat.update(false);
-      } else if (noSat.stamp() == store.level && noSat.value() == true) {
+      } else if (noSat.stamp() == store.level && noSat.value()) {
         return failResult;
       }
       // ==========
