@@ -1078,7 +1078,7 @@ public class ExampleBasedTest {
       numberInnerMoves++;
     }
 
-    if (result == true && example != null) {
+    if (result && example != null) {
       example.getSearch().assignSolution();
     }
 
