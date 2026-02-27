@@ -59,10 +59,10 @@ public final class Utils {
    * @return a new int[] with required size, and elements from @param array
    */
   public static int[] resize(int[] array, int newSize, int size, MemoryPool pool) {
-    if (ASSERTS_ENABLED && !(newSize > array.length)) {
+    if (ASSERTS_ENABLED && newSize <= array.length) {
       throw new IllegalStateException(String.valueOf("resize to bigger size"));
     }
-    if (ASSERTS_ENABLED && !(size <= array.length)) {
+    if (ASSERTS_ENABLED && size > array.length) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -118,7 +118,7 @@ public final class Utils {
    * @return a new array which first elements are the same as the ones in array
    */
   public static int[][] resize(int[][] array, int newSize, int size) {
-    if (ASSERTS_ENABLED && !(size < newSize)) {
+    if (ASSERTS_ENABLED && size >= newSize) {
       throw new IllegalStateException("Assertion failed");
     }
     int[][] answer = new int[newSize][];

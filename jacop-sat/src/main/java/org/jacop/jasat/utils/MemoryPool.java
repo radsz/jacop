@@ -61,7 +61,7 @@ public final class MemoryPool implements SolverComponent {
    */
   public int[] getNew(int size) {
 
-    if (ASSERTS_ENABLED && !(size > 0)) {
+    if (ASSERTS_ENABLED && size <= 0) {
       throw new IllegalStateException(String.valueOf("size must be > 0"));
     }
 
@@ -74,10 +74,10 @@ public final class MemoryPool implements SolverComponent {
       // no available arrays
       answer = new int[size];
     } else {
-      if (ASSERTS_ENABLED && !(indexes[size] > 0)) {
+      if (ASSERTS_ENABLED && indexes[size] <= 0) {
         throw new IllegalStateException("Assertion failed");
       }
-      if (ASSERTS_ENABLED && !(indexes[size] <= stockSize)) {
+      if (ASSERTS_ENABLED && indexes[size] > stockSize) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -86,10 +86,10 @@ public final class MemoryPool implements SolverComponent {
       answer = pool[size][index];
     }
 
-    if (ASSERTS_ENABLED && !(answer != null)) {
+    if (ASSERTS_ENABLED && answer == null) {
       throw new IllegalStateException(String.valueOf("returning a null array"));
     }
-    if (ASSERTS_ENABLED && !(answer.length == size)) {
+    if (ASSERTS_ENABLED && answer.length != size) {
       throw new IllegalStateException(String.valueOf("not the good length"));
     }
 
@@ -108,7 +108,7 @@ public final class MemoryPool implements SolverComponent {
     if (size >= pool.length) {
       return; // ignore this array, it is too long
     }
-    if (ASSERTS_ENABLED && !(indexes[array.length] <= stockSize)) {
+    if (ASSERTS_ENABLED && indexes[array.length] > stockSize) {
       throw new IllegalStateException("Assertion failed");
     }
 

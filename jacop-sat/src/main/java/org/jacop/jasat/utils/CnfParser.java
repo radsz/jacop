@@ -96,7 +96,7 @@ public final class CnfParser implements Iterable<IntVec> {
     if (c == -1) {
       throw new IOException();
     }
-    if (ASSERTS_ENABLED && !((c == '-') || (c >= '0' && c <= '9'))) {
+    if (ASSERTS_ENABLED && c != '-' && (c < '0' || c > '9')) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -165,20 +165,20 @@ public final class CnfParser implements Iterable<IntVec> {
   private void readProblemDef() throws IOException {
 
     // read "p cnf"
-    if (ASSERTS_ENABLED && !(c == 'p')) {
+    if (ASSERTS_ENABLED && c != 'p') {
       throw new IllegalStateException("Assertion failed");
     }
     c = stream.read();
     skipSpaces();
-    if (ASSERTS_ENABLED && !(c == 'c')) {
+    if (ASSERTS_ENABLED && c != 'c') {
       throw new IllegalStateException("Assertion failed");
     }
     c = stream.read();
-    if (ASSERTS_ENABLED && !(c == 'n')) {
+    if (ASSERTS_ENABLED && c != 'n') {
       throw new IllegalStateException("Assertion failed");
     }
     c = stream.read();
-    if (ASSERTS_ENABLED && !(c == 'f')) {
+    if (ASSERTS_ENABLED && c != 'f') {
       throw new IllegalStateException("Assertion failed");
     }
     c = stream.read();

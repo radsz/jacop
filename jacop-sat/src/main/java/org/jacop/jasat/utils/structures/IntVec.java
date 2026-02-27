@@ -113,10 +113,10 @@ public final class IntVec implements Iterable<Integer> {
    * @return the element at the index
    */
   public int get(int index) {
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(index < numElem)) {
+    if (ASSERTS_ENABLED && index >= numElem) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -130,10 +130,10 @@ public final class IntVec implements Iterable<Integer> {
    * @param i the new value
    */
   public void set(int index, int i) {
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(index < numElem)) {
+    if (ASSERTS_ENABLED && index >= numElem) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -155,10 +155,10 @@ public final class IntVec implements Iterable<Integer> {
    * @param index the index of the element to remove
    */
   public void remove(int index) {
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(index < numElem)) {
+    if (ASSERTS_ENABLED && index >= numElem) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -176,10 +176,10 @@ public final class IntVec implements Iterable<Integer> {
    * @param index the index to remove
    */
   public void removeFast(int index) {
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(index < numElem)) {
+    if (ASSERTS_ENABLED && index >= numElem) {
       throw new IllegalStateException("Assertion failed");
     }
 
