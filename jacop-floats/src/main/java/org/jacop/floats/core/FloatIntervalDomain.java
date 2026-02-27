@@ -606,7 +606,7 @@ public class FloatIntervalDomain extends FloatDomain {
       max = FloatDomain.MAX_FLOAT;
     }
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value " + min + " can not be greater than max value " + max));
     }
@@ -1819,7 +1819,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2423,7 +2423,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
@@ -2514,7 +2514,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public FloatInterval getInterval(int position) {
 
-    if (ASSERTS_ENABLED && !((position < size))) {
+    if (ASSERTS_ENABLED && position >= size) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2856,7 +2856,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public double leftElement(int intervalNo) {
 
-    if (ASSERTS_ENABLED && !((intervalNo < size))) {
+    if (ASSERTS_ENABLED && intervalNo >= size) {
       throw new IllegalStateException("Assertion failed");
     }
     return intervals[intervalNo].min();
@@ -2866,7 +2866,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public double rightElement(int intervalNo) {
 
-    if (ASSERTS_ENABLED && !((intervalNo < size))) {
+    if (ASSERTS_ENABLED && intervalNo >= size) {
       throw new IllegalStateException("Assertion failed");
     }
     return intervals[intervalNo].max();
@@ -2879,7 +2879,7 @@ public class FloatIntervalDomain extends FloatDomain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    if (ASSERTS_ENABLED && !((this.stamp <= level))) {
+    if (ASSERTS_ENABLED && this.stamp > level) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2888,7 +2888,7 @@ public class FloatIntervalDomain extends FloatDomain {
       ((FloatVar) v).domain = this.prevDomain;
     }
 
-    if (ASSERTS_ENABLED && !((((FloatVar) v).domain.stamp < level))) {
+    if (ASSERTS_ENABLED && ((FloatVar) v).domain.stamp >= level) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -2953,7 +2953,7 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !((stamp == storeLevel))) {
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2984,11 +2984,11 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !((stamp == storeLevel))) {
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
-    if (ASSERTS_ENABLED && !((searchConstraints.get(position) == constraint))) {
+    if (ASSERTS_ENABLED && searchConstraints.get(position) != constraint) {
       throw new IllegalStateException(
           String.valueOf("Position of the removed constraint not specified properly"));
     }
@@ -3196,7 +3196,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
