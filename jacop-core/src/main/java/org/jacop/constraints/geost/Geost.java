@@ -1100,7 +1100,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         boolean fullSweep = true;
         if (partialShapeSweep) {
           // if object already had a full sweep in this node, do partial sweep only
-          if (fullyPruned[o.no] == true) {
+          if (fullyPruned[o.no]) {
             fullSweep = false;
           } else {
             fullyPruned[o.no] = true;
@@ -1493,7 +1493,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           String.valueOf("It is improperly called outside the consistency function."));
     }
 
-    if (!(o.isGrounded() && pruneIfGrounded[o.no] == false)) {
+    if (!o.isGrounded() || pruneIfGrounded[o.no]) {
 
       if (DEBUG_OBJECT_GROUNDING) {
         log.debug("queued {}", o);
