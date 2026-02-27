@@ -74,7 +74,9 @@ public class Queens extends ExampleFd {
    * @param args first argument specifies the size of the chessboard.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Queens example = new Queens();
     example.parseArgs(args);
     example.model();
@@ -96,7 +98,9 @@ public class Queens extends ExampleFd {
    * @param args first argument specifies the size of the chessboard.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Queens example = new Queens();
     example.parseArgs(args);
     example.model();

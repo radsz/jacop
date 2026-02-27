@@ -66,7 +66,9 @@ public class WolfGoatCabbage extends ExampleFd {
    * @param args no argument is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     WolfGoatCabbage example;
     int numberInnerMoves = 1;
     boolean result = false;

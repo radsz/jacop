@@ -73,7 +73,9 @@ public class FurnitureMoving extends ExampleFd {
    * @param args command arguments (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     long t1;
     long t2;
     long t;

@@ -72,7 +72,9 @@ public class Bibd extends ExampleFd {
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Bibd example = new Bibd();
 
     if (args.length > 1) {

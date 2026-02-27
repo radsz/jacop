@@ -145,7 +145,9 @@ public class Muca extends ExampleFd {
    *     description.
    */
   void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Muca problem = new Muca();
 
     if (args.length > 0) {

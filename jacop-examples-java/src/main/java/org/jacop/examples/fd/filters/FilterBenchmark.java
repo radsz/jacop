@@ -447,7 +447,9 @@ public class FilterBenchmark {
    * @param args parameters (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     final long t1 = System.currentTimeMillis();
 
     schedule();

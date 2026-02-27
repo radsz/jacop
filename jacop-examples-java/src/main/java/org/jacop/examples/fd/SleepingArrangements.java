@@ -83,7 +83,9 @@ public class SleepingArrangements extends ExampleFd {
    * @param args no arguments are used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     SleepingArrangements example = new SleepingArrangements();
 
     example.model();

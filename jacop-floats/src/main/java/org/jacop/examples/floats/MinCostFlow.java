@@ -55,7 +55,9 @@ public class MinCostFlow {
    * @param args no arguments
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     MinCostFlow example = new MinCostFlow();
 
     example.minCostFlow();

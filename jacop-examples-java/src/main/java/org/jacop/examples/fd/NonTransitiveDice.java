@@ -158,7 +158,9 @@ public class NonTransitiveDice extends ExampleFd {
    *     number of sides of each dice.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     int noDices = (args.length > 0) ? Integer.parseInt(args[0]) : 4;
     int noSides = (args.length > 1) ? Integer.parseInt(args[1]) : 7;
 

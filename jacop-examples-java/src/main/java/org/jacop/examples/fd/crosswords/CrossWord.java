@@ -93,7 +93,9 @@ public class CrossWord extends ExampleFd {
    * @param args no arguments used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     String filename;
     if (args.length == 1) {
       filename = args[0];

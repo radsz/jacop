@@ -94,7 +94,9 @@ public class MagicSquares extends ExampleFd {
    * @param args the first argument allows to specify the size of magic square.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     runModelAndDual(args);
 
     MagicSquares exampleShave = new MagicSquares();
@@ -113,6 +115,9 @@ public class MagicSquares extends ExampleFd {
    * @param args the first argument allows to specify the size of magic square.
    */
   static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     runModelAndDual(args);
   }
 

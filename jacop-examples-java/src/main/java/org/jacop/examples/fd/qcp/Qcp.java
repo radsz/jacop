@@ -82,7 +82,9 @@ public class Qcp extends ExampleFd {
    * @param args the first argument is the name of the file containing the problem.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Qcp example = new Qcp();
 
     if (args.length > 0) {
@@ -139,7 +141,9 @@ public class Qcp extends ExampleFd {
    * @param args the first argument is the name of the file containing the problem.
    */
   void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Qcp example = new Qcp();
 
     if (args.length > 0) {

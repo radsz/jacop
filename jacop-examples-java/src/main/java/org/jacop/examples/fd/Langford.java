@@ -60,7 +60,9 @@ public class Langford extends ExampleFd {
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Langford example = new Langford();
     if (args.length > 1) {
       example.n = Integer.parseInt(args[0]);
@@ -98,7 +100,9 @@ public class Langford extends ExampleFd {
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Langford exampleDual = new Langford();
     if (args.length > 1) {
       exampleDual.n = Integer.parseInt(args[0]);

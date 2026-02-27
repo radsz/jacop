@@ -60,7 +60,9 @@ public class CpvizNetworkFlow {
   CpvizNetworkFlow() {}
 
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CpvizNetworkFlow run = new CpvizNetworkFlow();
 
     run.transportationProblem();

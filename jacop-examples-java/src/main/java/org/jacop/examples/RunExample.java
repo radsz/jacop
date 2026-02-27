@@ -53,7 +53,9 @@ public class RunExample {
    * @param args name of the example and its arguments.
    */
   void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     if (args.length == 0) {
 
       log.info(

@@ -70,7 +70,9 @@ public class WordGame {
   private WordGame() {}
 
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Store store = new Store();
 
     // Define the unknown word with 5 variables (one for each letter)

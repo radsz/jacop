@@ -85,7 +85,9 @@ public class LectureSeries extends ExampleFd {
    * @param args no arguments is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     LectureSeries example = new LectureSeries();
 
     example.model();

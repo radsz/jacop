@@ -79,7 +79,9 @@ public class Golf extends ExampleFd {
    * @param args no arguments is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Golf example = new Golf();
 
     example.model();

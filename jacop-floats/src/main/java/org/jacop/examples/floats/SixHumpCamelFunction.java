@@ -58,7 +58,9 @@ public class SixHumpCamelFunction {
    * @param args no arguments
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
     example.sixHumpCamelFunction();

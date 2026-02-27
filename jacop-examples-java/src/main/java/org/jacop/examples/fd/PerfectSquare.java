@@ -1455,7 +1455,9 @@ public class PerfectSquare extends ExampleFd {
    * @param args program parameters, the first one denotes the problem no to be solved.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     if (args.length == 0) {
 
       for (int i = 0; i < squares().length; i++) {
@@ -1538,7 +1540,9 @@ public class PerfectSquare extends ExampleFd {
    * @param args program parameters, the first one denotes the problem no to be solved.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     PerfectSquare example = new PerfectSquare();
 
     int problemNo = squares().length - 1;

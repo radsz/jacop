@@ -79,7 +79,9 @@ public class StonesOfHeaven extends ExampleFd {
    * @param args command arguments (none here)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     StonesOfHeaven example = new StonesOfHeaven();
 
     example.model();

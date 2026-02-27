@@ -81,7 +81,9 @@ public class ConferenceTalkPlacement {
    * @param args no argument is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     int noOfParallelTracks = 6;
     int noOfTimeSlots = 6;
     int noOfTalks = noOfParallelTracks * noOfTimeSlots;

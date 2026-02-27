@@ -391,7 +391,9 @@ public class CarSequencing extends ExampleFd {
    * @param args parameters (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CarSequencing example = new CarSequencing();
 
     readFromArray(CarSequencing.problem(), example);
@@ -413,7 +415,9 @@ public class CarSequencing extends ExampleFd {
    * @param args parameters (none)
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CarSequencing example = new CarSequencing();
 
     readFromArray(CarSequencing.problem(), example);

@@ -60,7 +60,9 @@ public class Tsp extends ExampleFd {
    * @param args no argument is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Tsp example = new Tsp();
 
     example.model();

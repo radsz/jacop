@@ -64,7 +64,9 @@ public class BuildingBlocks extends ExampleFd {
    * @param args args for the program (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     BuildingBlocks example = new BuildingBlocks();
 
     example.model();

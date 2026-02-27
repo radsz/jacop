@@ -91,7 +91,9 @@ public class Cryptogram extends ExampleFd {
    * @param args no arguments read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Cryptogram example = new Cryptogram();
 
     example.model();

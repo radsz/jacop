@@ -79,7 +79,9 @@ public class Sudoku extends ExampleFd {
    * @param args not used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Sudoku example = new Sudoku();
 
     example.model();
@@ -97,7 +99,9 @@ public class Sudoku extends ExampleFd {
    * @param args not used.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Sudoku example = new Sudoku();
 
     example.model();

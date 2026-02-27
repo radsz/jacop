@@ -48,7 +48,9 @@ public class Laplace {
    * @param args no arguments
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Laplace example = new Laplace();
 
     example.laplace();

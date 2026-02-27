@@ -390,7 +390,9 @@ public class MineSweeper extends ExampleFd {
    * @param args the filename containing the problem description.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     long t1;
     long t2;
     long t;

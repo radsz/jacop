@@ -71,7 +71,9 @@ public class SendMoreMoney extends ExampleFd {
    * @param args no arguments used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     SendMoreMoney exampleBasic = new SendMoreMoney();
 
     exampleBasic.modelBasic();

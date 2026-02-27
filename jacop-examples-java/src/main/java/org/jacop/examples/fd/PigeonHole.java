@@ -60,7 +60,9 @@ public class PigeonHole extends ExampleFd {
    * @param args the number of pigeons.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     PigeonHole example = new PigeonHole();
 
     if (args.length > 1) {

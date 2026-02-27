@@ -60,7 +60,9 @@ public class FittingNumbers extends ExampleFd {
    * @param args commans arguments (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     FittingNumbers example = new FittingNumbers();
 
     example.model();

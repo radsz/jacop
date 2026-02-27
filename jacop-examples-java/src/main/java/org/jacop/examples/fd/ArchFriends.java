@@ -69,7 +69,9 @@ public class ArchFriends extends ExampleFd {
    * @param args no arguments are read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     ArchFriends example = new ArchFriends();
 
     example.model();

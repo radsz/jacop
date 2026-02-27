@@ -50,7 +50,9 @@ public class Loan {
    * @param args no arguments
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Loan example = new Loan();
 
     if (args.length != 4) {

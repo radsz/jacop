@@ -71,7 +71,9 @@ public class KnapsackExample extends ExampleFd {
    *     maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     KnapsackExample example = new KnapsackExample();
 
     example.args = args;

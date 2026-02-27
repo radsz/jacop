@@ -91,7 +91,9 @@ public class Tunapalooza extends ExampleFd {
    * @param args no arguments are used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Tunapalooza example = new Tunapalooza();
 
     example.model();

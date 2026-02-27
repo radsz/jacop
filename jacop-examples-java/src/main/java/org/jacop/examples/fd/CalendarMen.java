@@ -76,7 +76,9 @@ public class CalendarMen extends ExampleFd {
    * @param args no arguments read.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CalendarMen example = new CalendarMen();
 
     example.model();
@@ -100,7 +102,9 @@ public class CalendarMen extends ExampleFd {
    * @param args no arguments read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CalendarMen example = new CalendarMen();
 
     example.model();

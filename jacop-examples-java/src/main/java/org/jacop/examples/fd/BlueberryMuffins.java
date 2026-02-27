@@ -79,7 +79,9 @@ public class BlueberryMuffins extends ExampleFd {
    * @param args no arguments are read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     BlueberryMuffins example = new BlueberryMuffins();
 
     example.model();

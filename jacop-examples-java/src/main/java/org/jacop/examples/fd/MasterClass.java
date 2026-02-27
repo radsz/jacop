@@ -83,7 +83,9 @@ public class MasterClass extends ExampleFd {
    * @param args no arguments is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     MasterClass example = new MasterClass();
 
     example.model();

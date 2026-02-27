@@ -49,7 +49,9 @@ public class CpvizSudoku extends Sudoku {
    * @param args not used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CpvizSudoku example = new CpvizSudoku();
 
     example.modelBasic();

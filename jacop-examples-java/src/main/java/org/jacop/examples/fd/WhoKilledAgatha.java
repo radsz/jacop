@@ -84,7 +84,9 @@ public class WhoKilledAgatha extends ExampleFd {
    * @param args parameters (none)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
 

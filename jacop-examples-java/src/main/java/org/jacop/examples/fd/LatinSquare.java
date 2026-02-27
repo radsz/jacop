@@ -60,7 +60,9 @@ public class LatinSquare extends ExampleFd {
    * @param args size of the problem
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     LatinSquare example = new LatinSquare();
 
     if (args.length > 0) {

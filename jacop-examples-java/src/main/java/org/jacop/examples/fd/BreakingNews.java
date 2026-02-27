@@ -78,7 +78,9 @@ public class BreakingNews extends ExampleFd {
    * @param args no arguments are read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     BreakingNews example = new BreakingNews();
 
     example.model();

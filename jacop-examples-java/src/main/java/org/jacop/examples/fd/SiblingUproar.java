@@ -103,7 +103,9 @@ public class SiblingUproar extends ExampleFd {
    * @param args no argument is used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     SiblingUproar example = new SiblingUproar();
 
     example.model();

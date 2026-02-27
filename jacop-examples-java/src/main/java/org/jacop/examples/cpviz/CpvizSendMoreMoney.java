@@ -53,7 +53,9 @@ import org.jacop.search.TraceGenerator;
 public class CpvizSendMoreMoney extends SendMoreMoney {
 
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CpvizSendMoreMoney exampleGlobal = new CpvizSendMoreMoney();
 
     exampleGlobal.modelGlobal();

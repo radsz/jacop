@@ -61,7 +61,9 @@ public class GeostExample extends ExampleFd {
    * @param args no parameters read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     GeostExample example = new GeostExample();
     example.model();
     example.search();

@@ -53,7 +53,9 @@ public class Parcel extends ExampleFd {
    * @param args no parameters
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Parcel example = new Parcel();
 
     example.model();

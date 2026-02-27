@@ -88,7 +88,9 @@ public class DeBruijn extends ExampleFd {
    * @param args between 2 and 3 arguments are used.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     int base = 2;
     int n = 4;
     int m = 9;

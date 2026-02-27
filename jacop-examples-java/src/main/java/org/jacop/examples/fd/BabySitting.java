@@ -69,7 +69,9 @@ public class BabySitting extends ExampleFd {
    * @param args no arguments are read.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     BabySitting example = new BabySitting();
 
     example.model();

@@ -83,7 +83,9 @@ public class Golomb extends ExampleFd {
    *     upper bound of the optimal solution.
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Golomb example = new Golomb();
 
     if (args.length != 0) {
@@ -110,7 +112,9 @@ public class Golomb extends ExampleFd {
    *     upper bound of the optimal solution.
    */
   public static void test(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Golomb example = new Golomb();
 
     if (args.length != 0) {

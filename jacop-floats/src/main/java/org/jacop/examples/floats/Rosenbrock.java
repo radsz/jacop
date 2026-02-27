@@ -54,7 +54,9 @@ public class Rosenbrock {
    * @param args no arguments
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Rosenbrock example = new Rosenbrock();
 
     example.rosenbrock();

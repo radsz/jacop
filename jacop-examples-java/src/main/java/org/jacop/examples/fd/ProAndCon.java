@@ -85,7 +85,9 @@ public class ProAndCon extends ExampleFd {
    * @param args command arguments (none here)
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     ProAndCon example = new ProAndCon();
 
     example.model();

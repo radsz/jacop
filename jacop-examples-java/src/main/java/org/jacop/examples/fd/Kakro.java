@@ -69,7 +69,9 @@ public class Kakro extends ExampleFd {
    * @param args no parameters
    */
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     Kakro example = new Kakro();
 
     example.model();

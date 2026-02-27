@@ -61,7 +61,9 @@ public class CpvizGardner {
   CpvizGardner() {}
 
   static void main(String[] args) {
-
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
     CpvizGardner run = new CpvizGardner();
     run.examples();
   }
