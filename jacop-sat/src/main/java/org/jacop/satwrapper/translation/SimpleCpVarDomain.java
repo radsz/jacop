@@ -87,10 +87,10 @@ public class SimpleCpVarDomain extends SatCpBridge {
 
   @Override
   public final int cpValueToBoolVar(int value, boolean isEquality) {
-    if (ASSERTS_ENABLED && !(value >= getMin())) {
+    if (ASSERTS_ENABLED && value < getMin()) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(value <= getMax())) {
+    if (ASSERTS_ENABLED && value > getMax()) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -106,10 +106,10 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public final int boolVarToCpValue(int literal) {
     int varIdx = Math.abs(literal);
-    if (ASSERTS_ENABLED && !(varIdx >= firstVar)) {
+    if (ASSERTS_ENABLED && varIdx < firstVar) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(varIdx <= firstVar + (getMax() - getMin() + 1) * 2)) {
+    if (ASSERTS_ENABLED && varIdx > firstVar + (getMax() - getMin() + 1) * 2) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -118,7 +118,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
 
   @Override
   public final boolean isEqualityBoolVar(int literal) {
-    if (ASSERTS_ENABLED && !(wrapper.boolVarToCpVar(literal) == this.variable)) {
+    if (ASSERTS_ENABLED && wrapper.boolVarToCpVar(literal) != this.variable) {
       throw new IllegalStateException("Assertion failed");
     }
     int varIdx = Math.abs(literal);
@@ -154,14 +154,14 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public void propagate(int literal) {
 
-    if (ASSERTS_ENABLED && !(isInThisRange(literal))) {
+    if (ASSERTS_ENABLED && !isInThisRange(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
 
     int value = boolVarToCpValue(literal);
     boolean isEquality = isEqualityBoolVar(literal);
 
-    if (ASSERTS_ENABLED && !(getMax() >= getMin())) {
+    if (ASSERTS_ENABLED && getMax() < getMin()) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -246,7 +246,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
   @Override
   public void initialize(SatWrapper wrapper) {
     super.initialize(wrapper);
-    if (ASSERTS_ENABLED && !(wrapper.domainDatabase != null)) {
+    if (ASSERTS_ENABLED && wrapper.domainDatabase == null) {
       throw new IllegalStateException(String.valueOf("DomainClausesDatabase is needed"));
     }
     this.clauseDatabase = wrapper.domainDatabase;

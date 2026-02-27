@@ -162,13 +162,13 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       propagationCauses[varIdx] = assertedLiteral;
 
       // invariant : the explanation is equal to the depth in trail stack
-      if (ASSERTS_ENABLED && !(trail.assertionStack.array[clauseIndex] == varIdx)) {
+      if (ASSERTS_ENABLED && trail.assertionStack.array[clauseIndex] != varIdx) {
         throw new IllegalStateException("Assertion failed");
       }
-      if (ASSERTS_ENABLED && !(trail.values[varIdx] == literal)) {
+      if (ASSERTS_ENABLED && trail.values[varIdx] != literal) {
         throw new IllegalStateException("Assertion failed");
       }
-      if (ASSERTS_ENABLED && !(clauseId == trail.getExplanation(varIdx))) {
+      if (ASSERTS_ENABLED && clauseId != trail.getExplanation(varIdx)) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -183,7 +183,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
    * To get a real clause to resolve with, we seek for the clause at the origin of the propagation.
    */
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
-    if (ASSERTS_ENABLED && !(uniqueIdToIndex(clauseIndex) == clauseIndex)) {
+    if (ASSERTS_ENABLED && uniqueIdToIndex(clauseIndex) != clauseIndex) {
       throw new IllegalStateException("Assertion failed");
     }
 
