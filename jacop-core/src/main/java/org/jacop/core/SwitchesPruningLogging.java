@@ -43,51 +43,51 @@ public final class SwitchesPruningLogging {
   public static final boolean TRACE = false;
 
   /** The switch which enables to switch on/off the switches concerning Store operation. */
-  public static final boolean TRACE_STORE = TRACE && true;
+  public static final boolean TRACE_STORE = TRACE;
 
   /** This switch enables to trace constraints which are being checked for consistency. */
-  public static boolean traceConsistencyCheck = TRACE && TRACE_STORE && true;
+  public static boolean traceConsistencyCheck = TRACE && TRACE_STORE;
 
   /** This switch enables tracing the constraint added to the constraint queue. */
-  public static boolean traceQueueingConstraint = TRACE && TRACE_STORE && true;
+  public static boolean traceQueueingConstraint = TRACE && TRACE_STORE;
 
   /**
    * This switch enables tracing attempt to add the constraint to a queue when it is already added.
    */
-  public static boolean traceAlreadyQueuedConstraint = TRACE && TRACE_STORE && true;
+  public static boolean traceAlreadyQueuedConstraint = TRACE && TRACE_STORE;
 
   /** This switch enables to traces the constraints which are being imposed. */
-  public static boolean traceConstraintImposition = TRACE && TRACE_STORE && true;
+  public static boolean traceConstraintImposition = TRACE && TRACE_STORE;
 
   /** It informs what traced constraints failed. */
-  public static boolean traceFailedConstraint = TRACE && TRACE_STORE && true;
+  public static boolean traceFailedConstraint = TRACE && TRACE_STORE;
 
   /** This switch enables to trace remove level operation. */
-  public static boolean traceLevelRemoval = TRACE && TRACE_STORE && true;
+  public static boolean traceLevelRemoval = TRACE && TRACE_STORE;
 
   /** This switch enables to trace set the store level. */
-  public static boolean traceOperationsOnLevel = TRACE && TRACE_STORE && true;
+  public static boolean traceOperationsOnLevel = TRACE && TRACE_STORE;
 
   /** It specifies if the search traces are active. */
-  public static final boolean TRACE_SEARCH = TRACE && true;
+  public static final boolean TRACE_SEARCH = TRACE;
 
   /** It traces the decisions within search. */
-  public static final boolean TRACE_SEARCH_TREE = TRACE && TRACE_SEARCH && true;
+  public static final boolean TRACE_SEARCH_TREE = TRACE && TRACE_SEARCH;
 
   /** It turns on all trace printouts in constraints. */
-  public static final boolean TRACE_CONSTRAINT = TRACE && true;
+  public static final boolean TRACE_CONSTRAINT = TRACE;
 
   /** It turns on all trace printouts in variables. */
-  public static boolean traceVar = TRACE && true;
+  public static boolean traceVar = TRACE;
 
   /** It traces all constraints have failed. */
-  public static boolean traceConstraintFailure = TRACE && true;
+  public static boolean traceConstraintFailure = TRACE;
 
   /** This switch enables to trace removal of the store level. */
-  public static boolean traceStoreRemoveLevel = TRACE && true;
+  public static boolean traceStoreRemoveLevel = TRACE;
 
   /** This switch enables to trace creation of the variable. */
-  public static boolean traceVariableCreation = TRACE && true;
+  public static boolean traceVariableCreation = TRACE;
 
   private SwitchesPruningLogging() {}
 
