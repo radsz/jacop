@@ -184,10 +184,10 @@ public class DisjointConditional extends Diff {
       List<? extends IntVar> exceptionCondition) {
 
     this(
-        o1.toArray(new IntVar[0]),
-        o2.toArray(new IntVar[0]),
-        l1.toArray(new IntVar[0]),
-        l2.toArray(new IntVar[0]),
+        o1.toArray(IntVar[]::new),
+        o2.toArray(IntVar[]::new),
+        l1.toArray(IntVar[]::new),
+        l2.toArray(IntVar[]::new),
         exceptionIndices,
         exceptionCondition);
   }
@@ -781,7 +781,7 @@ public class DisjointConditional extends Diff {
         || rSize >= (barierSize + (rLengthjMin - 1) * consideredRectDur.size())) {
       return;
     }
-    IntRectangle[] rects = consideredRectDur.toArray(new IntRectangle[0]);
+    IntRectangle[] rects = consideredRectDur.toArray(IntRectangle[]::new);
     Arrays.sort(rects, dimIthMinComparator.apply(i));
     Profile barrier = new Profile();
     int newMaxLength = 0;

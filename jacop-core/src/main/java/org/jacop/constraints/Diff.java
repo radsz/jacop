@@ -209,10 +209,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[0]),
-        o2.toArray(new IntVar[0]),
-        l1.toArray(new IntVar[0]),
-        l2.toArray(new IntVar[0]));
+        o1.toArray(IntVar[]::new),
+        o2.toArray(IntVar[]::new),
+        l1.toArray(IntVar[]::new),
+        l2.toArray(IntVar[]::new));
   }
 
   /**
@@ -348,7 +348,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       return;
     }
 
-    IntRectangle[] usedRectArray = usedRect.toArray(new IntRectangle[0]);
+    IntRectangle[] usedRectArray = usedRect.toArray(IntRectangle[]::new);
     TreeSet<IntRectangle> starts = buildStartsForNarrowIth(i, r, usedRectArray);
     List<IntRectangle> consideredRect = new ArrayList<>();
     for (IntRectangle ir : starts) {

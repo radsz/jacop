@@ -478,7 +478,7 @@ public abstract class ExampleFd {
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
-            vars.toArray(new IntVar[0]),
+            vars.toArray(IntVar[]::new),
             new MaxRegret<>(),
             new SmallestDomain<>(),
             new IndomainMiddle<>());

@@ -145,10 +145,10 @@ public class Diff2 extends Diff {
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[0]),
-        o2.toArray(new IntVar[0]),
-        l1.toArray(new IntVar[0]),
-        l2.toArray(new IntVar[0]));
+        o1.toArray(IntVar[]::new),
+        o2.toArray(IntVar[]::new),
+        l1.toArray(IntVar[]::new),
+        l2.toArray(IntVar[]::new));
   }
 
   /**
@@ -291,7 +291,7 @@ public class Diff2 extends Diff {
       }
     }
 
-    return list.toArray(new Rectangle[0]);
+    return list.toArray(Rectangle[]::new);
   }
 
   boolean notOverlapping(int i, int j, int[] exclusiveList) {

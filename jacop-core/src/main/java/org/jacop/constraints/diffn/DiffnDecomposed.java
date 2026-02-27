@@ -182,10 +182,10 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       List<? extends IntVar> ly) {
 
     this(
-        x.toArray(new IntVar[0]),
-        y.toArray(new IntVar[0]),
-        lx.toArray(new IntVar[0]),
-        ly.toArray(new IntVar[0]));
+        x.toArray(IntVar[]::new),
+        y.toArray(IntVar[]::new),
+        lx.toArray(IntVar[]::new),
+        ly.toArray(IntVar[]::new));
   }
 
   /**

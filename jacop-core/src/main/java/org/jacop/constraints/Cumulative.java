@@ -208,9 +208,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[0]),
-        durations.toArray(new IntVar[0]),
-        resources.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
         limit,
         true,
         true);
@@ -253,9 +253,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       boolean profile) {
 
     this(
-        starts.toArray(new IntVar[0]),
-        durations.toArray(new IntVar[0]),
-        resources.toArray(new IntVar[0]),
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
         limit,
         edgeFinding,
         profile);

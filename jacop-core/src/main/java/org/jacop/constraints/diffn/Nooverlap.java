@@ -228,10 +228,10 @@ public class Nooverlap extends Constraint {
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[0]),
-        o2.toArray(new IntVar[0]),
-        l1.toArray(new IntVar[0]),
-        l2.toArray(new IntVar[0]));
+        o1.toArray(IntVar[]::new),
+        o2.toArray(IntVar[]::new),
+        l1.toArray(IntVar[]::new),
+        l2.toArray(IntVar[]::new));
   }
 
   /**
