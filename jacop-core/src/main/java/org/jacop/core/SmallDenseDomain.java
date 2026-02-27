@@ -244,7 +244,7 @@ public class SmallDenseDomain extends IntDomain {
     if (newSize == 1) {
       singleton = true;
     }
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (singleton) {
@@ -271,7 +271,7 @@ public class SmallDenseDomain extends IntDomain {
     if (newSize == 1) {
       singleton = true;
     }
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (singleton) {
@@ -298,10 +298,10 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException("Assertion failed");
     }
     installResultDomain(result, storeLevel, v);
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     if (result.singleton()) {
@@ -327,10 +327,10 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException("Assertion failed");
     }
     installResultDomain(result, storeLevel, v);
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
     if (result.singleton()) {
@@ -428,7 +428,7 @@ public class SmallDenseDomain extends IntDomain {
     if (ASSERTS_ENABLED && minBound < previousMin) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -474,10 +474,10 @@ public class SmallDenseDomain extends IntDomain {
 
     installResultDomain(result, storeLevel, v);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -680,7 +680,7 @@ public class SmallDenseDomain extends IntDomain {
       return true;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -707,7 +707,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int getElementAt(int index) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -802,7 +802,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inValue(int storeLevel, IntVar v, int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -824,7 +824,7 @@ public class SmallDenseDomain extends IntDomain {
       singleton = true;
       size = 1;
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -876,7 +876,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && min > max) {
@@ -911,7 +911,7 @@ public class SmallDenseDomain extends IntDomain {
       if (this.max > max) {
         this.max = previousValue(max + 1);
       }
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       v.domainHasChanged(singleton ? GROUND : BOUND);
@@ -952,7 +952,7 @@ public class SmallDenseDomain extends IntDomain {
    */
   public void in(int storeLevel, Var v, long domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -991,7 +991,7 @@ public class SmallDenseDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -1089,7 +1089,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inComplement(int storeLevel, Var v, int complement) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1131,7 +1131,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inComplement(int storeLevel, Var v, int minComplement, int maxComplement) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1304,7 +1304,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = new SmallDenseDomain(minBound, inBits & bits);
 
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
@@ -1317,7 +1317,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = intersect(input, 0);
 
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
@@ -1330,7 +1330,7 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = intersect(input, 0);
 
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
@@ -1364,7 +1364,7 @@ public class SmallDenseDomain extends IntDomain {
 
       long inBits = alignBits(input);
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -1402,7 +1402,7 @@ public class SmallDenseDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -1421,7 +1421,7 @@ public class SmallDenseDomain extends IntDomain {
                 "Intersection not properly computed." + this + "i" + input + "r" + result));
       }
 
-      if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
@@ -1476,7 +1476,7 @@ public class SmallDenseDomain extends IntDomain {
       return GROUND;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1492,7 +1492,7 @@ public class SmallDenseDomain extends IntDomain {
     this.size = getSize(bits);
     this.singleton = this.size == 1;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1610,7 +1610,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int nextValue(int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1699,7 +1699,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int previousValue(int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1785,7 +1785,7 @@ public class SmallDenseDomain extends IntDomain {
           "The resulting domain can not be handled properly by " + this.getClass());
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1847,7 +1847,7 @@ public class SmallDenseDomain extends IntDomain {
 
     // It is used by Lex in set package.
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1857,7 +1857,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public boolean singleton() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1867,14 +1867,14 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain subtract(int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
     // Used in set package, BoundSetDomain.
     IntDomain result = subtract(value, value);
 
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -1923,7 +1923,7 @@ public class SmallDenseDomain extends IntDomain {
               "Subtraction not properly implemented " + this + "d " + domain + "res" + result));
     }
 
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -1933,7 +1933,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain subtract(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1950,7 +1950,7 @@ public class SmallDenseDomain extends IntDomain {
       return IntervalDomain.EMPTY;
     } else {
       SmallDenseDomain returnObj = new SmallDenseDomain(this.minBound, result);
-      if (ASSERTS_ENABLED && !(returnObj.checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && returnObj.checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(returnObj.checkInvariants()));
       }
 
@@ -1961,7 +1961,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void subtractAdapt(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2006,7 +2006,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void subtractAdapt(int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2035,7 +2035,7 @@ public class SmallDenseDomain extends IntDomain {
       max = previousValue(value);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -2080,7 +2080,7 @@ public class SmallDenseDomain extends IntDomain {
           String.valueOf("Union not properly implemented " + this + "d" + domain + "res" + result));
     }
 
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -2102,7 +2102,7 @@ public class SmallDenseDomain extends IntDomain {
 
     IntDomain result = union(value, value);
 
-    if (ASSERTS_ENABLED && !(result.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
@@ -2118,7 +2118,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void unionAdapt(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2132,7 +2132,7 @@ public class SmallDenseDomain extends IntDomain {
       this.size = max - min + 1;
       this.singleton = this.size == 1;
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -2155,7 +2155,7 @@ public class SmallDenseDomain extends IntDomain {
     this.size = getSize(result);
     this.singleton = this.size == 1;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -2199,7 +2199,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public SmallDenseDomain copy() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2252,7 +2252,7 @@ public class SmallDenseDomain extends IntDomain {
    */
   public SmallDenseDomain cloneLight() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
