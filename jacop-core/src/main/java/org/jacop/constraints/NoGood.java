@@ -96,7 +96,7 @@ public class NoGood extends Constraint {
     checkInputForNullness(
         new String[] {"listOfVars", "listOfValues"}, new Object[] {listOfVars, listOfValues});
     commonInitialization(
-        listOfVars.toArray(new IntVar[0]), listOfValues.stream().mapToInt(i -> i).toArray());
+        listOfVars.toArray(IntVar[]::new), listOfValues.stream().mapToInt(i -> i).toArray());
   }
 
   private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {

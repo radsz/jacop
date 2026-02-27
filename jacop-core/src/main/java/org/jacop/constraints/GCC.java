@@ -204,7 +204,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
 
-    this(x.toArray(new IntVar[0]), counters.toArray(new IntVar[0]));
+    this(x.toArray(IntVar[]::new), counters.toArray(IntVar[]::new));
   }
 
   private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {

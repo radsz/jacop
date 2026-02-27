@@ -94,7 +94,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
    * @param sum the sum variable.
    */
   public Sum(List<? extends IntVar> list, IntVar sum) {
-    this(list.toArray(new IntVar[0]), sum);
+    this(list.toArray(IntVar[]::new), sum);
   }
 
   @Override

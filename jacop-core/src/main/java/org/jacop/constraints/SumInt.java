@@ -99,7 +99,7 @@ public class SumInt extends AbstractSum {
    * @param sum variable containing the sum of weighted variables.
    */
   public SumInt(List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(variables.toArray(new IntVar[0]), rel, sum);
+    this(variables.toArray(IntVar[]::new), rel, sum);
   }
 
   @Override

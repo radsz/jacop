@@ -85,7 +85,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
 
     Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
     this.l = varSet.size();
-    this.list = varSet.toArray(new IntVar[0]);
+    this.list = varSet.toArray(IntVar[]::new);
     this.result = result;
 
     if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
@@ -109,7 +109,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
    * @param result result variable.
    */
   protected AbstractBoolVector(AtomicInteger idNum, List<? extends IntVar> list, IntVar result) {
-    this(idNum, list.toArray(new IntVar[0]), result);
+    this(idNum, list.toArray(IntVar[]::new), result);
   }
 
   /**

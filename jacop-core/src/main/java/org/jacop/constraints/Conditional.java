@@ -107,7 +107,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
    * @param c constraints for selection.
    */
   public Conditional(List<? extends IntVar> b, List<? extends PrimitiveConstraint> c) {
-    this(b.toArray(new IntVar[0]), c.toArray(new PrimitiveConstraint[0]));
+    this(b.toArray(IntVar[]::new), c.toArray(PrimitiveConstraint[]::new));
   }
 
   @Override

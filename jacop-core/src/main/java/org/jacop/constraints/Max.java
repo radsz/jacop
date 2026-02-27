@@ -71,7 +71,7 @@ public class Max extends AbstractMinMax {
    * @param variables the array of variables for which the maximum value is imposed.
    */
   public Max(List<? extends IntVar> variables, IntVar max) {
-    this(variables.toArray(new IntVar[0]), max);
+    this(variables.toArray(IntVar[]::new), max);
   }
 
   @Override

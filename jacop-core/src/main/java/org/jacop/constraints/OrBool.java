@@ -110,6 +110,6 @@ public class OrBool extends AbstractBool {
       }
     }
 
-    return result.toArray(new IntVar[0]);
+    return result.toArray(IntVar[]::new);
   }
 }

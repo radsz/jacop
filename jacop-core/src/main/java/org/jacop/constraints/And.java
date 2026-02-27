@@ -63,7 +63,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
    * @param listOfC arraylist of constraints
    */
   public And(List<PrimitiveConstraint> listOfC) {
-    this(listOfC.toArray(new PrimitiveConstraint[0]));
+    this(listOfC.toArray(PrimitiveConstraint[]::new));
   }
 
   /**

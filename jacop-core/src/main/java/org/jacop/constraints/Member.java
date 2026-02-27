@@ -95,7 +95,7 @@ public class Member extends PrimitiveConstraint {
    * @param e variable to be checkd on the list.
    */
   public Member(List<? extends IntVar> list, IntVar e) {
-    this(list.toArray(new IntVar[0]), e);
+    this(list.toArray(IntVar[]::new), e);
   }
 
   @Override

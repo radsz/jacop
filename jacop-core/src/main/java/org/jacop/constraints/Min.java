@@ -69,7 +69,7 @@ public class Min extends AbstractMinMax {
    * @param list the array of variables for which the minimal value is imposed.
    */
   public Min(List<? extends IntVar> list, IntVar min) {
-    this(list.toArray(new IntVar[0]), min);
+    this(list.toArray(IntVar[]::new), min);
   }
 
   @Override

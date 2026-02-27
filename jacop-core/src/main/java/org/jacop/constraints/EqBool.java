@@ -88,7 +88,7 @@ public class EqBool extends PrimitiveConstraint {
    * @param result variable which is equal 0 if variables from list contain different values.
    */
   public EqBool(List<? extends IntVar> list, IntVar result) {
-    this(list.toArray(new IntVar[0]), result);
+    this(list.toArray(IntVar[]::new), result);
   }
 
   /**

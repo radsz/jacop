@@ -88,7 +88,7 @@ public class SeqPrecedeChain extends Constraint {
    * @param x list of arguments x's.
    */
   public SeqPrecedeChain(List<? extends IntVar> x) {
-    this(x.toArray(new IntVar[0]));
+    this(x.toArray(IntVar[]::new));
   }
 
   @Override

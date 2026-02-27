@@ -143,7 +143,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    * @param n how many variables from list x are equal to at least one variable from list y.
    */
   public AmongVar(List<? extends IntVar> listOfX, List<? extends IntVar> listOfY, IntVar n) {
-    this(listOfX.toArray(new IntVar[0]), listOfY.toArray(new IntVar[0]), n);
+    this(listOfX.toArray(IntVar[]::new), listOfY.toArray(IntVar[]::new), n);
   }
 
   @Override

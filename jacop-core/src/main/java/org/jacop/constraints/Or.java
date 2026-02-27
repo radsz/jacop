@@ -81,7 +81,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
    * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
    */
   public Or(List<PrimitiveConstraint> listOfC) {
-    this(listOfC.toArray(new PrimitiveConstraint[0]));
+    this(listOfC.toArray(PrimitiveConstraint[]::new));
   }
 
   /**

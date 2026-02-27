@@ -94,7 +94,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
    * @param tuples the conflict (forbidden) tuples for that constraint.
    */
   public ExtensionalConflictVa(List<? extends IntVar> variables, int[][] tuples) {
-    this(variables.toArray(new IntVar[0]), tuples);
+    this(variables.toArray(IntVar[]::new), tuples);
   }
 
   /**

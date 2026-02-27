@@ -169,7 +169,7 @@ public class SumWeight extends Constraint
    * @param sum variable containing the sum of weighted variables.
    */
   public SumWeight(List<? extends IntVar> variables, List<Integer> weights, IntVar sum) {
-    this(variables.toArray(new IntVar[0]), weights.stream().mapToInt(i -> i).toArray(), sum);
+    this(variables.toArray(IntVar[]::new), weights.stream().mapToInt(i -> i).toArray(), sum);
   }
 
   @Override

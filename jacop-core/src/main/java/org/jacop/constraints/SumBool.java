@@ -92,7 +92,7 @@ public class SumBool extends AbstractSum {
    * @param sum variable containing the sum of the boolean variables.
    */
   public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(variables.toArray(new IntVar[0]), rel, sum);
+    this(variables.toArray(IntVar[]::new), rel, sum);
   }
 
   @Override
@@ -267,7 +267,7 @@ public class SumBool extends AbstractSum {
       }
     }
 
-    return ls.toArray(new IntVar[0]);
+    return ls.toArray(IntVar[]::new);
   }
 
   @Override
