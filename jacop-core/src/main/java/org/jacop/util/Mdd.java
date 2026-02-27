@@ -539,7 +539,7 @@ public class Mdd {
       }
     }
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (DEBUG_ALL) {
         log.debug("left {} right {} position {}", left, right, position);

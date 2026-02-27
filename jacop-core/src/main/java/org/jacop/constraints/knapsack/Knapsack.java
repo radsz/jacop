@@ -811,7 +811,7 @@ public class Knapsack extends Constraint
       return;
     }
 
-    final TreeLeaf leafForV = variableLeafMapping.get((IntVar) v);
+    final TreeLeaf leafForV = variableLeafMapping.get(v);
     final boolean maxBoundHasChanged = leafForV.hasMaxChanged();
     final boolean minBoundHasChanged = leafForV.hasMinChanged();
 

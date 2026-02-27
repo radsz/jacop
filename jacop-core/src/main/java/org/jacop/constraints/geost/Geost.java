@@ -123,19 +123,19 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   static final boolean DEBUG_ALL = false;
 
-  static final boolean DEBUG_MAIN = DEBUG_ALL || false;
+  static final boolean DEBUG_MAIN = DEBUG_ALL;
 
-  static final boolean DEBUG_SUBSETS = DEBUG_ALL || false;
+  static final boolean DEBUG_SUBSETS = DEBUG_ALL;
 
-  static final boolean DEBUG_DOUBLE_LAYER = DEBUG_ALL || false;
+  static final boolean DEBUG_DOUBLE_LAYER = DEBUG_ALL;
 
-  static final boolean DEBUG_SHAPE_SKIP = DEBUG_ALL || false;
+  static final boolean DEBUG_SHAPE_SKIP = DEBUG_ALL;
 
-  static final boolean DEBUG_VAR_SKIP = DEBUG_ALL || false;
+  static final boolean DEBUG_VAR_SKIP = DEBUG_ALL;
 
-  static final boolean DEBUG_OBJECT_GROUNDING = DEBUG_ALL || false;
+  static final boolean DEBUG_OBJECT_GROUNDING = DEBUG_ALL;
 
-  static final boolean DEBUG_BACKTRACK = DEBUG_ALL || false;
+  static final boolean DEBUG_BACKTRACK = DEBUG_ALL;
 
   static final boolean GATHER_STATS = true;
 

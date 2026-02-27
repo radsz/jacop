@@ -483,7 +483,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       log.info("{}", statistics());
     }
     restoreStoreLevelIfRaised(raisedLevel);
-    return masterSearch == null ? true : result;
+    return masterSearch == null || result;
   }
 
   private boolean labelingWithNoSolutions(boolean raisedLevel) {

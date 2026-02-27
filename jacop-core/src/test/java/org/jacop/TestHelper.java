@@ -82,7 +82,7 @@ public class TestHelper {
     search.getSolutionListener().recordSolutions(true);
     search.setAssignSolution(true);
 
-    boolean result = search.labeling(store, select);
+    search.labeling(store, select);
 
     return search.getSolutionListener().solutionsNo();
   }
@@ -101,7 +101,7 @@ public class TestHelper {
     search.getSolutionListener().recordSolutions(false);
     search.setAssignSolution(true);
 
-    boolean result = search.labeling(store, select);
+    search.labeling(store, select);
 
     return search.getSolutionListener().solutionsNo();
   }

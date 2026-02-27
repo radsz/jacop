@@ -247,7 +247,7 @@ public class TupleUtils {
 
     int position = (left + right) >> 1;
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (smallerEqualTuple(tuples[position], tuple)) {
         left = position;
@@ -349,7 +349,7 @@ public class TupleUtils {
 
     int position = (left + right) >> 1;
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
       if (values[position] > value) {
         right = position;
       } else {

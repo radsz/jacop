@@ -29,6 +29,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.jacop.core.IntVar;
@@ -76,7 +77,7 @@ public class GeostObject {
    * It stores all finite domain variables in connection to this object. E.g. shape variables are
    * one of the objects in the focus of the constraint.
    */
-  @Getter public final ArrayList<Var> variables;
+  @Getter public final List<Var> variables;
 
   /** It specifies the time constraint to execute to ensure that start + duration = end. */
   final TimeBoundConstraint timeConstraint;

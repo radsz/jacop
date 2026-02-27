@@ -244,10 +244,10 @@ public class Cumulative extends CumulativeBasic {
 
   private void processTasksForPrec(ThetaLambdaTree tree, TaskView[] t, int[] prec, long capacity) {
     for (TaskView aT : t) {
-      if (tree.rootNode().env > capacity * (long) aT.lct()) {
+      if (tree.rootNode().env > capacity * aT.lct()) {
         throw Store.failException;
       }
-      while (tree.rootNode().envLambda > capacity * (long) aT.lct()) {
+      while (tree.rootNode().envLambda > capacity * aT.lct()) {
         int i = tree.rootNode().responsibleEnvLambda;
         prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], aT.lct());
         tree.removeFromLambda(i);
@@ -310,7 +310,7 @@ public class Cumulative extends CumulativeBasic {
         long envlc = tree.calcEnvlc(t[l].lct(), ci);
         int diff = Integer.MIN_VALUE;
         if (envlc != Long.MIN_VALUE) {
-          long tmp = envlc - (cap - (long) ci) * (long) t[l].lct();
+          long tmp = envlc - (cap - ci) * t[l].lct();
           diff = long2int(IntDomain.divRoundUp(tmp, ci));
         }
         upd = Math.max(upd, diff);
@@ -419,8 +419,7 @@ public class Cumulative extends CumulativeBasic {
       if (t.lct() <= u.lct()) {
         energy += t.energy();
         if (rr == Integer.MIN_VALUE
-            || (float) energy / (float) (u.lct() - t.est())
-                > (float) maxEnergy / ((float) u.lct() - (float) rr)) {
+            || (double) energy / (u.lct() - t.est()) > (double) maxEnergy / (u.lct() - rr)) {
           maxEnergy = energy;
           rr = t.est();
         }

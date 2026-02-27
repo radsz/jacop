@@ -185,7 +185,7 @@ class ThetaLambdaTree extends Tree {
     ThetaLambdaNode node = tree[i];
     node.e = node.task.energy();
     node.env = node.task.env(c.max());
-    node.envC = ((long) c.max() - ci) * (long) node.task.est() + node.task.energy();
+    node.envC = (c.max() - ci) * node.task.est() + node.task.energy();
 
     updateThetaTree(parent(i));
   }
@@ -223,7 +223,7 @@ class ThetaLambdaTree extends Tree {
 
     int v = root();
     long e = 0L;
-    long maxEnvC = ((long) c.max() - cap) * bound;
+    long maxEnvC = (c.max() - cap) * bound;
 
     while (!isLeaf(v)) {
       if (plus(tree[right(v)].envC, e) > maxEnvC) {

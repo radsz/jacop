@@ -68,7 +68,7 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
    */
   public int compare(double left, T v) {
 
-    double right = ((double) v.weight) / v.getSizeFloat();
+    double right = v.weight / v.getSizeFloat();
 
     return Double.compare(left, right);
   }
@@ -83,9 +83,9 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
    */
   public int compare(T leftVar, T rightVar) {
 
-    double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
+    double left = leftVar.weight / leftVar.getSizeFloat();
 
-    double right = ((double) rightVar.weight) / rightVar.getSizeFloat();
+    double right = rightVar.weight / rightVar.getSizeFloat();
 
     return Double.compare(left, right);
   }

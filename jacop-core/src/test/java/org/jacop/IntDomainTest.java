@@ -96,8 +96,8 @@ class IntDomainTest {
     setupPrepareMethod(prepareMethodName);
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertThat(testedDomain.complement().toString())
-        .isEqualTo("{" + IntDomain.MIN_INT + "..0, 4, 8..11, 19.." + IntDomain.MAX_INT + "}");
+    assertThat(testedDomain.complement())
+        .hasToString("{" + IntDomain.MIN_INT + "..0, 4, 8..11, 19.." + IntDomain.MAX_INT + "}");
   }
 
   @ParameterizedTest
@@ -120,27 +120,27 @@ class IntDomainTest {
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 2}});
-    assertThat(testedDomain.intersect(2, 3).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.intersect(2, 3)).hasToString(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertThat(testedDomain.intersect(0, 25).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.intersect(0, 25)).hasToString(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertThat(testedDomain.intersect(1, 2).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.intersect(1, 2)).hasToString(goldenResultDomain.toString());
 
     testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isZero();
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 3, 5, 7, 12, 14}});
-    assertThat(testedDomain.intersect(2, 14).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.intersect(2, 14)).hasToString(goldenResultDomain.toString());
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {15, 15}});
-    assertThat(testedDomain.intersect(15, 15).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.intersect(15, 15)).hasToString(goldenResultDomain.toString());
   }
 
   @ParameterizedTest
@@ -150,7 +150,7 @@ class IntDomainTest {
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isZero();
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -168,7 +168,7 @@ class IntDomainTest {
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(20, 28))))
-        .isEqualTo(0);
+        .isZero();
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -197,24 +197,24 @@ class IntDomainTest {
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0)))).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0)))).isZero();
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(2, 2))))
-        .isEqualTo(0);
+        .isZero();
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertThat(testedDomain.intersectAdapt(2, 2)).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(2, 2)).isZero();
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertThat(testedDomain.intersectAdapt(0, 0)).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(0, 0)).isZero();
 
     testedDomain =
         (IntDomain)
@@ -232,7 +232,7 @@ class IntDomainTest {
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertThat(testedDomain.intersectAdapt(28, 45)).isEqualTo(0);
+    assertThat(testedDomain.intersectAdapt(28, 45)).isZero();
 
     testedDomain =
         (IntDomain)
@@ -274,19 +274,19 @@ class IntDomainTest {
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertThat(testedDomain.subtract(1, 3).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.subtract(1, 3)).hasToString(goldenResultDomain.toString());
 
     goldenResultDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {1, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertThat(testedDomain.subtract(0, 0).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.subtract(0, 0)).hasToString(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0}});
-    assertThat(testedDomain.subtract(1, 26).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.subtract(1, 26)).hasToString(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 6}});
-    assertThat(testedDomain.subtract(8, 26).toString()).isEqualTo(goldenResultDomain.toString());
+    assertThat(testedDomain.subtract(8, 26)).hasToString(goldenResultDomain.toString());
   }
 
   @ParameterizedTest

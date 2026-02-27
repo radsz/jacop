@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -80,7 +81,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
    * The frame is the area that is ensured to be covered by the obstacle, given the domain of its
    * origin variables.
    */
-  public LinkedList<Dbox> frame;
+  public List<Dbox> frame;
 
   int timeSizeOrigin;
   int timeSizeMax;
@@ -483,7 +484,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
         timeSizeOrigin = obstacle.start.max() - o.duration.min() + 1;
         // smallest possible end is when placed after the obstacle (feasible)
         if (ASSERTS_ENABLED
-            && !(obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min())) {
+            && obstacle.start.min() + obstacle.duration.min() > obstacle.end.min()) {
           throw new IllegalStateException(
               String.valueOf(
                   "time constraint not valid: "
@@ -504,7 +505,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
         timeSizeOrigin = obstacle.start.max() + 1;
         if (ASSERTS_ENABLED
-            && !(obstacle.start.min() + obstacle.duration.min() <= obstacle.end.min())) {
+            && obstacle.start.min() + obstacle.duration.min() > obstacle.end.min()) {
           throw new IllegalStateException("Assertion failed");
         }
         timeSizeMax = obstacle.end.min() + o.duration.min();

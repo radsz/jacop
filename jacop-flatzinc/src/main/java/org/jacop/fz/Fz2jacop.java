@@ -142,7 +142,7 @@ public class Fz2jacop {
   }
 
   private void printStatisticsTime(Parser parser) {
-    long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
+    long execTime = (parser.solver.initTime + parser.solver.searchTime) / 1_000_000L; // in ms
     final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
     final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
     final long sec =
@@ -154,7 +154,7 @@ public class Fz2jacop {
                 - TimeUnit.HOURS.toMillis(hr)
                 - TimeUnit.MINUTES.toMillis(min)
                 - TimeUnit.SECONDS.toMillis(sec));
-    System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double) execTime / 1000.0);
+    System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", execTime / 1000.0);
     if (hr == 0) {
       if (min == 0) {
         IO.println();

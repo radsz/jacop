@@ -241,7 +241,7 @@ class SingleConstraintTest extends TestHelper {
 
     Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-    assertThat(dubletons.size()).isEqualTo(1);
+    assertThat(dubletons).hasSize(1);
   }
 
   @Test
@@ -257,7 +257,7 @@ class SingleConstraintTest extends TestHelper {
 
     Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-    assertThat(dubletons.size()).isEqualTo(0);
+    assertThat(dubletons).isEmpty();
   }
 
   @Test
@@ -329,7 +329,6 @@ class SingleConstraintTest extends TestHelper {
   void testInvalidAmong3() {
 
     Store store = new Store();
-    IntVar min = new IntVar(store, "x", 0, 4);
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = null;
     assertThatThrownBy(() -> new Among(list, new IntervalDomain(1, 2), null))

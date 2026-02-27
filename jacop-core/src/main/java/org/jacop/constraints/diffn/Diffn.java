@@ -433,7 +433,7 @@ public class Diffn extends Nooverlap {
     if (r.exists()) {
       if (startExcluded[0] == Integer.MAX_VALUE) {
         if (limit - profileValue < r.getLength(oDim).min() || blocking) {
-          startExcluded[0] = (int) e.date() - r.getLength(dim).min() + 1;
+          startExcluded[0] = e.date() - r.getLength(dim).min() + 1;
         }
       } else if (limit - profileValue >= r.getLength(oDim).min() && !blocking) {
         if (startExcluded[0] <= r.lst(dim)) {
@@ -442,10 +442,10 @@ public class Diffn extends Nooverlap {
                 ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
                 dim,
                 r.getOrigin(dim),
-                new IntervalDomain(startExcluded[0], (int) e.date() - 1));
+                new IntervalDomain(startExcluded[0], e.date() - 1));
           }
           IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, startExcluded[0] - 1);
-          update.unionAdapt((int) e.date(), IntDomain.MAX_INT);
+          update.unionAdapt(e.date(), IntDomain.MAX_INT);
           r.getOrigin(dim).domain.in(store.level, r.getOrigin(dim), update);
           if (DEBUG_NARR) {
             log.debug(DEBUG_ARROW, r.getOrigin(dim));
@@ -456,9 +456,9 @@ public class Diffn extends Nooverlap {
     }
 
     if (lastBarier[0] == Integer.MAX_VALUE
-        && (int) e.date() >= r.lst(dim)
+        && e.date() >= r.lst(dim)
         && (limit - profileValue < r.getLength(oDim).min() || blocking)) {
-      lastBarier[0] = (int) e.date();
+      lastBarier[0] = e.date();
     }
 
     if (r.lst(dim) <= e.date()
@@ -490,7 +490,7 @@ public class Diffn extends Nooverlap {
                 rr.getOrigin(oDim).min(),
                 rr.getOrigin(oDim).max() + rr.getLength(oDim).min(),
                 rr.getLength(oDim).min()))) {
-      startExcluded[0] = (int) e.date();
+      startExcluded[0] = e.date();
     }
     if (rr.lst(dim) <= e.date()
         && e.date() < rr.ect(dim)
@@ -521,7 +521,7 @@ public class Diffn extends Nooverlap {
         log.debug(
             ">>> Diffn Profile 2. Narrowed {} \\ {}",
             rr.getOrigin(dim),
-            new IntervalDomain(startExcluded[0], (int) e.date()));
+            new IntervalDomain(startExcluded[0], e.date()));
       }
       rr.getOrigin(dim).domain.inMax(store.level, rr.getOrigin(dim), startExcluded[0] - 1);
       if (DEBUG_NARR) {

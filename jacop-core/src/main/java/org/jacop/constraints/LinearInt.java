@@ -399,8 +399,8 @@ public class LinearInt extends PrimitiveConstraint {
     // positive weights
     for (; i < pos; i++) {
       IntDomain xd = x[i].dom();
-      min = (long) xd.min() * a[i];
-      max = (long) xd.max() * a[i];
+      min = xd.min() * a[i];
+      max = xd.max() * a[i];
       f += min;
       e += max;
       variability[i] = max - min;

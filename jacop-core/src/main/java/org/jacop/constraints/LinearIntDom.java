@@ -381,7 +381,7 @@ public class LinearIntDom extends LinearInt {
       int index,
       int newIndex,
       boolean useOuterLoop) {
-    long elementValue = (long) element * w;
+    long elementValue = element * w;
     // Loop control differs based on positive/negative phase
     if (positive) {
       if (elementValue < lb) {

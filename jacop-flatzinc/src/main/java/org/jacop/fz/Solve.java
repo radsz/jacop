@@ -1372,7 +1372,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   double getSearchTime_ms() {
     searchTime = timer.getCpuTime() - startCpu;
-    return (double) searchTime / (long) 1e+6;
+    return searchTime / 1_000_000.0;
   }
 
   /**
@@ -1381,7 +1381,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return the initialization time in milliseconds
    */
   double getInitTime_ms() {
-    return (double) initTime / (long) 1e+6;
+    return initTime / 1_000_000.0;
   }
 
   /**

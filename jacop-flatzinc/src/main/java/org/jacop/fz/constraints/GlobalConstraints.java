@@ -418,11 +418,11 @@ class GlobalConstraints implements ParserTreeConstants {
     int n = 0;
     for (IntVar intVar : v) {
       if (!intVar.singleton()) {
-        q += (float) intVar.getSize() / (float) (intVar.max() - intVar.min() + 1);
+        q += intVar.getSize() / (float) (intVar.max() - intVar.min() + 1);
         n++;
       }
     }
-    return n > 0 && (q / (float) n) <= 0.5;
+    return n > 0 && q / n <= 0.5;
   }
 
   void gen_jacop_alldiff(SimpleNode node) {

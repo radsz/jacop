@@ -270,7 +270,7 @@ public class SumInt extends AbstractSum {
       min = x[i].min();
       max = min + I[i];
 
-      if (pruneNe(x[i], (long) sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
+      if (pruneNe(x[i], sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
         long newMin = x[i].min();
         long newMax = x[i].max();
         sumXmin += newMin - min;
@@ -281,7 +281,7 @@ public class SumInt extends AbstractSum {
   }
 
   private boolean pruneMin(IntVar x, long min) {
-    if (min > (long) x.min()) {
+    if (min > x.min()) {
       x.domain.inMin(store.level, x, long2int(min));
       return true;
     } else {
@@ -290,7 +290,7 @@ public class SumInt extends AbstractSum {
   }
 
   private boolean pruneMax(IntVar x, long max) {
-    if (max < (long) x.max()) {
+    if (max < x.max()) {
       x.domain.inMax(store.level, x, long2int(max));
       return true;
     } else {
@@ -301,7 +301,7 @@ public class SumInt extends AbstractSum {
   private boolean pruneNe(IntVar x, long min, long max) {
 
     if (min == max) {
-      boolean boundsChanged = min == (long) x.min() || max == (long) x.max();
+      boolean boundsChanged = min == x.min() || max == x.max();
 
       x.domain.inComplement(store.level, x, long2int(min));
 
@@ -339,8 +339,8 @@ public class SumInt extends AbstractSum {
     long sMin = bounds[0];
     long sMax = bounds[1];
 
-    return sMax <= (long) sum.min()
-        && sMin >= (long) sum.max(); // sMin == sMax && sMin == sum.min() && sMin == sum.max();
+    return sMax <= sum.min()
+        && sMin >= sum.max(); // sMin == sMax && sMin == sum.min() && sMin == sum.max();
   }
 
   /**
@@ -354,7 +354,7 @@ public class SumInt extends AbstractSum {
     long sMin = bounds[0];
     long sMax = bounds[1];
 
-    return sMin > (long) sum.max() || sMax < (long) sum.min();
+    return sMin > sum.max() || sMax < sum.min();
   }
 
   /**
@@ -383,7 +383,7 @@ public class SumInt extends AbstractSum {
 
     long sMax = computeSumBound(true);
 
-    return sMax <= (long) sum.min() - b;
+    return sMax <= sum.min() - b;
   }
 
   /**
@@ -396,7 +396,7 @@ public class SumInt extends AbstractSum {
 
     long sMin = computeSumBound(false);
 
-    return sMin >= (long) sum.max() + b;
+    return sMin >= sum.max() + b;
   }
 
   @Override

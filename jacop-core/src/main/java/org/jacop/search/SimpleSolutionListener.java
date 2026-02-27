@@ -424,7 +424,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     int middle = left;
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (DEBUG) {
         log.debug("left {} right {} middle {}", left, right, middle);
