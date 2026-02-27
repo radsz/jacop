@@ -534,7 +534,7 @@ public class Fsm {
       int indexOfValue = result.findPosition(nextElement, result.views[level].indexToValue);
 
       if (positions[level * stateNumber + fromState] == 0
-          && !(level == 0 && fromState == initState.id)) {
+          && (level != 0 || fromState != initState.id)) {
         positions[level * stateNumber + fromState] = result.freePosition;
         result.freePosition += vars[level].getSize();
         result.freePosition += result.domainLimits[level];

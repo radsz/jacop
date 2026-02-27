@@ -120,7 +120,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
     if (maxSizeOfIntersection == -1) {
       maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
       if (ASSERTS_ENABLED
-          && !(maxSizeOfIntersection == b.domain.lub().intersect(a.domain.lub()).getSize())) {
+          && maxSizeOfIntersection != b.domain.lub().intersect(a.domain.lub()).getSize()) {
         throw new IllegalStateException(
             String.valueOf("sizeOfIntersection not properly implemented"));
       }
@@ -145,7 +145,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
     maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
     if (ASSERTS_ENABLED
-        && !(maxSizeOfIntersection == a.domain.lub().intersect(b.domain.lub()).getSize())) {
+        && maxSizeOfIntersection != a.domain.lub().intersect(b.domain.lub()).getSize()) {
       throw new IllegalStateException(
           String.valueOf("sizeOfIntersection not properly implemented"));
     }

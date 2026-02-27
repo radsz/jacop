@@ -274,7 +274,7 @@ public class CreditCalculator<T extends Var>
     }
 
     if (currentBacktracks < 0
-        && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
+        && (currentLevel >= creditsLeft.length || creditsRight[currentLevel] <= 0)) {
       notifyExitChildListenersLeft(v, value, false);
       currentLevel--;
       return false;
@@ -351,7 +351,7 @@ public class CreditCalculator<T extends Var>
     }
 
     if (currentBacktracks < 0
-        && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
+        && (currentLevel >= creditsLeft.length || creditsRight[currentLevel] <= 0)) {
       notifyExitChildListenersLeft(choice, false);
       currentLevel--;
       return false;

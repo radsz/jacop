@@ -288,7 +288,8 @@ public class CumulativeBasic extends Constraint {
       int min = t.est();
       int max = t.lct();
       if (t.maxNonZero()
-          && !(min > maxProfile || max < minProfile)) { // t.dur.max() > 0 && t.res.max() > 0
+          && min <= maxProfile
+          && max >= minProfile) { // t.dur.max() > 0 && t.res.max() > 0
         es[j++] = eventFactory.create(PRUNE_START, t, min, 0);
         es[j++] = eventFactory.create(PRUNE_END, t, max, 0);
       }
