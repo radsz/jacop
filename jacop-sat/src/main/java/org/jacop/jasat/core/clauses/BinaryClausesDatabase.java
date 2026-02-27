@@ -65,7 +65,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    if (ASSERTS_ENABLED && !(clause.length == 2)) {
+    if (ASSERTS_ENABLED && clause.length != 2) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -153,7 +153,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   public MapClause resolutionWith(int clauseId, MapClause clause) {
 
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-    if (ASSERTS_ENABLED && !(clauseIndex < currentIndex)) {
+    if (ASSERTS_ENABLED && clauseIndex >= currentIndex) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -223,7 +223,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
       return ClauseState.SATISFIED_CLAUSE;
     } else {
       // conflict
-      if (ASSERTS_ENABLED && !(value0 == -literal0 && value1 == -literal1)) {
+      if (ASSERTS_ENABLED && (value0 != -literal0 || value1 != -literal1)) {
         throw new IllegalStateException("Assertion failed");
       }
 

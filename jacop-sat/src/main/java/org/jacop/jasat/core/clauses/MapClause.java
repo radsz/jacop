@@ -88,7 +88,7 @@ public final class MapClause implements Iterable<Integer> {
    * @return true if the opposite literal is in the clause, false otherwise
    */
   public boolean addLiteral(int literal) {
-    if (ASSERTS_ENABLED && !(literal != 0)) {
+    if (ASSERTS_ENABLED && literal == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -166,7 +166,7 @@ public final class MapClause implements Iterable<Integer> {
    */
   public boolean containsVariable(int varIdx) {
 
-    if (ASSERTS_ENABLED && !(varIdx > 0)) {
+    if (ASSERTS_ENABLED && varIdx <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
     return literals.containsKey(varIdx);
@@ -271,7 +271,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   private int[] toIntArray(int[] array) {
-    if (ASSERTS_ENABLED && !(array.length == literals.size())) {
+    if (ASSERTS_ENABLED && array.length != literals.size()) {
       throw new IllegalStateException("Assertion failed");
     }
     int i = 0;
@@ -308,7 +308,7 @@ public final class MapClause implements Iterable<Integer> {
   /** Clear the clause, ie. removes all literals */
   public void clear() {
     literals.clear();
-    if (ASSERTS_ENABLED && !(isEmpty())) {
+    if (ASSERTS_ENABLED && !isEmpty()) {
       throw new IllegalStateException("Assertion failed");
     }
   }

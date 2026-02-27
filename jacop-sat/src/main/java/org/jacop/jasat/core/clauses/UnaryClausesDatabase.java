@@ -65,7 +65,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    if (ASSERTS_ENABLED && !(clause.length == 1)) {
+    if (ASSERTS_ENABLED && clause.length != 1) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -93,7 +93,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
       conflictClause.addLiteral(literal);
       core.triggerConflictEvent(conflictClause);
     } else {
-      if (ASSERTS_ENABLED && !(value == literal)) {
+      if (ASSERTS_ENABLED && value != literal) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -107,7 +107,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    * @param clauseId the unique ID of the clause to remove
    */
   public void removeClause(int clauseId) {
-    if (ASSERTS_ENABLED && !(clauseId < currentIndex)) {
+    if (ASSERTS_ENABLED && clauseId >= currentIndex) {
       throw new IllegalStateException("Assertion failed");
     }
     numRemoved++;
@@ -134,7 +134,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
    */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-    if (ASSERTS_ENABLED && !(clauseIndex < currentIndex)) {
+    if (ASSERTS_ENABLED && clauseIndex >= currentIndex) {
       throw new IllegalStateException("Assertion failed");
     }
 

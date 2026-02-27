@@ -72,7 +72,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
    */
   public int addClause(int[] clause, boolean isModel) {
 
-    if (ASSERTS_ENABLED && !(clause.length == 3)) {
+    if (ASSERTS_ENABLED && clause.length != 3) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -169,10 +169,10 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
    */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-    if (ASSERTS_ENABLED && !(clauseIndex < currentIndex)) {
+    if (ASSERTS_ENABLED && clauseIndex >= currentIndex) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(clause.isUnsatisfiableIn(trail))) {
+    if (ASSERTS_ENABLED && !clause.isUnsatisfiableIn(trail)) {
       throw new IllegalStateException("Assertion failed");
     }
 
