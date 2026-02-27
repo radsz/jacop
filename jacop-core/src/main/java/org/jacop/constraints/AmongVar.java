@@ -1111,25 +1111,22 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
   @Override
   public void queueVariable(int level, Var variable) {
+    if (variable instanceof IntVar intVar) {
+      if (DEBUG_ALL) {
+        log.debug(" %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ");
+        log.debug("Var {}{}", intVar, intVar.recentDomainPruning());
+      }
 
-    if (!(variable instanceof IntVar intVar)) {
-      return;
-    }
+      Integer index = yIndex.get(intVar);
+      if (index != null) {
+        variableQueueY.add(index);
+        return;
+      }
 
-    if (DEBUG_ALL) {
-      log.debug(" %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ");
-      log.debug("Var {}{}", intVar, intVar.recentDomainPruning());
-    }
-
-    Integer index = yIndex.get(intVar);
-    if (index != null) {
-      variableQueueY.add(index);
-      return;
-    }
-
-    if (intVar != this.n && intVar.singleton()) {
-      // It can be only X
-      xGrounded.update(xGrounded.value() + 1);
+      if (intVar != this.n && intVar.singleton()) {
+        // It can be only X
+        xGrounded.update(xGrounded.value() + 1);
+      }
     }
   }
 

@@ -92,18 +92,18 @@ public class QueueForward<T extends Constraint> {
 
   private boolean constraintUsesQueueVariable(T constraint, Var v) {
 
-    if (!(constraint instanceof UsesQueueVariable) || !constraint.arguments().contains(v)) {
-      return false;
+    if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
+      try {
+        // We assume that all constraint needing queueVariable declare this method, even for
+        // the ones that inherit from other constraints.
+        constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
+        return true;
+      } catch (NoSuchMethodException _) {
+        // constraint may use empty queueVariable provided by abstract class Constraint
+        return false;
+      }
     }
-    try {
-      // We assume that all constraint needing queueVariable declare this method, even for
-      // the ones that inherit from other constraints.
-      constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-      return true;
-    } catch (NoSuchMethodException _) {
-      // constraint may use empty queueVariable provided by abstract class Constraint
-      return false;
-    }
+    return false;
   }
 
   /**

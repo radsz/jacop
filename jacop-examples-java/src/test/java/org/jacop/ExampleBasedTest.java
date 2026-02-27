@@ -198,7 +198,7 @@ class ExampleBasedTest {
         log.info("Solution(s) found");
       }
 
-      assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+      assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
       assertThat(example.store.toStringOrderedVars()).isEqualTo(solutions[i / 10]);
     }
   }
@@ -230,7 +230,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -241,7 +241,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -252,7 +252,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -313,7 +313,7 @@ class ExampleBasedTest {
     exampleBasic.modelBasic();
 
     assertThat(exampleBasic.searchAllAtOnce()).isTrue();
-    assertThat(exampleBasic.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(exampleBasic.searchLabel.getSolutionListener().solutionsNo()).isOne();
 
     exampleBasic.getSearch().assignSolution();
 
@@ -331,7 +331,7 @@ class ExampleBasedTest {
 
     assertThat(example.searchAllAtOnce()).isTrue();
 
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
 
     example.getSearch().assignSolution();
 
@@ -469,7 +469,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -480,7 +480,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -501,7 +501,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -511,7 +511,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -551,7 +551,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -569,7 +569,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -579,7 +579,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
@@ -590,7 +590,7 @@ class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
+    assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isOne();
   }
 
   @Test
