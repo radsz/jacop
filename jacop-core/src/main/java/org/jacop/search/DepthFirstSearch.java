@@ -261,28 +261,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   }
 
   /**
-   * Gets cost value for logging/display purposes.
-   *
-   * @return string representation of cost
-   */
-  private String getCostValueString() {
-    CostVariableHandler costHandler =
-        SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-    if (costHandler != null) {
-      DomainOperationHandler domainHandler =
-          SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
-      if (domainHandler != null) {
-        return domainHandler.getDomainString(costVariable);
-      } else {
-        return String.valueOf(getCurrentCostValue());
-      }
-    } else if (costVariable instanceof IntVar) {
-      return String.valueOf(costValue);
-    }
-    return String.valueOf(getCurrentCostValue());
-  }
-
-  /**
    * Updates cost value from a child search result.
    *
    * @param childSearch the child search that found a solution

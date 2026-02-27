@@ -232,29 +232,6 @@ public class SmallDenseDomain extends IntDomain {
   }
 
   /**
-   * Updates domain fields and notifies variable of domain change. Used when stamp == storeLevel.
-   *
-   * @param bitsResult the new bits value
-   * @param newSize the new size
-   * @param v the variable to notify
-   */
-  private void updateDomainInPlace(long bitsResult, int newSize, Var v) {
-    bits = bitsResult;
-    size = newSize;
-    if (newSize == 1) {
-      singleton = true;
-    }
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-    if (singleton) {
-      v.domainHasChanged(GROUND);
-    } else {
-      v.domainHasChanged(BOUND);
-    }
-  }
-
-  /**
    * Updates domain fields and notifies variable of domain change with event type detection. Used
    * when stamp == storeLevel.
    *
