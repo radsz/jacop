@@ -309,7 +309,7 @@ public class IntervalDomain extends IntDomain {
           intervals[i + 1] = temp;
           size++;
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
           if (ASSERTS_ENABLED && !(contains(min))) {
@@ -330,7 +330,7 @@ public class IntervalDomain extends IntDomain {
         intervals[size] = new Interval(min, max);
         size++;
 
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
         if (ASSERTS_ENABLED && !(contains(min))) {
@@ -544,7 +544,7 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -587,7 +587,7 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -1151,7 +1151,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1165,7 +1165,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1180,7 +1180,7 @@ public class IntervalDomain extends IntDomain {
    */
   public IntDomain multiply(int mul) {
 
-    if (ASSERTS_ENABLED && !(mul != 0)) {
+    if (ASSERTS_ENABLED && mul == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1258,7 +1258,7 @@ public class IntervalDomain extends IntDomain {
       intervals = new Interval[intervalDomain.intervals.length];
       System.arraycopy(intervalDomain.intervals, 0, intervals, 0, size);
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       return;
@@ -1368,7 +1368,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -1397,7 +1397,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1559,7 +1559,7 @@ public class IntervalDomain extends IntDomain {
         i1++;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -1573,7 +1573,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntervalDomain subtract(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1665,7 +1665,7 @@ public class IntervalDomain extends IntDomain {
       result.unionAdapt(intervals[i]);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -1699,7 +1699,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntDomain union(IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1865,7 +1865,7 @@ public class IntervalDomain extends IntDomain {
       return new IntervalDomain(min, max);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -1931,7 +1931,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -1947,7 +1947,7 @@ public class IntervalDomain extends IntDomain {
       return new IntervalDomain(value, value);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2002,7 +2002,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -2080,7 +2080,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inMin(int storeLevel, Var v, int min) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2118,7 +2118,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inMax(int storeLevel, Var v, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2156,7 +2156,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2218,7 +2218,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2238,7 +2238,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      if (ASSERTS_ENABLED && !(size != 0)) {
+      if (ASSERTS_ENABLED && size == 0) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -2404,7 +2404,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      if (ASSERTS_ENABLED && !(size != 0)) {
+      if (ASSERTS_ENABLED && size == 0) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -2427,7 +2427,7 @@ public class IntervalDomain extends IntDomain {
         return;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -2449,7 +2449,7 @@ public class IntervalDomain extends IntDomain {
             String.valueOf("In function improperly implemented." + result + "d " + input));
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -2463,7 +2463,7 @@ public class IntervalDomain extends IntDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2608,7 +2608,7 @@ public class IntervalDomain extends IntDomain {
 
     int returnedEvent = computeEvent(result);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -2624,7 +2624,7 @@ public class IntervalDomain extends IntDomain {
       installResultDomain(result, storeLevel, v);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2634,7 +2634,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inValue(int storeLevel, IntVar v, int value) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2668,7 +2668,7 @@ public class IntervalDomain extends IntDomain {
       installResultDomain(result, storeLevel, v);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2732,7 +2732,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inComplement(int storeLevel, Var v, int complement) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -2750,7 +2750,7 @@ public class IntervalDomain extends IntDomain {
 
           intervals[counter] = new Interval(complement + 1, intervals[counter].max());
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
 
@@ -2777,7 +2777,7 @@ public class IntervalDomain extends IntDomain {
 
           size--;
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
 
@@ -2806,7 +2806,7 @@ public class IntervalDomain extends IntDomain {
 
         intervals[counter] = new Interval(intervals[counter].min(), complement - 1);
 
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
 
@@ -2841,7 +2841,7 @@ public class IntervalDomain extends IntDomain {
       // One interval has been split, size increased by one.
       size++;
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -2874,7 +2874,7 @@ public class IntervalDomain extends IntDomain {
           if (ASSERTS_ENABLED && result.checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(result.checkInvariants()));
           }
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
 
@@ -2925,7 +2925,7 @@ public class IntervalDomain extends IntDomain {
 
         result.size = size;
 
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
         if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -2976,7 +2976,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inComplement(int storeLevel, Var v, int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3033,7 +3033,7 @@ public class IntervalDomain extends IntDomain {
             intervals[counter] = new Interval(oldIntervals[counter].min(), min - 1);
           }
           size++;
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
           v.domainHasChanged(ANY);
@@ -3063,7 +3063,7 @@ public class IntervalDomain extends IntDomain {
             intervals[counter] = new Interval(max + 1, intervals[counter].max());
           }
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
 
@@ -3103,7 +3103,7 @@ public class IntervalDomain extends IntDomain {
             intervals[counter] = new Interval(max + 1, intervals[counter].max());
           }
         }
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
         if (singleton()) {
@@ -3151,7 +3151,7 @@ public class IntervalDomain extends IntDomain {
           if (ASSERTS_ENABLED && result.checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(result.checkInvariants()));
           }
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
 
@@ -3178,7 +3178,7 @@ public class IntervalDomain extends IntDomain {
 
           result.size -= noRemoved;
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
           if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3206,7 +3206,7 @@ public class IntervalDomain extends IntDomain {
 
           result.intervals[counter] = new Interval(max + 1, intervals[counter].max());
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
           if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3244,7 +3244,7 @@ public class IntervalDomain extends IntDomain {
             result.intervals[counter] = new Interval(max + 1, intervals[counter + noRemoved].max());
           }
 
-          if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+          if (ASSERTS_ENABLED && checkInvariants() != null) {
             throw new IllegalStateException(String.valueOf(checkInvariants()));
           }
           if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3271,7 +3271,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && this.stamp > storeLevel) {
@@ -3286,7 +3286,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      if (ASSERTS_ENABLED && !(size != 0)) {
+      if (ASSERTS_ENABLED && size == 0) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -3435,7 +3435,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3478,7 +3478,7 @@ public class IntervalDomain extends IntDomain {
         throw Store.failException;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3495,7 +3495,7 @@ public class IntervalDomain extends IntDomain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) v).domain = result;
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -3508,7 +3508,7 @@ public class IntervalDomain extends IntDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(size != 0)) {
+    if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -3650,7 +3650,7 @@ public class IntervalDomain extends IntDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -3668,7 +3668,7 @@ public class IntervalDomain extends IntDomain {
       installResultDomain(result, storeLevel, v);
     }
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -3842,7 +3842,7 @@ public class IntervalDomain extends IntDomain {
 
         intervals[counter] = new Interval(value + 1, intervals[counter].max());
 
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
 
@@ -3870,7 +3870,7 @@ public class IntervalDomain extends IntDomain {
 
       intervals[counter] = new Interval(intervals[counter].min(), value - 1);
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -3895,7 +3895,7 @@ public class IntervalDomain extends IntDomain {
     // One interval has been split, size increased by one.
     size++;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -3923,7 +3923,7 @@ public class IntervalDomain extends IntDomain {
 
         intervals[current] = new Interval(maxValue + 1, intervals[current].max());
 
-        if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+        if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
 
@@ -4010,7 +4010,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int intersectAdapt(IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -4170,7 +4170,7 @@ public class IntervalDomain extends IntDomain {
         return GROUND;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -4180,7 +4180,7 @@ public class IntervalDomain extends IntDomain {
       int returnedEvent = computeEvent(result);
       adoptIntervalsFrom(result);
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -4252,7 +4252,7 @@ public class IntervalDomain extends IntDomain {
         return NONE;
       }
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
       if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -4262,7 +4262,7 @@ public class IntervalDomain extends IntDomain {
       int returnedEvent = computeEvent(result);
       adoptIntervalsFrom(result);
 
-      if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+      if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
@@ -4281,7 +4281,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int intersectAdapt(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -4346,7 +4346,7 @@ public class IntervalDomain extends IntDomain {
 
     adoptIntervalsFrom(result);
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
@@ -4370,7 +4370,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -4468,7 +4468,7 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException(String.valueOf("The index can not be negative"));
     }
-    if (ASSERTS_ENABLED && !(index < this.getSize())) {
+    if (ASSERTS_ENABLED && index >= this.getSize()) {
       throw new IllegalStateException(
           String.valueOf(
               "The domain does not have so many elements as specified by the index equal to "
