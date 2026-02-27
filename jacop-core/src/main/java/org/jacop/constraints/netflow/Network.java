@@ -207,9 +207,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     arc.index = arc.sister.index = DELETED_ARC;
     deletedArcs.add(arc);
     deletedSize.update(deletedArcs.size());
-
-    //     ((Pruning)this).numActiveArcs--;
-
   }
 
   /**

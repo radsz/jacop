@@ -299,7 +299,6 @@ public class CumulativeUnary extends Cumulative {
 
       if (j >= 0 && tree.ect(t[i].treeIndex) > t[i].lst()) {
         updateLct[i] = Math.min(q[indexQ - 1].lst(), updateLct[i]);
-        // updateLct[i] = Math.min(to[tree.get(j).task.index].lst(), updateLct[i]);
       }
     }
 

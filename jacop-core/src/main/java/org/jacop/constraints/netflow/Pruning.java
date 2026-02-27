@@ -437,13 +437,6 @@ public class Pruning extends Network {
     Node source = arc.head;
     Node sink = arc.tail();
 
-    /*
-     * int baseFlow = arc.getCompanion().flowOffset; if (arc.forward)
-     * baseFlow += arc.sister.capacity; else baseFlow += arc.capacity; int
-     * maxWeight = (baseFlow > 0) ? costLimit / baseFlow :
-     * Integer.MAX_VALUE; int flowAtMaxWeight = baseFlow;
-     */
-
     int[] state = new int[] {flow, capacity, costLimit};
     analyzeArcLoop(arc, source, sink, state);
     flow = state[0];

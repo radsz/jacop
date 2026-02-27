@@ -54,7 +54,6 @@ public class ProfileOptional {
   /*
    * All tasks of the constraint
    */
-  // final TaskView[] taskNormal;
   final boolean debugNarr = false;
   final boolean debug = false;
 

@@ -35,16 +35,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
-/*
- * Implements ThetaLambdaTree and operations on this tree for Cumulative constraint
- *
- * @author Krzysztof Kuchcinski
- * @version 5.0
- */
-
-/*
- * Defines the basic data structure for cumulative constraint's edge-finding algorithm.
- */
 abstract class Tree {
 
   // binary tree structure; number of nodes
@@ -136,7 +126,7 @@ abstract class Tree {
         new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
       out.print(toGraph(name));
     } catch (IOException _) {
-      throw new RuntimeException("IO exception; ignored");
+      throw new IllegalStateException("IO exception; ignored");
     }
   }
 
@@ -174,7 +164,7 @@ abstract class Tree {
     if (notExist(i)) {
       return result;
     } else {
-      String s = NODE_PREFIX + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
+      String s = NODE_PREFIX + i + " -> ";
       if (exist(left(i))) {
         result.append(s).append(NODE_PREFIX).append(left(i)).append("\n");
         result.append(treeToGraph(left(i)));
@@ -188,6 +178,7 @@ abstract class Tree {
     }
   }
 
+  @Override
   public String toString() {
 
     StringBuilder result = new StringBuilder();
