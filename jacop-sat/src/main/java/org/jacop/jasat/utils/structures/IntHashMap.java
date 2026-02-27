@@ -234,7 +234,7 @@ public final class IntHashMap<E> {
 
   /** Double the size of the table. */
   private void doubleSize() {
-    if (ASSERTS_ENABLED && !(tableValue.length == tableKey.length)) {
+    if (ASSERTS_ENABLED && tableValue.length != tableKey.length) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -254,7 +254,7 @@ public final class IntHashMap<E> {
     }
 
     // take fields from the temp map
-    if (ASSERTS_ENABLED && !(cardinal == temp.cardinal)) {
+    if (ASSERTS_ENABLED && cardinal != temp.cardinal) {
       throw new IllegalStateException("Assertion failed");
     }
     tableKey = temp.tableKey;

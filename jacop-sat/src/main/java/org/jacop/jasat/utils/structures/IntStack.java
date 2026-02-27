@@ -103,7 +103,7 @@ public final class IntStack {
    */
   public int pop() {
 
-    if (ASSERTS_ENABLED && !(currentIndex != 0)) {
+    if (ASSERTS_ENABLED && currentIndex == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -117,7 +117,7 @@ public final class IntStack {
    */
   public int peek() {
 
-    if (ASSERTS_ENABLED && !(currentIndex != 0)) {
+    if (ASSERTS_ENABLED && currentIndex == 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
