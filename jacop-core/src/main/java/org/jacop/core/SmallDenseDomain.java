@@ -294,7 +294,7 @@ public class SmallDenseDomain extends IntDomain {
    * @param v the variable to update
    */
   private void installAndNotify(SmallDenseDomain result, int storeLevel, Var v) {
-    if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+    if (ASSERTS_ENABLED && stamp >= storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
     installResultDomain(result, storeLevel, v);
@@ -323,7 +323,7 @@ public class SmallDenseDomain extends IntDomain {
    */
   private void installAndNotifyWithEvent(
       SmallDenseDomain result, int storeLevel, int previousMin, int previousMax, Var v) {
-    if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+    if (ASSERTS_ENABLED && stamp >= storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
     installResultDomain(result, storeLevel, v);
@@ -422,10 +422,10 @@ public class SmallDenseDomain extends IntDomain {
       boundEvent = true;
     }
 
-    if (ASSERTS_ENABLED && !(max <= previousMax)) {
+    if (ASSERTS_ENABLED && max > previousMax) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
-    if (ASSERTS_ENABLED && !(minBound >= previousMin)) {
+    if (ASSERTS_ENABLED && minBound < previousMin) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
     if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
@@ -465,10 +465,10 @@ public class SmallDenseDomain extends IntDomain {
       result.singleton = true;
     }
 
-    if (ASSERTS_ENABLED && !(result.max <= max)) {
+    if (ASSERTS_ENABLED && result.max > max) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
-    if (ASSERTS_ENABLED && !(result.minBound >= minBound)) {
+    if (ASSERTS_ENABLED && result.minBound < minBound) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
 
@@ -879,7 +879,7 @@ public class SmallDenseDomain extends IntDomain {
     if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
@@ -893,7 +893,7 @@ public class SmallDenseDomain extends IntDomain {
     if (newSize == 0) {
       throw failException;
     }
-    if (ASSERTS_ENABLED && !(newSize < size)) {
+    if (ASSERTS_ENABLED && newSize >= size) {
       throw new IllegalStateException(String.valueOf(INCORRECT_IN_OPERATION));
     }
 
@@ -918,7 +918,7 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+    if (ASSERTS_ENABLED && stamp >= storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
     SmallDenseDomain result =
@@ -934,10 +934,10 @@ public class SmallDenseDomain extends IntDomain {
     if (this.max > max) {
       result.max = result.previousValue(max + 1);
     }
-    if (ASSERTS_ENABLED && !(result.max <= max)) {
+    if (ASSERTS_ENABLED && result.max > max) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
-    if (ASSERTS_ENABLED && !(result.minBound >= min)) {
+    if (ASSERTS_ENABLED && result.minBound < min) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
     installAndNotify(result, storeLevel, v);
@@ -984,10 +984,10 @@ public class SmallDenseDomain extends IntDomain {
       adaptMin();
       max = previousValue(max + 1);
 
-      if (ASSERTS_ENABLED && !(max <= previousMax)) {
+      if (ASSERTS_ENABLED && max > previousMax) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
-      if (ASSERTS_ENABLED && !(minBound >= previousMin)) {
+      if (ASSERTS_ENABLED && minBound < previousMin) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
 
@@ -1001,10 +1001,10 @@ public class SmallDenseDomain extends IntDomain {
 
       SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
-      if (ASSERTS_ENABLED && !(result.max <= previousMax)) {
+      if (ASSERTS_ENABLED && result.max > previousMax) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
-      if (ASSERTS_ENABLED && !(result.minBound >= previousMin)) {
+      if (ASSERTS_ENABLED && result.minBound < previousMin) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
 
@@ -1111,7 +1111,7 @@ public class SmallDenseDomain extends IntDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(newSize <= size)) {
+    if (ASSERTS_ENABLED && newSize > size) {
       throw new IllegalStateException(String.valueOf(INCORRECT_IN_OPERATION));
     }
 
@@ -1164,7 +1164,7 @@ public class SmallDenseDomain extends IntDomain {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && !(newSize <= size)) {
+    if (ASSERTS_ENABLED && newSize > size) {
       throw new IllegalStateException(String.valueOf(INCORRECT_IN_OPERATION));
     }
 
@@ -1395,10 +1395,10 @@ public class SmallDenseDomain extends IntDomain {
       adaptMin();
       max = previousValue(max + 1);
 
-      if (ASSERTS_ENABLED && !(max <= previousMax)) {
+      if (ASSERTS_ENABLED && max > previousMax) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
-      if (ASSERTS_ENABLED && !(minBound >= previousMin)) {
+      if (ASSERTS_ENABLED && minBound < previousMin) {
         throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
       }
 
@@ -1556,7 +1556,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public boolean isIntersecting(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(String.valueOf("Illegal arguments min is greater than max"));
     }
 
@@ -2051,7 +2051,7 @@ public class SmallDenseDomain extends IntDomain {
 
       if (this.minBound <= input.minBound) {
 
-        if (ASSERTS_ENABLED && !(this.minBound + 63 >= newMax)) {
+        if (ASSERTS_ENABLED && this.minBound + 63 < newMax) {
           throw new IllegalStateException(
               String.valueOf("Union of two SmallDenseDomain does not fit in SmallDenseDomain"));
         }
@@ -2062,7 +2062,7 @@ public class SmallDenseDomain extends IntDomain {
 
       } else {
 
-        if (ASSERTS_ENABLED && !(input.minBound + 63 >= newMax)) {
+        if (ASSERTS_ENABLED && input.minBound + 63 < newMax) {
           throw new IllegalStateException(
               String.valueOf("Union of two SmallDenseDomain does not fit in SmallDenseDomain"));
         }
@@ -2262,7 +2262,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    if (ASSERTS_ENABLED && !(this.stamp <= level)) {
+    if (ASSERTS_ENABLED && this.stamp > level) {
       throw new IllegalStateException("Assertion failed");
     }
 

@@ -215,7 +215,7 @@ public class IntervalDomain extends IntDomain {
    */
   public IntervalDomain(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value can not be greater than max value"));
     }
@@ -1223,10 +1223,10 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(position < size)) {
+    if (ASSERTS_ENABLED && position >= size) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(position >= 0)) {
+    if (ASSERTS_ENABLED && position < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1577,7 +1577,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2160,7 +2160,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
@@ -2222,7 +2222,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(this.stamp <= storeLevel)) {
+    if (ASSERTS_ENABLED && this.stamp > storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2618,7 +2618,7 @@ public class IntervalDomain extends IntDomain {
     if (stamp == storeLevel) {
       adoptIntervalsFrom(result);
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       installResultDomain(result, storeLevel, v);
@@ -2657,7 +2657,7 @@ public class IntervalDomain extends IntDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -2722,7 +2722,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public Interval getInterval(int position) {
 
-    if (ASSERTS_ENABLED && !(position < size)) {
+    if (ASSERTS_ENABLED && position >= size) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -2851,7 +2851,7 @@ public class IntervalDomain extends IntDomain {
         throw failException;
       }
 
-      if (ASSERTS_ENABLED && !(storeLevel > stamp)) {
+      if (ASSERTS_ENABLED && storeLevel <= stamp) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -3119,7 +3119,7 @@ public class IntervalDomain extends IntDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(storeLevel > stamp)) {
+      if (ASSERTS_ENABLED && storeLevel <= stamp) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -3274,7 +3274,7 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(this.stamp <= storeLevel)) {
+    if (ASSERTS_ENABLED && this.stamp > storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -3447,7 +3447,7 @@ public class IntervalDomain extends IntDomain {
       if (stamp == storeLevel) {
         adoptIntervalsFrom(result);
       } else {
-        if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+        if (ASSERTS_ENABLED && stamp >= storeLevel) {
           throw new IllegalStateException("Assertion failed");
         }
         installResultDomain(result, storeLevel, v);
@@ -3662,7 +3662,7 @@ public class IntervalDomain extends IntDomain {
     if (stamp == storeLevel) {
       adoptIntervalsFrom(result);
     } else {
-      if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       installResultDomain(result, storeLevel, v);
@@ -3693,7 +3693,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int leftElement(int intervalNo) {
 
-    if (ASSERTS_ENABLED && !(intervalNo < size)) {
+    if (ASSERTS_ENABLED && intervalNo >= size) {
       throw new IllegalStateException("Assertion failed");
     }
     return intervals[intervalNo].min();
@@ -3702,7 +3702,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int rightElement(int intervalNo) {
 
-    if (ASSERTS_ENABLED && !(intervalNo < size)) {
+    if (ASSERTS_ENABLED && intervalNo >= size) {
       throw new IllegalStateException("Assertion failed");
     }
     return intervals[intervalNo].max();
@@ -3717,7 +3717,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    if (ASSERTS_ENABLED && !(this.stamp <= level)) {
+    if (ASSERTS_ENABLED && this.stamp > level) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -4285,7 +4285,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && !(min <= max)) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
@@ -4465,7 +4465,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int getElementAt(int index) {
 
-    if (ASSERTS_ENABLED && !(index >= 0)) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException(String.valueOf("The index can not be negative"));
     }
     if (ASSERTS_ENABLED && !(index < this.getSize())) {
