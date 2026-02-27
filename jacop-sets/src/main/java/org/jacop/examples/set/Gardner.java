@@ -63,6 +63,9 @@ public class Gardner extends ExampleSet {
    * @param args parameters (none)
    */
   public static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
 
     Gardner example = new Gardner();
     example.model();

@@ -67,6 +67,9 @@ public class Steiner extends ExampleSet {
    * @param args parameters (none)
    */
   public static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
 
     Steiner example = new Steiner();
     example.n = 7;

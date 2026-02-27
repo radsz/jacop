@@ -78,6 +78,9 @@ public class SocialGolfer extends ExampleSet {
    * @param args parameters (none)
    */
   public static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
 
     SocialGolfer example = new SocialGolfer();
 
