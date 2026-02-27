@@ -140,7 +140,7 @@ public class AllEqual extends PrimitiveConstraint {
 
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
-        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) {
+        if (!x[i].singleton() || !x[j].singleton() || x[i].value() != x[j].value()) {
           return false;
         }
       }

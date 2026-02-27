@@ -50,27 +50,29 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public void inValue(Store store, Var v, int value, boolean leftBranch) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      // For IntVar, leftBranch parameter is ignored - always use inValue
+      intVar.dom().inValue(store.level, intVar, value);
+      return;
     }
-    // For IntVar, leftBranch parameter is ignored - always use inValue
-    intVar.dom().inValue(store.level, intVar, value);
+    throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
   }
 
   @Override
   public void inComplement(Store store, Var v, int value, boolean leftBranch) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      // For IntVar, leftBranch parameter is ignored - always use inComplement
+      intVar.dom().inComplement(store.level, intVar, value);
+      return;
     }
-    // For IntVar, leftBranch parameter is ignored - always use inComplement
-    intVar.dom().inComplement(store.level, intVar, value);
+    throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
   }
 
   @Override
   public String getDomainString(Var v) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      return intVar.dom().toString();
     }
-    return intVar.dom().toString();
+    throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
   }
 }

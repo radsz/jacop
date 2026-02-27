@@ -361,7 +361,7 @@ class BoundDomain extends IntDomain {
   @Override
   public void inValue(int storeLevel, IntVar v, int value) {
 
-    if (!(value >= minBound && value <= maxBound)) {
+    if (value < minBound || value > maxBound) {
       throw failException;
     }
 

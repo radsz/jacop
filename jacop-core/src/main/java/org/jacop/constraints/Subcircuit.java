@@ -185,7 +185,7 @@ public class Subcircuit extends Alldiff {
   boolean needsListPruning() {
 
     for (IntVar el : list) {
-      if (!(el.min() >= 1 && el.max() <= list.length)) {
+      if (el.min() < 1 || el.max() > list.length) {
         return true;
       }
     }

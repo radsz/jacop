@@ -118,7 +118,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
       previous = selectedDimensions[i];
 
-      if (!(selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension)) {
+      if (selectedDimensions[i] < 0 || selectedDimensions[i] > obstacle.dimension) {
         return "incorrect dimension: " + selectedDimensions[i];
       }
     }

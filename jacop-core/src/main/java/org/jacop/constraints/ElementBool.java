@@ -214,7 +214,7 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
       } else if (valueOfElement == 1) {
         ones = true;
       }
-    } while (!(zeros && ones) && e.hasMoreElements());
+    } while ((!zeros || !ones) && e.hasMoreElements());
 
     if (zeros && !ones) {
       value.domain.inValue(store.level, value, 0);

@@ -210,7 +210,7 @@ public class NetworkFlow extends Constraint
       throw Store.failException;
     }
 
-    int cost = (int) network.cost((long) costVariable.max() + 1);
+    int cost = (int) network.cost(costVariable.max() + 1L);
     if (cost > costVariable.max()) {
       throw Store.failException;
     }
@@ -232,7 +232,7 @@ public class NetworkFlow extends Constraint
 
   /** Prunes cost minimum from current flow cost, then if all vars are ground, prunes cost max. */
   private void finishConsistencyCostPruning(Store store) {
-    int cost = (int) network.cost((long) costVariable.max() + 1);
+    int cost = (int) network.cost(costVariable.max() + 1L);
     if (cost > costVariable.max()) {
       throw Store.failException;
     }

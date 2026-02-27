@@ -399,10 +399,10 @@ public class Dbox {
 
     // unrolling for 2 dimensions
     if (pointDim == 2) {
-      return !(pointCoordinates[0] < origin[0]
-          || pointCoordinates[0] >= origin[0] + length[0]
-          || pointCoordinates[1] < origin[1]
-          || pointCoordinates[1] >= origin[1] + length[1]);
+      return pointCoordinates[0] >= origin[0]
+          && pointCoordinates[0] < origin[0] + length[0]
+          && pointCoordinates[1] >= origin[1]
+          && pointCoordinates[1] < origin[1] + length[1];
     } else {
 
       int limit = Math.min(origin.length, pointDim);

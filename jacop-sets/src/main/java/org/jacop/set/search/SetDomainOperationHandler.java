@@ -53,39 +53,41 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public void inValue(Store store, Var v, int value, boolean leftBranch) {
-    if (!(v instanceof SetVar setVar)) {
-      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
+    if (v instanceof SetVar setVar) {
+      SetDomain setDomain = setVar.dom();
+      if (leftBranch) {
+        // Left branch: add element to GLB (Greatest Lower Bound)
+        setDomain.inGlb(store.level, setVar, value);
+      } else {
+        // Right branch: remove element from LUB (add to LUB complement)
+        setDomain.inLubComplement(store.level, setVar, value);
+      }
+      return;
     }
-    SetDomain setDomain = setVar.dom();
-    if (leftBranch) {
-      // Left branch: add element to GLB (Greatest Lower Bound)
-      setDomain.inGlb(store.level, setVar, value);
-    } else {
-      // Right branch: remove element from LUB (add to LUB complement)
-      setDomain.inLubComplement(store.level, setVar, value);
-    }
+    throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
   }
 
   @Override
   public void inComplement(Store store, Var v, int value, boolean leftBranch) {
-    if (!(v instanceof SetVar setVar)) {
-      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
+    if (v instanceof SetVar setVar) {
+      SetDomain setDomain = setVar.dom();
+      if (leftBranch) {
+        // Left branch: remove from GLB (add to LUB complement)
+        setDomain.inLubComplement(store.level, setVar, value);
+      } else {
+        // Right branch: add to GLB
+        setDomain.inGlb(store.level, setVar, value);
+      }
+      return;
     }
-    SetDomain setDomain = setVar.dom();
-    if (leftBranch) {
-      // Left branch: remove from GLB (add to LUB complement)
-      setDomain.inLubComplement(store.level, setVar, value);
-    } else {
-      // Right branch: add to GLB
-      setDomain.inGlb(store.level, setVar, value);
-    }
+    throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
   }
 
   @Override
   public String getDomainString(Var v) {
-    if (!(v instanceof SetVar setVar)) {
-      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
+    if (v instanceof SetVar setVar) {
+      return setVar.dom().toString();
     }
-    return setVar.dom().toString();
+    throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
   }
 }

@@ -857,7 +857,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private boolean intervalOverlap(int min1, int max1, int min2, int max2) {
-    return !(min1 >= max2 || max1 <= min2);
+    return min1 < max2 && max1 > min2;
   }
 
   private int lct(List<Task> tasks) {
@@ -1134,7 +1134,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         profileNarrowStartFromProfile(store, start, duration, p.min, p.max);
       }
     } else {
-      if (mustUseMin != -1 && !(mustUseMax <= p.getMin() || mustUseMin >= p.getMax())) {
+      if (mustUseMin != -1 && mustUseMax > p.getMin() && mustUseMin < p.getMax()) {
         int offset =
             intervalOverlap(p.getMin(), p.getMax(), mustUseMin, mustUseMax) ? resources.min() : 0;
         if (debugNarrEnabled) {

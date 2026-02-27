@@ -75,7 +75,7 @@ public abstract class AbstractElement extends Constraint implements Stateful {
 
   @Override
   public boolean isStateful() {
-    return !(index.min() >= 1 + indexOffset && index.max() <= listLength() + indexOffset);
+    return index.min() < 1 + indexOffset || index.max() > listLength() + indexOffset;
   }
 
   @Override

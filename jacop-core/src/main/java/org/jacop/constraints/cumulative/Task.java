@@ -66,7 +66,7 @@ class Task {
   }
 
   long energy() {
-    return (long) dur.min() * (long) res.min();
+    return (long) dur.min() * res.min();
   }
 
   boolean exists() {

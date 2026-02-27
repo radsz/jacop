@@ -52,44 +52,45 @@ public class IntCostVariableHandler implements CostVariableHandler {
 
   @Override
   public double getCostValue(Var v) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      return intVar.dom().min();
     }
-    return intVar.dom().min();
+    throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
   }
 
   @Override
   public Constraint createCostConstraint(Var v, double costValue) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      int intCostValue = (int) costValue;
+      return new XltC(intVar, intCostValue);
     }
-    int intCostValue = (int) costValue;
-    return new XltC(intVar, intCostValue);
+    throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
   }
 
   @Override
   public void updateCostDomain(Store store, Var v, double costValue) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      int intCostValue = (int) costValue;
+      intVar.domain.inMax(store.level, intVar, intCostValue - 1);
+      return;
     }
-    int intCostValue = (int) costValue;
-    intVar.domain.inMax(store.level, intVar, intCostValue - 1);
+    throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
   }
 
   @Override
   public double getMinCostValue(Var v) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      return intVar.dom().min();
     }
-    return intVar.dom().min();
+    throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
   }
 
   @Override
   public double getMaxCostValue(Var v) {
-    if (!(v instanceof IntVar intVar)) {
-      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
+    if (v instanceof IntVar intVar) {
+      return intVar.dom().max();
     }
-    return intVar.dom().max();
+    throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
   }
 
   @Override

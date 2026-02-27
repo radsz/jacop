@@ -190,7 +190,7 @@ public class SumWeight extends Constraint
 
     do {
 
-      if (!(lMin <= equalTo && equalTo <= lMax)) {
+      if (lMin > equalTo || equalTo > lMax) {
         throw Store.failException;
       }
 

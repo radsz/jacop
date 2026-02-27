@@ -133,28 +133,27 @@ public class Derivative {
 
   private static FloatVar getDerivativeFromSingleConstraint(
       Store store, FloatVar f, Set<FloatVar> vars, FloatVar x, Constraint currentConstraint) {
-    if (!(currentConstraint instanceof FloatDerivableConstraint)) {
-      throw new UnsupportedOperationException(
-          "Constraint " + currentConstraint + " does not support derivatives");
+    if (currentConstraint instanceof FloatDerivableConstraint derivableConstraint) {
+      eval.push(currentConstraint);
+      FloatVar v = derivableConstraint.derivative(store, f, vars, x);
+      eval.pop();
+      return v;
     }
-    eval.push(currentConstraint);
-    FloatVar v = ((FloatDerivableConstraint) currentConstraint).derivative(store, f, vars, x);
-    eval.pop();
-    return v;
+    throw new UnsupportedOperationException(
+        "Constraint " + currentConstraint + " does not support derivatives");
   }
 
   private static FloatVar getDerivativeFromMultipleConstraints(
       Store store, FloatVar f, Set<FloatVar> vars, FloatVar x, List<Constraint> constraints) {
     Constraint c = resolveConstraint(f, constraints);
     if (c != null) {
-      if (!(c instanceof FloatDerivableConstraint)) {
-        throw new UnsupportedOperationException(
-            "Constraint " + c + " does not support derivatives");
+      if (c instanceof FloatDerivableConstraint derivableConstraint) {
+        eval.push(c);
+        FloatVar v = derivableConstraint.derivative(store, f, vars, x);
+        eval.pop();
+        return v;
       }
-      eval.push(c);
-      FloatVar v = ((FloatDerivableConstraint) c).derivative(store, f, vars, x);
-      eval.pop();
-      return v;
+      throw new UnsupportedOperationException("Constraint " + c + " does not support derivatives");
     }
     log.info(
         "!!! "

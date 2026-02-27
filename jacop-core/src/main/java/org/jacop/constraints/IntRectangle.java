@@ -101,7 +101,7 @@ class IntRectangle {
   }
 
   boolean intervalOverlap(int min1, int max1, int min2, int max2) {
-    return !(min1 >= max2 || max1 <= min2);
+    return min1 < max2 && max1 > min2;
   }
 
   int length(int i) {

@@ -99,7 +99,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     reminderMin = z.min();
     reminderMax = z.max();
 
-    if (!(y.min() <= 0 && y.max() >= 0)) {
+    if (y.min() > 0 || y.max() < 0) {
       resultMin = propagateNonZeroY(store, resultMin, resultMax, reminderMin, reminderMax);
       resultMax = resultMaxFromLastPropagate;
     }

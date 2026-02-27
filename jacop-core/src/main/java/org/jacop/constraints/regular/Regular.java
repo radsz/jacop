@@ -827,7 +827,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     int prevVal = curState.outDegree;
     curState.outDegree = successors.length;
     for (int i = prevVal; i < curState.outDegree; i++) {
-      if (!(successors[i].isActive(activeLevels) && curState.intersects(list[level].domain, i))) {
+      if (!successors[i].isActive(activeLevels) || !curState.intersects(list[level].domain, i)) {
         curState.outDegree = i;
       } else {
         successors[i].inDegree++;

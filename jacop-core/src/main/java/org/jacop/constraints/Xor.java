@@ -69,7 +69,7 @@ public class Xor extends PrimitiveConstraint {
 
     checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
 
-    if (!(b.min() >= 0 && b.max() <= 1)) {
+    if (b.min() < 0 || b.max() > 1) {
       throw new IllegalArgumentException(
           "Constraint Xor has a variable b = " + b + " that has a domain outside of 0..1.");
     }

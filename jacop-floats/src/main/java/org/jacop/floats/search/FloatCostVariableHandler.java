@@ -54,44 +54,45 @@ public class FloatCostVariableHandler implements CostVariableHandler {
 
   @Override
   public double getCostValue(Var v) {
-    if (!(v instanceof FloatVar floatVar)) {
-      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+    if (v instanceof FloatVar floatVar) {
+      return floatVar.dom().max();
     }
-    return floatVar.dom().max();
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
 
   @Override
   public Constraint createCostConstraint(Var v, double costValue) {
-    if (!(v instanceof FloatVar floatVar)) {
-      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+    if (v instanceof FloatVar floatVar) {
+      double previousCost = FloatDomain.previousForMinimization(costValue);
+      return new PlteqC(floatVar, previousCost);
     }
-    double previousCost = FloatDomain.previousForMinimization(costValue);
-    return new PlteqC(floatVar, previousCost);
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
 
   @Override
   public void updateCostDomain(Store store, Var v, double costValue) {
-    if (!(v instanceof FloatVar floatVar)) {
-      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+    if (v instanceof FloatVar floatVar) {
+      double previousCost = FloatDomain.previous(costValue);
+      floatVar.domain.inMax(store.level, floatVar, previousCost);
+      return;
     }
-    double previousCost = FloatDomain.previous(costValue);
-    floatVar.domain.inMax(store.level, floatVar, previousCost);
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
 
   @Override
   public double getMinCostValue(Var v) {
-    if (!(v instanceof FloatVar floatVar)) {
-      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+    if (v instanceof FloatVar floatVar) {
+      return floatVar.dom().min();
     }
-    return floatVar.dom().min();
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
 
   @Override
   public double getMaxCostValue(Var v) {
-    if (!(v instanceof FloatVar floatVar)) {
-      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+    if (v instanceof FloatVar floatVar) {
+      return floatVar.dom().max();
     }
-    return floatVar.dom().max();
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
 
   @Override

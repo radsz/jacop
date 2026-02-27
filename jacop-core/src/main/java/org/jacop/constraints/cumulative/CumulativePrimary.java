@@ -296,7 +296,7 @@ class CumulativePrimary extends Constraint {
       if (!start[k].singleton()) {
         int min = start[k].min();
         int max = start[k].max() + dur[k];
-        if (!(min > maxProfile || max < minProfile)) {
+        if (min <= maxProfile && max >= minProfile) {
           es[j++] = new Event(PRUNE_START, k, min, 0);
           es[j++] = new Event(PRUNE_END, k, max, 0);
         }

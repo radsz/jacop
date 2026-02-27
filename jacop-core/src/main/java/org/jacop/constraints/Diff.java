@@ -287,7 +287,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   }
 
   boolean intervalOverlap(int min1, int max1, int min2, int max2) {
-    return !(min1 >= max2 || max1 <= min2);
+    return min1 < max2 && max1 > min2;
   }
 
   /**
@@ -843,9 +843,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   private boolean shouldProcessRectangle(RectState state, Diff2Var[] evalRects) {
     if (evalRects != null) {
-      return !state.minLengthEq0() && !(state.settled() && state.maxLevel() < currentStore.level);
+      return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
     }
-    return !(state.settled() && state.maxLevel() < currentStore.level);
+    return !state.settled() || state.maxLevel() >= currentStore.level;
   }
 
   private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {

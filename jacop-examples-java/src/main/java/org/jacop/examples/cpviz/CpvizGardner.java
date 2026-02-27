@@ -144,12 +144,10 @@ public class CpvizGardner {
     }
 
     log.info(
-        "ThreadCpuTime = "
-            + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
-            + "ms");
+        "ThreadCpuTime = " + (b.getThreadCpuTime(tread.threadId()) - startCpu) / 1_000_000L + "ms");
     log.info(
         "ThreadUserTime = "
-            + (b.getThreadUserTime(tread.threadId()) - startUser) / (long) 1e+6
+            + (b.getThreadUserTime(tread.threadId()) - startUser) / 1_000_000L
             + "ms");
   }
 }
