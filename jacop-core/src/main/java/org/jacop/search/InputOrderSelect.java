@@ -97,7 +97,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int index) {
 
-    if (ASSERTS_ENABLED && !(index < searchVariables.length)) {
+    if (ASSERTS_ENABLED && index >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -119,13 +119,13 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    if (ASSERTS_ENABLED && !(currentIndex.value() >= 0)) {
+    if (ASSERTS_ENABLED && currentIndex.value() < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(currentIndex.value() < searchVariables.length)) {
+    if (ASSERTS_ENABLED && currentIndex.value() >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(searchVariables[currentIndex.value()].dom() != null)) {
+    if (ASSERTS_ENABLED && searchVariables[currentIndex.value()].dom() == null) {
       throw new IllegalStateException("Assertion failed");
     }
 

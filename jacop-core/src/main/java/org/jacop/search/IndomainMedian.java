@@ -57,11 +57,11 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
   /** It requires IntVar variable. */
   public int indomain(IntVar v) {
 
-    if (ASSERTS_ENABLED && !(!v.singleton())) {
+    if (ASSERTS_ENABLED && v.singleton()) {
       throw new IllegalStateException(
           String.valueOf("indomain does not work with singleton variables."));
     }
-    if (ASSERTS_ENABLED && !(v.dom().domainId() != IntDomain.BOUND_DOMAIN_ID)) {
+    if (ASSERTS_ENABLED && v.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
       throw new IllegalStateException(String.valueOf("It is not possible to use BoundDomain"));
     }
 
@@ -96,7 +96,7 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         return domain.intervals[i].min() + position;
       }
     }
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("Indomain Median does not work properly."));
     }
     return 0;
@@ -122,7 +122,7 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         return next.min() + position;
       }
     }
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("Indomain Median does not work properly."));
     }
     return 0;

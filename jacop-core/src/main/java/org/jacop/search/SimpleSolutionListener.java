@@ -136,10 +136,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   /** It returns the solution number no. The first solution has an index 1. */
   public Domain[] getSolution(int no) {
 
-    if (ASSERTS_ENABLED && !(no <= noSolutions)) {
+    if (ASSERTS_ENABLED && no > noSolutions) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(recordSolutions)) {
+    if (ASSERTS_ENABLED && !recordSolutions) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -309,20 +309,20 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       number = 0;
     }
 
-    if (ASSERTS_ENABLED && !(number < noSolutions)) {
+    if (ASSERTS_ENABLED && number >= noSolutions) {
       throw new IllegalStateException(String.valueOf("Smaller number of solutions were found."));
     }
-    if (ASSERTS_ENABLED && !(recordSolutions || number == 0)) {
+    if (ASSERTS_ENABLED && !recordSolutions && number != 0) {
       throw new IllegalStateException(String.valueOf("The solutions were not stored."));
     }
-    if (ASSERTS_ENABLED && !(solutions.length > number)) {
+    if (ASSERTS_ENABLED && solutions.length <= number) {
       throw new IllegalStateException(
           String.valueOf("The solution of the given number was not stored."));
     }
 
     if (vars != null) {
 
-      if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+      if (ASSERTS_ENABLED && store.currentConstraint != null) {
         throw new IllegalStateException("Assertion failed");
       }
 

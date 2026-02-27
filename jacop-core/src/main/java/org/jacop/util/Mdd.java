@@ -123,7 +123,7 @@ public class Mdd {
 
     for (int i = 0; i < vars.length; i++) {
       this.views[i] = new IndexDomainView(vars[i], true);
-      if (ASSERTS_ENABLED && !(domainLimits[i] >= vars[i].getSize())) {
+      if (ASSERTS_ENABLED && domainLimits[i] < vars[i].getSize()) {
         throw new IllegalStateException(
             String.valueOf(i + "-th variable has a size larger than its domain limit size"));
       }
@@ -326,7 +326,7 @@ public class Mdd {
       } else {
         indexOfValue = findPosition(value, views[varNo].indexToValue);
       }
-      if (ASSERTS_ENABLED && !(indexOfValue != -1)) {
+      if (ASSERTS_ENABLED && indexOfValue == -1) {
         throw new IllegalStateException("Assertion failed");
       }
       nodePosition += indexOfValue;
@@ -357,7 +357,7 @@ public class Mdd {
    */
   public void addTuple(int[] tuple) {
 
-    if (ASSERTS_ENABLED && !(extendable)) {
+    if (ASSERTS_ENABLED && !extendable) {
       throw new IllegalStateException(
           String.valueOf("Mdd can not be extended after shrinking operation was performed"));
     }
@@ -457,7 +457,7 @@ public class Mdd {
 
     for (int[] tuple : table) {
 
-      if (ASSERTS_ENABLED && !(tuple.length == positions.length)) {
+      if (ASSERTS_ENABLED && tuple.length != positions.length) {
         throw new IllegalStateException(String.valueOf("Tuples have different length."));
       }
 
@@ -490,7 +490,7 @@ public class Mdd {
     int nodePosition = 0;
     for (int i = 0; i < tuple.length; i++) {
 
-      if (ASSERTS_ENABLED && !(positions[i] != -1)) {
+      if (ASSERTS_ENABLED && positions[i] == -1) {
         throw new IllegalStateException(
             String.valueOf(
                 "value specified by tuple "
@@ -702,7 +702,7 @@ public class Mdd {
    */
   public boolean checkIfAllowed(int[] tuple) {
 
-    if (ASSERTS_ENABLED && !(tuple.length == vars.length)) {
+    if (ASSERTS_ENABLED && tuple.length != vars.length) {
       throw new IllegalStateException("Assertion failed");
     }
 

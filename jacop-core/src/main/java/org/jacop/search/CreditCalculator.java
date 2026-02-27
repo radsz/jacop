@@ -81,7 +81,7 @@ public class CreditCalculator<T extends Var>
    */
   public CreditCalculator(int credit, int backtracks, int maxDepth) {
 
-    if (ASSERTS_ENABLED && !(maxDepth >= 1)) {
+    if (ASSERTS_ENABLED && maxDepth < 1) {
       throw new IllegalStateException("Assertion failed");
     }
 

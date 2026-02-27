@@ -337,7 +337,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
   boolean checkIfShavable(IntVar v, Integer val) {
 
-    if (ASSERTS_ENABLED && !(v.domain.contains(val) && !v.domain.singleton())) {
+    if (ASSERTS_ENABLED && (!v.domain.contains(val) || v.domain.singleton())) {
       throw new IllegalStateException(
           String.valueOf("var " + v + "val " + val + " should not be checked for shavability"));
     }

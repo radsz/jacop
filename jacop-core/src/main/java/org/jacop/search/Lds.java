@@ -65,7 +65,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
    */
   public Lds(int maxDiscrepancies) {
 
-    if (ASSERTS_ENABLED && !(maxDiscrepancies >= 0)) {
+    if (ASSERTS_ENABLED && maxDiscrepancies < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 

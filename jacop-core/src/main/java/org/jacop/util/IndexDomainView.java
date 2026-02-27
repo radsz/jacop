@@ -82,7 +82,7 @@ public class IndexDomainView {
 
       indexToValue = new int[v.domain.noIntervals()];
 
-      if (ASSERTS_ENABLED && !(false)) {
+      if (ASSERTS_ENABLED) {
         throw new IllegalStateException(
             String.valueOf(
                 "Not implemented functionality. Only sparse index domain view is implemented."));
@@ -120,7 +120,7 @@ public class IndexDomainView {
   public void intializeSupportSweep() {
 
     if (!viewOfSparseDomain) {
-      if (ASSERTS_ENABLED && !(false)) {
+      if (ASSERTS_ENABLED) {
         throw new IllegalStateException(
             String.valueOf("Not yet implemented functionality for non sparse representation"));
       }
@@ -211,7 +211,7 @@ public class IndexDomainView {
         return true;
       }
     } else {
-      if (ASSERTS_ENABLED && !(false)) {
+      if (ASSERTS_ENABLED) {
         throw new IllegalStateException(String.valueOf("Not implemented yet"));
       }
       return false;
@@ -235,7 +235,7 @@ public class IndexDomainView {
       return true;
     } else {
 
-      if (ASSERTS_ENABLED && !(false)) {
+      if (ASSERTS_ENABLED) {
         throw new IllegalStateException(String.valueOf("Not yet implemented functionality"));
       }
       return false;
@@ -252,7 +252,7 @@ public class IndexDomainView {
 
     if (!viewOfSparseDomain) {
 
-      if (ASSERTS_ENABLED && !(false)) {
+      if (ASSERTS_ENABLED) {
         throw new IllegalStateException(String.valueOf("Not yet implemented functionality"));
       }
       return 0;

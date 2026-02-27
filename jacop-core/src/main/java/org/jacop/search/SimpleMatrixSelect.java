@@ -139,7 +139,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
       Indomain<T> indomain,
       int pivotPosition) {
 
-    if (ASSERTS_ENABLED && !(pivotPosition >= 0)) {
+    if (ASSERTS_ENABLED && pivotPosition < 0) {
       throw new IllegalStateException(String.valueOf("Pivot position must be equal or greater 0"));
     }
 
@@ -154,7 +154,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
       List<T> current = new ArrayList<>();
 
-      if (ASSERTS_ENABLED && !(var.length > pivotPosition)) {
+      if (ASSERTS_ENABLED && var.length <= pivotPosition) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -178,7 +178,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int firstVariable) {
 
-    if (ASSERTS_ENABLED && !(searchVariables.size() > firstVariable)) {
+    if (ASSERTS_ENABLED && searchVariables.size() <= firstVariable) {
       throw new IllegalStateException(
           String.valueOf(
               "The position of the first entity to check is larger than the array size"));
@@ -329,10 +329,10 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    if (ASSERTS_ENABLED && !(primaryIndex >= 0)) {
+    if (ASSERTS_ENABLED && primaryIndex < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(primaryIndex < searchVariables.size())) {
+    if (ASSERTS_ENABLED && primaryIndex >= searchVariables.size()) {
       throw new IllegalStateException("Assertion failed");
     }
 

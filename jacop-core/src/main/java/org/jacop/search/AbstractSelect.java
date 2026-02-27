@@ -95,13 +95,13 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
   @Override
   public int getChoiceValue() {
 
-    if (ASSERTS_ENABLED && !(currentIndex >= 0)) {
+    if (ASSERTS_ENABLED && currentIndex < 0) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(currentIndex < searchVariables.length)) {
+    if (ASSERTS_ENABLED && currentIndex >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(searchVariables[currentIndex].dom() != null)) {
+    if (ASSERTS_ENABLED && searchVariables[currentIndex].dom() == null) {
       throw new IllegalStateException("Assertion failed");
     }
 

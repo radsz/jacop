@@ -172,7 +172,7 @@ public class TimeStamp<T> implements Stateful {
    */
   public void update(T val) {
 
-    if (ASSERTS_ENABLED && !(stamps[pointer4Last] <= store.level)) {
+    if (ASSERTS_ENABLED && stamps[pointer4Last] > store.level) {
       throw new IllegalStateException(
           String.valueOf(
               "Error - Timestamp" + this + "has greater level than store " + "- missing remove"));

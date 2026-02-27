@@ -97,7 +97,7 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
    */
   public T getChoiceVariable(int index) {
 
-    if (ASSERTS_ENABLED && !(index < searchVariables.length)) {
+    if (ASSERTS_ENABLED && index >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }
 

@@ -77,7 +77,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
    */
   public int indomain(IntVar v) {
 
-    if (ASSERTS_ENABLED && !(!v.singleton())) {
+    if (ASSERTS_ENABLED && v.singleton()) {
       throw new IllegalStateException(
           String.valueOf("Indomain should not be called with singleton domain"));
     }
@@ -111,7 +111,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
     }
 
     // Only to satisfy the compiler.
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("Error. This code should not be reached."));
     }
     return Integer.MAX_VALUE;

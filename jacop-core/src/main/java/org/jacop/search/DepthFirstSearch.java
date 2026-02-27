@@ -468,7 +468,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       return vars;
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException(String.valueOf("Fix it. Uncomment below."));
     }
 
@@ -579,7 +579,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Applies the chosen value to the choice variable (left branch). */
   private void applyChoiceVariableValue(T fdv, int val) {
-    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+    if (ASSERTS_ENABLED && store.currentConstraint != null) {
       throw new IllegalStateException("Assertion failed");
     }
     DomainOperationHandler domainHandler =
@@ -602,7 +602,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Applies the choice constraint (left branch) and updates decisions/depthExcludePaths. */
   private void applyChoiceConstraint(PrimitiveConstraint choice) {
-    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+    if (ASSERTS_ENABLED && store.currentConstraint != null) {
       throw new IllegalStateException("Assertion failed");
     }
     store.impose(choice);
@@ -765,7 +765,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Executes right branch for constraint choice (Not(choice)), returns consistency result. */
   private boolean doRightBranchChoice(PrimitiveConstraint choice, int firstVariable) {
-    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+    if (ASSERTS_ENABLED && store.currentConstraint != null) {
       throw new IllegalStateException("Assertion failed");
     }
     store.setLevel(store.level);
@@ -783,7 +783,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Executes right branch for variable (inComplement), returns consistency result. */
   private boolean doRightBranchVariable(T fdv, int val, int firstVariable) {
-    if (ASSERTS_ENABLED && !(store.currentConstraint == null)) {
+    if (ASSERTS_ENABLED && store.currentConstraint != null) {
       throw new IllegalStateException("Assertion failed");
     }
     store.setLevel(store.level);
