@@ -30,6 +30,7 @@
 
 package org.jacop.examples.cpviz;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Not;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -53,6 +54,7 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class CpvizGardner {
   Store store;
 
@@ -80,7 +82,7 @@ public class CpvizGardner {
     int num_persons_per_meeting = 3;
     int persons = 15;
 
-    IO.println("Gardner dinner problem ");
+    log.info("Gardner dinner problem ");
     store = new Store();
 
     SetVar[] days = new SetVar[35];
@@ -109,14 +111,14 @@ public class CpvizGardner {
       }
     }
 
-    IO.println(
+    log.info(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
     boolean result = store.consistency();
-    IO.println("*** consistency = " + result);
+    log.info("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<>();
 
@@ -133,19 +135,19 @@ public class CpvizGardner {
     result = label.labeling(store, select);
 
     if (result) {
-      IO.println("*** Yes");
+      log.info("*** Yes");
       for (SetVar day : days) {
-        IO.println(day);
+        log.info("{}", day);
       }
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
-    IO.println(
+    log.info(
         "ThreadCpuTime = "
             + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
             + "ms");
-    IO.println(
+    log.info(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.threadId()) - startUser) / (long) 1e+6
             + "ms");

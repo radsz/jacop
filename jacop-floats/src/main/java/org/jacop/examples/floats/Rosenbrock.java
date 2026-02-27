@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -41,6 +42,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for Rosenbrock function using float constraints. */
+@Slf4j
 public class Rosenbrock {
 
   final double minFloat = -1e+150;
@@ -63,7 +65,7 @@ public class Rosenbrock {
     long startTime;
     startTime = System.currentTimeMillis();
 
-    IO.println("========= rosenbrock =========");
+    log.info("========= rosenbrock =========");
 
     Store store = new Store();
 
@@ -89,7 +91,7 @@ public class Rosenbrock {
     store.impose(
         new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
-    IO.println(
+    log.info(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -102,12 +104,12 @@ public class Rosenbrock {
     boolean result = min.minimize();
 
     if (result) {
-      IO.println("\nPrecision = " + FloatDomain.precision());
+      log.info("\nPrecision = " + FloatDomain.precision());
 
       long endTime = System.currentTimeMillis();
       long elapsed = endTime - startTime;
 
-      IO.println("\n\t*** Execution time = " + elapsed + " ms");
+      log.info("\n\t*** Execution time = " + elapsed + " ms");
     }
   }
 }

@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
@@ -54,6 +55,7 @@ import org.jacop.core.Store;
  * @author Krzysztof "Vrbl" Wrobel and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class BuildingBlocks extends ExampleFd {
 
   /**
@@ -68,7 +70,7 @@ public class BuildingBlocks extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -78,7 +80,7 @@ public class BuildingBlocks extends ExampleFd {
     vars = new ArrayList<>();
     store = new Store();
 
-    IO.println("Building Blocks");
+    log.info("Building Blocks");
 
     IntVar A = new IntVar(store, "A", 1, 4);
     IntVar B = new IntVar(store, "B", 1, 4);

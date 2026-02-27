@@ -31,6 +31,7 @@
 package org.jacop.examples.set;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
@@ -54,6 +55,7 @@ import org.jacop.set.search.MaxCardDiff;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Steiner extends ExampleSet {
 
   /** It specifies the length of the problem. */
@@ -79,7 +81,7 @@ public class Steiner extends ExampleSet {
 
     int t = n * (n - 1) / 6;
 
-    IO.println("Steiner problem with n = " + n + " and T = " + t);
+    log.info("Steiner problem with n = " + n + " and T = " + t);
 
     int r = n % 6;
 
@@ -163,18 +165,18 @@ public class Steiner extends ExampleSet {
       result = label.labeling(store, select);
 
       if (result) {
-        IO.println("*** Yes");
+        log.info("*** Yes");
         label.getSolutionListener().printAllSolutions();
       } else {
-        IO.println("*** No");
+        log.info("*** No");
       }
 
       t2 = System.currentTimeMillis();
       t = t2 - t1;
-      IO.println("\n\t*** Execution time = " + t + " ms");
+      log.info("\n\t*** Execution time = " + t + " ms");
       return result;
     } else {
-      IO.println("Problem has no solution");
+      log.info("Problem has no solution");
       return false;
     }
   }

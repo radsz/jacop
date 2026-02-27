@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.Fz2jacop;
 import org.junit.jupiter.api.AfterEach;
@@ -56,6 +57,7 @@ import org.junit.jupiter.api.BeforeAll;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 class MinizincBasedTestsHelper {
   protected static final String RELATIVE_PATH = "src/test/fz/";
   protected static final String LIST_FILE_NAME = "list.txt";
@@ -82,7 +84,7 @@ class MinizincBasedTestsHelper {
 
   protected static Collection<String> fileReader(String timeCategory) throws IOException {
 
-    IO.println("timeCategory" + timeCategory);
+    log.info("timeCategory" + timeCategory);
     try (FileReader file = new FileReader(RELATIVE_PATH + timeCategory + LIST_FILE_NAME);
         BufferedReader br = new BufferedReader(file)) {
 
@@ -148,7 +150,7 @@ class MinizincBasedTestsHelper {
     String result = new String(Files.readAllBytes(Path.of(outputFilename)));
 
     if (PRINT_INFO) {
-      IO.println(filename + "\n" + result);
+      log.info(filename + "\n" + result);
     }
 
     return Arrays.asList(result.split("\n"));
@@ -156,7 +158,7 @@ class MinizincBasedTestsHelper {
 
   protected void testExecution(String timeCategory) throws IOException {
 
-    IO.println("Test file: " + timeCategory + testFilename);
+    log.info("Test file: " + timeCategory + testFilename);
     List<String> result = new ArrayList<>();
     List<String> expectedResult =
         expected(timeCategory + testFilename + ".out"); // path to file name *.out

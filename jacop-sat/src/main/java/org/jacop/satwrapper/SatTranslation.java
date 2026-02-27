@@ -32,6 +32,7 @@ package org.jacop.satwrapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,6 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class SatTranslation {
 
   final SatWrapper clauses;
@@ -107,7 +109,7 @@ public class SatTranslation {
       throw Store.failException;
     }
     if (debug) {
-      IO.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
+      log.info("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
     }
 
     for (IntVar v : a1reduced) {

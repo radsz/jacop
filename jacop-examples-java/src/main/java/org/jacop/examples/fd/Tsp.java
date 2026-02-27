@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
@@ -48,6 +49,7 @@ import org.jacop.search.SmallestDomain;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Tsp extends ExampleFd {
 
   IntVar[][] varsMatrix;
@@ -64,7 +66,7 @@ public class Tsp extends ExampleFd {
     example.model();
 
     if (example.searchMaxRegretForMatrixOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -148,12 +150,12 @@ public class Tsp extends ExampleFd {
     t = t2 - t1;
 
     if (result) {
-      IO.println("Variables " + store.toStringOrderedVars());
+      log.info("Variables " + store.toStringOrderedVars());
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

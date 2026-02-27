@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Util to parse command-line arguments.
@@ -43,6 +44,7 @@ import java.util.Set;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class OptParse<E> {
 
   // handlers
@@ -116,7 +118,7 @@ public class OptParse<E> {
     String key = loc > 0 ? arg.substring(0, loc) : arg;
     String value = loc > 0 ? arg.substring(loc + 1) : "";
     if (!handlers.containsKey(key)) {
-      IO.println("unknown option: " + key);
+      log.info("unknown option: " + key);
       printHelp();
       return null;
     }
@@ -126,8 +128,8 @@ public class OptParse<E> {
   /** Print help of all options. */
   public void printHelp() {
     // print the main help message
-    IO.println(mainHelp);
-    IO.println("options:");
+    log.info(mainHelp);
+    log.info("options:");
 
     // print (only once for each handler) its help
     Set<OptHandler<E>> printedHelps = new HashSet<>();
@@ -140,7 +142,7 @@ public class OptParse<E> {
 
       // print help for this handler
       String msg = "-%c, --%-16s %s".formatted(handler.shortOpt, handler.longOpt, handler.help);
-      IO.println(msg);
+      log.info(msg);
     }
   }
 

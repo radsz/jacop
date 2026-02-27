@@ -25,6 +25,7 @@
 
 package org.jacop.fz.constraints;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Not;
@@ -58,6 +59,7 @@ import org.jacop.set.core.SetVar;
  *
  * @author Krzysztof Kuchcinski
  */
+@Slf4j
 class SetConstraints implements ParserTreeConstants {
 
   final Support support;
@@ -76,7 +78,7 @@ class SetConstraints implements ParserTreeConstants {
       v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
       if (support.options.debug()) {
-        IO.println("% Cardinality of set " + v1 + " = " + v2);
+        log.info("% Cardinality of set " + v1 + " = " + v2);
       }
 
     } else {

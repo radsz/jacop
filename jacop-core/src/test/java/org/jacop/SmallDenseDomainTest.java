@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -27,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @author Mariusz Świerkot
  */
 @ExtendWith(MockitoExtension.class)
+@Slf4j
 public class SmallDenseDomainTest {
 
   @Mock IntVar v;
@@ -47,7 +49,7 @@ public class SmallDenseDomainTest {
   public void testContains(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
-    IO.println("Contains function test");
+    log.info("Contains function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
 
@@ -57,7 +59,7 @@ public class SmallDenseDomainTest {
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-3, 4, 5, 5, 9, 10}});
 
-    IO.println("Test Complement function");
+    log.info("Test Complement function");
     assertThat(testedDomain.contains(createDomain(new Interval(1, 2), new Interval(6, 6))))
         .isFalse();
   }
@@ -66,7 +68,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testComplement(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
-    IO.println("Complement function test");
+    log.info("Complement function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(testedDomain.complement().toString())
@@ -77,7 +79,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testGetElementAt(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
-    IO.println("GetElementAt function test");
+    log.info("GetElementAt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     assertThat(testedDomain.getElementAt(0)).isEqualTo(1);
@@ -88,7 +90,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testIntersect(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
-    IO.println("Intersect function test");
+    log.info("Intersect function test");
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -123,7 +125,7 @@ public class SmallDenseDomainTest {
   public void testIntersectAdapt(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
-    IO.println("IntersectAdapt function test");
+    log.info("IntersectAdapt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isEqualTo(0);
@@ -228,7 +230,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testIsIntersecting() throws Exception {
 
-    IO.println("IsIntersecting function test");
+    log.info("IsIntersecting function test");
     IntDomain testedDomain =
         (IntDomain)
             prepareMethod.invoke(
@@ -242,7 +244,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testSubtract() throws Exception {
 
-    IO.println("Subtract function test");
+    log.info("Subtract function test");
     IntDomain testedDomain =
         (IntDomain)
             prepareMethod.invoke(
@@ -270,7 +272,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testNextValue() throws Exception {
 
-    IO.println("NextValue function test");
+    log.info("NextValue function test");
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -281,7 +283,7 @@ public class SmallDenseDomainTest {
   @MethodSource("parametricTest")
   public void testPreviousValue() throws Exception {
 
-    IO.println("previousValue function test");
+    log.info("previousValue function test");
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});

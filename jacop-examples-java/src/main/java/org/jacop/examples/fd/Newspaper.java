@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -58,6 +59,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Newspaper extends ExampleFd {
 
   /** Start times for each person (algy, bertie, charlie, digby) and newspaper index. */
@@ -79,7 +81,7 @@ public class Newspaper extends ExampleFd {
     example.model();
 
     if (example.searchSmallestMin()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

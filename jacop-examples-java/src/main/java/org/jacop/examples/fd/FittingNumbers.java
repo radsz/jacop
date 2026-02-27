@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -46,6 +47,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class FittingNumbers extends ExampleFd {
 
   final int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
@@ -64,7 +66,7 @@ public class FittingNumbers extends ExampleFd {
     example.model();
 
     if (example.searchAllAtOnce()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -92,6 +94,6 @@ public class FittingNumbers extends ExampleFd {
 
     store.impose(new LinearInt(counters, elements, "==", sum));
 
-    IO.println(store);
+    log.info("{}", store);
   }
 }

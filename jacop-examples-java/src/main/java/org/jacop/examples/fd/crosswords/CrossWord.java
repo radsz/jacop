@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.IntVar;
@@ -64,6 +65,7 @@ import org.jacop.util.Mdd;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class CrossWord extends ExampleFd {
 
   final int r = 5; // number of rows
@@ -95,7 +97,7 @@ public class CrossWord extends ExampleFd {
     String filename;
     if (args.length == 1) {
       filename = args[0];
-      IO.println("Using file " + filename);
+      log.info("Using file " + filename);
     }
 
     CrossWord m = new CrossWord();
@@ -110,7 +112,7 @@ public class CrossWord extends ExampleFd {
 
     t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
   } // end main
 
   /** Model(). */
@@ -207,7 +209,7 @@ public class CrossWord extends ExampleFd {
    */
   public void printSolution(char[][] crossWordTemplate) {
 
-    IO.println();
+    log.info("");
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
         if (crossWordTemplate[i][j] != '*') {
@@ -216,7 +218,7 @@ public class CrossWord extends ExampleFd {
           IO.print("* ");
         }
       }
-      IO.println();
+      log.info("");
     }
   }
 
@@ -263,10 +265,10 @@ public class CrossWord extends ExampleFd {
         }
 
       } catch (IOException e) {
-        IO.println(e);
+        log.info("{}", e);
       }
 
-      IO.println("There are " + wordCount + " words of size " + wordSize);
+      log.info("There are " + wordCount + " words of size " + wordSize);
       resultForWordSize.reduce();
       mdds.put(wordSize, resultForWordSize);
     }
@@ -297,13 +299,13 @@ public class CrossWord extends ExampleFd {
     long t2 = System.currentTimeMillis();
 
     if (result) {
-      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      log.info("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
       searchLabel.printAllSolutions();
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }
@@ -328,7 +330,7 @@ public class CrossWord extends ExampleFd {
       boolean returnCode = super.executeAfterSolution(search, select);
 
       if (noSolutions % 10 == 0) {
-        IO.println("Solution # " + noSolutions);
+        log.info("Solution # " + noSolutions);
         printSolution(crossWordTemplate);
       }
 

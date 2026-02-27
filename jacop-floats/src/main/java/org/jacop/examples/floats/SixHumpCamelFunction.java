@@ -32,6 +32,7 @@ package org.jacop.examples.floats;
 
 import java.util.HashSet;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.Derivative;
@@ -45,6 +46,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for six-hump camel function using float constraints. */
+@Slf4j
 public class SixHumpCamelFunction {
 
   final double minFloat = -1e+20;
@@ -67,7 +69,7 @@ public class SixHumpCamelFunction {
     long t1;
     t1 = System.currentTimeMillis();
 
-    IO.println("========= Six Hump Camel Function =========");
+    log.info("========= Six Hump Camel Function =========");
 
     Store store = new Store();
 
@@ -114,15 +116,15 @@ public class SixHumpCamelFunction {
     vars.add(x2);
     Derivative.init(store);
 
-    IO.println("================== fx1 =================");
+    log.info("================== fx1 =================");
     FloatVar fx1 = Derivative.getDerivative(store, f, vars, x1);
 
-    IO.println("================== fx2 =================");
+    log.info("================== fx2 =================");
     FloatVar fx2 = Derivative.getDerivative(store, f, vars, x2);
     store.impose(new PeqC(fx1, 0.0));
     store.impose(new PeqC(fx2, 0.0));
 
-    IO.println(
+    log.info(
         "Var store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -137,14 +139,14 @@ public class SixHumpCamelFunction {
     boolean result = min.minimize();
 
     if (!result) {
-      IO.println("NO SOLUTION");
+      log.info("NO SOLUTION");
     }
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 }

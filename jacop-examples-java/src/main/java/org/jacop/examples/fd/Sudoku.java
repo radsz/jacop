@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -44,6 +45,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Sudoku extends ExampleFd {
 
   /** The Sudoku grid; shared with subclasses. */
@@ -83,7 +85,7 @@ public class Sudoku extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);
@@ -101,7 +103,7 @@ public class Sudoku extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);
@@ -111,7 +113,7 @@ public class Sudoku extends ExampleFd {
     example.modelBasic();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     printMatrix(example.elements, example.elements.length, example.elements[0].length);

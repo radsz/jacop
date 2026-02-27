@@ -38,6 +38,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -59,6 +60,7 @@ import org.jacop.util.fsm.FsmTransition;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Nonogram extends ExampleFd {
 
   /** The value that represents a black dot. */
@@ -157,7 +159,7 @@ public class Nonogram extends ExampleFd {
 
     example.model();
     if (example.searchAll()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     example.printMatrix(example.board);
@@ -174,7 +176,7 @@ public class Nonogram extends ExampleFd {
 
     example.model();
     if (example.searchAll()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
     example.printMatrix(example.board);
 
@@ -185,12 +187,12 @@ public class Nonogram extends ExampleFd {
         no.insert(0, "0");
       }
 
-      IO.println("Problem file data" + no + ".nin");
+      log.info("Problem file data" + no + ".nin");
       example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
       example.model();
 
       if (example.searchAll()) {
-        IO.println(SOLUTION_FOUND);
+        log.info(SOLUTION_FOUND);
       }
 
       example.printMatrix(example.board);
@@ -322,7 +324,7 @@ public class Nonogram extends ExampleFd {
     vars = new ArrayList<>();
     initBoardAndValues();
     addZigzagVariableOrdering();
-    IO.println("Size " + vars.size());
+    log.info("Size " + vars.size());
     addRowRules();
     addColumnRules();
   }
@@ -401,7 +403,7 @@ public class Nonogram extends ExampleFd {
     searchLabel.getSolutionListener().recordSolutions(false);
     searchLabel.setAssignSolution(true);
 
-    IO.println("Search has begun ...");
+    log.info("Search has begun ...");
 
     final long t1 = System.currentTimeMillis();
 
@@ -410,13 +412,13 @@ public class Nonogram extends ExampleFd {
     long t2 = System.currentTimeMillis();
 
     if (result) {
-      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      log.info("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
       searchLabel.printAllSolutions();
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }
@@ -436,7 +438,7 @@ public class Nonogram extends ExampleFd {
           IO.print(" ");
         }
       }
-      IO.println();
+      log.info("");
     }
   }
 }

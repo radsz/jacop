@@ -38,6 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
@@ -59,6 +60,7 @@ import org.jacop.util.fsm.FsmTransition;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class CarSequencing extends ExampleFd {
 
   /**
@@ -356,7 +358,7 @@ public class CarSequencing extends ExampleFd {
 
     List<String> result = new ArrayList<>();
 
-    IO.println("readFile(" + file + ")");
+    log.info("readFile(" + file + ")");
 
     try (BufferedReader inr =
         new BufferedReader(
@@ -377,7 +379,7 @@ public class CarSequencing extends ExampleFd {
       } // end while
 
     } catch (IOException e) {
-      IO.println(e);
+      log.info("{}", e);
     }
 
     return result.toArray(new String[0]);
@@ -399,7 +401,7 @@ public class CarSequencing extends ExampleFd {
     String[] description = toStringArray(example);
 
     for (String line : description) {
-      IO.println(line);
+      log.info(line);
     }
 
     example.searchAllAtOnce();
@@ -421,7 +423,7 @@ public class CarSequencing extends ExampleFd {
     String[] description = toStringArray(example);
 
     for (String line : description) {
-      IO.println(line);
+      log.info(line);
     }
 
     example.searchAllAtOnce();

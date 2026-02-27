@@ -31,6 +31,7 @@
 package org.jacop.floats.search;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
@@ -49,6 +50,7 @@ import org.jacop.search.SimpleSolutionListener;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Optimize<T extends Var> {
 
   final Store store;
@@ -138,9 +140,9 @@ public class Optimize<T extends Var> {
 
   private boolean minimizeWithChoice(PrimitiveConstraint choice) {
     if (printInfo) {
-      IO.println("% Current cost bounds: " + cost + "\n----------");
+      log.info("% Current cost bounds: " + cost + "\n----------");
       FloatInterval f = new FloatInterval(cost.min(), ((PlteqC) choice).c);
-      IO.println("% Checking interval " + f);
+      log.info("% Checking interval " + f);
     }
 
     store.impose(choice);
@@ -148,9 +150,9 @@ public class Optimize<T extends Var> {
 
     if (!result) {
       if (printInfo) {
-        IO.println("% No solution");
+        log.info("% No solution");
         FloatInterval f = new FloatInterval(FloatDomain.next(((PlteqC) choice).c), cost.max());
-        IO.println("% Checking interval " + f);
+        log.info("% Checking interval " + f);
       }
       store.impose(new Not(choice));
       result = minimize();
@@ -170,8 +172,8 @@ public class Optimize<T extends Var> {
         IO.print(", ");
       }
     }
-    IO.println("]");
-    IO.println("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
+    log.info("]");
+    log.info("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
   }
 
   /**
@@ -213,8 +215,8 @@ public class Optimize<T extends Var> {
 
       costValue = cost.max();
 
-      IO.println(Arrays.asList(variables));
-      IO.println("% Found solution with cost " + cost);
+      log.info(Arrays.asList(variables).toString());
+      log.info("% Found solution with cost " + cost);
 
       lastCost = new FloatInterval(cost.min(), cost.max());
       for (int i = 0; i < variables.length; i++) {

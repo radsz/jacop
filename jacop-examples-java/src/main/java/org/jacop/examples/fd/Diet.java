@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -66,6 +67,7 @@ import org.jacop.core.Store;
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Diet extends ExampleFd {
 
   public final int n = 4; // number of ingredients
@@ -94,9 +96,9 @@ public class Diet extends ExampleFd {
    */
   public static void printLastSolution(Diet diet) {
 
-    IO.println("Cost: " + diet.cost.value());
+    log.info("Cost: " + diet.cost.value());
     for (int i = 0; i < diet.m; i++) {
-      IO.println(diet.food[i] + ": " + diet.x[i].value());
+      log.info(diet.food[i] + ": " + diet.x[i].value());
     }
   }
 
@@ -110,42 +112,42 @@ public class Diet extends ExampleFd {
     Diet diet = new Diet();
     diet.model();
 
-    IO.println("Searching for optimal using sum weight constraints");
+    log.info("Searching for optimal using sum weight constraints");
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      IO.println(NO_SOLUTION);
+      log.info(NO_SOLUTION);
     }
 
     diet = new Diet();
     diet.modelKnapsack();
 
-    IO.println("Searching for optimal using knapsack constraints");
+    log.info("Searching for optimal using knapsack constraints");
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      IO.println(NO_SOLUTION);
+      log.info(NO_SOLUTION);
     }
 
     diet = new Diet();
     diet.model();
 
-    IO.println("Searching for all solutions using sum weight constraints");
+    log.info("Searching for all solutions using sum weight constraints");
 
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      IO.println(NO_SOLUTION);
+      log.info(NO_SOLUTION);
     }
 
     diet = new Diet();
     diet.modelKnapsack();
 
-    IO.println("Searching for all solutions using knapsack constraints");
+    log.info("Searching for all solutions using knapsack constraints");
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      IO.println(NO_SOLUTION);
+      log.info(NO_SOLUTION);
     }
   }
 

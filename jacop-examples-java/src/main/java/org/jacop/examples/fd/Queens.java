@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XneqY;
@@ -44,6 +45,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Queens extends ExampleFd {
 
   // Place n queens on a chessboard of size nxn
@@ -77,7 +79,7 @@ public class Queens extends ExampleFd {
     example.parseArgs(args);
     example.model();
     if (example.searchSmallestMiddle()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -99,21 +101,21 @@ public class Queens extends ExampleFd {
     example.parseArgs(args);
     example.model();
     if (example.searchSmallestMiddle()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     example = new Queens();
     example.parseArgs(args);
     example.modelBasic();
     if (example.searchLds(3)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     example = new Queens();
     example.parseArgs(args);
     example.modelChanneling();
     if (example.searchSmallestMiddle()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 

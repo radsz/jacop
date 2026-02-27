@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
@@ -69,6 +70,7 @@ import org.jacop.core.Store;
  * @author Janusz Kociolek, Sebastian Czypek, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class StonesOfHeaven extends ExampleFd {
 
   /**
@@ -83,7 +85,7 @@ public class StonesOfHeaven extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -93,7 +95,7 @@ public class StonesOfHeaven extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Solution for problem Stones of Heaven");
+    log.info("Solution for problem Stones of Heaven");
 
     String[] ColorNames = {"red", "lightgreen", "white", "darkgreen"};
     final int /* ired = 0, */ iLgreen = 1;

@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Max;
@@ -68,6 +69,7 @@ import org.jacop.search.SimpleSelect;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class NonTransitiveDice extends ExampleFd {
 
   /** It contains constraints which can be used for shaving guidance. */
@@ -137,7 +139,7 @@ public class NonTransitiveDice extends ExampleFd {
       IO.print(example.searchLabel.getDecisions() + "\t");
       IO.print(example.searchLabel.getWrongDecisions() + "\t");
       IO.print(example.searchLabel.getBacktracks() + "\t");
-      IO.println(example.searchLabel.getMaximumDepth() + "\t");
+      log.info(example.searchLabel.getMaximumDepth() + "\t");
       currentBest--;
       if (result) {
         firstSolutionFound = true;
@@ -352,7 +354,7 @@ public class NonTransitiveDice extends ExampleFd {
     IO.print(searchLabel.getDecisions() + "\t");
     IO.print(searchLabel.getWrongDecisions() + "\t");
     IO.print(searchLabel.getBacktracks() + "\t");
-    IO.println(searchLabel.getMaximumDepth() + "\t");
+    log.info(searchLabel.getMaximumDepth() + "\t");
 
     return result;
   }

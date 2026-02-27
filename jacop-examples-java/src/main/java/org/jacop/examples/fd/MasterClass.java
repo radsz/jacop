@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.XeqC;
@@ -73,6 +74,7 @@ import org.jacop.core.Store;
  * @author Zbigniew Danielczyk, Mariusz Jedrzejko, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class MasterClass extends ExampleFd {
 
   /**
@@ -87,7 +89,7 @@ public class MasterClass extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -97,7 +99,7 @@ public class MasterClass extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Solution to problem Master Class");
+    log.info("Solution to problem Master Class");
 
     // voice names
     String[] glos = {"mezzosoprano", "soprano", "bass", "tenor_1", "tenor_2"};

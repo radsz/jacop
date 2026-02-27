@@ -30,6 +30,7 @@
 
 package org.jacop.examples.cpviz;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -50,6 +51,7 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class CpvizNetworkFlow {
   Store store;
   IntVar[] vars;
@@ -125,7 +127,7 @@ public class CpvizNetworkFlow {
 
     store.impose(new NetworkFlow(net));
 
-    IO.println(
+    log.info(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -152,15 +154,15 @@ public class CpvizNetworkFlow {
     boolean result = label.labeling(store, select, cost);
 
     if (result) {
-      IO.println("*** Yes");
-      IO.println(cost);
+      log.info("*** Yes");
+      log.info("{}", cost);
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 
   /** Listener for network flow solutions. */
@@ -177,7 +179,7 @@ public class CpvizNetworkFlow {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 
-      IO.println("Solution cost cost = " + costVar.value());
+      log.info("Solution cost cost = " + costVar.value());
 
       IO.print("[");
 
@@ -185,7 +187,7 @@ public class CpvizNetworkFlow {
         IO.print(v + " ");
       }
 
-      IO.println("]");
+      log.info("]");
 
       return returnCode;
     }

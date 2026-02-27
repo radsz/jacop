@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -50,6 +51,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Derivative {
 
   public static final double MIN_FLOAT = -1e+150;
@@ -154,7 +156,7 @@ public class Derivative {
       eval.pop();
       return v;
     }
-    IO.println(
+    log.info(
         "!!! "
             + constraints.size()
             + " constraints define a function for variable "

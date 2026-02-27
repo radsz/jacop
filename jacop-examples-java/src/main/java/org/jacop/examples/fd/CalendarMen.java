@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -64,6 +65,7 @@ import org.jacop.core.Store;
  * @author Michal Tonderski, Szymon Sieklucki, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class CalendarMen extends ExampleFd {
 
   private static final String SOLUTION_FOUND = "Solution(s) found";
@@ -80,7 +82,7 @@ public class CalendarMen extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     CalendarMen exampleBasic = new CalendarMen();
@@ -88,7 +90,7 @@ public class CalendarMen extends ExampleFd {
     exampleBasic.modelBasic();
 
     if (exampleBasic.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -104,7 +106,7 @@ public class CalendarMen extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -114,7 +116,7 @@ public class CalendarMen extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("This program solves logic puzzle Calendar Men");
+    log.info("This program solves logic puzzle Calendar Men");
 
     String[] firstNames = {
       "Antonio",
@@ -474,7 +476,7 @@ public class CalendarMen extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("This program solves logic puzzle Calendar Men");
+    log.info("This program solves logic puzzle Calendar Men");
 
     String[] firstnameId = {
       "Antonio",

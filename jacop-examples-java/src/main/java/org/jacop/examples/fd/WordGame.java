@@ -37,6 +37,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Scanner;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -60,6 +61,7 @@ import org.jacop.util.Mdd;
  *
  * @author Radoslaw Szymanek
  */
+@Slf4j
 public class WordGame {
 
   public static final String DEFAULT_DICTIONARY =
@@ -81,7 +83,7 @@ public class WordGame {
         new ExtensionalSupportMdd(readDictionaryFor5LetterWords(DEFAULT_DICTIONARY, unknownWord)));
 
     for (int attempt = 1; attempt <= 8; attempt++) {
-      IO.println("Attempt " + attempt);
+      log.info("Attempt " + attempt);
 
       // Set up search
       final SelectChoicePoint<IntVar> select =
@@ -170,7 +172,7 @@ public class WordGame {
       } // end while
 
     } catch (IOException e) {
-      IO.println(e);
+      log.info("{}", e);
     }
 
     resultForWordSize.reduce();
@@ -179,10 +181,10 @@ public class WordGame {
 
   private static char[] getUserGuessQuality() {
     Scanner scanner = new Scanner(System.in);
-    IO.println("Enter the quality of your guess:");
-    IO.println("! : The letter is not present in the unknown word.");
-    IO.println("+ : The letter is present and in the correct position in the unknown word.");
-    IO.println("- : The letter is present but not in the correct position in the unknown word.");
+    log.info("Enter the quality of your guess:");
+    log.info("! : The letter is not present in the unknown word.");
+    log.info("+ : The letter is present and in the correct position in the unknown word.");
+    log.info("- : The letter is present but not in the correct position in the unknown word.");
     IO.print("Quality: ");
     String input = scanner.nextLine();
     return input.toCharArray();
@@ -206,7 +208,7 @@ public class WordGame {
       for (T v : vars) {
         IO.print((char) ((IntVar) v).dom().min());
       }
-      IO.println(" ");
+      log.info(" ");
 
       return returnCode;
     }

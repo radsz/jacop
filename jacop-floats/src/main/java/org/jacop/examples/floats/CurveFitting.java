@@ -31,6 +31,7 @@
 package org.jacop.examples.floats;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -42,6 +43,7 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 /** Example for curve fitting using float constraints. */
+@Slf4j
 public class CurveFitting {
 
   final double minFloat = -1e+150;
@@ -61,7 +63,7 @@ public class CurveFitting {
 
   void curveFitting3() {
 
-    IO.println("========= curveFitting3 =========");
+    log.info("========= curveFitting3 =========");
 
     Store store = new Store();
 
@@ -133,7 +135,7 @@ public class CurveFitting {
     System.arraycopy(Ey, 0, vars, n, 2 * n - n);
     vars[2 * n] = b1;
 
-    IO.println(
+    log.info(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -150,8 +152,8 @@ public class CurveFitting {
 
     label.labeling(store, s);
 
-    IO.println(X + "\n" + Y + "\n" + b1);
+    log.info(X + "\n" + Y + "\n" + b1);
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
   }
 }

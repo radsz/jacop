@@ -31,6 +31,7 @@
 package org.jacop.examples.set;
 
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -50,6 +51,7 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public abstract class ExampleSet {
 
   /** It contains all variables used within a specific example. */
@@ -80,7 +82,7 @@ public abstract class ExampleSet {
       for (int j = 0; j < cols; j++) {
         IO.print(matrix[i][j].value() + " ");
       }
-      IO.println();
+      log.info("");
     }
   }
 
@@ -89,7 +91,7 @@ public abstract class ExampleSet {
 
   /** Prints search statistics (nodes, decisions, wrong decisions, backtracks, max depth). */
   protected void printSearchStats() {
-    IO.println();
+    log.info("");
     IO.print(searchLabel.getNodes() + "\t");
     IO.print(searchLabel.getDecisions() + "\t");
     IO.print(searchLabel.getWrongDecisions() + "\t");
@@ -99,7 +101,7 @@ public abstract class ExampleSet {
 
   /** Prints execution time in ms since the given start time. */
   protected void printExecutionTime(long t1) {
-    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
   }
 
   /**
@@ -247,7 +249,7 @@ public abstract class ExampleSet {
     boolean result =
         executeSearch(createSimpleSelect(new MostConstrainedStatic<>()), null, null, true, false);
     if (!result) {
-      IO.println("**** No Solution ****");
+      log.info("**** No Solution ****");
     }
     return result;
   }
@@ -271,9 +273,9 @@ public abstract class ExampleSet {
             false,
             true);
     if (result) {
-      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      log.info("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
     return result;
   }
@@ -305,7 +307,7 @@ public abstract class ExampleSet {
     boolean result = labelMaster.labeling(store, selectMaster);
 
     if (result) {
-      IO.println("Solution found");
+      log.info("Solution found");
     }
 
     if (result) {

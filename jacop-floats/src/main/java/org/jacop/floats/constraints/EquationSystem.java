@@ -32,6 +32,7 @@ package org.jacop.floats.constraints;
 
 import java.util.Arrays;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -45,6 +46,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class EquationSystem extends Constraint {
 
   static final boolean DEBUG = false;
@@ -87,7 +89,7 @@ public class EquationSystem extends Constraint {
       for (int i = 0; i < xs.length; i++) {
         if (DEBUG) {
           if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max()) {
-            IO.println("*** " + x[i] + " in " + xs[i]);
+            log.info("*** " + x[i] + " in " + xs[i]);
           }
         }
 

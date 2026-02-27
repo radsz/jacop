@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.TanPeqR;
@@ -39,6 +40,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for tangent using float constraints. */
+@Slf4j
 public class TanExample {
 
   /**
@@ -58,7 +60,7 @@ public class TanExample {
    */
   public void model() {
 
-    IO.println("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");
+    log.info("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");
 
     long t1;
     t1 = System.currentTimeMillis();
@@ -74,7 +76,7 @@ public class TanExample {
     store.impose(new TanPeqR(p, q));
     store.impose(new PplusQeqR(p, q, new FloatVar(store, 0.0, 0.0)));
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -95,13 +97,13 @@ public class TanExample {
     if (result) {
       label.printAllSolutions();
     } else {
-      IO.println("NO SOLUTION");
+      log.info("NO SOLUTION");
     }
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
   }
 }

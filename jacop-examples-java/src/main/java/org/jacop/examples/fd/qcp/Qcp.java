@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
@@ -59,6 +60,7 @@ import org.jacop.search.TransformExtensional;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Qcp extends ExampleFd {
 
   // It uses correct InputOrder tie breaking (lex)
@@ -144,7 +146,7 @@ public class Qcp extends ExampleFd {
       example.filename = args[0];
     }
 
-    IO.println("Solving Qcp with restart search.");
+    log.info("Solving Qcp with restart search.");
     example.model();
 
     if (example.searchWithRestarts()) {
@@ -268,8 +270,8 @@ public class Qcp extends ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println("Number of milliseconds " + (end - begin));
-    IO.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
+    log.info("Number of milliseconds " + (end - begin));
+    log.info("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
     return result;
   }
@@ -296,7 +298,7 @@ public class Qcp extends ExampleFd {
       }
     }
 
-    IO.println(transform.variablesTransformationScope);
+    log.info("{}", transform.variablesTransformationScope);
 
     final SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -313,7 +315,7 @@ public class Qcp extends ExampleFd {
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

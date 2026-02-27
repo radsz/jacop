@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -139,6 +140,7 @@ import org.jacop.util.fsm.FsmTransition;
  *
  * @author Krzysztof Kuchcinski
  */
+@Slf4j
 class GlobalConstraints implements ParserTreeConstants {
 
   final Store store;
@@ -832,7 +834,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (m == ub.length && z == lb.length) {
       if (support.options.debug()) {
         String s = "% SKIPPED " + new CountValuesBounds(x, lb, ub, values);
-        IO.println(s.replace("\n", "\n% "));
+        log.info(s.replace("\n", "\n% "));
       }
       return;
     }
@@ -1120,7 +1122,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     var.domain.in(store.level, var, d);
     if (support.options.debug()) {
-      IO.println("% " + var + " in " + d);
+      log.info("% " + var + " in " + d);
     }
   }
 
@@ -1172,7 +1174,7 @@ class GlobalConstraints implements ParserTreeConstants {
       for (int[] ints : c) {
         v[0].domain.inComplement(store.level, v[0], ints[0]);
         if (support.options.debug()) {
-          IO.println("% " + v[0] + " \\ " + ints[0]);
+          log.info("% " + v[0] + " \\ " + ints[0]);
         }
       }
     } else {

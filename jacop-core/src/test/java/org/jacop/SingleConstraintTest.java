@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Among;
@@ -95,6 +96,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * @version 5.0
  */
 @ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
+@Slf4j
 public class SingleConstraintTest extends TestHelper {
 
   @Test
@@ -905,7 +907,7 @@ public class SingleConstraintTest extends TestHelper {
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
-      IO.println("Starting test: " + context.getDisplayName());
+      log.info("Starting test: " + context.getDisplayName());
     }
   }
 }

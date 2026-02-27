@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -69,6 +70,7 @@ import org.jacop.core.Store;
  * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Golf extends ExampleFd {
 
   /**
@@ -83,7 +85,7 @@ public class Golf extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -93,7 +95,7 @@ public class Golf extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Golf problem ");
+    log.info("Program to solve Golf problem ");
 
     // First names of golf players.
     String[] FnNames = {"Bill", "Paul", "Frank", "Jack"};

@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Min;
@@ -63,6 +64,7 @@ import org.jacop.core.Store;
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class DeBruijn extends ExampleFd {
 
   // These parameters may be set by the user:
@@ -117,19 +119,19 @@ public class DeBruijn extends ExampleFd {
       for (int i = 0; i < m; i++) {
         IO.print(debruijn.x[i].value() + " ");
       }
-      IO.println();
+      log.info("");
 
-      IO.println("\nbinary:");
+      log.info("\nbinary:");
 
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
           IO.print(debruijn.binary[i][j].value() + " ");
         }
-        IO.println(" : " + debruijn.x[i].value());
+        log.info(" : " + debruijn.x[i].value());
       }
 
     } else {
-      IO.println("No solutions.");
+      log.info("No solutions.");
     } // end if result
   } // end main
 
@@ -154,7 +156,7 @@ public class DeBruijn extends ExampleFd {
       }
     }
 
-    IO.println("Using base: " + base + " n: " + n + " m: " + m);
+    log.info("Using base: " + base + " n: " + n + " m: " + m);
 
     // decimal representation, ranges from 0..base^n-1
     x = new IntVar[m];

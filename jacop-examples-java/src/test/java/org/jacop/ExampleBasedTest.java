@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashSet;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.examples.fd.ArchFriends;
 import org.jacop.examples.fd.BabySitting;
 import org.jacop.examples.fd.BasicLogicPascal;
@@ -95,6 +96,7 @@ import org.junit.jupiter.api.Test;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class ExampleBasedTest {
 
   @Test
@@ -109,7 +111,7 @@ public class ExampleBasedTest {
     String[] description = CarSequencing.toStringArray(example);
 
     for (String line : description) {
-      IO.println(line);
+      log.info(line);
     }
 
     assertThat(example.searchAllAtOnce()).isTrue();
@@ -188,12 +190,12 @@ public class ExampleBasedTest {
         no.insert(0, "0");
       }
 
-      IO.println("Problem file data" + no + ".nin");
+      log.info("Problem file data" + no + ".nin");
       example.readFromFile("src/test/resources/nonogramRepository/data" + no + ".nin");
       example.model();
 
       if (example.searchAll()) {
-        IO.println("Solution(s) found");
+        log.info("Solution(s) found");
       }
 
       assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(1);
@@ -204,7 +206,7 @@ public class ExampleBasedTest {
   @Test
   public void testQCP() {
 
-    IO.println("Solving Qcp with restart search.");
+    log.info("Solving Qcp with restart search.");
     Qcp example = new Qcp();
     example.filename = "src/test/resources/psqwh-25-235-0081.pls";
     example.model();
@@ -403,15 +405,15 @@ public class ExampleBasedTest {
     for (int i = 0; i < example.m; i++) {
       IO.print(example.x[i].value() + " ");
     }
-    IO.println();
+    log.info("");
 
-    IO.println("\nbinary:");
+    log.info("\nbinary:");
 
     for (int i = 0; i < example.m; i++) {
       for (int j = 0; j < example.n; j++) {
         IO.print(example.binary[i][j].value() + " ");
       }
-      IO.println(" : " + example.x[i].value());
+      log.info(" : " + example.x[i].value());
     }
 
     assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(14);
@@ -420,7 +422,7 @@ public class ExampleBasedTest {
   @Test
   public void testDietSumWeight() {
 
-    IO.println("Searching for all solutions using sum weight constraints");
+    log.info("Searching for all solutions using sum weight constraints");
 
     Diet exampleSumWeight = new Diet();
 
@@ -436,7 +438,7 @@ public class ExampleBasedTest {
   @Test
   public void testDiet() {
 
-    IO.println("Searching for all solutions using knapsack constraints");
+    log.info("Searching for all solutions using knapsack constraints");
     Diet exampleKnapsack = new Diet();
 
     exampleKnapsack.modelKnapsack();
@@ -740,7 +742,7 @@ public class ExampleBasedTest {
       IO.print(example.searchLabel.getDecisions() + "\t");
       IO.print(example.searchLabel.getWrongDecisions() + "\t");
       IO.print(example.searchLabel.getBacktracks() + "\t");
-      IO.println(example.searchLabel.getMaximumDepth() + "\t");
+      log.info(example.searchLabel.getMaximumDepth() + "\t");
 
       currentBest--;
 
@@ -770,7 +772,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.searchMaxRegretOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -836,7 +838,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -874,7 +876,7 @@ public class ExampleBasedTest {
     exampleBasic.modelBasic();
 
     if (exampleBasic.search()) {
-      IO.println("Solution found.");
+      log.info("Solution found.");
     }
 
     exampleBasic.getSearch().assignSolution();
@@ -888,7 +890,7 @@ public class ExampleBasedTest {
     exampleGlobal.model();
 
     if (exampleGlobal.search()) {
-      IO.println("Solution found.");
+      log.info("Solution found.");
     }
 
     exampleGlobal.getSearch().assignSolution();
@@ -906,7 +908,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -924,7 +926,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -942,7 +944,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -960,7 +962,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -974,7 +976,7 @@ public class ExampleBasedTest {
     example.modelBasic();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -994,7 +996,7 @@ public class ExampleBasedTest {
 
     if (result) {
       int numSolutions = survoPuzzle.searchLabel.getSolutionListener().solutionsNo();
-      IO.println("Number of solutions: " + numSolutions);
+      log.info("Number of solutions: " + numSolutions);
     }
 
     survoPuzzle.getSearch().assignSolution();
@@ -1012,7 +1014,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.searchMaxRegretForMatrixOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -1030,7 +1032,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.searchMostConstrainedStatic()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();
@@ -1047,7 +1049,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     assertThat(example.searchLabel.getSolutionListener().solutionsNo()).isEqualTo(8);
@@ -1068,7 +1070,7 @@ public class ExampleBasedTest {
       example.model();
 
       if (!example.searchMostConstrainedStatic()) {
-        IO.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+        log.info("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
       } else {
         result = true;
       }
@@ -1093,7 +1095,7 @@ public class ExampleBasedTest {
     example.model();
 
     if (example.searchMostConstrainedStatic()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example.getSearch().assignSolution();

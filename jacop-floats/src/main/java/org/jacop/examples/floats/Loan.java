@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusQeqR;
@@ -40,6 +41,7 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 /** Example for loan calculation using float constraints. */
+@Slf4j
 public class Loan {
 
   /**
@@ -52,7 +54,7 @@ public class Loan {
     Loan example = new Loan();
 
     if (args.length != 4) {
-      IO.println("Wring number of parameters");
+      log.info("Wring number of parameters");
     } else {
       double i = Double.parseDouble(args[0]);
       double p = Double.parseDouble(args[1]);
@@ -84,7 +86,7 @@ public class Loan {
     //             B4 = 0.0;
     //        result P = 907.47 (precision 1e-4)
 
-    IO.println(
+    log.info(
         "\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\n"
             + "R- quarterly repayment and B4- balance owing at end\nParameters:");
 
@@ -97,19 +99,19 @@ public class Loan {
     FloatVar R; // quarterly repayment
     if (r != 0.0) {
       R = new FloatVar(store, "R", r, r);
-      IO.println("R = " + r);
+      log.info("R = " + r);
     } else {
       R = new FloatVar(store, "R", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      IO.println("R = ?");
+      log.info("R = ?");
     }
 
     FloatVar P; // principal initially borrowed
     if (p != 0.0) {
       P = new FloatVar(store, "P", p, p);
-      IO.println("P = " + p);
+      log.info("P = " + p);
     } else {
       P = new FloatVar(store, "P", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      IO.println("P = ?");
+      log.info("P = ?");
     }
 
     FloatVar I = new FloatVar(store, "I", i, i); // interest rate
@@ -121,10 +123,10 @@ public class Loan {
     FloatVar B4; //  balance owing at end
     if (b4 >= 0.0) {
       B4 = new FloatVar(store, "B4", b4, b4);
-      IO.println("B4 = " + b4);
+      log.info("B4 = " + b4);
     } else {
       B4 = new FloatVar(store, "B4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-      IO.println("B4 = ?");
+      log.info("B4 = ?");
     }
 
     FloatVar t1 = new FloatVar(store, "t1", 1.0, 2.0);
@@ -170,8 +172,8 @@ public class Loan {
 
     label.labeling(store, s);
 
-    IO.println(B4 + "\n" + P + "\n" + R);
+    log.info(B4 + "\n" + P + "\n" + R);
 
-    IO.println("Precision = " + FloatDomain.precision());
+    log.info("Precision = " + FloatDomain.precision());
   }
 }

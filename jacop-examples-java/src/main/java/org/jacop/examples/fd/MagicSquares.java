@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Assignment;
@@ -53,6 +54,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @SuppressWarnings("ManualArrayCopy")
+@Slf4j
 public class MagicSquares extends ExampleFd {
 
   /** It specifies the number. */
@@ -72,7 +74,7 @@ public class MagicSquares extends ExampleFd {
     }
     example.model();
     if (example.searchMiddle()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     MagicSquares exampleDual = new MagicSquares();
@@ -81,7 +83,7 @@ public class MagicSquares extends ExampleFd {
     }
     exampleDual.modelDual();
     if (exampleDual.creditSearch(64, 5000, 10)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -101,7 +103,7 @@ public class MagicSquares extends ExampleFd {
     }
     exampleShave.model4Shaving();
     if (exampleShave.shavingSearch(exampleShave.guidingShaving, true)) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 

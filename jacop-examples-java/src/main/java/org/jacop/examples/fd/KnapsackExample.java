@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XlteqC;
@@ -51,6 +52,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class KnapsackExample extends ExampleFd {
 
   /** It stores the parameters of the main function to be used by the model functions. */
@@ -77,7 +79,7 @@ public class KnapsackExample extends ExampleFd {
     example.model();
 
     if (example.searchOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example = new KnapsackExample();
@@ -86,7 +88,7 @@ public class KnapsackExample extends ExampleFd {
     example.modelBasic();
 
     if (example.searchOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

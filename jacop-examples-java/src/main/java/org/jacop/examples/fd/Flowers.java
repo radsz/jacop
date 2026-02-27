@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Element;
@@ -91,6 +92,7 @@ import org.jacop.core.Store;
  * @author Tomasz Szwed, Wojciech Krupa, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Flowers extends ExampleFd {
 
   /**
@@ -105,14 +107,14 @@ public class Flowers extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
   @Override
   public void model() {
 
-    IO.println("Program to solve Flower logic puzzle");
+    log.info("Program to solve Flower logic puzzle");
 
     store = new Store();
     vars = new ArrayList<>();

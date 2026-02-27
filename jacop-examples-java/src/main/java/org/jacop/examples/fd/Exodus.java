@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -79,6 +80,7 @@ import org.jacop.core.Store;
  * @author Duda Wojciech and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Exodus extends ExampleFd {
 
   /**
@@ -93,7 +95,7 @@ public class Exodus extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

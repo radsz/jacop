@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
@@ -75,6 +76,7 @@ import org.jacop.core.Store;
  * @author Romam Gawelek, Marcin Kazmierczak, Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class ProAndCon extends ExampleFd {
 
   /**
@@ -89,7 +91,7 @@ public class ProAndCon extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

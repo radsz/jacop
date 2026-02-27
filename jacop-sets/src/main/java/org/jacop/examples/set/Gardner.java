@@ -32,6 +32,7 @@ package org.jacop.examples.set;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -53,6 +54,7 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Gardner extends ExampleSet {
 
   /**
@@ -76,7 +78,7 @@ public class Gardner extends ExampleSet {
     final int num_persons_per_meeting = 3;
     final int persons = 15;
 
-    IO.println("Gardner dinner problem ");
+    log.info("Gardner dinner problem ");
     store = new Store();
 
     SetVar[] days = new SetVar[num_days];
@@ -111,7 +113,7 @@ public class Gardner extends ExampleSet {
       }
     }
 
-    IO.println(
+    log.info(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -133,7 +135,7 @@ public class Gardner extends ExampleSet {
     final long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
-    IO.println("*** consistency = " + result);
+    log.info("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<>();
 
@@ -146,19 +148,19 @@ public class Gardner extends ExampleSet {
     result = label.labeling(store, select);
 
     if (result) {
-      IO.println("*** Yes");
+      log.info("*** Yes");
       for (SetVar v : vars) {
-        IO.println(v);
+        log.info(v.toString());
       }
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
-    IO.println(
+    log.info(
         "ThreadCpuTime = "
             + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
             + "ms");
-    IO.println(
+    log.info(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.threadId()) - startUser) / (long) 1e+6
             + "ms");

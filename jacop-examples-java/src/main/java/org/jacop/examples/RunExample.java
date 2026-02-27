@@ -33,6 +33,7 @@ package org.jacop.examples;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.fz.Fz2jacop;
 
 /**
@@ -42,6 +43,7 @@ import org.jacop.fz.Fz2jacop;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class RunExample {
 
   /**
@@ -54,11 +56,11 @@ public class RunExample {
 
     if (args.length == 0) {
 
-      IO.println(
+      log.info(
           "You can run java JaCoP examples with java command and Scala JaCoP examples with scala command");
-      IO.println("Please specify as the first argument the name of the example");
-      IO.println("All remaining arguments will be passed to the example.");
-      IO.println(
+      log.info("Please specify as the first argument the name of the example");
+      log.info("All remaining arguments will be passed to the example.");
+      log.info(
           "The name of the example is either the class name from org.jacop.examples"
               + " or name of .fzn file.");
       System.exit(-1);

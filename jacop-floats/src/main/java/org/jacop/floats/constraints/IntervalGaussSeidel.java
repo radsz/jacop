@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
@@ -43,6 +44,7 @@ import org.jacop.floats.util.Matrix;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class IntervalGaussSeidel {
 
   static final boolean DEBUG = false;
@@ -205,7 +207,7 @@ public class IntervalGaussSeidel {
   }
 
   private void debugPrintMatrixSign() {
-    IO.println("dominant = " + true + " ===================================");
+    log.info("dominant = " + true + " ===================================");
     for (FloatInterval[] floatIntervals : A) {
       for (FloatInterval floatInterval : floatIntervals) {
         if (floatInterval.min() <= 0 && floatInterval.max() >= 0) {
@@ -218,7 +220,7 @@ public class IntervalGaussSeidel {
           IO.print("? ");
         }
       }
-      IO.println();
+      log.info("");
     }
   }
 
@@ -255,7 +257,7 @@ public class IntervalGaussSeidel {
         IO.print(x[i] + ", ");
       }
     }
-    IO.println("}");
+    log.info("}");
   }
 
   private static boolean hasConverged(FloatInterval[] x, FloatInterval[] previousX) {
@@ -270,7 +272,7 @@ public class IntervalGaussSeidel {
   void precondition(FloatInterval[][] aa, double[] bb) {
 
     if (DEBUG) {
-      IO.println("Before preconditioning\n" + this);
+      log.info("Before preconditioning\n" + this);
     }
 
     double[][] midPoint = new double[aa.length][aa[0].length];
@@ -305,7 +307,7 @@ public class IntervalGaussSeidel {
     b = newB;
 
     if (DEBUG) {
-      IO.println("After preconditioning\n" + this);
+      log.info("After preconditioning\n" + this);
     }
   }
 

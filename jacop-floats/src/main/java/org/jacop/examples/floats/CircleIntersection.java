@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
@@ -42,6 +43,7 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 /** Example for circle intersection using float constraints. */
+@Slf4j
 public class CircleIntersection {
 
   final double minFloat = -1e+150;
@@ -64,7 +66,7 @@ public class CircleIntersection {
     long startTime;
     startTime = System.currentTimeMillis();
 
-    IO.println("========= circleIntersection =========");
+    log.info("========= circleIntersection =========");
 
     Store store = new Store();
 
@@ -91,7 +93,7 @@ public class CircleIntersection {
     store.impose(new PmulQeqR(s2, s2, r2));
     store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -110,11 +112,11 @@ public class CircleIntersection {
 
     label.printAllSolutions();
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long endTime = System.currentTimeMillis();
     long elapsed = endTime - startTime;
 
-    IO.println("\n\t*** Execution time = " + elapsed + " ms");
+    log.info("\n\t*** Execution time = " + elapsed + " ms");
   }
 }

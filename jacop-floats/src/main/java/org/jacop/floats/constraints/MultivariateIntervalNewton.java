@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -52,6 +53,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class MultivariateIntervalNewton {
 
   static final boolean DEBUG = false;
@@ -89,13 +91,13 @@ public class MultivariateIntervalNewton {
       for (int j = 0; j < x.length; j++) {
 
         if (DEBUG) {
-          IO.println("Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
+          log.info("Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
         }
 
         fprime[i][j] = Derivative.getDerivative(store, f[i], vars, x[j]);
 
         if (DEBUG) {
-          IO.println("\t derivate = " + fprime[i][j]);
+          log.info("\t derivate = " + fprime[i][j]);
         }
       }
     }
@@ -124,23 +126,23 @@ public class MultivariateIntervalNewton {
     b = values();
 
     if (DEBUG) {
-      IO.println("Middle values for x");
+      log.info("Middle values for x");
       for (double value : xInit) {
         IO.print(value + " ");
       }
-      IO.println();
+      log.info("");
 
-      IO.println("Middle values for f");
+      log.info("Middle values for f");
       for (double v : b) {
         IO.print(v + ", ");
       }
-      IO.println();
+      log.info("");
     }
 
     IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
 
     if (DEBUG) {
-      IO.println(igs);
+      log.info(igs.toString());
     }
 
     FloatInterval[] v = igs.solve();

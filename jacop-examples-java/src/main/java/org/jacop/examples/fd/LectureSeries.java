@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.Element;
@@ -75,6 +76,7 @@ import org.jacop.core.Store;
  * @author Grzegorz Moskwa, Marcin Nowak, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class LectureSeries extends ExampleFd {
 
   /**
@@ -89,7 +91,7 @@ public class LectureSeries extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -99,7 +101,7 @@ public class LectureSeries extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Lecture Series ");
+    log.info("Program to solve Lecture Series ");
 
     String[] firstNames = {"Alice", "Bernadette", "Charles", "Duane", "Eddie"};
     final int iAlice = 0;

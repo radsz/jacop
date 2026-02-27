@@ -30,6 +30,7 @@
 
 package org.jacop.fz.examples;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.fz.FlatzincLoader;
@@ -42,6 +43,7 @@ import org.jacop.search.SelectChoicePoint;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class FlatzincSolver {
 
   FlatzincSolver() {}
@@ -85,7 +87,7 @@ public class FlatzincSolver {
 
   /** Prints store statistics. */
   private void printStoreStats(Store store) {
-    IO.println(
+    log.info(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -105,9 +107,9 @@ public class FlatzincSolver {
   /** Prints search result. */
   private void printResult(boolean result) {
     if (result) {
-      IO.println("*** Yes");
+      log.info("*** Yes");
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
   }
 
@@ -115,6 +117,6 @@ public class FlatzincSolver {
   private void printExecutionTime(long startTime) {
     long t2 = System.currentTimeMillis();
     long t = t2 - startTime;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 }

@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
@@ -81,6 +82,7 @@ import org.jacop.core.Store;
  * @author Lesniak Kamil, Harezlak Roman, Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Tunapalooza extends ExampleFd {
 
   /**
@@ -95,7 +97,7 @@ public class Tunapalooza extends ExampleFd {
     example.model();
 
     if (example.searchMostConstrainedStatic()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

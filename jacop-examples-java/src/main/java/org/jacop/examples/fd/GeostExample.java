@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -50,6 +51,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class GeostExample extends ExampleFd {
 
   /**
@@ -194,15 +196,15 @@ public class GeostExample extends ExampleFd {
     boolean result = store.consistency();
 
     if (result) {
-      IO.println("*** Yes");
-      IO.println(store);
+      log.info("*** Yes");
+      log.info("{}", store);
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
     t2 = System.currentTimeMillis();
     t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

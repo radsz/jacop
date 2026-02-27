@@ -33,6 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
@@ -61,6 +62,7 @@ import org.jacop.search.SelectChoicePoint;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class Golomb extends ExampleFd {
 
   /** It specifies the number of marks (number of natural numbers in the sequence). */
@@ -95,7 +97,7 @@ public class Golomb extends ExampleFd {
     example.model();
 
     if (example.searchOptimalInfo()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -122,7 +124,7 @@ public class Golomb extends ExampleFd {
     example.model();
 
     if (example.searchOptimalInfo()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     Golomb exampleAll = new Golomb();
@@ -138,14 +140,14 @@ public class Golomb extends ExampleFd {
     exampleAll.model();
 
     if (exampleAll.searchAllOptimal()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
   @Override
   public void model() {
 
-    IO.println("Program to solve Golomb mark problem - length " + noMarks);
+    log.info("Program to solve Golomb mark problem - length " + noMarks);
 
     store = new Store();
     vars = new ArrayList<>();
@@ -240,7 +242,7 @@ public class Golomb extends ExampleFd {
 
     t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
 
     return result;
   }

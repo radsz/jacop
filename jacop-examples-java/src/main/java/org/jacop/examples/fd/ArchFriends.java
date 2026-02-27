@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.XeqC;
@@ -60,6 +61,7 @@ import org.jacop.core.Store;
  * @author Adam Plonka, Piotr Ogrodzki, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class ArchFriends extends ExampleFd {
   /**
    * It executes the program to solve the logic puzzle.
@@ -73,7 +75,7 @@ public class ArchFriends extends ExampleFd {
     example.model();
 
     if (example.searchAllAtOnce()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -83,7 +85,7 @@ public class ArchFriends extends ExampleFd {
     vars = new ArrayList<>();
     store = new Store();
 
-    IO.println("Program to solve ArchFriends problem ");
+    log.info("Program to solve ArchFriends problem ");
 
     // Declaration of constants (names, variables' indexes
 

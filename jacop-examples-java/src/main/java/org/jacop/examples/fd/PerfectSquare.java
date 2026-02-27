@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -67,6 +68,7 @@ import org.jacop.search.SmallestMin;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class PerfectSquare extends ExampleFd {
 
   IntVar[] varsX;
@@ -1457,7 +1459,7 @@ public class PerfectSquare extends ExampleFd {
     if (args.length == 0) {
 
       for (int i = 0; i < squares().length; i++) {
-        IO.println("Problem no. " + i);
+        log.info("Problem no. " + i);
 
         PerfectSquare example = new PerfectSquare();
 
@@ -1506,7 +1508,7 @@ public class PerfectSquare extends ExampleFd {
     if (args.length == 0) {
 
       for (int i = 0; i < squares().length; i++) {
-        IO.println("Problem no. " + i);
+        log.info("Problem no. " + i);
 
         PerfectSquare example = new PerfectSquare();
         example.modelGeost(i);
@@ -1568,7 +1570,7 @@ public class PerfectSquare extends ExampleFd {
     size = new IntVar[numberOfRectangles];
 
     IO.print("Constraint model without use of Diffn constraint");
-    IO.println("No squares = " + numberOfRectangles + SIZE_LABEL + masterSize);
+    log.info("No squares = " + numberOfRectangles + SIZE_LABEL + masterSize);
     IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = numberOfRectangles - 1; j >= 0; j--) {
@@ -1587,7 +1589,7 @@ public class PerfectSquare extends ExampleFd {
       IO.print(sqSize + " ");
     }
 
-    IO.println("]");
+    log.info("]");
 
     IntVar[] endX = new IntVar[varsX.length];
     IntVar[] endY = new IntVar[varsY.length];
@@ -1645,8 +1647,8 @@ public class PerfectSquare extends ExampleFd {
       store.impose(new SumInt(sumList, "==", limit));
     }
 
-    IO.println(NUMBER_OF_VARIABLES + store.size());
-    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
+    log.info(NUMBER_OF_VARIABLES + store.size());
+    log.info(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   /**
@@ -1669,7 +1671,7 @@ public class PerfectSquare extends ExampleFd {
     IntVar[][] rectangles = new IntVar[noRectangles][4];
 
     IO.print("Constraint model based on Diffn constraint");
-    IO.println("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
+    log.info("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
     IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = noRectangles - 1; j >= 0; j--) {
@@ -1692,12 +1694,12 @@ public class PerfectSquare extends ExampleFd {
       IO.print(sqSize + " ");
     }
 
-    IO.println("]");
+    log.info("]");
 
     store.impose(new Diffn(rectangles));
 
-    IO.println(NUMBER_OF_VARIABLES + store.size());
-    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
+    log.info(NUMBER_OF_VARIABLES + store.size());
+    log.info(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   @Override
@@ -1730,7 +1732,7 @@ public class PerfectSquare extends ExampleFd {
     List<Shape> shapes = new ArrayList<>();
 
     IO.print("Constraint model based on Geost and Diffn constraint");
-    IO.println("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
+    log.info("Example " + problemNo + "  No squares = " + noRectangles + SIZE_LABEL + masterSize);
     IO.print(SQUARE_SIZE_PREFIX);
 
     for (int j = noRectangles - 1; j >= 0; j--) {
@@ -1773,7 +1775,7 @@ public class PerfectSquare extends ExampleFd {
     NonOverlapping constraint = new NonOverlapping(objects, dimensions);
     constraints.add(constraint);
 
-    IO.println("]");
+    log.info("]");
 
     // objects, constraints, shapes.
     // Geost does not employ area reasoning and it is loosing greatly
@@ -1783,8 +1785,8 @@ public class PerfectSquare extends ExampleFd {
     // the main pruning component still.
     store.impose(new Diffn(rectangles, false));
 
-    IO.println(NUMBER_OF_VARIABLES + store.size());
-    IO.println(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
+    log.info(NUMBER_OF_VARIABLES + store.size());
+    log.info(NUMBER_OF_CONSTRAINTS + store.numberConstraints());
   }
 
   @Override
@@ -1816,7 +1818,7 @@ public class PerfectSquare extends ExampleFd {
     t = t2 - t1;
 
     String s = "%.2f".formatted((float) t / 1000);
-    IO.println("\n\t*** Execution time = " + s + " s");
+    log.info("\n\t*** Execution time = " + s + " s");
 
     if (result) {
 
@@ -1830,7 +1832,7 @@ public class PerfectSquare extends ExampleFd {
         }
       }
 
-      IO.println(")");
+      log.info(")");
 
       // If needed a latex representation of the solution can be generated.
 

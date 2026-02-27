@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqY;
@@ -93,6 +94,7 @@ import org.jacop.core.Store;
  * @author Krzysztof "Vrbl" Wrobel, Wioletta "Vuka" Kruzolek, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class SiblingUproar extends ExampleFd {
 
   /**
@@ -107,7 +109,7 @@ public class SiblingUproar extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -118,7 +120,7 @@ public class SiblingUproar extends ExampleFd {
     vars = new ArrayList<>();
     store = new Store();
 
-    IO.println("Problem name: Sibling Uproar ");
+    log.info("Problem name: Sibling Uproar ");
 
     // Specification of children names
     String[] childrenNames = {"Brian", "Russell", "Stuart", "Nina", "Paula"};

@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -53,6 +54,7 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class PartitionSet extends Constraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -146,11 +148,11 @@ public class PartitionSet extends Constraint {
       return;
     }
     if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
-      IO.println("% 1" + s[i] + " in " + s[i].dom().glb());
+      log.info("% 1" + s[i] + " in " + s[i].dom().glb());
 
       s[i].domain.inLub(store.level, s[i], s[i].dom().glb());
     } else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
-      IO.println("% 2");
+      log.info("% 2");
 
       s[i].domain.inGlb(store.level, s[i], s[i].dom().lub());
     }

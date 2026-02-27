@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XmulCeqZ;
@@ -57,6 +58,7 @@ import org.jacop.search.SmallestDomain;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class SendMoreMoney extends ExampleFd {
 
   /*
@@ -75,7 +77,7 @@ public class SendMoreMoney extends ExampleFd {
     exampleBasic.modelBasic();
 
     if (exampleBasic.search()) {
-      IO.println("Solution found.");
+      log.info("Solution found.");
     }
 
     SendMoreMoney exampleGlobal = new SendMoreMoney();
@@ -83,7 +85,7 @@ public class SendMoreMoney extends ExampleFd {
     exampleGlobal.model();
 
     if (exampleGlobal.search()) {
-      IO.println("Solution found.");
+      log.info("Solution found.");
     }
   }
 

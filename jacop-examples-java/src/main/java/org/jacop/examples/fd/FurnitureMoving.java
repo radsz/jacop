@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
@@ -58,6 +59,7 @@ import org.jacop.search.SmallestDomain;
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class FurnitureMoving extends ExampleFd {
 
   private static final boolean GENERATE_ALL = true;
@@ -84,7 +86,7 @@ public class FurnitureMoving extends ExampleFd {
 
     t2 = System.currentTimeMillis();
     t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 
   @Override
@@ -173,15 +175,15 @@ public class FurnitureMoving extends ExampleFd {
 
     Var[] variables = searchLabel.getSolutionListener().getVariables();
     for (int i = 0; i < variables.length; i++) {
-      IO.println("Variable " + i + " " + variables[i]);
+      log.info("Variable " + i + " " + variables[i]);
     }
 
     if (result) {
 
       searchLabel.printAllSolutions();
 
-      IO.println("\nNumber of persons needed: " + cost.value());
-      IO.println(
+      log.info("\nNumber of persons needed: " + cost.value());
+      log.info(
           "Piano: "
               + starts[0].value()
               + " .. "

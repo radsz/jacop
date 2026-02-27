@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -38,6 +39,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for Laplace equation using float constraints. */
+@Slf4j
 public class Laplace {
 
   /**
@@ -88,8 +90,8 @@ public class Laplace {
 
   void laplace() {
 
-    IO.println("========= laplace =========");
-    IO.println(
+    log.info("========= laplace =========");
+    log.info(
         "Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
 
     Store store = new Store();
@@ -123,10 +125,10 @@ public class Laplace {
       for (int j = 0; j < c + 1; j++) {
         System.out.printf("%.2f\t", x[i][j].value());
       }
-      IO.println();
+      log.info("");
     }
 
-    IO.println();
-    IO.println("Precision = " + FloatDomain.precision());
+    log.info("");
+    log.info("Precision = " + FloatDomain.precision());
   }
 }

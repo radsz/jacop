@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.CosPeqR;
 import org.jacop.floats.constraints.SinPeqR;
@@ -39,6 +40,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for sin/cos using float constraints. */
+@Slf4j
 public class SinCosExample {
 
   /**
@@ -58,7 +60,7 @@ public class SinCosExample {
     long t1;
     t1 = System.currentTimeMillis();
 
-    IO.println("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
+    log.info("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
 
     Store store = new Store();
 
@@ -71,7 +73,7 @@ public class SinCosExample {
     store.impose(new SinPeqR(p, q));
     store.impose(new CosPeqR(p, q));
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -92,14 +94,14 @@ public class SinCosExample {
     if (result) {
       label.printAllSolutions();
     } else {
-      IO.println("NO SOLUTION");
+      log.info("NO SOLUTION");
     }
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 }

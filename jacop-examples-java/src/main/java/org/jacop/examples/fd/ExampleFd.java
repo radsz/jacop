@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -59,6 +60,7 @@ import org.jacop.search.WeightedDegree;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public abstract class ExampleFd {
 
   /** It contains all variables used within a specific example. */
@@ -93,7 +95,7 @@ public abstract class ExampleFd {
       for (int j = 0; j < cols; j++) {
         IO.print(matrix[i][j].value() + " ");
       }
-      IO.println();
+      log.info("");
     }
   }
 
@@ -102,7 +104,7 @@ public abstract class ExampleFd {
 
   /** Prints search statistics (nodes, decisions, wrong decisions, backtracks, max depth). */
   protected void printSearchStats() {
-    IO.println();
+    log.info("");
     IO.print(searchLabel.getNodes() + "\t");
     IO.print(searchLabel.getDecisions() + "\t");
     IO.print(searchLabel.getWrongDecisions() + "\t");
@@ -112,7 +114,7 @@ public abstract class ExampleFd {
 
   /** Prints execution time in ms since the given start time. */
   protected void printExecutionTime(long t1) {
-    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
+    log.info(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
   }
 
   /**
@@ -187,7 +189,7 @@ public abstract class ExampleFd {
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
-    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
+    log.info(EXECUTION_TIME_PREFIX + t + " ms");
 
     return result;
   }
@@ -267,7 +269,7 @@ public abstract class ExampleFd {
     final boolean result = searchLabel.labeling(store, select);
     printSearchStats();
     if (!result) {
-      IO.println("**** No Solution ****");
+      log.info("**** No Solution ****");
     }
     return result;
   }
@@ -295,9 +297,9 @@ public abstract class ExampleFd {
     boolean result = searchLabel.labeling(store, select);
 
     if (result) {
-      IO.println("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
+      log.info("Number of solutions " + searchLabel.getSolutionListener().solutionsNo());
     } else {
-      IO.println(FAILED_TO_FIND_SOLUTION);
+      log.info(FAILED_TO_FIND_SOLUTION);
     }
     printExecutionTime(t1);
     return result;
@@ -321,7 +323,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
+    log.info(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -359,8 +361,8 @@ public abstract class ExampleFd {
     long end = System.currentTimeMillis();
 
     if (printInfo) {
-      IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
-      IO.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
+      log.info(NUMBER_OF_MILLISECONDS + (end - begin));
+      log.info("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
       if (result) {
         store.print();
@@ -418,16 +420,16 @@ public abstract class ExampleFd {
       searchLabel.setExitListener(collector);
     }
 
-    IO.println();
+    log.info("");
     IO.print(nodes + "\t");
     IO.print(decisions + "\t");
     IO.print(wrongDecisions + "\t");
     IO.print(backtracks + "\t");
 
     if (result) {
-      IO.println(1);
+      log.info("{}", 1);
     } else {
-      IO.println(0);
+      log.info("{}", 0);
     }
 
     return result;
@@ -463,7 +465,7 @@ public abstract class ExampleFd {
     final boolean result = searchLabel.labeling(store, select);
     store.print();
     printSearchStats();
-    IO.println(result ? 1 : 0);
+    log.info("{}", result ? 1 : 0);
     return result;
   }
 
@@ -520,7 +522,7 @@ public abstract class ExampleFd {
     // Execution time measurement
     long end = System.currentTimeMillis();
 
-    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
+    log.info(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -549,12 +551,12 @@ public abstract class ExampleFd {
     t = t2 - t1;
 
     if (result) {
-      IO.println("Variables : " + vars);
+      log.info("Variables : " + vars);
     } else {
-      IO.println(FAILED_TO_FIND_SOLUTION);
+      log.info(FAILED_TO_FIND_SOLUTION);
     }
 
-    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
+    log.info(EXECUTION_TIME_PREFIX + t + " ms");
 
     return result;
   }
@@ -580,7 +582,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
+    log.info(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -606,7 +608,7 @@ public abstract class ExampleFd {
 
     long end = System.currentTimeMillis();
 
-    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
+    log.info(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return result;
   }
@@ -633,10 +635,10 @@ public abstract class ExampleFd {
     if (solution) {
       store.print();
     } else {
-      IO.println(FAILED_TO_FIND_SOLUTION);
+      log.info(FAILED_TO_FIND_SOLUTION);
     }
 
-    IO.println(NUMBER_OF_MILLISECONDS + (end - begin));
+    log.info(NUMBER_OF_MILLISECONDS + (end - begin));
 
     return solution;
   }
@@ -668,7 +670,7 @@ public abstract class ExampleFd {
     boolean result = labelMaster.labeling(store, selectMaster);
 
     if (result) {
-      IO.println("Solution found");
+      log.info("Solution found");
     }
 
     if (result) {
@@ -677,7 +679,7 @@ public abstract class ExampleFd {
 
     long t2 = System.currentTimeMillis();
 
-    IO.println(EXECUTION_TIME_PREFIX + (t2 - t1) + " ms");
+    log.info(EXECUTION_TIME_PREFIX + (t2 - t1) + " ms");
 
     return result;
   }

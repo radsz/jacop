@@ -37,6 +37,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
@@ -79,6 +80,7 @@ import org.jacop.search.SmallestDomain;
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class MineSweeper extends ExampleFd {
 
   /** It represents the unknown value in the problem matrix. */
@@ -338,14 +340,14 @@ public class MineSweeper extends ExampleFd {
    */
   public static int[][] readFile(String file) {
 
-    IO.println("readFile(" + file + ")");
+    log.info("readFile(" + file + ")");
 
     try (BufferedReader inr =
         new BufferedReader(
             new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
       return parseMineSweeperLines(readNonCommentLines(inr));
     } catch (IOException e) {
-      IO.println(e);
+      log.info("{}", e);
       return null;
     }
   }
@@ -358,7 +360,7 @@ public class MineSweeper extends ExampleFd {
       if (str.startsWith("#") || str.startsWith("%")) {
         continue;
       }
-      IO.println(str);
+      log.info(str);
       lines.add(str);
     }
     return lines;
@@ -408,7 +410,7 @@ public class MineSweeper extends ExampleFd {
 
       t2 = System.currentTimeMillis();
       t = t2 - t1;
-      IO.println("\n\t*** Execution time = " + t + " ms");
+      log.info("\n\t*** Execution time = " + t + " ms");
     }
 
     if (args.length > 0) {
@@ -428,7 +430,7 @@ public class MineSweeper extends ExampleFd {
 
     t2 = System.currentTimeMillis();
     t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   } // end main
 
   @Override
@@ -507,27 +509,27 @@ public class MineSweeper extends ExampleFd {
       if (numSolutions <= 100) {
         searchLabel.printAllSolutions();
       } else {
-        IO.println("Too many solutions to print...");
+        log.info("Too many solutions to print...");
       }
 
       if (numSolutions > 1) {
-        IO.println("\nThe last solution:");
+        log.info("\nThe last solution:");
       } else {
-        IO.println("\nThe solution:");
+        log.info("\nThe solution:");
       }
 
       for (int i = 0; i < r; i++) {
         for (int j = 0; j < c; j++) {
           IO.print(mines[i][j].value() + " ");
         }
-        IO.println();
+        log.info("");
       }
 
-      IO.println("numSolutions: " + numSolutions);
+      log.info("numSolutions: " + numSolutions);
 
     } else {
 
-      IO.println("No solutions.");
+      log.info("No solutions.");
     } // end if result
   } // end search
 } // end class

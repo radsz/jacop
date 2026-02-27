@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -41,6 +42,7 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 /** Example for cyclohexane molecule using float constraints. */
+@Slf4j
 public class Cyclohexane {
 
   final double minFloat = -1e+150;
@@ -63,7 +65,7 @@ public class Cyclohexane {
     long startTime;
     startTime = System.currentTimeMillis();
 
-    IO.println("========= cyclohexane =========");
+    log.info("========= cyclohexane =========");
 
     Store store = new Store();
 
@@ -133,7 +135,7 @@ public class Cyclohexane {
     store.impose(new LinearFloat(new FloatVar[] {t5, t11}, new double[] {1.0, 1.0}, "==", -13.0));
     store.impose(new LinearFloat(new FloatVar[] {t6, t12}, new double[] {1.0, 1.0}, "==", -13.0));
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -150,11 +152,11 @@ public class Cyclohexane {
 
     label.labeling(store, s);
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long endTime = System.currentTimeMillis();
     long elapsed = endTime - startTime;
 
-    IO.println("\n\t*** Execution time = " + elapsed + " ms");
+    log.info("\n\t*** Execution time = " + elapsed + " ms");
   }
 }

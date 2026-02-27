@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.SumInt;
@@ -74,6 +75,7 @@ import org.jacop.search.SmallestDomain;
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class WhoKilledAgatha extends ExampleFd {
 
   /**
@@ -87,7 +89,7 @@ public class WhoKilledAgatha extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   } // end main
 
@@ -216,24 +218,24 @@ public class WhoKilledAgatha extends ExampleFd {
 
       int numSolutions = searchLabel.getSolutionListener().solutionsNo();
 
-      IO.println("Number of Solutions: " + numSolutions);
+      log.info("Number of Solutions: " + numSolutions);
 
       for (int s = 1; s <= numSolutions; s++) {
         Domain[] res = searchLabel.getSolutionListener().getSolution(s);
         int len = res.length;
 
-        IO.println("the_killer: " + res[0]);
+        log.info("the_killer: " + res[0]);
 
         // print the result
         for (Domain re : res) {
           IO.print(re + " ");
         }
-        IO.println();
+        log.info("");
       }
 
     } else {
 
-      IO.println("No solution.");
+      log.info("No solution.");
     }
 
     return result;

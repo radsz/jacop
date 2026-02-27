@@ -31,6 +31,7 @@
 package org.jacop.examples.floats;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Circuit;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,6 +46,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 
 /** Example for tiny Tsp using float constraints. */
+@Slf4j
 public class TinyTsp {
 
   final double maxFloat = 1e+150;
@@ -66,7 +68,7 @@ public class TinyTsp {
     long t1;
     t1 = System.currentTimeMillis();
 
-    IO.println("========= tinyTsp =========");
+    log.info("========= tinyTsp =========");
 
     Store store = new Store();
 
@@ -101,7 +103,7 @@ public class TinyTsp {
 
     store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -114,15 +116,15 @@ public class TinyTsp {
 
     label.labeling(store, s, route);
 
-    IO.println(route);
-    IO.println(Arrays.asList(dist));
-    IO.println(Arrays.asList(visit));
+    log.info(route.toString());
+    log.info(Arrays.asList(dist).toString());
+    log.info(Arrays.asList(visit).toString());
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 }

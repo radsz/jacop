@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.SumInt;
@@ -55,6 +56,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Cryptogram extends ExampleFd {
 
   /** It specifies how many lines of expressions can be inputed in one execution. */
@@ -95,7 +97,7 @@ public class Cryptogram extends ExampleFd {
     example.model();
 
     if (example.searchMostConstrainedStatic()) {
-      IO.println("\nSolution(s) found");
+      log.info("\nSolution(s) found");
     }
   }
 
@@ -127,9 +129,9 @@ public class Cryptogram extends ExampleFd {
   private void useDefaultLines() {
     lines[0] = "HERE+SHE=COMES";
     noLines = 1;
-    IO.println("No input file was supplied, using lines : ");
+    log.info("No input file was supplied, using lines : ");
     for (int i = 0; i < noLines; i++) {
-      IO.println(lines[0]);
+      log.info(lines[0]);
     }
   }
 
@@ -191,10 +193,10 @@ public class Cryptogram extends ExampleFd {
 
   private void warnIfTooManyLetters(Map<String, IntVar> letters) {
     if (letters.size() > base) {
-      IO.println("Expressions contain more than letters than base of the number system used ");
-      IO.println("Base " + base);
-      IO.println("Letters " + letters);
-      IO.println("There can not be any solution");
+      log.info("Expressions contain more than letters than base of the number system used ");
+      log.info("Base " + base);
+      log.info("Letters " + letters);
+      log.info("There can not be any solution");
     }
   }
 

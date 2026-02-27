@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.Not;
@@ -64,6 +65,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Zebra extends ExampleFd {
 
   /**
@@ -78,7 +80,7 @@ public class Zebra extends ExampleFd {
     example.model();
 
     if (example.searchMostConstrainedStatic()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -88,7 +90,7 @@ public class Zebra extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Zebra problem ");
+    log.info("Program to solve Zebra problem ");
 
     String[] colorNames = {"red", "green", "white", "yellow", "blue"};
     final int ired = 0;

@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,6 +48,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class LatinSquare extends ExampleFd {
 
   /** The size of the latin square. */
@@ -68,7 +70,7 @@ public class LatinSquare extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -78,7 +80,7 @@ public class LatinSquare extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Quasigroup (Latin-square) problem size = " + n + "x" + n);
+    log.info("Quasigroup (Latin-square) problem size = " + n + "x" + n);
 
     // Get problem size n from second program argument.
     IntVar[][] x = new IntVar[n][n];

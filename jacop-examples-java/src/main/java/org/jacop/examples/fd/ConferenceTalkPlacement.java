@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
@@ -64,6 +65,7 @@ import org.jacop.search.SmallestDomain;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class ConferenceTalkPlacement {
 
   Store store;
@@ -110,7 +112,7 @@ public class ConferenceTalkPlacement {
     // Real life examples maybe solvable to optimality for much larger sizes.
 
     if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
@@ -135,7 +137,7 @@ public class ConferenceTalkPlacement {
       result.get(ints[0]).put(ints[1], ints[2]);
     }
 
-    IO.println(result);
+    log.info("{}", result);
 
     return result;
   }
@@ -185,7 +187,7 @@ public class ConferenceTalkPlacement {
       lowerBound += sortedArray[i];
     }
 
-    IO.println(lowerBound);
+    log.info("{}", lowerBound);
     return lowerBound;
   }
 
@@ -299,12 +301,12 @@ public class ConferenceTalkPlacement {
     long t = t2 - t1;
 
     if (result) {
-      IO.println("Variables : " + vars);
+      log.info("Variables : " + vars);
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }
@@ -343,12 +345,12 @@ public class ConferenceTalkPlacement {
     long t = t2 - t1;
 
     if (result) {
-      IO.println("Variables : " + vars);
+      log.info("Variables : " + vars);
     } else {
-      IO.println("Failed to find any solution");
+      log.info("Failed to find any solution");
     }
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
 
     return result;
   }

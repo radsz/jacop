@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.Constraint;
@@ -44,6 +45,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Langford extends ExampleFd {
 
   public int n = 3;
@@ -68,7 +70,7 @@ public class Langford extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
 
     Langford exampleBound = new Langford();
@@ -85,7 +87,7 @@ public class Langford extends ExampleFd {
     exampleDual.modelDual();
 
     if (exampleDual.search()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 
@@ -105,7 +107,7 @@ public class Langford extends ExampleFd {
     exampleDual.modelDual();
 
     if (exampleDual.search()) {
-      IO.println(SOLUTION_FOUND);
+      log.info(SOLUTION_FOUND);
     }
   }
 

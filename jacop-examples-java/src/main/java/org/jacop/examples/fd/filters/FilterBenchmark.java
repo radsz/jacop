@@ -33,6 +33,7 @@ package org.jacop.examples.fd.filters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Cumulative;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.XgteqC;
@@ -64,6 +65,7 @@ import org.jacop.ui.PrintSchedule;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class FilterBenchmark {
 
   static List<IntVar> Ts;
@@ -97,17 +99,17 @@ public class FilterBenchmark {
 
   /** Prints standard experiment header. */
   private static void printExperimentHeader(Filter filter, int addNum, int mulNum) {
-    IO.println(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
-    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
-    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
+    log.info(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
+    log.info(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    log.info(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
   }
 
   /** Prints experiment header with clock length. */
   private static void printExperimentHeader(Filter filter, int addNum, int mulNum, int clock) {
-    IO.println(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
-    IO.println(
+    log.info(TEST_OF_SCHEDULING_FOR + filter.name() + " example");
+    log.info(
         WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS + ";\nclock length: " + clock);
-    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
+    log.info(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
   }
 
   /** Prints store stats and runs consistency; returns consistency result. */
@@ -118,7 +120,7 @@ public class FilterBenchmark {
   /** Same as above but runs given action before consistency (e.g. impose extra constraint). */
   private static boolean checkConsistency(
       Store store, String consistentMsg, Runnable beforeConsistency) {
-    IO.println(
+    log.info(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -127,7 +129,7 @@ public class FilterBenchmark {
       beforeConsistency.run();
     }
     boolean result = store.consistency();
-    IO.println(consistentMsg + " = " + result);
+    log.info(consistentMsg + " = " + result);
     return result;
   }
 
@@ -167,7 +169,7 @@ public class FilterBenchmark {
     final long t1 = System.currentTimeMillis();
     Search<IntVar> label = new DepthFirstSearch<>();
     boolean result = label.labeling(store, select, cost);
-    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
+    log.info(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
     return result;
   }
 
@@ -190,7 +192,7 @@ public class FilterBenchmark {
       label = new DepthFirstSearch<>();
       result = label.labeling(store, selectIo);
     }
-    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
+    log.info(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
     return result;
   }
 
@@ -275,7 +277,7 @@ public class FilterBenchmark {
       String consistencyMsg,
       java.util.function.Supplier<String> extraSuccessLineSupplier) {
     if (headerMsg != null) {
-      IO.println(headerMsg);
+      log.info(headerMsg);
     }
     List<List<IntVar>> taskVars = constraintBuilder.apply(store);
     SelectChoicePoint<IntVar> select = selectorBuilder.apply(taskVars);
@@ -309,7 +311,7 @@ public class FilterBenchmark {
       java.util.function.Supplier<String> extraSuccessLineSupplier,
       Search<IntVar> firstPhaseSearch) {
     if (headerMsg != null) {
-      IO.println(headerMsg);
+      log.info(headerMsg);
     }
     constraintBuilder.run();
     checkConsistency(store, consistencyMsg);
@@ -424,15 +426,15 @@ public class FilterBenchmark {
   /** Prints success/failure with optional extra line; returns cost value or -1. */
   private static int reportResult(boolean result, String extraSuccessLine) {
     if (result) {
-      IO.println("\n*** Yes");
+      log.info("\n*** Yes");
       if (extraSuccessLine != null) {
-        IO.println(extraSuccessLine);
+        log.info(extraSuccessLine);
       }
       PrintSchedule sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(sch);
+      log.info("{}", sch);
       return cost.value();
     } else {
-      IO.println("*** No");
+      log.info("*** No");
       return -1;
     }
   }
@@ -458,7 +460,7 @@ public class FilterBenchmark {
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
-    IO.println(EXECUTION_TIME_PREFIX + t + " ms");
+    log.info(EXECUTION_TIME_PREFIX + t + " ms");
   }
 
   /**
@@ -846,17 +848,17 @@ public class FilterBenchmark {
    */
   public static int experiment1P(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
+    log.info(
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
-    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
+    log.info(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    log.info(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
     int pipeLb = computePipelineLowerBound(filter, addNum, mulNum);
-    IO.println("Lower bound = " + pipeLb);
+    log.info("Lower bound = " + pipeLb);
 
     List<IntVar> cc = new ArrayList<>();
     cc.add(new IntVar(store, 10000, 10000));
@@ -880,7 +882,7 @@ public class FilterBenchmark {
 
     final long t1 = System.currentTimeMillis();
     boolean result = search.labeling(store, select, cost);
-    IO.println(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
+    log.info(EXECUTION_TIME_PREFIX + (System.currentTimeMillis() - t1) + " ms");
 
     return reportResult(result);
   }
@@ -896,16 +898,16 @@ public class FilterBenchmark {
    */
   public static int experiment2P(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
+    log.info(
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    IO.println(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
-    IO.println(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
+    log.info(WITH_PREFIX + addNum + ADDERS_AND + mulNum + MULTIPLIERS);
+    log.info(ADD_DURATION + filter.addDel() + AND_MUL_DURATION + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
     int pipeLb = computePipelineLowerBound(filter, addNum, mulNum);
-    IO.println("Lower bound = " + pipeLb);
+    log.info("Lower bound = " + pipeLb);
 
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(

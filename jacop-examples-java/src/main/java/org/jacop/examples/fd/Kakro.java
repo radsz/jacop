@@ -34,6 +34,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
@@ -49,6 +50,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Kakro extends ExampleFd {
 
   public final int noRows = 4;
@@ -73,7 +75,7 @@ public class Kakro extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
 
       ExampleFd.printMatrix(example.elements, example.noRows, example.noColumns);
     }

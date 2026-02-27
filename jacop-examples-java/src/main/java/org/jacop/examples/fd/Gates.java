@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.function.BiFunction;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.table.SimpleTable;
@@ -51,6 +52,7 @@ import org.jacop.search.SimpleSelect;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Gates extends ExampleFd {
 
   /**
@@ -69,12 +71,12 @@ public class Gates extends ExampleFd {
     example.model();
 
     if (example.searchSpecific()) {
-      IO.println("Solution found.");
+      log.info("Solution found.");
     }
 
     t2 = System.currentTimeMillis();
     t = t2 - t1;
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 
   /**
@@ -142,7 +144,7 @@ public class Gates extends ExampleFd {
     and(c, nca, t[1], tableConstraintProvider);
     and(a, b, t[0], tableConstraintProvider);
 
-    IO.println(
+    log.info(
         "\nBooleanVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -250,25 +252,25 @@ public class Gates extends ExampleFd {
     boolean searchResult = searchLabel.labeling(store, select);
 
     if (searchResult) {
-      IO.println("\nYes");
+      log.info("\nYes");
       Domain[][] solutions = new Domain[searchLabel.getSolutionListener().solutionsNo()][];
       for (int i = 1; i <= solutions.length; i++) {
         solutions[i - 1] = searchLabel.getSolution(i);
       }
 
-      IO.println("\nAll solutions:\n");
+      log.info("\nAll solutions:\n");
       for (IntVar v : vars) {
         IO.print(v.id() + "\t");
       }
-      IO.println("\n-------------------------------------");
+      log.info("\n-------------------------------------");
       for (Domain[] solution : solutions) {
         for (int i = 0; i < solutions[0].length; i++) {
           IO.print(solution[i] + "\t");
         }
-        IO.println();
+        log.info("");
       }
     } else {
-      IO.println("\nNo");
+      log.info("\nNo");
     }
 
     return searchResult;

@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -50,6 +51,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class DonaldGeraldRobert extends ExampleFd {
 
   /**
@@ -64,14 +66,14 @@ public class DonaldGeraldRobert extends ExampleFd {
     example.model();
 
     if (example.searchSmallestDomain(false)) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
   @Override
   public void model() {
 
-    IO.println("Program to solve Donald+Gerald=Robert problem ");
+    log.info("Program to solve Donald+Gerald=Robert problem ");
 
     // Creating constraint store
     store = new Store();

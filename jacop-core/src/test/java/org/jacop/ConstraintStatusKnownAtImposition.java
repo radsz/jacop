@@ -1,11 +1,13 @@
 package org.jacop;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 public class ConstraintStatusKnownAtImposition {
 
   @Test
@@ -44,8 +46,8 @@ public class ConstraintStatusKnownAtImposition {
 
     store.impose(cons);
 
-    IO.println(cons);
-    IO.println(store);
+    log.info("{}", cons);
+    log.info("{}", store);
 
     store.consistency();
   }

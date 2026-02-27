@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Or;
@@ -68,6 +69,7 @@ import org.jacop.core.Store;
  * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class BreakingNews extends ExampleFd {
 
   /**
@@ -82,7 +84,7 @@ public class BreakingNews extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -92,7 +94,7 @@ public class BreakingNews extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Breaking News ");
+    log.info("Program to solve Breaking News ");
 
     // String arrays with reporters names.
     String[] ReporterName = {"Corey", "Jimmy", "Lous", "Perry"};

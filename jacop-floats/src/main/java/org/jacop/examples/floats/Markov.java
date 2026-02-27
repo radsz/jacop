@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -38,6 +39,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for Markov chains using float constraints. */
+@Slf4j
 public class Markov {
 
   /**
@@ -57,7 +59,7 @@ public class Markov {
     long t1;
     t1 = System.currentTimeMillis();
 
-    IO.println("========= markovChainsTaha =========");
+    log.info("========= markovChainsTaha =========");
 
     Store store = new Store();
 
@@ -111,7 +113,7 @@ public class Markov {
     System.arraycopy(mean_first_return_time, 0, vars, 3, 3);
     vars[6] = tot_cost;
 
-    IO.println(
+    log.info(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -126,16 +128,16 @@ public class Markov {
     boolean result = label.labeling(store, s, tot_cost);
 
     if (result) {
-      IO.println(tot_cost);
+      log.info(tot_cost.toString());
     } else {
-      IO.println("NO SOLUTION");
+      log.info("NO SOLUTION");
     }
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
 
-    IO.println("\n\t*** Execution time = " + t + " ms");
+    log.info("\n\t*** Execution time = " + t + " ms");
   }
 }

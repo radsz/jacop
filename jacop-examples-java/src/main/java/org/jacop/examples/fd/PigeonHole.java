@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -46,6 +47,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class PigeonHole extends ExampleFd {
 
   /** The number of pigeons in the problem. */
@@ -68,7 +70,7 @@ public class PigeonHole extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
 
     example = new PigeonHole();
@@ -80,7 +82,7 @@ public class PigeonHole extends ExampleFd {
     example.modelBasic();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

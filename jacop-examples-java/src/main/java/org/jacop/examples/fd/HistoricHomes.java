@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqC;
@@ -62,6 +63,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class HistoricHomes extends ExampleFd {
 
   /**
@@ -76,7 +78,7 @@ public class HistoricHomes extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -86,7 +88,7 @@ public class HistoricHomes extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Historic Homes logic puzzle");
+    log.info("Program to solve Historic Homes logic puzzle");
 
     String[] streetName = {
       "street_Azalea_Drive",

@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
@@ -52,6 +53,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class WolfGoatCabbage extends ExampleFd {
 
   /** It specifies number of moves allowed (one move is from one river bank to the other). */
@@ -77,7 +79,7 @@ public class WolfGoatCabbage extends ExampleFd {
       example.model();
 
       if (!example.searchMostConstrainedStatic()) {
-        IO.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+        log.info("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
       } else {
         result = true;
       }
@@ -89,7 +91,7 @@ public class WolfGoatCabbage extends ExampleFd {
   @Override
   public void model() {
 
-    IO.println("Creating model for solution with " + numberInnerMoves + " intermediate steps");
+    log.info("Creating model for solution with " + numberInnerMoves + " intermediate steps");
     // Creating constraint store
     store = new Store();
     vars = new ArrayList<>();

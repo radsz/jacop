@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.SumInt;
@@ -43,6 +44,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Parcel extends ExampleFd {
 
   /**
@@ -57,7 +59,7 @@ public class Parcel extends ExampleFd {
     example.model();
 
     if (example.searchMaxRegretOptimal()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 

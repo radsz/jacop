@@ -32,6 +32,7 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntVar;
@@ -53,6 +54,7 @@ import org.junit.jupiter.api.Test;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class QueueForwardTest {
 
   String nl = "\n";
@@ -69,7 +71,7 @@ public class QueueForwardTest {
 
     store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
 
-    IO.println("Precision = " + FloatDomain.precision());
+    log.info("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
     Search<FloatVar> label = new DepthFirstSearch<>();
@@ -79,10 +81,10 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      IO.println("Solutions: ");
+      log.info("Solutions: ");
       label.printAllSolutions();
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
     assertThat(result).isTrue();
@@ -101,7 +103,7 @@ public class QueueForwardTest {
     IntVar one = new IntVar(store, "one", 1, 1);
     store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
 
-    IO.println("Precision = " + FloatDomain.precision());
+    log.info("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
     Search<FloatVar> label = new DepthFirstSearch<>();
@@ -111,10 +113,10 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      IO.println("Solutions: ");
+      log.info("Solutions: ");
       label.printAllSolutions();
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
     assertThat(result).isFalse();
@@ -142,10 +144,10 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      IO.println("Solutions: ");
+      log.info("Solutions: ");
       label.printAllSolutions();
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
     assertThat(result).isFalse();

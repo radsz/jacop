@@ -32,6 +32,7 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.BooleanVar;
@@ -44,6 +45,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Bibd extends ExampleFd {
 
   /** It specifies number of rows in the incidence matrix. */
@@ -81,14 +83,14 @@ public class Bibd extends ExampleFd {
         example.k = Integer.parseInt(args[3]);
         example.lambda = Integer.parseInt(args[4]);
       } catch (Exception _) {
-        IO.println("Program parameters if provided must specify v, b, r, k, and lambda");
+        log.info("Program parameters if provided must specify v, b, r, k, and lambda");
       }
     }
 
     example.model();
 
     if (example.searchAllAtOnce()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
 
       ExampleFd.printMatrix(example.x, example.v, example.b);
     }

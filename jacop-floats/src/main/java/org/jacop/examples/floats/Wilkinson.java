@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -42,6 +43,7 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 /** Example for Wilkinson polynomial using float constraints. */
+@Slf4j
 public class Wilkinson {
 
   final double minFloat = -1e+150;
@@ -64,7 +66,7 @@ public class Wilkinson {
     long startTime;
     startTime = System.currentTimeMillis();
 
-    IO.println("========= wilkinson =========");
+    log.info("========= wilkinson =========");
 
     Store store = new Store();
 
@@ -104,7 +106,7 @@ public class Wilkinson {
         new LinearFloat(
             new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
 
-    IO.println(
+    log.info(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -120,13 +122,13 @@ public class Wilkinson {
 
     label.labeling(store, s, x);
 
-    IO.println(x);
+    log.info(x.toString());
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
 
     long endTime = System.currentTimeMillis();
     long elapsed = endTime - startTime;
 
-    IO.println("\n\t*** Execution time = " + elapsed + " ms");
+    log.info("\n\t*** Execution time = " + elapsed + " ms");
   }
 }

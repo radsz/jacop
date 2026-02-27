@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
@@ -66,6 +67,7 @@ import org.jacop.core.Store;
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class SurvoPuzzle extends ExampleFd {
 
   int r; // number of rows
@@ -90,7 +92,7 @@ public class SurvoPuzzle extends ExampleFd {
       for (int j = 0; j < cols; j++) {
         IO.print(matrix[i][j].value() + " ");
       }
-      IO.println();
+      log.info("");
     }
   }
 
@@ -104,7 +106,7 @@ public class SurvoPuzzle extends ExampleFd {
     String filename = "";
     if (args.length == 1) {
       filename = args[0];
-      IO.println("Using file " + filename);
+      log.info("Using file " + filename);
     }
 
     SurvoPuzzle m = new SurvoPuzzle();
@@ -122,13 +124,13 @@ public class SurvoPuzzle extends ExampleFd {
 
     if (result) {
       int numSolutions = m.searchLabel.getSolutionListener().solutionsNo();
-      IO.println("Number of solutions: " + numSolutions);
+      log.info("Number of solutions: " + numSolutions);
       printMatrix(m.x, m.r, m.c);
     }
 
     t2 = System.currentTimeMillis();
 
-    IO.println("\n\t*** Execution time = " + (t2 - t1) + " ms");
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
   } // end main
 
   /** Model(). */
@@ -139,7 +141,7 @@ public class SurvoPuzzle extends ExampleFd {
 
     if (matrix == null) {
 
-      IO.println("Using the default problem.");
+      log.info("Using the default problem.");
 
       /* Default problem:
        *
@@ -212,7 +214,7 @@ public class SurvoPuzzle extends ExampleFd {
    */
   public void readFile(String file) {
 
-    IO.println("readFile(" + file + ")");
+    log.info("readFile(" + file + ")");
 
     try (BufferedReader inr =
         new BufferedReader(
@@ -222,7 +224,7 @@ public class SurvoPuzzle extends ExampleFd {
         buildMatrixAndSums(matrixI);
       }
     } catch (IOException e) {
-      IO.println(e);
+      log.info("{}", e);
     }
   }
 
@@ -237,7 +239,7 @@ public class SurvoPuzzle extends ExampleFd {
       }
       str = str.replace("_", "");
       String[] row = str.split("\\s+");
-      IO.println(str);
+      log.info(str);
       if (lineCount == 0) {
         parseHeaderRow(row);
       } else {
@@ -259,7 +261,7 @@ public class SurvoPuzzle extends ExampleFd {
       for (int j = 0; j < row.length; j++) {
         colsums[j] = Integer.parseInt(row[j]);
       }
-      IO.println();
+      log.info("");
     } else {
       List<Integer> thisRow = parseRowValues(row);
       matrixI.add(thisRow);

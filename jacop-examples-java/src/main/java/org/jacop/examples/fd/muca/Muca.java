@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.IfThen;
@@ -71,6 +72,7 @@ import org.slf4j.LoggerFactory;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class Muca extends ExampleFd {
 
   private static final Logger log = LoggerFactory.getLogger(Muca.class);
@@ -531,7 +533,7 @@ public class Muca extends ExampleFd {
     for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
       IO.print(transitions[i] + "\t");
     }
-    IO.println();
+    log.info("");
   }
 
   private void printSearchSpecialGoods() {
@@ -540,7 +542,7 @@ public class Muca extends ExampleFd {
       for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
         IO.print(deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
       }
-      IO.println(sum[g].value() + ">=" + finalQuantity.get(g));
+      log.info(sum[g].value() + ">=" + finalQuantity.get(g));
     }
   }
 
@@ -590,9 +592,9 @@ public class Muca extends ExampleFd {
       log.error("Exception occurred", ex);
     }
 
-    IO.println(this.maxCost);
-    IO.println(this.maxDelta);
-    IO.println(this.minDelta);
+    log.info("{}", this.maxCost);
+    log.info("{}", this.maxDelta);
+    log.info("{}", this.minDelta);
   }
 
   private void readInitialQuantity(BufferedReader br) throws IOException {

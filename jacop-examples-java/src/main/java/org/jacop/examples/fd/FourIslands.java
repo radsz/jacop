@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqC;
@@ -76,6 +77,7 @@ import org.jacop.core.Store;
  * @author Waldemar Sliwinski, Zdzislaw Zawada, and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public class FourIslands extends ExampleFd {
 
   /**
@@ -90,7 +92,7 @@ public class FourIslands extends ExampleFd {
     example.model();
 
     if (example.search()) {
-      IO.println("Solution(s) found");
+      log.info("Solution(s) found");
     }
   }
 
@@ -100,7 +102,7 @@ public class FourIslands extends ExampleFd {
     store = new Store();
     vars = new ArrayList<>();
 
-    IO.println("Program to solve Four Islands problem ");
+    log.info("Program to solve Four Islands problem ");
 
     // names of islands
     String[] islandNames = {"Pwana", "Quero", "Rayou", "Skern"};

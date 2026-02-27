@@ -32,6 +32,7 @@ package org.jacop.examples.floats;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PplusCeqR;
@@ -42,6 +43,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 /** Example for min-cost flow using float constraints. */
+@Slf4j
 public class MinCostFlow {
 
   final double minFloat = -1e+150;
@@ -61,7 +63,7 @@ public class MinCostFlow {
 
   void minCostFlow() {
 
-    IO.println("========= minCostFlow =========");
+    log.info("========= minCostFlow =========");
 
     Store store = new Store();
 
@@ -140,16 +142,16 @@ public class MinCostFlow {
 
     label.labeling(store, s, cost);
 
-    IO.println(cost);
+    log.info(cost.toString());
 
     for (FloatVar x : X) {
       System.out.printf("%.2f, ", x.value());
     }
-    IO.println();
+    log.info("");
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
     // result =" +
     //       (double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
 
-    IO.println("\nPrecision = " + FloatDomain.precision());
+    log.info("\nPrecision = " + FloatDomain.precision());
   }
 }

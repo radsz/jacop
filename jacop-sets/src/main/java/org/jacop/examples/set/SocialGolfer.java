@@ -31,6 +31,7 @@
 package org.jacop.examples.set;
 
 import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XlteqY;
 import org.jacop.core.IntVar;
@@ -58,6 +59,7 @@ import org.jacop.set.search.MinLubCard;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class SocialGolfer extends ExampleSet {
 
   // 2, 7, 4
@@ -128,7 +130,7 @@ public class SocialGolfer extends ExampleSet {
 
     int[] weights = computeWeights(players);
 
-    IO.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
+    log.info("Social golfer problem " + weeks + "-" + groups + "-" + players);
 
     store = new Store();
 
@@ -249,7 +251,7 @@ public class SocialGolfer extends ExampleSet {
     final long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
-    IO.println("*** consistency = " + result);
+    log.info("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<>();
 
@@ -266,22 +268,22 @@ public class SocialGolfer extends ExampleSet {
     result = label.labeling(store, select);
 
     if (result) {
-      IO.println("*** Yes");
+      log.info("*** Yes");
       for (int i = 0; i < weeks; i++) {
         for (int j = 0; j < groups; j++) {
           IO.print(golferGroup[i][j].dom() + " ");
         }
-        IO.println();
+        log.info("");
       }
     } else {
-      IO.println("*** No");
+      log.info("*** No");
     }
 
-    IO.println(
+    log.info(
         "ThreadCpuTime = "
             + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
             + "ms");
-    IO.println(
+    log.info(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.threadId()) - startUser) / (long) 1e+6
             + "ms");
