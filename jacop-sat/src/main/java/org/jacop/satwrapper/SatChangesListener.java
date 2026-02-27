@@ -80,7 +80,7 @@ public final class SatChangesListener
 
   /** Clears all sets, so that elements occurring in them later result only from later events. */
   public void clear() {
-    if (ASSERTS_ENABLED && !(lowerBounds.length == upperBounds.length)) {
+    if (ASSERTS_ENABLED && lowerBounds.length != upperBounds.length) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -115,13 +115,13 @@ public final class SatChangesListener
    */
   private void onAssertion(int literal) {
 
-    if (ASSERTS_ENABLED && !(wrapper.isVarLiteral(literal))) {
+    if (ASSERTS_ENABLED && !wrapper.isVarLiteral(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(core.trail.isSet(Math.abs(literal)))) {
+    if (ASSERTS_ENABLED && !core.trail.isSet(Math.abs(literal))) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(core.trail.values[Math.abs(literal)] == literal)) {
+    if (ASSERTS_ENABLED && core.trail.values[Math.abs(literal)] != literal) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -263,10 +263,10 @@ public final class SatChangesListener
       int isOneValue = core.trail.values[isOne];
       int isZeroValue = core.trail.values[isZero];
 
-      if (ASSERTS_ENABLED && !(!(isZeroValue * isOneValue > 0))) {
+      if (ASSERTS_ENABLED && isZeroValue * isOneValue > 0) {
         throw new IllegalStateException("Assertion failed");
       }
-      if (ASSERTS_ENABLED && !(!(isOneValue == 0 && isZeroValue == 0))) {
+      if (ASSERTS_ENABLED && isOneValue == 0 && isZeroValue == 0) {
         throw new IllegalStateException("Assertion failed");
       }
 

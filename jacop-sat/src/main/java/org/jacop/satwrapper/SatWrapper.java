@@ -212,7 +212,7 @@ public final class SatWrapper extends Constraint
 
       SatCpBridge bridge = new SimpleCpVarDomain(this, variable, translate);
       setSatBridge(variable, bridge);
-      if (ASSERTS_ENABLED && !(log(this, "create default domain", bridge))) {
+      if (ASSERTS_ENABLED && !log(this, "create default domain", bridge)) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -309,13 +309,13 @@ public final class SatWrapper extends Constraint
 
   /** Assert the next literal from toAssertLiterals. */
   private void processOneLiteral() {
-    if (ASSERTS_ENABLED && !(!toAssertLiterals.isEmpty())) {
+    if (ASSERTS_ENABLED && toAssertLiterals.isEmpty()) {
       throw new IllegalStateException("Assertion failed");
     }
 
     // take the next literal (already set literals are ignored)
     int literal = toAssertLiterals.pop();
-    if (ASSERTS_ENABLED && !(literal != 0)) {
+    if (ASSERTS_ENABLED && literal == 0) {
       throw new IllegalStateException("Assertion failed");
     }
     if (trail.isSet(Math.abs(literal))) {
@@ -369,7 +369,7 @@ public final class SatWrapper extends Constraint
 
     mustBacktrack = true;
 
-    if (ASSERTS_ENABLED && !(log(this, "*** conflict occurred at sat level " + level))) {
+    if (ASSERTS_ENABLED && !log(this, "*** conflict occurred at sat level " + level)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -378,10 +378,10 @@ public final class SatWrapper extends Constraint
 
   /** Wrapper listens for explanations, to know how deep to backtrack. */
   public void onExplain(MapClause explanation) {
-    if (ASSERTS_ENABLED && !(mustBacktrack)) {
+    if (ASSERTS_ENABLED && !mustBacktrack) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(core.explanationClause == explanation)) {
+    if (ASSERTS_ENABLED && core.explanationClause != explanation) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -396,7 +396,7 @@ public final class SatWrapper extends Constraint
             showClauseMeaning(explanation)))) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(log(this, "trail: " + core.trail))) {
+    if (ASSERTS_ENABLED && !log(this, "trail: " + core.trail)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -445,13 +445,13 @@ public final class SatWrapper extends Constraint
     cpToSatLevels[cpLevel] = null;
     // the new maximum SAT level
     int newMaxSatLevel = previousCpLevel == -1 ? 0 : cpToSatLevels[previousCpLevel];
-    if (ASSERTS_ENABLED && !(newMaxSatLevel >= 0)) {
+    if (ASSERTS_ENABLED && newMaxSatLevel < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
     if (newMaxSatLevel != currentSatLevel) {
 
-      if (ASSERTS_ENABLED && !(currentSatLevel > newMaxSatLevel)) {
+      if (ASSERTS_ENABLED && currentSatLevel <= newMaxSatLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       // we are not at the SAT level we should be, so backjump to reach it
@@ -461,13 +461,13 @@ public final class SatWrapper extends Constraint
         throw new IllegalStateException("Assertion failed");
       }
 
-      if (ASSERTS_ENABLED && !(log(this, "core SAT level %d", core.currentLevel))) {
+      if (ASSERTS_ENABLED && !log(this, "core SAT level %d", core.currentLevel)) {
         throw new IllegalStateException("Assertion failed");
       }
 
       core.backjumpToLevel(newMaxSatLevel);
       currentSatLevel = core.currentLevel;
-      if (ASSERTS_ENABLED && !(currentSatLevel == newMaxSatLevel)) {
+      if (ASSERTS_ENABLED && currentSatLevel != newMaxSatLevel) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -501,10 +501,10 @@ public final class SatWrapper extends Constraint
      * failure), but rather be scheduled for being executed at next call to
      * consistency()
      */
-    if (ASSERTS_ENABLED && !(registeredVars.contains(v))) {
+    if (ASSERTS_ENABLED && !registeredVars.contains(v)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(log(this, "queue variable " + v + " at CP level " + level))) {
+    if (ASSERTS_ENABLED && !log(this, "queue variable " + v + " at CP level " + level)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -523,7 +523,7 @@ public final class SatWrapper extends Constraint
       // let us check the domain bounds
       int lower = intVar.domain.min();
       int upper = intVar.domain.max();
-      if (ASSERTS_ENABLED && !(upper - lower >= 1)) {
+      if (ASSERTS_ENABLED && upper - lower < 1) {
         throw new IllegalStateException("Assertion failed");
       } // otherwise, singleton
 
@@ -548,7 +548,7 @@ public final class SatWrapper extends Constraint
    */
   private void setBoolVariable(int variable, boolean value) {
     // notify the constraint clauses database, for propagations
-    if (ASSERTS_ENABLED && !(variable > 0)) {
+    if (ASSERTS_ENABLED && variable <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
     int literal = value ? variable : -variable;
@@ -738,7 +738,7 @@ public final class SatWrapper extends Constraint
 
     SatCpBridge range = getSatBridge(variable);
 
-    if (ASSERTS_ENABLED && !(range != null)) {
+    if (ASSERTS_ENABLED && range == null) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -766,7 +766,7 @@ public final class SatWrapper extends Constraint
    * @return IntVar represented by the literal
    */
   public IntVar boolVarToCpVar(int literal) {
-    if (ASSERTS_ENABLED && !(isVarLiteral(literal))) {
+    if (ASSERTS_ENABLED && !isVarLiteral(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -782,7 +782,7 @@ public final class SatWrapper extends Constraint
    * @return the value represented by this literal
    */
   public int boolVarToCpValue(int literal) {
-    if (ASSERTS_ENABLED && !(isVarLiteral(literal))) {
+    if (ASSERTS_ENABLED && !isVarLiteral(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -800,7 +800,7 @@ public final class SatWrapper extends Constraint
    *     <=}v'
    */
   public boolean isEqualityBoolVar(int literal) {
-    if (ASSERTS_ENABLED && !(isVarLiteral(literal))) {
+    if (ASSERTS_ENABLED && !isVarLiteral(literal)) {
       throw new IllegalStateException("Assertion failed");
     }
     int varIdx = Math.abs(literal);
@@ -840,10 +840,10 @@ public final class SatWrapper extends Constraint
 
   /** Called when the SAT solver starts. */
   public void onStart() {
-    if (ASSERTS_ENABLED && !(core != null)) {
+    if (ASSERTS_ENABLED && core == null) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(core.dbStore != null)) {
+    if (ASSERTS_ENABLED && core.dbStore == null) {
       throw new IllegalStateException("Assertion failed");
     }
     // due to some dependencies problems, we cannot access the database
