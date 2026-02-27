@@ -316,6 +316,7 @@ public class IntervalGaussSeidel {
    *
    * @return string representation of the system
    */
+  @Override
   public String toString() {
 
     StringBuilder s = new StringBuilder();

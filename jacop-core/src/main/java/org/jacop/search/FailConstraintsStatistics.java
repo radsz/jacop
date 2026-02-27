@@ -126,6 +126,7 @@ public class FailConstraintsStatistics implements ConsistencyListener {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
 
     StringBuilder c = new StringBuilder();

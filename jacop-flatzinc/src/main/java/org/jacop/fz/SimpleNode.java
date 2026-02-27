@@ -95,6 +95,7 @@ public class SimpleNode implements Node {
   you need to do. */
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     return ParserTreeConstants.jjtNodeName[id];
   }

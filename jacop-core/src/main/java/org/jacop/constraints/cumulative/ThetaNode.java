@@ -53,6 +53,7 @@ class ThetaNode extends TreeNode {
     p = pT;
   }
 
+  @Override
   public String toString() {
     String taskNo = task != null ? "\ntask = " + task.index : "";
     return "node: " + index + taskNo + "\nect = " + ect + "\np = " + p;

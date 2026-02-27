@@ -210,6 +210,7 @@ public class PredefinedOrder implements LexicographicalOrder {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     return Arrays.toString(masterOrdering);
   }

@@ -124,6 +124,7 @@ public class SparseSet {
    *
    * @return string containing all members of the set.
    */
+  @Override
   public String toString() {
 
     StringBuilder result = new StringBuilder();

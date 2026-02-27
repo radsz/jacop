@@ -47,6 +47,7 @@ record BinItem(IntVar bin, int weight) {
     }
   }
 
+  @Override
   public String toString() {
     return "(" + bin + ", " + weight + ")";
   }

@@ -157,6 +157,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    *
    * @return string describing the variables, ordering, and value selection heuristic.
    */
+  @Override
   public String toString() {
     return Arrays.asList(searchVariables) + ", InputOrder, (" + valueOrdering + ")";
   }

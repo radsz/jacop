@@ -139,6 +139,7 @@ public class InArea implements ExternalConstraint {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     return "(in_area: " + allowedArea + " - holes(" + holes + "))";
   }

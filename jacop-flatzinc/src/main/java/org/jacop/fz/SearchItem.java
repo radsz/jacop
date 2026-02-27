@@ -1297,6 +1297,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     StringBuilder s = new StringBuilder();
     if (searchType == null) {
@@ -1410,6 +1411,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
 
     /** {@inheritDoc} */
+    @Override
     public String toString() {
       return "(" + v1 + ", " + v2 + ")";
     }

@@ -280,6 +280,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    *
    * @return string describing the current level, trail, and stored information.
    */
+  @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
 

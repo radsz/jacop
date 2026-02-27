@@ -283,6 +283,7 @@ public class TraceGenerator<T extends Var>
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     return "";
   }
@@ -967,6 +968,7 @@ public class TraceGenerator<T extends Var>
     boolean equal = true;
     int previous;
 
+    @Override
     public String toString() {
       return "Node(" + id + ") = " + v.id + ", " + dom + ", " + val + ", " + equal;
     }

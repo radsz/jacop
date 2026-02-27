@@ -57,6 +57,7 @@ public class ConstantCalculator extends Calculator {
    *
    * @return a string describing the calculator and its fail limit.
    */
+  @Override
   public String toString() {
     return "constantCalculator(" + failLimit + ")";
   }

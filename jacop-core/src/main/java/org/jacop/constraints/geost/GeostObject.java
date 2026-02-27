@@ -179,6 +179,7 @@ public class GeostObject {
    *
    * @return string describing the object with its shape, coordinates, and time variables
    */
+  @Override
   public String toString() {
 
     return "Object("

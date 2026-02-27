@@ -235,6 +235,7 @@ public final class Arc {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
 
     Node tail = tail();

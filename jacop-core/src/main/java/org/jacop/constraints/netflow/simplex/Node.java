@@ -170,6 +170,7 @@ public final class Node {
    *
    * @return string describing the node with its balance, delta, and potential.
    */
+  @Override
   public String toString() {
     return "[node: "
         + name

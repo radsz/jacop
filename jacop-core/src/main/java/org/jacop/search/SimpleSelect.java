@@ -198,6 +198,7 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
    *
    * @return string describing the variables, ordering, and value selection heuristic.
    */
+  @Override
   public String toString() {
     return Arrays.asList(searchVariables)
         + ", SimpleSelect("

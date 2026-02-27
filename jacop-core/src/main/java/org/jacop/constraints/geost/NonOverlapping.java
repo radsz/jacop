@@ -190,6 +190,7 @@ public class NonOverlapping implements ExternalConstraint {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
 
     return "(non_overlapping: "

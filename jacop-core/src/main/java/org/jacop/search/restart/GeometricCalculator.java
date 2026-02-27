@@ -70,6 +70,7 @@ public class GeometricCalculator extends Calculator {
    *
    * @return a string describing the calculator with its base and scale parameters.
    */
+  @Override
   public String toString() {
     return "geometricCalculator(" + base + ", " + scale + ")";
   }

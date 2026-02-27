@@ -130,6 +130,7 @@ public abstract class BinaryNode {
    *
    * @return the node's id as a string
    */
+  @Override
   public String toString() {
     return "" + id;
   }

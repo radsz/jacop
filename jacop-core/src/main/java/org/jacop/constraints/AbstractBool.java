@@ -155,6 +155,7 @@ public abstract class AbstractBool extends DecomposedConstraint<PrimitiveConstra
    *
    * @return string representation of the constraint.
    */
+  @Override
   public String toString() {
     return c.toString();
   }

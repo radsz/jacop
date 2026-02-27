@@ -228,6 +228,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
   }
 
   record Item(IntVar b, int value) {
+    @Override
     public String toString() {
       return "[" + b + ", " + value + "]";
     }

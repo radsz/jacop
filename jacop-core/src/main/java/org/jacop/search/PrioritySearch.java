@@ -685,6 +685,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     StringBuilder b = new StringBuilder();
 

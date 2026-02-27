@@ -201,6 +201,7 @@ public class ReversibleSparseBitSet {
    *
    * @return string describing the words and their values.
    */
+  @Override
   public String toString() {
     StringBuilder s = new StringBuilder("words: ");
 

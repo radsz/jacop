@@ -88,6 +88,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[offset = " + flowOffset);
     if (xVar != null) {

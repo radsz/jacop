@@ -280,6 +280,7 @@ public class DefaultSearchVars {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
 
     return "%% default int search variables = array1d(1.."

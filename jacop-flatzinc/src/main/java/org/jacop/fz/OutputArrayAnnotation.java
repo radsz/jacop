@@ -124,6 +124,7 @@ public class OutputArrayAnnotation {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");

@@ -323,6 +323,7 @@ public class MultivariateIntervalNewton {
    *
    * @return string representation
    */
+  @Override
   public String toString() {
     StringBuilder s = new StringBuilder("MultivariateIntervalNewton:\n");
 

@@ -59,6 +59,7 @@ public class LubyCalculator extends Calculator {
   }
 
   /** {@inheritDoc} */
+  @Override
   public String toString() {
     return "lubyCalculator(" + scale + ")";
   }

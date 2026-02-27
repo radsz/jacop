@@ -389,6 +389,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    *
    * @return string describing the search variables matrix.
    */
+  @Override
   public String toString() {
     return searchVariables + "\n";
   }
