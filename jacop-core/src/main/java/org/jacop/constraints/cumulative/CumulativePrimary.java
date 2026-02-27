@@ -95,7 +95,10 @@ class CumulativePrimary extends Constraint {
 
     checkInputForNullness(
         new String[] {"starts", "durations", "resources", "limit"},
-        new Object[][] {starts, {durations}, {resources}, {limit}});
+        starts,
+        new Object[] {durations},
+        new Object[] {resources},
+        new Object[] {limit});
     checkInput(durations, i -> i >= 0, "durations must be greater than 0");
     checkInput(resources, i -> i >= 0, "resources must be greater than 0");
 

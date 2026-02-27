@@ -147,15 +147,13 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           "costVar",
           "violationMeasure"
         },
-        new Object[][] {
-          xvars,
-          hardCounters,
-          {countedValue},
-          {softLowerBound},
-          {softUpperBound},
-          {costVar},
-          {violationMeasure}
-        });
+        xvars,
+        hardCounters,
+        new Object[] {countedValue},
+        new Object[] {softLowerBound},
+        new Object[] {softUpperBound},
+        new Object[] {costVar},
+        new Object[] {violationMeasure});
 
     this.xvars = copyIntVarArray(xvars);
     this.hardCounters = copyIntVarArray(hardCounters);

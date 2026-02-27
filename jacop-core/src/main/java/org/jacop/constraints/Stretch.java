@@ -69,7 +69,11 @@ public class Stretch extends DecomposedConstraint<Constraint> {
   public Stretch(int[] values, int[] min, int[] max, IntVar[] x) {
 
     checkInputForNullness(
-        new String[] {"values", "min", "max", "x"}, new Object[][] {{values}, {min}, {max}, x});
+        new String[] {"values", "min", "max", "x"},
+        new Object[] {values},
+        new Object[] {min},
+        new Object[] {max},
+        x);
 
     this.values = Arrays.copyOf(values, values.length);
     this.min = Arrays.copyOf(min, min.length);

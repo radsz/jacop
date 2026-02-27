@@ -176,7 +176,9 @@ public class Knapsack extends Constraint
 
     checkInputForNullness(
         new String[] {"items", "knapsackCapacity", "knapsackProfit"},
-        new Object[][] {items, {knapsackCapacity}, {knapsackProfit}});
+        items,
+        new Object[] {knapsackCapacity},
+        new Object[] {knapsackProfit});
 
     // it handles duplicates.
     commonInitialization(
@@ -206,7 +208,11 @@ public class Knapsack extends Constraint
 
     checkInputForNullness(
         new String[] {"profits", "weights", "quantity", "knapsackCapacity", "knapsackProfit"},
-        new Object[][] {{profits}, {weights}, quantity, {knapsackCapacity}, {knapsackProfit}});
+        new Object[] {profits},
+        new Object[] {weights},
+        quantity,
+        new Object[] {knapsackCapacity},
+        new Object[] {knapsackProfit});
 
     if (profits.length != weights.length) {
       throw new IllegalArgumentException(
