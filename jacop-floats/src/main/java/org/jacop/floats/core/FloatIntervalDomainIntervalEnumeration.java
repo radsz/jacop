@@ -69,7 +69,7 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
       return domain.intervals[intervalNo];
     }
 
-    if (ASSERTS_ENABLED && !(false)) {
+    if (ASSERTS_ENABLED) {
       throw new IllegalStateException("Assertion failed");
     }
     return null;

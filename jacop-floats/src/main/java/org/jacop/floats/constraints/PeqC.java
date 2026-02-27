@@ -59,7 +59,7 @@ public class PeqC extends AbstractPcompC {
 
     super(idNumber, p, c);
 
-    if (ASSERTS_ENABLED && !(c >= IntDomain.MIN_INT && c <= IntDomain.MAX_INT)) {
+    if (ASSERTS_ENABLED && (c < IntDomain.MIN_INT || c > IntDomain.MAX_INT)) {
       throw new IllegalStateException(
           String.valueOf("Constant c " + c + " is not in the allowed range "));
     }

@@ -59,7 +59,7 @@ class BoundsVar implements MutableVar {
   BoundsVar(Store store, double min, double max) {
     BoundsVarValue val = new BoundsVarValue();
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value " + min + " greater than max value " + max + " in BoundsVar"));
     }
@@ -74,7 +74,7 @@ class BoundsVar implements MutableVar {
   BoundsVar(Store store, double min, double max, double lb, double ub) {
     BoundsVarValue val = new BoundsVarValue();
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value " + min + " greater than max value " + max + " in BoundsVar"));
     }

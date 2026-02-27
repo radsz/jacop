@@ -125,7 +125,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
       return null;
     }
 
-    if (ASSERTS_ENABLED && !((index >= 0))) {
+    if (ASSERTS_ENABLED && index < 0) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -146,7 +146,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
   T roundRobinVarSelection(int index) {
 
-    if (ASSERTS_ENABLED && !((index < searchVariables.length))) {
+    if (ASSERTS_ENABLED && index >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }
 

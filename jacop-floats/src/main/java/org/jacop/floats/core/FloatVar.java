@@ -140,7 +140,7 @@ public class FloatVar extends Var {
     dom.modelConstraints = new Constraint[FloatDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[FloatDomain.eventsInclusion.length];
 
-    if (ASSERTS_ENABLED && !((name.lastIndexOf(" ") == -1))) {
+    if (ASSERTS_ENABLED && name.lastIndexOf(" ") != -1) {
       throw new IllegalStateException(String.valueOf("Name can not contain space character"));
     }
 
@@ -202,7 +202,7 @@ public class FloatVar extends Var {
    */
   public double value() {
 
-    if (ASSERTS_ENABLED && !(singleton())) {
+    if (ASSERTS_ENABLED && !singleton()) {
       throw new IllegalStateException(
           String.valueOf("Request for a value of not grounded variable " + this));
     }

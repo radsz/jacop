@@ -1079,7 +1079,7 @@ public abstract class FloatDomain extends Domain {
       throw new IllegalArgumentException("An argument should be a singleton domain");
     }
 
-    if (ASSERTS_ENABLED && !((value instanceof FloatDomain))) {
+    if (ASSERTS_ENABLED && !(value instanceof FloatDomain)) {
       throw new IllegalStateException(
           String.valueOf("Can not compare int domains with other types of domains."));
     }
@@ -1640,7 +1640,7 @@ public abstract class FloatDomain extends Domain {
    */
   public double value() {
 
-    if (ASSERTS_ENABLED && !((singleton()))) {
+    if (ASSERTS_ENABLED && !singleton()) {
       throw new IllegalStateException(
           String.valueOf("function value() called when domain is not a singleton domain."));
     }

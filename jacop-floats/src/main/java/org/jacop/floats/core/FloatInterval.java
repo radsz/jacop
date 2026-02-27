@@ -58,7 +58,7 @@ public record FloatInterval(double min, double max) {
    */
   public FloatInterval {
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("min value " + min + " is larger than max value " + max));
     }

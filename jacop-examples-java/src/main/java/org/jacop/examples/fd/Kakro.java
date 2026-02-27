@@ -97,7 +97,7 @@ public class Kakro extends ExampleFd {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         if (rowDescription[i][j] == 1) {
-          if (ASSERTS_ENABLED && !((columnDescription[i][j] == 1))) {
+          if (ASSERTS_ENABLED && columnDescription[i][j] != 1) {
             throw new IllegalStateException(
                 String.valueOf("Contradiction between row and column descriptions."));
           }
