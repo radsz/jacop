@@ -86,7 +86,7 @@ public class XorBool extends PrimitiveConstraint {
     this.x = Arrays.copyOf(x, x.length);
     this.y = y;
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 

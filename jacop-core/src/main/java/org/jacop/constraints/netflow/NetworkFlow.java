@@ -222,10 +222,10 @@ public class NetworkFlow extends Constraint
     network.pruneNodesWithSmallDegree();
     network.analyze(costLimit);
 
-    if (ASSERTS_ENABLED && !(checkFlow(network))) {
+    if (ASSERTS_ENABLED && !checkFlow(network)) {
       throw new IllegalStateException("Assertion failed");
     }
-    if (ASSERTS_ENABLED && !(checkStructure(network))) {
+    if (ASSERTS_ENABLED && !checkStructure(network)) {
       throw new IllegalStateException("Assertion failed");
     }
   }

@@ -74,7 +74,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
           "The length of the two lists in Conditional constraints must be equal");
     }
     for (IntVar be : b) {
-      if (ASSERTS_ENABLED && !(be.min() >= 0 && be.max() <= 1)) {
+      if (ASSERTS_ENABLED && (be.min() < 0 || be.max() > 1)) {
         throw new IllegalStateException(
             String.valueOf("The elements of condition list must be 0/1 variables"));
       }

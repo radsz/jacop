@@ -69,7 +69,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(IntVar[][] rectangle) {
 
-    if (ASSERTS_ENABLED && !(rectangle != null)) {
+    if (ASSERTS_ENABLED && rectangle == null) {
       throw new IllegalStateException(String.valueOf("Rectangles list is null"));
     }
 
@@ -81,10 +81,10 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      if (ASSERTS_ENABLED && !(rectangle[i] != null)) {
+      if (ASSERTS_ENABLED && rectangle[i] == null) {
         throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
       }
-      if (ASSERTS_ENABLED && !(rectangle[i].length != 4)) {
+      if (ASSERTS_ENABLED && rectangle[i].length == 4) {
         throw new IllegalStateException(
             String.valueOf("The rectangle has to have exactly two dimensions"));
       }
@@ -140,7 +140,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(List<? extends List<? extends IntVar>> rectangle) {
 
-    if (ASSERTS_ENABLED && !(rectangle != null)) {
+    if (ASSERTS_ENABLED && rectangle == null) {
       throw new IllegalStateException(String.valueOf("Rectangles list is null"));
     }
 
@@ -152,10 +152,10 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.size()];
 
     for (int i = 0; i < rectangle.size(); i++) {
-      if (ASSERTS_ENABLED && !(rectangle.get(i) != null)) {
+      if (ASSERTS_ENABLED && rectangle.get(i) == null) {
         throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
       }
-      if (ASSERTS_ENABLED && !(rectangle.get(i).size() != 4)) {
+      if (ASSERTS_ENABLED && rectangle.get(i).size() == 4) {
         throw new IllegalStateException(
             String.valueOf("The rectangle has to have exactly two dimensions"));
       }

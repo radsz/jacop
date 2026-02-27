@@ -133,7 +133,7 @@ public class DomainStructure implements VarHandler {
 
       // arc already deleted ?
       if (arcs[id].index == DELETED_ARC) {
-        if (ASSERTS_ENABLED && !(false)) {
+        if (ASSERTS_ENABLED) {
           throw new IllegalStateException("Assertion failed");
         }
         continue;
@@ -155,7 +155,7 @@ public class DomainStructure implements VarHandler {
 
   private void groundArc(int arcId, boolean active, MutableNetwork network) {
 
-    if (ASSERTS_ENABLED && !(arcId < notGrounded)) {
+    if (ASSERTS_ENABLED && arcId >= notGrounded) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -224,12 +224,12 @@ public class DomainStructure implements VarHandler {
    * @param arcId the index of the arc to unground.
    */
   public void ungroundArc(int arcId) {
-    if (ASSERTS_ENABLED && !(arcId >= notGrounded)) {
+    if (ASSERTS_ENABLED && arcId < notGrounded) {
       throw new IllegalStateException("Assertion failed");
     }
 
     // add domain/arc pair
-    if (ASSERTS_ENABLED && !(arcId == notGrounded)) {
+    if (ASSERTS_ENABLED && arcId != notGrounded) {
       throw new IllegalStateException("Assertion failed");
     }
     notGrounded++;

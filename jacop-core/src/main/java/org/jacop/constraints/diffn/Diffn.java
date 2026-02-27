@@ -641,7 +641,7 @@ public class Diffn extends Nooverlap {
     IntVar[] ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      if (ASSERTS_ENABLED && !(rectangle[i] != null)) {
+      if (ASSERTS_ENABLED && rectangle[i] == null) {
         throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
       }
 

@@ -430,13 +430,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         "objects",
         Arrays.stream(objects).flatMap(obj -> obj.getVariables().stream()).toArray(IntVar[]::new));
 
-    if (ASSERTS_ENABLED && !(objects.length > 0)) {
+    if (ASSERTS_ENABLED && objects.length <= 0) {
       throw new IllegalStateException(String.valueOf("empty collection of objects"));
     }
-    if (ASSERTS_ENABLED && !(shapes.length > 0)) {
+    if (ASSERTS_ENABLED && shapes.length <= 0) {
       throw new IllegalStateException(String.valueOf("empty collection of shapes"));
     }
-    if (ASSERTS_ENABLED && !(constraints.length > 0)) {
+    if (ASSERTS_ENABLED && constraints.length <= 0) {
       throw new IllegalStateException(String.valueOf("empty collection of constraints"));
     }
 
@@ -464,7 +464,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     Dbox.supportDimension(dimension + 1);
     shapeIdsToPrune = new int[shapeRegister.length];
 
-    if (ASSERTS_ENABLED && !(dimension > 0)) {
+    if (ASSERTS_ENABLED && dimension <= 0) {
       throw new IllegalStateException(String.valueOf("No dimensions"));
     }
 
@@ -481,7 +481,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     temporaryObjectSet = new LinkedHashSet<>();
     backtracking = false;
     workingList = new ArrayList<>();
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
     groundedVars = new ArrayList<>();
@@ -491,7 +491,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   private static Shape[] buildShapeRegisterArray(Map<Integer, Shape> idShapeMap) {
     Shape[] register = new Shape[idShapeMap.size()];
     for (Map.Entry<Integer, Shape> e : idShapeMap.entrySet()) {
-      if (ASSERTS_ENABLED && !(e.getKey() < idShapeMap.size())) {
+      if (ASSERTS_ENABLED && e.getKey() >= idShapeMap.size()) {
         throw new IllegalStateException(
             String.valueOf(
                 "Shapes do not have unique ids between 0 and n-1, where n is number of shapes."));
@@ -551,7 +551,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       for (Var v : o.getVariables()) {
         if (!v.singleton()) {
           GeostObject previousValue = variableObjectMap.put(v, o);
-          if (ASSERTS_ENABLED && !(previousValue == null)) {
+          if (ASSERTS_ENABLED && previousValue != null) {
             throw new IllegalStateException(
                 String.valueOf(
                     "Current implementation of Geost does not allow reuse of not singleton variables."));
@@ -643,7 +643,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public final Shape getShape(int id) {
 
-    if (ASSERTS_ENABLED && !(id >= 0 && id < shapeRegister.length && shapeRegister[id] != null)) {
+    if (ASSERTS_ENABLED && (id < 0 || id >= shapeRegister.length || shapeRegister[id] == null)) {
       throw new IllegalStateException(String.valueOf("unknown shape id: " + id));
     }
 
@@ -671,7 +671,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       constraintCount += ics.size();
     }
 
-    if (ASSERTS_ENABLED && !(constraintCount == internalConstraints.size())) {
+    if (ASSERTS_ENABLED && constraintCount != internalConstraints.size()) {
       throw new IllegalStateException(String.valueOf("some constraints were not added correctly"));
     }
 
@@ -778,7 +778,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 
-      if (ASSERTS_ENABLED && !(f.containsPoint(c))) {
+      if (ASSERTS_ENABLED && !f.containsPoint(c)) {
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
       updateNFromForbiddenBoxPruneMin(o, f);
@@ -796,7 +796,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     if (feasiblePointFound) {
-      if (ASSERTS_ENABLED && !(c[d] >= (d != dimension ? o.coords[d].min() : o.start.min()))) {
+      if (ASSERTS_ENABLED && c[d] < (d != dimension ? o.coords[d].min() : o.start.min())) {
         throw new IllegalStateException(
             String.valueOf(
                 "feasible point found "
@@ -824,7 +824,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     final int size1 = o.dimension + 1;
     for (int i = 0; i < size1; i++) {
       n[i] = Math.min(n[i], f.origin[i] + f.length[i]);
-      if (ASSERTS_ENABLED && !(n[i] > c[i])) {
+      if (ASSERTS_ENABLED && n[i] <= c[i]) {
         throw new IllegalStateException(String.valueOf("n is not larger than c in pruneMin"));
       }
     }
@@ -887,7 +887,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 
-      if (ASSERTS_ENABLED && !(f.containsPoint(c))) {
+      if (ASSERTS_ENABLED && !f.containsPoint(c)) {
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
       updateNFromForbiddenBoxPruneMax(o, f);
@@ -905,7 +905,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     if (feasiblePointFound) {
-      if (ASSERTS_ENABLED && !(c[d] <= (d != dimension ? o.coords[d].max() : o.end.max()))) {
+      if (ASSERTS_ENABLED && c[d] > (d != dimension ? o.coords[d].max() : o.end.max())) {
         throw new IllegalStateException(
             String.valueOf(
                 "feasible point found "
@@ -933,7 +933,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     final int size3 = o.dimension + 1;
     for (int i = 0; i < size3; i++) {
       n[i] = Math.max(n[i], f.origin[i] - 1);
-      if (ASSERTS_ENABLED && !(n[i] < c[i])) {
+      if (ASSERTS_ENABLED && n[i] >= c[i]) {
         throw new IllegalStateException(String.valueOf("n is not smaller than c in pruneMax"));
       }
     }
@@ -1185,7 +1185,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
             if (!bestShapeIDFound) {
               // best shape ID was removed from o.shapeId
               shapeIdsToPrune[0] = shapeIdsToPrune[lastSidIndex];
-              if (ASSERTS_ENABLED && !(lastSidIndex >= 1)) {
+              if (ASSERTS_ENABLED && lastSidIndex < 1) {
                 throw new IllegalStateException("Assertion failed");
               }
               lastSidIndex--;
@@ -1276,10 +1276,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               }
             }
 
-            if (ASSERTS_ENABLED && !(minLowerBound > IntDomain.MIN_INT)) {
+            if (ASSERTS_ENABLED && minLowerBound <= IntDomain.MIN_INT) {
               throw new IllegalStateException("Assertion failed");
             }
-            if (ASSERTS_ENABLED && !(maxUpperBound < IntDomain.MAX_INT)) {
+            if (ASSERTS_ENABLED && maxUpperBound >= IntDomain.MAX_INT) {
               throw new IllegalStateException("Assertion failed");
             }
 
@@ -1488,7 +1488,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   public final void queueObject(GeostObject o) {
 
     // Important to keep and ensure.
-    if (ASSERTS_ENABLED && !(inConsistency)) {
+    if (ASSERTS_ENABLED && !inConsistency) {
       throw new IllegalStateException(
           String.valueOf("It is improperly called outside the consistency function."));
     }
@@ -1667,7 +1667,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     if (inConsistency) {
 
-      if (ASSERTS_ENABLED && !((variableObjectMap.containsKey(v) || v.singleton()))) {
+      if (ASSERTS_ENABLED && !variableObjectMap.containsKey(v) && !v.singleton()) {
         throw new IllegalStateException(
             String.valueOf("The variable " + v + " does not exist in variable-object map."));
       }
@@ -1716,7 +1716,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       log.debug("removeLevel({})", store.level);
     }
 
-    if (ASSERTS_ENABLED && !(!inConsistency)) {
+    if (ASSERTS_ENABLED && inConsistency) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1730,7 +1730,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   @Override
   public void removeLevelLate(int level) {
 
-    if (ASSERTS_ENABLED && !(!inConsistency)) {
+    if (ASSERTS_ENABLED && inConsistency) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -1759,7 +1759,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
 
       Var v = groundedVars.remove(i);
-      if (ASSERTS_ENABLED && !(v != null)) {
+      if (ASSERTS_ENABLED && v == null) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -1792,7 +1792,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       GeostObject o = objectList.remove(i);
 
-      if (ASSERTS_ENABLED && !(o != null)) {
+      if (ASSERTS_ENABLED && o == null) {
         throw new IllegalStateException("Assertion failed");
       }
 

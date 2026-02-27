@@ -76,7 +76,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
       resultMax = result[1];
     } while (store.propagationHasOccurred);
 
-    if (ASSERTS_ENABLED && !(checkSolution(resultMin, resultMax) == null)) {
+    if (ASSERTS_ENABLED && checkSolution(resultMin, resultMax) != null) {
       throw new IllegalStateException(String.valueOf(checkSolution(resultMin, resultMax)));
     }
   }

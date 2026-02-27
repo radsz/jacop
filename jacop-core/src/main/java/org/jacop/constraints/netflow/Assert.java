@@ -346,7 +346,7 @@ public class Assert {
       }
       boolean b1 = arc.sister == g.lower[arc.index];
       boolean b2 = arc == g.lower[arc.index];
-      if (ASSERTS_ENABLED && !(b1 ^ b2)) {
+      if (ASSERTS_ENABLED && b1 == b2) {
         throw new IllegalStateException("Assertion failed");
       }
     }
@@ -399,7 +399,7 @@ public class Assert {
       }
       boolean b1 = tree.contains(i.toParent);
       boolean b2 = tree.contains(i.toParent.sister);
-      if (ASSERTS_ENABLED && !(b1 ^ b2)) {
+      if (ASSERTS_ENABLED && b1 == b2) {
         throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
       }
     }
@@ -422,7 +422,7 @@ public class Assert {
       int count2 = 0;
       for (Arc arc : node.adjacencyList) {
         if (arc != null) {
-          if (ASSERTS_ENABLED && !((arc.head == node) ^ (arc.tail() == node))) {
+          if (ASSERTS_ENABLED && (arc.head == node) == (arc.tail() == node)) {
             throw new IllegalStateException("Assertion failed");
           }
           if (ASSERTS_ENABLED && arc.index == NetworkSimplex.DELETED_ARC) {

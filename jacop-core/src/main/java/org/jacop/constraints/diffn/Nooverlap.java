@@ -77,7 +77,7 @@ public class Nooverlap extends Constraint {
    */
   public Nooverlap(IntVar[][] rectangle) {
 
-    if (ASSERTS_ENABLED && !(rectangle != null)) {
+    if (ASSERTS_ENABLED && rectangle == null) {
       throw new IllegalStateException(String.valueOf("Rectangles list is null"));
     }
 
@@ -87,10 +87,10 @@ public class Nooverlap extends Constraint {
     this.rectangle = new Rectangle[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      if (ASSERTS_ENABLED && !(rectangle[i] != null)) {
+      if (ASSERTS_ENABLED && rectangle[i] == null) {
         throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
       }
-      if (ASSERTS_ENABLED && !(rectangle[i].length == 4)) {
+      if (ASSERTS_ENABLED && rectangle[i].length != 4) {
         throw new IllegalStateException(
             String.valueOf("The rectangle has to have exactly two dimensions"));
       }

@@ -402,7 +402,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (x.singleton()) {
         k = k.union(x.min());
       } else {
-        if (ASSERTS_ENABLED && !(false)) {
+        if (ASSERTS_ENABLED) {
           throw new IllegalStateException(
               String.valueOf("consistencyForY is called without all X being grounded"));
         }
@@ -1148,7 +1148,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         return true;
       }
 
-      if (ASSERTS_ENABLED && !(!allYsGrounded || !allXsGrounded || (n.value() == lb0))) {
+      if (ASSERTS_ENABLED && allYsGrounded && allXsGrounded && n.value() != lb0) {
         throw new IllegalStateException(
             String.valueOf(
                 " Domain of N or value of timestamp LBoUTS was not maintenated properly"));

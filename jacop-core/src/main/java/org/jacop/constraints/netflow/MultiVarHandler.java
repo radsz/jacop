@@ -68,7 +68,7 @@ public class MultiVarHandler implements VarHandler {
    * @param handler the handler to add; must list the same variable as this handler.
    */
   public void add(VarHandler handler) {
-    if (ASSERTS_ENABLED && !(handler.listVariables().contains(variable))) {
+    if (ASSERTS_ENABLED && !handler.listVariables().contains(variable)) {
       throw new IllegalStateException("Assertion failed");
     }
     handlers.add(handler);
@@ -76,7 +76,7 @@ public class MultiVarHandler implements VarHandler {
 
   /** {@inheritDoc} */
   public int getPruningEvent(Var variable) {
-    if (ASSERTS_ENABLED && !(this.variable == variable)) {
+    if (ASSERTS_ENABLED && this.variable != variable) {
       throw new IllegalStateException("Assertion failed");
     }
     int max = IntDomain.GROUND;
@@ -96,7 +96,7 @@ public class MultiVarHandler implements VarHandler {
 
   /** {@inheritDoc} */
   public void processEvent(IntVar variable, MutableNetwork network) {
-    if (ASSERTS_ENABLED && !(this.variable == variable)) {
+    if (ASSERTS_ENABLED && this.variable != variable) {
       throw new IllegalStateException("Assertion failed");
     }
     for (VarHandler handler : handlers) {

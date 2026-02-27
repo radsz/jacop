@@ -213,7 +213,7 @@ public class SumWeight extends Constraint
 
       IntDomain currentDomain = list[i].domain;
 
-      if (ASSERTS_ENABLED && !(!currentDomain.singleton())) {
+      if (ASSERTS_ENABLED && currentDomain.singleton()) {
         throw new IllegalStateException(
             String.valueOf("Singletons should not occur in this part of the array"));
       }

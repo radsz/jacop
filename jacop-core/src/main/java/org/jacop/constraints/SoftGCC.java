@@ -337,12 +337,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   private void buildValueBasedHardCountersSoftBounds(
       Store store, List<Constraint> target, List<IntVar> costs, int i) {
     target.add(new Count(xvars, hardCounters[i], countedValue[i]));
-    if (ASSERTS_ENABLED && !(softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)) {
+    if (ASSERTS_ENABLED && (softLowerBound[i] < 0 || softLowerBound[i] > xvars.length)) {
       throw new IllegalStateException(
           String.valueOf(
               "LowerBound for " + i + "-th element must be between 0 and number of variables"));
     }
-    if (ASSERTS_ENABLED && !(softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)) {
+    if (ASSERTS_ENABLED && (softUpperBound[i] < 0 || softUpperBound[i] > xvars.length)) {
       throw new IllegalStateException(
           String.valueOf(
               "UpperBound for " + i + "-th element must be between 0 and number of variables"));

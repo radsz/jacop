@@ -263,7 +263,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     do {
       store.propagationHasOccurred = false;
       consistencyProcessChangedVariables();
-      if (ASSERTS_ENABLED && !(checkXorder())) {
+      if (ASSERTS_ENABLED && !checkXorder()) {
         throw new IllegalStateException(
             String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
       }
@@ -301,7 +301,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
     firstConsistencyCheck = false;
     firstConsistencyLevel = store.level;
-    if (ASSERTS_ENABLED && !(checkXorder())) {
+    if (ASSERTS_ENABLED && !checkXorder()) {
       throw new IllegalStateException(
           String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
     }
@@ -388,10 +388,10 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private void consistencyPruneXDomains(Store store) {
     for (int j = 0; j < stampValue; j++) {
-      if (ASSERTS_ENABLED && !(match3[j] >= 0 && match3[j] < ySize)) {
+      if (ASSERTS_ENABLED && (match3[j] < 0 || match3[j] >= ySize)) {
         throw new IllegalStateException("Assertion failed");
       }
-      if (ASSERTS_ENABLED && !(compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize)) {
+      if (ASSERTS_ENABLED && (compOfY[match3[j]] < 0 || compOfY[match3[j]] > ySize)) {
         throw new IllegalStateException("Assertion failed");
       }
       int cutMin = xDomain[j].min();
@@ -587,19 +587,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     firstPass();
 
     // check we are in the good ranges for match1 and match1xOrder
-    if (ASSERTS_ENABLED && !(checkFirstPass())) {
+    if (ASSERTS_ENABLED && !checkFirstPass()) {
       throw new IllegalStateException("Assertion failed");
     }
 
     secondPass();
 
-    if (ASSERTS_ENABLED && !(checkSecondPass())) {
+    if (ASSERTS_ENABLED && !checkSecondPass()) {
       throw new IllegalStateException("Assertion failed");
     }
 
     thirdPass();
 
-    if (ASSERTS_ENABLED && !(checkThirdPass())) {
+    if (ASSERTS_ENABLED && !checkThirdPass()) {
       throw new IllegalStateException("Assertion failed");
     }
   }
