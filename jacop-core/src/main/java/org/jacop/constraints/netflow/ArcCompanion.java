@@ -262,7 +262,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
         if (arc.index == DELETED_ARC) {
           int deltaCost = newCost - arc.cost;
           int flow = flowOffset + arc.sister.capacity;
-          network.changeCostOffset((long) flow * (long) deltaCost);
+          network.changeCostOffset((long) flow * deltaCost);
         } /*else if (flowOffset != 0) {
                 int deltaCost = newCost - arc.cost;
             int flow = flowOffset;
@@ -291,7 +291,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       if (arc.index == DELETED_ARC) {
         int deltaCost = newCost - arc.cost;
         int flow = flowOffset + arc.sister.capacity;
-        network.changeCostOffset((long) flow * (long) deltaCost);
+        network.changeCostOffset((long) flow * deltaCost);
       } /*else if (flowOffset != 0) {
              int deltaCost = newCost - arc.cost;
           int flow = flowOffset;

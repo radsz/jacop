@@ -346,7 +346,7 @@ public abstract class IntDomain extends Domain {
    * @return the result or MAX_INT/MIN_INT if result causes overflow
    */
   public static int multiplyInt(int x, int y) {
-    long r = (long) x * (long) y;
+    long r = (long) x * y;
     if ((int) r != r) {
       return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
@@ -364,7 +364,7 @@ public abstract class IntDomain extends Domain {
     int r = x + y;
     // HD 2-12 Overflow iff both arguments have the opposite sign of the result
     if (((x ^ r) & (y ^ r)) < 0) {
-      return (long) x + (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
+      return (long) x + y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
     return r;
   }
@@ -382,7 +382,7 @@ public abstract class IntDomain extends Domain {
     // HD 2-12 Overflow iff the arguments have different signs and
     // the sign of the result is different than the sign of x
     if (((x ^ y) & (x ^ r)) < 0) {
-      return (long) x - (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
+      return (long) x - y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
     }
     return r;
   }

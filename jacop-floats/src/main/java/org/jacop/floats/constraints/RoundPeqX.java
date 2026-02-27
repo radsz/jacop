@@ -66,8 +66,8 @@ public class RoundPeqX extends AbstractRoundPeqX {
 
       store.propagationHasOccurred = false;
 
-      double pMin = Math.nextUp((double) x.min() - 0.5);
-      double pMax = Math.nextDown((double) x.max() + 0.5);
+      double pMin = Math.nextUp(x.min() - 0.5);
+      double pMax = Math.nextDown(x.max() + 0.5);
 
       p.domain.in(store.level, p, pMin, pMax);
 
@@ -102,9 +102,7 @@ public class RoundPeqX extends AbstractRoundPeqX {
 
   @Override
   public boolean satisfied() {
-    return x.singleton()
-        && p.min() > (double) x.value() - 0.5
-        && p.max() < (double) x.value() + 0.5;
+    return x.singleton() && p.min() > x.value() - 0.5 && p.max() < x.value() + 0.5;
   }
 
   @Override

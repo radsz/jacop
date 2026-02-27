@@ -92,7 +92,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    */
   public int compareTo(KnapsackItem that) {
 
-    long comparison = (long) weight * (long) that.profit - (long) profit * (long) that.weight;
+    long comparison = (long) weight * that.profit - (long) profit * that.weight;
 
     if (comparison == 0) {
 

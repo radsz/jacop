@@ -60,7 +60,7 @@ public class CeilPeqX extends AbstractRoundPeqX {
 
     do {
       // ceil(p) = x, n - 1 < x <= n
-      p.domain.in(store.level, p, Math.nextUp((double) x.min() - 1), x.max());
+      p.domain.in(store.level, p, Math.nextUp(x.min() - 1), x.max());
 
       store.propagationHasOccurred = false;
 
@@ -70,7 +70,7 @@ public class CeilPeqX extends AbstractRoundPeqX {
 
   @Override
   public boolean satisfied() {
-    return x.singleton() && p.min() > (double) x.value() - 1.0 && p.max() <= (double) x.value();
+    return x.singleton() && p.min() > x.value() - 1.0 && p.max() <= x.value();
   }
 
   @Override

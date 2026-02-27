@@ -63,7 +63,7 @@ public abstract class AbstractRoundPeqX extends Constraint implements SatisfiedP
     checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
     double q = Double.max(p.min(), p.max());
-    if (q > (double) Integer.MAX_VALUE || q < (double) Integer.MIN_VALUE) {
+    if (q > Integer.MAX_VALUE || q < Integer.MIN_VALUE) {
       throw new RuntimeException("Error: JaCoP cannor handle " + p + " in rounding to integer.");
     }
     numberId = idNum.incrementAndGet();

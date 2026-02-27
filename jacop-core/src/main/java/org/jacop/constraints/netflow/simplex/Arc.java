@@ -231,7 +231,7 @@ public final class Arc {
       flow += companion.flowOffset;
     }
 
-    return (long) flow * (long) cost;
+    return (long) flow * cost;
   }
 
   /** {@inheritDoc} */

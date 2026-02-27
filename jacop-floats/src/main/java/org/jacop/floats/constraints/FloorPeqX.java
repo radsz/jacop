@@ -61,8 +61,7 @@ public class FloorPeqX extends AbstractRoundPeqX {
     // floor(p) = x, x <= p < x+1
 
     do {
-      p.domain.in(
-          store.level, p, x.min(), FloatDomain.previous((double) x.max() + 1)); // p <= x+1, x <= p
+      p.domain.in(store.level, p, x.min(), FloatDomain.previous(x.max() + 1)); // p <= x+1, x <= p
 
       store.propagationHasOccurred = false;
 
@@ -73,7 +72,7 @@ public class FloorPeqX extends AbstractRoundPeqX {
 
   @Override
   public boolean satisfied() {
-    return x.singleton() && p.min() >= (double) x.value() && p.max() < (double) x.value() + 1.0;
+    return x.singleton() && p.min() >= x.value() && p.max() < x.value() + 1.0;
   }
 
   @Override
