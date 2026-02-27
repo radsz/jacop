@@ -70,7 +70,7 @@ public class SetVar extends Var {
     dom.modelConstraints = new Constraint[SetDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[SetDomain.eventsInclusion.length];
 
-    if (ASSERTS_ENABLED && !((name.lastIndexOf(" ") == -1))) {
+    if (ASSERTS_ENABLED && name.lastIndexOf(" ") != -1) {
       throw new IllegalStateException(String.valueOf("Name can not contain space character"));
     }
 
@@ -278,13 +278,20 @@ public class SetVar extends Var {
    */
   public void domainHasChanged(int event) {
 
+    boolean singleton = singleton();
     if (ASSERTS_ENABLED
-        && !(((event == SetDomain.LUB_EVENT && !singleton())
-            || (event == SetDomain.GLB_EVENT && !singleton())
-            || (event == SetDomain.ANY && !singleton())
-            || (event == SetDomain.BOUND && !singleton())
-            || (event == SetDomain.CARDINALITY_EVENT && !singleton())
-            || (event == SetDomain.GROUND && singleton())))) {
+        && ((event == SetDomain.LUB_EVENT && singleton)
+            || (event == SetDomain.GLB_EVENT && singleton)
+            || (event == SetDomain.ANY && singleton)
+            || (event == SetDomain.BOUND && singleton)
+            || (event == SetDomain.CARDINALITY_EVENT && singleton)
+            || (event == SetDomain.GROUND && !singleton)
+            || (event != SetDomain.LUB_EVENT
+                && event != SetDomain.GLB_EVENT
+                && event != SetDomain.ANY
+                && event != SetDomain.BOUND
+                && event != SetDomain.CARDINALITY_EVENT
+                && event != SetDomain.GROUND))) {
       throw new IllegalStateException(
           String.valueOf("Wrong event generated " + event + "? " + singleton()));
     }

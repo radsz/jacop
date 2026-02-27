@@ -276,7 +276,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public void addDom(IntDomain set) {
 
-    if (ASSERTS_ENABLED && !(set.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && set.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(set.checkInvariants()));
     }
 
@@ -287,10 +287,10 @@ public class BoundSetDomain extends SetDomain {
   /** Adds a set to the domain. */
   public void addDom(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.lub().checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.lub().checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.lub().checkInvariants()));
     }
-    if (ASSERTS_ENABLED && !(domain.glb().checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.glb().checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.glb().checkInvariants()));
     }
 
@@ -374,7 +374,7 @@ public class BoundSetDomain extends SetDomain {
   /** It checks if the supplied set or setDomain is a subset of this domain. */
   public boolean contains(IntDomain set) {
 
-    if (ASSERTS_ENABLED && !(set.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && set.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(set.checkInvariants()));
     }
 
@@ -389,7 +389,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public boolean contains(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -510,7 +510,7 @@ public class BoundSetDomain extends SetDomain {
   }
 
   private void applyInAtNewLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
-    if (ASSERTS_ENABLED && !(stamp < storeLevel)) {
+    if (ASSERTS_ENABLED && stamp >= storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -579,7 +579,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain intersect(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -602,7 +602,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain intersect(IntDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -683,7 +683,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public void setDomain(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -694,7 +694,7 @@ public class BoundSetDomain extends SetDomain {
   /** It sets the domain to the the set {min..max}. It grounds it. */
   public void setDomain(int min, int max) {
 
-    if (ASSERTS_ENABLED && !((min <= max))) {
+    if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException("Assertion failed");
     }
     this.lubDomain = new IntervalDomain(min, max);
@@ -753,7 +753,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain subtract(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -797,7 +797,7 @@ public class BoundSetDomain extends SetDomain {
   @Override
   public String toString() {
 
-    if (ASSERTS_ENABLED && !(checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
@@ -839,7 +839,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(SetDomain domain) {
 
-    if (ASSERTS_ENABLED && !(domain.checkInvariants() == null)) {
+    if (ASSERTS_ENABLED && domain.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(domain.checkInvariants()));
     }
 
@@ -858,7 +858,7 @@ public class BoundSetDomain extends SetDomain {
    */
   public SetDomain union(int min, int max) {
 
-    if (ASSERTS_ENABLED && !(max > min)) {
+    if (ASSERTS_ENABLED && max <= min) {
       throw new IllegalStateException(String.valueOf("min value is larger than max value"));
     }
 
@@ -933,7 +933,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
       applyNewLevelGlbChange(level, v, glbDomain.union(element));
@@ -961,7 +961,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
       applyNewLevelGlbChange(level, v, glbDomain.union(intersect));
@@ -993,7 +993,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
       applyNewLevelLubChange(level, v, lubDomain.subtract(element));
@@ -1027,7 +1027,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -1062,7 +1062,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
       applyNewLevelLubChange(level, v, lubDomain.intersect(intersect));
@@ -1114,7 +1114,7 @@ public class BoundSetDomain extends SetDomain {
 
     } else {
 
-      if (ASSERTS_ENABLED && !(stamp < level)) {
+      if (ASSERTS_ENABLED && stamp >= level) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -1173,7 +1173,7 @@ public class BoundSetDomain extends SetDomain {
 
   /** Returns true if inValue was called (caller should skip CARDINALITY_EVENT). */
   private boolean applyInCardinalityAtNewLevel(int level, SetVar v, int min, int max) {
-    if (ASSERTS_ENABLED && !(stamp < level)) {
+    if (ASSERTS_ENABLED && stamp >= level) {
       throw new IllegalStateException("Assertion failed");
     }
 

@@ -131,7 +131,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
       return ret;
     }
     int maxPlace = this.getMaxPascal(level);
-    if (ASSERTS_ENABLED && !((place <= maxPlace))) {
+    if (ASSERTS_ENABLED && place > maxPlace) {
       throw new IllegalStateException("Assertion failed");
     }
     int occLevel = this.maxLevel - 1;

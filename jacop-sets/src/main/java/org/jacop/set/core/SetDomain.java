@@ -503,7 +503,7 @@ public abstract class SetDomain extends Domain {
   @Override
   public void removeLevel(int level, Var v) {
 
-    if (ASSERTS_ENABLED && !((this.stamp <= level))) {
+    if (ASSERTS_ENABLED && this.stamp > level) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -512,7 +512,7 @@ public abstract class SetDomain extends Domain {
       ((SetVar) v).domain = this.previousDomain;
     }
 
-    if (ASSERTS_ENABLED && !((v.level() < level))) {
+    if (ASSERTS_ENABLED && v.level() >= level) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -530,7 +530,7 @@ public abstract class SetDomain extends Domain {
       return;
     }
 
-    if (ASSERTS_ENABLED && !((stamp == storeLevel))) {
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
       throw new IllegalStateException("Assertion failed");
     }
 
