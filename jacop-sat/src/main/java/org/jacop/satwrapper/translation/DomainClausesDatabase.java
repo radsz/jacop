@@ -94,7 +94,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     SatCpBridge domain = wrapper.boolVarToDomain(assertedLiteral);
     if (domain.isTranslated()) {
       if (ASSERTS_ENABLED
-          && !(wrapper.log(this, "variable %s is ignored because translated", domain.variable))) {
+          && !wrapper.log(this, "variable %s is ignored because translated", domain.variable)) {
         throw new IllegalStateException("Assertion failed");
       }
       return;
@@ -188,7 +188,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     }
 
     if (ASSERTS_ENABLED
-        && !(wrapper.log(this, "asked resolution with (index %d) %s", clauseIndex, clause))) {
+        && !wrapper.log(this, "asked resolution with (index %d) %s", clauseIndex, clause)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -199,7 +199,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     int assertedLiteral = propagationCauses[propagatedVar];
 
     if (ASSERTS_ENABLED
-        && !(wrapper.log(
+        && !wrapper.log(
             this,
             "resolution with "
                 + propagatedLiteral
@@ -208,7 +208,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
                 + " meaning "
                 + wrapper.showLiteralMeaning(propagatedLiteral)
                 + " or "
-                + wrapper.showLiteralMeaning(-assertedLiteral)))) {
+                + wrapper.showLiteralMeaning(-assertedLiteral))) {
       throw new IllegalStateException("Assertion failed");
     }
 

@@ -67,7 +67,7 @@ public final class DomainTranslator implements WrapperComponent {
     if (!translatedVars.contains(variable)) {
 
       if (ASSERTS_ENABLED
-          && !(wrapper.log(this, "translation of variable %s to clauses", variable))) {
+          && !wrapper.log(this, "translation of variable %s to clauses", variable)) {
         throw new IllegalStateException("Assertion failed");
       }
 

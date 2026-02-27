@@ -326,13 +326,9 @@ public final class SatWrapper extends Constraint
         throw Store.failException;
       }
       if (ASSERTS_ENABLED
-          && !(log(
+          && !log(
               this,
-              "literal "
-                  + literal
-                  + " already set (to "
-                  + trail.values[Math.abs(literal)]
-                  + ")"))) {
+              "literal " + literal + " already set (to " + trail.values[Math.abs(literal)] + ")")) {
         throw new IllegalStateException("Assertion failed");
       }
 
@@ -389,11 +385,11 @@ public final class SatWrapper extends Constraint
     clauseToLearn = explanation;
 
     if (ASSERTS_ENABLED
-        && !(log(
+        && !log(
             this,
             "*** must learn explanation %s meaning %s",
             explanation,
-            showClauseMeaning(explanation)))) {
+            showClauseMeaning(explanation))) {
       throw new IllegalStateException("Assertion failed");
     }
     if (ASSERTS_ENABLED && !log(this, "trail: " + core.trail)) {
@@ -457,7 +453,7 @@ public final class SatWrapper extends Constraint
       // we are not at the SAT level we should be, so backjump to reach it
 
       if (ASSERTS_ENABLED
-          && !(log(this, "solver backjumps from %d to %d", currentSatLevel, newMaxSatLevel))) {
+          && !log(this, "solver backjumps from %d to %d", currentSatLevel, newMaxSatLevel)) {
         throw new IllegalStateException("Assertion failed");
       }
 

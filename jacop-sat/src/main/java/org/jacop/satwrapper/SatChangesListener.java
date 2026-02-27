@@ -204,7 +204,7 @@ public final class SatChangesListener
     }
 
     if (ASSERTS_ENABLED
-        && !(wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate))) {
+        && !wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate)) {
       throw new IllegalStateException("Assertion failed");
     }
 
@@ -212,7 +212,7 @@ public final class SatChangesListener
     updateBooleanVars(storeLevel);
 
     if (ASSERTS_ENABLED
-        && !(wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate))) {
+        && !wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate)) {
       throw new IllegalStateException("Assertion failed");
     }
   }
@@ -224,13 +224,13 @@ public final class SatChangesListener
       IntVar variable = (IntVar) wrapper.store.vars[index];
 
       if (ASSERTS_ENABLED
-          && !(wrapper.log(
+          && !wrapper.log(
               this,
               "updating %s, with lower %s and upper %s, " + "excluded values are %s",
               variable,
               lowerBounds[index],
               upperBounds[index],
-              excludedValues[index]))) {
+              excludedValues[index])) {
         throw new IllegalStateException("Assertion failed");
       }
 
