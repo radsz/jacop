@@ -2010,7 +2010,7 @@ public class FloatIntervalDomain extends FloatDomain {
         continue;
       }
 
-      double min = Math.min(currentDomain1.min(), currentDomain2.min());
+      final double min = Math.min(currentDomain1.min(), currentDomain2.min());
       unionDomainAdvanceOverlapping(intervalDomain, max1, max2, i1Ref, i2Ref, cur1Ref, cur2Ref);
       i1 = i1Ref[0];
       i2 = i2Ref[0];
