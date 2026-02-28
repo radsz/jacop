@@ -421,6 +421,15 @@ public abstract class FloatDomain extends Domain {
     return new FloatIntervalDomain(0.0, 0.0);
   }
 
+  /**
+   * Computes bounds for multiplication of two closed intervals.
+   *
+   * @param a the minimum value of the first interval
+   * @param b the maximum value of the first interval
+   * @param c the minimum value of the second interval
+   * @param d the maximum value of the second interval
+   * @return the interval enclosing products of values from both intervals
+   */
   public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
     if (c == 1.0 && d == 1.0) {
@@ -613,6 +622,15 @@ public abstract class FloatDomain extends Domain {
     return null;
   }
 
+  /**
+   * Computes bounds for division of two closed intervals.
+   *
+   * @param a the minimum value of the dividend interval
+   * @param b the maximum value of the dividend interval
+   * @param c the minimum value of the divisor interval
+   * @param d the maximum value of the divisor interval
+   * @return the interval enclosing quotients of values from both intervals
+   */
   public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
 
     if (c == 1.0 && d == 1.0) {
