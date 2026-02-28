@@ -117,21 +117,21 @@ public class WhoKilledAgatha extends ExampleFd {
     final int butler = 1;
     final int charles = 2;
 
-    IntVar the_killer = new IntVar(store, "the_killer", 0, n - 1);
+    IntVar theKiller = new IntVar(store, "the_killer", 0, n - 1);
     IntVar[][] hates = new IntVar[n][n];
     IntVar[][] richer = new IntVar[n][n];
     fillHatesAndRicherArrays(n, hates, richer);
 
     vars = new ArrayList<>();
 
-    imposeKillerConstraints(the_killer, hates, richer, n, agatha);
+    imposeKillerConstraints(theKiller, hates, richer, n, agatha);
     imposeRicherDiagonal(richer, n);
     imposeRicherSymmetry(richer, n);
     imposeAgathaHatesConstraints(hates, agatha, butler, charles);
     imposeCharlesHatesAgathaConstraints(hates, n, agatha, charles);
     imposeButlerRicherHatesConstraints(richer, hates, n, agatha, butler);
     imposeButlerHatesAgathaConstraints(hates, n, agatha, butler);
-    addSearchVariables(the_killer, hates, richer, n);
+    addSearchVariables(theKiller, hates, richer, n);
     imposeSumConstraints(hates, n);
   }
 
@@ -145,10 +145,10 @@ public class WhoKilledAgatha extends ExampleFd {
   }
 
   private void imposeKillerConstraints(
-      IntVar the_killer, IntVar[][] hates, IntVar[][] richer, int n, int agatha) {
+      IntVar theKiller, IntVar[][] hates, IntVar[][] richer, int n, int agatha) {
     for (int i = 0; i < n; i++) {
-      store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(hates[i][agatha], 1)));
-      store.impose(new IfThen(new XeqC(the_killer, i), new XeqC(richer[i][agatha], 0)));
+      store.impose(new IfThen(new XeqC(theKiller, i), new XeqC(hates[i][agatha], 1)));
+      store.impose(new IfThen(new XeqC(theKiller, i), new XeqC(richer[i][agatha], 0)));
     }
   }
 
@@ -184,8 +184,8 @@ public class WhoKilledAgatha extends ExampleFd {
     }
   }
 
-  private void addSearchVariables(IntVar the_killer, IntVar[][] hates, IntVar[][] richer, int n) {
-    vars.add(the_killer);
+  private void addSearchVariables(IntVar theKiller, IntVar[][] hates, IntVar[][] richer, int n) {
+    vars.add(theKiller);
     for (int i = 0; i < n; i++) {
       vars.addAll(Arrays.asList(hates[i]).subList(0, n));
     }

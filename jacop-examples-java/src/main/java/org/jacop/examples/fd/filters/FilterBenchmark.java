@@ -68,12 +68,12 @@ import org.jacop.ui.PrintSchedule;
 @Slf4j
 public class FilterBenchmark {
 
-  static List<IntVar> Ts;
-  static List<IntVar> Rs;
+  static List<IntVar> taskStarts;
+  static List<IntVar> taskResources;
 
-  static List<Integer> Ds;
+  static List<Integer> taskDurations;
 
-  static List<String> Ns;
+  static List<String> taskNames;
 
   static IntVar cost;
 
@@ -234,19 +234,21 @@ public class FilterBenchmark {
       int[][] dependencies,
       int[] delays,
       int[] lastOp,
-      IntVar[] T,
-      int[] D,
+      IntVar[] startTimes,
+      int[] durations,
       IntVar costVar,
       int costMax) {
     for (int[] dependency : dependencies) {
-      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
+      store.impose(
+          new XplusClteqZ(
+              startTimes[dependency[0]], delays[dependency[0]], startTimes[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<>();
     int endMax = costVar == null ? costMax : costVar.max();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, endMax);
-      store.impose(new XplusCeqZ(T[value], D[value], end));
+      store.impose(new XplusCeqZ(startTimes[value], durations[value], end));
       endOp.add(end);
     }
 
@@ -350,17 +352,17 @@ public class FilterBenchmark {
       Store store,
       Filter filter,
       ResourceRanges ranges,
-      IntVar[] T,
-      IntVar[] R,
-      int[] D,
-      IntVar[] Tadd,
-      IntVar[] Radd,
-      IntVar[] Dadd,
-      IntVar[] ResAdd,
-      IntVar[] Tmul,
-      IntVar[] Rmul,
-      IntVar[] Dmul,
-      IntVar[] ResMul,
+      IntVar[] startTimes,
+      IntVar[] resources,
+      int[] durations,
+      IntVar[] startTimesAdd,
+      IntVar[] resourcesAdd,
+      IntVar[] durationsAdd,
+      IntVar[] resourceUsageAdd,
+      IntVar[] startTimesMul,
+      IntVar[] resourcesMul,
+      IntVar[] durationsMul,
+      IntVar[] resourceUsageMul,
       IntVar addDelay,
       IntVar mulDelay,
       IntVar one,
@@ -376,23 +378,23 @@ public class FilterBenchmark {
       String t = nameT + i;
       String r = nameR + i;
 
-      T[i] = new IntVar(store, t, tMin, tMax);
+      startTimes[i] = new IntVar(store, t, tMin, tMax);
 
       if (filter.ids()[i] == filter.addId()) {
-        R[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
-        Tadd[j] = T[i];
-        Radd[j] = R[i];
-        Dadd[j] = addDelay;
-        D[i] = filter.addDel();
-        ResAdd[j] = one;
+        resources[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
+        startTimesAdd[j] = startTimes[i];
+        resourcesAdd[j] = resources[i];
+        durationsAdd[j] = addDelay;
+        durations[i] = filter.addDel();
+        resourceUsageAdd[j] = one;
         j++;
       } else {
-        R[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
-        Tmul[k] = T[i];
-        Rmul[k] = R[i];
-        Dmul[k] = mulDelay;
-        D[i] = filter.mulDel();
-        ResMul[k] = one;
+        resources[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
+        startTimesMul[k] = startTimes[i];
+        resourcesMul[k] = resources[i];
+        durationsMul[k] = mulDelay;
+        durations[i] = filter.mulDel();
+        resourceUsageMul[k] = one;
         k++;
       }
     }
@@ -406,16 +408,17 @@ public class FilterBenchmark {
    * @param D delay values
    * @param names operation names
    */
-  private static void finalizeStaticFields(IntVar[] T, IntVar[] R, int[] D, List<String> names) {
-    Ts = new ArrayList<>();
-    Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<>();
-    Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<>();
-    for (Integer v : D) {
-      Ds.add(v);
+  private static void finalizeStaticFields(
+      IntVar[] startTimes, IntVar[] resources, int[] durations, List<String> names) {
+    taskStarts = new ArrayList<>();
+    taskStarts.addAll(Arrays.asList(startTimes));
+    taskResources = new ArrayList<>();
+    taskResources.addAll(Arrays.asList(resources));
+    taskDurations = new ArrayList<>();
+    for (Integer v : durations) {
+      taskDurations.add(v);
     }
-    Ns = names;
+    taskNames = names;
   }
 
   /** Prints success/failure and returns cost value or -1. */
@@ -430,7 +433,7 @@ public class FilterBenchmark {
       if (extraSuccessLine != null) {
         log.info(extraSuccessLine);
       }
-      PrintSchedule sch = new PrintSchedule(Ns, Ts, Ds, Rs);
+      PrintSchedule sch = new PrintSchedule(taskNames, taskStarts, taskDurations, taskResources);
       log.info("{}", sch);
       return cost.value();
     } else {
@@ -822,12 +825,12 @@ public class FilterBenchmark {
             + filter.mulDel();
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            listToArray(Ts),
+            listToArray(taskStarts),
             new MostConstrainedStatic<>(),
             new SmallestDomain<>(),
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(taskResources), null, null, new IndomainMin<>());
     return runTwoPhaseExperiment(
         store,
         header,
@@ -913,12 +916,12 @@ public class FilterBenchmark {
 
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            listToArray(Ts),
+            listToArray(taskStarts),
             new SmallestMin<>(),
             new MostConstrainedStatic<>(),
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(taskResources), null, null, new IndomainMin<>());
 
     CreditCalculator<IntVar> credit = new CreditCalculator<>(taskVars.size() / 2, 5, 10);
     Search<IntVar> search = new DepthFirstSearch<>();
@@ -943,12 +946,12 @@ public class FilterBenchmark {
     printExperimentHeader(filter, addNum, mulNum);
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            listToArray(Ts),
+            listToArray(taskStarts),
             new MostConstrainedStatic<>(),
             new SmallestDomain<>(),
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(taskResources), null, null, new IndomainMin<>());
     return runTwoPhaseExperiment(
         store,
         null,
@@ -975,12 +978,12 @@ public class FilterBenchmark {
     printExperimentHeader(filter, addNum, mulNum, clock);
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            listToArray(Ts),
+            listToArray(taskStarts),
             new SmallestMin<>(),
             new MostConstrainedStatic<>(),
             new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(taskResources), null, null, new IndomainMin<>());
     return runTwoPhaseExperiment(
         store,
         null,
@@ -1012,37 +1015,58 @@ public class FilterBenchmark {
     IntVar mulDelay = new IntVar(store, filter.mulDel(), filter.mulDel());
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar[] T = new IntVar[delays.length];
-    IntVar[] R = new IntVar[delays.length];
-    int[] D = new int[delays.length];
+    IntVar[] startTimes = new IntVar[delays.length];
+    IntVar[] resources = new IntVar[delays.length];
+    int[] durations = new int[delays.length];
 
-    IntVar[] Tadd = new IntVar[filter.noAdd()];
-    IntVar[] Radd = new IntVar[filter.noAdd()];
-    IntVar[] Dadd = new IntVar[filter.noAdd()];
-    IntVar[] ResAdd = new IntVar[filter.noAdd()];
+    IntVar[] startTimesAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourcesAdd = new IntVar[filter.noAdd()];
+    IntVar[] durationsAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourceUsageAdd = new IntVar[filter.noAdd()];
 
-    IntVar[] Tmul = new IntVar[filter.noMul()];
-    IntVar[] Rmul = new IntVar[filter.noMul()];
-    IntVar[] Dmul = new IntVar[filter.noMul()];
-    IntVar[] ResMul = new IntVar[filter.noMul()];
+    IntVar[] startTimesMul = new IntVar[filter.noMul()];
+    IntVar[] resourcesMul = new IntVar[filter.noMul()];
+    IntVar[] durationsMul = new IntVar[filter.noMul()];
+    IntVar[] resourceUsageMul = new IntVar[filter.noMul()];
 
     populateResourceArrays(
-        store, filter, ranges, T, R, D, Tadd, Radd, Dadd, ResAdd, Tmul, Rmul, Dmul, ResMul,
-        addDelay, mulDelay, one, 0, 100);
+        store,
+        filter,
+        ranges,
+        startTimes,
+        resources,
+        durations,
+        startTimesAdd,
+        resourcesAdd,
+        durationsAdd,
+        resourceUsageAdd,
+        startTimesMul,
+        resourcesMul,
+        durationsMul,
+        resourceUsageMul,
+        addDelay,
+        mulDelay,
+        one,
+        0,
+        100);
 
-    cost = createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 100);
+    cost =
+        createDependencyAndCostConstraints(
+            store, dependencies, delays, lastOp, startTimes, durations, null, 100);
 
-    store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
-    store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
+    store.impose(new Diffn(startTimesAdd, resourcesAdd, durationsAdd, resourceUsageAdd));
+    store.impose(new Diffn(startTimesMul, resourcesMul, durationsMul, resourceUsageMul));
 
     IntVar limitAdd = new IntVar(store, 1, addNum);
-    store.impose(new Cumulative(Tadd, Dadd, ResAdd, limitAdd, true, false));
+    store.impose(
+        new Cumulative(startTimesAdd, durationsAdd, resourceUsageAdd, limitAdd, true, false));
     IntVar limitMul = new IntVar(store, 1, mulNum);
-    store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
+    store.impose(
+        new Cumulative(startTimesMul, durationsMul, resourceUsageMul, limitMul, true, false));
 
-    finalizeStaticFields(T, R, D, filter.names());
+    finalizeStaticFields(startTimes, resources, durations, filter.names());
 
-    return makeLabelingList(T, R);
+    return makeLabelingList(startTimes, resources);
   }
 
   /**
@@ -1067,37 +1091,58 @@ public class FilterBenchmark {
         new IntVar(store, 1, 1); // since pipelined multiplier the effective delay is 1
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar[] T = new IntVar[delays.length];
-    IntVar[] R = new IntVar[delays.length];
-    int[] D = new int[delays.length];
+    IntVar[] startTimes = new IntVar[delays.length];
+    IntVar[] resources = new IntVar[delays.length];
+    int[] durations = new int[delays.length];
 
-    IntVar[] Tadd = new IntVar[filter.noAdd()];
-    IntVar[] Radd = new IntVar[filter.noAdd()];
-    IntVar[] Dadd = new IntVar[filter.noAdd()];
-    IntVar[] ResAdd = new IntVar[filter.noAdd()];
+    IntVar[] startTimesAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourcesAdd = new IntVar[filter.noAdd()];
+    IntVar[] durationsAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourceUsageAdd = new IntVar[filter.noAdd()];
 
-    IntVar[] Tmul = new IntVar[filter.noMul()];
-    IntVar[] Rmul = new IntVar[filter.noMul()];
-    IntVar[] Dmul = new IntVar[filter.noMul()];
-    IntVar[] ResMul = new IntVar[filter.noMul()];
+    IntVar[] startTimesMul = new IntVar[filter.noMul()];
+    IntVar[] resourcesMul = new IntVar[filter.noMul()];
+    IntVar[] durationsMul = new IntVar[filter.noMul()];
+    IntVar[] resourceUsageMul = new IntVar[filter.noMul()];
 
     populateResourceArrays(
-        store, filter, ranges, T, R, D, Tadd, Radd, Dadd, ResAdd, Tmul, Rmul, Dmul, ResMul,
-        addDelay, mulDelay, one, 0, 100);
+        store,
+        filter,
+        ranges,
+        startTimes,
+        resources,
+        durations,
+        startTimesAdd,
+        resourcesAdd,
+        durationsAdd,
+        resourceUsageAdd,
+        startTimesMul,
+        resourcesMul,
+        durationsMul,
+        resourceUsageMul,
+        addDelay,
+        mulDelay,
+        one,
+        0,
+        100);
 
-    cost = createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 100);
+    cost =
+        createDependencyAndCostConstraints(
+            store, dependencies, delays, lastOp, startTimes, durations, null, 100);
 
-    store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
-    store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
+    store.impose(new Diffn(startTimesAdd, resourcesAdd, durationsAdd, resourceUsageAdd));
+    store.impose(new Diffn(startTimesMul, resourcesMul, durationsMul, resourceUsageMul));
 
     IntVar limitAdd = new IntVar(store, 0, addNum);
-    store.impose(new Cumulative(Tadd, Dadd, ResAdd, limitAdd, true, false));
+    store.impose(
+        new Cumulative(startTimesAdd, durationsAdd, resourceUsageAdd, limitAdd, true, false));
     IntVar limitMul = new IntVar(store, 0, mulNum);
-    store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
+    store.impose(
+        new Cumulative(startTimesMul, durationsMul, resourceUsageMul, limitMul, true, false));
 
-    finalizeStaticFields(T, R, D, filter.names());
+    finalizeStaticFields(startTimes, resources, durations, filter.names());
 
-    return makeLabelingList(T, R);
+    return makeLabelingList(startTimes, resources);
   }
 
   /**
@@ -1123,24 +1168,24 @@ public class FilterBenchmark {
     IntVar mulDelay = new IntVar(store, filter.mulDel(), filter.mulDel());
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar[] T = new IntVar[delays.length];
-    IntVar[] Tclock = new IntVar[delays.length];
-    IntVar[] Tstep = new IntVar[delays.length];
-    IntVar[] R = new IntVar[delays.length];
-    int[] D = new int[delays.length];
+    IntVar[] startTimes = new IntVar[delays.length];
+    IntVar[] clockTimes = new IntVar[delays.length];
+    IntVar[] stepTimes = new IntVar[delays.length];
+    IntVar[] resources = new IntVar[delays.length];
+    int[] durations = new int[delays.length];
 
-    IntVar[] Tadd = new IntVar[filter.noAdd()];
-    IntVar[] TaddClock = new IntVar[filter.noAdd()];
-    IntVar[] Radd = new IntVar[filter.noAdd()];
-    IntVar[] Dadd = new IntVar[filter.noAdd()];
-    IntVar[] ResAdd = new IntVar[filter.noAdd()];
+    IntVar[] startTimesAdd = new IntVar[filter.noAdd()];
+    IntVar[] clockTimesAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourcesAdd = new IntVar[filter.noAdd()];
+    IntVar[] durationsAdd = new IntVar[filter.noAdd()];
+    IntVar[] resourceUsageAdd = new IntVar[filter.noAdd()];
 
-    IntVar[] Tmul = new IntVar[filter.noMul()];
-    IntVar[] TmulClock = new IntVar[filter.noMul()];
-    IntVar[] Rmul = new IntVar[filter.noMul()];
-    IntVar[] Dmul = new IntVar[filter.noMul()];
-    IntVar[] DmulClock = new IntVar[filter.noMul()];
-    IntVar[] ResMul = new IntVar[filter.noMul()];
+    IntVar[] startTimesMul = new IntVar[filter.noMul()];
+    IntVar[] clockTimesMul = new IntVar[filter.noMul()];
+    IntVar[] resourcesMul = new IntVar[filter.noMul()];
+    IntVar[] durationsMul = new IntVar[filter.noMul()];
+    IntVar[] durationsMulClock = new IntVar[filter.noMul()];
+    IntVar[] resourceUsageMul = new IntVar[filter.noMul()];
 
     String nameT = "T";
     String nameR = "R";
@@ -1150,58 +1195,61 @@ public class FilterBenchmark {
       String t = nameT + i;
       String r = nameR + i;
 
-      T[i] = new IntVar(store, t, 0, 1000);
-      Tclock[i] = new IntVar(store, "Tclock" + i, 0, 100);
+      startTimes[i] = new IntVar(store, t, 0, 1000);
+      clockTimes[i] = new IntVar(store, "Tclock" + i, 0, 100);
 
       if (filter.ids()[i] == filter.addId()) {
 
-        Tstep[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.addDel());
-        R[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
-        Tadd[j] = T[i];
-        TaddClock[j] = Tclock[i];
-        Radd[j] = R[i];
-        Dadd[j] = addDelay;
-        D[i] = filter.addDel();
-        ResAdd[j] = one;
+        stepTimes[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.addDel());
+        resources[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
+        startTimesAdd[j] = startTimes[i];
+        clockTimesAdd[j] = clockTimes[i];
+        resourcesAdd[j] = resources[i];
+        durationsAdd[j] = addDelay;
+        durations[i] = filter.addDel();
+        resourceUsageAdd[j] = one;
 
         j++;
       } else {
-        Tstep[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.mulDel());
-        R[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
-        Tmul[k] = T[i];
-        TmulClock[k] = Tclock[i];
-        Rmul[k] = R[i];
-        D[i] = filter.mulDel();
-        Dmul[k] = mulDelay;
-        DmulClock[k] = addDelay;
-        ResMul[k] = one;
+        stepTimes[i] = new IntVar(store, "Tstep" + i, 0, clk - filter.mulDel());
+        resources[i] = new IntVar(store, r, ranges.mulMin, ranges.mulMax);
+        startTimesMul[k] = startTimes[i];
+        clockTimesMul[k] = clockTimes[i];
+        resourcesMul[k] = resources[i];
+        durations[i] = filter.mulDel();
+        durationsMul[k] = mulDelay;
+        durationsMulClock[k] = addDelay;
+        resourceUsageMul[k] = one;
 
         k++;
       }
 
       IntVar temp = new IntVar(store, 0, 1000);
-      store.impose(new XmulCeqZ(Tclock[i], clk, temp));
-      store.impose(new XplusYeqZ(temp, Tstep[i], T[i]));
+      store.impose(new XmulCeqZ(clockTimes[i], clk, temp));
+      store.impose(new XplusYeqZ(temp, stepTimes[i], startTimes[i]));
     }
 
     cost =
-        createDependencyAndCostConstraints(store, dependencies, delays, lastOp, T, D, null, 1000);
+        createDependencyAndCostConstraints(
+            store, dependencies, delays, lastOp, startTimes, durations, null, 1000);
 
-    store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
-    store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
+    store.impose(new Diffn(startTimesAdd, resourcesAdd, durationsAdd, resourceUsageAdd));
+    store.impose(new Diffn(startTimesMul, resourcesMul, durationsMul, resourceUsageMul));
 
-    store.impose(new Diffn(TmulClock, Rmul, DmulClock, ResMul));
+    store.impose(new Diffn(clockTimesMul, resourcesMul, durationsMulClock, resourceUsageMul));
 
-    store.impose(new Diffn(TaddClock, Radd, Dadd, ResAdd));
+    store.impose(new Diffn(clockTimesAdd, resourcesAdd, durationsAdd, resourceUsageAdd));
 
     IntVar limitAdd = new IntVar(store, 1, addNum);
-    store.impose(new Cumulative(TaddClock, Dadd, ResAdd, limitAdd, true, false));
+    store.impose(
+        new Cumulative(clockTimesAdd, durationsAdd, resourceUsageAdd, limitAdd, true, false));
     IntVar limitMul = new IntVar(store, 1, mulNum);
-    store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
+    store.impose(
+        new Cumulative(startTimesMul, durationsMul, resourceUsageMul, limitMul, true, false));
 
-    finalizeStaticFields(T, R, D, filter.names());
+    finalizeStaticFields(startTimes, resources, durations, filter.names());
 
-    return makeLabelingList(T, R);
+    return makeLabelingList(startTimes, resources);
   }
 
   /**
@@ -1237,21 +1285,21 @@ public class FilterBenchmark {
     store.impose(new XmulCeqZ(pipe, 3, pipe3));
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar[] T = new IntVar[delays.length];
-    IntVar[] Ta = new IntVar[delays.length];
-    IntVar[] Tb = new IntVar[delays.length];
-    IntVar[] R = new IntVar[delays.length];
-    int[] D = new int[delays.length];
+    IntVar[] startTimes = new IntVar[delays.length];
+    IntVar[] startTimesA = new IntVar[delays.length];
+    IntVar[] startTimesB = new IntVar[delays.length];
+    IntVar[] resources = new IntVar[delays.length];
+    int[] durations = new int[delays.length];
 
-    IntVar[] Tadd = new IntVar[3 * filter.noAdd()];
-    IntVar[] Radd = new IntVar[3 * filter.noAdd()];
-    IntVar[] Dadd = new IntVar[3 * filter.noAdd()];
-    IntVar[] ResAdd = new IntVar[3 * filter.noAdd()];
+    IntVar[] startTimesAdd = new IntVar[3 * filter.noAdd()];
+    IntVar[] resourcesAdd = new IntVar[3 * filter.noAdd()];
+    IntVar[] durationsAdd = new IntVar[3 * filter.noAdd()];
+    IntVar[] resourceUsageAdd = new IntVar[3 * filter.noAdd()];
 
-    IntVar[] Tmul = new IntVar[3 * filter.noMul()];
-    IntVar[] Rmul = new IntVar[3 * filter.noMul()];
-    IntVar[] Dmul = new IntVar[3 * filter.noMul()];
-    IntVar[] ResMul = new IntVar[3 * filter.noMul()];
+    IntVar[] startTimesMul = new IntVar[3 * filter.noMul()];
+    IntVar[] resourcesMul = new IntVar[3 * filter.noMul()];
+    IntVar[] durationsMul = new IntVar[3 * filter.noMul()];
+    IntVar[] resourceUsageMul = new IntVar[3 * filter.noMul()];
 
     int j = 0;
     int k = 0;
@@ -1262,51 +1310,51 @@ public class FilterBenchmark {
       final String tb = nameT + "b" + i;
       final String r = nameR + i;
 
-      T[i] = new IntVar(store, t, 0, 100);
-      Ta[i] = new IntVar(store, ta, 0, 100);
-      Tb[i] = new IntVar(store, tb, 0, 100);
-      store.impose(new XplusYeqZ(T[i], pipe, Ta[i]));
-      store.impose(new XplusYeqZ(T[i], pipe2, Tb[i]));
+      startTimes[i] = new IntVar(store, t, 0, 100);
+      startTimesA[i] = new IntVar(store, ta, 0, 100);
+      startTimesB[i] = new IntVar(store, tb, 0, 100);
+      store.impose(new XplusYeqZ(startTimes[i], pipe, startTimesA[i]));
+      store.impose(new XplusYeqZ(startTimes[i], pipe2, startTimesB[i]));
 
       if (filter.ids()[i] == filter.addId()) {
 
-        R[i] = new IntVar(store, r, addMin, addMax);
-        Tadd[3 * j] = T[i];
-        Tadd[3 * j + 1] = Ta[i];
-        Tadd[3 * j + 2] = Tb[i];
-        Radd[3 * j] = R[i];
-        Radd[3 * j + 1] = R[i];
-        Radd[3 * j + 2] = R[i];
-        Dadd[3 * j] = addDelay;
-        Dadd[3 * j + 1] = addDelay;
-        Dadd[3 * j + 2] = addDelay;
-        D[i] = filter.addDel();
-        ResAdd[3 * j] = one;
-        ResAdd[3 * j + 1] = one;
-        ResAdd[3 * j + 2] = one;
+        resources[i] = new IntVar(store, r, addMin, addMax);
+        startTimesAdd[3 * j] = startTimes[i];
+        startTimesAdd[3 * j + 1] = startTimesA[i];
+        startTimesAdd[3 * j + 2] = startTimesB[i];
+        resourcesAdd[3 * j] = resources[i];
+        resourcesAdd[3 * j + 1] = resources[i];
+        resourcesAdd[3 * j + 2] = resources[i];
+        durationsAdd[3 * j] = addDelay;
+        durationsAdd[3 * j + 1] = addDelay;
+        durationsAdd[3 * j + 2] = addDelay;
+        durations[i] = filter.addDel();
+        resourceUsageAdd[3 * j] = one;
+        resourceUsageAdd[3 * j + 1] = one;
+        resourceUsageAdd[3 * j + 2] = one;
 
         j++;
       } else {
-        R[i] = new IntVar(store, r, mulMin, mulMax);
-        Tmul[3 * k] = T[i];
-        Tmul[3 * k + 1] = Ta[i];
-        Tmul[3 * k + 2] = Tb[i];
-        Rmul[3 * k] = R[i];
-        Rmul[3 * k + 1] = R[i];
-        Rmul[3 * k + 2] = R[i];
-        Dmul[3 * k] = mulDelay;
-        Dmul[3 * k + 1] = mulDelay;
-        Dmul[3 * k + 2] = mulDelay;
-        D[i] = filter.mulDel();
-        ResMul[3 * k] = one;
-        ResMul[3 * k + 1] = one;
-        ResMul[3 * k + 2] = one;
+        resources[i] = new IntVar(store, r, mulMin, mulMax);
+        startTimesMul[3 * k] = startTimes[i];
+        startTimesMul[3 * k + 1] = startTimesA[i];
+        startTimesMul[3 * k + 2] = startTimesB[i];
+        resourcesMul[3 * k] = resources[i];
+        resourcesMul[3 * k + 1] = resources[i];
+        resourcesMul[3 * k + 2] = resources[i];
+        durationsMul[3 * k] = mulDelay;
+        durationsMul[3 * k + 1] = mulDelay;
+        durationsMul[3 * k + 2] = mulDelay;
+        durations[i] = filter.mulDel();
+        resourceUsageMul[3 * k] = one;
+        resourceUsageMul[3 * k + 1] = one;
+        resourceUsageMul[3 * k + 2] = one;
 
         IntVar temp1 = new IntVar(store, 0, 100);
-        store.impose(new XplusCeqZ(T[i], 1, temp1));
+        store.impose(new XplusCeqZ(startTimes[i], 1, temp1));
         store.impose(new XneqY(temp1, pipe));
         IntVar temp2 = new IntVar(store, 0, 100);
-        store.impose(new XplusCeqZ(T[i], 1, temp2));
+        store.impose(new XplusCeqZ(startTimes[i], 1, temp2));
         store.impose(new XneqY(temp2, pipe2));
 
         k++;
@@ -1314,13 +1362,15 @@ public class FilterBenchmark {
     }
 
     for (int[] dependency : dependencies) {
-      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
+      store.impose(
+          new XplusClteqZ(
+              startTimes[dependency[0]], delays[dependency[0]], startTimes[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<>();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[value], D[value], end));
+      store.impose(new XplusCeqZ(startTimes[value], durations[value], end));
       endOp.add(end);
     }
     IntVar cost = new IntVar(store, 0, 100);
@@ -1328,34 +1378,34 @@ public class FilterBenchmark {
 
     store.impose(new XlteqY(cost, pipe3));
 
-    store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
-    store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
+    store.impose(new Diffn(startTimesAdd, resourcesAdd, durationsAdd, resourceUsageAdd));
+    store.impose(new Diffn(startTimesMul, resourcesMul, durationsMul, resourceUsageMul));
 
-    Ts = new ArrayList<>();
-    Ts.addAll(Arrays.asList(T));
-    Ts.addAll(Arrays.asList(Ta));
-    Ts.addAll(Arrays.asList(Tb));
+    taskStarts = new ArrayList<>();
+    taskStarts.addAll(Arrays.asList(startTimes));
+    taskStarts.addAll(Arrays.asList(startTimesA));
+    taskStarts.addAll(Arrays.asList(startTimesB));
 
-    Rs = new ArrayList<>();
-    Rs.addAll(Arrays.asList(R));
-    Rs.addAll(Arrays.asList(R));
-    Rs.addAll(Arrays.asList(R));
+    taskResources = new ArrayList<>();
+    taskResources.addAll(Arrays.asList(resources));
+    taskResources.addAll(Arrays.asList(resources));
+    taskResources.addAll(Arrays.asList(resources));
 
-    Ds = new ArrayList<>();
-    for (Integer v : D) {
-      Ds.add(v);
+    taskDurations = new ArrayList<>();
+    for (Integer v : durations) {
+      taskDurations.add(v);
     }
-    for (int v : D) {
-      Ds.add(v);
+    for (int v : durations) {
+      taskDurations.add(v);
     }
-    for (int v : D) {
-      Ds.add(v);
+    for (int v : durations) {
+      taskDurations.add(v);
     }
 
-    Ns = filter.namesPipeline();
+    taskNames = filter.namesPipeline();
     FilterBenchmark.cost = pipe;
 
-    return makeLabelingList(T, R);
+    return makeLabelingList(startTimes, resources);
   }
 
   /**

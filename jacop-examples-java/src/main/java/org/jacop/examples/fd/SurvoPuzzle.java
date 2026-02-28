@@ -77,7 +77,7 @@ public class SurvoPuzzle extends ExampleFd {
   int[][] matrix; // the clues matrix
 
   IntVar[][] x; // the solution
-  IntVar[] x_arr; // x as an array, for alldifferent
+  IntVar[] xArr; // x as an array, for alldifferent
 
   /**
    * It prints a matrix of variables. All variables must be grounded.
@@ -150,30 +150,30 @@ public class SurvoPuzzle extends ExampleFd {
        * http://www.survo.fi/puzzles/280708.txt, the third puzzle
        * Survo puzzle 128/2008 (1700) #364-35846
        */
-      int r_tmp = 3;
-      int c_tmp = 6;
-      int[] rowsums_tmp = {30, 86, 55};
-      int[] colsums_tmp = {22, 11, 42, 32, 27, 37};
-      int[][] matrix_tmp = {{0, 0, 0, 0, 0, 0}, {0, 0, 18, 0, 0, 0}, {0, 0, 0, 0, 0, 0}};
+      int rTmp = 3;
+      int cTmp = 6;
+      int[] rowsumsTmp = {30, 86, 55};
+      int[] colsumsTmp = {22, 11, 42, 32, 27, 37};
+      int[][] matrixTmp = {{0, 0, 0, 0, 0, 0}, {0, 0, 18, 0, 0, 0}, {0, 0, 0, 0, 0, 0}};
 
-      r = r_tmp;
-      c = c_tmp;
-      rowsums = rowsums_tmp;
-      colsums = colsums_tmp;
-      matrix = matrix_tmp;
+      r = rTmp;
+      c = cTmp;
+      rowsums = rowsumsTmp;
+      colsums = colsumsTmp;
+      matrix = matrixTmp;
     }
 
     // initiate structures and variables
     x = new IntVar[r][c];
-    x_arr = new IntVar[r * c];
+    xArr = new IntVar[r * c];
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
         x[i][j] = new IntVar(store, "x_" + i + "_" + j, 1, r * c);
         if (matrix[i][j] > 0) {
           store.impose(new XeqC(x[i][j], matrix[i][j]));
         }
-        x_arr[c * i + j] = new IntVar(store, "xa_" + i + "_" + j, 1, r * c);
-        store.impose(new XeqY(x_arr[c * i + j], x[i][j]));
+        xArr[c * i + j] = new IntVar(store, "xa_" + i + "_" + j, 1, r * c);
+        store.impose(new XeqY(xArr[c * i + j], x[i][j]));
       }
     }
 
@@ -196,11 +196,11 @@ public class SurvoPuzzle extends ExampleFd {
     }
 
     // Alldifferent on the array version.
-    store.impose(new Alldiff(x_arr));
+    store.impose(new Alldiff(xArr));
 
     vars = new ArrayList<>();
 
-    vars.addAll(Arrays.asList(x_arr));
+    vars.addAll(Arrays.asList(xArr));
   }
 
   /**
