@@ -446,18 +446,18 @@ public class DisjointConditional extends Diff {
         if (checkRect(s)) {
           if (one.use) {
             usedRect.add(one.useRect);
-            contains = contains || one.sChanged;
+            contains = contains || one.schanged;
           }
           if (!one.minLength0 && one.j > 0) {
             profileCandidates.add(s);
-            contains = contains || one.sChanged;
+            contains = contains || one.schanged;
           }
           if (!exclusionList.onList(s.index)) {
             checkArea = true;
             totalNumberOfRectangles++;
             mergeRectangleBounds(
-                dim, one.sOriginMin, one.sOriginMax, one.sLengthMin, startMin, stopMax, minLength);
-            area += one.sArea;
+                dim, one.soriginMin, one.soriginMax, one.slengthMin, startMin, stopMax, minLength);
+            area += one.sareaValue;
           }
         }
       }
@@ -474,19 +474,19 @@ public class DisjointConditional extends Diff {
       RectangleWithCondition s,
       Rectangle r,
       int dim,
-      int[] rMin,
-      int[] rMax,
+      int[] rminBounds,
+      int[] rmaxBounds,
       Set<IntVar> fdvQueue) {
     boolean overlap = true;
-    boolean sChanged = containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
+    boolean schanged = containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
     IntRectangle useRect = new IntRectangle(dim);
-    long sArea = 1;
+    long sareaValue = 1;
     boolean use = true;
     boolean minLength0 = false;
     int j = 0;
-    int[] sOriginMin = new int[dim];
-    int[] sOriginMax = new int[dim];
-    int[] sLengthMin = new int[dim];
+    int[] soriginMin = new int[dim];
+    int[] soriginMax = new int[dim];
+    int[] slengthMin = new int[dim];
 
     for (int m = 0; m < dim && overlap; m++) {
       IntDomain sOriginIdom = s.origin[m].dom();
@@ -495,11 +495,11 @@ public class DisjointConditional extends Diff {
       int sOriginiMax = sOriginIdom.max();
       int sMin = sOriginIdom.min();
       int sMax = sOriginiMax + sLengthIdom.max();
-      overlap = intervalOverlap(rMin[m], rMax[m], sMin, sMax);
+      overlap = intervalOverlap(rminBounds[m], rmaxBounds[m], sMin, sMax);
 
-      sOriginMin[m] = sMin;
-      sOriginMax[m] = sOriginiMax + sLengthiMin;
-      sLengthMin[m] = sLengthiMin;
+      soriginMin[m] = sMin;
+      soriginMax[m] = sOriginiMax + sLengthiMin;
+      slengthMin[m] = sLengthiMin;
 
       int start = sOriginiMax;
       int stop = sMin + sLengthiMin;
@@ -509,30 +509,39 @@ public class DisjointConditional extends Diff {
       } else {
         use = false;
       }
-      minLength0 = minLength0 || (sLengthMin[m] <= 0);
-      sArea *= sLengthMin[m];
+      minLength0 = minLength0 || (slengthMin[m] <= 0);
+      sareaValue *= slengthMin[m];
     }
     return new FindRectanglesResult(
-        overlap, use, useRect, sChanged, minLength0, j, sOriginMin, sOriginMax, sLengthMin, sArea);
+        overlap,
+        use,
+        useRect,
+        schanged,
+        minLength0,
+        j,
+        soriginMin,
+        soriginMax,
+        slengthMin,
+        sareaValue);
   }
 
   private void mergeRectangleBounds(
       int dim,
-      int[] sOriginMin,
-      int[] sOriginMax,
-      int[] sLengthMin,
+      int[] soriginMin,
+      int[] soriginMax,
+      int[] slengthMin,
       int[] startMin,
       int[] stopMax,
       int[] minLength) {
     for (int i = 0; i < dim; i++) {
-      if (sOriginMin[i] < startMin[i]) {
-        startMin[i] = sOriginMin[i];
+      if (soriginMin[i] < startMin[i]) {
+        startMin[i] = soriginMin[i];
       }
-      if (sOriginMax[i] > stopMax[i]) {
-        stopMax[i] = sOriginMax[i];
+      if (soriginMax[i] > stopMax[i]) {
+        stopMax[i] = soriginMax[i];
       }
-      if (minLength[i] > sLengthMin[i]) {
-        minLength[i] = sLengthMin[i];
+      if (minLength[i] > slengthMin[i]) {
+        minLength[i] = slengthMin[i];
       }
     }
   }
@@ -581,35 +590,35 @@ public class DisjointConditional extends Diff {
     final boolean overlap;
     final boolean use;
     final IntRectangle useRect;
-    final boolean sChanged;
+    final boolean schanged;
     final boolean minLength0;
     final int j;
-    final int[] sOriginMin;
-    final int[] sOriginMax;
-    final int[] sLengthMin;
-    final long sArea;
+    final int[] soriginMin;
+    final int[] soriginMax;
+    final int[] slengthMin;
+    final long sareaValue;
 
     FindRectanglesResult(
         boolean overlap,
         boolean use,
         IntRectangle useRect,
-        boolean sChanged,
+        boolean schanged,
         boolean minLength0,
         int j,
-        int[] sOriginMin,
-        int[] sOriginMax,
-        int[] sLengthMin,
-        long sArea) {
+        int[] soriginMin,
+        int[] soriginMax,
+        int[] slengthMin,
+        long sareaValue) {
       this.overlap = overlap;
       this.use = use;
       this.useRect = useRect;
-      this.sChanged = sChanged;
+      this.schanged = schanged;
       this.minLength0 = minLength0;
       this.j = j;
-      this.sOriginMin = sOriginMin;
-      this.sOriginMax = sOriginMax;
-      this.sLengthMin = sLengthMin;
-      this.sArea = sArea;
+      this.soriginMin = soriginMin;
+      this.soriginMax = soriginMax;
+      this.slengthMin = slengthMin;
+      this.sareaValue = sareaValue;
     }
   }
 
@@ -707,15 +716,15 @@ public class DisjointConditional extends Diff {
       Rectangle r,
       IntRectangle[] usedRectArray,
       List<IntRectangle> consideredRect,
-      int rSize,
-      int rLengthiMin,
-      int rLengthjMin) {
+      int rsizeValue,
+      int rlengthiMin,
+      int rlengthjMin) {
     consideredRect.clear();
     int minI = IntDomain.MAX_INT;
     long rectSize = 0;
     for (IntRectangle t : usedRectArray) {
       int tempMin = t.origins[i] + t.lengths[i];
-      if (t.origins[i] - s < rLengthiMin && s < tempMin) {
+      if (t.origins[i] - s < rlengthiMin && s < tempMin) {
         consideredRect.add(t);
         rectSize += t.lengths[j];
         if (tempMin < minI) {
@@ -724,7 +733,7 @@ public class DisjointConditional extends Diff {
       }
     }
     if (consideredRect.isEmpty()
-        || rSize >= (rectSize + (long) (rLengthjMin - 1) * consideredRect.size())) {
+        || rsizeValue >= (rectSize + (long) (rlengthjMin - 1) * consideredRect.size())) {
       return;
     }
     IntDomain rOriginDom = r.origin[i].dom();
@@ -762,8 +771,8 @@ public class DisjointConditional extends Diff {
       Rectangle r,
       IntRectangle[] usedRectArray,
       IntRectangle maxRect,
-      int rSize,
-      int rLengthjMin) {
+      int rsizeValue,
+      int rlengthjMin) {
     List<IntRectangle> consideredRectDur = new ArrayList<>();
     int barierSize = 0;
     for (IntRectangle t : usedRectArray) {
@@ -773,7 +782,7 @@ public class DisjointConditional extends Diff {
       }
     }
     if (consideredRectDur.isEmpty()
-        || rSize >= (barierSize + (rLengthjMin - 1) * consideredRectDur.size())) {
+        || rsizeValue >= (barierSize + (rlengthjMin - 1) * consideredRectDur.size())) {
       return;
     }
     IntRectangle[] rects = consideredRectDur.toArray(IntRectangle[]::new);

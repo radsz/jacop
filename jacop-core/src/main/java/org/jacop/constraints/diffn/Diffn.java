@@ -223,17 +223,17 @@ public class Diffn extends Nooverlap {
   private int areaCheckPartialCommonForRectangle(Rectangle r, Rectangle s, int dim) {
     int rMin = r.est(dim);
     int rMax = r.lct(dim);
-    int sLengthMin = s.getLength(dim).min();
+    int slengthMinValue = s.getLength(dim).min();
     if (s.getOrigin(dim).min() <= rMin) {
-      sLengthMin = areaCheckSOriginBeforeRMin(r, s, dim, rMin, rMax, sLengthMin);
+      slengthMinValue = areaCheckSOriginBeforeRMin(r, s, dim, rMin, rMax, slengthMinValue);
     } else if (s.getOrigin(dim).max() + s.getLength(dim).min() > rMax) {
-      sLengthMin = areaCheckSOriginAfterRMin(r, s, dim, rMax, sLengthMin);
+      slengthMinValue = areaCheckSOriginAfterRMin(r, s, dim, rMax, slengthMinValue);
     }
-    return sLengthMin;
+    return slengthMinValue;
   }
 
   private int areaCheckSOriginBeforeRMin(
-      Rectangle r, Rectangle s, int dim, int rminValue, int rmaxValue, int sLengthMin) {
+      Rectangle r, Rectangle s, int dim, int rminValue, int rmaxValue, int slengthMinValue) {
     if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rmaxValue) {
       return Math.max(s.ect(dim) - rminValue, 0);
     }
@@ -249,14 +249,14 @@ public class Diffn extends Nooverlap {
   }
 
   private int areaCheckSOriginAfterRMin(
-      Rectangle r, Rectangle s, int dim, int rmaxValue, int sLengthMin) {
+      Rectangle r, Rectangle s, int dim, int rmaxValue, int slengthMinValue) {
     int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
     if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
       return distance2;
     } else if (distance2 <= 0) {
       return 0;
     }
-    return sLengthMin;
+    return slengthMinValue;
   }
 
   private void profile() {
