@@ -368,7 +368,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
    */
   public boolean labeling(Store store) {
 
-    boolean raisedLevel = initializeSearch(store);
+    final boolean raisedLevel = initializeSearch(store);
 
     if (costVariable == null) {
       optimize = false;
@@ -401,7 +401,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
    */
   public boolean labeling(Store store, Var costVar) {
 
-    boolean raisedLevel = initializeSearch(store);
+    final boolean raisedLevel = initializeSearch(store);
 
     if (solutionsLimit == -1) {
       solutionsLimit = Integer.MAX_VALUE;
@@ -433,7 +433,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   /** {@inheritDoc} */
   public boolean labeling() {
 
-    boolean raisedLevel = initializeSearch(allVars.getFirst().getStore());
+    final boolean raisedLevel = initializeSearch(allVars.getFirst().getStore());
     configureCostVariableForLabeling();
     depth = store.level;
     cost = null;

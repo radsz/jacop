@@ -98,11 +98,11 @@ public class ProfileItem {
   /**
    * Computes the combined value when two profile items overlap.
    *
-   * @param aValue the value from the other profile item
+   * @param overlapValue the value from the other profile item
    * @return the combined value
    */
-  protected int computeOverlapValue(int aValue) {
-    return type == Profile.CUMUL ? aValue + value : Math.max(aValue, value);
+  protected int computeOverlapValue(int overlapValue) {
+    return type == Profile.CUMUL ? overlapValue + value : Math.max(overlapValue, value);
   }
 
   /**
@@ -129,15 +129,15 @@ public class ProfileItem {
   protected void overlapInternal(
       ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
     if (a.min == min) {
-      overlapWhenAMinEqualsMin(a, overlap, right);
+      overlapWhenAminEqualsMin(a, overlap, right);
     } else if (a.min < min) {
-      overlapWhenAMinLessThanMin(a, left, overlap, right);
+      overlapWhenAminLessThanMin(a, left, overlap, right);
     } else {
-      overlapWhenAMinGreaterThanMin(a, left, overlap, right);
+      overlapWhenAminGreaterThanMin(a, left, overlap, right);
     }
   }
 
-  private void overlapWhenAMinEqualsMin(ProfileItem a, ProfileItem overlap, ProfileItem right) {
+  private void overlapWhenAminEqualsMin(ProfileItem a, ProfileItem overlap, ProfileItem right) {
     if (a.max < max) {
       if (min != a.max) {
         overlap.set(min, a.max, computeOverlapValue(a.value));
@@ -151,7 +151,7 @@ public class ProfileItem {
     }
   }
 
-  private void overlapWhenAMinLessThanMin(
+  private void overlapWhenAminLessThanMin(
       ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
     left.set(a.min, min, a.value);
     if (a.max == max) {
@@ -169,7 +169,7 @@ public class ProfileItem {
     }
   }
 
-  private void overlapWhenAMinGreaterThanMin(
+  private void overlapWhenAminGreaterThanMin(
       ProfileItem a, ProfileItem left, ProfileItem overlap, ProfileItem right) {
     left.set(min, a.min, value);
     if (a.max == max) {

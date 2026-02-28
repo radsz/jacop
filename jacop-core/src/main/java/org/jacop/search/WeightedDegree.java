@@ -47,6 +47,7 @@ import org.jacop.core.Var;
  */
 public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
+  /** Creates a comparator without enabling store-level weight management. */
   protected WeightedDegree() {}
 
   /**

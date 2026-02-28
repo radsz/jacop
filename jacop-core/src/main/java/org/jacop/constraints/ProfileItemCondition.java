@@ -79,13 +79,13 @@ class ProfileItemCondition extends ProfileItem {
   /**
    * Computes the adjusted value for the other profile item based on exclusive rectangles.
    *
-   * @param aValue the value from the other profile item
+   * @param overlapValue the value from the other profile item
    * @param exList the exclusive list for computing rectangle sizes
    * @return the adjusted value
    */
-  private int computeConditionValue(int aValue, ExclusiveList exList) {
+  private int computeConditionValue(int overlapValue, ExclusiveList exList) {
     int val = exclusiveRectsSize(exList);
-    return val == 0 ? aValue : aValue > val ? aValue - val : 0;
+    return val == 0 ? overlapValue : overlapValue > val ? overlapValue - val : 0;
   }
 
   void overlap(
