@@ -164,22 +164,22 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return xDom;
   }
 
-  private IntervalDomain computeYDom1FromX(IntervalDomain xDom) {
-    IntervalDomain yDom1 = new IntervalDomain(xDom.size + 1);
-    Interval[] intervals = xDom.intervals;
+  private IntervalDomain computeYDom1FromX(IntervalDomain xdomain) {
+    IntervalDomain yDom1 = new IntervalDomain(xdomain.size + 1);
+    Interval[] intervals = xdomain.intervals;
     int i = 0;
-    for (; i < xDom.size; i++) {
+    for (; i < xdomain.size; i++) {
       if (intervals[i].max() > 0) {
         break;
       }
     }
-    int j = i == xDom.size ? i - 1 : i;
+    int j = i == xdomain.size ? i - 1 : i;
     for (; j >= 0; j--) {
       if (intervals[j].max() <= 0) {
         yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
       }
     }
-    if (i < xDom.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
+    if (i < xdomain.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
       if (-intervals[i].min() > intervals[i].max()) {
         yDom1.unionAdapt(0, -intervals[i].min());
       } else {
@@ -189,19 +189,19 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return yDom1;
   }
 
-  private IntervalDomain computeYDomFromX(IntervalDomain xDom, IntervalDomain yDom1) {
-    Interval[] intervals = xDom.intervals;
+  private IntervalDomain computeYDomFromX(IntervalDomain xdomain, IntervalDomain ydomain1) {
+    Interval[] intervals = xdomain.intervals;
     int i = 0;
-    for (; i < xDom.size; i++) {
+    for (; i < xdomain.size; i++) {
       if (intervals[i].max() > 0) {
         break;
       }
     }
-    IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
-    for (; i < xDom.size; i++) {
+    IntervalDomain yDom = new IntervalDomain(xdomain.size + 1);
+    for (; i < xdomain.size; i++) {
       yDom.unionAdapt(intervals[i]);
     }
-    yDom.addDom(yDom1);
+    yDom.addDom(ydomain1);
     return yDom;
   }
 
@@ -221,12 +221,12 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return yDom;
   }
 
-  private IntervalDomain computeXDomFromY(IntervalDomain yDom) {
-    IntervalDomain xDom = new IntervalDomain(yDom.size + 1);
-    for (int i = yDom.size - 1; i >= 0; i--) {
-      xDom.unionAdapt(-yDom.intervals[i].max(), -yDom.intervals[i].min());
+  private IntervalDomain computeXDomFromY(IntervalDomain ydomain) {
+    IntervalDomain xDom = new IntervalDomain(ydomain.size + 1);
+    for (int i = ydomain.size - 1; i >= 0; i--) {
+      xDom.unionAdapt(-ydomain.intervals[i].max(), -ydomain.intervals[i].min());
     }
-    xDom.addDom(yDom);
+    xDom.addDom(ydomain);
     return xDom;
   }
 
@@ -336,16 +336,16 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
   /**
    * Returns true if yDom intersects the image of the i-th x-interval under the absolute value map.
    */
-  private boolean yIntersectsAbsImage(IntDomain xDom, IntDomain yDom, int i) {
-    int right = xDom.rightElement(i);
-    int left = xDom.leftElement(i);
+  private boolean yIntersectsAbsImage(IntDomain xdomain, IntDomain ydomain, int i) {
+    int right = xdomain.rightElement(i);
+    int left = xdomain.leftElement(i);
     if (right <= 0) {
-      return yDom.isIntersecting(-right, -left);
+      return ydomain.isIntersecting(-right, -left);
     }
     if (left >= 0) {
-      return yDom.isIntersecting(left, right);
+      return ydomain.isIntersecting(left, right);
     }
-    return yDom.isIntersecting(0, -left) || yDom.isIntersecting(0, right);
+    return ydomain.isIntersecting(0, -left) || ydomain.isIntersecting(0, right);
   }
 
   @Override

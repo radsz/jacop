@@ -518,16 +518,16 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       Task l,
       long totalArea,
       int estS,
-      int lLct) {
+      int llctValue) {
     final int limitMax = limit.max();
     final int maxuse = limitMax - l.res().min();
-    long slack = (long) (lLct - estS) * limitMax - totalArea - l.areaMin();
+    long slack = (long) (llctValue - estS) * limitMax - totalArea - l.areaMin();
     int j = 0;
     Task[] tasks = new Task[setS.size()];
     int tasksLength = 0;
     while (slack < 0 && j < setS.size()) {
       Task t = setS.get(j);
-      if (t.res().min() <= maxuse || lLct <= t.lst()) {
+      if (t.res().min() <= maxuse || llctValue <= t.lst()) {
         slack += t.areaMin();
       } else {
         tasks[tasksLength++] = t;
@@ -538,7 +538,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       Arrays.sort(tasks, 0, tasksLength, taskDescLstComparator);
       j = 0;
       int limitMin = limit.min();
-      int compl = lLct;
+      int compl = llctValue;
       while (slack < 0 && j < tasksLength) {
         Task t = tasks[j];
         j++;
@@ -703,16 +703,16 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       Task l,
       long totalArea,
       int lctS,
-      int lEst) {
+      int lestValue) {
     final int limitMax = limit.max();
     final int maxuse = limitMax - l.res().min();
-    long slack = (long) (lctS - lEst) * limitMax - totalArea - l.areaMin();
+    long slack = (long) (lctS - lestValue) * limitMax - totalArea - l.areaMin();
     int j = 0;
     Task[] tasks = new Task[setS.size()];
     int tasksLength = 0;
     while (slack < 0 && j < setS.size()) {
       Task t = setS.get(j);
-      if (t.res().min() <= maxuse || lEst >= t.ect()) {
+      if (t.res().min() <= maxuse || lestValue >= t.ect()) {
         slack += t.areaMin();
       } else {
         tasks[tasksLength++] = t;
@@ -720,7 +720,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       j++;
     }
     int newStartl = IntDomain.MIN_INT;
-    int startl = lEst;
+    int startl = lestValue;
     if (slack < 0 && tasksLength != 0) {
       Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
       j = 0;
@@ -733,7 +733,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         startl = newStartl;
       }
     }
-    if (newStartl > lEst) {
+    if (newStartl > lestValue) {
       if (debugNarrEnabled) {
         log.debug(
             ">>> Cumulative EF <<< 0. Narrowed {} in {}..{}", l.start(), startl, IntDomain.MAX_INT);
@@ -960,20 +960,20 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return sumAreaMinExcluding(s, tasks);
   }
 
-  private long computeNotFirstSlack(Task s, List<Task> tasks, int sEst) {
+  private long computeNotFirstSlack(Task s, List<Task> tasks, int sestValue) {
     int completionS = computeNotFirstCompletionS(s, tasks);
     long a = computeNotFirstArea(s, tasks);
-    return (long) (completionS - sEst) * limit.max() - a - s.areaMin();
+    return (long) (completionS - sestValue) * limit.max() - a - s.areaMin();
   }
 
   private int fillNotFirstTaskArray(
-      List<Task> tasks, Task s, int sEst, long maxuse, Task[] taskArray, long[] slackHolder) {
+      List<Task> tasks, Task s, int sestValue, long maxuse, Task[] taskArray, long[] slackHolder) {
     int tasksLength = 0;
     int j = 0;
     while (slackHolder[0] < 0 && j < tasks.size()) {
       Task t = tasks.get(j);
       if (t != s) {
-        if (t.res().min() <= maxuse || sEst >= t.ect()) {
+        if (t.res().min() <= maxuse || sestValue >= t.ect()) {
           slackHolder[0] += t.areaMin();
         } else {
           taskArray[tasksLength++] = t;
@@ -985,11 +985,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void propagateNotFirstMinStart(
-      Store store, Task s, int sEst, Task[] taskArray, int tasksLength, long slack) {
+      Store store, Task s, int sestValue, Task[] taskArray, int tasksLength, long slack) {
     Arrays.sort(taskArray, 0, tasksLength, taskAscEctComparator);
     int j = 0;
     int limitMin = limit.min();
-    int startl = sEst;
+    int startl = sestValue;
     int newStartl = IntDomain.MIN_INT;
     while (slack < 0 && j < tasksLength) {
       Task t = taskArray[j];
@@ -998,7 +998,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
       startl = newStartl;
     }
-    if (newStartl > sEst) {
+    if (newStartl > sestValue) {
       if (debugNarrEnabled) {
         log.debug(
             ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}", s.start(), startl, IntDomain.MAX_INT);
@@ -1050,13 +1050,13 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private int fillNotLastTaskArray(
-      List<Task> tasks, Task s, int sLct, long maxuse, Task[] taskArray, long[] slackHolder) {
+      List<Task> tasks, Task s, int slctValue, long maxuse, Task[] taskArray, long[] slackHolder) {
     int tasksLength = 0;
     int j = 0;
     while (slackHolder[0] < 0 && j < tasks.size()) {
       Task t = tasks.get(j);
       if (t != s) {
-        if (t.res().min() <= maxuse || sLct <= t.lst()) {
+        if (t.res().min() <= maxuse || slctValue <= t.lst()) {
           slackHolder[0] += t.areaMin();
         } else {
           taskArray[tasksLength++] = t;
@@ -1068,11 +1068,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void propagateNotLastMaxStart(
-      Store store, Task s, int sLct, Task[] taskArray, int tasksLength, long slack) {
+      Store store, Task s, int slctValue, Task[] taskArray, int tasksLength, long slack) {
     Arrays.sort(taskArray, 0, tasksLength, taskDescLstComparator);
     int j = 0;
     int limitMin = limit.min();
-    int compl = sLct;
+    int compl = slctValue;
     while (slack < 0 && j < tasksLength) {
       Task t = taskArray[j];
       j++;
@@ -1211,9 +1211,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void profileNarrowStartFromProfile(
-      Store store, IntVar start, IntVar duration, int pMin, int pMax) {
-    int updateMin = pMin - duration.min() + 1;
-    int updateMax = pMax - 1;
+      Store store, IntVar start, IntVar duration, int pminValue, int pmaxValue) {
+    int updateMin = pminValue - duration.min() + 1;
+    int updateMax = pmaxValue - 1;
     if (updateMin <= start.max() && updateMax >= start.min() && updateMin <= updateMax) {
       if (debugNarrEnabled) {
         log.debug(
