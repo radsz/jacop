@@ -1092,15 +1092,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int[] maxU = new int[ySize];
     Arrays.fill(maxU, ySize - 1);
 
-    int[] min_l = new int[ySize];
-    Arrays.fill(min_l, 0);
+    int[] minL = new int[ySize];
+    Arrays.fill(minL, 0);
 
     upperCount(maxU);
-    lowerCount(min_l);
+    lowerCount(minL);
 
-    logMaxUAndMinLDebug(maxU, min_l);
+    logMaxUAndMinLDebug(maxU, minL);
     for (int i = 0; i < ySize; i++) {
-      applyYDomainPruningForI(i, maxU, min_l);
+      applyYDomainPruningForI(i, maxU, minL);
     }
     // add the rest of nodes not treated in this pass that was already singleton
     if (DEBUG) {
@@ -1128,14 +1128,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void logMaxUAndMinLDebug(int[] maxU, int[] minL) {
     if (DEBUG) {
       StringBuilder sb = new StringBuilder("maxU ");
-      for (int aMax_u : maxU) {
-        sb.append(aMax_u).append(" ");
+      for (int aMaxU : maxU) {
+        sb.append(aMaxU).append(" ");
       }
       log.debug("{}", sb);
 
       sb = new StringBuilder("min_l ");
-      for (int aMin_l : minL) {
-        sb.append(aMin_l).append(" ");
+      for (int aMinL : minL) {
+        sb.append(aMinL).append(" ");
       }
       log.debug("{}", sb);
     }
