@@ -343,7 +343,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     WatchSearchResult search = findWatchPositions(clause);
 
-    applyAddClauseWatches(clause, clauseIndex, clauseId, search);
+    applyAddClauseWatches(clause, clauseId, search);
 
     addWatch(clause[0], clauseIndex);
     addWatch(clause[1], clauseIndex);
@@ -413,8 +413,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     return new WatchSearchResult(watch1pos, watch2pos, highestPos, secondHighestPos, numFoundWatch);
   }
 
-  private void applyAddClauseWatches(
-      int[] clause, int clauseIndex, int clauseId, WatchSearchResult search) {
+  private void applyAddClauseWatches(int[] clause, int clauseId, WatchSearchResult search) {
     switch (search.numFoundWatch) {
       case 2:
         if (ASSERTS_ENABLED && search.watch1pos == search.watch2pos) {

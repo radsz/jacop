@@ -97,7 +97,7 @@ class ProfileItemCondition extends ProfileItem {
       int[] r) {
 
     if (a.min == min) {
-      overlapCaseAminEqMin(a, left, overlap, right, exList, r);
+      overlapCaseAminEqMin(a, overlap, right, exList, r);
     } else if (a.min < min) {
       left.set(a.min, min, a.value, r);
       overlapCaseAminLtMin(a, overlap, right, exList, r);
@@ -115,7 +115,6 @@ class ProfileItemCondition extends ProfileItem {
 
   private void overlapCaseAminEqMin(
       ProfileItemCondition a,
-      ProfileItemCondition left,
       ProfileItemCondition overlap,
       ProfileItemCondition right,
       ExclusiveList exList,

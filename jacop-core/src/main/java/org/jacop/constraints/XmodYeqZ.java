@@ -89,7 +89,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     z.domain.in(store.level, z, reminderMin, reminderMax);
 
     if (y.singleton()) {
-      propagateWhenYSingleton(store, reminderMin, reminderMax);
+      propagateWhenYSingleton(store);
     }
 
     if (x.singleton()) {
@@ -138,7 +138,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     return new int[] {reminderMin, reminderMax};
   }
 
-  private void propagateWhenYSingleton(Store store, int reminderMin, int reminderMax) {
+  private void propagateWhenYSingleton(Store store) {
     if (x.domain.getSize() < 100) {
       int absY = Math.abs(y.value());
       IntDomain d = makeDomain(x, absY, z);

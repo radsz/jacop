@@ -320,7 +320,7 @@ public class LinearIntDom extends LinearInt {
       int eMax = e.max();
 
       for (int element = eMin; element <= eMax; element++) {
-        if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex, true)) {
+        if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex)) {
           break outerloop;
         }
       }
@@ -350,7 +350,7 @@ public class LinearIntDom extends LinearInt {
       boolean positive) {
     for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
       int element = val.nextElement();
-      if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex, false)) {
+      if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex)) {
         break;
       }
     }
@@ -367,8 +367,6 @@ public class LinearIntDom extends LinearInt {
    * @param positive true if processing positive coefficients
    * @param index current variable index
    * @param newIndex next variable index
-   * @param useOuterLoop true if should break outer loop (for interval domain), false for simple
-   *     break
    * @return true if should break the loop, false otherwise
    */
   private boolean processElement(
@@ -379,8 +377,7 @@ public class LinearIntDom extends LinearInt {
       long partialSum,
       boolean positive,
       int index,
-      int newIndex,
-      boolean useOuterLoop) {
+      int newIndex) {
     long elementValue = element * w;
     // Loop control differs based on positive/negative phase
     if (positive) {

@@ -407,7 +407,7 @@ public abstract class FloatDomain extends Domain {
       return mulBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
     if (p0_1) {
-      return mulBoundsP0(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+      return mulBoundsP0(b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
     if (m1) {
       return mulBoundsM(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
@@ -416,7 +416,7 @@ public abstract class FloatDomain extends Domain {
       return mulBoundsN1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
     if (n0_1) {
-      return mulBoundsN0(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+      return mulBoundsN0(a, c, d, m2, p0_2, p1_2, n0_2, n1_2);
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -476,7 +476,6 @@ public abstract class FloatDomain extends Domain {
   }
 
   private static FloatIntervalDomain mulBoundsP0(
-      double a,
       double b,
       double c,
       double d,
@@ -549,7 +548,6 @@ public abstract class FloatDomain extends Domain {
 
   private static FloatIntervalDomain mulBoundsN0(
       double a,
-      double b,
       double c,
       double d,
       boolean m2,

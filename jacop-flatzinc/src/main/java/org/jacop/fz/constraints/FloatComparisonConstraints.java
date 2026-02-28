@@ -110,14 +110,14 @@ class FloatComparisonConstraints implements ParserTreeConstants {
     if (reified) {
       ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
       IntVar v3 = support.getVariable(p3);
-      PrimitiveConstraint c = floatComparisonReifiedConstraint(operation, node, p1, p2, v3);
+      PrimitiveConstraint c = floatComparisonReifiedConstraint(operation, p1, p2, v3);
       if (c != null) {
         support.pose(new Reified(c, v3));
       }
       return;
     }
 
-    floatComparisonNonReified(operation, node, p1, p2);
+    floatComparisonNonReified(operation, p1, p2);
   }
 
   /**
@@ -125,7 +125,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
    * and return).
    */
   private PrimitiveConstraint floatComparisonReifiedConstraint(
-      int operation, SimpleNode node, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2, IntVar v3) {
+      int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2, IntVar v3) {
     if (p2.getType() == 5) {
       FloatVar v1 = support.getFloatVariable(p1);
       double i2 = support.getFloat(p2);
@@ -292,7 +292,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
   }
 
   private void floatComparisonNonReified(
-      int operation, SimpleNode node, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2) {
+      int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2) {
     boolean p1Float = p1.getType() == 5;
     boolean p2Float = p2.getType() == 5;
     if (p1Float && (p2.getType() == 0 || p2.getType() == 1)) {

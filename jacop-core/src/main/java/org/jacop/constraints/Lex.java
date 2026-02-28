@@ -323,20 +323,20 @@ public class Lex extends DecomposedConstraint<Constraint> {
       if (addState[i].length != 0) {
         state0TransitionsAddStateNonEmpty(i, j, terminate);
       } else {
-        state0TransitionsAddStateEmpty(i, j, terminate);
+        state0TransitionsAddStateEmpty(i, j);
       }
     }
 
     private void state0TransitionsAddStateNonEmpty(int i, int j, FsmState terminate) {
       if (j == 0) {
-        state0TransitionsJZero(i, terminate);
+        state0TransitionsJZero(i);
       } else {
-        state0TransitionsJNonZero(i, j, terminate);
+        state0TransitionsJNonZero(i, j);
       }
       state0AddZeroTransitionToState1(i, j);
     }
 
-    private void state0TransitionsJZero(int i, FsmState terminate) {
+    private void state0TransitionsJZero(int i) {
       state[i][0][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), addState[i][0]));
       for (int s = 1; s < addState[i].length; s++) {
         addState[i][s - 1].transitions.add(
@@ -346,7 +346,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
           new FsmTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
     }
 
-    private void state0TransitionsJNonZero(int i, int j, FsmState terminate) {
+    private void state0TransitionsJNonZero(int i, int j) {
       if (isLe) {
         state[i][j][0].transitions.add(
             new FsmTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
@@ -365,7 +365,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
       }
     }
 
-    private void state0TransitionsAddStateEmpty(int i, int j, FsmState terminate) {
+    private void state0TransitionsAddStateEmpty(int i, int j) {
       if (!isLe) {
         state[i][j][0].transitions.add(
             new FsmTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));

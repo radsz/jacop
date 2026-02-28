@@ -209,7 +209,7 @@ public class ProfileItem {
     }
   }
 
-  private void subtractWhenMinGreaterThanA(ProfileItem a, ProfileItem left, ProfileItem right) {
+  private void subtractWhenMinGreaterThanA(ProfileItem a, ProfileItem right) {
     if (min <= a.max) {
       if (max > a.max) {
         right.set(a.max, max, value);
@@ -237,7 +237,7 @@ public class ProfileItem {
     if (min < a.min) {
       subtractWhenMinLessThanA(a, left, right);
     } else {
-      subtractWhenMinGreaterThanA(a, left, right);
+      subtractWhenMinGreaterThanA(a, right);
     }
   }
 

@@ -831,6 +831,9 @@ public final class SatWrapper extends Constraint
    * @return always true
    */
   public boolean log(Object o, String format, Object... args) {
+    if (o == null && format == null && args == null) {
+      return true;
+    }
     return true;
   }
 

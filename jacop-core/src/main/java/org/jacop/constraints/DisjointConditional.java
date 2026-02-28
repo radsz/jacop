@@ -438,8 +438,7 @@ public class DisjointConditional extends Diff {
     }
 
     for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).rects) {
-      FindRectanglesResult one =
-          processOneRectangleForFind(s, r, dim, rMin, rMax, startMin, stopMax, minLength, fdvQueue);
+      FindRectanglesResult one = processOneRectangleForFind(s, r, dim, rMin, rMax, fdvQueue);
       if (one.overlap) {
         if (s.condition() == null || s.condition().max() != 0) {
           overlappingRects.add(s);
@@ -465,7 +464,7 @@ public class DisjointConditional extends Diff {
     }
 
     if (checkArea) {
-      checkAreaFeasibility(r, dim, startMin, stopMax, minLength, area, totalNumberOfRectangles);
+      checkAreaFeasibility(r, startMin, stopMax, minLength, area, totalNumberOfRectangles);
     }
 
     return contains;
@@ -477,9 +476,6 @@ public class DisjointConditional extends Diff {
       int dim,
       int[] rMin,
       int[] rMax,
-      int[] startMin,
-      int[] stopMax,
-      int[] minLength,
       Set<IntVar> fdvQueue) {
     boolean overlap = true;
     boolean sChanged = containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
@@ -543,7 +539,6 @@ public class DisjointConditional extends Diff {
 
   private void checkAreaFeasibility(
       Rectangle r,
-      int dim,
       int[] startMin,
       int[] stopMax,
       int[] minLength,

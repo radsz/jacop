@@ -100,6 +100,7 @@ public final class SwitchesPruningLogging {
    * @param args the arguments for the pattern
    */
   public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object[] args) {
+    consume(isEnabled, fromClass, pattern, args);
     // No-op: stub implementation when pruning trace logging is disabled.
   }
 
@@ -112,6 +113,7 @@ public final class SwitchesPruningLogging {
    * @param arg1 the first argument for the pattern
    */
   public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object arg1) {
+    consume(isEnabled, fromClass, pattern, arg1);
     // No-op: stub implementation when pruning trace logging is disabled.
   }
 
@@ -126,6 +128,11 @@ public final class SwitchesPruningLogging {
    */
   public static void log(
       boolean isEnabled, Class<?> fromClass, String pattern, Object arg1, Object arg2) {
+    consume(isEnabled, fromClass, pattern, arg1, arg2);
     // No-op: stub implementation when pruning trace logging is disabled.
+  }
+
+  private static void consume(Object... unused) {
+    // Intentionally empty: used to avoid unused-parameter warnings in no-op logging stubs.
   }
 }

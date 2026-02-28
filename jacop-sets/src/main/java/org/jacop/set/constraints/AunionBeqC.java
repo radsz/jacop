@@ -65,12 +65,12 @@ public class AunionBeqC extends AbstractSetOpBeqC {
     SetDomain bDom = b.dom();
     SetDomain cDom = c.dom();
 
-    propagateUnionGlbA(store, aDom, bDom, cDom, bHasChanged, cHasChanged);
+    propagateUnionGlbA(store, bDom, cDom, bHasChanged, cHasChanged);
     if (cHasChanged) {
       a.domain.inLub(store.level, a, cDom.lub());
     }
 
-    propagateUnionGlbB(store, aDom, bDom, cDom, aHasChanged, cHasChanged);
+    propagateUnionGlbB(store, aDom, cDom, aHasChanged, cHasChanged);
     if (cHasChanged) {
       b.domain.inLub(store.level, b, cDom.lub());
     }
@@ -91,12 +91,7 @@ public class AunionBeqC extends AbstractSetOpBeqC {
   }
 
   private void propagateUnionGlbA(
-      Store store,
-      SetDomain aDom,
-      SetDomain bDom,
-      SetDomain cDom,
-      boolean bHasChanged,
-      boolean cHasChanged) {
+      Store store, SetDomain bDom, SetDomain cDom, boolean bHasChanged, boolean cHasChanged) {
     if ((cHasChanged || bHasChanged) && cDom.lub().getSize() > 0) {
       IntDomain glbA = cDom.glb().subtract(bDom.lub());
       if (glbA.getSize() > 0) {
@@ -106,12 +101,7 @@ public class AunionBeqC extends AbstractSetOpBeqC {
   }
 
   private void propagateUnionGlbB(
-      Store store,
-      SetDomain aDom,
-      SetDomain bDom,
-      SetDomain cDom,
-      boolean aHasChanged,
-      boolean cHasChanged) {
+      Store store, SetDomain aDom, SetDomain cDom, boolean aHasChanged, boolean cHasChanged) {
     if ((aHasChanged || cHasChanged) && cDom.lub().getSize() > 0) {
       IntDomain glbB = cDom.glb().subtract(aDom.lub());
       if (glbB.getSize() > 0) {

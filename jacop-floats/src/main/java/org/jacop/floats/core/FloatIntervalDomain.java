@@ -178,8 +178,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * Removes a range when the range minimum is at or before the interval start. May shrink or remove
    * intervals from counter onward.
    */
-  private void removeRangeFromIntervalsMinAtOrBefore(
-      int counter, double minValue, double maxValue) {
+  private void removeRangeFromIntervalsMinAtOrBefore(int counter, double maxValue) {
     if (maxValue < intervals[counter].min()) {
       return;
     }
@@ -256,7 +255,7 @@ public class FloatIntervalDomain extends FloatDomain {
    */
   private void removeRangeFromIntervals(int counter, double minValue, double maxValue) {
     if (minValue <= intervals[counter].min()) {
-      removeRangeFromIntervalsMinAtOrBefore(counter, minValue, maxValue);
+      removeRangeFromIntervalsMinAtOrBefore(counter, maxValue);
     } else {
       removeRangeFromIntervalsMinAfter(counter, minValue, maxValue);
     }

@@ -292,10 +292,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
   /** Returns true if store became inconsistent. */
   private boolean processShavingConstraint(
-      Map<IntVar, LinkedHashSet<Integer>> shavableCurrent,
-      Constraint g,
-      IntVar shaveVar,
-      int shaveVal) {
+      Map<IntVar, LinkedHashSet<Integer>> shavableCurrent, IntVar shaveVar, int shaveVal) {
     LinkedHashSet<Integer> notShavableListShaveVar = notShavable.get(shaveVar);
     if (notShavableListShaveVar != null && notShavableListShaveVar.remove(shaveVal)) {
       return false;
@@ -328,7 +325,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
       if (onlyIntVarsOfFailedConstraint && !varsOfFailedConstraint.contains(shaveVar)) {
         continue;
       }
-      if (processShavingConstraint(shavableCurrent, g, shaveVar, shaveVal)) {
+      if (processShavingConstraint(shavableCurrent, shaveVar, shaveVal)) {
         return false;
       }
     }

@@ -277,7 +277,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       sccs();
       countBoundConsistency(store);
       consistencyPruneXDomains(store);
-      consistencyVerifyYDomainAfterPruning(store);
+      consistencyVerifyYDomainAfterPruning();
     } while (store.propagationHasOccurred);
   }
 
@@ -415,7 +415,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private void consistencyVerifyYDomainAfterPruning(Store store) {
+  private void consistencyVerifyYDomainAfterPruning() {
     for (int i = 0; i < xSize; i++) {
       if (!x[i].singleton()) {
         continue;
