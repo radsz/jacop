@@ -182,7 +182,7 @@ public class WordGame {
   }
 
   private static char[] getUserGuessQuality() {
-    Scanner scanner = new Scanner(System.in);
+    final Scanner scanner = new Scanner(System.in);
     log.info("Enter the quality of your guess:");
     log.info("! : The letter is not present in the unknown word.");
     log.info("+ : The letter is present and in the correct position in the unknown word.");

@@ -345,8 +345,8 @@ public class FilterBenchmark {
    * @param addDelay delay variable for additions
    * @param mulDelay delay variable for multiplications
    * @param one constant one variable
-   * @param tMin minimum value for T variables
-   * @param tMax maximum value for T variables
+   * @param tminValue minimum value for T variables
+   * @param tmaxValue maximum value for T variables
    */
   private static void populateResourceArrays(
       Store store,
@@ -366,8 +366,8 @@ public class FilterBenchmark {
       IntVar addDelay,
       IntVar mulDelay,
       IntVar one,
-      int tMin,
-      int tMax) {
+      int tminValue,
+      int tmaxValue) {
     int[] delays = filter.delays();
     String nameT = "T";
     String nameR = "R";
@@ -378,7 +378,7 @@ public class FilterBenchmark {
       String t = nameT + i;
       String r = nameR + i;
 
-      startTimes[i] = new IntVar(store, t, tMin, tMax);
+      startTimes[i] = new IntVar(store, t, tminValue, tmaxValue);
 
       if (filter.ids()[i] == filter.addId()) {
         resources[i] = new IntVar(store, r, ranges.addMin, ranges.addMax);
