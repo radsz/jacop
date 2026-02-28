@@ -77,7 +77,7 @@ public class TinyTsp {
     FloatDomain.setPrecision(1e-6);
     FloatDomain.intervalPrint(false);
 
-    int N = 4;
+    int n = 4;
     double[][] d = {
       {0.0, 2.23606797749979, 2.23606797749979, 3.605551275463989},
       {2.23606797749979, 0.0, 1.4142135623730951, 1.4142135623730951},
@@ -85,23 +85,23 @@ public class TinyTsp {
       {3.605551275463989, 1.4142135623730951, 2.0, 0.0}
     };
 
-    IntVar[] visit = new IntVar[N];
-    for (int i = 0; i < N; i++) {
-      visit[i] = new IntVar(store, "visit[" + i + "]", 1, N);
+    IntVar[] visit = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      visit[i] = new IntVar(store, "visit[" + i + "]", 1, n);
     }
 
     store.impose(new Circuit(visit));
 
-    FloatVar[] dist = new FloatVar[N];
-    for (int i = 0; i < N; i++) {
+    FloatVar[] dist = new FloatVar[n];
+    for (int i = 0; i < n; i++) {
       dist[i] = new FloatVar(store, "dist[" + i + "]", 0.0, 10.0);
       store.impose(new ElementFloat(visit[i], d[i], dist[i]));
     }
 
     FloatVar route = new FloatVar(store, "route", 0.0, maxFloat);
-    FloatVar[] var = new FloatVar[N + 1];
-    System.arraycopy(dist, 0, var, 0, N);
-    var[N] = route;
+    FloatVar[] var = new FloatVar[n + 1];
+    System.arraycopy(dist, 0, var, 0, n);
+    var[n] = route;
 
     store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 

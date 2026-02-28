@@ -73,36 +73,36 @@ public class CurveFitting {
 
     int n = 19;
 
-    FloatVar[] Ex = new FloatVar[n];
-    FloatVar[] Ey = new FloatVar[n];
+    FloatVar[] ex = new FloatVar[n];
+    FloatVar[] ey = new FloatVar[n];
     for (int i = 0; i < n; i++) {
-      Ex[i] = new FloatVar(store, "Ex[" + i + "]", minFloat, maxFloat);
-      Ey[i] = new FloatVar(store, "Ey[" + i + "]", minFloat, maxFloat);
+      ex[i] = new FloatVar(store, "Ex[" + i + "]", minFloat, maxFloat);
+      ey[i] = new FloatVar(store, "Ey[" + i + "]", minFloat, maxFloat);
     }
 
     FloatVar sumExEx = new FloatVar(store, "sumExEx", minFloat, maxFloat);
 
-    FloatVar[] ExEx = new FloatVar[n + 1];
-    FloatVar[] ExEy = new FloatVar[n + 1];
+    FloatVar[] exEx = new FloatVar[n + 1];
+    FloatVar[] exEy = new FloatVar[n + 1];
     double[] w = new double[n + 1];
     for (int i = 0; i < n; i++) {
-      ExEx[i] = new FloatVar(store, "ExEx[" + i + "]", minFloat, maxFloat);
-      store.impose(new PmulQeqR(Ex[i], Ex[i], ExEx[i]));
+      exEx[i] = new FloatVar(store, "ExEx[" + i + "]", minFloat, maxFloat);
+      store.impose(new PmulQeqR(ex[i], ex[i], exEx[i]));
 
-      ExEy[i] = new FloatVar(store, "ExEy[" + i + "]", minFloat, maxFloat);
-      store.impose(new PmulQeqR(Ex[i], Ey[i], ExEy[i]));
+      exEy[i] = new FloatVar(store, "ExEy[" + i + "]", minFloat, maxFloat);
+      store.impose(new PmulQeqR(ex[i], ey[i], exEy[i]));
 
       w[i] = 1.0;
     }
     w[n] = -1.0;
-    ExEx[n] = sumExEx;
+    exEx[n] = sumExEx;
 
-    store.impose(new LinearFloat(ExEx, w, "==", 0.0));
+    store.impose(new LinearFloat(exEx, w, "==", 0.0));
 
     FloatVar[] div = new FloatVar[n + 1];
     for (int i = 0; i < n; i++) {
       div[i] = new FloatVar(store, "div[" + i + "]", minFloat, maxFloat);
-      store.impose(new PmulQeqR(sumExEx, div[i], ExEy[i]));
+      store.impose(new PmulQeqR(sumExEx, div[i], exEy[i]));
     }
     FloatVar b1 = new FloatVar(store, "b1", minFloat, maxFloat);
     div[n] = b1;
@@ -116,25 +116,25 @@ public class CurveFitting {
 
     double[] ones = new double[n];
     Arrays.fill(ones, 1.0);
-    store.impose(new LinearFloat(Ex, ones, "==", 0.0));
-    store.impose(new LinearFloat(Ey, ones, "==", 0.0));
+    store.impose(new LinearFloat(ex, ones, "==", 0.0));
+    store.impose(new LinearFloat(ey, ones, "==", 0.0));
 
-    double[] Sx = {
+    double[] sx = {
       0.0, 0.5, 1.0, 1.5, 1.9, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.6, 7.0, 7.6, 8.5, 9.0, 10.0
     };
-    double[] Sy = {
+    double[] sy = {
       1.0, 0.9, 0.7, 1.5, 2.0, 2.4, 3.2, 2.0, 2.7, 3.5, 1.0, 4.0, 3.6, 2.7, 5.7, 4.6, 6.0, 6.8, 7.3
     };
-    FloatVar X = new FloatVar(store, "X", minFloat, maxFloat); // -10, 10);
-    FloatVar Y = new FloatVar(store, "Y", minFloat, maxFloat); // -10, 10);
+    FloatVar x = new FloatVar(store, "X", minFloat, maxFloat); // -10, 10);
+    FloatVar y = new FloatVar(store, "Y", minFloat, maxFloat); // -10, 10);
     for (int i = 0; i < n; i++) {
-      store.impose(new PplusQeqR(X, Ex[i], new FloatVar(store, Sx[i], Sx[i])));
-      store.impose(new PplusQeqR(Y, Ey[i], new FloatVar(store, Sy[i], Sy[i])));
+      store.impose(new PplusQeqR(x, ex[i], new FloatVar(store, sx[i], sx[i])));
+      store.impose(new PplusQeqR(y, ey[i], new FloatVar(store, sy[i], sy[i])));
     }
 
     FloatVar[] vars = new FloatVar[2 * n + 1];
-    System.arraycopy(Ex, 0, vars, 0, n);
-    System.arraycopy(Ey, 0, vars, n, 2 * n - n);
+    System.arraycopy(ex, 0, vars, 0, n);
+    System.arraycopy(ey, 0, vars, n, 2 * n - n);
     vars[2 * n] = b1;
 
     log.info(
@@ -154,7 +154,7 @@ public class CurveFitting {
 
     label.labeling(store, s);
 
-    log.info(X + "\n" + Y + "\n" + b1);
+    log.info(x + "\n" + y + "\n" + b1);
 
     log.info("\nPrecision = " + FloatDomain.precision());
   }

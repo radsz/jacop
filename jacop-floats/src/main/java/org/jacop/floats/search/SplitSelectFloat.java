@@ -150,7 +150,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
       throw new IllegalStateException("Assertion failed");
     }
 
-    int N = searchVariables.length;
+    int length = searchVariables.length;
 
     int n = 0;
     int i = roundRobinIndex.value();
@@ -158,16 +158,16 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
     do {
 
       if (!searchVariables[i].singleton()) {
-        roundRobinIndex.update((i + 1) % N);
+        roundRobinIndex.update((i + 1) % length);
 
         return searchVariables[i];
       }
 
       ii = i;
-      i = (i + 1) % N;
+      i = (i + 1) % length;
       n++;
 
-    } while (searchVariables[ii].singleton() && n < N);
+    } while (searchVariables[ii].singleton() && n < length);
 
     return null;
   }

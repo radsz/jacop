@@ -68,10 +68,9 @@ public class Markov {
     FloatDomain.setPrecision(1.0e-13);
     FloatDomain.intervalPrint(false);
 
-    FloatVar[] mean_first_return_time = new FloatVar[3];
+    FloatVar[] meanFirstReturnTime = new FloatVar[3];
     for (int i = 0; i < 3; i++) {
-      mean_first_return_time[i] =
-          new FloatVar(store, "mean_first_return_time[" + i + "]", 0.0, 1.0);
+      meanFirstReturnTime[i] = new FloatVar(store, "mean_first_return_time[" + i + "]", 0.0, 1.0);
     }
 
     FloatVar[] p = new FloatVar[3];
@@ -79,7 +78,7 @@ public class Markov {
       p[i] = new FloatVar(store, "p[" + i + "]", 0.0, 1.0);
     }
 
-    FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
+    FloatVar totalCost = new FloatVar(store, "tot_cost", 0.0, 385.0);
 
     store.impose(
         new LinearFloat(
@@ -105,15 +104,15 @@ public class Markov {
             new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
     store.impose(
         new LinearFloat(
-            new FloatVar[] {tot_cost, p[0], p[1], p[2]},
+            new FloatVar[] {totalCost, p[0], p[1], p[2]},
             new double[] {-1.0, 100.0, 125.0, 160.0},
             "==",
             0.0));
 
     FloatVar[] vars = new FloatVar[7];
     System.arraycopy(p, 0, vars, 0, 3);
-    System.arraycopy(mean_first_return_time, 0, vars, 3, 3);
-    vars[6] = tot_cost;
+    System.arraycopy(meanFirstReturnTime, 0, vars, 3, 3);
+    vars[6] = totalCost;
 
     log.info(
         "\bVar store size: "
@@ -127,10 +126,10 @@ public class Markov {
     label.setAssignSolution(true);
     label.getSolutionListener().recordSolutions(true);
 
-    boolean result = label.labeling(store, s, tot_cost);
+    boolean result = label.labeling(store, s, totalCost);
 
     if (result) {
-      log.info(tot_cost.toString());
+      log.info(totalCost.toString());
     } else {
       log.info("NO SOLUTION");
     }

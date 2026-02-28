@@ -98,83 +98,87 @@ public class Loan {
 
     FloatVar one = new FloatVar(store, "1.0", 1.0, 1.0);
 
-    FloatVar R; // quarterly repayment
+    FloatVar repayment; // quarterly repayment
     if (r != 0.0) {
-      R = new FloatVar(store, "R", r, r);
+      repayment = new FloatVar(store, "R", r, r);
       log.info("R = " + r);
     } else {
-      R = new FloatVar(store, "R", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
+      repayment = new FloatVar(store, "R", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       log.info("R = ?");
     }
 
-    FloatVar P; // principal initially borrowed
+    FloatVar principal; // principal initially borrowed
     if (p != 0.0) {
-      P = new FloatVar(store, "P", p, p);
+      principal = new FloatVar(store, "P", p, p);
       log.info("P = " + p);
     } else {
-      P = new FloatVar(store, "P", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
+      principal = new FloatVar(store, "P", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       log.info("P = ?");
     }
 
-    FloatVar I = new FloatVar(store, "I", i, i); // interest rate
+    FloatVar interestRate = new FloatVar(store, "I", i, i); // interest rate
 
-    FloatVar B1 =
+    FloatVar balance1 =
         new FloatVar(
             store, "B1", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT); // balance after one quarter
 
-    FloatVar B4; //  balance owing at end
+    FloatVar balance4; // balance owing at end
     if (b4 >= 0.0) {
-      B4 = new FloatVar(store, "B4", b4, b4);
+      balance4 = new FloatVar(store, "B4", b4, b4);
       log.info("B4 = " + b4);
     } else {
-      B4 = new FloatVar(store, "B4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
+      balance4 = new FloatVar(store, "B4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
       log.info("B4 = ?");
     }
 
     FloatVar t1 = new FloatVar(store, "t1", 1.0, 2.0);
-    store.impose(new PplusQeqR(one, I, t1));
+    store.impose(new PplusQeqR(one, interestRate, t1));
     FloatVar t2 = new FloatVar(store, "t2", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-    store.impose(new PmulQeqR(P, t1, t2));
-    FloatVar negR = new FloatVar(store, "negR", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
+    store.impose(new PmulQeqR(principal, t1, t2));
+    FloatVar negRepayment =
+        new FloatVar(store, "negR", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
     FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0);
-    store.impose(new PplusQeqR(R, negR, zero));
-    store.impose(new PplusQeqR(t2, negR, B1));
+    store.impose(new PplusQeqR(repayment, negRepayment, zero));
+    store.impose(new PplusQeqR(t2, negRepayment, balance1));
 
     FloatVar t3 = new FloatVar(store, "t3", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-    store.impose(new PmulQeqR(B1, t1, t3));
-    FloatVar B2 =
+    store.impose(new PmulQeqR(balance1, t1, t3));
+    FloatVar balance2 =
         new FloatVar(
             store,
             "B2",
             FloatDomain.MIN_FLOAT,
             FloatDomain.MAX_FLOAT); // balance after two quarters
-    store.impose(new PplusQeqR(t3, negR, B2));
+    store.impose(new PplusQeqR(t3, negRepayment, balance2));
 
     FloatVar t4 = new FloatVar(store, "t4", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-    store.impose(new PmulQeqR(B2, t1, t4));
-    FloatVar B3 =
+    store.impose(new PmulQeqR(balance2, t1, t4));
+    FloatVar balance3 =
         new FloatVar(
             store,
             "B3",
             FloatDomain.MIN_FLOAT,
             FloatDomain.MAX_FLOAT); // balance after three quarters
-    store.impose(new PplusQeqR(t4, negR, B3));
+    store.impose(new PplusQeqR(t4, negRepayment, balance3));
 
     FloatVar t5 = new FloatVar(store, "t5", FloatDomain.MIN_FLOAT, FloatDomain.MAX_FLOAT);
-    store.impose(new PmulQeqR(B3, t1, t5));
-    store.impose(new PplusQeqR(t5, negR, B4));
+    store.impose(new PmulQeqR(balance3, t1, t5));
+    store.impose(new PplusQeqR(t5, negRepayment, balance4));
 
     // solve minimize cost;
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<>(store, new FloatVar[] {B1, B2, B3, B4, P, R}, null);
+        new SplitSelectFloat<>(
+            store,
+            new FloatVar[] {balance1, balance2, balance3, balance4, principal, repayment},
+            null);
     // s.leftFirst = false;
 
     label.setSolutionListener(new PrintOutListener<>());
 
     label.labeling(store, s);
 
-    log.info(B4 + "\n" + P + "\n" + R);
+    log.info(balance4 + "\n" + principal + "\n" + repayment);
 
     log.info("Precision = " + FloatDomain.precision());
   }

@@ -79,16 +79,16 @@ public class MinCostFlow {
 
     double[] costs = {10.0, 6.0, 10.0, 20.0, 2.0, 4.0, 10.0, 2.0, 10.0, 2.0};
     double[] capacity = {6.0, 4.0, 4.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 4.0};
-    double[] capacity_lb = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double[] capacityLb = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     int[][] arcs = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 3}, {2, 4}, {2, 5}, {3, 4}, {3, 5}, {4, 5}};
 
     FloatVar cost = new FloatVar(store, "cost", 0.0, maxFloat);
 
-    FloatVar[] X = new FloatVar[m];
+    FloatVar[] x = new FloatVar[m];
 
     for (int i = 0; i < m; i++) {
-      X[i] = new FloatVar(store, "X[" + i + "]", capacity_lb[i], capacity[i]);
+      x[i] = new FloatVar(store, "X[" + i + "]", capacityLb[i], capacity[i]);
     }
 
     for (int i = 0; i < n; i++) {
@@ -97,7 +97,7 @@ public class MinCostFlow {
       List<Double> outFlowWeights = new ArrayList<>();
       for (int j = 0; j < m; j++) {
         if (arcs[j][1] == i + 1) {
-          outFlow.add(X[j]);
+          outFlow.add(x[j]);
           outFlowWeights.add(1.0);
         }
       }
@@ -106,7 +106,7 @@ public class MinCostFlow {
       List<Double> inFlowWeights = new ArrayList<>();
       for (int j = 0; j < m; j++) {
         if (arcs[j][0] == i + 1) {
-          inFlow.add(X[j]);
+          inFlow.add(x[j]);
           inFlowWeights.add(1.0);
         }
       }
@@ -124,20 +124,20 @@ public class MinCostFlow {
       store.impose(new PplusCeqR(inResult, demand[i], outResult));
     }
 
-    FloatVar[] vars = new FloatVar[X.length + 1];
+    FloatVar[] vars = new FloatVar[x.length + 1];
     double[] nCosts = new double[costs.length + 1];
     for (int i = 0; i < vars.length - 1; i++) {
-      vars[i] = X[i];
+      vars[i] = x[i];
       nCosts[i] = costs[i];
     }
-    vars[X.length] = cost;
+    vars[x.length] = cost;
     nCosts[costs.length] = -1.0;
 
     store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
 
     // solve minimize cost;
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
-    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, X, new SmallestDomainFloat<>());
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, x, new SmallestDomainFloat<>());
     label.setAssignSolution(true);
     // s.leftFirst = false;
     label.setTimeOut(1);
@@ -146,8 +146,8 @@ public class MinCostFlow {
 
     log.info(cost.toString());
 
-    for (FloatVar x : X) {
-      System.out.printf("%.2f, ", x.value());
+    for (FloatVar xVar : x) {
+      System.out.printf("%.2f, ", xVar.value());
     }
     log.info("");
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
