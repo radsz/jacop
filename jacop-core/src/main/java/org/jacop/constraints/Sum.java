@@ -108,10 +108,10 @@ public class Sum extends Constraint implements SatisfiedPresent {
       long[] result = collectGroundedAndBounds(pointer, sumGroundedLocal);
       pointer = (int) result[0];
       sumGroundedLocal = result[1];
-      long lMin = result[2];
-      long lMax = result[3];
+      long lowerBoundSum = result[2];
+      long upperBoundSum = result[3];
 
-      applySumDomainAndPropagateToVariables(store, pointer, lMin, lMax);
+      applySumDomainAndPropagateToVariables(store, pointer, lowerBoundSum, upperBoundSum);
     } while (store.propagationHasOccurred);
 
     nextGroundedPosition.update(pointer);
@@ -119,8 +119,8 @@ public class Sum extends Constraint implements SatisfiedPresent {
   }
 
   private long[] collectGroundedAndBounds(int pointer, long sumGroundedLocal) {
-    long lMin = sumGroundedLocal;
-    long lMax = lMin;
+    long lowerBoundSum = sumGroundedLocal;
+    long upperBoundSum = lowerBoundSum;
     long sumJustGrounded = 0;
 
     for (int i = pointer; i < list.length; i++) {
@@ -135,56 +135,57 @@ public class Sum extends Constraint implements SatisfiedPresent {
         sumJustGrounded += currentDomain.min();
         continue;
       }
-      lMin += currentDomain.min();
-      lMax += currentDomain.max();
+      lowerBoundSum += currentDomain.min();
+      upperBoundSum += currentDomain.max();
     }
 
     sumGroundedLocal += sumJustGrounded;
-    lMin += sumJustGrounded;
-    lMax += sumJustGrounded;
+    lowerBoundSum += sumJustGrounded;
+    upperBoundSum += sumJustGrounded;
 
-    return new long[] {pointer, sumGroundedLocal, lMin, lMax};
+    return new long[] {pointer, sumGroundedLocal, lowerBoundSum, upperBoundSum};
   }
 
   private void applySumDomainAndPropagateToVariables(
-      Store store, int pointer, long lMin, long lMax) {
-    boolean needAdaptMin = sum.min() > lMin;
-    boolean needAdaptMax = sum.max() < lMax;
+      Store store, int pointer, long lowerBoundSum, long upperBoundSum) {
+    boolean needAdaptMin = sum.min() > lowerBoundSum;
+    boolean needAdaptMax = sum.max() < upperBoundSum;
 
-    sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
+    sum.domain.in(store.level, sum, long2int(lowerBoundSum), long2int(upperBoundSum));
     store.propagationHasOccurred = false;
 
     if (needAdaptMin && !needAdaptMax) {
-      propagateMinToVariables(store, pointer, lMax);
+      propagateMinToVariables(store, pointer, upperBoundSum);
     } else if (!needAdaptMin && needAdaptMax) {
-      propagateMaxToVariables(store, pointer, lMin);
+      propagateMaxToVariables(store, pointer, lowerBoundSum);
     } else if (needAdaptMin && needAdaptMax) {
-      propagateMinMaxToVariables(store, pointer, lMin, lMax);
+      propagateMinMaxToVariables(store, pointer, lowerBoundSum, upperBoundSum);
     }
   }
 
-  private void propagateMinToVariables(Store store, int pointer, long lMax) {
+  private void propagateMinToVariables(Store store, int pointer, long upperBoundSum) {
     for (int i = pointer; i < list.length; i++) {
       IntVar v = list[i];
-      v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
+      v.domain.inMin(store.level, v, long2int(sum.min() - upperBoundSum + v.max()));
     }
   }
 
-  private void propagateMaxToVariables(Store store, int pointer, long lMin) {
+  private void propagateMaxToVariables(Store store, int pointer, long lowerBoundSum) {
     for (int i = pointer; i < list.length; i++) {
       IntVar v = list[i];
-      v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
+      v.domain.inMax(store.level, v, long2int(sum.max() - lowerBoundSum + v.min()));
     }
   }
 
-  private void propagateMinMaxToVariables(Store store, int pointer, long lMin, long lMax) {
+  private void propagateMinMaxToVariables(
+      Store store, int pointer, long lowerBoundSum, long upperBoundSum) {
     for (int i = pointer; i < list.length; i++) {
       IntVar v = list[i];
       v.domain.in(
           store.level,
           v,
-          long2int(sum.min() - lMax + v.max()),
-          long2int(sum.max() - lMin + v.min()));
+          long2int(sum.min() - upperBoundSum + v.max()),
+          long2int(sum.max() - lowerBoundSum + v.min()));
     }
   }
 

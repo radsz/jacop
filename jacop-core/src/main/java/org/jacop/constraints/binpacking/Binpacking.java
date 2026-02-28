@@ -322,11 +322,11 @@ public class Binpacking extends Constraint
   }
 
   private void applyTighteningBounds(
-      Store store, int i, int required, int[] Cj, int candidatesLength) {
-    if (noSum(Cj, load[i].min() - required, load[i].min() - required)) {
+      Store store, int i, int required, int[] candidateWeights, int candidatesLength) {
+    if (noSum(candidateWeights, load[i].min() - required, load[i].min() - required)) {
       load[i].domain.inMin(store.level, load[i], required + betaP);
     }
-    if (noSum(Cj, load[i].max() - required, load[i].max() - required)) {
+    if (noSum(candidateWeights, load[i].max() - required, load[i].max() - required)) {
       load[i].domain.inMax(store.level, load[i], required + alphaP);
     }
   }
@@ -337,16 +337,24 @@ public class Binpacking extends Constraint
       int binIdx,
       int required,
       BinItem[] candidates,
-      int[] Cj,
+      int[] candidateWeights,
       int candidatesLength) {
     for (int j = 0; j < candidatesLength; j++) {
-      int[] CjMinusI = new int[candidatesLength - 1];
-      System.arraycopy(Cj, 0, CjMinusI, 0, j);
-      System.arraycopy(Cj, j + 1, CjMinusI, j, Cj.length - j - 1);
-      if (noSum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) {
+      int[] candidateWeightsMinusCurrent = new int[candidatesLength - 1];
+      System.arraycopy(candidateWeights, 0, candidateWeightsMinusCurrent, 0, j);
+      System.arraycopy(
+          candidateWeights,
+          j + 1,
+          candidateWeightsMinusCurrent,
+          j,
+          candidateWeights.length - j - 1);
+      if (noSum(
+          candidateWeightsMinusCurrent,
+          load[i].min() - required - candidateWeights[j],
+          load[i].max() - required - candidateWeights[j])) {
         candidates[j].bin().domain.inComplement(store.level, candidates[j].bin(), binIdx);
       }
-      if (noSum(CjMinusI, load[i].min() - required, load[i].max() - required)) {
+      if (noSum(candidateWeightsMinusCurrent, load[i].min() - required, load[i].max() - required)) {
         candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), binIdx);
       }
     }

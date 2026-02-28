@@ -848,19 +848,22 @@ public class TraceGenerator<T extends Var>
     return visualizerState + 1;
   }
 
-  private void writeIntVarVisualization(AttributesImpl vAtts, IntVar v) throws SAXException {
+  private void writeIntVarVisualization(AttributesImpl variableAttributes, IntVar v)
+      throws SAXException {
     if (v.singleton()) {
-      vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + v.value());
-      hdVis.startElement("", "", "integer", vAtts);
+      variableAttributes.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, "" + v.value());
+      hdVis.startElement("", "", "integer", variableAttributes);
       hdVis.endElement("", "", "integer");
     } else {
-      vAtts.addAttribute("", "", "domain", ATTR_TYPE_CDATA, intDomainToString(v.dom()));
-      hdVis.startElement("", "", "dvar", vAtts);
+      variableAttributes.addAttribute(
+          "", "", "domain", ATTR_TYPE_CDATA, intDomainToString(v.dom()));
+      hdVis.startElement("", "", "dvar", variableAttributes);
       hdVis.endElement("", "", "dvar");
     }
   }
 
-  private void writeNonIntVarVisualization(AttributesImpl vAtts, Var v) throws SAXException {
+  private void writeNonIntVarVisualization(AttributesImpl variableAttributes, Var v)
+      throws SAXException {
     DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(v);
     if (domainHandler == null) {
       return;
@@ -868,13 +871,13 @@ public class TraceGenerator<T extends Var>
     String domainStr = domainHandler.getDomainString(v);
     boolean isSingleton = invokeSingletonReflective(v);
     if (isSingleton) {
-      vAtts.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, domainStr);
-      hdVis.startElement("", "", "sinteger", vAtts);
+      variableAttributes.addAttribute("", "", ATTR_VALUE, ATTR_TYPE_CDATA, domainStr);
+      hdVis.startElement("", "", "sinteger", variableAttributes);
       hdVis.endElement("", "", "sinteger");
     } else {
-      vAtts.addAttribute("", "", "low", ATTR_TYPE_CDATA, domainStr);
-      vAtts.addAttribute("", "", "high", ATTR_TYPE_CDATA, domainStr);
-      hdVis.startElement("", "", "svar", vAtts);
+      variableAttributes.addAttribute("", "", "low", ATTR_TYPE_CDATA, domainStr);
+      variableAttributes.addAttribute("", "", "high", ATTR_TYPE_CDATA, domainStr);
+      hdVis.startElement("", "", "svar", variableAttributes);
       hdVis.endElement("", "", "svar");
     }
   }
