@@ -394,29 +394,29 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m1,
-      boolean p0_1,
-      boolean p1_1,
-      boolean n0_1,
-      boolean n1_1,
+      boolean p01,
+      boolean p11,
+      boolean n01,
+      boolean n11,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_1) {
-      return mulBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p11) {
+      return mulBoundsP1(a, b, c, d, m2, p02, p12, n02, n12);
     }
-    if (p0_1) {
-      return mulBoundsP0(b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    if (p01) {
+      return mulBoundsP0(b, c, d, m2, p02, p12, n02, n12);
     }
     if (m1) {
-      return mulBoundsM(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+      return mulBoundsM(a, b, c, d, m2, p02, p12, n02, n12);
     }
-    if (n1_1) {
-      return mulBoundsN1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    if (n11) {
+      return mulBoundsN1(a, b, c, d, m2, p02, p12, n02, n12);
     }
-    if (n0_1) {
-      return mulBoundsN0(a, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    if (n01) {
+      return mulBoundsN0(a, c, d, m2, p02, p12, n02, n12);
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -453,23 +453,23 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a * c), up(b * d));
     }
-    if (p0_2) {
+    if (p02) {
       return new FloatIntervalDomain(0.0, up(b * d));
     }
     if (m2) {
       return new FloatIntervalDomain(down(b * c), up(b * d));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b * c), up(a * d));
     }
-    if (n0_2) {
+    if (n02) {
       return new FloatIntervalDomain(down(b * c), 0.0);
     }
     return new FloatIntervalDomain(0.0, 0.0);
@@ -480,14 +480,14 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_2 || p0_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p12 || p02) {
       return new FloatIntervalDomain(0.0, up(b * d));
     }
-    if (n1_2 || n0_2) {
+    if (n12 || n02) {
       return new FloatIntervalDomain(down(b * c), 0.0);
     }
     if (m2) {
@@ -502,14 +502,14 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p0_2 || p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p02 || p12) {
       return new FloatIntervalDomain(down(a * d), up(b * d));
     }
-    if (n0_2 || n1_2) {
+    if (n02 || n12) {
       return new FloatIntervalDomain(down(b * c), up(a * c));
     }
     if (m2) {
@@ -524,23 +524,23 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a * d), up(b * c));
     }
-    if (p0_2) {
+    if (p02) {
       return new FloatIntervalDomain(down(a * d), 0.0);
     }
     if (m2) {
       return new FloatIntervalDomain(down(a * d), up(a * c));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b * d), up(a * c));
     }
-    if (n0_2) {
+    if (n02) {
       return new FloatIntervalDomain(0.0, up(a * c));
     }
     return new FloatIntervalDomain(0.0, 0.0);
@@ -551,14 +551,14 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p0_2 || p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p02 || p12) {
       return new FloatIntervalDomain(down(a * d), 0.0);
     }
-    if (n0_2 || n1_2) {
+    if (n02 || n12) {
       return new FloatIntervalDomain(0.0, up(a * c));
     }
     if (m2) {
@@ -583,32 +583,32 @@ public abstract class FloatDomain extends Domain {
       double d,
       boolean m1,
       boolean z1,
-      boolean p0_1,
-      boolean p1_1,
-      boolean n0_1,
-      boolean n1_1,
+      boolean p01,
+      boolean p11,
+      boolean n01,
+      boolean n11,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_1) {
-      return divBoundsP1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p11) {
+      return divBoundsP1(a, b, c, d, m2, p02, p12, n02, n12);
     }
-    if (p0_1) {
-      return divBoundsP0(a, b, c, d, p1_2, n1_2);
+    if (p01) {
+      return divBoundsP0(a, b, c, d, p12, n12);
     }
     if (m1) {
-      return divBoundsM(a, b, c, d, p1_2, n1_2);
+      return divBoundsM(a, b, c, d, p12, n12);
     }
-    if (n1_1) {
-      return divBoundsN1(a, b, c, d, m2, p0_2, p1_2, n0_2, n1_2);
+    if (n11) {
+      return divBoundsN1(a, b, c, d, m2, p02, p12, n02, n12);
     }
-    if (n0_1) {
-      return divBoundsN0(a, b, c, d, p1_2, n1_2);
+    if (n01) {
+      return divBoundsN0(a, b, c, d, p12, n12);
     }
     if (z1) {
-      return divBoundsZ(p1_2, n1_2);
+      return divBoundsZ(p12, n12);
     }
     return null;
   }
@@ -646,14 +646,14 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a / d), up(b / c));
     }
-    if (p0_2) {
+    if (p02) {
       return new FloatIntervalDomain(down(a / d), MAX_FLOAT);
     }
     if (m2) {
@@ -662,32 +662,32 @@ public abstract class FloatDomain extends Domain {
       return (FloatIntervalDomain)
           new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b / d), up(a / c));
     }
-    if (n0_2) {
+    if (n02) {
       return new FloatIntervalDomain(MIN_FLOAT, up(a / c));
     }
     throw Store.failException;
   }
 
   private static FloatIntervalDomain divBoundsP0(
-      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
-    if (p1_2) {
+      double a, double b, double c, double d, boolean p12, boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(0.0, up(b / c));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b / d), 0.0);
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }
 
   private static FloatIntervalDomain divBoundsM(
-      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
-    if (p1_2) {
+      double a, double b, double c, double d, boolean p12, boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a / c), up(b / c));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b / d), up(a / d));
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
@@ -699,14 +699,14 @@ public abstract class FloatDomain extends Domain {
       double c,
       double d,
       boolean m2,
-      boolean p0_2,
-      boolean p1_2,
-      boolean n0_2,
-      boolean n1_2) {
-    if (p1_2) {
+      boolean p02,
+      boolean p12,
+      boolean n02,
+      boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a / c), up(b / d));
     }
-    if (p0_2) {
+    if (p02) {
       return new FloatIntervalDomain(MIN_FLOAT, up(b / d));
     }
     if (m2) {
@@ -715,28 +715,28 @@ public abstract class FloatDomain extends Domain {
       return (FloatIntervalDomain)
           new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(down(b / c), up(a / d));
     }
-    if (n0_2) {
+    if (n02) {
       return new FloatIntervalDomain(down(b / c), MAX_FLOAT);
     }
     throw Store.failException;
   }
 
   private static FloatIntervalDomain divBoundsN0(
-      double a, double b, double c, double d, boolean p1_2, boolean n1_2) {
-    if (p1_2) {
+      double a, double b, double c, double d, boolean p12, boolean n12) {
+    if (p12) {
       return new FloatIntervalDomain(down(a / c), 0.0);
     }
-    if (n1_2) {
+    if (n12) {
       return new FloatIntervalDomain(0.0, up(a / d));
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }
 
-  private static FloatIntervalDomain divBoundsZ(boolean p1_2, boolean n1_2) {
-    if (p1_2 || n1_2) {
+  private static FloatIntervalDomain divBoundsZ(boolean p12, boolean n12) {
+    if (p12 || n12) {
       return new FloatIntervalDomain(0.0, 0.0);
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
