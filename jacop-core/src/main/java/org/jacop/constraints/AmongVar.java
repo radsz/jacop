@@ -299,9 +299,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
   }
 
-  private void pruneOrDetachYToFutureDom(Store store, IntDomain futureDom, int yGround) {
+  private void pruneOrDetachYToFutureDom(Store store, IntDomain futureDom, int ygroundedCount) {
 
-    for (int i = yGround; i < listOfY.length; i++) {
+    for (int i = ygroundedCount; i < listOfY.length; i++) {
       IntVar y = listOfY[i];
       if (y.domain.isIntersecting(futureDom)) {
         y.domain.in(store.level, y, y.domain.intersect(futureDom));
@@ -432,10 +432,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     return countCoverMin;
   }
 
-  private int[] countYCoverStats(int yGr, IntDomain k, IntDomain u) {
+  private int[] countYCoverStats(int ygroundedCount, IntDomain k, IntDomain u) {
     int noRoleY = 0;
     int alreadyCover = 0;
-    for (int i = 0; i < yGr; i++) {
+    for (int i = 0; i < ygroundedCount; i++) {
       IntVar y = listOfY[i];
       if (k.contains(y.domain)) {
         alreadyCover++;
@@ -446,7 +446,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     IntDomain disjoint = new IntervalDomain();
     int potentialCover = 0;
     int disjointCover = 0;
-    for (int i = yGr; i < listOfY.length; i++) {
+    for (int i = ygroundedCount; i < listOfY.length; i++) {
       IntVar y = listOfY[i];
       if (y.singleton()) {
         if (k.contains(y.domain)) {
@@ -472,8 +472,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     return new int[] {noRoleY, alreadyCover, potentialCover, disjointCover};
   }
 
-  private void pruneYSubtractK(Store store, int yGr, IntDomain k) {
-    for (int i = yGr; i < listOfY.length; i++) {
+  private void pruneYSubtractK(Store store, int ygroundedCount, IntDomain k) {
+    for (int i = ygroundedCount; i < listOfY.length; i++) {
       IntVar y = listOfY[i];
       if (y.domain.isIntersecting(k)) {
         y.domain.in(store.level, y, y.domain.subtract(k));
@@ -483,7 +483,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
   private void pruneYWhenNSingleton(
       Store store,
-      int yGr,
+      int ygroundedCount,
       IntDomain k,
       int countCoverMin,
       int potentialCover,
@@ -491,7 +491,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     if (potentialCover <= k.getSize()
         && mayLeftToCover == (n.min() - countCoverMin)
         && k.getSize() == mayLeftToCover) {
-      for (int i = yGr; i < listOfY.length; i++) {
+      for (int i = ygroundedCount; i < listOfY.length; i++) {
         IntVar y = listOfY[i];
         if (y.domain.isIntersecting(k)) {
           y.domain.in(store.level, y, k);
@@ -499,7 +499,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
     }
     if (potentialCover == n.min() - countCoverMin && k.getSize() == mayLeftToCover) {
-      for (int i = yGr; i < listOfY.length; i++) {
+      for (int i = ygroundedCount; i < listOfY.length; i++) {
         IntVar y = listOfY[i];
         if (y.domain.isIntersecting(k)) {
           y.domain.in(store.level, y, k);

@@ -233,13 +233,13 @@ public class Diffn extends Nooverlap {
   }
 
   private int areaCheckSOriginBeforeRMin(
-      Rectangle r, Rectangle s, int dim, int rMin, int rMax, int sLengthMin) {
-    if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rMax) {
-      return Math.max(s.ect(dim) - rMin, 0);
+      Rectangle r, Rectangle s, int dim, int rminValue, int rmaxValue, int sLengthMin) {
+    if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rmaxValue) {
+      return Math.max(s.ect(dim) - rminValue, 0);
     }
     int rmax = r.getOrigin(dim).max() + r.getLength(dim).min();
-    int distance1 = Math.min(s.ect(dim) - rMin, rmax - rMin);
-    int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rMin);
+    int distance1 = Math.min(s.ect(dim) - rminValue, rmax - rminValue);
+    int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rminValue);
     if (distance1 < distance2) {
       return Math.max(distance1, 0);
     } else if (distance2 > 0) {
@@ -249,7 +249,7 @@ public class Diffn extends Nooverlap {
   }
 
   private int areaCheckSOriginAfterRMin(
-      Rectangle r, Rectangle s, int dim, int rMax, int sLengthMin) {
+      Rectangle r, Rectangle s, int dim, int rmaxValue, int sLengthMin) {
     int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
     if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
       return distance2;

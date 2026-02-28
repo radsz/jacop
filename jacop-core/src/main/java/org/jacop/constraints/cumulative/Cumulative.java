@@ -405,11 +405,11 @@ public class Cumulative extends CumulativeBasic {
       TaskView u,
       Integer[] t1,
       Integer[] t2,
-      long C,
+      long capacityLimit,
       int[] lb,
-      int[] Dupd,
-      int[] SlUpd,
-      long[] E) {
+      int[] dupdUpdates,
+      int[] slUpdUpdates,
+      long[] energyPrefix) {
     long energy = 0;
     long maxEnergy = 0;
     int rr = Integer.MIN_VALUE;
@@ -424,32 +424,34 @@ public class Cumulative extends CumulativeBasic {
           rr = t.est();
         }
       } else if (rr != Integer.MIN_VALUE) {
-        long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
+        long rest = maxEnergy - (capacityLimit - t.res().min()) * (u.lct() - rr);
         if (rest > 0) {
-          Dupd[i] = (int) Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
+          dupdUpdates[i] =
+              (int) Math.max(dupdUpdates[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
         }
-        if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
-          lb[i] = Math.max(lb[i], Dupd[i]);
+        if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > capacityLimit * (u.lct() - rr)) {
+          lb[i] = Math.max(lb[i], dupdUpdates[i]);
         }
       }
-      E[i] = energy;
+      energyPrefix[i] = energy;
     }
 
     long minSl = Integer.MAX_VALUE;
     int rt = u.lct();
     for (int i : t2) {
       TaskView t = ts[i];
-      if (C * (u.lct() - t.est()) - E[i] < minSl) {
+      if (capacityLimit * (u.lct() - t.est()) - energyPrefix[i] < minSl) {
         rt = t.est();
-        minSl = C * (u.lct() - rt) - E[i];
+        minSl = capacityLimit * (u.lct() - rt) - energyPrefix[i];
       }
       if (t.lct() > u.lct()) {
         long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
         if (rt <= u.lct() && rest > 0) {
-          SlUpd[i] = (int) Math.max(SlUpd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+          slUpdUpdates[i] =
+              (int) Math.max(slUpdUpdates[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
         }
         if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
-          lb[i] = Math.max(Math.max(lb[i], Dupd[i]), SlUpd[i]);
+          lb[i] = Math.max(Math.max(lb[i], dupdUpdates[i]), slUpdUpdates[i]);
         }
       }
     }
