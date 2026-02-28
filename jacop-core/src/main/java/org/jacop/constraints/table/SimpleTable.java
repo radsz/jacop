@@ -157,31 +157,31 @@ public class SimpleTable extends AbstractTable implements SatisfiedPresent {
   }
 
   private void updateMaskSimpleTable(
-      int delta, IntDomain rp, IntDomain cd, Map<Integer, Long> xSupport) {
+      int delta, IntDomain rp, IntDomain cd, Map<Integer, Long> xsupportMap) {
     if (delta < cd.getSize()) {
-      updateMaskFromRp(rp, xSupport);
+      updateMaskFromRp(rp, xsupportMap);
       mask = ~mask;
     } else {
-      updateMaskFromSupport(cd, xSupport);
+      updateMaskFromSupport(cd, xsupportMap);
     }
   }
 
-  private void updateMaskFromRp(IntDomain rp, Map<Integer, Long> xSupport) {
+  private void updateMaskFromRp(IntDomain rp, Map<Integer, Long> xsupportMap) {
     ValueEnumeration e = rp.valueEnumeration();
     while (e.hasMoreElements()) {
-      Long bs = xSupport.get(e.nextElement());
+      Long bs = xsupportMap.get(e.nextElement());
       if (bs != null) {
         mask |= bs;
       }
     }
   }
 
-  private void updateMaskFromSupport(IntDomain cd, Map<Integer, Long> xSupport) {
-    Set<Map.Entry<Integer, Long>> xsEntry = xSupport.entrySet();
+  private void updateMaskFromSupport(IntDomain cd, Map<Integer, Long> xsupportMap) {
+    Set<Map.Entry<Integer, Long>> xsEntry = xsupportMap.entrySet();
     if (cd.getSize() < xsEntry.size()) {
       ValueEnumeration e = cd.valueEnumeration();
       while (e.hasMoreElements()) {
-        Long bs = xSupport.get(e.nextElement());
+        Long bs = xsupportMap.get(e.nextElement());
         if (bs != null) {
           mask |= bs;
         }
@@ -237,11 +237,11 @@ public class SimpleTable extends AbstractTable implements SatisfiedPresent {
   }
 
   private void filterDomainSimpleTableByVariable(
-      IntVar xi, long wrds, Map<Integer, Long> xSupport) {
+      IntVar xi, long wrds, Map<Integer, Long> xsupportMap) {
     ValueEnumeration e = xi.dom().valueEnumeration();
     while (e.hasMoreElements()) {
       int el = e.nextElement();
-      Long bs = xSupport.get(el);
+      Long bs = xsupportMap.get(el);
       if (bs != null) {
         if ((wrds & bs) == 0L) {
           xi.domain.inComplement(store.level, xi, el);

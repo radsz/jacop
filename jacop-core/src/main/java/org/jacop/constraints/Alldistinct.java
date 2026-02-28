@@ -1172,19 +1172,19 @@ public class Alldistinct extends Constraint
     log.debug(MAXIMUM_MATCHING, matching);
   }
 
-  private void debugConsistencyVariableChanged(IntVar v, IntDomain vPrunedDomain) {
+  private void debugConsistencyVariableChanged(IntVar v, IntDomain vprunedDomain) {
     log.debug("Variable changed {}", v);
-    log.debug("Pruned Domain {}", vPrunedDomain);
+    log.debug("Pruned Domain {}", vprunedDomain);
   }
 
   private void debugConsistencyMatchedValue(
-      IntVar v, Integer matchedValue, IntDomain vPrunedDomain) {
+      IntVar v, Integer matchedValue, IntDomain vprunedDomain) {
     log.debug(
         " V {} matchedValue {} prunedDom {}contains? {}",
         v,
         matchedValue,
-        vPrunedDomain,
-        vPrunedDomain.contains(matchedValue));
+        vprunedDomain,
+        vprunedDomain.contains(matchedValue));
   }
 
   private void debugConsistencyNoDifferenceInDomain(IntVar v) {

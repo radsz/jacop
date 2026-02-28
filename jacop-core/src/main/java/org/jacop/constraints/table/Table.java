@@ -180,31 +180,31 @@ public class Table extends AbstractTable {
   }
 
   private void updateMaskTable(
-      int delta, IntDomain rp, IntDomain cd, Map<Integer, long[]> xSupport) {
+      int delta, IntDomain rp, IntDomain cd, Map<Integer, long[]> xsupportMap) {
     if (delta < cd.getSize()) {
-      updateMaskTableFromRp(rp, xSupport);
+      updateMaskTableFromRp(rp, xsupportMap);
       rbs.reverseMask();
     } else {
-      updateMaskTableFromSupport(cd, xSupport);
+      updateMaskTableFromSupport(cd, xsupportMap);
     }
   }
 
-  private void updateMaskTableFromRp(IntDomain rp, Map<Integer, long[]> xSupport) {
+  private void updateMaskTableFromRp(IntDomain rp, Map<Integer, long[]> xsupportMap) {
     ValueEnumeration e = rp.valueEnumeration();
     while (e.hasMoreElements()) {
-      long[] bs = xSupport.get(e.nextElement());
+      long[] bs = xsupportMap.get(e.nextElement());
       if (bs != null) {
         rbs.addToMask(bs);
       }
     }
   }
 
-  private void updateMaskTableFromSupport(IntDomain cd, Map<Integer, long[]> xSupport) {
-    Set<Map.Entry<Integer, long[]>> xsEntry = xSupport.entrySet();
+  private void updateMaskTableFromSupport(IntDomain cd, Map<Integer, long[]> xsupportMap) {
+    Set<Map.Entry<Integer, long[]>> xsEntry = xsupportMap.entrySet();
     if (cd.getSize() < xsEntry.size()) {
       ValueEnumeration e = cd.valueEnumeration();
       while (e.hasMoreElements()) {
-        long[] bs = xSupport.get(e.nextElement());
+        long[] bs = xsupportMap.get(e.nextElement());
         if (bs != null) {
           rbs.addToMask(bs);
         }
@@ -247,11 +247,11 @@ public class Table extends AbstractTable {
   }
 
   private void filterDomainTableByVariable(
-      int i, IntVar xi, long[] wrds, Map<Integer, long[]> xSupport) {
+      int i, IntVar xi, long[] wrds, Map<Integer, long[]> xsupportMap) {
     ValueEnumeration e = xi.dom().valueEnumeration();
     while (e.hasMoreElements()) {
       int el = e.nextElement();
-      long[] bs = xSupport.get(el);
+      long[] bs = xsupportMap.get(el);
       if (bs != null) {
         int index = residues[i].get(el);
         if ((wrds[index] & bs[index]) == 0L) {

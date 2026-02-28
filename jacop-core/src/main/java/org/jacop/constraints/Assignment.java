@@ -244,13 +244,13 @@ public class Assignment extends Constraint
     }
   }
 
-  private void propagateFromPrunedD(Store store, IntVar v, IntDomain vPrunedDomain) {
+  private void propagateFromPrunedD(Store store, IntVar v, IntDomain vprunedDomain) {
     Integer position = ds.get(v);
-    vPrunedDomain = vPrunedDomain.intersect(rangeX);
-    if (vPrunedDomain.isEmpty()) {
+    vprunedDomain = vprunedDomain.intersect(rangeX);
+    if (vprunedDomain.isEmpty()) {
       return;
     }
-    for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
+    for (ValueEnumeration enumer = vprunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
       int dValue = enumer.nextElement() - shiftX;
       if (dValue >= 0 && dValue < x.length) {
         x[dValue].domain.inComplement(store.level, x[dValue], position);
@@ -262,12 +262,12 @@ public class Assignment extends Constraint
   }
 
   private void propagateFromPrunedX(
-      Store store, IntVar v, IntDomain vPrunedDomain, Integer position) {
-    vPrunedDomain = vPrunedDomain.intersect(rangeD);
-    if (vPrunedDomain.isEmpty()) {
+      Store store, IntVar v, IntDomain vprunedDomain, Integer position) {
+    vprunedDomain = vprunedDomain.intersect(rangeD);
+    if (vprunedDomain.isEmpty()) {
       return;
     }
-    for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
+    for (ValueEnumeration enumer = vprunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
       int xValue = enumer.nextElement() - shiftD;
       if (xValue >= 0 && xValue < d.length) {
         d[xValue].domain.inComplement(store.level, d[xValue], position);
