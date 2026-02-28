@@ -647,18 +647,18 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * component is given as a [min, max] range so that both the lower and upper bounds of the
    * expression are checked. An {@link ArithmeticException} is thrown if overflow is detected.
    *
-   * @param aMin minimum of the first addend.
-   * @param aMax maximum of the first addend.
-   * @param bMin minimum of the second addend.
-   * @param bMax maximum of the second addend.
-   * @param cMin minimum of the subtrahend.
-   * @param cMax maximum of the subtrahend.
+   * @param aminValue minimum of the first addend.
+   * @param amaxValue maximum of the first addend.
+   * @param bminValue minimum of the second addend.
+   * @param bmaxValue maximum of the second addend.
+   * @param cminValue minimum of the subtrahend.
+   * @param cmaxValue maximum of the subtrahend.
    */
   protected static void checkSumOverflow(
-      int aMin, int aMax, int bMin, int bMax, int cMin, int cMax) {
-    int sumMin = Math.addExact(aMin, bMin);
-    int sumMax = Math.addExact(aMax, bMax);
-    Math.subtractExact(sumMin, cMax);
-    Math.subtractExact(sumMax, cMin);
+      int aminValue, int amaxValue, int bminValue, int bmaxValue, int cminValue, int cmaxValue) {
+    int sumMin = Math.addExact(aminValue, bminValue);
+    int sumMax = Math.addExact(amaxValue, bmaxValue);
+    Math.subtractExact(sumMin, cmaxValue);
+    Math.subtractExact(sumMax, cminValue);
   }
 }

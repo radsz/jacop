@@ -2434,7 +2434,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
-      int returnedEvent = computeEvent(result);
+      final int returnedEvent = computeEvent(result);
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -3442,7 +3442,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
-      int returnedEvent = computeEvent(result);
+      final int returnedEvent = computeEvent(result);
 
       if (stamp == storeLevel) {
         adoptIntervalsFrom(result);
@@ -3485,8 +3485,6 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
-      int returnedEvent = computeEvent(result);
-
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
@@ -3499,6 +3497,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
+      final int returnedEvent = computeEvent(result);
       v.domainHasChanged(returnedEvent);
       return;
     }

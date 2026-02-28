@@ -439,10 +439,10 @@ public class Store {
     changed[c.getQueueIndex()].add(c);
   }
 
-  private void queueModelConstraintsForVariable(Domain vDom, Var v, int pruningEvent) {
-    for (int j : vDom.getEventsInclusion(pruningEvent)) {
-      Constraint[] addedConstraints = vDom.modelConstraints[j];
-      for (int i = vDom.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
+  private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
+    for (int j : vdomain.getEventsInclusion(pruningEvent)) {
+      Constraint[] addedConstraints = vdomain.modelConstraints[j];
+      for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
         Constraint c = addedConstraints[i];
         c.queueVariable(level, v);
         if (currentConstraint != c) {
@@ -452,9 +452,9 @@ public class Store {
     }
   }
 
-  private void queueSearchConstraintsForVariable(Domain vDom, Var v) {
-    List<Constraint> constr = vDom.searchConstraints;
-    for (int i = vDom.searchConstraintsToEvaluate - 1; i >= 0; i--) {
+  private void queueSearchConstraintsForVariable(Domain vdomain, Var v) {
+    List<Constraint> constr = vdomain.searchConstraints;
+    for (int i = vdomain.searchConstraintsToEvaluate - 1; i >= 0; i--) {
       Constraint c = constr.get(i);
       c.queueVariable(level, v);
       if (currentConstraint != c) {
@@ -496,10 +496,10 @@ public class Store {
 
     recordChange(v);
 
-    Domain vDom = v.dom();
+    Domain vdomain = v.dom();
 
-    queueModelConstraintsForVariable(vDom, v, pruningEvent);
-    queueSearchConstraintsForVariable(vDom, v);
+    queueModelConstraintsForVariable(vdomain, v, pruningEvent);
+    queueSearchConstraintsForVariable(vdomain, v);
 
     if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
       queueWatchedConstraintsForVariable(v);

@@ -238,22 +238,22 @@ public class SgmpcsSearch {
     return solutionPool;
   }
 
-  private void logSolutionPool(int[][] solutionPool, int vLength) {
+  private void logSolutionPool(int[][] solutionPool, int variableCount) {
     log.debug("%% Initial pool of solutions");
     for (int i = 0; i < solutionPool.length; i++) {
       StringBuilder sb = new StringBuilder("%% Solution ").append(i + 1).append(": ");
-      for (int j = 0; j < vLength; j++) {
+      for (int j = 0; j < variableCount; j++) {
         sb.append(solutionPool[i][j]).append(" ");
       }
       log.debug("{}", sb);
     }
   }
 
-  private void logEliteSolutions(int vLength) {
+  private void logEliteSolutions(int variableCount) {
     log.debug("%% Selected best {} solutions", e);
     for (int i = 0; i < e; i++) {
       StringBuilder solution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
-      for (int j = 0; j < vLength; j++) {
+      for (int j = 0; j < variableCount; j++) {
         solution.append(elite[i][j]).append(" ");
       }
       log.debug("{}", solution);
