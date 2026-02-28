@@ -119,7 +119,7 @@ public class CosPeqR extends AbstractTrigConstraint
       q.domain.in(store.level, q, qMin, qMax);
 
       // p update using acos (range 0..PI)
-      updatePDomain(store, qMin, qMax, Math::acos, 0.0, FloatDomain.PI);
+      updateFirstDomainFromSecond(store, qMin, qMax, Math::acos, 0.0, FloatDomain.PI);
 
     } while (store.propagationHasOccurred);
   }

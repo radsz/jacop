@@ -120,7 +120,8 @@ public class SinPeqR extends AbstractTrigConstraint
 
       // p update using asin (range -PI/2..PI/2)
       // asin is increasing, so swap qMin/qMax: pMin = asin(qMin), pMax = asin(qMax)
-      updatePDomain(store, qMax, qMin, Math::asin, -FloatDomain.PI / 2, FloatDomain.PI / 2);
+      updateFirstDomainFromSecond(
+          store, qMax, qMin, Math::asin, -FloatDomain.PI / 2, FloatDomain.PI / 2);
 
     } while (store.propagationHasOccurred);
   }

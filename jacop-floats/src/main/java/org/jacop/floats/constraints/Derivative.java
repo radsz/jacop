@@ -194,10 +194,10 @@ public class Derivative {
   }
 
   private static boolean constraintDefinesF(FloatVar f, Constraint cc) {
-    return constraintDefinesFBinary(f, cc) || constraintDefinesFLinear(f, cc);
+    return constraintDefinesBinaryResult(f, cc) || constraintDefinesLinearResult(f, cc);
   }
 
-  private static boolean constraintDefinesFBinary(FloatVar f, Constraint cc) {
+  private static boolean constraintDefinesBinaryResult(FloatVar f, Constraint cc) {
     if (cc instanceof PmulQeqR qeqR && f.equals(qeqR.r)) {
       return true;
     }
@@ -213,7 +213,7 @@ public class Derivative {
     return cc instanceof PdivQeqR qeqR && f.equals(qeqR.p);
   }
 
-  private static boolean constraintDefinesFLinear(FloatVar f, Constraint cc) {
+  private static boolean constraintDefinesLinearResult(FloatVar f, Constraint cc) {
     if (cc instanceof LinearFloat float1 && float1.relationType == Linear.EQ) {
       double[] ws = float1.weights;
       FloatVar[] ls = float1.list;

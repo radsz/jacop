@@ -111,8 +111,8 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
       }
       store.propagationHasOccurred = false;
 
-      double min = computeRMinForSquare();
-      double max = computeRMaxForSquare();
+      double min = computeSquareRangeMinimum();
+      double max = computeSquareRangeMaximum();
       r.domain.in(store.level, r, min, max);
 
       double pMin = r.min() <= 0.0 ? 0.0 : Math.sqrt(r.min());
@@ -133,7 +133,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     } while (store.propagationHasOccurred);
   }
 
-  private double computeRMinForSquare() {
+  private double computeSquareRangeMinimum() {
     double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
     double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
     double min = Math.min(p1, p2);
@@ -144,7 +144,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     return FloatDomain.down(min);
   }
 
-  private double computeRMaxForSquare() {
+  private double computeSquareRangeMaximum() {
     double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
     double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
     double max = Math.max(p1, p2);

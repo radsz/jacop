@@ -114,19 +114,19 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         throw Store.failException;
       }
 
-      double[] qBounds = computeTanQBounds(min, max);
+      double[] qBounds = computeTangentBounds(min, max);
       if (qBounds == null) {
         return;
       }
 
       q.domain.in(store.level, q, qBounds[0], qBounds[1]);
-      updatePFromQ(store, qBounds[0], qBounds[1]);
+      updateFirstDomainFromSecond(store, qBounds[0], qBounds[1]);
 
     } while (store.propagationHasOccurred);
   }
 
   /** Returns {qMin, qMax} or null if we should return from the loop. */
-  private double[] computeTanQBounds(double min, double max) {
+  private double[] computeTangentBounds(double min, double max) {
     int intervalForMin = intervalNo(min);
     int intervalForMax = intervalNo(max);
 
@@ -135,23 +135,23 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         if (intervalForMax != 1) {
           return null;
         }
-        return qBoundsInterval1(min, max);
+        return boundsForIntervalOne(min, max);
       case 2:
         if (intervalForMax != 2) {
           return null;
         }
-        return qBoundsInterval2(min, max);
+        return boundsForIntervalTwo(min, max);
       case 3:
         if (intervalForMax != 3) {
           return null;
         }
-        return qBoundsInterval3(min, max);
+        return boundsForIntervalThree(min, max);
       default:
         return null;
     }
   }
 
-  private static double[] qBoundsInterval1(double min, double max) {
+  private static double[] boundsForIntervalOne(double min, double max) {
     double qMin = FloatDomain.down(Math.tan(min));
     double qMax = FloatDomain.up(Math.tan(max));
     if (qMax < 0) {
@@ -160,7 +160,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     return new double[] {qMin, qMax};
   }
 
-  private static double[] qBoundsInterval2(double min, double max) {
+  private static double[] boundsForIntervalTwo(double min, double max) {
     double qMin = FloatDomain.down(Math.tan(min));
     double qMax = FloatDomain.up(Math.tan(max));
     if (qMin > qMax) {
@@ -173,7 +173,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     return new double[] {qMin, qMax};
   }
 
-  private static double[] qBoundsInterval3(double min, double max) {
+  private static double[] boundsForIntervalThree(double min, double max) {
     double qMin = FloatDomain.down(Math.tan(min));
     double qMax = FloatDomain.up(Math.tan(max));
     if (qMin > 0) {
@@ -182,9 +182,9 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     return new double[] {qMin, qMax};
   }
 
-  private void updatePFromQ(Store store, double qMin, double qMax) {
-    double pMin = Math.atan(qMin);
-    double pMax = Math.atan(qMax);
+  private void updateFirstDomainFromSecond(Store store, double qminValue, double qmaxValue) {
+    double pMin = Math.atan(qminValue);
+    double pMax = Math.atan(qmaxValue);
     pMin = FloatDomain.down(pMin);
     pMax = FloatDomain.up(pMax);
     if (java.lang.Double.isNaN(pMin)) {

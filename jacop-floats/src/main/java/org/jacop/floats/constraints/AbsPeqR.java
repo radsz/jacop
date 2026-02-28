@@ -123,17 +123,18 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
    * Updates p and q domains with the given bounds and resets the propagation flag.
    *
    * @param store the constraint store
-   * @param pMin minimum bound for p
-   * @param pMax maximum bound for p
-   * @param qMin minimum bound for q
-   * @param qMax maximum bound for q
+   * @param pminValue minimum bound for p
+   * @param pmaxValue maximum bound for p
+   * @param qminValue minimum bound for q
+   * @param qmaxValue maximum bound for q
    */
-  private void updateDomains(Store store, double pMin, double pMax, double qMin, double qMax) {
-    p.domain.in(store.level, p, pMin, pMax);
+  private void updateDomains(
+      Store store, double pminValue, double pmaxValue, double qminValue, double qmaxValue) {
+    p.domain.in(store.level, p, pminValue, pmaxValue);
 
     store.propagationHasOccurred = false;
 
-    q.domain.in(store.level, q, qMin, qMax);
+    q.domain.in(store.level, q, qminValue, qmaxValue);
   }
 
   @Override

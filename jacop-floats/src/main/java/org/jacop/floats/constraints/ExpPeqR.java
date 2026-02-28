@@ -79,19 +79,19 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
   public void consistency(Store store) {
 
     do {
-      double[] pBounds = computePBoundsFromQ();
+      double[] pBounds = computeFirstBoundsFromSecond();
       p.domain.in(store.level, p, pBounds[0], pBounds[1]);
 
       store.propagationHasOccurred = false;
 
-      double[] qBounds = computeQBoundsFromP();
+      double[] qBounds = computeSecondBoundsFromFirst();
       q.domain.in(store.level, q, qBounds[0], qBounds[1]);
 
     } while (store.propagationHasOccurred);
   }
 
   /** Returns {pMin, pMax} for exp(p)=q. */
-  private double[] computePBoundsFromQ() {
+  private double[] computeFirstBoundsFromSecond() {
     if (q.min() == 1.0 && q.max() == 1.0) {
       return new double[] {0.0, 0.0};
     }
@@ -116,7 +116,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
   }
 
   /** Returns {qMin, qMax} for exp(p)=q. */
-  private double[] computeQBoundsFromP() {
+  private double[] computeSecondBoundsFromFirst() {
     if (p.min() == p.max() && p.min() == 0.0) {
       return new double[] {1.0, 1.0};
     }

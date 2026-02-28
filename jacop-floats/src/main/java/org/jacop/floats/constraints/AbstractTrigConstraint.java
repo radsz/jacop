@@ -166,16 +166,16 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
    * @param nanMin the value to use for pMin when inverseFunc returns NaN
    * @param nanMax the value to use for pMax when inverseFunc returns NaN
    */
-  protected void updatePDomain(
+  protected void updateFirstDomainFromSecond(
       Store store,
-      double qMin,
-      double qMax,
+      double qminValue,
+      double qmaxValue,
       DoubleUnaryOperator inverseFunc,
       double nanMin,
       double nanMax) {
     // p update
-    double pMin = inverseFunc.applyAsDouble(qMax);
-    double pMax = inverseFunc.applyAsDouble(qMin);
+    double pMin = inverseFunc.applyAsDouble(qmaxValue);
+    double pMax = inverseFunc.applyAsDouble(qminValue);
 
     pMin = FloatDomain.down(pMin);
     pMax = FloatDomain.up(pMax);
