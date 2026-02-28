@@ -179,9 +179,9 @@ public class SurvoPuzzle extends ExampleFd {
 
     // row sums
     for (int i = 0; i < r; i++) {
-      IntVar r_sum = new IntVar(store, "r_" + i, 1, r * c * r * c);
-      store.impose(new SumInt(x[i], "==", r_sum));
-      store.impose(new XeqC(r_sum, rowsums[i]));
+      IntVar rowSum = new IntVar(store, "r_" + i, 1, r * c * r * c);
+      store.impose(new SumInt(x[i], "==", rowSum));
+      store.impose(new XeqC(rowSum, rowsums[i]));
     }
 
     // column sums
@@ -190,9 +190,9 @@ public class SurvoPuzzle extends ExampleFd {
       for (int i = 0; i < r; i++) {
         cols.add(x[i][j]);
       }
-      IntVar c_sum = new IntVar(store, "c_" + j, 1, r * c * r * c);
-      store.impose(new SumInt(cols, "==", c_sum));
-      store.impose(new XeqC(c_sum, colsums[j]));
+      IntVar columnSum = new IntVar(store, "c_" + j, 1, r * c * r * c);
+      store.impose(new SumInt(cols, "==", columnSum));
+      store.impose(new XeqC(columnSum, colsums[j]));
     }
 
     // Alldifferent on the array version.

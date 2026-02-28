@@ -196,10 +196,10 @@ public class WhoKilledAgatha extends ExampleFd {
 
   private void imposeSumConstraints(IntVar[][] hates, int n) {
     for (int i = 0; i < n; i++) {
-      IntVar a_sum = new IntVar(store, "a_sum" + i, 0, n);
-      store.impose(new SumInt(hates[i], "==", a_sum));
-      store.impose(new XlteqC(a_sum, 2));
-      vars.add(a_sum);
+      IntVar hateSum = new IntVar(store, "a_sum" + i, 0, n);
+      store.impose(new SumInt(hates[i], "==", hateSum));
+      store.impose(new XlteqC(hateSum, 2));
+      vars.add(hateSum);
     }
   }
 

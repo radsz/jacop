@@ -280,15 +280,15 @@ public class NonTransitiveDice extends ExampleFd {
       // consequtive dices
       // should be different?
 
-      IntVar[] sides_two_consequtive_dices = new IntVar[noSides * 2];
+      IntVar[] sidesTwoConsecutiveDices = new IntVar[noSides * 2];
 
       for (int i = 0; i < noDices; i++) {
 
         for (int j = 0; j < noSides; j++) {
-          sides_two_consequtive_dices[j] = faces[noSides * i + j];
-          sides_two_consequtive_dices[j + noSides] = faces[noSides * ((i + 1) % noDices) + j];
+          sidesTwoConsecutiveDices[j] = faces[noSides * i + j];
+          sidesTwoConsecutiveDices[j + noSides] = faces[noSides * ((i + 1) % noDices) + j];
         }
-        Constraint cx = new Alldistinct(sides_two_consequtive_dices);
+        Constraint cx = new Alldistinct(sidesTwoConsecutiveDices);
         store.impose(cx);
         shavingConstraints.add(cx);
       }
