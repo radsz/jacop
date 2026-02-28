@@ -143,61 +143,61 @@ public class Bnode extends BinaryNode {
 
   void prune(double min, double max) {
 
-    boolean left_changed;
-    boolean right_changed;
+    boolean leftChanged;
+    boolean rightChanged;
 
-    left_changed = pruneNode(min, max, left, right);
+    leftChanged = pruneNode(min, max, left, right);
 
-    right_changed = pruneNode(min, max, right, left);
+    rightChanged = pruneNode(min, max, right, left);
 
-    if (left_changed) {
+    if (leftChanged) {
       left.prune();
     }
-    if (right_changed) {
+    if (rightChanged) {
       right.prune();
     }
   }
 
   boolean pruneNode(double min, double max, BinaryNode node, BinaryNode sibling) {
 
-    double node_min = node.min();
-    double node_max = node.max();
+    double nodeMinValue = node.min();
+    double nodeMaxValue = node.max();
 
-    double sibling_min = sibling.min();
-    double sibling_max = sibling.max();
+    double siblingMinValue = sibling.min();
+    double siblingMaxValue = sibling.max();
 
-    FloatDomain bound = FloatDomain.subBounds(min, max, sibling_min, sibling_max);
-    double new_node_min = bound.min();
-    double new_node_max = bound.max();
+    FloatDomain bound = FloatDomain.subBounds(min, max, siblingMinValue, siblingMaxValue);
+    double newNodeMinValue = bound.min();
+    double newNodeMaxValue = bound.max();
 
     double lb = node.lb();
     double ub = node.ub();
 
-    if (new_node_min > node_min) {
-      if (new_node_max < node_max) {
+    if (newNodeMinValue > nodeMinValue) {
+      if (newNodeMaxValue < nodeMaxValue) {
 
-        if (new_node_min > new_node_max) {
+        if (newNodeMinValue > newNodeMaxValue) {
           throw Store.failException;
         }
 
-        node.updateBounds(new_node_min, new_node_max, lb, ub);
+        node.updateBounds(newNodeMinValue, newNodeMaxValue, lb, ub);
 
       } else {
 
-        if (new_node_min > node_max) {
+        if (newNodeMinValue > nodeMaxValue) {
           throw Store.failException;
         }
 
-        node.updateBounds(new_node_min, node_max, lb, ub);
+        node.updateBounds(newNodeMinValue, nodeMaxValue, lb, ub);
       }
       return true;
-    } else if (new_node_max < node_max) {
+    } else if (newNodeMaxValue < nodeMaxValue) {
 
-      if (node_min > new_node_max) {
+      if (nodeMinValue > newNodeMaxValue) {
         throw Store.failException;
       }
 
-      node.updateBounds(node_min, new_node_max, lb, ub);
+      node.updateBounds(nodeMinValue, newNodeMaxValue, lb, ub);
 
       return true;
     } else {
