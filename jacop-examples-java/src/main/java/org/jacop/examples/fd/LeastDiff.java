@@ -104,22 +104,22 @@ public class LeastDiff extends ExampleFd {
     store.impose(new Alldifferent(digits));
 
     int[] weights5 = {10000, 1000, 100, 10, 1};
-    IntVar value_abcde = new IntVar(store, "v_abcde", 0, 99999);
-    IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
+    IntVar valueAbcde = new IntVar(store, "v_abcde", 0, 99999);
+    IntVar valueFghij = new IntVar(store, "v_fghij", 0, 99999);
 
     // Constraints for getting value for words
-    store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
-    store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
+    store.impose(new LinearInt(abcde, weights5, "==", valueAbcde));
+    store.impose(new LinearInt(fghij, weights5, "==", valueFghij));
 
     // abcde > fghij
-    store.impose(new XgtY(value_abcde, value_fghij));
+    store.impose(new XgtY(valueAbcde, valueFghij));
 
     // Main equation of the problem:
     //    diff = abcde - fghij
     //  ->
     //    diff + fghij = abcde
     // It would be niced with a constraint XminusYeqZ(...), though
-    store.impose(new XplusYeqZ(cost, value_fghij, value_abcde));
+    store.impose(new XplusYeqZ(cost, valueFghij, valueAbcde));
 
     vars = new ArrayList<>();
     vars.addAll(Arrays.asList(digits));

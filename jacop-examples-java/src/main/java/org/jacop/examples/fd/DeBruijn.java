@@ -78,7 +78,7 @@ public class DeBruijn extends ExampleFd {
   // The constraint variables
   public IntVar[] x; // the decimal numbers
   public IntVar[][] binary; // the representation of numbers in x, in the choosen base
-  IntVar[] bin_code; // the de Bruijn sequence (first number in binary)
+  IntVar[] binCode; // the de Bruijn sequence (first number in binary)
 
   // the model
 
@@ -151,9 +151,9 @@ public class DeBruijn extends ExampleFd {
 
     store = new Store();
 
-    int pow_base_n = pow(base, n); // base^n, the range of integers
+    int powBaseN = pow(base, n); // base^n, the range of integers
     if (m > 0) {
-      if (m > pow_base_n) {
+      if (m > powBaseN) {
         throw new RuntimeException("m must be <= base^n (" + m + ")");
       }
     }
@@ -163,7 +163,7 @@ public class DeBruijn extends ExampleFd {
     // decimal representation, ranges from 0..base^n-1
     x = new IntVar[m];
     for (int i = 0; i < m; i++) {
-      x[i] = new IntVar(store, "x_" + i, 0, pow_base_n - 1);
+      x[i] = new IntVar(store, "x_" + i, 0, powBaseN - 1);
     }
 
     // convert between decimal number in x[i] and "base-ary" numbers
@@ -203,11 +203,11 @@ public class DeBruijn extends ExampleFd {
     vars = new ArrayList<>();
     // This is the de Bruijn sequence, i.e.
     // the first element of of each row in binary[i]
-    bin_code = new IntVar[m];
+    binCode = new IntVar[m];
     for (int i = 0; i < m; i++) {
-      bin_code[i] = new IntVar(store, "bin_code_" + i, 0, base - 1);
-      vars.add(bin_code[i]);
-      store.impose(new XeqY(bin_code[i], binary[i][0]));
+      binCode[i] = new IntVar(store, "bin_code_" + i, 0, base - 1);
+      vars.add(binCode[i]);
+      store.impose(new XeqY(binCode[i], binary[i][0]));
     }
 
     // All values in x should be different

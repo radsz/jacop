@@ -174,15 +174,15 @@ public class BlueberryMuffins extends ExampleFd {
     // Auxilary variables to help express clue number 2.
 
     IntVar six = new IntVar(store, "six", 6, 6);
-    IntVar I1 = new IntVar(store, "temp1", 1, 4);
-    IntVar I2 = new IntVar(store, "temp2", 1, 4);
+    IntVar i1Var = new IntVar(store, "temp1", 1, 4);
+    IntVar i2Var = new IntVar(store, "temp2", 1, 4);
 
     // I1 denotes number of muffins taken by Bill.
-    store.impose(Element.choose(I1, muffins, person[ibill]));
+    store.impose(Element.choose(i1Var, muffins, person[ibill]));
     // I2 denotes number of muffins taken by Ellis.
-    store.impose(Element.choose(I2, muffins, last[iellis]));
+    store.impose(Element.choose(i2Var, muffins, last[iellis]));
     // 2. Bill and Ellis snitched a total of six muffins.
-    store.impose(new XplusYeqZ(I1, I2, six));
+    store.impose(new XplusYeqZ(i1Var, i2Var, six));
 
     // 3. The secretary (who is a woman) snitched more than the dogcatcher.
 
@@ -193,16 +193,16 @@ public class BlueberryMuffins extends ExampleFd {
             new XeqY(profession[isecretary], person[icalla]),
             new XeqY(profession[isecretary], person[ilynn])));
 
-    IntVar I3 = new IntVar(store, "temp3", 1, 4);
-    IntVar I4 = new IntVar(store, "temp4", 1, 4);
+    IntVar i3Var = new IntVar(store, "temp3", 1, 4);
+    IntVar i4Var = new IntVar(store, "temp4", 1, 4);
 
     // I3 denotes number of muffins taken by secretary.
-    store.impose(Element.choose(I3, muffins, profession[isecretary]));
+    store.impose(Element.choose(i3Var, muffins, profession[isecretary]));
     // I4 denotes number of muffins taken by dogcatcher
-    store.impose(Element.choose(I4, muffins, profession[idogcatcher]));
+    store.impose(Element.choose(i4Var, muffins, profession[idogcatcher]));
 
     // secretary has snitched more muffins than the dogcatcher.
-    store.impose(new XgtY(I3, I4));
+    store.impose(new XgtY(i3Var, i4Var));
 
     // 4. Mark snitched two more than Summers did.
     store.impose(

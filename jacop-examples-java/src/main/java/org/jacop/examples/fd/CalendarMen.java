@@ -182,7 +182,7 @@ public class CalendarMen extends ExampleFd {
 
     final int iMoross = 0;
     final int iNelsen = 1;
-    final int iO_Rourke = 2;
+    final int iOrourke = 2;
     final int iPaulos = 3;
     final int iQuarello = 4;
     final int iReede = 5;
@@ -314,7 +314,7 @@ public class CalendarMen extends ExampleFd {
     int[] list4 = {6, 9, 12};
 
     store.impose(Element.choose(d1, list4, first[iIvor]));
-    store.impose(Element.choose(d2, list4, last[iO_Rourke]));
+    store.impose(Element.choose(d2, list4, last[iOrourke]));
     store.impose(Element.choose(d3, list4, sport[itennis]));
 
     // 5. Wang was featured the month immediately after John, and two months
@@ -558,7 +558,7 @@ public class CalendarMen extends ExampleFd {
     final int igolf = 4;
     final int ihockey = 5;
     final int ilacrosse = 6;
-    final int ip_vauliting = 7;
+    final int iPvauliting = 7;
     final int irowing = 8;
     final int isquash = 9;
     final int itennis = 10;
@@ -852,7 +852,7 @@ public class CalendarMen extends ExampleFd {
 
     // 16. The pole vaulter appeared sometime after the golfer.
 
-    store.impose(new XltY(sport[igolf], sport[ip_vauliting])); // X < Y
+    store.impose(new XltY(sport[igolf], sport[iPvauliting])); // X < Y
   }
 
   /** Creates variables for a given array of names. */

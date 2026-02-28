@@ -87,7 +87,7 @@ public class Parcel extends ExampleFd {
 
     int maxLoad = 5;
     int minLoad = -6;
-    int[] load_parcels = {0, 1, 5, -6, 4, 3, -5, 2, 1, -3};
+    int[] loadParcels = {0, 1, 5, -6, 4, 3, -5, 2, 1, -3};
 
     // Creating constraint store
     store = new Store();
@@ -125,7 +125,7 @@ public class Parcel extends ExampleFd {
       store.impose(Element.choose(startTown, cities, nextTown));
       // This constraint defines change in the load
       // i denotes here i-th city on the road
-      store.impose(Element.choose(startTown, load_parcels, loads[i]));
+      store.impose(Element.choose(startTown, loadParcels, loads[i]));
       // This constraint computes cost.
       // i denotes here the number of the city person travels from.
       store.impose(Element.choose(cities[i], distance[i], costs[i]));

@@ -81,7 +81,7 @@ public class CpvizGardner {
     final long startCpu = b.getThreadCpuTime(tread.threadId());
     final long startUser = b.getThreadUserTime(tread.threadId());
 
-    int num_persons_per_meeting = 3;
+    int numPersonsPerMeeting = 3;
     int persons = 15;
 
     log.info("Gardner dinner problem ");
@@ -101,7 +101,7 @@ public class CpvizGardner {
 
     // card(days[i]) = num_persons_per_meeting
     for (SetVar setVar : days) {
-      store.impose(new CardA(setVar, num_persons_per_meeting));
+      store.impose(new CardA(setVar, numPersonsPerMeeting));
     }
 
     for (int i = 0; i < days.length - 1; i++) {

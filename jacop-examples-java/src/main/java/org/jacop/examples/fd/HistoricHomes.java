@@ -100,10 +100,10 @@ public class HistoricHomes extends ExampleFd {
       "street_Oleander_Road",
     };
 
-    final int iAzalea_Drive = 0; /* iCrepe_Myrtle_Court = 1, */
-    final int iJasmine_Boulevard = 2;
-    final int iMagnolia_Street = 3;
-    final int iOleander_Road = 4;
+    final int iAzaleaDrive = 0; /* iCrepeMyrtleCourt = 1, */
+    final int iJasmineBoulevard = 2;
+    final int iMagnoliaStreet = 3;
+    final int iOleanderRoad = 4;
 
     String[] orderName = {"1st", "2nd", "3rd", "4th", "5th"};
 
@@ -140,7 +140,7 @@ public class HistoricHomes extends ExampleFd {
 
     // 1. The home on Jasmine is 20 years older than the one on Azalea.
 
-    store.impose(new XplusCeqZ(street[iAzalea_Drive], -20, street[iJasmine_Boulevard]));
+    store.impose(new XplusCeqZ(street[iAzaleaDrive], -20, street[iJasmineBoulevard]));
 
     // 2. The third home on the tour was built in 1860.
 
@@ -151,7 +151,7 @@ public class HistoricHomes extends ExampleFd {
 
     // Position of MagnoliaStreet within order array determines its order.
     IntVar index1 = new IntVar(store, "index1", 1, 5);
-    store.impose(Element.choose(index1, order, street[iMagnolia_Street]));
+    store.impose(Element.choose(index1, order, street[iMagnoliaStreet]));
     // Position of value 1890 within order array determines its order.
     IntVar index2 = new IntVar(store, "index2", 1, 5);
     IntVar value1890 = new IntVar(store, "1890", 1890, 1890);
@@ -160,9 +160,9 @@ public class HistoricHomes extends ExampleFd {
     store.impose(new XltY(index1, index2));
 
     // implied constraints
-    store.impose(new XneqC(street[iMagnolia_Street], 1890));
+    store.impose(new XneqC(street[iMagnoliaStreet], 1890));
     store.impose(new XneqC(order[i1st], 1890));
-    store.impose(new XneqY(order[i5th], street[iMagnolia_Street]));
+    store.impose(new XneqY(order[i5th], street[iMagnoliaStreet]));
 
     // 4. The tour visited the home on Oleander (which wasn't the last of
     // the five to
@@ -170,14 +170,14 @@ public class HistoricHomes extends ExampleFd {
     // turn was
     // seen sometime before the one built in 1900.
 
-    store.impose(new XneqC(street[iOleander_Road], 1920));
+    store.impose(new XneqC(street[iOleanderRoad], 1920));
 
-    // Index 3 specifies the order for iOleander_Road
+    // Index 3 specifies the order for iOleanderRoad
     IntVar index3 = new IntVar(store, "index3", 1, 5);
-    store.impose(Element.choose(index3, order, street[iOleander_Road]));
+    store.impose(Element.choose(index3, order, street[iOleanderRoad]));
     // Index 4 specifies the order for Jasmine buiding.
     IntVar index4 = new IntVar(store, "index4", 1, 5);
-    store.impose(Element.choose(index4, order, street[iJasmine_Boulevard]));
+    store.impose(Element.choose(index4, order, street[iJasmineBoulevard]));
     // index 2 specifies the order for building built at 1890.
     IntVar index5 = new IntVar(store, "index5", 1, 5);
     IntVar value1900 = new IntVar(store, "1900", 1900, 1900);
@@ -187,15 +187,15 @@ public class HistoricHomes extends ExampleFd {
     store.impose(new XltY(index4, index5));
 
     // implied constraints.
-    store.impose(new XneqY(street[iOleander_Road], order[i5th]));
-    store.impose(new XneqY(street[iOleander_Road], order[i4th]));
-    store.impose(new XneqC(street[iOleander_Road], 1900));
+    store.impose(new XneqY(street[iOleanderRoad], order[i5th]));
+    store.impose(new XneqY(street[iOleanderRoad], order[i4th]));
+    store.impose(new XneqC(street[iOleanderRoad], 1900));
 
     store.impose(new XneqC(order[i1st], 1900));
     store.impose(new XneqC(order[i2nd], 1900));
 
-    store.impose(new XneqY(order[i1st], street[iJasmine_Boulevard]));
-    store.impose(new XneqY(order[i5th], street[iJasmine_Boulevard]));
+    store.impose(new XneqY(order[i1st], street[iJasmineBoulevard]));
+    store.impose(new XneqY(order[i5th], street[iJasmineBoulevard]));
 
     vars.add(index1);
     vars.add(index2);

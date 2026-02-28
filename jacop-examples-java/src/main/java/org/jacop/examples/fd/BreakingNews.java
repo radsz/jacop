@@ -99,7 +99,7 @@ public class BreakingNews extends ExampleFd {
     log.info("Program to solve Breaking News ");
 
     // String arrays with reporters names.
-    String[] ReporterName = {"Corey", "Jimmy", "Lous", "Perry"};
+    String[] reporterName = {"Corey", "Jimmy", "Lous", "Perry"};
 
     // Constant indexes to ease referring to variables denoting reporters.
     final int /* iPerry = 0, */ iCorey = 1;
@@ -107,7 +107,7 @@ public class BreakingNews extends ExampleFd {
     final int iLous = 3;
 
     // String arrays with locations names.
-    String[] LocationName = {"Bayonne", "NewHope", "PortCharles", "SouthAmboy"};
+    String[] locationName = {"Bayonne", "NewHope", "PortCharles", "SouthAmboy"};
 
     // Constant indexes to ease referring to variables denoting locations.
     final int iBayonne = 0;
@@ -116,7 +116,7 @@ public class BreakingNews extends ExampleFd {
     final int iSouthAmboy = 3;
 
     // String arrays with stories names.
-    String[] StoryName = {"30pound", "blimp", "skyscraper", "beached"};
+    String[] storyName = {"30pound", "blimp", "skyscraper", "beached"};
 
     // Constant indexes to ease referring to variables denoting stories.
     final int i30pound = 0;
@@ -133,9 +133,9 @@ public class BreakingNews extends ExampleFd {
     // All variables are created with domain 1..4. Variables from
     // different arrays with the same values denote the same person.
     for (int i = 0; i < 4; i++) {
-      reporter[i] = new IntVar(store, ReporterName[i], 1, 4);
-      location[i] = new IntVar(store, LocationName[i], 1, 4);
-      story[i] = new IntVar(store, StoryName[i], 1, 4);
+      reporter[i] = new IntVar(store, reporterName[i], 1, 4);
+      location[i] = new IntVar(store, locationName[i], 1, 4);
+      story[i] = new IntVar(store, storyName[i], 1, 4);
       vars.add(reporter[i]);
       vars.add(location[i]);
       vars.add(story[i]);

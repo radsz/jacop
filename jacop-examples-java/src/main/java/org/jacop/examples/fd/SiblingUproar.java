@@ -155,11 +155,11 @@ public class SiblingUproar extends ExampleFd {
       "hogged_television"
     };
     // Creation of indexes for ease of referring
-    final int ifinished_cereal = 0;
-    final int ilet_dog_in_room = 1;
-    final int iused_up_hot_water = 2;
-    final int ifailed_to_return_rollerblades = 3;
-    final int ihogged_television = 4;
+    final int iFinishedCereal = 0;
+    final int iLetDogInRoom = 1;
+    final int iUsedUpHotWater = 2;
+    final int iFailedToReturnRollerblades = 3;
+    final int iHoggedTelevision = 4;
 
     // Specification of different types of revenge.
     String[] wayNames = {
@@ -171,10 +171,10 @@ public class SiblingUproar extends ExampleFd {
     };
 
     // Creation of indexes for ease of referring
-    final int iknocked_over_chess_game = 0; /* ilet_gerbil_out_of_cage = 1, */
-    final int ihung_up_on_friend = 2;
-    final int iremoved_light_bulbs = 3;
-    final int ihid_violin = 4;
+    final int iKnockedOverChessGame = 0; /* iLetGerbilOutOfCage = 1, */
+    final int iHungUpOnFriend = 2;
+    final int iRemovedLightBulbs = 3;
+    final int iHidViolin = 4;
 
     // Specification of different punishment.
     String[] choreNames = {
@@ -185,11 +185,11 @@ public class SiblingUproar extends ExampleFd {
       "washing_the_windows"
     };
     // Creation of indexes for ease of referring
-    final int icleaning_the_attic = 0;
-    final int icleaning_the_basement = 1;
-    final int icleaning_the_garage = 2;
-    final int iwashing_the_blinds = 3;
-    final int iwashing_the_windows = 4;
+    final int iCleaningTheAttic = 0;
+    final int iCleaningTheBasement = 1;
+    final int iCleaningTheGarage = 2;
+    final int iWashingTheBlinds = 3;
+    final int iWashingTheWindows = 4;
 
     // Creation of FDV's array
     IntVar[] children = new IntVar[5];
@@ -279,13 +279,13 @@ public class SiblingUproar extends ExampleFd {
     vars.add(boy);
     vars.add(s);
 
-    store.impose(Element.choose(boy, children, way[iremoved_light_bulbs]));
-    store.impose(Element.choose(s, angryat, reason[iused_up_hot_water]));
-    store.impose(new XeqY(way[iremoved_light_bulbs], reason[iused_up_hot_water]));
+    store.impose(Element.choose(boy, children, way[iRemovedLightBulbs]));
+    store.impose(Element.choose(s, angryat, reason[iUsedUpHotWater]));
+    store.impose(new XeqY(way[iRemovedLightBulbs], reason[iUsedUpHotWater]));
 
     IntVar ktos = new IntVar(store, "somebody", 1, 5);
     store.impose(Element.choose(boy, angryat, ktos));
-    store.impose(new XeqY(chore[icleaning_the_basement], ktos));
+    store.impose(new XeqY(chore[iCleaningTheBasement], ktos));
     vars.add(ktos);
 
     // 3. The five siblings are: Paula, the person who was angry at Paula,
@@ -295,16 +295,16 @@ public class SiblingUproar extends ExampleFd {
     // sibling's violin.
 
     IntVar someone = new IntVar(store, "someone", 1, 5);
-    store.impose(Element.choose(someone, angryat, reason[ihogged_television]));
+    store.impose(Element.choose(someone, angryat, reason[iHoggedTelevision]));
     vars.add(someone);
 
     IntVar z = new IntVar(store, "Z", 1, 5);
-    store.impose(new XneqY(z, way[iremoved_light_bulbs]));
-    store.impose(new XneqY(z, way[ihid_violin]));
+    store.impose(new XneqY(z, way[iRemovedLightBulbs]));
+    store.impose(new XneqY(z, way[iHidViolin]));
     vars.add(z);
 
     IntVar[] all = {
-      children[iPaula], angryat[jPaula], reason[ihogged_television], chore[icleaning_the_attic], z
+      children[iPaula], angryat[jPaula], reason[iHoggedTelevision], chore[iCleaningTheAttic], z
     }; // piatka
     // rodzenstwa
     store.impose(new Alldifferent(all));
@@ -312,31 +312,31 @@ public class SiblingUproar extends ExampleFd {
     // 4. The child who was angry at Stuart was punished by being told to
     // wash the Venetian blinds.
 
-    store.impose(new XeqY(angryat[jStuart], chore[iwashing_the_blinds]));
+    store.impose(new XeqY(angryat[jStuart], chore[iWashingTheBlinds]));
 
     // 5. Russell was punished by being sent to clean out a section of the
     // garage.
 
-    store.impose(new XeqY(chore[icleaning_the_garage], children[iRussell]));
+    store.impose(new XeqY(chore[iCleaningTheGarage], children[iRussell]));
 
     // 6. The child who let the dog in a sibling's room didn't retaliate
     // against another sibling by knocking over a chess game
     // that he or she was playing.
 
-    store.impose(new XneqY(reason[ilet_dog_in_room], way[iknocked_over_chess_game]));
+    store.impose(new XneqY(reason[iLetDogInRoom], way[iKnockedOverChessGame]));
 
     // 7. The child who was hogging the television was angry at a sibling
     // who wasn't punished by being told to
     // straighten up the attic or wash the windows.
 
-    store.impose(new XneqY(reason[ihogged_television], chore[icleaning_the_attic]));
-    store.impose(new XneqY(reason[ihogged_television], chore[iwashing_the_windows]));
+    store.impose(new XneqY(reason[iHoggedTelevision], chore[iCleaningTheAttic]));
+    store.impose(new XneqY(reason[iHoggedTelevision], chore[iWashingTheWindows]));
 
     // 8. In retaliation, one person hid the violin belonging to the person
     // who was angry at Paula.
 
     IntVar imie = new IntVar(store, "imie", 1, 5);
-    store.impose(Element.choose(imie, angryat, way[ihid_violin]));
+    store.impose(Element.choose(imie, angryat, way[iHidViolin]));
     store.impose(Element.choose(imie, children, angryat[jPaula]));
     vars.add(imie);
 
@@ -347,8 +347,8 @@ public class SiblingUproar extends ExampleFd {
     // and the one who retaliated against a sibling by knocking over a chess
     // game in progress.
 
-    store.impose(new XeqY(way[iknocked_over_chess_game], children[iBrian]));
-    store.impose(new XeqY(chore[iwashing_the_windows], reason[ifailed_to_return_rollerblades]));
+    store.impose(new XeqY(way[iKnockedOverChessGame], children[iBrian]));
+    store.impose(new XeqY(chore[iWashingTheWindows], reason[iFailedToReturnRollerblades]));
 
     // 10. Stuart and the person who was angry at Nina are, in some order,
     // the child who
@@ -357,9 +357,9 @@ public class SiblingUproar extends ExampleFd {
     // retaliated against a sibling by hanging up on his or her best friend.
 
     IntVar kto = new IntVar(store, "kto", 1, 5);
-    store.impose(Element.choose(kto, children, reason[ifinished_cereal]));
-    store.impose(new XeqY(angryat[jNina], reason[ifinished_cereal]));
-    store.impose(new XeqY(children[iStuart], way[ihung_up_on_friend]));
+    store.impose(Element.choose(kto, children, reason[iFinishedCereal]));
+    store.impose(new XeqY(angryat[jNina], reason[iFinishedCereal]));
+    store.impose(new XeqY(children[iStuart], way[iHungUpOnFriend]));
     vars.add(kto);
   }
 }
