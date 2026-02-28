@@ -84,71 +84,71 @@ public class BuildingBlocks extends ExampleFd {
 
     log.info("Building Blocks");
 
-    IntVar A = new IntVar(store, "A", 1, 4);
-    IntVar B = new IntVar(store, "B", 1, 4);
-    IntVar C = new IntVar(store, "C", 1, 4);
-    IntVar D = new IntVar(store, "D", 1, 4);
-    IntVar E = new IntVar(store, "E", 1, 4);
-    IntVar F = new IntVar(store, "F", 1, 4);
-    IntVar G = new IntVar(store, "G", 1, 4);
-    IntVar H = new IntVar(store, "H", 1, 4);
-    IntVar I = new IntVar(store, "I", 1, 4);
-    IntVar J = new IntVar(store, "J", 1, 4);
-    IntVar K = new IntVar(store, "K", 1, 4);
-    IntVar L = new IntVar(store, "L", 1, 4);
-    IntVar M = new IntVar(store, "M", 1, 4);
-    IntVar N = new IntVar(store, "N", 1, 4);
-    IntVar O = new IntVar(store, "O", 1, 4);
-    IntVar P = new IntVar(store, "P", 1, 4);
-    IntVar R = new IntVar(store, "R", 1, 4);
-    IntVar S = new IntVar(store, "S", 1, 4);
-    IntVar T = new IntVar(store, "T", 1, 4);
-    IntVar U = new IntVar(store, "U", 1, 4);
-    IntVar W = new IntVar(store, "W", 1, 4);
-    IntVar V = new IntVar(store, "V", 1, 4);
-    IntVar X = new IntVar(store, "X", 1, 4);
-    IntVar Y = new IntVar(store, "Y", 1, 4);
+    IntVar a = new IntVar(store, "A", 1, 4);
+    IntVar b = new IntVar(store, "B", 1, 4);
+    IntVar c = new IntVar(store, "C", 1, 4);
+    IntVar d = new IntVar(store, "D", 1, 4);
+    IntVar e = new IntVar(store, "E", 1, 4);
+    IntVar f = new IntVar(store, "F", 1, 4);
+    IntVar g = new IntVar(store, "G", 1, 4);
+    IntVar h = new IntVar(store, "H", 1, 4);
+    IntVar iVar = new IntVar(store, "I", 1, 4);
+    IntVar j = new IntVar(store, "J", 1, 4);
+    IntVar k = new IntVar(store, "K", 1, 4);
+    IntVar l = new IntVar(store, "L", 1, 4);
+    IntVar m = new IntVar(store, "M", 1, 4);
+    IntVar n = new IntVar(store, "N", 1, 4);
+    IntVar o = new IntVar(store, "O", 1, 4);
+    IntVar p = new IntVar(store, "P", 1, 4);
+    IntVar r = new IntVar(store, "R", 1, 4);
+    IntVar s = new IntVar(store, "S", 1, 4);
+    IntVar t = new IntVar(store, "T", 1, 4);
+    IntVar u = new IntVar(store, "U", 1, 4);
+    IntVar w = new IntVar(store, "W", 1, 4);
+    IntVar v = new IntVar(store, "V", 1, 4);
+    IntVar x = new IntVar(store, "X", 1, 4);
+    IntVar y = new IntVar(store, "Y", 1, 4);
 
     // array of letters.
-    IntVar[] letters = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, R, S, T, U, W, V, X, Y};
+    IntVar[] letters = {a, b, c, d, e, f, g, h, iVar, j, k, l, m, n, o, p, r, s, t, u, w, v, x, y};
 
     vars.addAll(Arrays.asList(letters));
 
     // First word, each letter on a different block.
-    IntVar[] bake = {B, A, K, E};
+    IntVar[] bake = {b, a, k, e};
     store.impose(new Alldifferent(bake));
 
-    IntVar[] onyx = {O, N, Y, X};
+    IntVar[] onyx = {o, n, y, x};
     store.impose(new Alldifferent(onyx));
 
-    IntVar[] echo = {E, C, H, O};
+    IntVar[] echo = {e, c, h, o};
     store.impose(new Alldifferent(echo));
 
-    IntVar[] oval = {O, V, A, L};
+    IntVar[] oval = {o, v, a, l};
     store.impose(new Alldifferent(oval));
 
-    IntVar[] grid = {G, R, I, D};
+    IntVar[] grid = {g, r, iVar, d};
     store.impose(new Alldifferent(grid));
 
-    IntVar[] smug = {S, M, U, G};
+    IntVar[] smug = {s, m, u, g};
     store.impose(new Alldifferent(smug));
 
-    IntVar[] jump = {J, U, M, P};
+    IntVar[] jump = {j, u, m, p};
     store.impose(new Alldifferent(jump));
 
-    IntVar[] torn = {T, O, R, N};
+    IntVar[] torn = {t, o, r, n};
     store.impose(new Alldifferent(torn));
 
-    IntVar[] luck = {L, U, C, K};
+    IntVar[] luck = {l, u, c, k};
     store.impose(new Alldifferent(luck));
 
-    IntVar[] viny = {V, I, N, Y};
+    IntVar[] viny = {v, iVar, n, y};
     store.impose(new Alldifferent(viny));
 
-    IntVar[] lush = {L, U, S, H};
+    IntVar[] lush = {l, u, s, h};
     store.impose(new Alldifferent(lush));
 
-    IntVar[] wrap = {W, R, A, P};
+    IntVar[] wrap = {w, r, a, p};
     store.impose(new Alldifferent(wrap));
 
     // auxilary variables

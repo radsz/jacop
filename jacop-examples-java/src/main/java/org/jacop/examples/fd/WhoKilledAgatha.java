@@ -224,7 +224,6 @@ public class WhoKilledAgatha extends ExampleFd {
 
       for (int s = 1; s <= numSolutions; s++) {
         Domain[] res = searchLabel.getSolutionListener().getSolution(s);
-        int len = res.length;
 
         log.info("the_killer: " + res[0]);
 

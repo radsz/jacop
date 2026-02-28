@@ -75,12 +75,12 @@ public class CpvizNetworkFlow {
     store = new Store();
 
     NetworkBuilder net = new NetworkBuilder();
-    final Node A = net.addNode("A", 0);
-    final Node B = net.addNode("B", 0);
-    final Node C = net.addNode("C", 0);
-    final Node D = net.addNode("D", 0);
-    final Node E = net.addNode("E", 0);
-    final Node F = net.addNode("F", 0);
+    final Node nodeA = net.addNode("A", 0);
+    final Node nodeB = net.addNode("B", 0);
+    final Node nodeC = net.addNode("C", 0);
+    final Node nodeD = net.addNode("D", 0);
+    final Node nodeE = net.addNode("E", 0);
+    final Node nodeF = net.addNode("F", 0);
 
     final Node source = net.addNode("source", 9); // should ne 5+3+3=11 but it does not work...
 
@@ -93,33 +93,33 @@ public class CpvizNetworkFlow {
     x[0] = new IntVar(store, "x_0", 0, 5);
     x[1] = new IntVar(store, "x_1", 0, 3);
     x[2] = new IntVar(store, "x_2", 0, 3);
-    net.addArc(source, A, 0, x[0]);
-    net.addArc(source, B, 0, x[1]);
-    net.addArc(source, C, 0, x[2]);
+    net.addArc(source, nodeA, 0, x[0]);
+    net.addArc(source, nodeB, 0, x[1]);
+    net.addArc(source, nodeC, 0, x[2]);
 
     x[3] = new IntVar(store, "a->d", 0, 5);
     x[4] = new IntVar(store, "a->e", 0, 5);
-    net.addArc(A, D, 3, x[3]);
-    net.addArc(A, E, 1, x[4]);
+    net.addArc(nodeA, nodeD, 3, x[3]);
+    net.addArc(nodeA, nodeE, 1, x[4]);
 
     x[5] = new IntVar(store, "b->d", 0, 3);
     x[6] = new IntVar(store, "b->e", 0, 3);
     x[7] = new IntVar(store, "b->f", 0, 3);
-    net.addArc(B, D, 4, x[5]);
-    net.addArc(B, E, 2, x[6]);
-    net.addArc(B, F, 4, x[7]);
+    net.addArc(nodeB, nodeD, 4, x[5]);
+    net.addArc(nodeB, nodeE, 2, x[6]);
+    net.addArc(nodeB, nodeF, 4, x[7]);
 
     x[8] = new IntVar(store, "c->e", 0, 3);
     x[9] = new IntVar(store, "c->f", 0, 3);
-    net.addArc(C, E, 3, x[8]);
-    net.addArc(C, F, 3, x[9]);
+    net.addArc(nodeC, nodeE, 3, x[8]);
+    net.addArc(nodeC, nodeF, 3, x[9]);
 
     x[10] = new IntVar(store, "x_10", 3, 3);
     x[11] = new IntVar(store, "x_11", 3, 3);
     x[12] = new IntVar(store, "x_12", 3, 3);
-    net.addArc(D, sinkD, 0, x[10]);
-    net.addArc(E, sinkE, 0, x[11]);
-    net.addArc(F, sinkF, 0, x[12]);
+    net.addArc(nodeD, sinkD, 0, x[10]);
+    net.addArc(nodeE, sinkE, 0, x[11]);
+    net.addArc(nodeF, sinkF, 0, x[12]);
 
     IntVar cost = new IntVar(store, "cost", 0, 1000);
     net.setCostVariable(cost);

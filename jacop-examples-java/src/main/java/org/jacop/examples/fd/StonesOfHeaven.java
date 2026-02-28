@@ -99,81 +99,81 @@ public class StonesOfHeaven extends ExampleFd {
 
     log.info("Solution for problem Stones of Heaven");
 
-    String[] ColorNames = {"red", "lightgreen", "white", "darkgreen"};
+    String[] colorNames = {"red", "lightgreen", "white", "darkgreen"};
     final int /* ired = 0, */ iLgreen = 1;
     final int iwhite = 2;
     final int iDgreen = 3;
 
-    String[] CountryNames = {"USA", "Finland", "Japan", "Italy"};
+    String[] countryNames = {"USA", "Finland", "Japan", "Italy"};
     final int iusa = 0;
     final int ifin = 1;
     final int ijapan = 2; /*, iitaly = 3 */
 
-    String[] ItemNames = {"beltbuckle", "dragon", "grasshopper", "horse"};
+    String[] itemNames = {"beltbuckle", "dragon", "grasshopper", "horse"};
     final int ibelt = 0;
     final int idragon = 1;
     final int igrasshopper = 2;
     final int ihorse = 3;
 
-    String[] DynastyNames = {"Ching", "Ming", "Sung", "Tang"};
+    String[] dynastyNames = {"Ching", "Ming", "Sung", "Tang"};
     final int iChing = 0; /* iMing = 1, */
     final int iSung = 2;
     final int iTang = 3;
 
-    IntVar[] Color = new IntVar[4];
-    IntVar[] Country = new IntVar[4];
-    IntVar[] Item = new IntVar[4];
-    IntVar[] Dynasty = new IntVar[4];
+    IntVar[] color = new IntVar[4];
+    IntVar[] country = new IntVar[4];
+    IntVar[] item = new IntVar[4];
+    IntVar[] dynasty = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
-      Color[i] = new IntVar(store, ColorNames[i], 1, 4);
-      Country[i] = new IntVar(store, CountryNames[i], 1, 4);
-      Item[i] = new IntVar(store, ItemNames[i], 1, 4);
-      Dynasty[i] = new IntVar(store, DynastyNames[i], 1, 4);
-      vars.add(Color[i]);
-      vars.add(Country[i]);
-      vars.add(Item[i]);
-      vars.add(Dynasty[i]);
+      color[i] = new IntVar(store, colorNames[i], 1, 4);
+      country[i] = new IntVar(store, countryNames[i], 1, 4);
+      item[i] = new IntVar(store, itemNames[i], 1, 4);
+      dynasty[i] = new IntVar(store, dynastyNames[i], 1, 4);
+      vars.add(color[i]);
+      vars.add(country[i]);
+      vars.add(item[i]);
+      vars.add(dynasty[i]);
     }
 
-    store.impose(new Alldifferent(Color));
-    store.impose(new Alldifferent(Country));
-    store.impose(new Alldifferent(Item));
-    store.impose(new Alldifferent(Dynasty));
+    store.impose(new Alldifferent(color));
+    store.impose(new Alldifferent(country));
+    store.impose(new Alldifferent(item));
+    store.impose(new Alldifferent(dynasty));
 
     // 1. The rare white dragon (which the American didn't buy) didn't come
     // from the Sung dynasty.
 
-    store.impose(new XeqY(Color[iwhite], Item[idragon]));
-    store.impose(new XneqY(Dynasty[iSung], Item[idragon]));
-    store.impose(new XneqY(Country[iusa], Item[idragon]));
+    store.impose(new XeqY(color[iwhite], item[idragon]));
+    store.impose(new XneqY(dynasty[iSung], item[idragon]));
+    store.impose(new XneqY(country[iusa], item[idragon]));
 
     // 2. The exquisite belt buckle (which wasn't any shade of green) was
     // created in 618 A.D. for an emperor of the Tang dynasty.
 
-    store.impose(new XneqY(Item[ibelt], Color[iLgreen]));
-    store.impose(new XneqY(Item[ibelt], Color[iDgreen]));
-    store.impose(new XeqY(Item[ibelt], Dynasty[iTang]));
+    store.impose(new XneqY(item[ibelt], color[iLgreen]));
+    store.impose(new XneqY(item[ibelt], color[iDgreen]));
+    store.impose(new XeqY(item[ibelt], dynasty[iTang]));
 
     // 3. Three of the figurines were the one bought by the Finn (which
     // wasn't the dragon), the one from the Ching dynasty (which didn't go
     // to the buyer from Japan), and the light green object (which wasn't
     // the horse).
-    store.impose(new XneqY(Country[ifin], Item[idragon]));
-    store.impose(new XneqY(Country[ifin], Dynasty[iChing]));
-    store.impose(new XneqY(Country[ifin], Color[iLgreen]));
+    store.impose(new XneqY(country[ifin], item[idragon]));
+    store.impose(new XneqY(country[ifin], dynasty[iChing]));
+    store.impose(new XneqY(country[ifin], color[iLgreen]));
 
-    store.impose(new XneqY(Dynasty[iChing], Country[ijapan]));
-    store.impose(new XneqY(Dynasty[iChing], Color[iLgreen]));
+    store.impose(new XneqY(dynasty[iChing], country[ijapan]));
+    store.impose(new XneqY(dynasty[iChing], color[iLgreen]));
 
-    store.impose(new XneqY(Color[iLgreen], Item[ihorse]));
+    store.impose(new XneqY(color[iLgreen], item[ihorse]));
 
     // 4. The American decided against both the grasshopper and the piece
     // from the Sung dynasty, neither of which she felt would match her
     // home decor.
-    store.impose(new XneqY(Country[iusa], Item[igrasshopper]));
-    store.impose(new XneqY(Country[iusa], Dynasty[iSung]));
+    store.impose(new XneqY(country[iusa], item[igrasshopper]));
+    store.impose(new XneqY(country[iusa], dynasty[iSung]));
 
-    store.impose(new XneqY(Item[igrasshopper], Dynasty[iSung]));
+    store.impose(new XneqY(item[igrasshopper], dynasty[iSung]));
   }
 }

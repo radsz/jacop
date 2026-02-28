@@ -104,14 +104,14 @@ public class GeostExample extends ExampleFd {
     shape4.add(new Dbox(new int[] {2, 1}, new int[] {1, 3}));
     shapes.add(new Shape(3, shape4));
 
-    IntVar X_o1 = new IntVar(store, "x1", 0, 1);
-    IntVar Y_o1 = new IntVar(store, "y1", 0, 1);
-    IntVar[] coords_o1 = {X_o1, Y_o1};
-    IntVar shape_o1 = new IntVar(store, "shape_o1", 0, 3);
-    IntVar start_o1 = new IntVar(store, "start_o1", 2, 2);
-    IntVar duration_o1 = new IntVar(store, "duration_o1", 12, 12);
-    IntVar end_o1 = new IntVar(store, "end_o1", 14, 14);
-    GeostObject o1 = new GeostObject(0, coords_o1, shape_o1, start_o1, duration_o1, end_o1);
+    IntVar xO1 = new IntVar(store, "x1", 0, 1);
+    IntVar yO1 = new IntVar(store, "y1", 0, 1);
+    IntVar[] coordsO1 = {xO1, yO1};
+    IntVar shapeO1 = new IntVar(store, "shape_o1", 0, 3);
+    IntVar startO1 = new IntVar(store, "start_o1", 2, 2);
+    IntVar durationO1 = new IntVar(store, "duration_o1", 12, 12);
+    IntVar endO1 = new IntVar(store, "end_o1", 14, 14);
+    GeostObject o1 = new GeostObject(0, coordsO1, shapeO1, startO1, durationO1, endO1);
     objects.add(o1);
 
     //  Object o2- shapes 5 and 6
@@ -127,14 +127,14 @@ public class GeostExample extends ExampleFd {
     shape6.add(new Dbox(new int[] {2, 1}, new int[] {1, 1}));
     shapes.add(new Shape(5, shape6));
 
-    IntVar X_o2 = new IntVar(store, "x2", 0, 2);
-    IntVar Y_o2 = new IntVar(store, "y2", 0, 1);
-    IntVar[] coords_o2 = {X_o2, Y_o2};
-    IntVar shape_o2 = new IntVar(store, "shape_o2", 4, 5);
-    IntVar start_o2 = new IntVar(store, "start_o2", 10, 10);
-    IntVar duration_o2 = new IntVar(store, "duration_o2", 12, 12);
-    IntVar end_o2 = new IntVar(store, "end_o2", 22, 22);
-    GeostObject o2 = new GeostObject(1, coords_o2, shape_o2, start_o2, duration_o2, end_o2);
+    IntVar xO2 = new IntVar(store, "x2", 0, 2);
+    IntVar yO2 = new IntVar(store, "y2", 0, 1);
+    IntVar[] coordsO2 = {xO2, yO2};
+    IntVar shapeO2 = new IntVar(store, "shape_o2", 4, 5);
+    IntVar startO2 = new IntVar(store, "start_o2", 10, 10);
+    IntVar durationO2 = new IntVar(store, "duration_o2", 12, 12);
+    IntVar endO2 = new IntVar(store, "end_o2", 22, 22);
+    GeostObject o2 = new GeostObject(1, coordsO2, shapeO2, startO2, durationO2, endO2);
     objects.add(o2);
 
     //  Object o3- shapes 7 and 8
@@ -146,14 +146,14 @@ public class GeostExample extends ExampleFd {
     shape8.add(new Dbox(new int[] {0, 0}, new int[] {2, 3}));
     shapes.add(new Shape(7, shape8));
 
-    IntVar X_o3 = new IntVar(store, "x3", 0, 4);
-    IntVar Y_o3 = new IntVar(store, "y3", 0, 0);
-    IntVar[] coords_o3 = {X_o3, Y_o3};
-    IntVar shape_o3 = new IntVar(store, "shape_o3", 6, 7);
-    IntVar start_o3 = new IntVar(store, "start_o3", 10, 10);
-    IntVar duration_o3 = new IntVar(store, "duration_o3", 12, 12);
-    IntVar end_o3 = new IntVar(store, "end_o3", 22, 22);
-    GeostObject o3 = new GeostObject(2, coords_o3, shape_o3, start_o3, duration_o3, end_o3);
+    IntVar xO3 = new IntVar(store, "x3", 0, 4);
+    IntVar yO3 = new IntVar(store, "y3", 0, 0);
+    IntVar[] coordsO3 = {xO3, yO3};
+    IntVar shapeO3 = new IntVar(store, "shape_o3", 6, 7);
+    IntVar startO3 = new IntVar(store, "start_o3", 10, 10);
+    IntVar durationO3 = new IntVar(store, "duration_o3", 12, 12);
+    IntVar endO3 = new IntVar(store, "end_o3", 22, 22);
+    GeostObject o3 = new GeostObject(2, coordsO3, shapeO3, startO3, durationO3, endO3);
     objects.add(o3);
 
     //  Object o4- shape 9
@@ -161,14 +161,14 @@ public class GeostExample extends ExampleFd {
     shape9.add(new Dbox(new int[] {0, 0}, new int[] {1, 4}));
     shapes.add(new Shape(8, shape9));
 
-    IntVar X_o4 = new IntVar(store, "x4", 0, 1);
-    IntVar Y_o4 = new IntVar(store, "y4", 0, 1);
-    IntVar[] coords_o4 = {X_o4, Y_o4};
-    IntVar shape_o4 = new IntVar(store, "shape_o4", 8, 8);
-    IntVar start_o4 = new IntVar(store, "start_o4", 14, 14);
-    IntVar duration_o4 = new IntVar(store, "duration_o4", 8, 8);
-    IntVar end_o4 = new IntVar(store, "end_o4", 22, 22);
-    GeostObject o4 = new GeostObject(3, coords_o4, shape_o4, start_o4, duration_o4, end_o4);
+    IntVar xO4 = new IntVar(store, "x4", 0, 1);
+    IntVar yO4 = new IntVar(store, "y4", 0, 1);
+    IntVar[] coordsO4 = {xO4, yO4};
+    IntVar shapeO4 = new IntVar(store, "shape_o4", 8, 8);
+    IntVar startO4 = new IntVar(store, "start_o4", 14, 14);
+    IntVar durationO4 = new IntVar(store, "duration_o4", 8, 8);
+    IntVar endO4 = new IntVar(store, "end_o4", 22, 22);
+    GeostObject o4 = new GeostObject(3, coordsO4, shapeO4, startO4, durationO4, endO4);
     objects.add(o4);
 
     // dimension 2 must be added so the time dimension is also present.
