@@ -60,7 +60,7 @@ public class XexpYeqZ extends AbstractXopYeqZ {
     super(idNumber, x, y, z);
   }
 
-  private int computeZi(int xi, int yi, IntVar zVar) {
+  private int computeZi(int xi, int yi, IntVar zvar) {
     if (xi == 0) {
       if (yi == 0) {
         return 1;
@@ -71,13 +71,13 @@ public class XexpYeqZ extends AbstractXopYeqZ {
       return 0;
     }
     long zl = toLong(Math.pow(xi, yi));
-    if (zl < zVar.min() || zl > zVar.max()) {
+    if (zl < zvar.min() || zl > zvar.max()) {
       return -1; // signal skip
     }
     return long2int(zl);
   }
 
-  private void propagateSupportedValues(IntDomain xDom, IntDomain yDom, IntDomain zDom) {
+  private void propagateSupportedValues(IntDomain xdomain, IntDomain ydomain, IntDomain zdomain) {
     for (ValueEnumeration ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
       int xi = ex.nextElement();
       for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
@@ -87,10 +87,10 @@ public class XexpYeqZ extends AbstractXopYeqZ {
           continue;
         }
         if (z.domain.contains(zi)) {
-          xDom.unionAdapt(xi);
-          yDom.unionAdapt(yi);
+          xdomain.unionAdapt(xi);
+          ydomain.unionAdapt(yi);
         }
-        zDom.unionAdapt(zi);
+        zdomain.unionAdapt(zi);
       }
     }
   }

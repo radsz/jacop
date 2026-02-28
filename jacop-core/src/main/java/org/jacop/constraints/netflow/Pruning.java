@@ -278,26 +278,26 @@ public class Pruning extends Network {
       shift -= companion2.flowOffset;
     }
 
-    IntVar xVar1 = companion1.xVar;
-    IntVar xVar2 = companion2.xVar;
+    IntVar xvar1 = companion1.xVar;
+    IntVar xvar2 = companion2.xVar;
     if (differentDir) {
-      nvarInShift(companion1, xVar2.domain, -shift);
-      nvarInShift(companion2, xVar1.domain, shift);
+      nvarInShift(companion1, xvar2.domain, -shift);
+      nvarInShift(companion2, xvar1.domain, shift);
     } else {
-      pruneDegree2NodeSameDir(companion1, companion2, xVar1, xVar2, shift);
+      pruneDegree2NodeSameDir(companion1, companion2, xvar1, xvar2, shift);
     }
   }
 
   private void pruneDegree2NodeSameDir(
-      ArcCompanion companion1, ArcCompanion companion2, IntVar xVar1, IntVar xVar2, int shift) {
-    IntDomain xDom = xVar1.dom();
+      ArcCompanion companion1, ArcCompanion companion2, IntVar xvar1, IntVar xvar2, int shift) {
+    IntDomain xDom = xvar1.dom();
     IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
     for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
       yDomIn.unionAdapt(new Interval(-shift - xDom.rightElement(i), -shift - xDom.leftElement(i)));
     }
     nvarInShift(companion2, yDomIn, 0);
 
-    IntDomain yDom = xVar2.domain;
+    IntDomain yDom = xvar2.domain;
     IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
     for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
       xDomIn.unionAdapt(new Interval(-shift - yDom.rightElement(i), -shift - yDom.leftElement(i)));
