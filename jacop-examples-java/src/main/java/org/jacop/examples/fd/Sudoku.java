@@ -132,7 +132,7 @@ public class Sudoku extends ExampleFd {
   /** Builds the Sudoku model using primitive XneqY constraints. */
   protected void buildModelBasic(int[][] description) {
     createVariables(description);
-    addXneqyConstraints();
+    addXneqYConstraints();
   }
 
   /** Creates variables for the Sudoku grid. */
@@ -187,15 +187,15 @@ public class Sudoku extends ExampleFd {
   }
 
   /** Adds XneqY constraints for rows, columns, and blocks. */
-  private void addXneqyConstraints() {
+  private void addXneqYConstraints() {
     int noRows = 3;
     int noColumns = 3;
-    addXneqyConstraintsForRows(noRows, noColumns);
-    addXneqyConstraintsForColumns(noRows, noColumns);
-    addXneqyConstraintsForBlocks(noRows, noColumns);
+    addXneqYConstraintsForRows(noRows, noColumns);
+    addXneqYConstraintsForColumns(noRows, noColumns);
+    addXneqYConstraintsForBlocks(noRows, noColumns);
   }
 
-  private void addXneqyConstraintsForRows(int noRows, int noColumns) {
+  private void addXneqYConstraintsForRows(int noRows, int noColumns) {
     int n = noRows * noColumns;
     for (int i = 0; i < n; i++) {
       for (int k = 0; k < n; k++) {
@@ -206,7 +206,7 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  private void addXneqyConstraintsForColumns(int noRows, int noColumns) {
+  private void addXneqYConstraintsForColumns(int noRows, int noColumns) {
     int n = noRows * noColumns;
     for (int i = 0; i < n; i++) {
       for (int k = 0; k < n; k++) {
@@ -217,7 +217,7 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  private void addXneqyConstraintsForBlocks(int noRows, int noColumns) {
+  private void addXneqYConstraintsForBlocks(int noRows, int noColumns) {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         List<IntVar> block = new ArrayList<>();
