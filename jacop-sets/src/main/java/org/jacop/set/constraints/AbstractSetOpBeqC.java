@@ -111,12 +111,12 @@ public abstract class AbstractSetOpBeqC extends Constraint
    * Performs the operation-specific propagation within the do-while loop.
    *
    * @param store the constraint store
-   * @param aChanged whether variable a has changed
-   * @param bChanged whether variable b has changed
-   * @param cChanged whether variable c has changed
+   * @param changedA whether variable a has changed
+   * @param changedB whether variable b has changed
+   * @param changedC whether variable c has changed
    */
   protected abstract void propagateOperation(
-      Store store, boolean aChanged, boolean bChanged, boolean cChanged);
+      Store store, boolean changedA, boolean changedB, boolean changedC);
 
   @Override
   public int getDefaultConsistencyPruningEvent() {

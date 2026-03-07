@@ -52,6 +52,8 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
+ * Handles variables and parameters parsing for FlatZinc models.
+ *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */

@@ -571,8 +571,8 @@ public class NetworkSimplex {
   }
 
   /**
-   * Changes the parent of a node and updates the thread data structure (This operation invalidates
-   * the depth values in the subtree)
+   * Changes the parent of a node and updates the thread data structure. (This operation invalidates
+   * the depth values in the subtree.)
    *
    * <p>Runs in O(T2) amortized time over all treeSwaps performed by an updateTree operation where
    * T2 is the size of the subtree that is being reversed.

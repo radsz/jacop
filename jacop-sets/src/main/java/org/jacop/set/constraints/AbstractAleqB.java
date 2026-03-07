@@ -139,10 +139,10 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
     if (b.domain.glb().getSize() <= 0) {
       return;
     }
-    ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
-    ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
-    int be = bGlbEnum.nextElement();
-    compareCommonPrefixLoop(store, aLubEnum, bGlbEnum, be);
+    ValueEnumeration lubEnum = a.domain.lub().valueEnumeration();
+    ValueEnumeration glbEnum = b.domain.glb().valueEnumeration();
+    int be = glbEnum.nextElement();
+    compareCommonPrefixLoop(store, lubEnum, glbEnum, be);
   }
 
   /**
@@ -150,22 +150,22 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
    * determines ordering; throws Store.failException if incompatible.
    */
   private void compareCommonPrefixLoop(
-      Store store, ValueEnumeration aLubEnum, ValueEnumeration bGlbEnum, int be) {
+      Store store, ValueEnumeration lubEnum, ValueEnumeration glbEnum, int be) {
     int ae;
     do {
-      if (!aLubEnum.hasMoreElements()) {
+      if (!lubEnum.hasMoreElements()) {
         return; // b has more elements and up to now all equal
       }
-      ae = aLubEnum.nextElement();
+      ae = lubEnum.nextElement();
 
       if (ae == be) {
-        if (bGlbEnum.hasMoreElements()) {
-          be = bGlbEnum.nextElement();
-          if (!aLubEnum.hasMoreElements()) {
+        if (glbEnum.hasMoreElements()) {
+          be = glbEnum.nextElement();
+          if (!lubEnum.hasMoreElements()) {
             return; // b has more elements than a
           }
         } else {
-          afterCommonPrefix(store, a, b, aLubEnum, ae);
+          afterCommonPrefix(store, a, b, lubEnum, ae);
           return;
         }
       } else if (ae < be) {
@@ -183,11 +183,11 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
    * @param store the constraint store
    * @param a the first set variable
    * @param b the second set variable
-   * @param aLubEnum the enumeration of a's lub values (positioned after the common prefix)
+   * @param lubEnum the enumeration of a's lub values (positioned after the common prefix)
    * @param lastAe the last element value read from aLubEnum
    */
   protected void afterCommonPrefix(
-      Store store, SetVar a, SetVar b, ValueEnumeration aLubEnum, int lastAe) {
+      Store store, SetVar a, SetVar b, ValueEnumeration lubEnum, int lastAe) {
     // Default: no additional check (used by AleB)
   }
 }

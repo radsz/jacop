@@ -525,7 +525,13 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     }
 
     private void addValueBasedXArcs(
-        IntDomain all, IntDomain[] doms, int n, int m, Node[] xNodes, Node[] valueNodes, Node t) {
+        IntDomain all,
+        IntDomain[] doms,
+        int n,
+        int m,
+        Node[] variableNodes,
+        Node[] valueNodes,
+        Node t) {
       for (int i = 0; i < n; i++) {
         IntVar v = xvars[i];
         List<Arc> arcs = new ArrayList<>();
@@ -533,12 +539,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         IntDomain vDom = v.domain;
         for (int j = 0; j < m; j++) {
           if (vDom.isIntersecting(doms[j])) {
-            arcs.add(addArc(xNodes[i], valueNodes[j], 0, 1));
+            arcs.add(addArc(variableNodes[i], valueNodes[j], 0, 1));
             domains.add(doms[j]);
           }
           IntDomain notCounted = vDom.subtract(all);
           if (!notCounted.isEmpty()) {
-            arcs.add(addArc(xNodes[i], t, 0, 1));
+            arcs.add(addArc(variableNodes[i], t, 0, 1));
             domains.add(notCounted);
           }
         }

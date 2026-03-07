@@ -261,6 +261,12 @@ public class BenchmarkMetadataGenerator {
     return builtinToFamily;
   }
 
+  /**
+   * Entry point for generating benchmark metadata files.
+   *
+   * @param args optional category names to generate metadata for; generates all if empty.
+   * @throws IOException if an I/O error occurs during metadata generation.
+   */
   public static void main(String[] args) throws IOException {
     BenchmarkMetadataGenerator generator = new BenchmarkMetadataGenerator();
     if (args.length > 0) {

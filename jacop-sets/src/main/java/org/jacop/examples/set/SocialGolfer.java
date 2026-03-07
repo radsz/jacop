@@ -131,7 +131,7 @@ public class SocialGolfer extends ExampleSet {
 
     final int n = groups * players;
 
-    int[] weights = computeWeights(players);
+    final int[] weights = computeWeights(players);
 
     log.info("Social golfer problem " + weeks + "-" + groups + "-" + players);
 

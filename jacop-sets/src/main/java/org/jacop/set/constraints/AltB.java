@@ -102,7 +102,7 @@ public class AltB extends AbstractAleqB {
 
   @Override
   protected void afterCommonPrefix(
-      Store store, SetVar a, SetVar b, ValueEnumeration aLubEnum, int lastAe) {
+      Store store, SetVar a, SetVar b, ValueEnumeration lubEnum, int lastAe) {
     if (a.domain.lub().getSize() > b.domain.glb().getSize()) {
       // a and b are equal to some point
       int nextA = a.domain.lub().nextValue(lastAe);

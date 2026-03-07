@@ -89,7 +89,6 @@ public final class DebugModuleHelper {
    * Registers a debug module with the core for all relevant events.
    *
    * @param core the core instance
-   * @param module the module to register (must implement all listener interfaces)
    */
   public static void registerModule(
       Core core,

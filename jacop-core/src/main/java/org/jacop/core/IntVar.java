@@ -286,16 +286,6 @@ public class IntVar extends Var {
   }
 
   /**
-   * It registers constraint with current variable, so anytime this variable is changed the
-   * constraint is reevaluated. Pruning events constants from 0 to n, where n is the strongest
-   * pruning event.
-   *
-   * @param c the constraint which is being attached to the variable.
-   * @param pruningEvent type of the event which must occur to trigger the execution of the
-   *     consistency function.
-   */
-
-  /**
    * It returns the values which have been removed at current store level. It does _not_ return the
    * recent pruning in between the calls to that function.
    *

@@ -59,29 +59,29 @@ public class AunionBeqC extends AbstractSetOpBeqC {
 
   @Override
   protected void propagateOperation(
-      Store store, boolean aHasChanged, boolean bHasChanged, boolean cHasChanged) {
+      Store store, boolean changedA, boolean changedB, boolean changedC) {
 
     SetDomain aDom = a.dom();
     SetDomain bDom = b.dom();
     SetDomain cDom = c.dom();
 
-    propagateUnionGlbA(store, bDom, cDom, bHasChanged, cHasChanged);
-    if (cHasChanged) {
+    propagateUnionGlbA(store, bDom, cDom, changedB, changedC);
+    if (changedC) {
       a.domain.inLub(store.level, a, cDom.lub());
     }
 
-    propagateUnionGlbB(store, aDom, cDom, aHasChanged, cHasChanged);
-    if (cHasChanged) {
+    propagateUnionGlbB(store, aDom, cDom, changedA, changedC);
+    if (changedC) {
       b.domain.inLub(store.level, b, cDom.lub());
     }
 
-    if (aHasChanged) {
+    if (changedA) {
       c.domain.inGlb(store.level, c, aDom.glb());
     }
-    if (bHasChanged) {
+    if (changedB) {
       c.domain.inGlb(store.level, c, bDom.glb());
     }
-    if (aHasChanged || bHasChanged) {
+    if (changedA || changedB) {
       c.domain.inLub(store.level, c, aDom.lub().union(bDom.lub()));
     }
 
@@ -91,9 +91,9 @@ public class AunionBeqC extends AbstractSetOpBeqC {
   }
 
   private void propagateUnionGlbA(
-      Store store, SetDomain bDom, SetDomain cDom, boolean bHasChanged, boolean cHasChanged) {
-    if ((cHasChanged || bHasChanged) && cDom.lub().getSize() > 0) {
-      IntDomain glbA = cDom.glb().subtract(bDom.lub());
+      Store store, SetDomain domainB, SetDomain domainC, boolean changedB, boolean changedC) {
+    if ((changedC || changedB) && domainC.lub().getSize() > 0) {
+      IntDomain glbA = domainC.glb().subtract(domainB.lub());
       if (glbA.getSize() > 0) {
         a.domain.inGlb(store.level, a, glbA);
       }
@@ -101,9 +101,9 @@ public class AunionBeqC extends AbstractSetOpBeqC {
   }
 
   private void propagateUnionGlbB(
-      Store store, SetDomain aDom, SetDomain cDom, boolean aHasChanged, boolean cHasChanged) {
-    if ((aHasChanged || cHasChanged) && cDom.lub().getSize() > 0) {
-      IntDomain glbB = cDom.glb().subtract(aDom.lub());
+      Store store, SetDomain domainA, SetDomain domainC, boolean changedA, boolean changedC) {
+    if ((changedA || changedC) && domainC.lub().getSize() > 0) {
+      IntDomain glbB = domainC.glb().subtract(domainA.lub());
       if (glbB.getSize() > 0) {
         b.domain.inGlb(store.level, b, glbB);
       }

@@ -561,7 +561,7 @@ public class LinearInt extends PrimitiveConstraint {
   /**
    * Computes the minimum and maximum possible weighted sums.
    *
-   * @return a record containing sMin and sMax.
+   * @return a record containing sumMin and sumMax.
    */
   private SumBounds computeSumBounds() {
     long sMin = 0L;
@@ -613,7 +613,7 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   /** Holds the minimum and maximum possible weighted sums. */
-  private record SumBounds(long sMin, long sMax) {}
+  private record SumBounds(long sumMin, long sumMax) {}
 
   /**
    * Checks if the equality relation is satisfied.
@@ -622,7 +622,7 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public boolean satisfiedEq() {
     SumBounds bounds = computeSumBounds();
-    return bounds.sMin == bounds.sMax && bounds.sMin == b;
+    return bounds.sumMin == bounds.sumMax && bounds.sumMin == b;
   }
 
   /**
@@ -632,7 +632,7 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public boolean satisfiedNeq() {
     SumBounds bounds = computeSumBounds();
-    return bounds.sMin > b || bounds.sMax < b;
+    return bounds.sumMin > b || bounds.sumMax < b;
   }
 
   /**

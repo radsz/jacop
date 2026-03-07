@@ -341,24 +341,24 @@ public class Diffn extends Nooverlap {
   }
 
   /** Builds event array; returns null if no mandatory events. Sets limitOut[0] to limit. */
-  private Event[] buildSweepEvents(Rectangle r, BitSet o, int dim, int oDim, int[] limitOut) {
+  private Event[] buildSweepEvents(Rectangle r, BitSet o, int dim, int otherDim, int[] limitOut) {
     Event[] es = new Event[2 * o.cardinality() + 2];
     boolean mandatoryExists = false;
     int j = 0;
-    int minLimit = r.est(oDim);
-    int maxLimit = r.lct(oDim);
+    int minLimit = r.est(otherDim);
+    int maxLimit = r.lct(otherDim);
     for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
       Rectangle rr = rectangle[i];
       rr.index = i;
       int min = rr.lst(dim);
       int max = rr.ect(dim);
-      int lMin = rr.getLength(oDim).min();
+      int lMin = rr.getLength(otherDim).min();
       if (min >= max || lMin <= 0) {
         continue;
       }
-      int oMin = rr.lst(oDim);
-      int oMax = rr.ect(oDim);
-      boolean withinR = rr.est(oDim) >= r.est(oDim) && rr.lct(oDim) <= r.lct(oDim);
+      int oMin = rr.lst(otherDim);
+      int oMax = rr.ect(otherDim);
+      boolean withinR = rr.est(otherDim) >= r.est(otherDim) && rr.lct(otherDim) <= r.lct(otherDim);
       int val = withinR ? lMin : 0;
       if (oMin < oMax) {
         Interval block = new Interval(oMin, oMax);
@@ -368,8 +368,8 @@ public class Diffn extends Nooverlap {
         es[j++] = new Event(PROFILE_ADD, rr, min, val, null);
         es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -val, null);
       }
-      minLimit = Math.min(rr.est(oDim), minLimit);
-      maxLimit = Math.max(rr.lct(oDim), maxLimit);
+      minLimit = Math.min(rr.est(otherDim), minLimit);
+      maxLimit = Math.max(rr.lct(otherDim), maxLimit);
       mandatoryExists = true;
     }
     if (!mandatoryExists) {
@@ -385,7 +385,7 @@ public class Diffn extends Nooverlap {
       Event e,
       Event ne,
       Rectangle r,
-      int oDim,
+      int otherDim,
       int dim,
       int limit,
       boolean[] inProfile,
@@ -420,22 +420,22 @@ public class Diffn extends Nooverlap {
     int ri = r.index;
     int profileValue = curProfile[0];
     if (inProfile[ri]) {
-      profileValue -= r.getLength(oDim).min();
+      profileValue -= r.getLength(otherDim).min();
     }
 
     boolean blocking =
         blocking(
             sweepLine,
-            r.getOrigin(oDim).min(),
-            r.getOrigin(oDim).max() + r.getLength(oDim).min(),
-            r.getLength(oDim).min());
+            r.getOrigin(otherDim).min(),
+            r.getOrigin(otherDim).max() + r.getLength(otherDim).min(),
+            r.getLength(otherDim).min());
 
     if (r.exists()) {
       if (startExcluded[0] == Integer.MAX_VALUE) {
-        if (limit - profileValue < r.getLength(oDim).min() || blocking) {
+        if (limit - profileValue < r.getLength(otherDim).min() || blocking) {
           startExcluded[0] = e.date() - r.getLength(dim).min() + 1;
         }
-      } else if (limit - profileValue >= r.getLength(oDim).min() && !blocking) {
+      } else if (limit - profileValue >= r.getLength(otherDim).min() && !blocking) {
         if (startExcluded[0] <= r.lst(dim)) {
           if (DEBUG_NARR) {
             log.debug(
@@ -457,20 +457,20 @@ public class Diffn extends Nooverlap {
 
     if (lastBarier[0] == Integer.MAX_VALUE
         && e.date() >= r.lst(dim)
-        && (limit - profileValue < r.getLength(oDim).min() || blocking)) {
+        && (limit - profileValue < r.getLength(otherDim).min() || blocking)) {
       lastBarier[0] = e.date();
     }
 
     if (r.lst(dim) <= e.date()
         && e.date() < r.ect(dim)
-        && limit - profileValue < r.getLength(oDim).max()) {
-      r.getLength(oDim).domain.inMax(store.level, r.getLength(oDim), limit - profileValue);
+        && limit - profileValue < r.getLength(otherDim).max()) {
+      r.getLength(otherDim).domain.inMax(store.level, r.getLength(otherDim), limit - profileValue);
     }
   }
 
   private void processPruneStart(
       Event e,
-      int oDim,
+      int otherDim,
       int dim,
       int limit,
       boolean[] inProfile,
@@ -481,27 +481,29 @@ public class Diffn extends Nooverlap {
     int ri = rr.index;
     int profileValue = curProfile[0];
     if (inProfile[ri]) {
-      profileValue -= rr.getLength(oDim).min();
+      profileValue -= rr.getLength(otherDim).min();
     }
     if (rr.exists()
-        && (limit - profileValue < rr.getLength(oDim).min()
+        && (limit - profileValue < rr.getLength(otherDim).min()
             || blocking(
                 sweepLine,
-                rr.getOrigin(oDim).min(),
-                rr.getOrigin(oDim).max() + rr.getLength(oDim).min(),
-                rr.getLength(oDim).min()))) {
+                rr.getOrigin(otherDim).min(),
+                rr.getOrigin(otherDim).max() + rr.getLength(otherDim).min(),
+                rr.getLength(otherDim).min()))) {
       startExcluded[0] = e.date();
     }
     if (rr.lst(dim) <= e.date()
         && e.date() < rr.ect(dim)
-        && limit - profileValue < rr.getLength(oDim).max()) {
-      rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
+        && limit - profileValue < rr.getLength(otherDim).max()) {
+      rr.getLength(otherDim)
+          .domain
+          .inMax(store.level, rr.getLength(otherDim), limit - profileValue);
     }
   }
 
   private void processPruneEnd(
       Event e,
-      int oDim,
+      int otherDim,
       int dim,
       int limit,
       boolean[] inProfile,
@@ -512,7 +514,7 @@ public class Diffn extends Nooverlap {
     int ri = rr.index;
     int profileValue = curProfile[0];
     if (inProfile[ri]) {
-      profileValue -= rr.getLength(oDim).min();
+      profileValue -= rr.getLength(otherDim).min();
     }
     if (rr.exists()
         && startExcluded[0] != Integer.MAX_VALUE
@@ -530,8 +532,10 @@ public class Diffn extends Nooverlap {
     }
     if (rr.lst(dim) <= e.date()
         && e.date() < rr.ect(dim)
-        && limit - profileValue < rr.getLength(oDim).max()) {
-      rr.getLength(oDim).domain.inMax(store.level, rr.getLength(oDim), limit - profileValue);
+        && limit - profileValue < rr.getLength(otherDim).max()) {
+      rr.getLength(otherDim)
+          .domain
+          .inMax(store.level, rr.getLength(otherDim), limit - profileValue);
     }
     int maxDuration = IntDomain.subtractInt(lastBarier[0], rr.getOrigin(dim).min());
     if (maxDuration < rr.getLength(dim).max()) {
@@ -560,29 +564,31 @@ public class Diffn extends Nooverlap {
     }
   }
 
-  private void addBlockToSweepLine(List<Interval> sweepLine, Interval eBlock) {
+  private void addBlockToSweepLine(List<Interval> sweepLine, Interval eventBlock) {
     Interval previous = new Interval(IntDomain.MIN_INT, IntDomain.MIN_INT);
     for (int i = 0; i < sweepLine.size(); i++) {
       Interval sweepLineElement = sweepLine.get(i);
-      if ((eBlock.max() > sweepLineElement.min() && eBlock.max() <= sweepLineElement.max())
-          || (eBlock.min() >= sweepLineElement.min() && eBlock.min() < sweepLineElement.max())) {
+      if ((eventBlock.max() > sweepLineElement.min() && eventBlock.max() <= sweepLineElement.max())
+          || (eventBlock.min() >= sweepLineElement.min()
+              && eventBlock.min() < sweepLineElement.max())) {
         throw Store.failException; // overlap
       }
-      if (eBlock.max() <= sweepLineElement.min() && eBlock.min() >= previous.max()) {
-        sweepLine.add(i, eBlock);
+      if (eventBlock.max() <= sweepLineElement.min() && eventBlock.min() >= previous.max()) {
+        sweepLine.add(i, eventBlock);
         return;
       }
       previous = sweepLineElement;
     }
-    if (sweepLine.getLast().max() <= eBlock.min()) {
-      sweepLine.add(eBlock);
+    if (sweepLine.getLast().max() <= eventBlock.min()) {
+      sweepLine.add(eventBlock);
     }
   }
 
-  private void removeBlockFromSweepLine(List<Interval> sweepLine, Interval eBlock) {
+  private void removeBlockFromSweepLine(List<Interval> sweepLine, Interval eventBlock) {
     for (int i = 0; i < sweepLine.size(); i++) {
       Interval sweepLineElement = sweepLine.get(i);
-      if (sweepLineElement.min() == eBlock.min() && sweepLineElement.max() == eBlock.max()) {
+      if (sweepLineElement.min() == eventBlock.min()
+          && sweepLineElement.max() == eventBlock.max()) {
         sweepLine.remove(i);
         return;
       }

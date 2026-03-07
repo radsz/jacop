@@ -39,8 +39,8 @@ package org.jacop.jasat.core.clauses;
  */
 public final class ClauseState {
 
-  /** */
-  public static final int UNKNOWN_CLAUSE = 0; // too much non affected literals
+  /** Indicates too many non-affected literals to determine clause state. */
+  public static final int UNKNOWN_CLAUSE = 0;
 
   public static final int UNSATISFIABLE_CLAUSE = 1; // unsatisfiable clause
   public static final int SATISFIED_CLAUSE = 2;

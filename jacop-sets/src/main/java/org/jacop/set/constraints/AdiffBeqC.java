@@ -60,21 +60,21 @@ public class AdiffBeqC extends AbstractSetOpBeqC {
 
   @Override
   protected void propagateOperation(
-      Store store, boolean aHasChanged, boolean bHasChanged, boolean cHasChanged) {
+      Store store, boolean changedA, boolean changedB, boolean changedC) {
 
-    if (cHasChanged) {
+    if (changedC) {
       a.domain.inGlb(store.level, a, c.domain.glb());
     }
 
-    if (bHasChanged || cHasChanged) {
+    if (changedB || changedC) {
       a.domain.inLub(store.level, a, b.domain.lub().union(c.domain.lub()));
     }
 
-    if (cHasChanged) {
+    if (changedC) {
       b.domain.inLub(store.level, b, b.domain.lub().subtract(c.domain.glb()));
     }
 
-    if (aHasChanged || bHasChanged) {
+    if (changedA || changedB) {
       c.domain.inGlb(store.level, c, a.domain.glb().subtract(b.domain.lub()));
       c.domain.inLub(store.level, c, a.domain.lub().subtract(b.domain.glb()));
     }

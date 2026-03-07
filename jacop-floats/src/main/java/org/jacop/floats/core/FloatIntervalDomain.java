@@ -66,10 +66,6 @@ public class FloatIntervalDomain extends FloatDomain {
   private static final String ASSERT_MAX_NOT_ADDED = "The maximum was not added";
 
   /**
-   * Copies metadata from this domain into the result domain and installs it on the variable. Sets
-   * prevDomain to this.
-   */
-  /**
    * Clones this domain and installs the clone on the variable, returning the clone for further
    * modification.
    *
@@ -334,15 +330,6 @@ public class FloatIntervalDomain extends FloatDomain {
     }
   }
 
-  /**
-   * Computes intersection of this domain with input intervals, optionally shifted.
-   *
-   * @param inputIntervals the input interval array
-   * @param inputSize the number of intervals in inputIntervals
-   * @param shift the shift to apply to input intervals (0.0 for no shift)
-   * @return the intersection result, or null if no change needed
-   * @throws RuntimeException if intersection is empty (failException)
-   */
   /**
    * Computes the intersection of this domain with the range [min, max]. Assumes the caller has
    * already verified the range overlaps this domain.

@@ -58,35 +58,35 @@ public class AintersectBeqC extends AbstractSetOpBeqC {
 
   @Override
   protected void propagateOperation(
-      Store store, boolean aHasChanged, boolean bHasChanged, boolean cHasChanged) {
+      Store store, boolean changedA, boolean changedB, boolean changedC) {
 
-    if (cHasChanged) {
+    if (changedC) {
       a.domain.inGlb(store.level, a, c.domain.glb());
     }
 
-    if (bHasChanged || cHasChanged) {
+    if (changedB || changedC) {
       IntDomain temp = b.domain.glb().subtract(c.domain.lub());
       if (!temp.isEmpty()) {
         a.domain.inLub(store.level, a, a.domain.lub().subtract(temp));
       }
     }
 
-    if (cHasChanged) {
+    if (changedC) {
       b.domain.inGlb(store.level, b, c.domain.glb());
     }
 
-    if (cHasChanged || aHasChanged) {
+    if (changedC || changedA) {
       IntDomain temp = a.domain.glb().subtract(c.domain.lub());
       if (!temp.isEmpty()) {
         b.domain.inLub(store.level, b, b.domain.lub().subtract(temp));
       }
     }
 
-    if (bHasChanged || aHasChanged) {
+    if (changedB || changedA) {
       c.domain.inGlb(store.level, c, a.domain.glb().intersect(b.domain.glb()));
     }
 
-    if (bHasChanged || aHasChanged) {
+    if (changedB || changedA) {
       c.domain.inLub(store.level, c, a.domain.lub().intersect(b.domain.lub()));
     }
 

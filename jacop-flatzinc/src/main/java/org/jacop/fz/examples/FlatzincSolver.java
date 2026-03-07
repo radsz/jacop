@@ -57,7 +57,7 @@ public class FlatzincSolver {
 
   void ex(String[] args) {
 
-    long t1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
 
     if (args.length == 0) {
       args = new String[2];

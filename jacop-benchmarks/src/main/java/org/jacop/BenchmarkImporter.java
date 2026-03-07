@@ -195,6 +195,7 @@ public class BenchmarkImporter {
           case DUPLICATE, CAPPED, NON_DETERMINISTIC, TOO_LARGE -> {
             // benign skips: don't count as consecutive hard failures
           }
+          default -> throw new IllegalStateException("Unexpected result: " + result);
         }
       } catch (Exception e) {
         System.err.println(

@@ -1278,22 +1278,22 @@ class GlobalConstraints implements ParserTreeConstants {
   /**
    * Builds a DFA with the given number of states, initial state, and final states.
    *
-   * @param Q the number of states
+   * @param stateCount the number of states
    * @param q0 the initial state (1-based)
-   * @param F the set of final states (1-based)
+   * @param finalStates the set of final states (1-based)
    * @return a pair of [Fsm dfa, FsmState[] states]
    */
-  private static Object[] buildDfaStructure(int Q, int q0, IntDomain F) {
+  private static Object[] buildDfaStructure(int stateCount, int q0, IntDomain finalStates) {
     Fsm dfa = new Fsm();
-    FsmState[] s = new FsmState[Q];
+    FsmState[] s = new FsmState[stateCount];
     for (int i = 0; i < s.length; i++) {
       s[i] = new FsmState();
       dfa.allStates.add(s[i]);
     }
     dfa.initState = s[q0 - 1];
-    ValueEnumeration finalStates = F.valueEnumeration();
-    while (finalStates.hasMoreElements()) {
-      dfa.finalStates.add(s[finalStates.nextElement() - 1]);
+    ValueEnumeration finalStateEnum = finalStates.valueEnumeration();
+    while (finalStateEnum.hasMoreElements()) {
+      dfa.finalStates.add(s[finalStateEnum.nextElement() - 1]);
     }
     return new Object[] {dfa, s};
   }
