@@ -355,7 +355,7 @@ public class NetworkBuilder {
 
     for (Arc arc : arcList) {
       if (arc.head == node || arc.tail() == node) {
-        ensureCompanionXVar(store, arc);
+        ensureCompanionXvar(store, arc);
         IntVar v = arc.getCompanion().xVar;
         if (arc.head == node) {
           in.add(v);
@@ -387,7 +387,7 @@ public class NetworkBuilder {
     }
   }
 
-  private void ensureCompanionXVar(Store store, Arc arc) {
+  private void ensureCompanionXvar(Store store, Arc arc) {
     if (arc.getCompanion() == null) {
       arc.companion = new ArcCompanion(arc, 0);
     }

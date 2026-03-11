@@ -394,6 +394,13 @@ class BoundDomain extends IntDomain {
     return new BoundDomain(this.minBound, this.maxBound - 1);
   }
 
+  private BoundDomain computeInComplementResult(int min, int max) {
+    if (max < this.maxBound) {
+      return new BoundDomain(max + 1, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, min - 1);
+  }
+
   @Override
   public void inComplement(int storeLevel, Var v, int complement) {
 
@@ -422,13 +429,6 @@ class BoundDomain extends IntDomain {
       installResultDomain(result, storeLevel, v);
       notifyDomainChange(v, result.singleton());
     }
-  }
-
-  private BoundDomain computeInComplementResult(int min, int max) {
-    if (max < this.maxBound) {
-      return new BoundDomain(max + 1, this.maxBound);
-    }
-    return new BoundDomain(this.minBound, min - 1);
   }
 
   @Override

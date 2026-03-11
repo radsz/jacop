@@ -1005,9 +1005,9 @@ class LinearConstraints implements ParserTreeConstants {
         // (x != y) <=> b == x xor y = b
         support.pose(new XorBool(new IntVar[] {x, y}, boolVar));
       } else if (x.singleton()) {
-        poseXneqCReifiedOrImplied(y, x.value(), boolVar, isReified);
+        poseXneqConstReifiedOrImplied(y, x.value(), boolVar, isReified);
       } else if (y.singleton()) {
-        poseXneqCReifiedOrImplied(x, y.value(), boolVar, isReified);
+        poseXneqConstReifiedOrImplied(x, y.value(), boolVar, isReified);
       } else {
         poseReifiedOrImplied(new XneqY(x, y), boolVar, isReified);
       }
@@ -1046,7 +1046,8 @@ class LinearConstraints implements ParserTreeConstants {
    * @param boolVar the boolean variable for reification/implication
    * @param isReified true to use reified, false to use implied
    */
-  private void poseXneqCReifiedOrImplied(IntVar var, int value, IntVar boolVar, boolean isReified) {
+  private void poseXneqConstReifiedOrImplied(
+      IntVar var, int value, IntVar boolVar, boolean isReified) {
     if (isReified) {
       support.pose(support.fzXneqCreified(var, value, boolVar));
     } else {

@@ -84,11 +84,11 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
       store.propagationHasOccurred = false;
 
       if (x.singleton()) {
-        propagateWhenXSingleton(store);
+        propagateWhenXsingleton(store);
       } else if (y.singleton()) {
-        propagateWhenYSingleton(store);
+        propagateWhenYsingleton(store);
       } else if (z.singleton()) {
-        propagateWhenZSingleton(store);
+        propagateWhenZsingleton(store);
       } else {
         propagateWhenNoneSingleton(store);
       }
@@ -96,7 +96,7 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
     } while (store.propagationHasOccurred);
   }
 
-  private void propagateWhenXSingleton(Store store) {
+  private void propagateWhenXsingleton(Store store) {
     int xValue = x.value();
     IntDomain yDom = y.dom();
     int ySize = yDom.noIntervals();
@@ -131,7 +131,7 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
     y.domain.inShift(store.level, y, temp, xValue);
   }
 
-  private void propagateWhenYSingleton(Store store) {
+  private void propagateWhenYsingleton(Store store) {
     int yValue = y.value();
     IntDomain xDom = x.dom();
     int xSize = x.domain.noIntervals();
@@ -166,7 +166,7 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
     x.domain.inShift(store.level, x, temp, yValue);
   }
 
-  private void propagateWhenZSingleton(Store store) {
+  private void propagateWhenZsingleton(Store store) {
     int zValue = z.value();
     IntDomain xDom = x.dom();
     int xSize = xDom.noIntervals();

@@ -372,6 +372,124 @@ class ComparisonConstraints implements ParserTreeConstants {
     }
   }
 
+  /** Returns null if already handled, or the constraint to pose. */
+  private PrimitiveConstraint intComparisonConstVar(
+      int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2, IntVar v3, boolean isReified) {
+    IntVar v2 = support.getVariable(p2);
+    int i1 = support.getInt(p1);
+    validateConstantBounds(i1);
+    return switch (operation) {
+      case Support.EQ -> intComparisonConstVarEq(v2, i1, v3, isReified);
+      case Support.NE -> intComparisonConstVarNe(v2, i1, v3, isReified);
+      case Support.LT -> intComparisonConstVarLt(v2, i1, v3);
+      case Support.GT -> intComparisonConstVarGt(v2, i1, v3);
+      case Support.LE -> intComparisonConstVarLe(v2, i1, v3);
+      case Support.GE -> intComparisonConstVarGe(v2, i1, v3);
+      default -> throw new RuntimeException("Internal error in " + getClass().getName());
+    };
+  }
+
+  private PrimitiveConstraint intComparisonConstVarEq(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
+    if (isReified && support.reif.size(v2) > support.reif.minSize) {
+      return null;
+    }
+    if (!v2.domain.contains(i1)) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    if (v2.min() == i1 && v2.singleton()) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (v3.max() == 0) {
+      v2.domain.inComplement(store.level, v2, i1);
+      return null;
+    }
+    if (v3.min() == 1) {
+      v2.domain.inValue(store.level, v2, i1);
+      return null;
+    }
+    if (isReified && generateForEqC(v2, i1, v3)) {
+      return null;
+    }
+    if (isReified) {
+      support.pose(support.fzXeqCreified(v2, i1, v3));
+    } else {
+      support.pose(support.fzXeqCimplied(v2, i1, v3));
+    }
+    return null;
+  }
+
+  private PrimitiveConstraint intComparisonConstVarNe(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
+    if (v2.min() > i1 || v2.max() < i1) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (v2.min() == i1 && v2.singleton()) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    if (isReified && generateForNeqC(v2, i1, v3)) {
+      return null;
+    }
+    if (isReified) {
+      support.pose(support.fzXneqCreified(v2, i1, v3));
+    } else {
+      support.pose(support.fzXneqCimplied(v2, i1, v3));
+    }
+    return null;
+  }
+
+  private PrimitiveConstraint intComparisonConstVarLt(IntVar v2, int i1, IntVar v3) {
+    if (i1 < v2.min()) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (i1 >= v2.max()) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    return new XgtC(v2, i1);
+  }
+
+  private PrimitiveConstraint intComparisonConstVarGt(IntVar v2, int i1, IntVar v3) {
+    if (i1 > v2.max()) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (i1 <= v2.min()) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    return new XltC(v2, i1);
+  }
+
+  private PrimitiveConstraint intComparisonConstVarLe(IntVar v2, int i1, IntVar v3) {
+    if (i1 <= v2.min()) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (i1 > v2.max()) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    return new XgteqC(v2, i1);
+  }
+
+  private PrimitiveConstraint intComparisonConstVarGe(IntVar v2, int i1, IntVar v3) {
+    if (i1 > v2.max()) {
+      v3.domain.inValue(store.level, v3, 1);
+      return null;
+    }
+    if (i1 < v2.min()) {
+      v3.domain.inValue(store.level, v3, 0);
+      return null;
+    }
+    return new XlteqC(v2, i1);
+  }
+
   private void intComparisonVarConst(int operation, IntVar v1, int i2) {
     switch (operation) {
       case Support.EQ:
@@ -394,61 +512,6 @@ class ComparisonConstraints implements ParserTreeConstants {
         break;
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());
-    }
-  }
-
-  private void intComparisonVarVar(int operation, IntVar v1, IntVar v2) {
-    switch (operation) {
-      case Support.EQ:
-        support.pose(new XeqY(v1, v2));
-        break;
-      case Support.NE:
-        support.pose(new XneqY(v1, v2));
-        break;
-      case Support.LT:
-        support.pose(new XltY(v1, v2));
-        break;
-      case Support.GT:
-        support.pose(new XgtY(v1, v2));
-        break;
-      case Support.LE:
-        support.pose(new XlteqY(v1, v2));
-        break;
-      case Support.GE:
-        support.pose(new XgteqY(v1, v2));
-        break;
-      default:
-        throw new RuntimeException("Internal error in " + getClass().getName());
-    }
-  }
-
-  void int_comparison_reif(int operation, SimpleNode node) {
-    int_comparison_reif_imp(operation, node, true);
-  }
-
-  void int_comparison_imp(int operation, SimpleNode node) {
-    int_comparison_reif_imp(operation, node, false);
-  }
-
-  private void int_comparison_reif_imp(int operation, SimpleNode node, boolean isReified) {
-
-    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-    IntVar v3 = support.getVariable(p3);
-
-    PrimitiveConstraint c;
-    if (p2.getType() == 0 || p2.getType() == 1) {
-      c = intComparisonVarConst(operation, p1, p2, v3, isReified);
-    } else if (p1.getType() == 0 || p1.getType() == 1) {
-      c = intComparisonConstVar(operation, p1, p2, v3, isReified);
-    } else {
-      c = intComparisonVarVar(operation, p1, p2, v3, isReified);
-    }
-
-    if (c != null) {
-      Constraint cr = isReified ? new Reified(c, v3) : new Implies(v3, c);
-      support.pose(cr);
     }
   }
 
@@ -634,122 +697,29 @@ class ComparisonConstraints implements ParserTreeConstants {
     return new XgteqC(v1, i2);
   }
 
-  /** Returns null if already handled, or the constraint to pose. */
-  private PrimitiveConstraint intComparisonConstVar(
-      int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2, IntVar v3, boolean isReified) {
-    IntVar v2 = support.getVariable(p2);
-    int i1 = support.getInt(p1);
-    validateConstantBounds(i1);
-    return switch (operation) {
-      case Support.EQ -> intComparisonConstVarEq(v2, i1, v3, isReified);
-      case Support.NE -> intComparisonConstVarNe(v2, i1, v3, isReified);
-      case Support.LT -> intComparisonConstVarLt(v2, i1, v3);
-      case Support.GT -> intComparisonConstVarGt(v2, i1, v3);
-      case Support.LE -> intComparisonConstVarLe(v2, i1, v3);
-      case Support.GE -> intComparisonConstVarGe(v2, i1, v3);
-      default -> throw new RuntimeException("Internal error in " + getClass().getName());
-    };
-  }
-
-  private PrimitiveConstraint intComparisonConstVarEq(
-      IntVar v2, int i1, IntVar v3, boolean isReified) {
-    if (isReified && support.reif.size(v2) > support.reif.minSize) {
-      return null;
+  private void intComparisonVarVar(int operation, IntVar v1, IntVar v2) {
+    switch (operation) {
+      case Support.EQ:
+        support.pose(new XeqY(v1, v2));
+        break;
+      case Support.NE:
+        support.pose(new XneqY(v1, v2));
+        break;
+      case Support.LT:
+        support.pose(new XltY(v1, v2));
+        break;
+      case Support.GT:
+        support.pose(new XgtY(v1, v2));
+        break;
+      case Support.LE:
+        support.pose(new XlteqY(v1, v2));
+        break;
+      case Support.GE:
+        support.pose(new XgteqY(v1, v2));
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
     }
-    if (!v2.domain.contains(i1)) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    if (v2.min() == i1 && v2.singleton()) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (v3.max() == 0) {
-      v2.domain.inComplement(store.level, v2, i1);
-      return null;
-    }
-    if (v3.min() == 1) {
-      v2.domain.inValue(store.level, v2, i1);
-      return null;
-    }
-    if (isReified && generateForEqC(v2, i1, v3)) {
-      return null;
-    }
-    if (isReified) {
-      support.pose(support.fzXeqCreified(v2, i1, v3));
-    } else {
-      support.pose(support.fzXeqCimplied(v2, i1, v3));
-    }
-    return null;
-  }
-
-  private PrimitiveConstraint intComparisonConstVarNe(
-      IntVar v2, int i1, IntVar v3, boolean isReified) {
-    if (v2.min() > i1 || v2.max() < i1) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (v2.min() == i1 && v2.singleton()) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    if (isReified && generateForNeqC(v2, i1, v3)) {
-      return null;
-    }
-    if (isReified) {
-      support.pose(support.fzXneqCreified(v2, i1, v3));
-    } else {
-      support.pose(support.fzXneqCimplied(v2, i1, v3));
-    }
-    return null;
-  }
-
-  private PrimitiveConstraint intComparisonConstVarLt(IntVar v2, int i1, IntVar v3) {
-    if (i1 < v2.min()) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (i1 >= v2.max()) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    return new XgtC(v2, i1);
-  }
-
-  private PrimitiveConstraint intComparisonConstVarGt(IntVar v2, int i1, IntVar v3) {
-    if (i1 > v2.max()) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (i1 <= v2.min()) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    return new XltC(v2, i1);
-  }
-
-  private PrimitiveConstraint intComparisonConstVarLe(IntVar v2, int i1, IntVar v3) {
-    if (i1 <= v2.min()) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (i1 > v2.max()) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    return new XgteqC(v2, i1);
-  }
-
-  private PrimitiveConstraint intComparisonConstVarGe(IntVar v2, int i1, IntVar v3) {
-    if (i1 > v2.max()) {
-      v3.domain.inValue(store.level, v3, 1);
-      return null;
-    }
-    if (i1 < v2.min()) {
-      v3.domain.inValue(store.level, v3, 0);
-      return null;
-    }
-    return new XlteqC(v2, i1);
   }
 
   /** Returns null if already handled, or the constraint to pose. */
@@ -845,6 +815,36 @@ class ComparisonConstraints implements ParserTreeConstants {
       support.pose(support.fzXneqCreified(v, c, b));
     } else {
       support.pose(support.fzXneqCimplied(v, c, b));
+    }
+  }
+
+  void int_comparison_reif(int operation, SimpleNode node) {
+    int_comparison_reif_imp(operation, node, true);
+  }
+
+  void int_comparison_imp(int operation, SimpleNode node) {
+    int_comparison_reif_imp(operation, node, false);
+  }
+
+  private void int_comparison_reif_imp(int operation, SimpleNode node, boolean isReified) {
+
+    ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+    ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+    ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+    IntVar v3 = support.getVariable(p3);
+
+    PrimitiveConstraint c;
+    if (p2.getType() == 0 || p2.getType() == 1) {
+      c = intComparisonVarConst(operation, p1, p2, v3, isReified);
+    } else if (p1.getType() == 0 || p1.getType() == 1) {
+      c = intComparisonConstVar(operation, p1, p2, v3, isReified);
+    } else {
+      c = intComparisonVarVar(operation, p1, p2, v3, isReified);
+    }
+
+    if (c != null) {
+      Constraint cr = isReified ? new Reified(c, v3) : new Implies(v3, c);
+      support.pose(cr);
     }
   }
 

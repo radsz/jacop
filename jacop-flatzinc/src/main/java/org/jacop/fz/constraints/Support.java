@@ -873,15 +873,15 @@ public class Support implements ParserTreeConstants {
       return;
     }
     if (b.max() == 0) {
-      propagateFzXeqYWhenBZero(store, x, y, isReified, removeConstraint);
+      propagateFzXeqYwhenBzero(store, x, y, isReified, removeConstraint);
       return;
     }
     if (b.min() == 1) {
-      propagateFzXeqYWhenBOne(store, x, y);
+      propagateFzXeqYwhenBone(store, x, y);
     }
   }
 
-  private void propagateFzXeqYWhenBZero(
+  private void propagateFzXeqYwhenBzero(
       Store store, IntVar x, IntVar y, boolean isReified, Runnable removeConstraint) {
     if (isReified) {
       if (y.singleton()) {
@@ -897,7 +897,7 @@ public class Support implements ParserTreeConstants {
     }
   }
 
-  private void propagateFzXeqYWhenBOne(Store store, IntVar x, IntVar y) {
+  private void propagateFzXeqYwhenBone(Store store, IntVar x, IntVar y) {
     do {
       x.domain.in(store.level, x, y.domain);
       store.propagationHasOccurred = false;

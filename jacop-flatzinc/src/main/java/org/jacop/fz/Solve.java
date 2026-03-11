@@ -621,6 +621,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  void setSearchTimeout(RestartSearch<T> search) {
+    int to = options.getTimeOut();
+    if (to > 0) {
+      search.setTimeOutMilliseconds(to);
+    }
+  }
+
+  /**
+   * Sets timeout on all searches in a list if timeout option is configured.
+   *
+   * @param searches the list of searches to set timeout on
+   */
+  void setSearchTimeout(ArrayList<Search<T>> searches) {
+    int to = options.getTimeOut();
+    if (to > 0) {
+      for (Search<T> s : searches) {
+        s.setTimeOutMilliseconds(to);
+      }
+    }
+  }
+
   /**
    * Executes a search with optional restart and cost variable.
    *
@@ -631,6 +652,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeSearch(DepthFirstSearch<T> label, Var costVar, String solveType) {
     return executeSearch(label, variableSelection, costVar, solveType);
+  }
+
+  /**
+   * Executes a search with optional restart and cost variable, using specified selection.
+   *
+   * @param label the depth first search to execute
+   * @param select the choice point selector to use
+   * @param costVar the cost variable (null for satisfy)
+   * @param solveType the solve type string for debug output ("satisfy", "minimize", "maximize")
+   * @return true if a solution was found, false otherwise
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeSearch(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (!options.runSearch()) {
+      flatzincDfs = label;
+      flatzincVariableSelection = select;
+      flatzincCost = costVar;
+      return false;
+    }
+    try {
+      if (restartCalculator != null) {
+        return executeRestartSearch(label, select, costVar, solveType);
+      }
+      return executeNonRestartSearch(label, select, costVar, solveType);
+    } catch (NumberSolutionsReached _) {
+      return numberSolutions > 0;
+    }
   }
 
   /**
@@ -660,34 +709,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           default -> throw new RuntimeException("Internal error in " + getClass().getName());
         };
     IO.println(solve + " : " + si);
-  }
-
-  /**
-   * Executes a search with optional restart and cost variable, using specified selection.
-   *
-   * @param label the depth first search to execute
-   * @param select the choice point selector to use
-   * @param costVar the cost variable (null for satisfy)
-   * @param solveType the solve type string for debug output ("satisfy", "minimize", "maximize")
-   * @return true if a solution was found, false otherwise
-   */
-  @SuppressWarnings("unchecked")
-  private boolean executeSearch(
-      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
-    if (!options.runSearch()) {
-      flatzincDfs = label;
-      flatzincVariableSelection = select;
-      flatzincCost = costVar;
-      return false;
-    }
-    try {
-      if (restartCalculator != null) {
-        return executeRestartSearch(label, select, costVar, solveType);
-      }
-      return executeNonRestartSearch(label, select, costVar, solveType);
-    } catch (NumberSolutionsReached _) {
-      return numberSolutions > 0;
-    }
   }
 
   @SuppressWarnings("unchecked")
@@ -757,27 +778,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         pose(new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
         costVariable = max_cost;
         return max_cost;
-      }
-    }
-  }
-
-  void setSearchTimeout(RestartSearch<T> search) {
-    int to = options.getTimeOut();
-    if (to > 0) {
-      search.setTimeOutMilliseconds(to);
-    }
-  }
-
-  /**
-   * Sets timeout on all searches in a list if timeout option is configured.
-   *
-   * @param searches the list of searches to set timeout on
-   */
-  void setSearchTimeout(ArrayList<Search<T>> searches) {
-    int to = options.getTimeOut();
-    if (to > 0) {
-      for (Search<T> s : searches) {
-        s.setTimeOutMilliseconds(to);
       }
     }
   }

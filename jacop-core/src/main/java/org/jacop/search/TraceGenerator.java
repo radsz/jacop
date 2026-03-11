@@ -424,6 +424,36 @@ public class TraceGenerator<T extends Var>
     return returnCode;
   }
 
+  /** {@inheritDoc} */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+
+    boolean returnCode = true;
+
+    if (exitChildListeners != null) {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, status);
+      }
+      returnCode = code;
+    }
+
+    currentSearchNode = searchStack.pop();
+
+    if (!status && returnCode) {
+
+      currentSearchNode = new SearchNode();
+
+      currentSearchNode.id = searchNodeId++;
+      currentSearchNode.equal = false;
+      currentSearchNode.c = choice;
+      currentSearchNode.previous = searchStack.peek().id;
+
+      searchStack.push(currentSearchNode);
+    }
+
+    return returnCode;
+  }
+
   private boolean applyExitChildListenersLeftChild(T v, int value, boolean status) {
     if (exitChildListeners == null) {
       return true;
@@ -461,36 +491,6 @@ public class TraceGenerator<T extends Var>
       // SetDomain not available - skip this operation
     }
     return null;
-  }
-
-  /** {@inheritDoc} */
-  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-
-    boolean returnCode = true;
-
-    if (exitChildListeners != null) {
-      boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(choice, status);
-      }
-      returnCode = code;
-    }
-
-    currentSearchNode = searchStack.pop();
-
-    if (!status && returnCode) {
-
-      currentSearchNode = new SearchNode();
-
-      currentSearchNode.id = searchNodeId++;
-      currentSearchNode.equal = false;
-      currentSearchNode.c = choice;
-      currentSearchNode.previous = searchStack.peek().id;
-
-      searchStack.push(currentSearchNode);
-    }
-
-    return returnCode;
   }
 
   /** {@inheritDoc} */

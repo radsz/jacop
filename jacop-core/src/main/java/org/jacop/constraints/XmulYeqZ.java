@@ -77,7 +77,7 @@ public class XmulYeqZ extends AbstractXopYeqZ {
   public void consistency(Store store) {
 
     if (xSquare) {
-      propagateXSquareBounds(store);
+      propagateXsquareBounds(store);
     } else {
       propagateMulBounds(store);
     }
@@ -87,7 +87,7 @@ public class XmulYeqZ extends AbstractXopYeqZ {
     }
   }
 
-  private void propagateXSquareBounds(Store store) {
+  private void propagateXsquareBounds(Store store) {
     do {
       // Bounds for Z
       Interval zBounds = IntDomain.squareBounds(x.min(), x.max());

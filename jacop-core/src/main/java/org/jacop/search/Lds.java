@@ -86,6 +86,21 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
     return true;
   }
 
+  /**
+   * It is executed after exiting the left child. The parameters specify the choice point. The
+   * parameter status specifies the return code from the child. The return parameter of this
+   * function specifies if the search should continue undisturbed or exit the current search node
+   * with false. If the continuing to the right child will exceed the number of allowed
+   * discrepancies then this function will return false so the right child will not be explored.
+   */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+
+    if (!status) {
+      return handleLeftChildFailureChoice(choice);
+    }
+    return true;
+  }
+
   private boolean handleLeftChildFailureVar(T v, int value) {
     noDiscrepancies++;
     if (noDiscrepancies >= maxNoDiscrepancies) {
@@ -120,21 +135,6 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
         exitChildListener.leftChild(v, value, false);
       }
     }
-  }
-
-  /**
-   * It is executed after exiting the left child. The parameters specify the choice point. The
-   * parameter status specifies the return code from the child. The return parameter of this
-   * function specifies if the search should continue undisturbed or exit the current search node
-   * with false. If the continuing to the right child will exceed the number of allowed
-   * discrepancies then this function will return false so the right child will not be explored.
-   */
-  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-
-    if (!status) {
-      return handleLeftChildFailureChoice(choice);
-    }
-    return true;
   }
 
   private boolean handleLeftChildFailureChoice(PrimitiveConstraint choice) {

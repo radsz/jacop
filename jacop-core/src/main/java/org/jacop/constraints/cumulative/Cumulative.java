@@ -104,6 +104,27 @@ public class Cumulative extends CumulativeBasic {
     }
   }
 
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   */
+  public Cumulative(
+      List<? extends IntVar> starts,
+      List<? extends IntVar> durations,
+      List<? extends IntVar> resources,
+      IntVar limit) {
+
+    this(
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
+        limit);
+  }
+
   private void checkLimitOverflow(IntVar limit) {
     if (limit != null) {
       for (Task t : taskNormal) {
@@ -137,27 +158,6 @@ public class Cumulative extends CumulativeBasic {
       }
       capIndex++;
     }
-  }
-
-  /**
-   * It creates a cumulative constraint.
-   *
-   * @param starts variables denoting starts of the tasks.
-   * @param durations variables denoting durations of the tasks.
-   * @param resources variables denoting resource usage of the tasks.
-   * @param limit the overall limit of resources which has to be used.
-   */
-  public Cumulative(
-      List<? extends IntVar> starts,
-      List<? extends IntVar> durations,
-      List<? extends IntVar> resources,
-      IntVar limit) {
-
-    this(
-        starts.toArray(IntVar[]::new),
-        durations.toArray(IntVar[]::new),
-        resources.toArray(IntVar[]::new),
-        limit);
   }
 
   /**

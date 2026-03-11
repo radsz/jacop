@@ -147,6 +147,54 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Checks that the given parameter array and its elements are not null.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the array of objects to validate for nullness.
+   */
+  public void checkInputForNullness(String a, Object[] parameters) {
+
+    if (parameters == null) {
+      throw new IllegalArgumentException(
+          "Constraint of type "
+              + this.getClass().getSimpleName()
+              + " has parameter "
+              + a
+              + " that is null.");
+    }
+
+    for (int i = 0; i < parameters.length; i++) {
+      if (parameters[i] == null) {
+        throw new IllegalArgumentException(
+            "Constraint of type "
+                + this.getClass().getSimpleName()
+                + " has parameter "
+                + a
+                + "["
+                + i
+                + "] that is null.");
+      }
+    }
+  }
+
+  /**
+   * Checks that the given integer array parameter is not null.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the integer array to validate for nullness.
+   */
+  public void checkInputForNullness(String a, int[] parameters) {
+    if (parameters == null) {
+      throw new IllegalArgumentException(
+          "Constraint of type "
+              + this.getClass().getSimpleName()
+              + " has parameter "
+              + a
+              + " that is null.");
+    }
+  }
+
   private void validateSingleParameterArray(String[] a, Object[] parameter) {
     if (a.length != parameter.length) {
       throw new IllegalArgumentException(
@@ -205,54 +253,6 @@ public abstract class DecomposedConstraint<T extends Constraint> {
           }
         }
       }
-    }
-  }
-
-  /**
-   * Checks that the given parameter array and its elements are not null.
-   *
-   * @param a description of the parameter, used in error messages.
-   * @param parameters the array of objects to validate for nullness.
-   */
-  public void checkInputForNullness(String a, Object[] parameters) {
-
-    if (parameters == null) {
-      throw new IllegalArgumentException(
-          "Constraint of type "
-              + this.getClass().getSimpleName()
-              + " has parameter "
-              + a
-              + " that is null.");
-    }
-
-    for (int i = 0; i < parameters.length; i++) {
-      if (parameters[i] == null) {
-        throw new IllegalArgumentException(
-            "Constraint of type "
-                + this.getClass().getSimpleName()
-                + " has parameter "
-                + a
-                + "["
-                + i
-                + "] that is null.");
-      }
-    }
-  }
-
-  /**
-   * Checks that the given integer array parameter is not null.
-   *
-   * @param a description of the parameter, used in error messages.
-   * @param parameters the integer array to validate for nullness.
-   */
-  public void checkInputForNullness(String a, int[] parameters) {
-    if (parameters == null) {
-      throw new IllegalArgumentException(
-          "Constraint of type "
-              + this.getClass().getSimpleName()
-              + " has parameter "
-              + a
-              + " that is null.");
     }
   }
 

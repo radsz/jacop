@@ -1377,23 +1377,6 @@ public class IntervalDomain extends IntDomain {
     return result;
   }
 
-  private IntDomain subtractFromSparse(IntDomain domain) {
-    IntDomain result = this.cloneLight();
-    ValueEnumeration enumer = domain.valueEnumeration();
-    while (enumer.hasMoreElements()) {
-      int next = enumer.nextElement();
-      result.subtractAdapt(next);
-    }
-    if (ASSERTS_ENABLED
-        && !(!(domain instanceof SmallDenseDomain denseDomain)
-            || result.eq(this.subtract(denseDomain.toIntervalDomain())))) {
-      throw new IllegalStateException(
-          String.valueOf(
-              "Subtract function is not working" + this + "d:" + domain + "r:" + result));
-    }
-    return result;
-  }
-
   @Override
   public IntDomain subtract(IntDomain domain) {
 
@@ -1670,6 +1653,23 @@ public class IntervalDomain extends IntDomain {
     }
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
+    }
+    return result;
+  }
+
+  private IntDomain subtractFromSparse(IntDomain domain) {
+    IntDomain result = this.cloneLight();
+    ValueEnumeration enumer = domain.valueEnumeration();
+    while (enumer.hasMoreElements()) {
+      int next = enumer.nextElement();
+      result.subtractAdapt(next);
+    }
+    if (ASSERTS_ENABLED
+        && !(!(domain instanceof SmallDenseDomain denseDomain)
+            || result.eq(this.subtract(denseDomain.toIntervalDomain())))) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "Subtract function is not working" + this + "d:" + domain + "r:" + result));
     }
     return result;
   }

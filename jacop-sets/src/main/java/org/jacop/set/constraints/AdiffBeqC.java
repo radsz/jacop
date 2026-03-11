@@ -85,13 +85,13 @@ public class AdiffBeqC extends AbstractSetOpBeqC {
   }
 
   private void propagateAdiffCardinality(Store store) {
-    propagateAdiffCardinalityAMinCard(store);
+    propagateAdiffCardinalityAminCard(store);
     propagateAdiffCardinalityC(store);
     propagateAdiffCardinalityB(store);
     propagateAdiffCardinalityA(store);
   }
 
-  private void propagateAdiffCardinalityAMinCard(Store store) {
+  private void propagateAdiffCardinalityAminCard(Store store) {
     int aMinCard = a.domain.card().min();
     if (aMinCard <= 0) {
       return;

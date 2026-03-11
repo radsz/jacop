@@ -439,6 +439,36 @@ public class Store {
     changed[c.getQueueIndex()].add(c);
   }
 
+  /**
+   * This function schedules all attached (not yet satisfied constraints) for given variable for
+   * re-evaluation. This function must add all attached constraints for reevaluation but it will do
+   * it any order which suits it.
+   *
+   * @param v variable for which some pruning event has occurred.
+   * @param pruningEvent specifies the type of the pruning event.
+   * @param info it specifies detailed information about the change of the variable domain. the
+   *     inputs of the currentConstraint in the manner that would validate another execution.
+   */
+  public void addChanged(Var v, int pruningEvent, int info) {
+
+    propagationHasOccurred = true;
+
+    if (variableActivityManagement) {
+      variablesPrunned.add(v);
+    }
+
+    recordChange(v);
+
+    Domain vdomain = v.dom();
+
+    queueModelConstraintsForVariable(vdomain, v, pruningEvent);
+    queueSearchConstraintsForVariable(vdomain, v);
+
+    if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
+      queueWatchedConstraintsForVariable(v);
+    }
+  }
+
   private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
@@ -473,36 +503,6 @@ public class Store {
       if (currentConstraint != con) {
         addChanged(con);
       }
-    }
-  }
-
-  /**
-   * This function schedules all attached (not yet satisfied constraints) for given variable for
-   * re-evaluation. This function must add all attached constraints for reevaluation but it will do
-   * it any order which suits it.
-   *
-   * @param v variable for which some pruning event has occurred.
-   * @param pruningEvent specifies the type of the pruning event.
-   * @param info it specifies detailed information about the change of the variable domain. the
-   *     inputs of the currentConstraint in the manner that would validate another execution.
-   */
-  public void addChanged(Var v, int pruningEvent, int info) {
-
-    propagationHasOccurred = true;
-
-    if (variableActivityManagement) {
-      variablesPrunned.add(v);
-    }
-
-    recordChange(v);
-
-    Domain vdomain = v.dom();
-
-    queueModelConstraintsForVariable(vdomain, v, pruningEvent);
-    queueSearchConstraintsForVariable(vdomain, v);
-
-    if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
-      queueWatchedConstraintsForVariable(v);
     }
   }
 

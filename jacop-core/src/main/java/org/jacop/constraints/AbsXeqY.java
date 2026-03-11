@@ -125,10 +125,10 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
         log.debug("X {} Y {}", x, y);
       }
 
-      IntervalDomain xDom = xDomainAsInterval();
+      IntervalDomain xDom = computeXdomainInterval();
 
-      IntervalDomain yDom1 = computeYDom1FromX(xDom);
-      IntervalDomain yDom = computeYDomFromX(xDom, yDom1);
+      IntervalDomain yDom1 = computeYdom1FromX(xDom);
+      IntervalDomain yDom = computeYdomFromX(xDom, yDom1);
 
       if (DEBUG_ALL) {
         log.debug("new Ydom {}", yDom);
@@ -136,8 +136,8 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
       y.domain.in(store.level, y, yDom);
 
-      IntervalDomain yDomAsInterval = yDomainAsInterval();
-      IntervalDomain xDomFromY = computeXDomFromY(yDomAsInterval);
+      IntervalDomain yDomAsInterval = computeYdomainInterval();
+      IntervalDomain xDomFromY = computeXdomFromY(yDomAsInterval);
 
       if (DEBUG_ALL) {
         log.debug("new Xdom {}", xDomFromY);
@@ -148,7 +148,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     } while (store.propagationHasOccurred);
   }
 
-  private IntervalDomain xDomainAsInterval() {
+  private IntervalDomain computeXdomainInterval() {
     if (x.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       return (IntervalDomain) x.domain;
     }
@@ -164,7 +164,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return xDom;
   }
 
-  private IntervalDomain computeYDom1FromX(IntervalDomain xdomain) {
+  private IntervalDomain computeYdom1FromX(IntervalDomain xdomain) {
     IntervalDomain yDom1 = new IntervalDomain(xdomain.size + 1);
     Interval[] intervals = xdomain.intervals;
     int i = 0;
@@ -189,7 +189,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return yDom1;
   }
 
-  private IntervalDomain computeYDomFromX(IntervalDomain xdomain, IntervalDomain ydomain1) {
+  private IntervalDomain computeYdomFromX(IntervalDomain xdomain, IntervalDomain ydomain1) {
     Interval[] intervals = xdomain.intervals;
     int i = 0;
     for (; i < xdomain.size; i++) {
@@ -205,7 +205,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return yDom;
   }
 
-  private IntervalDomain yDomainAsInterval() {
+  private IntervalDomain computeYdomainInterval() {
     if (y.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       return (IntervalDomain) y.domain;
     }
@@ -221,7 +221,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     return yDom;
   }
 
-  private IntervalDomain computeXDomFromY(IntervalDomain ydomain) {
+  private IntervalDomain computeXdomFromY(IntervalDomain ydomain) {
     IntervalDomain xDom = new IntervalDomain(ydomain.size + 1);
     for (int i = ydomain.size - 1; i >= 0; i--) {
       xDom.unionAdapt(-ydomain.intervals[i].max(), -ydomain.intervals[i].min());
@@ -296,12 +296,12 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
     do {
       store.propagationHasOccurred = false;
-      applyNotConsistencyWhenYSingleton(store);
-      applyNotConsistencyWhenXSingleton(store);
+      applyNotConsistencyWhenYsingleton(store);
+      applyNotConsistencyWhenXsingleton(store);
     } while (store.propagationHasOccurred);
   }
 
-  private void applyNotConsistencyWhenYSingleton(Store store) {
+  private void applyNotConsistencyWhenYsingleton(Store store) {
     if (!y.singleton()) {
       return;
     }
@@ -309,7 +309,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     x.domain.inComplement(store.level, x, -y.value());
   }
 
-  private void applyNotConsistencyWhenXSingleton(Store store) {
+  private void applyNotConsistencyWhenXsingleton(Store store) {
     if (!x.singleton()) {
       return;
     }
@@ -326,7 +326,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
     IntDomain yDom = y.domain;
     int xSize = xDom.noIntervals();
     for (int i = 0; i < xSize; i++) {
-      if (yIntersectsAbsImage(xDom, yDom, i)) {
+      if (checkYintersectsAbsImage(xDom, yDom, i)) {
         return false;
       }
     }
@@ -336,7 +336,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
   /**
    * Returns true if yDom intersects the image of the i-th x-interval under the absolute value map.
    */
-  private boolean yIntersectsAbsImage(IntDomain xdomain, IntDomain ydomain, int i) {
+  private boolean checkYintersectsAbsImage(IntDomain xdomain, IntDomain ydomain, int i) {
     int right = xdomain.rightElement(i);
     int left = xdomain.leftElement(i);
     if (right <= 0) {

@@ -132,7 +132,7 @@ public class Sudoku extends ExampleFd {
   /** Builds the Sudoku model using primitive XneqY constraints. */
   protected void buildModelBasic(int[][] description) {
     createVariables(description);
-    addXneqYConstraints();
+    addInequalityConstraints();
   }
 
   /** Creates variables for the Sudoku grid. */
@@ -186,16 +186,16 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  /** Adds XneqY constraints for rows, columns, and blocks. */
-  private void addXneqYConstraints() {
+  /** Adds inequality constraints for rows, columns, and blocks. */
+  private void addInequalityConstraints() {
     int noRows = 3;
     int noColumns = 3;
-    addXneqYConstraintsForRows(noRows, noColumns);
-    addXneqYConstraintsForColumns(noRows, noColumns);
-    addXneqYConstraintsForBlocks(noRows, noColumns);
+    addInequalityConstraintsForRows(noRows, noColumns);
+    addInequalityConstraintsForColumns(noRows, noColumns);
+    addInequalityConstraintsForBlocks(noRows, noColumns);
   }
 
-  private void addXneqYConstraintsForRows(int noRows, int noColumns) {
+  private void addInequalityConstraintsForRows(int noRows, int noColumns) {
     int n = noRows * noColumns;
     for (int i = 0; i < n; i++) {
       for (int k = 0; k < n; k++) {
@@ -206,7 +206,7 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  private void addXneqYConstraintsForColumns(int noRows, int noColumns) {
+  private void addInequalityConstraintsForColumns(int noRows, int noColumns) {
     int n = noRows * noColumns;
     for (int i = 0; i < n; i++) {
       for (int k = 0; k < n; k++) {
@@ -217,7 +217,7 @@ public class Sudoku extends ExampleFd {
     }
   }
 
-  private void addXneqYConstraintsForBlocks(int noRows, int noColumns) {
+  private void addInequalityConstraintsForBlocks(int noRows, int noColumns) {
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
         List<IntVar> block = new ArrayList<>();

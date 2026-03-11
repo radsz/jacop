@@ -89,11 +89,11 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     z.domain.in(store.level, z, reminderMin, reminderMax);
 
     if (y.singleton()) {
-      propagateWhenYSingleton(store);
+      propagateWhenYsingleton(store);
     }
 
     if (x.singleton()) {
-      propagateWhenXSingleton(store);
+      propagateWhenXsingleton(store);
     }
 
     reminderMin = z.min();
@@ -110,27 +110,27 @@ public class XmodYeqZ extends AbstractXopYeqZ {
 
   private int[] computeReminderBounds() {
     if (x.min() >= 0) {
-      return computeReminderBoundsXNonNegative();
+      return computeReminderBoundsXnonNegative();
     }
     if (x.max() < 0) {
-      return computeReminderBoundsXNegative();
+      return computeReminderBoundsXnegative();
     }
-    return computeReminderBoundsXMixed();
+    return computeReminderBoundsXmixed();
   }
 
-  private int[] computeReminderBoundsXNonNegative() {
+  private int[] computeReminderBoundsXnonNegative() {
     int reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
     reminderMax = Math.min(reminderMax, x.max());
     return new int[] {0, reminderMax};
   }
 
-  private int[] computeReminderBoundsXNegative() {
+  private int[] computeReminderBoundsXnegative() {
     int reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
     reminderMin = Math.max(reminderMin, x.min());
     return new int[] {reminderMin, 0};
   }
 
-  private int[] computeReminderBoundsXMixed() {
+  private int[] computeReminderBoundsXmixed() {
     int reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
     int reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
     reminderMin = Math.max(reminderMin, x.min());
@@ -138,7 +138,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     return new int[] {reminderMin, reminderMax};
   }
 
-  private void propagateWhenYSingleton(Store store) {
+  private void propagateWhenYsingleton(Store store) {
     if (x.domain.getSize() < 100) {
       int absY = Math.abs(y.value());
       IntDomain d = makeDomain(x, absY, z);
@@ -173,7 +173,7 @@ public class XmodYeqZ extends AbstractXopYeqZ {
     }
   }
 
-  private void propagateWhenXSingleton(Store store) {
+  private void propagateWhenXsingleton(Store store) {
     if (!z.domain.contains(x.value() % Math.abs(y.min()))) {
       y.domain.inMin(store.level, y, y.min() + 1);
     } else if (!z.domain.contains(x.value() % Math.abs(y.max()))) {

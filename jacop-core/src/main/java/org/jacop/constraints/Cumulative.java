@@ -502,15 +502,15 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       setL.remove(indexOfl);
       removeFromSlct(setS);
     } else if (between) {
-      updateDownLBetween(store, setS, setL, indexOfl, l, totalArea, estS, lLct);
+      updateDownLbetween(store, setS, setL, indexOfl, l, totalArea, estS, lLct);
     } else if (after) {
       setL.remove(indexOfl);
     } else {
-      propagateDownLBefore(store, setS, setL, indexOfl, l);
+      propagateDownLbefore(store, setS, setL, indexOfl, l);
     }
   }
 
-  private void updateDownLBetween(
+  private void updateDownLbetween(
       Store store,
       List<Task> setS,
       List<Task> setL,
@@ -565,7 +565,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void propagateDownLBefore(
+  private void propagateDownLbefore(
       Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l) {
     if (debugEnabled) {
       log.debug("after={} between={}!!!", false, false);
@@ -687,15 +687,15 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       setL.remove(indexOfl);
       removeFromSest(setS);
     } else if (between) {
-      updateUpLBetween(store, setS, setL, indexOfl, l, totalArea, lctS, lEst);
+      updateUpLbetween(store, setS, setL, indexOfl, l, totalArea, lctS, lEst);
     } else if (before) {
       setL.remove(indexOfl);
     } else {
-      propagateUpLAfter(store, setS, setL, indexOfl, l, startOfS);
+      propagateUpLafter(store, setS, setL, indexOfl, l, startOfS);
     }
   }
 
-  private void updateUpLBetween(
+  private void updateUpLbetween(
       Store store,
       List<Task> setS,
       List<Task> setL,
@@ -747,7 +747,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void propagateUpLAfter(
+  private void propagateUpLafter(
       Store store, List<Task> setS, List<Task> setL, int indexOfl, Task l, int startOfS) {
     if (debugEnabled) {
       log.debug("before={} between={}!!!", false, false);

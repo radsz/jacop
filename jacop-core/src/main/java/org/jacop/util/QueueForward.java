@@ -90,22 +90,6 @@ public class QueueForward<T extends Constraint> {
     isEmpty = forwardMap.isEmpty();
   }
 
-  private boolean constraintUsesQueueVariable(T constraint, Var v) {
-
-    if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
-      try {
-        // We assume that all constraint needing queueVariable declare this method, even for
-        // the ones that inherit from other constraints.
-        constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-        return true;
-      } catch (NoSuchMethodException _) {
-        // constraint may use empty queueVariable provided by abstract class Constraint
-        return false;
-      }
-    }
-    return false;
-  }
-
   /**
    * Constructs a queue forward from arrays of constraints and variables.
    *
@@ -154,6 +138,22 @@ public class QueueForward<T extends Constraint> {
    */
   public QueueForward(T constraint, Var v) {
     this(Collections.singletonList(constraint), Collections.singletonList(v));
+  }
+
+  private boolean constraintUsesQueueVariable(T constraint, Var v) {
+
+    if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
+      try {
+        // We assume that all constraint needing queueVariable declare this method, even for
+        // the ones that inherit from other constraints.
+        constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
+        return true;
+      } catch (NoSuchMethodException _) {
+        // constraint may use empty queueVariable provided by abstract class Constraint
+        return false;
+      }
+    }
+    return false;
   }
 
   /**

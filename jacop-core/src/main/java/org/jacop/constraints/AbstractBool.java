@@ -71,6 +71,27 @@ public abstract class AbstractBool extends DecomposedConstraint<PrimitiveConstra
   }
 
   /**
+   * It constructs boolean constraint on variables.
+   *
+   * @param a parameters
+   * @param result result variable.
+   */
+  protected AbstractBool(List<? extends IntVar> a, IntVar result) {
+    this(a.toArray(new IntVar[0]), result);
+  }
+
+  /**
+   * It constructs boolean constraint on variables.
+   *
+   * @param a a parameter
+   * @param b b parameter
+   * @param result result variable.
+   */
+  protected AbstractBool(IntVar a, IntVar b, IntVar result) {
+    this(new IntVar[] {a, b}, result);
+  }
+
+  /**
    * Returns the short-circuit value that triggers early termination.
    *
    * @return 1 for OR, 0 for AND
@@ -118,27 +139,6 @@ public abstract class AbstractBool extends DecomposedConstraint<PrimitiveConstra
    * @return filtered array of variables
    */
   protected abstract IntVar[] filter(IntVar[] xs, int[] shortCircuit);
-
-  /**
-   * It constructs boolean constraint on variables.
-   *
-   * @param a parameters
-   * @param result result variable.
-   */
-  protected AbstractBool(List<? extends IntVar> a, IntVar result) {
-    this(a.toArray(new IntVar[0]), result);
-  }
-
-  /**
-   * It constructs boolean constraint on variables.
-   *
-   * @param a a parameter
-   * @param b b parameter
-   * @param result result variable.
-   */
-  protected AbstractBool(IntVar a, IntVar b, IntVar result) {
-    this(new IntVar[] {a, b}, result);
-  }
 
   @Override
   public void imposeDecomposition(Store store) {

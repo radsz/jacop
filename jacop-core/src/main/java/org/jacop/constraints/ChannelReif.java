@@ -90,17 +90,17 @@ public class ChannelReif extends AbstractChannel {
   }
 
   @Override
-  protected void handleBMaxZero(Store store, int i) {
+  protected void handleBmaxZero(Store store, int i) {
     x.domain.inComplement(store.level, x, item[i].value());
   }
 
   @Override
-  protected void handleBMinOne(Store store, int i) {
+  protected void handleBminOne(Store store, int i) {
     x.domain.in(store.level, x, item[i].value(), item[i].value());
   }
 
   @Override
-  protected void propagateWhenXIsSingleton(Store store, int start) {
+  protected void propagateWhenXisSingleton(Store store, int start) {
     IntVar b = valueMap.get(x.value());
     b.domain.inValue(store.level, b, 1);
 

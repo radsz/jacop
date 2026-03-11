@@ -224,14 +224,6 @@ public class LinearIntDom extends LinearInt {
     findSupportPositive(index, sum);
   }
 
-  void findSupportPositive(int index, long partialSum) {
-    findSupport(true, index, partialSum);
-  }
-
-  void findSupportNegative(int index, long partialSum) {
-    findSupport(false, index, partialSum);
-  }
-
   /**
    * Finds support for variables in the linear constraint.
    *
@@ -275,6 +267,14 @@ public class LinearIntDom extends LinearInt {
     } else {
       processValueEnumeration(currentDom, index, newIndex, w, lb, ub, partialSum, positive);
     }
+  }
+
+  void findSupportPositive(int index, long partialSum) {
+    findSupport(true, index, partialSum);
+  }
+
+  void findSupportNegative(int index, long partialSum) {
+    findSupport(false, index, partialSum);
   }
 
   private void storeAssignmentsToSupport() {

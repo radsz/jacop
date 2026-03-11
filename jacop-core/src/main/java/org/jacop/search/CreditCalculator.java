@@ -267,6 +267,26 @@ public class CreditCalculator<T extends Var>
     return handleLeftChildTimeoutOrContinueVar(v, value);
   }
 
+  /**
+   * It is executed after exiting the left child. The parameters specify the choice point. The
+   * parameter status specifies the return code from the child. The return parameter of this
+   * function specifies if the search should continue undisturbed or exit the current search node.
+   * If the left child has exhausted backtracks allowance then this function will return false so
+   * the right child will not be explored.
+   */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+
+    if (!status) {
+      return handleLeftChildFailureChoice(choice);
+    }
+
+    if (status) {
+      return handleLeftChildSuccessChoice(choice);
+    }
+
+    return handleLeftChildTimeoutOrContinueChoice(choice);
+  }
+
   private boolean handleLeftChildFailureVar(T v, int value) {
     if (currentLevel > 0 && currentLevel < creditsLeft.length) {
       creditsRight[currentLevel - 1] += creditsLeft[currentLevel];
@@ -316,34 +336,6 @@ public class CreditCalculator<T extends Var>
     return true;
   }
 
-  private void notifyExitChildListenersLeft(T v, int value, boolean status) {
-    if (exitChildListeners != null) {
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        exitChildListener.leftChild(v, value, status);
-      }
-    }
-  }
-
-  /**
-   * It is executed after exiting the left child. The parameters specify the choice point. The
-   * parameter status specifies the return code from the child. The return parameter of this
-   * function specifies if the search should continue undisturbed or exit the current search node.
-   * If the left child has exhausted backtracks allowance then this function will return false so
-   * the right child will not be explored.
-   */
-  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-
-    if (!status) {
-      return handleLeftChildFailureChoice(choice);
-    }
-
-    if (status) {
-      return handleLeftChildSuccessChoice(choice);
-    }
-
-    return handleLeftChildTimeoutOrContinueChoice(choice);
-  }
-
   private boolean handleLeftChildFailureChoice(PrimitiveConstraint choice) {
     if (currentLevel + 1 < creditsLeft.length) {
       creditsRight[currentLevel] += creditsLeft[currentLevel + 1];
@@ -388,6 +380,14 @@ public class CreditCalculator<T extends Var>
       }
     }
     return true;
+  }
+
+  private void notifyExitChildListenersLeft(T v, int value, boolean status) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.leftChild(v, value, status);
+      }
+    }
   }
 
   private void notifyExitChildListenersLeft(PrimitiveConstraint choice, boolean status) {

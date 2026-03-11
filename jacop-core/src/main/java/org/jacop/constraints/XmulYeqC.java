@@ -74,13 +74,13 @@ public class XmulYeqC extends AbstractConstraintXandY {
   @Override
   public void consistency(final Store store) {
     if (xSquare) {
-      propagateXSquareEqC(store);
+      propagateXsquareEqC(store);
     } else {
-      propagateXMulYEqC(store);
+      propagateXmulYeqC(store);
     }
   }
 
-  private void propagateXSquareEqC(Store store) {
+  private void propagateXsquareEqC(Store store) {
     do {
       store.propagationHasOccurred = false;
 
@@ -104,7 +104,7 @@ public class XmulYeqC extends AbstractConstraintXandY {
     } while (store.propagationHasOccurred);
   }
 
-  private void propagateXMulYEqC(Store store) {
+  private void propagateXmulYeqC(Store store) {
     do {
       store.propagationHasOccurred = false;
 

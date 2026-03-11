@@ -461,6 +461,18 @@ public class BoundSetDomain extends SetDomain {
     }
   }
 
+  /**
+   * It updates the domain to have values only within the domain. The type of update is decided by
+   * the value of stamp. It informs the variable of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param setDom the domain according to which the domain is updated.
+   */
+  public void in(int storeLevel, SetVar v, SetDomain setDom) {
+    in(storeLevel, v, setDom.glb(), setDom.lub());
+  }
+
   private void applyInAtSameLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
     int eventGlb = glbDomain.unionAdapt(inGlb);
     int eventLub = lubDomain.intersectAdapt(inLub);
@@ -557,18 +569,6 @@ public class BoundSetDomain extends SetDomain {
         v.domainHasChanged(SetDomain.LUB_EVENT);
       }
     }
-  }
-
-  /**
-   * It updates the domain to have values only within the domain. The type of update is decided by
-   * the value of stamp. It informs the variable of a change if it occurred.
-   *
-   * @param storeLevel level of the store at which the update occurs.
-   * @param v variable for which this domain is used.
-   * @param setDom the domain according to which the domain is updated.
-   */
-  public void in(int storeLevel, SetVar v, SetDomain setDom) {
-    in(storeLevel, v, setDom.glb(), setDom.lub());
   }
 
   /**

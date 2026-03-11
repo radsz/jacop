@@ -244,21 +244,6 @@ public abstract class IntDomain extends Domain {
     return result;
   }
 
-  private static Interval divIntBoundsCase5(int a, int b, int c, int d) {
-    double ac = (double) a / c;
-    double ad = (double) a / d;
-    double bc = (double) b / c;
-    double bd = (double) b / d;
-    double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-    double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-    int min = (int) Math.round(Math.ceil(low));
-    int max = (int) Math.round(Math.floor(high));
-    if (min > max) {
-      throw Store.failException;
-    }
-    return new Interval(min, max);
-  }
-
   /**
    * Finds the result interval for integer division of {a..b} by a constant c for div and mod
    * constraints.
@@ -292,6 +277,21 @@ public abstract class IntDomain extends Domain {
 
       return new Interval(min, max);
     }
+  }
+
+  private static Interval divIntBoundsCase5(int a, int b, int c, int d) {
+    double ac = (double) a / c;
+    double ad = (double) a / d;
+    double bc = (double) b / c;
+    double bd = (double) b / d;
+    double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+    double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+    int min = (int) Math.round(Math.ceil(low));
+    int max = (int) Math.round(Math.floor(high));
+    if (min > max) {
+      throw Store.failException;
+    }
+    return new Interval(min, max);
   }
 
   /**

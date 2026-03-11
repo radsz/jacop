@@ -93,6 +93,25 @@ public class NoGoodsCollector<T extends IntVar>
     return delegateLeftChildToListeners(v, value, status);
   }
 
+  /**
+   * Handles exiting the left child when using constraint-based choices.
+   *
+   * @param choice the primitive constraint used as the left branch choice.
+   * @param status true if a solution was found, false otherwise.
+   * @return true if search should continue, false if it should exit.
+   */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners == null) {
+      return true;
+    } else {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, status);
+      }
+      return code;
+    }
+  }
+
   private boolean handleLeftChildOnTimeOut(T v, int value, boolean status) {
     for (List<T> noGood : noGoodsVariables) {
       noGood.add(v);
@@ -119,25 +138,6 @@ public class NoGoodsCollector<T extends IntVar>
     }
     for (ExitChildListener<T> exitChildListener : exitChildListeners) {
       exitChildListener.leftChild(v, value, status);
-    }
-  }
-
-  /**
-   * Handles exiting the left child when using constraint-based choices.
-   *
-   * @param choice the primitive constraint used as the left branch choice.
-   * @param status true if a solution was found, false otherwise.
-   * @return true if search should continue, false if it should exit.
-   */
-  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-    if (exitChildListeners == null) {
-      return true;
-    } else {
-      boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-        code |= exitChildListener.leftChild(choice, status);
-      }
-      return code;
     }
   }
 

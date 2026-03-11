@@ -781,7 +781,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       if (ASSERTS_ENABLED && !f.containsPoint(c)) {
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
-      updateNFromForbiddenBoxPruneMin(o, f);
+      updateNfromForbiddenBoxPruneMin(o, f);
       feasiblePointFound = advanceToNextFeasiblePointPruneMin(o, d);
 
       if (c[d] >= limit) {
@@ -820,7 +820,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     n[dimension] = o.start.max() + 1;
   }
 
-  private void updateNFromForbiddenBoxPruneMin(GeostObject o, Dbox f) {
+  private void updateNfromForbiddenBoxPruneMin(GeostObject o, Dbox f) {
     final int size1 = o.dimension + 1;
     for (int i = 0; i < size1; i++) {
       n[i] = Math.min(n[i], f.origin[i] + f.length[i]);
@@ -890,7 +890,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       if (ASSERTS_ENABLED && !f.containsPoint(c)) {
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
-      updateNFromForbiddenBoxPruneMax(o, f);
+      updateNfromForbiddenBoxPruneMax(o, f);
       feasiblePointFound = advanceToNextFeasiblePointPruneMax(o, d);
 
       if (c[d] <= limit) {
@@ -929,7 +929,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     n[dimension] = o.end.min() - 1;
   }
 
-  private void updateNFromForbiddenBoxPruneMax(GeostObject o, Dbox f) {
+  private void updateNfromForbiddenBoxPruneMax(GeostObject o, Dbox f) {
     final int size3 = o.dimension + 1;
     for (int i = 0; i < size3; i++) {
       n[i] = Math.max(n[i], f.origin[i] - 1);

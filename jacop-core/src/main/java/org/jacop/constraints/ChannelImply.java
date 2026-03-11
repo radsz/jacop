@@ -90,17 +90,17 @@ public class ChannelImply extends AbstractChannel {
   }
 
   @Override
-  protected void handleBMaxZero(Store store, int i) {
+  protected void handleBmaxZero(Store store, int i) {
     // No action needed for ChannelImply when b.max() == 0
   }
 
   @Override
-  protected void handleBMinOne(Store store, int i) {
+  protected void handleBminOne(Store store, int i) {
     x.domain.inValue(store.level, x, item[i].value());
   }
 
   @Override
-  protected void propagateWhenXIsSingleton(Store store, int start) {
+  protected void propagateWhenXisSingleton(Store store, int start) {
     IntVar b = valueMap.get(x.value());
 
     for (int i = start; i < n; i++) {

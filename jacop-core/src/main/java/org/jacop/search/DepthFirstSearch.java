@@ -932,74 +932,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
-  private void logSolutionCostIfPrintInfo() {
-    if (!printInfo) {
-      return;
-    }
-    if (costVariable != null) {
-      CostVariableHandler costHandler =
-          SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-      if (costHandler != null) {
-        double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-        log.info(SOLUTION_COST_IS, cost);
-      } else if (costVariable instanceof IntVar) {
-        log.info(SOLUTION_COST_IS, costValue);
-      }
-    }
-    log.info("{}", this);
-  }
-
-  private boolean handleLabelingFoundSolution(boolean raisedLevel, boolean result) {
-    if (printInfo) {
-      logSolutionCostIfPrintInfo();
-    }
-
-    if (raisedLevel) {
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
-    }
-
-    if (checkTimeOut()) {
-      markTimeOutOccurred();
-      if (printInfo) {
-        log.info(TIMEOUT_S, tOut);
-      }
-      return false;
-    }
-    if (masterSearch == null) {
-      return true;
-    }
-    return result;
-  }
-
-  private boolean handleLabelingNoSolution(boolean raisedLevel) {
-    if (printInfo) {
-      log.info(NO_SOLUTION_FOUND);
-      log.info(
-          DFS_STATS_FORMAT,
-          searchId,
-          nodes,
-          decisions,
-          wrongDecisions,
-          numberBacktracks,
-          maxDepthExcludePaths);
-    }
-
-    if (raisedLevel) {
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
-    }
-
-    if (checkTimeOut()) {
-      markTimeOutOccurred();
-      if (printInfo) {
-        log.info(TIMEOUT_S, tOut);
-      }
-    }
-
-    return false;
-  }
-
   /**
    * Performs labeling using the given store and choice point selection heuristic.
    *
@@ -1115,6 +1047,74 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       }
       return false;
     }
+  }
+
+  private void logSolutionCostIfPrintInfo() {
+    if (!printInfo) {
+      return;
+    }
+    if (costVariable != null) {
+      CostVariableHandler costHandler =
+          SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+      if (costHandler != null) {
+        double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
+        log.info(SOLUTION_COST_IS, cost);
+      } else if (costVariable instanceof IntVar) {
+        log.info(SOLUTION_COST_IS, costValue);
+      }
+    }
+    log.info("{}", this);
+  }
+
+  private boolean handleLabelingFoundSolution(boolean raisedLevel, boolean result) {
+    if (printInfo) {
+      logSolutionCostIfPrintInfo();
+    }
+
+    if (raisedLevel) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+
+    if (checkTimeOut()) {
+      markTimeOutOccurred();
+      if (printInfo) {
+        log.info(TIMEOUT_S, tOut);
+      }
+      return false;
+    }
+    if (masterSearch == null) {
+      return true;
+    }
+    return result;
+  }
+
+  private boolean handleLabelingNoSolution(boolean raisedLevel) {
+    if (printInfo) {
+      log.info(NO_SOLUTION_FOUND);
+      log.info(
+          DFS_STATS_FORMAT,
+          searchId,
+          nodes,
+          decisions,
+          wrongDecisions,
+          numberBacktracks,
+          maxDepthExcludePaths);
+    }
+
+    if (raisedLevel) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+
+    if (checkTimeOut()) {
+      markTimeOutOccurred();
+      if (printInfo) {
+        log.info(TIMEOUT_S, tOut);
+      }
+    }
+
+    return false;
   }
 
   private void logCostInfoIfPrintInfo() {

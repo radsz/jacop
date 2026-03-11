@@ -215,124 +215,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     initializeArrayCopyToStateLevels(levels, outarc, outdeg);
   }
 
-  private int initializeArrayForwardReachable(
-      Fsm dfa, int levels, IntDomain[][][] outarc, Set<FsmState> reachable, Set<FsmState> tmp) {
-    reachable.add(dfa.initState);
-    int level = 0;
-    while (level < levels) {
-      tmp.clear();
-      for (FsmState s : reachable) {
-        for (FsmTransition t : s.transitions) {
-          IntDomain dom = t.domain.intersect(list[level].dom());
-          if (outarc[level][s.id][t.successor.id] != null) {
-            outarc[level][s.id][t.successor.id].addDom(dom);
-          } else {
-            outarc[level][s.id][t.successor.id] = dom;
-          }
-          if (dom.getSize() > 0) {
-            if (level < levels - 1) {
-              tmp.add(t.successor);
-            } else if (dfa.finalStates.contains(t.successor)) {
-              tmp.add(t.successor);
-            }
-          }
-        }
-      }
-      reachable.clear();
-      reachable.addAll(tmp);
-      level++;
-    }
-    return level;
-  }
-
-  private int initializeArrayBackwardReachable(
-      int level,
-      int stateNum,
-      IntDomain[][][] outarc,
-      int[][] outdeg,
-      Set<FsmState> reachable,
-      Set<FsmState> tmp,
-      FsmState[] array) {
-    while (level > 0) {
-      tmp.clear();
-      stateLevels[level] = new RegState[reachable.size()];
-      for (int i = 0; i < stateNum; i++) {
-        for (int j = 0; j < stateNum; j++) {
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
-            if (!reachable.contains(array[i])) {
-              outarc[level - 1][j][i].clear();
-            } else {
-              outdeg[level - 1][j] += outarc[level - 1][j][i].getSize();
-              tmp.add(array[j]);
-            }
-          }
-        }
-      }
-      reachable.clear();
-      reachable.addAll(tmp);
-      level--;
-    }
-    return level;
-  }
-
-  private void initializeArrayCopyToStateLevels(
-      int levels, IntDomain[][][] outarc, int[][] outdeg) {
-    int nextLevelIndex = 0;
-    for (int level = 0; level < levels; level++) {
-      int index = nextLevelIndex;
-      nextLevelIndex = 0;
-      for (int i = 0; i < stateNumber; i++) {
-        if (outdeg[level][i] <= 0) {
-          continue;
-        }
-        RegState s = getState(level, i);
-        if (s == null) {
-          s =
-              listRepresentation
-                  ? new RegStateInt(level, i, outdeg[level][i], index)
-                  : new RegStateDom(level, i, outdeg[level][i], index);
-          stateLevels[level][index++] = s;
-          activeLevelsTemp[level] = index;
-          if (DEBUG_ALL) {
-            log.debug(
-                "Create new state q_{}{} with in degree : {} and out degree : {}",
-                level,
-                i,
-                s.inDegree,
-                s.outDegree);
-          }
-        }
-        for (int j = 0; j < stateNumber; j++) {
-          if (outarc[level][i][j] == null || outarc[level][i][j].getSize() == 0) {
-            continue;
-          }
-          RegState suc = getState(level + 1, j);
-          if (suc == null) {
-            suc =
-                listRepresentation
-                    ? new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex)
-                    : new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
-            stateLevels[level + 1][nextLevelIndex++] = suc;
-            activeLevelsTemp[level + 1] = nextLevelIndex;
-            if (DEBUG_ALL) {
-              log.debug(
-                  "Create new state q_{}{} with in degree : {} and out degree : {}",
-                  level + 1,
-                  j,
-                  suc.inDegree,
-                  suc.outDegree);
-            }
-          }
-          s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
-          if (DEBUG_ALL) {
-            log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
-            log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
-          }
-        }
-      }
-    }
-  }
-
   /**
    * Initialization phase of the algorithm.
    *
@@ -492,6 +374,124 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       for (RegState state : layeredGraph[i]) {
         stateLevels[i][j] = state;
         j++;
+      }
+    }
+  }
+
+  private int initializeArrayForwardReachable(
+      Fsm dfa, int levels, IntDomain[][][] outarc, Set<FsmState> reachable, Set<FsmState> tmp) {
+    reachable.add(dfa.initState);
+    int level = 0;
+    while (level < levels) {
+      tmp.clear();
+      for (FsmState s : reachable) {
+        for (FsmTransition t : s.transitions) {
+          IntDomain dom = t.domain.intersect(list[level].dom());
+          if (outarc[level][s.id][t.successor.id] != null) {
+            outarc[level][s.id][t.successor.id].addDom(dom);
+          } else {
+            outarc[level][s.id][t.successor.id] = dom;
+          }
+          if (dom.getSize() > 0) {
+            if (level < levels - 1) {
+              tmp.add(t.successor);
+            } else if (dfa.finalStates.contains(t.successor)) {
+              tmp.add(t.successor);
+            }
+          }
+        }
+      }
+      reachable.clear();
+      reachable.addAll(tmp);
+      level++;
+    }
+    return level;
+  }
+
+  private int initializeArrayBackwardReachable(
+      int level,
+      int stateNum,
+      IntDomain[][][] outarc,
+      int[][] outdeg,
+      Set<FsmState> reachable,
+      Set<FsmState> tmp,
+      FsmState[] array) {
+    while (level > 0) {
+      tmp.clear();
+      stateLevels[level] = new RegState[reachable.size()];
+      for (int i = 0; i < stateNum; i++) {
+        for (int j = 0; j < stateNum; j++) {
+          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
+            if (!reachable.contains(array[i])) {
+              outarc[level - 1][j][i].clear();
+            } else {
+              outdeg[level - 1][j] += outarc[level - 1][j][i].getSize();
+              tmp.add(array[j]);
+            }
+          }
+        }
+      }
+      reachable.clear();
+      reachable.addAll(tmp);
+      level--;
+    }
+    return level;
+  }
+
+  private void initializeArrayCopyToStateLevels(
+      int levels, IntDomain[][][] outarc, int[][] outdeg) {
+    int nextLevelIndex = 0;
+    for (int level = 0; level < levels; level++) {
+      int index = nextLevelIndex;
+      nextLevelIndex = 0;
+      for (int i = 0; i < stateNumber; i++) {
+        if (outdeg[level][i] <= 0) {
+          continue;
+        }
+        RegState s = getState(level, i);
+        if (s == null) {
+          s =
+              listRepresentation
+                  ? new RegStateInt(level, i, outdeg[level][i], index)
+                  : new RegStateDom(level, i, outdeg[level][i], index);
+          stateLevels[level][index++] = s;
+          activeLevelsTemp[level] = index;
+          if (DEBUG_ALL) {
+            log.debug(
+                "Create new state q_{}{} with in degree : {} and out degree : {}",
+                level,
+                i,
+                s.inDegree,
+                s.outDegree);
+          }
+        }
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level][i][j] == null || outarc[level][i][j].getSize() == 0) {
+            continue;
+          }
+          RegState suc = getState(level + 1, j);
+          if (suc == null) {
+            suc =
+                listRepresentation
+                    ? new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex)
+                    : new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
+            stateLevels[level + 1][nextLevelIndex++] = suc;
+            activeLevelsTemp[level + 1] = nextLevelIndex;
+            if (DEBUG_ALL) {
+              log.debug(
+                  "Create new state q_{}{} with in degree : {} and out degree : {}",
+                  level + 1,
+                  j,
+                  suc.inDegree,
+                  suc.outDegree);
+            }
+          }
+          s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
+          if (DEBUG_ALL) {
+            log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
+            log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
+          }
+        }
       }
     }
   }

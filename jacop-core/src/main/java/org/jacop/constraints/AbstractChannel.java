@@ -167,7 +167,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
    * @param store the constraint store
    * @param i the index of the item
    */
-  protected abstract void handleBMaxZero(Store store, int i);
+  protected abstract void handleBmaxZero(Store store, int i);
 
   /**
    * Handles the case when b.min() == 1 for a given item index.
@@ -175,7 +175,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
    * @param store the constraint store
    * @param i the index of the item
    */
-  protected abstract void handleBMinOne(Store store, int i);
+  protected abstract void handleBminOne(Store store, int i);
 
   /**
    * Propagates constraints when x becomes a singleton.
@@ -183,7 +183,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
    * @param store the constraint store
    * @param start the starting index for propagation
    */
-  protected abstract void propagateWhenXIsSingleton(Store store, int start);
+  protected abstract void propagateWhenXisSingleton(Store store, int start);
 
   @Override
   public void consistency(final Store store) {
@@ -194,13 +194,13 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     for (int i = start; i < n; i++) {
 
       if (item[i].b().max() == 0) {
-        handleBMaxZero(store, i);
+        handleBmaxZero(store, i);
         swap(start, i);
         start++;
         startChanged = true;
         continue;
       } else if (item[i].b().min() == 1) {
-        handleBMinOne(store, i);
+        handleBminOne(store, i);
       }
 
       if (!x.domain.contains(item[i].value())) {
@@ -223,7 +223,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     }
 
     if (x.singleton()) {
-      propagateWhenXIsSingleton(store, start);
+      propagateWhenXisSingleton(store, start);
     }
   }
 
