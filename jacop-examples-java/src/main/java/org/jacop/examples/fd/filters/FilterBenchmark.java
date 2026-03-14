@@ -135,11 +135,11 @@ public class FilterBenchmark {
 
   /** Computes pipeline lower bound from filter and resource counts. */
   private static int computePipelineLowerBound(Filter filter, int addNum, int mulNum) {
-    int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
-    int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
+    int tAdd = filter.noAdd() * filter.addDel() / addNum;
+    int rAdd = filter.noAdd() * filter.addDel() % addNum;
     int addLb = rAdd == 0 ? tAdd : tAdd + 1;
-    int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
-    int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
+    int tMul = filter.noMul() * filter.mulDel() / mulNum;
+    int rMul = filter.noMul() * filter.mulDel() % mulNum;
     int mulLb = rMul == 0 ? tMul : tMul + 1;
     return Math.max(addLb, mulLb);
   }

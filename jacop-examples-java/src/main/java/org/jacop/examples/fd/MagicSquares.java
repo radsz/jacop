@@ -153,7 +153,7 @@ public class MagicSquares extends ExampleFd {
 
     vars.addAll(Arrays.asList(squares).subList(0, number));
     for (int i = number; i > 0; i--) {
-      vars.add(squares[(i - 1) * number + (number - i)]);
+      vars.add(squares[(i - 1) * number + number - i]);
     }
     vars.addAll(Arrays.asList(squares));
 
@@ -161,7 +161,7 @@ public class MagicSquares extends ExampleFd {
 
     IntVar k =
         new IntVar(
-            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
+            store, "K", number * (number * number + 1) / 2, number * (number * number + 1) / 2);
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
@@ -187,7 +187,7 @@ public class MagicSquares extends ExampleFd {
     imposeAndMaybeCollect(new SumInt(diagonal, "==", k), collectForShaving);
 
     for (int i = number; i > 0; i--) {
-      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+      diagonal[i - 1] = squares[(i - 1) * number + number - i];
     }
     store.impose(new SumInt(diagonal, "==", k));
 
@@ -217,7 +217,7 @@ public class MagicSquares extends ExampleFd {
 
     IntVar k =
         new IntVar(
-            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
+            store, "K", number * (number * number + 1) / 2, number * (number * number + 1) / 2);
 
     for (int i = 0; i < number; i++) {
       for (int j = 0; j < number; j++) {
@@ -228,7 +228,7 @@ public class MagicSquares extends ExampleFd {
 
     vars.addAll(Arrays.asList(squares).subList(0, number));
     for (int i = number; i > 0; i--) {
-      vars.add(squares[(i - 1) * number + (number - i)]);
+      vars.add(squares[(i - 1) * number + number - i]);
     }
     vars.addAll(Arrays.asList(squares));
 
@@ -257,7 +257,7 @@ public class MagicSquares extends ExampleFd {
     store.impose(new SumInt(diagonal, "==", k));
 
     for (int i = number; i > 0; i--) {
-      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+      diagonal[i - 1] = squares[(i - 1) * number + number - i];
     }
     store.impose(new SumInt(diagonal, "==", k));
 

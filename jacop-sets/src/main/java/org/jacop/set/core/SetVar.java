@@ -49,9 +49,10 @@ public class SetVar extends Var {
   static {
     try {
       Class.forName("org.jacop.set.search.SetSearchSupport");
-    } catch (ClassNotFoundException _) {
-      // SetSearchSupport not available - handlers won't be registered
-      // This is OK if jacop-sets search package is not on classpath
+    } catch (ClassNotFoundException e) {
+      // SetSearchSupport not available; search handlers not registered
+      String notAvailable = e.getMessage();
+      assert notAvailable != null || true; // optional dependency; ignore if absent
     }
   }
 

@@ -875,30 +875,26 @@ class ComparisonConstraints implements ParserTreeConstants {
   }
 
   boolean generateForEq(IntVar v1, IntVar v2, IntVar b) {
-    if (v1.min() >= 0 && v1.max() <= 1) {
-      if (v2.singleton()) {
-        if (v2.value() == 1) {
-          support.pose(new XeqY(v1, b));
-          return true;
-        } else if (v2.value() == 0) {
-          support.pose(new XneqY(v1, b));
-          return true;
-        }
+    if (v1.min() >= 0 && v1.max() <= 1 && v2.singleton()) {
+      if (v2.value() == 1) {
+        support.pose(new XeqY(v1, b));
+        return true;
+      } else if (v2.value() == 0) {
+        support.pose(new XneqY(v1, b));
+        return true;
       }
     }
     return false;
   }
 
   boolean generateForNeq(IntVar v1, IntVar v2, IntVar b) {
-    if (v1.min() >= 0 && v1.max() <= 1) {
-      if (v2.singleton()) {
-        if (v2.value() == 1) {
-          support.pose(new XneqY(v1, b));
-          return true;
-        } else if (v2.value() == 0) {
-          support.pose(new XeqY(v1, b));
-          return true;
-        }
+    if (v1.min() >= 0 && v1.max() <= 1 && v2.singleton()) {
+      if (v2.value() == 1) {
+        support.pose(new XneqY(v1, b));
+        return true;
+      } else if (v2.value() == 0) {
+        support.pose(new XeqY(v1, b));
+        return true;
       }
     }
     return false;

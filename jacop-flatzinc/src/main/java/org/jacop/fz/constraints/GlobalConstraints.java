@@ -1669,7 +1669,7 @@ class GlobalConstraints implements ParserTreeConstants {
         }
         shapeI.add(new Dbox(offset, size));
       }
-      shapes.add(new Shape((i + 1), shapeI));
+      shapes.add(new Shape(i + 1, shapeI));
     }
 
     ArrayList<GeostObject> objects = new ArrayList<>();
@@ -1716,10 +1716,8 @@ class GlobalConstraints implements ParserTreeConstants {
     b = filtered[0];
     x = filtered[1];
 
-    if (x.length == 2) {
-      if (tryPoseIfThenElseBoolTwoBranches(b, x, y)) {
-        return;
-      }
+    if (x.length == 2 && tryPoseIfThenElseBoolTwoBranches(b, x, y)) {
+      return;
     }
     gen_jacop_if_then_else_int(node);
   }

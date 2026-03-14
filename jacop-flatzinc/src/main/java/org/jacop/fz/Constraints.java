@@ -98,10 +98,10 @@ public class Constraints implements ParserTreeConstants {
               + " of "
               + (noConstraints - bool2Int)
               + " p = "
-              + (float) (boolClauses) / (float) (noConstraints - bool2Int));
+              + (float) boolClauses / (float) (noConstraints - bool2Int));
     }
 
-    if ((float) (boolClauses) / (float) (noConstraints - bool2Int) >= satThreshold) {
+    if ((float) boolClauses / (float) (noConstraints - bool2Int) >= satThreshold) {
       support.options.setSat();
     }
 

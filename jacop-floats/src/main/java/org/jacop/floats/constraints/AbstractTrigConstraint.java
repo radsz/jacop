@@ -112,7 +112,7 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
    * @return the normalized interval
    */
   protected FloatInterval normalize(FloatVar v) {
-    return org.jacop.floats.core.FloatDomain.normalizeAngle(v.min(), v.max());
+    return FloatDomain.normalizeAngle(v.min(), v.max());
   }
 
   /**
@@ -179,10 +179,10 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
 
     pMin = FloatDomain.down(pMin);
     pMax = FloatDomain.up(pMax);
-    if (java.lang.Double.isNaN(pMin)) {
+    if (Double.isNaN(pMin)) {
       pMin = nanMin;
     }
-    if (java.lang.Double.isNaN(pMax)) {
+    if (Double.isNaN(pMax)) {
       pMax = nanMax;
     }
 

@@ -96,6 +96,8 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
     super(variables.getFirst().getStore(), variables, weights, rel, sum);
   }
 
+  // Required: QueueForward uses getDeclaredMethod() to check if a concrete class
+  // declares queueVariable. Removing this override breaks constraint propagation.
   @Override
   public void queueVariable(int level, Var v) {
     super.queueVariable(level, v);

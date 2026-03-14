@@ -97,7 +97,7 @@ public class BoundSetDomain extends SetDomain {
    */
   private static void notifySingletonOrEvent(SetVar v, SetDomain dom, int event) {
     if (dom.singleton()) {
-      v.domainHasChanged(SetDomain.GROUND);
+      v.domainHasChanged(GROUND);
     } else {
       v.domainHasChanged(event);
     }
@@ -117,7 +117,7 @@ public class BoundSetDomain extends SetDomain {
       lubDomain = glbDomain;
       cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
     }
-    notifySingletonOrEvent(v, this, SetDomain.GLB_EVENT);
+    notifySingletonOrEvent(v, this, GLB_EVENT);
   }
 
   /**
@@ -134,7 +134,7 @@ public class BoundSetDomain extends SetDomain {
       glbDomain = lubDomain;
       cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
     }
-    notifySingletonOrEvent(v, this, SetDomain.LUB_EVENT);
+    notifySingletonOrEvent(v, this, LUB_EVENT);
   }
 
   /**
@@ -164,7 +164,7 @@ public class BoundSetDomain extends SetDomain {
     copyCommonFieldsToResult(result, level);
     v.domain = result;
 
-    notifySingletonOrEvent(v, result, SetDomain.GLB_EVENT);
+    notifySingletonOrEvent(v, result, GLB_EVENT);
   }
 
   /**
@@ -194,7 +194,7 @@ public class BoundSetDomain extends SetDomain {
     copyCommonFieldsToResult(result, level);
     v.domain = result;
 
-    notifySingletonOrEvent(v, result, SetDomain.LUB_EVENT);
+    notifySingletonOrEvent(v, result, LUB_EVENT);
   }
 
   /**
@@ -455,7 +455,7 @@ public class BoundSetDomain extends SetDomain {
     }
 
     if (stamp == storeLevel) {
-      applyInAtSameLevel(storeLevel, v, inGlb, inLub);
+      applyInAtSameLevel(v, inGlb, inLub);
     } else {
       applyInAtNewLevel(storeLevel, v, inGlb, inLub);
     }
@@ -473,7 +473,7 @@ public class BoundSetDomain extends SetDomain {
     in(storeLevel, v, setDom.glb(), setDom.lub());
   }
 
-  private void applyInAtSameLevel(int storeLevel, SetVar v, IntDomain inGlb, IntDomain inLub) {
+  private void applyInAtSameLevel(SetVar v, IntDomain inGlb, IntDomain inLub) {
     int eventGlb = glbDomain.unionAdapt(inGlb);
     int eventLub = lubDomain.intersectAdapt(inLub);
 
@@ -482,7 +482,7 @@ public class BoundSetDomain extends SetDomain {
       if (cardDomain.isEmpty()) {
         throw Store.failException;
       }
-      v.domainHasChanged(IntDomain.GROUND);
+      v.domainHasChanged(GROUND);
       return;
     }
 
@@ -497,27 +497,27 @@ public class BoundSetDomain extends SetDomain {
       throw Store.failException;
     }
 
-    if (eventCardinality != Domain.NONE) {
+    if (eventCardinality != NONE) {
       if (cardDomain.min() == lubDomain.getSize()) {
         glbDomain = lubDomain;
         cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-        v.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(GROUND);
         return;
       }
       if (cardDomain.max() == glbDomain.getSize()) {
         lubDomain = glbDomain;
         cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-        v.domainHasChanged(IntDomain.GROUND);
+        v.domainHasChanged(GROUND);
         return;
       }
     }
 
-    if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
-      v.domainHasChanged(SetDomain.ANY);
-    } else if (eventGlb != Domain.NONE) {
-      v.domainHasChanged(SetDomain.GLB_EVENT);
-    } else if (eventLub != Domain.NONE) {
-      v.domainHasChanged(SetDomain.LUB_EVENT);
+    if (eventGlb != NONE && eventLub != NONE) {
+      v.domainHasChanged(ANY);
+    } else if (eventGlb != NONE) {
+      v.domainHasChanged(GLB_EVENT);
+    } else if (eventLub != NONE) {
+      v.domainHasChanged(LUB_EVENT);
     }
   }
 
@@ -540,12 +540,12 @@ public class BoundSetDomain extends SetDomain {
     if (!resultCardinality.eq(cardDomain)) {
       if (cardDomain.min() == lubDomain.getSize()) {
         resultGlb = lubDomain;
-        eventGlb = SetDomain.GLB_EVENT;
+        eventGlb = GLB_EVENT;
         resultCardinality.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
       }
       if (cardDomain.max() == glbDomain.getSize()) {
         resultLub = glbDomain;
-        eventLub = SetDomain.LUB_EVENT;
+        eventLub = LUB_EVENT;
         resultCardinality.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
       }
     }
@@ -559,14 +559,14 @@ public class BoundSetDomain extends SetDomain {
     v.domain = result;
 
     if (result.singleton()) {
-      v.domainHasChanged(SetDomain.GROUND);
+      v.domainHasChanged(GROUND);
     } else {
-      if (eventGlb == SetDomain.GLB_EVENT && eventLub == SetDomain.LUB_EVENT) {
-        v.domainHasChanged(SetDomain.BOUND);
-      } else if (eventGlb != Domain.NONE) {
-        v.domainHasChanged(SetDomain.GLB_EVENT);
-      } else if (eventLub != Domain.NONE) {
-        v.domainHasChanged(SetDomain.LUB_EVENT);
+      if (eventGlb == GLB_EVENT && eventLub == LUB_EVENT) {
+        v.domainHasChanged(BOUND);
+      } else if (eventGlb != NONE) {
+        v.domainHasChanged(GLB_EVENT);
+      } else if (eventLub != NONE) {
+        v.domainHasChanged(LUB_EVENT);
       }
     }
   }
@@ -955,7 +955,7 @@ public class BoundSetDomain extends SetDomain {
 
       int event = glbDomain.unionAdapt(intersect);
 
-      if (event != Domain.NONE) {
+      if (event != NONE) {
         adaptCardAfterGlbGrowth(v);
       }
 
@@ -1038,7 +1038,7 @@ public class BoundSetDomain extends SetDomain {
       v.domain = result;
     }
 
-    v.domainHasChanged(SetDomain.GROUND);
+    v.domainHasChanged(GROUND);
   }
 
   @Override
@@ -1056,7 +1056,7 @@ public class BoundSetDomain extends SetDomain {
 
       int event = lubDomain.intersectAdapt(intersect);
 
-      if (event != Domain.NONE) {
+      if (event != NONE) {
         adaptCardAfterLubShrink(v);
       }
 
@@ -1128,7 +1128,7 @@ public class BoundSetDomain extends SetDomain {
       v.domain = result;
     }
 
-    v.domainHasChanged(SetDomain.GROUND);
+    v.domainHasChanged(GROUND);
   }
 
   @Override
@@ -1144,7 +1144,7 @@ public class BoundSetDomain extends SetDomain {
             : applyInCardinalityAtNewLevel(level, v, min, max);
 
     if (!earlyReturn) {
-      v.domainHasChanged(SetDomain.CARDINALITY_EVENT);
+      v.domainHasChanged(CARDINALITY_EVENT);
     }
   }
 

@@ -187,7 +187,6 @@ public class PartitionSet extends Constraint {
 
   List<AdisjointB> disjointConstraints() {
 
-    Store store = s[0].getStore();
     ArrayList<AdisjointB> intersect = new ArrayList<>();
     for (int i = 0; i < s.length; i++) {
       for (int j = i + 1; j < s.length; j++) {

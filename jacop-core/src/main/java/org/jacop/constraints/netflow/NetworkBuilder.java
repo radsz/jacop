@@ -342,7 +342,7 @@ public class NetworkBuilder {
       addFlowBalanceConstraintsForNode(store, result, node);
     }
 
-    addDomainStructureConstraints(store, result);
+    addDomainStructureConstraints(result);
 
     addCostConstraints(store, result);
 
@@ -400,7 +400,7 @@ public class NetworkBuilder {
     }
   }
 
-  private void addDomainStructureConstraints(Store store, List<Constraint> result) {
+  private void addDomainStructureConstraints(List<Constraint> result) {
     for (VarHandler handler : handlerList) {
       if (handler instanceof DomainStructure structure) {
         for (int i = 0; i < structure.arcs.length; i++) {

@@ -607,15 +607,15 @@ public abstract class SetDomain extends Domain {
       return;
     }
 
-    if (removeConstraintFromPruningEvent(SetDomain.GROUND, constraint)) {
+    if (removeConstraintFromPruningEvent(GROUND, constraint)) {
       return;
     }
 
-    if (removeConstraintFromPruningEvent(SetDomain.BOUND, constraint)) {
+    if (removeConstraintFromPruningEvent(BOUND, constraint)) {
       return;
     }
 
-    removeConstraintFromPruningEvent(SetDomain.ANY, constraint);
+    removeConstraintFromPruningEvent(ANY, constraint);
   }
 
   /**

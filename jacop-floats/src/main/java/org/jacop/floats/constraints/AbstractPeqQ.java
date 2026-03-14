@@ -114,8 +114,8 @@ public abstract class AbstractPeqQ extends PrimitiveConstraint {
    */
   protected boolean satisfiedWhenEqual() {
     return grounded()
-        && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
-        && java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
+        && Math.abs(p.min() - q.max()) <= FloatDomain.precision()
+        && Math.abs(p.max() - q.min()) <= FloatDomain.precision();
   }
 
   /**

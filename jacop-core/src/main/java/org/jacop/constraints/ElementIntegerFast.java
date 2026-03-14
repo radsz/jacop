@@ -178,7 +178,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
       int val = list[position];
-      if (AbstractElement.disjoint(value, val)) {
+      if (disjoint(value, val)) {
         addPositionToIndexDom(indexDom, position);
       } else if (breakWhenReached && val == breakAtVal) {
         break;
@@ -206,7 +206,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
       int val = list[position];
-      if (AbstractElement.disjoint(value, val)) {
+      if (disjoint(value, val)) {
         addPositionToIndexDom(indexDom, position);
       } else {
         min = Math.min(min, val);
@@ -238,7 +238,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
       int val = list[position];
-      if (AbstractElement.disjoint(value, val)) {
+      if (disjoint(value, val)) {
         addPositionToIndexDom(indexDom, position);
       } else {
         min = Math.min(min, val);

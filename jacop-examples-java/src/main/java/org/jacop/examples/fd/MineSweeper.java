@@ -404,7 +404,7 @@ public class MineSweeper extends ExampleFd {
 
       t1 = System.currentTimeMillis();
 
-      minesweeper.problem = MineSweeper.readFromArray(problems()[i]);
+      minesweeper.problem = readFromArray(problems()[i]);
 
       minesweeper.model();
 
@@ -416,17 +416,17 @@ public class MineSweeper extends ExampleFd {
     }
 
     if (args.length > 0) {
-      minesweeper.problem = MineSweeper.readFile(args[0]);
+      minesweeper.problem = readFile(args[0]);
     }
 
     if (minesweeper.problem == null) {
-      minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problemKayeSplitter());
+      minesweeper.problem = readFromArray(problemKayeSplitter());
     }
 
     minesweeper.model();
     minesweeper.searchSpecific(false);
 
-    minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problemTest());
+    minesweeper.problem = readFromArray(problemTest());
     minesweeper.model();
     minesweeper.searchSpecific(true);
 

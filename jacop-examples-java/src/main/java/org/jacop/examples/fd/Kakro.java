@@ -79,7 +79,7 @@ public class Kakro extends ExampleFd {
     if (example.search()) {
       log.info("Solution(s) found");
 
-      ExampleFd.printMatrix(example.elements, example.noRows, example.noColumns);
+      printMatrix(example.elements, example.noRows, example.noColumns);
     }
   }
 

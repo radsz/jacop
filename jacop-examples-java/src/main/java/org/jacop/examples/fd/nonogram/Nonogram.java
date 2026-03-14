@@ -212,8 +212,8 @@ public class Nonogram extends ExampleFd {
     for (String s : result) {
       try {
         sequence[current++] = Integer.parseInt(s);
-      } catch (Exception _) {
-        // Ignore parsing errors
+      } catch (NumberFormatException e) {
+        log.trace("Ignoring non-integer token: {}", e.getMessage());
       }
     }
     return sequence;
@@ -240,8 +240,8 @@ public class Nonogram extends ExampleFd {
       for (String s : result) {
         try {
           dimensions[current++] = Integer.parseInt(s);
-        } catch (Exception _) {
-          // Ignore parsing errors
+        } catch (NumberFormatException e) {
+          log.trace("Ignoring non-integer token: {}", e.getMessage());
         }
       }
 

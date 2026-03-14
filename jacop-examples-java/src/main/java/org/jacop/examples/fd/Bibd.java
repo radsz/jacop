@@ -94,7 +94,7 @@ public class Bibd extends ExampleFd {
     if (example.searchAllAtOnce()) {
       log.info("Solution(s) found");
 
-      ExampleFd.printMatrix(example.x, example.v, example.b);
+      printMatrix(example.x, example.v, example.b);
     }
   }
 

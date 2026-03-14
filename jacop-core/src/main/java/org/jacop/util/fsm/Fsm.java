@@ -300,8 +300,7 @@ public class Fsm {
 
     // Forward pass: compute reachable states and transition domains
     reachable.add(this.initState);
-    level =
-        doForwardPass(outarc, vars, levels, stateNumber, array, reachable, tmp, finalStates, level);
+    level = doForwardPass(outarc, vars, levels, reachable, tmp, finalStates, level);
 
     // Backward pass: prune paths that don't reach an accepting state
     doBackwardPass(outarc, stateNumber, array, reachable, tmp, level);
@@ -313,8 +312,6 @@ public class Fsm {
       IntervalDomain[][][] outarc,
       IntVar[] vars,
       int levels,
-      int stateNumber,
-      FsmState[] array,
       Set<FsmState> reachable,
       Set<FsmState> tmp,
       Set<FsmState> finalStates,

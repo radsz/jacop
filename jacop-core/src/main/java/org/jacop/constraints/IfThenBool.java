@@ -203,10 +203,10 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
       return false;
     }
 
-    if (negated && (x.singleton(0) && z.singleton(0))) {
+    if (negated && x.singleton(0) && z.singleton(0)) {
       return true;
     }
-    if (!negated && (x.singleton(0) && z.singleton(1))) {
+    if (!negated && x.singleton(0) && z.singleton(1)) {
       return true;
     }
 

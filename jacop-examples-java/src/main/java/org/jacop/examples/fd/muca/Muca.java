@@ -352,7 +352,7 @@ public class Muca extends ExampleFd {
 
     createBidCostsAndExtensional(usedTransformation);
 
-    createDeltasAndPartialSums(usedTransformation, noAvailableTransformations);
+    createDeltasAndPartialSums();
 
     createWeightsAndSum(usedTransformation);
 
@@ -430,8 +430,7 @@ public class Muca extends ExampleFd {
     }
   }
 
-  private void createDeltasAndPartialSums(
-      IntVar[] usedTransformation, int noAvailableTransformations) {
+  private void createDeltasAndPartialSums() {
     deltasI = new IntVar[maxNoTransformations][noGoods];
     deltasO = new IntVar[maxNoTransformations][noGoods];
     sum = new IntVar[noGoods];

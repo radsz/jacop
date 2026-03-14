@@ -252,7 +252,7 @@ public class NetworkSimplex {
       if (arc.sister.capacity > 0) {
         primalStep(arc.sister);
       }
-      if (ASSERTS_ENABLED && (arc.sister.capacity != 0 && arc.index != TREE_ARC)) {
+      if (ASSERTS_ENABLED && arc.sister.capacity != 0 && arc.index != TREE_ARC) {
         throw new IllegalStateException("Assertion failed");
       }
     }

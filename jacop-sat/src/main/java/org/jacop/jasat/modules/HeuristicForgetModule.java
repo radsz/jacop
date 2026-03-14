@@ -122,7 +122,7 @@ public final class HeuristicForgetModule
     if (explanation.size() > 2) {
       // only try to remember clauses longer than 2
 
-      int lbd = Math.min(computeLbd(explanation), learntClauses.length - 1);
+      int lbd = Math.min(computeLbd(), learntClauses.length - 1);
 
       if (ASSERTS_ENABLED && (lbd <= 0 || lbd >= learntClauses.length)) {
         throw new IllegalStateException("Assertion failed");
@@ -155,10 +155,9 @@ public final class HeuristicForgetModule
   /**
    * Compute the LBD (Literal Block Distance) of a clause.
    *
-   * @param clause the clause
    * @return the LBD of this clause
    */
-  private int computeLbd(MapClause clause) {
+  private int computeLbd() {
 
     return 0;
   }

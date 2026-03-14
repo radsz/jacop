@@ -137,7 +137,6 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
     double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
     double min = Math.min(p1, p2);
-    double max = Math.max(p1, p2);
     if (p.min() <= 0.0 && p.max() >= 0.0) {
       return 0.0;
     }

@@ -91,10 +91,8 @@ public class AinB extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    if (strict) {
-      if (b.domain.isEmpty()) {
-        throw Store.failException;
-      }
+    if (strict && b.domain.isEmpty()) {
+      throw Store.failException;
     }
 
     a.domain.inLub(store.level, a, b.domain.lub());

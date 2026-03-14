@@ -152,10 +152,8 @@ public class DeBruijn extends ExampleFd {
     store = new Store();
 
     int powBaseN = pow(base, n); // base^n, the range of integers
-    if (m > 0) {
-      if (m > powBaseN) {
-        throw new RuntimeException("m must be <= base^n (" + m + ")");
-      }
+    if (m > 0 && m > powBaseN) {
+      throw new RuntimeException("m must be <= base^n (" + m + ")");
     }
 
     log.info("Using base: " + base + " n: " + n + " m: " + m);

@@ -233,7 +233,7 @@ public class NonTransitiveDice extends ExampleFd {
 
   /** Imposes implied constraints that fix wins[i][j][m] to 1 when probability is high enough. */
   private void imposeImpliedWinConstraints(IntVar[][][] wins, int noDices, int noSides) {
-    int threshold = currentBest != noSides * noSides ? currentBest - 1 : (noSides * noSides) / 2;
+    int threshold = currentBest != noSides * noSides ? currentBest - 1 : noSides * noSides / 2;
     for (int j = 0; j < noSides; j++) {
       for (int m = 0; m < noSides; m++) {
         if ((j + 1) * (noSides - m) > threshold) {

@@ -97,7 +97,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
     }
     double pMin;
     if (q.min() > 0) {
-      pMin = java.lang.Math.log(q.min());
+      pMin = Math.log(q.min());
       if (Double.isNaN(pMin) || Double.isInfinite(pMin)) {
         throw new InternalException("Floating-point overflow in constraint " + this);
       }
@@ -107,7 +107,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
     } else {
       throw Store.failException;
     }
-    double pMax = java.lang.Math.log(q.max());
+    double pMax = Math.log(q.max());
     if (Double.isNaN(pMax) || Double.isInfinite(pMax)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }
@@ -120,13 +120,13 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
     if (p.min() == p.max() && p.min() == 0.0) {
       return new double[] {1.0, 1.0};
     }
-    double qMin = java.lang.Math.exp(p.min());
+    double qMin = Math.exp(p.min());
     if (Double.isNaN(qMin) || Double.isInfinite(qMin)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }
     qMin = FloatDomain.down(qMin);
 
-    double qMax = java.lang.Math.exp(p.max());
+    double qMax = Math.exp(p.max());
     if (Double.isNaN(qMax) || Double.isInfinite(qMax)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }
@@ -136,7 +136,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
 
   @Override
   public boolean satisfied() {
-    return grounded() && java.lang.Math.exp(p.min()) - q.max() <= FloatDomain.precision();
+    return grounded() && Math.exp(p.min()) - q.max() <= FloatDomain.precision();
   }
 
   @Override

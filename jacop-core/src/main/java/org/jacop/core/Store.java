@@ -732,7 +732,7 @@ public class Store {
    */
   public void impose(Constraint c, int queueIndex) {
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && queueIndex >= queueNo) {
+    if (ASSERTS_ENABLED && queueIndex >= queueNo) {
       throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
     }
 
@@ -767,7 +767,7 @@ public class Store {
    */
   public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && queueIndex >= queueNo) {
+    if (ASSERTS_ENABLED && queueIndex >= queueNo) {
       throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
     }
 
@@ -801,7 +801,7 @@ public class Store {
   public <T extends Constraint> void imposeDecomposition(
       DecomposedConstraint<T> c, int queueIndex) {
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && queueIndex >= queueNo) {
+    if (ASSERTS_ENABLED && queueIndex >= queueNo) {
       throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
     }
 
@@ -891,7 +891,7 @@ public class Store {
 
     Var previousVar = variablesHashMap.put(v.id(), v);
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && previousVar != null) {
+    if (ASSERTS_ENABLED && previousVar != null) {
       throw new IllegalStateException(
           String.valueOf("Two variables have the same id " + previousVar + " " + v));
     }
@@ -965,7 +965,7 @@ public class Store {
       return;
     }
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && trailManager.getLevel() != level) {
+    if (ASSERTS_ENABLED && trailManager.getLevel() != level) {
       throw new IllegalStateException(
           String.valueOf(
               "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()"));
@@ -1108,7 +1108,7 @@ public class Store {
       c.removeLevelLate(level);
     }
 
-    if (org.jacop.core.Store.ASSERTS_ENABLED && checkInvariants() != null) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
   }
@@ -1141,7 +1141,7 @@ public class Store {
 
       for (int i = 0; i < size; i++) {
 
-        if (org.jacop.core.Store.ASSERTS_ENABLED
+        if (ASSERTS_ENABLED
             && vars[i].level() >= level
             && !trailManager.isRecognizedAsChanged(vars[i].storeIndex)) {
           throw new IllegalStateException(

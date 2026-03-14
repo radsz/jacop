@@ -205,8 +205,8 @@ public class Qcp extends ExampleFd {
         try {
           int currentNo = Integer.parseInt(s);
           numbers[i - 1][current++] = currentNo;
-        } catch (Exception _) {
-          // Ignore parsing errors
+        } catch (NumberFormatException e) {
+          log.trace("Ignoring non-integer token: {}", e.getMessage());
         }
       }
     }

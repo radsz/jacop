@@ -185,7 +185,7 @@ public class BreakingNews extends ExampleFd {
     orConstraint[2] =
         new And(
             new XeqY(story[ibeached], reporter[iCorey]),
-            new XeqY(reporter[iCorey], (location[iBayonne])));
+            new XeqY(reporter[iCorey], location[iBayonne]));
 
     store.impose(new Or(orConstraint));
   }

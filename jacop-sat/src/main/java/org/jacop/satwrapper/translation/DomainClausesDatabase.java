@@ -87,7 +87,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
      */
     if (!wrapper.isVarLiteral(assertedLiteral)) {
       return;
-    } else {
     }
 
     // get the value this literal corresponds to
@@ -140,9 +139,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
         // trigger the conflict and fail
         core.triggerConflictEvent(conflictClause);
         throw Store.failException;
-
-      } else {
-        // nothing to do, literal is already set to the right value
       }
     } else {
 

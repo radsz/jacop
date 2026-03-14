@@ -136,7 +136,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    while (true) {
+    boolean fixpointReached = false;
+    while (!fixpointReached) {
       IntDomain glbA = a.domain.glb();
       IntDomain lubA = a.domain.lub();
       IntDomain potentialEl = lubA.subtract(glbA);
@@ -162,7 +163,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
           glbSum + weightOfLastRequiredEl,
           lubSum + weightOfLastRequiredEl);
 
-      return;
+      fixpointReached = true;
     }
   }
 

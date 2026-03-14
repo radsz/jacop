@@ -71,7 +71,7 @@ class OperationConstraints implements ParserTreeConstants {
     IntVar v3 = support.getVariable(p3);
 
     if (v1.singleton() && v2.singleton()) {
-      int min = java.lang.Math.min(v1.value(), v2.value());
+      int min = Math.min(v1.value(), v2.value());
       v3.domain.inValue(store.level, v3, min);
     } else if (v1.singleton() && v1.value() <= v2.min()) {
       int min = v1.value();
@@ -100,7 +100,7 @@ class OperationConstraints implements ParserTreeConstants {
     IntVar v3 = support.getVariable(p3);
 
     if (v1.singleton() && v2.singleton()) {
-      int max = java.lang.Math.max(v1.value(), v2.value());
+      int max = Math.max(v1.value(), v2.value());
       v3.domain.inValue(store.level, v3, max);
     } else if (v1.singleton() && v1.value() >= v2.max()) {
       int max = v1.value();

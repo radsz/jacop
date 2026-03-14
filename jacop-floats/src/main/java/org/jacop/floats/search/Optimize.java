@@ -129,11 +129,9 @@ public class Optimize<T extends Var> {
   }
 
   private boolean performLabelingIfNeeded() {
-    if (lastCost != null) {
-      if (lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) {
-        printLastSolution();
-        return true;
-      }
+    if (lastCost != null && lastCost.min() >= cost.min() && lastCost.max() <= cost.max()) {
+      printLastSolution();
+      return true;
     }
     return search.labeling(store, select);
   }

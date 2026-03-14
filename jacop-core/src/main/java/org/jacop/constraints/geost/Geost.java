@@ -782,7 +782,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
       updateNfromForbiddenBoxPruneMin(o, f);
-      feasiblePointFound = advanceToNextFeasiblePointPruneMin(o, d);
+      feasiblePointFound = advanceToNextFeasiblePointPruneMin(o);
 
       if (c[d] >= limit) {
         return limit;
@@ -830,7 +830,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
   }
 
-  private boolean advanceToNextFeasiblePointPruneMin(GeostObject o, int d) {
+  private boolean advanceToNextFeasiblePointPruneMin(GeostObject o) {
     for (int i = o.dimension; i >= 0; i--) {
       int lexI = order.dimensionAt(i);
       final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.start.min();
@@ -891,7 +891,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         throw new IllegalStateException(String.valueOf("bad forbidden region, c is not contained"));
       }
       updateNfromForbiddenBoxPruneMax(o, f);
-      feasiblePointFound = advanceToNextFeasiblePointPruneMax(o, d);
+      feasiblePointFound = advanceToNextFeasiblePointPruneMax(o);
 
       if (c[d] <= limit) {
         return limit;
@@ -939,7 +939,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
   }
 
-  private boolean advanceToNextFeasiblePointPruneMax(GeostObject o, int d) {
+  private boolean advanceToNextFeasiblePointPruneMax(GeostObject o) {
     for (int i = o.dimension; i >= 0; i--) {
       int lexI = order.dimensionAt(i);
       final int domainMin = lexI != dimension ? o.coords[lexI].min() : o.end.min();

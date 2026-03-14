@@ -237,10 +237,8 @@ class LinearConstraints implements ParserTreeConstants {
       handleIntLinReifEqSingleVar(p1[0], p2[0], p3, p4, isReified);
       return;
     }
-    if (p1.length == 2) {
-      if (handleIntLinReifEqTwoVars(p1, p2, p3, p4, isReified)) {
-        return;
-      }
+    if (p1.length == 2 && handleIntLinReifEqTwoVars(p1, p2, p3, p4, isReified)) {
+      return;
     }
 
     int pos = sumPossible(p1, p3);

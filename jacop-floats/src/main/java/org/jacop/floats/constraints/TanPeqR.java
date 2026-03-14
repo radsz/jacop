@@ -187,10 +187,10 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     double pMax = Math.atan(qmaxValue);
     pMin = FloatDomain.down(pMin);
     pMax = FloatDomain.up(pMax);
-    if (java.lang.Double.isNaN(pMin)) {
+    if (Double.isNaN(pMin)) {
       pMin = -FloatDomain.PI / 2;
     }
-    if (java.lang.Double.isNaN(pMax)) {
+    if (Double.isNaN(pMax)) {
       pMax = FloatDomain.PI / 2;
     }
     double k = Math.floor(p.min() / FloatDomain.PI);

@@ -87,10 +87,8 @@ public class EquationSystem extends Constraint {
 
     if (xs != null) {
       for (int i = 0; i < xs.length; i++) {
-        if (DEBUG) {
-          if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max()) {
-            log.info("*** " + x[i] + " in " + xs[i]);
-          }
+        if (DEBUG && (x[i].min() < xs[i].min() || x[i].max() > xs[i].max())) {
+          log.info("*** " + x[i] + " in " + xs[i]);
         }
 
         if (!xs[i].singleton()) {

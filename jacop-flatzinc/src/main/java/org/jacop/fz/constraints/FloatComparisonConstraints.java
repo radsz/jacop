@@ -294,7 +294,6 @@ class FloatComparisonConstraints implements ParserTreeConstants {
   private void floatComparisonNonReified(
       int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2) {
     boolean p1Float = p1.getType() == 5;
-    boolean p2Float = p2.getType() == 5;
     if (p1Float && (p2.getType() == 0 || p2.getType() == 1)) {
       floatComparisonNonReifiedTwoConstants(operation, support.getFloat(p1), support.getFloat(p2));
       return;

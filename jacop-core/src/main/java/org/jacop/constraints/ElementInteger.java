@@ -282,7 +282,7 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
       int val = list[position];
-      if (AbstractElement.disjoint(value.domain, val)) {
+      if (disjoint(value.domain, val)) {
         if (indexDom.size == 0) {
           indexDom.unionAdapt(position + 1 + indexOffset);
         } else {

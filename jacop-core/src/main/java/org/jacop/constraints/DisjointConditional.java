@@ -438,7 +438,7 @@ public class DisjointConditional extends Diff {
     }
 
     for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).rects) {
-      FindRectanglesResult one = processOneRectangleForFind(s, r, dim, rMin, rMax, fdvQueue);
+      FindRectanglesResult one = processOneRectangleForFind(s, dim, rMin, rMax, fdvQueue);
       if (one.overlap) {
         if (s.condition() == null || s.condition().max() != 0) {
           overlappingRects.add(s);
@@ -471,12 +471,7 @@ public class DisjointConditional extends Diff {
   }
 
   private FindRectanglesResult processOneRectangleForFind(
-      RectangleWithCondition s,
-      Rectangle r,
-      int dim,
-      int[] rminBounds,
-      int[] rmaxBounds,
-      Set<IntVar> fdvQueue) {
+      RectangleWithCondition s, int dim, int[] rminBounds, int[] rmaxBounds, Set<IntVar> fdvQueue) {
     boolean overlap = true;
     boolean schanged = containsChangedVariable(s, fdvQueue) || conditionChanged(fdvQueue, s.index);
     IntRectangle useRect = new IntRectangle(dim);

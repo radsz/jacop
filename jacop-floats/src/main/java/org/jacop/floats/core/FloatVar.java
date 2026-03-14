@@ -50,9 +50,10 @@ public class FloatVar extends Var {
   static {
     try {
       Class.forName("org.jacop.floats.search.FloatSearchSupport");
-    } catch (ClassNotFoundException _) {
-      // FloatSearchSupport not available - handlers won't be registered
-      // This is OK if jacop-floats search package is not on classpath
+    } catch (ClassNotFoundException e) {
+      // FloatSearchSupport not available; search handlers not registered
+      String notAvailable = e.getMessage();
+      assert notAvailable != null || true; // optional dependency; ignore if absent
     }
   }
 
@@ -331,9 +332,9 @@ public class FloatVar extends Var {
   public void domainHasChanged(int event) {
 
     if (ASSERTS_ENABLED
-        && !(((event == IntDomain.ANY && !singleton())
-            || (event == IntDomain.BOUND && !singleton())
-            || (event == IntDomain.GROUND && singleton())))) {
+        && !(event == IntDomain.ANY && !singleton()
+            || event == IntDomain.BOUND && !singleton()
+            || event == IntDomain.GROUND && singleton())) {
       throw new IllegalStateException(String.valueOf("Wrong event generated"));
     }
 

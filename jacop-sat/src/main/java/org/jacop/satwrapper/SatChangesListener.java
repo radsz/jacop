@@ -285,14 +285,11 @@ public final class SatChangesListener
    */
   public void ensureAccess(IntVar cpVar) {
     // only check things for true IntVar, not BooleanVar
-    if (cpVar.storeIndex >= 0) {
-
-      if (upperBounds.length <= cpVar.storeIndex) {
-        int newLen = 2 * cpVar.storeIndex;
-        upperBounds = Arrays.copyOf(upperBounds, newLen);
-        lowerBounds = Arrays.copyOf(lowerBounds, newLen);
-        excludedValues = Arrays.copyOf(excludedValues, newLen);
-      }
+    if (cpVar.storeIndex >= 0 && upperBounds.length <= cpVar.storeIndex) {
+      int newLen = 2 * cpVar.storeIndex;
+      upperBounds = Arrays.copyOf(upperBounds, newLen);
+      lowerBounds = Arrays.copyOf(lowerBounds, newLen);
+      excludedValues = Arrays.copyOf(excludedValues, newLen);
     }
   }
 

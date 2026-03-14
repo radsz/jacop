@@ -141,11 +141,9 @@ public class VariablesParameters implements ParserTreeConstants {
   private void extractIntInterval(ASTIntTiExprTail tail) {
     lowInterval = tail.getLow();
     highInterval = tail.getHigh();
-    if (CHECK_BOUNDS) {
-      if (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT) {
-        throw new ArithmeticException(
-            "Too large bounds on intervals " + lowInterval + ".." + highInterval);
-      }
+    if (CHECK_BOUNDS && (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT)) {
+      throw new ArithmeticException(
+          "Too large bounds on intervals " + lowInterval + ".." + highInterval);
     }
   }
 

@@ -174,13 +174,12 @@ public class RegularExpressionParser {
   private Expression parseWord(Expression c) {
     c = new Literal(lexer.getString());
     lexer.nextToken();
-    if (token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF) {
-      if (token != LexicalAnalyzer.DOT
-          && token != LexicalAnalyzer.STAR
-          && token != LexicalAnalyzer.PLUS) {
-        expect(LexicalAnalyzer.OPERATOR);
-      }
-      // contin will be set by caller from switch
+    if (token != LexicalAnalyzer.RIGHT_PAREN
+        && token != LexicalAnalyzer.EOF
+        && token != LexicalAnalyzer.DOT
+        && token != LexicalAnalyzer.STAR
+        && token != LexicalAnalyzer.PLUS) {
+      expect(LexicalAnalyzer.OPERATOR);
     }
     return c;
   }

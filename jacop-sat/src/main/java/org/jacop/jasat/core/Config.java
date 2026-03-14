@@ -128,8 +128,9 @@ public class Config extends Properties {
     for (Field field : this.getClass().getFields()) {
       try {
         sb.append("%-30s: %s\n".formatted(field.getName(), field.get(this)));
-      } catch (IllegalArgumentException | IllegalAccessException _) {
-        // Ignore reflection errors
+      } catch (IllegalArgumentException | IllegalAccessException e) {
+        // Ignore reflection errors for inaccessible fields; e.getMessage() would show the cause
+        assert e != null;
       }
     }
 

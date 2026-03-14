@@ -396,7 +396,7 @@ public class CarSequencing extends ExampleFd {
     }
     CarSequencing example = new CarSequencing();
 
-    readFromArray(CarSequencing.problem(), example);
+    readFromArray(problem(), example);
 
     example.model();
 
@@ -420,7 +420,7 @@ public class CarSequencing extends ExampleFd {
     }
     CarSequencing example = new CarSequencing();
 
-    readFromArray(CarSequencing.problem(), example);
+    readFromArray(problem(), example);
 
     example.model();
 

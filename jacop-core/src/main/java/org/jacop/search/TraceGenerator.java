@@ -487,8 +487,8 @@ public class TraceGenerator<T extends Var>
             setDomainClass.getMethod("subtract", int.class, int.class);
         return (Domain) subtractMethod.invoke(dom, value, value);
       }
-    } catch (Exception _) {
-      // SetDomain not available - skip this operation
+    } catch (Exception e) {
+      log.trace("SetDomain not available - skip this operation", e);
     }
     return null;
   }
@@ -748,8 +748,8 @@ public class TraceGenerator<T extends Var>
             String domainStr = setDomainToStringReflective(dom);
             atts.addAttribute("", "", ATTR_CHOICE, ATTR_TYPE_CDATA, domainStr);
           }
-        } catch (Exception _) {
-          // SetDomain not available - skip this operation
+        } catch (Exception e) {
+          log.trace("SetDomain not available - skip this operation", e);
         }
       }
       hdTree.startElement("", "", "tryc", atts);

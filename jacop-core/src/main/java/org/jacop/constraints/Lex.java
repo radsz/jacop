@@ -313,21 +313,21 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     private void buildState0Transitions(int i, int j, FsmState terminate) {
       if (i != state.length - 1) {
-        state0TransitionsNonLastRow(i, j, terminate);
+        state0TransitionsNonLastRow(i, j);
       } else {
         state0TransitionsLastRow(i, j, terminate);
       }
     }
 
-    private void state0TransitionsNonLastRow(int i, int j, FsmState terminate) {
+    private void state0TransitionsNonLastRow(int i, int j) {
       if (addState[i].length != 0) {
-        state0TransitionsAddStateNonEmpty(i, j, terminate);
+        state0TransitionsAddStateNonEmpty(i, j);
       } else {
         state0TransitionsAddStateEmpty(i, j);
       }
     }
 
-    private void state0TransitionsAddStateNonEmpty(int i, int j, FsmState terminate) {
+    private void state0TransitionsAddStateNonEmpty(int i, int j) {
       if (j == 0) {
         state0TransitionsJzero(i);
       } else {

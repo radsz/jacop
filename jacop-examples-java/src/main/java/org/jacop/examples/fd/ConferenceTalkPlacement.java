@@ -121,30 +121,6 @@ public class ConferenceTalkPlacement {
   }
 
   /**
-   * Transforms a 2D array of costs into a nested map structure.
-   *
-   * @param costs 2D array where each row contains [talk1, talk2, cost]
-   * @param noOfTalks total number of talks
-   * @return nested map structure mapping pairs of talks to their scheduling costs
-   */
-  private Map<Integer, Map<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
-
-    Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
-
-    for (int i = 0; i < noOfTalks; i++) {
-      result.put(i, new HashMap<>());
-    }
-
-    for (int[] ints : costs) {
-      result.get(ints[0]).put(ints[1], ints[2]);
-    }
-
-    log.info("{}", result);
-
-    return result;
-  }
-
-  /**
    * Generates random costs for scheduling talk pairs.
    *
    * @param noOfTalks total number of talks
@@ -170,27 +146,6 @@ public class ConferenceTalkPlacement {
     }
 
     return result;
-  }
-
-  // assumes noTalks = noOfParallelTracks * noOfTimeSlots
-  private int computeLowerBound(
-      int noOfParallelTracks, int noOfTimeSlots, Map<Integer, Map<Integer, Integer>> costs) {
-
-    List<Integer> costsList = new ArrayList<>();
-    for (Map<Integer, Integer> elH : costs.values()) {
-      costsList.addAll(elH.values());
-    }
-
-    Integer[] sortedArray = costsList.toArray(new Integer[0]);
-    Arrays.sort(sortedArray);
-
-    int lowerBound = 0;
-    for (int i = 0; i < noOfTimeSlots * (noOfParallelTracks * (noOfParallelTracks - 1) / 2); i++) {
-      lowerBound += sortedArray[i];
-    }
-
-    log.info("{}", lowerBound);
-    return lowerBound;
   }
 
   /**

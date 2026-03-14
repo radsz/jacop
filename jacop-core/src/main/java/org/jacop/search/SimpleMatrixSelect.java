@@ -207,14 +207,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
     for (int currentPosition = firstVariable + 1; currentPosition < finalIndex; currentPosition++) {
       T v = searchVariables.get(currentPosition).get(pivotPosition);
 
-      if (v.singleton()) {
-        if (trySwapGroundedRow(firstVariable, currentPosition)) {
-          if (optimalPosition == firstVariable) {
-            optimalPosition = currentPosition;
-          }
-          firstVariable++;
-          continue;
+      if (v.singleton() && trySwapGroundedRow(firstVariable, currentPosition)) {
+        if (optimalPosition == firstVariable) {
+          optimalPosition = currentPosition;
         }
+        firstVariable++;
+        continue;
       }
 
       int comparison = mainComparator.compare(optimalMetric, v);

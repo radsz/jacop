@@ -605,7 +605,7 @@ public abstract class FloatDomain extends Domain {
       return divBoundsP1(a, b, c, d, m2, p02, p12, n02, n12);
     }
     if (p01) {
-      return divBoundsP0(a, b, c, d, p12, n12);
+      return divBoundsP0(b, c, d, p12, n12);
     }
     if (m1) {
       return divBoundsM(a, b, c, d, p12, n12);
@@ -614,7 +614,7 @@ public abstract class FloatDomain extends Domain {
       return divBoundsN1(a, b, c, d, m2, p02, p12, n02, n12);
     }
     if (n01) {
-      return divBoundsN0(a, b, c, d, p12, n12);
+      return divBoundsN0(a, c, d, p12, n12);
     }
     if (z1) {
       return divBoundsZ(p12, n12);
@@ -690,7 +690,7 @@ public abstract class FloatDomain extends Domain {
   }
 
   private static FloatIntervalDomain divBoundsP0(
-      double a, double b, double c, double d, boolean p12, boolean n12) {
+      double b, double c, double d, boolean p12, boolean n12) {
     if (p12) {
       return new FloatIntervalDomain(0.0, up(b / c));
     }
@@ -743,7 +743,7 @@ public abstract class FloatDomain extends Domain {
   }
 
   private static FloatIntervalDomain divBoundsN0(
-      double a, double b, double c, double d, boolean p12, boolean n12) {
+      double a, double c, double d, boolean p12, boolean n12) {
     if (p12) {
       return new FloatIntervalDomain(down(a / c), 0.0);
     }
@@ -809,10 +809,10 @@ public abstract class FloatDomain extends Domain {
     FloatDomain result = union(union);
 
     if (result.getSize() == getSize()) {
-      return Domain.NONE;
+      return NONE;
     } else {
       setDomain(result);
-      return FloatDomain.ANY;
+      return ANY;
     }
   }
 
@@ -1672,13 +1672,13 @@ public abstract class FloatDomain extends Domain {
    * @return the normalized angle interval
    */
   public static FloatInterval normalizeAngle(double min, double max) {
-    double normMin = FloatDomain.down(min % (2 * FloatDomain.PI));
+    double normMin = down(min % (2 * PI));
     double maxmin = max - min;
-    double normMax = FloatDomain.up(normMin + maxmin);
+    double normMax = up(normMin + maxmin);
 
-    if (normMax >= 2 * FloatDomain.PI) {
-      normMin = FloatDomain.down(normMin - 2 * FloatDomain.PI);
-      normMax = FloatDomain.up(normMax - 2 * FloatDomain.PI);
+    if (normMax >= 2 * PI) {
+      normMin = down(normMin - 2 * PI);
+      normMax = up(normMax - 2 * PI);
     }
 
     return new FloatInterval(normMin, normMax);

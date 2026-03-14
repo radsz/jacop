@@ -165,7 +165,7 @@ public class ElementVariableFast extends AbstractElement implements SatisfiedPre
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
-      if (AbstractElement.disjoint(value, list[position])) {
+      if (disjoint(value, list[position])) {
         indexDomNonEmpty = true;
         if (indexDom.size == 0) {
           indexDom.unionAdapt(position + 1 + indexOffset);

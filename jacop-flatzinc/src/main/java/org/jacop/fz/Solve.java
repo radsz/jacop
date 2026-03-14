@@ -439,7 +439,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
     }
-    listSeqSearches.getLast();
 
     applyHeuristicSearch(label, si);
 

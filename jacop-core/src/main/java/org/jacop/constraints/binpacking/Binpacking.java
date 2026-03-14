@@ -249,7 +249,7 @@ public class Binpacking extends Constraint
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
-  private IntervalDomain collectChangedDomains(Store store) {
+  private IntervalDomain collectChangedDomains() {
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
       Iterator<IntVar> it = binQueue.iterator();
@@ -299,7 +299,7 @@ public class Binpacking extends Constraint
     for (int l = 0; l < candidatesLength; l++) {
       Cj[l] = candidates[l].weight();
     }
-    applyTighteningBounds(store, i, required, Cj, candidatesLength);
+    applyTighteningBounds(store, i, required, Cj);
     applyEliminationAndCommitment(store, i, binIdx, required, candidates, Cj, candidatesLength);
   }
 
@@ -321,8 +321,7 @@ public class Binpacking extends Constraint
     }
   }
 
-  private void applyTighteningBounds(
-      Store store, int i, int required, int[] candidateWeights, int candidatesLength) {
+  private void applyTighteningBounds(Store store, int i, int required, int[] candidateWeights) {
     if (noSum(candidateWeights, load[i].min() - required, load[i].min() - required)) {
       load[i].domain.inMin(store.level, load[i], required + betaP);
     }
@@ -381,7 +380,7 @@ public class Binpacking extends Constraint
     boolean pruneLb = lbPruning && lbPruningStamp.value();
     pruneLb = updatePruneLbFlag(pruneLb);
     store.propagationHasOccurred = false;
-    IntervalDomain d = collectChangedDomains(store);
+    IntervalDomain d = collectChangedDomains();
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
       processBin(store, i);

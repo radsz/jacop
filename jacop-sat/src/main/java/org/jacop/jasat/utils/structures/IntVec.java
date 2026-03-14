@@ -185,12 +185,10 @@ public final class IntVec implements Iterable<Integer> {
 
     numElem--;
     // the last element ? easy !
-    if (index == numElem) {
-    } else {
+    if (index != numElem) {
+      // move the last element in place of the one we remove
       array[index] = array[numElem];
     }
-
-    // note: we just move the last element in place of the one we remove
   }
 
   /**

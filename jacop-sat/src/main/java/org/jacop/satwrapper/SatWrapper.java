@@ -485,10 +485,8 @@ public final class SatWrapper extends Constraint
     /* KK: Do not queue variable when this constraint (wrapper) executes
      *     its consistency method
      */
-    if (store.currentConstraint != null) {
-      if (store.currentConstraint.equals(this)) {
-        return;
-      }
+    if (store.currentConstraint != null && store.currentConstraint.equals(this)) {
+      return;
     }
 
     /*
@@ -587,7 +585,7 @@ public final class SatWrapper extends Constraint
     return "("
         + boolVarToCpVar(literal)
         + ")"
-        + (isEqualityBoolVar(literal) ? (literal > 0 ? "=" : "!=") : (literal > 0 ? "<=" : ">"))
+        + (isEqualityBoolVar(literal) ? literal > 0 ? "=" : "!=" : literal > 0 ? "<=" : ">")
         + boolVarToCpValue(literal);
   }
 

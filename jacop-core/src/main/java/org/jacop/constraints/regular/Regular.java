@@ -314,7 +314,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     RegState s = findStateInLayer(layeredGraph[currentLevel + 1], nextNodePosition);
-    boolean visited = (s != null);
+    boolean visited = s != null;
     if (s == null) {
       s =
           createAndAddStateToLayeredGraph(

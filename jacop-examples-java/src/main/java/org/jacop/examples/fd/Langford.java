@@ -132,7 +132,7 @@ public class Langford extends ExampleFd {
     for (int i = 0; i + 1 < n; i++) {
       for (int j = 0; j < m; j++) {
 
-        store.impose(new XplusCeqZ(x[i * m + j], (j + 2), x[(i + 1) * m + j]));
+        store.impose(new XplusCeqZ(x[i * m + j], j + 2, x[(i + 1) * m + j]));
       }
     }
 
@@ -156,7 +156,7 @@ public class Langford extends ExampleFd {
     for (int i = 0; i + 1 < n; i++) {
       for (int j = 0; j < m; j++) {
 
-        store.impose(new XplusCeqZ(x[i * m + j], (j + 2), x[(i + 1) * m + j]));
+        store.impose(new XplusCeqZ(x[i * m + j], j + 2, x[(i + 1) * m + j]));
       }
     }
 
