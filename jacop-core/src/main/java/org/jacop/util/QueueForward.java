@@ -30,6 +30,7 @@
 
 package org.jacop.util;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -144,12 +145,14 @@ public class QueueForward<T extends Constraint> {
 
     if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(v)) {
       try {
-        // We assume that all constraint needing queueVariable declare this method, even for
-        // the ones that inherit from other constraints.
-        constraint.getClass().getDeclaredMethod("queueVariable", int.class, Var.class);
-        return true;
-      } catch (NoSuchMethodException _) {
-        // constraint may use empty queueVariable provided by abstract class Constraint
+        // getMethod() traverses the full class hierarchy, unlike getDeclaredMethod()
+        // which only checks the concrete class. We check the declaring class to
+        // distinguish a meaningful queueVariable override from the empty default
+        // in Constraint.
+        Method m = constraint.getClass().getMethod("queueVariable", int.class, Var.class);
+        return m.getDeclaringClass() != Constraint.class;
+      } catch (NoSuchMethodException e) {
+        // Cannot happen: Constraint always declares queueVariable.
         return false;
       }
     }

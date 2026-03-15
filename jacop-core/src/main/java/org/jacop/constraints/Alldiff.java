@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Alldiff constraint assures that all FDVs has different values. It uses bounds consistency
@@ -357,13 +356,6 @@ public class Alldiff extends Alldifferent {
         }
       }
     }
-  }
-
-  // Overwritten as QueueForwardQueue checks that constraint has declared this method.
-  @SuppressWarnings("PMD.UselessOverridingMethod")
-  @Override
-  public void queueVariable(int level, Var v) {
-    super.queueVariable(level, v);
   }
 
   /**

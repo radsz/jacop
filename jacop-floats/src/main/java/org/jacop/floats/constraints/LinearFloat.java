@@ -35,7 +35,6 @@ import java.util.Set;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
 
@@ -94,13 +93,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
       List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
     super(variables.getFirst().getStore(), variables, weights, rel, sum);
-  }
-
-  // Required: QueueForward uses getDeclaredMethod() to check if a concrete class
-  // declares queueVariable. Removing this override breaks constraint propagation.
-  @Override
-  public void queueVariable(int level, Var v) {
-    super.queueVariable(level, v);
   }
 
   /**
