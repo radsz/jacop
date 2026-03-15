@@ -30,6 +30,7 @@
 
 package org.jacop.util;
 
+import java.util.Arrays;
 import org.jacop.core.IntVar;
 
 /**
@@ -122,7 +123,38 @@ public class TupleUtils {
     return applyInsertPlan(sortedTs, plan);
   }
 
-  private record InsertPlan(int[] position, boolean[] insert, int insertNo, int[][] reusedTuples) {}
+  private record InsertPlan(int[] position, boolean[] insert, int insertNo, int[][] reusedTuples) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof InsertPlan other
+          && insertNo == other.insertNo
+          && Arrays.equals(position, other.position)
+          && Arrays.equals(insert, other.insert)
+          && Arrays.deepEquals(reusedTuples, other.reusedTuples);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = Arrays.hashCode(position);
+      result = 31 * result + Arrays.hashCode(insert);
+      result = 31 * result + insertNo;
+      result = 31 * result + Arrays.deepHashCode(reusedTuples);
+      return result;
+    }
+
+    @Override
+    public String toString() {
+      return "InsertPlan[position="
+          + Arrays.toString(position)
+          + ", insert="
+          + Arrays.toString(insert)
+          + ", insertNo="
+          + insertNo
+          + ", reusedTuples="
+          + Arrays.deepToString(reusedTuples)
+          + "]";
+    }
+  }
 
   private InsertPlan buildInsertPlan(int[][] sortedTs) {
     int[] position = new int[sortedTs.length];

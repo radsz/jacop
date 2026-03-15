@@ -72,7 +72,7 @@ public class FloatIntervalDomain extends FloatDomain {
    * @param v the variable to install the clone on
    * @return the cloned domain
    */
-  private FloatIntervalDomain cloneAndInstall(int storeLevel, Var v) {
+  private FloatIntervalDomain cloneAndInstallFloat(int storeLevel, Var v) {
     FloatIntervalDomain result = this.cloneLight();
     installResultDomain(result, storeLevel, v);
     return result;
@@ -2924,7 +2924,7 @@ public class FloatIntervalDomain extends FloatDomain {
   public void removeSearchConstraint(int storeLevel, Var v, Constraint constraint) {
 
     if (stamp < storeLevel) {
-      cloneAndInstall(storeLevel, v).removeSearchConstraint(storeLevel, v, constraint);
+      cloneAndInstallFloat(storeLevel, v).removeSearchConstraint(storeLevel, v, constraint);
       return;
     }
 
@@ -2955,7 +2955,8 @@ public class FloatIntervalDomain extends FloatDomain {
   public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
-      cloneAndInstall(storeLevel, v).removeSearchConstraint(storeLevel, v, position, constraint);
+      cloneAndInstallFloat(storeLevel, v)
+          .removeSearchConstraint(storeLevel, v, position, constraint);
       return;
     }
 

@@ -340,6 +340,10 @@ public class BenchmarkImporter {
         return null;
       }
       return outputFzn;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      System.out.println("    " + candidate.instanceName() + ": compilation interrupted");
+      return null;
     } catch (Exception _) {
       System.out.println("    " + candidate.instanceName() + ": compilation error");
       return null;

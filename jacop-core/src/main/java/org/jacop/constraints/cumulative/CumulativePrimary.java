@@ -269,7 +269,24 @@ class CumulativePrimary extends Constraint {
     }
   }
 
-  private record SweepEventArray(Event[] events, int count) {}
+  private record SweepEventArray(Event[] events, int count) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof SweepEventArray other
+          && count == other.count
+          && Arrays.equals(events, other.events);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(events) + count;
+    }
+
+    @Override
+    public String toString() {
+      return "SweepEventArray[events=" + Arrays.toString(events) + ", count=" + count + "]";
+    }
+  }
 
   private SweepEventArray buildSweepEventArray() {
     Event[] es = new Event[4 * start.length];

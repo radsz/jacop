@@ -165,14 +165,14 @@ public class RegularExpressionParser {
 
   private Expression parseParen(Expression c) {
     lexer.nextToken();
-    c = parse(false);
+    Expression result = parse(false);
     expect(LexicalAnalyzer.RIGHT_PAREN);
     lexer.nextToken();
-    return c;
+    return result;
   }
 
   private Expression parseWord(Expression c) {
-    c = new Literal(lexer.getString());
+    Expression result = new Literal(lexer.getString());
     lexer.nextToken();
     if (token != LexicalAnalyzer.RIGHT_PAREN
         && token != LexicalAnalyzer.EOF
@@ -181,7 +181,7 @@ public class RegularExpressionParser {
         && token != LexicalAnalyzer.PLUS) {
       expect(LexicalAnalyzer.OPERATOR);
     }
-    return c;
+    return result;
   }
 
   /**

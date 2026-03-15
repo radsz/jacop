@@ -940,7 +940,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   }
 
   private void updateLeftChangeFromLevelHadChanged(Store store) {
-    int start = leftChange.stamp() < store.level ? 0 : 0;
+    int start = 0;
     int end = leftChange.stamp() < store.level ? levelHadChanged.length : leftChange.value();
     int found = findFirstLevelHadChanged(start, end);
     if (found >= 0) {

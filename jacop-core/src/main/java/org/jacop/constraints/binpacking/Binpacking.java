@@ -97,9 +97,32 @@ public class Binpacking extends Constraint
    *
    * @param bin which are constrained to define bin for item i.
    * @param load which are constrained to define load for bin i.
-   * @param w which define size ofitem i.
+   * @param w which define size of item i.
    */
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w) {
+    this(bin, load, w, computeDefaultMinBin(bin, w));
+  }
+
+  /**
+   * It constructs the binpacking constraint for the supplied variable.
+   *
+   * @param bin which are constrained to define bin for item i.
+   * @param load which are constrained to define load for bin i.
+   * @param w which define size of item i.
+   */
+  public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w) {
+    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w);
+  }
+
+  /**
+   * It constructs the binpacking constraint for the supplied variable.
+   *
+   * @param bin which are constrained to define bin for item i.
+   * @param load which are constrained to define load for bin i.
+   * @param w which define size of item i.
+   * @param minBin minimal index of a bin; overrides the value computed from bin variable domains
+   */
+  public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
 
     checkInputForNullness(new String[] {"bin", "load", "w"}, bin, load, new Object[] {w});
     checkInputForDuplication("load", load);
@@ -128,7 +151,7 @@ public class Binpacking extends Constraint
     this.item = new BinItem[itemPar.size()];
     this.queueIndex = 2;
 
-    minBinNumber = bin[0].min();
+    minBinNumber = minBin;
     Set<Map.Entry<IntVar, Integer>> entries = itemPar.entrySet();
     int j = 0;
     for (Map.Entry<IntVar, Integer> e : entries) {
@@ -137,10 +160,6 @@ public class Binpacking extends Constraint
       item[j] = new BinItem(b, ws);
 
       sizeAllItems += ws;
-
-      if (minBinNumber > b.min()) {
-        minBinNumber = b.min();
-      }
       j++;
     }
 
@@ -163,39 +182,21 @@ public class Binpacking extends Constraint
    *
    * @param bin which are constrained to define bin for item i.
    * @param load which are constrained to define load for bin i.
-   * @param w which define size ofitem i.
-   */
-  public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w) {
-    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w);
-  }
-
-  /**
-   * It constructs the binpacking constraint for the supplied variable.
-   *
-   * @param bin which are constrained to define bin for item i.
-   * @param load which are constrained to define load for bin i.
-   * @param w which define size ofitem i.
-   * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable
-   *     bin
-   */
-  public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
-    this(bin, load, w);
-    minBinNumber = minBin;
-  }
-
-  /**
-   * It constructs the binpacking constraint for the supplied variable.
-   *
-   * @param bin which are constrained to define bin for item i.
-   * @param load which are constrained to define load for bin i.
-   * @param w which define size ofitem i.
-   * @param minBin minimal index of a bin; ovewrite the value provided by minimal index of variable
-   *     bin
+   * @param w which define size of item i.
+   * @param minBin minimal index of a bin; overrides the value computed from bin variable domains
    */
   public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w, int minBin) {
+    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w, minBin);
+  }
 
-    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w);
-    minBinNumber = minBin;
+  private static int computeDefaultMinBin(IntVar[] bin, int[] w) {
+    int min = bin[0].min();
+    for (int i = 0; i < bin.length; i++) {
+      if (w[i] != 0 && bin[i].min() < min) {
+        min = bin[i].min();
+      }
+    }
+    return min;
   }
 
   /**

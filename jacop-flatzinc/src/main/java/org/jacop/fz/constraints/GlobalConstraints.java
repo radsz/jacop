@@ -1039,7 +1039,28 @@ class GlobalConstraints implements ParserTreeConstants {
     return newT;
   }
 
-  private record TableVarsTuples(IntVar[] vars, int[][] tuples) {}
+  private record TableVarsTuples(IntVar[] vars, int[][] tuples) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof TableVarsTuples other
+          && Arrays.equals(vars, other.vars)
+          && Arrays.deepEquals(tuples, other.tuples);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(vars) + Arrays.deepHashCode(tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "TableVarsTuples[vars="
+          + Arrays.toString(vars)
+          + ", tuples="
+          + Arrays.deepToString(tuples)
+          + "]";
+    }
+  }
 
   private TableVarsTuples removeGroundVariablesFromTable(IntVar[] v, int[][] t, int size) {
     boolean[] toRemove = new boolean[v.length];

@@ -72,8 +72,16 @@ public class CumulativeUnary extends Cumulative {
    * @param durations variables denoting durations of the tasks.
    * @param resources variables denoting resource usage of the tasks.
    * @param limit the overall limit of resources which has to be used.
+   * @param doProfile defines whether to do profile-based propagation (true) or not (false).
+   * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false).
    */
-  public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
+  public CumulativeUnary(
+      IntVar[] starts,
+      IntVar[] durations,
+      IntVar[] resources,
+      IntVar limit,
+      boolean doProfile,
+      boolean doEdgeFind) {
 
     super(starts, durations, resources, limit);
     checkInput(durations, i -> i.min() >= 0, "duration does not allow negative values");
@@ -87,16 +95,29 @@ public class CumulativeUnary extends Cumulative {
       tvn[i].index = i;
     }
 
-    String s = System.getProperty("max_edge_find_size");
-    int limitOnEdgeFind = 100;
-    if (s != null) {
-      limitOnEdgeFind = Integer.parseInt(s);
+    if (!doProfile && !doEdgeFind) {
+      log.warn("CumulativeUnary has no effect (no propagators defined).");
     }
-    doUnaryEdgeFind = starts.length <= limitOnEdgeFind;
+    this.doProfile = doProfile;
+    this.doUnaryEdgeFind = doEdgeFind;
+  }
 
-    if (!doUnaryEdgeFind) {
-      doProfile = true;
-    }
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   */
+  public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
+    this(
+        starts,
+        durations,
+        resources,
+        limit,
+        starts.length > getEdgeFindLimit(),
+        starts.length <= getEdgeFindLimit());
   }
 
   /**
@@ -111,43 +132,18 @@ public class CumulativeUnary extends Cumulative {
    */
   public CumulativeUnary(
       IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile) {
-
-    this(starts, durations, resources, limit);
-
-    if (doUnaryEdgeFind) {
-      this.doProfile = doProfile;
-    } else {
-      this.doProfile = true;
-    }
+    this(
+        starts,
+        durations,
+        resources,
+        limit,
+        starts.length <= getEdgeFindLimit() ? doProfile : true,
+        starts.length <= getEdgeFindLimit());
   }
 
-  /**
-   * It creates a cumulative constraint.
-   *
-   * @param starts variables denoting starts of the tasks.
-   * @param durations variables denoting durations of the tasks.
-   * @param resources variables denoting resource usage of the tasks.
-   * @param limit the overall limit of resources which has to be used.
-   * @param doProfile defines whether to do profile-based propagation (true) or not (false);
-   * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default
-   *     is true
-   */
-  public CumulativeUnary(
-      IntVar[] starts,
-      IntVar[] durations,
-      IntVar[] resources,
-      IntVar limit,
-      boolean doProfile,
-      boolean doEdgeFind) {
-
-    this(starts, durations, resources, limit);
-
-    if (!doProfile && !doEdgeFind) {
-      log.warn("CumulativeUnary has no effect (no propagators defined).");
-    } else {
-      this.doProfile = doProfile;
-      this.doUnaryEdgeFind = doEdgeFind;
-    }
+  private static int getEdgeFindLimit() {
+    String s = System.getProperty("max_edge_find_size");
+    return s != null ? Integer.parseInt(s) : 100;
   }
 
   /**
