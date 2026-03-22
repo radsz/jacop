@@ -1,0 +1,226 @@
+/*
+ * ExtensionalSupportMdd.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.util.IndexDomainView;
+import org.jacop.util.Mdd;
+import org.jacop.util.SparseSet;
+
+/**
+ * Extensional constraint assures that one of the tuples is enforced in the relation.
+ *
+ * <p>This implementation uses technique developed/improved by Roland Yap and his student. Paper
+ * presented at CP2008. We would like to thank Roland for answering our detailed questions about the
+ * implementation. It is a slightly improved version to what was presented at the conference.
+ *
+ * <p>This constraint uses a lot of memory, despite using an Mdd. However, if the constraint is
+ * imposed multiple times (50+) its overall usage of memory maybe advantageous. Always test against
+ * STR version.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresent {
+
+  /** It specifies if the debugging information is printed. */
+  public static final boolean DEBUG_ALL = false;
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies a multiple value decision diagram used by this constraint. */
+  private final Mdd mdd;
+
+  final SparseSet gNo;
+  final IndexDomainView[] views;
+  TimeStamp<Integer> gNoSize;
+  SparseSet gYes;
+
+  /**
+   * It creates an extensional constraint.
+   *
+   * @param diagram multiple-valued decision diagram describing allowed tuples.
+   */
+  public ExtensionalSupportMdd(Mdd diagram) {
+
+    checkInputForNullness("diagram", new Object[] {diagram});
+    checkInputForNullness("diagram.vars", diagram.vars);
+    checkInputForNullness("diagram.views", diagram.views);
+
+    queueIndex = 1;
+
+    this.mdd = diagram;
+    this.views = diagram.views;
+    gNo = new SparseSet(diagram.freePosition);
+    numberId = idNumber.incrementAndGet();
+
+    setScope(this.mdd.vars);
+  }
+
+  /**
+   * It constructs extensional support constraint. Please note that parameters will be stored
+   * internally as references until the impose of the constraint takes place. Changing parameters
+   * after constructing the constraint and before its imposition will change the constraint too.
+   *
+   * @param vars the variables in the scope of the constraint.
+   * @param table list of tuples which are allowed.
+   */
+  public ExtensionalSupportMdd(IntVar[] vars, int[][] table) {
+    this(new Mdd(vars, table));
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    super.impose(store);
+
+    this.gNoSize = new TimeStamp<>(store, 0);
+
+    store.raiseLevelBeforeConsistency = true;
+
+    if (mdd.freePosition > store.sparseSetSize) {
+      store.sparseSetSize = mdd.freePosition;
+    }
+  }
+
+  // data structures to support for a given variable
+  // signaling what value index is supported.
+
+  @Override
+  public void consistency(Store s) {
+
+    gYes = s.sparseSet;
+
+    gYes.clear();
+
+    gNo.setSize(gNoSize.value());
+
+    for (IndexDomainView indexDomainView : views) {
+      indexDomainView.intializeSupportSweep();
+    }
+
+    seekSupport(0, 0);
+
+    for (IndexDomainView view : views) {
+      view.removeUnSupportedValues(s);
+    }
+
+    gNoSize.update(gNo.members);
+  }
+
+  /**
+   * It checks if the node at a given level of Mdd has a support.
+   *
+   * @param nodeId the position of the node in the Mdd.
+   * @param level number of variable associated with the node.
+   * @return true if node is supported by current domains of variables.
+   */
+  public boolean seekSupport(int nodeId, int level) {
+
+    if (gYes.isMember(nodeId)) {
+      return true;
+    }
+
+    if (gNo.isMember(nodeId)) {
+      return false;
+    }
+
+    boolean result = seekSupportInLoop(nodeId, level);
+    recordSeekSupportResult(nodeId, result);
+    return result;
+  }
+
+  private boolean seekSupportInLoop(int nodeId, int level) {
+    boolean result = false;
+    for (int i = 0; i < mdd.domainLimits[level]; i++) {
+      int shift = nodeId + i;
+      if (valueHasSupport(shift, level, i, result)) {
+        result = true;
+        if (allIndexesSupportedFrom(level)) {
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  private boolean valueHasSupport(int shift, int level, int i, boolean resultSoFar) {
+    return mdd.diagram[shift] != Mdd.NOEDGE
+        && views[level].contains(i)
+        && (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1))
+        && (!views[level].setSupport(i) || !resultSoFar);
+  }
+
+  private void recordSeekSupportResult(int nodeId, boolean result) {
+    if (result) {
+      gYes.addMember(nodeId);
+    } else {
+      gNo.addMember(nodeId);
+    }
+  }
+
+  private boolean allIndexesSupportedFrom(int level) {
+    int j = level;
+    while (j < views.length && views[j].isSupported()) {
+      j++;
+    }
+    return j == views.length;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return mdd.checkIfAllowed();
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : extensionalSupportMDD( ");
+
+    IntVar[] vars = mdd.vars;
+
+    for (IntVar v : vars) {
+      result.append(v).append(" ");
+    }
+
+    result.append(")").append("size = ").append(mdd.freePosition);
+
+    result.append(")\n");
+
+    return result.toString();
+  }
+}

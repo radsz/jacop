@@ -1,0 +1,164 @@
+/*
+ * XmulYeqZ.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+
+/**
+ * Constraint X * Y #= Z.
+ *
+ * <p>Boundary consistency is used.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class XmulYeqZ extends AbstractXopYeqZ {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  private final boolean xSquare;
+
+  private final XeqY xEqz;
+  private final XeqY yEqz;
+
+  /**
+   * It constructs a constraint X * Y = Z.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  public XmulYeqZ(IntVar x, IntVar y, IntVar z) {
+
+    super(idNumber, x, y, z);
+
+    xSquare = x == y;
+
+    this.queueIndex = 1;
+
+    xEqz = new XeqY(x, z);
+    yEqz = new XeqY(y, z);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (xSquare) {
+      propagateXsquareBounds(store);
+    } else {
+      propagateMulBounds(store);
+    }
+
+    if (x.singleton(0) || y.singleton(0)) {
+      removeConstraint();
+    }
+  }
+
+  private void propagateXsquareBounds(Store store) {
+    do {
+      // Bounds for Z
+      Interval zBounds = IntDomain.squareBounds(x.min(), x.max());
+      z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+      store.propagationHasOccurred = false;
+
+      // Bounds for X
+      int xMin = toInt(Math.round(Math.ceil(Math.sqrt(z.min()))));
+      int xMax = toInt(Math.round(Math.floor(Math.sqrt(z.max()))));
+
+      if (xMin > xMax) {
+        throw Store.failException;
+      }
+
+      if (x.min() < 0) {
+        IntDomain dom = new IntervalDomain(-xMax, -xMin);
+        dom.unionAdapt(xMin, xMax);
+        x.domain.in(store.level, x, dom);
+      } else {
+        x.domain.in(store.level, x, xMin, xMax);
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagateMulBounds(Store store) {
+    if (x.singleton(1)) {
+      this.queueIndex = 0;
+      yEqz.consistency(store);
+      return;
+    }
+    if (y.singleton(1)) {
+      this.queueIndex = 0;
+      xEqz.consistency(store);
+      return;
+    }
+
+    do {
+      this.queueIndex = 1;
+
+      // Bounds for Z
+      Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+      z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
+      store.propagationHasOccurred = false;
+
+      // Bounds for X
+      Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
+      x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+
+      // Bounds for Y
+      Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
+      y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && x.min() * y.min() == z.min();
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
+  }
+}

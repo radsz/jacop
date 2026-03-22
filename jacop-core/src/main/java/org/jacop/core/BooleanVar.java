@@ -1,0 +1,239 @@
+/*
+ * BooleanVariable.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.core;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import org.jacop.constraints.Constraint;
+
+/**
+ * Defines a variable and related operations on it.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class BooleanVar extends IntVar {
+
+  /**
+   * This constructor creates a variable with empty domain (standard FD domain), automatically
+   * generated name, and empty attached constraint list.
+   *
+   * @param store It specifies the store in which boolean variable should be created.
+   */
+  public BooleanVar(final Store store) {
+    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundDomain(0, 1));
+  }
+
+  /**
+   * Boolean variable constructor.
+   *
+   * @param store It specifies the store in which boolean variable should be created.
+   * @param name It specifies the id of the variable.
+   */
+  public BooleanVar(Store store, String name) {
+    this(store, name, new BoundDomain(0, 1));
+  }
+
+  /**
+   * Boolean variable constructor.
+   *
+   * @param store It specifies the store in which boolean variable should be created.
+   * @param name It specifies the id of the variable.
+   * @param min it specifies the minimum value, which must be greater or equal 0.
+   * @param max it specifies the maximum value, which must be smaller or equal 1.
+   */
+  public BooleanVar(Store store, String name, int min, int max) {
+    this(store, name, new BoundDomain(min, max));
+  }
+
+  /**
+   * Boolean variable constructor.
+   *
+   * @param store It specifies the store in which boolean variable should be created.
+   * @param min it specifies the minimum value, which must be greater or equal 0.
+   * @param max it specifies the maximum value, which must be smaller or equal 1.
+   */
+  public BooleanVar(Store store, int min, int max) {
+    this(
+        store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundDomain(min, max));
+  }
+
+  /**
+   * It creates a Boolean variable.
+   *
+   * @param store It specifies the store in which boolean variable should be created.
+   * @param dom It specifies the domain of the boolean variable.
+   */
+  public BooleanVar(Store store, BoundDomain dom) {
+    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
+  }
+
+  /**
+   * It creates a Boolean variable.
+   *
+   * @param store the store in which the variable is being created.
+   * @param name the name of the created variable.
+   * @param dom the domain specifying the domain of the variable.
+   */
+  public BooleanVar(Store store, String name, BoundDomain dom) {
+
+    if (ASSERTS_ENABLED && (dom.min() < 0 || dom.min() > dom.max() || dom.max() > 1)) {
+      throw new IllegalStateException(
+          String.valueOf("Boolean variable can only get value between 0..1"));
+    }
+
+    dom.searchConstraints = new ArrayList<>();
+    dom.modelConstraints = new Constraint[3][];
+    dom.modelConstraintsToEvaluate = new int[3];
+    dom.modelConstraintsToEvaluate[0] = 0;
+    dom.modelConstraintsToEvaluate[1] = 0;
+    dom.modelConstraintsToEvaluate[2] = 0;
+    id = name;
+    domain = dom;
+    domain.stamp = 0;
+    this.store = store;
+    // the return code is ignored as the variable is not stored within store.vars;
+    store.putVariable(this);
+
+    if (store.pointer4GroundedBooleanVariables == null) {
+      store.pointer4GroundedBooleanVariables = new TimeStamp<>(store, 0);
+      // Boolean Time stamp will be updated manually by store.
+      store.timeStamps.remove(store.pointer4GroundedBooleanVariables);
+      store.changeHistory4BooleanVariables = new BooleanVar[100];
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Pruning event is ignored as all are evaluated with GROUND event, since any change to Boolean
+   * Variable makes it ground. Only NONE and GROUND events are considered. By default GROUND event
+   * is used.
+   */
+  @Override
+  public void putModelConstraint(Constraint constraint, int pruningEvent) {
+
+    if (singleton()) {
+      return;
+    }
+
+    if (pruningEvent == Domain.NONE) {
+      return;
+    }
+
+    domain.putModelConstraint(store.level, this, constraint, IntDomain.GROUND);
+
+    store.recordBooleanChange(this);
+  }
+
+  @Override
+  public void putSearchConstraint(Constraint constraint) {
+
+    if (singleton()) {
+      return;
+    }
+
+    domain.putSearchConstraint(store.level, this, constraint);
+    store.recordBooleanChange(this);
+  }
+
+  @Override
+  public void removeConstraint(Constraint constraint) {
+
+    if (singleton()) {
+      return;
+    }
+
+    int i = domain.searchConstraintsToEvaluate - 1;
+    for (; i >= 0; i--) {
+      if (domain.searchConstraints.get(i) == constraint) {
+        domain.removeSearchConstraint(store.level, this, i, constraint);
+      }
+    }
+
+    if (i == -1) {
+      domain.removeModelConstraint(store.level, this, constraint);
+    }
+
+    store.recordBooleanChange(this);
+  }
+
+  @Override
+  public String toString() {
+    if (domain.singleton()) {
+      return id + "=" + domain;
+    } else {
+      return id + "::" + domain;
+    }
+  }
+
+  /**
+   * It is possible to add the domain of variable. It should be used with care, only right after
+   * variable was created and before it is used in constraints or search.
+   *
+   * @param dom the added domain.
+   */
+  public void addDom(Domain dom) {
+
+    domain.addDom((IntDomain) dom);
+  }
+
+  /**
+   * This function returns current domain of the variable.
+   *
+   * @return the domain of the variable.
+   */
+  public BoundDomain dom() {
+    return (BoundDomain) domain;
+  }
+
+  /**
+   * It checks if the domains of variables are equal.
+   *
+   * @param v the variable to which current variable is compared to.
+   * @return true if both variables have the same domain.
+   */
+  public boolean eq(BooleanVar v) {
+    return domain.eq(v.dom());
+  }
+
+  /**
+   * It returns the values which have been removed at current store level. It does _not_ return the
+   * recent pruning in between the calls to that function.
+   *
+   * @return difference between the current level and the one before it.
+   */
+  public BoundDomain recentDomainPruning() {
+
+    return (BoundDomain) domain.recentDomainPruning(store.level);
+  }
+}

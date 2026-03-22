@@ -1,0 +1,243 @@
+/*
+ * Bnode.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.floats.constraints.linear;
+
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+
+/** Binary node for linear constraint tree. */
+public class Bnode extends BinaryNode {
+
+  // bounds for this node
+  final BoundsVar bound;
+
+  /**
+   * Constructs a binary node with default bounds.
+   *
+   * @param store the constraint store
+   */
+  public Bnode(Store store) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store);
+  }
+
+  /**
+   * Constructs a binary node with specified min and max bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   */
+  public Bnode(Store store, double min, double max) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store, min, max);
+  }
+
+  /**
+   * Constructs a binary node with specified bounds and lookahead bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   * @param lb the lower lookahead bound
+   * @param ub the upper lookahead bound
+   */
+  public Bnode(Store store, double min, double max, double lb, double ub) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store, min, max, lb, ub);
+  }
+
+  @Override
+  void propagate() {
+
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
+
+    d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = d.min();
+    double ub = d.max();
+
+    updateBoundsAndPropagate(min, max, lb, ub, false);
+  }
+
+  @Override
+  void propagateAndPrune() {
+
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
+
+    double nodeMin = min();
+    double nodeMax = max();
+
+    d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = d.min();
+    double ub = d.max();
+
+    if (min > nodeMin) {
+      if (max < nodeMax) {
+        if (min > max) {
+          throw Store.failException;
+        }
+        updateBounds(min, max, lb, ub);
+        prune(min, max);
+        parent.propagateAndPrune();
+      } else {
+        if (min > nodeMax) {
+          throw Store.failException;
+        }
+        updateBounds(min, nodeMax, lb, ub);
+        prune(min, nodeMax);
+        parent.propagateAndPrune();
+      }
+    } else if (max < nodeMax) {
+      if (nodeMin > max) {
+        throw Store.failException;
+      }
+      updateBounds(nodeMin, max, lb, ub);
+      prune(nodeMin, max);
+      parent.propagateAndPrune();
+    } else {
+      // no change in the domain but it was called since the children have been changed
+      prune(nodeMin, nodeMax);
+    }
+  }
+
+  @Override
+  void prune() {
+
+    double min = min();
+    double max = max();
+
+    prune(min, max);
+  }
+
+  void prune(double min, double max) {
+
+    boolean leftChanged;
+    boolean rightChanged;
+
+    leftChanged = pruneNode(min, max, left, right);
+
+    rightChanged = pruneNode(min, max, right, left);
+
+    if (leftChanged) {
+      left.prune();
+    }
+    if (rightChanged) {
+      right.prune();
+    }
+  }
+
+  boolean pruneNode(double min, double max, BinaryNode node, BinaryNode sibling) {
+
+    double nodeMinValue = node.min();
+    double nodeMaxValue = node.max();
+
+    double siblingMinValue = sibling.min();
+    double siblingMaxValue = sibling.max();
+
+    FloatDomain bound = FloatDomain.subBounds(min, max, siblingMinValue, siblingMaxValue);
+    double newNodeMinValue = bound.min();
+    double newNodeMaxValue = bound.max();
+
+    double lb = node.lb();
+    double ub = node.ub();
+
+    if (newNodeMinValue > nodeMinValue) {
+      if (newNodeMaxValue < nodeMaxValue) {
+
+        if (newNodeMinValue > newNodeMaxValue) {
+          throw Store.failException;
+        }
+
+        node.updateBounds(newNodeMinValue, newNodeMaxValue, lb, ub);
+
+      } else {
+
+        if (newNodeMinValue > nodeMaxValue) {
+          throw Store.failException;
+        }
+
+        node.updateBounds(newNodeMinValue, nodeMaxValue, lb, ub);
+      }
+      return true;
+    } else if (newNodeMaxValue < nodeMaxValue) {
+
+      if (nodeMinValue > newNodeMaxValue) {
+        throw Store.failException;
+      }
+
+      node.updateBounds(nodeMinValue, newNodeMaxValue, lb, ub);
+
+      return true;
+    } else {
+
+      return false;
+    }
+  }
+
+  @Override
+  double min() {
+    return ((BoundsVarValue) bound.value()).min;
+  }
+
+  @Override
+  double max() {
+    return ((BoundsVarValue) bound.value()).max;
+  }
+
+  @Override
+  double lb() {
+    return ((BoundsVarValue) bound.value()).lb;
+  }
+
+  @Override
+  double ub() {
+    return ((BoundsVarValue) bound.value()).ub;
+  }
+
+  @Override
+  void updateBounds(double min, double max, double lb, double ub) {
+    bound.update(min, max, lb, ub);
+  }
+
+  /**
+   * Returns a string representation of this binary node.
+   *
+   * @return string representation including node id, stamp and bounds
+   */
+  @Override
+  public String toString() {
+    return super.toString() + "(" + bound.stamp() + ")" + " : " + bound;
+  }
+}

@@ -1,0 +1,235 @@
+/*
+ * XorBool.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
+/**
+ * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class XorBool extends PrimitiveConstraint {
+
+  /*
+   * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
+   * is True, and the rest are False. It gives False if an even number of its arguments is True,
+   * and the rest are False.
+   *
+   * For two arguments the truth table is
+   *
+   * X | Y | Z
+   * 0   0   0
+   * 0   1   1
+   * 1   0   1
+   * 1   1   0
+   */
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variables x for the constraint. */
+  private final IntVar[] x;
+
+  private final IntVar y;
+
+  /**
+   * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
+   *
+   * @param x variables x.
+   * @param y variable y.
+   */
+  public XorBool(IntVar[] x, IntVar y) {
+
+    checkInputForNullness(new String[] {"x", "y"}, x, new Object[] {y});
+
+    queueIndex = 0;
+    numberId = idNumber.incrementAndGet();
+
+    this.x = Arrays.copyOf(x, x.length);
+    this.y = y;
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+
+    if (x.length > 2) {
+      queueIndex = 1;
+    } else {
+      queueIndex = 0;
+    }
+
+    setScope(Stream.concat(Arrays.stream(x), Stream.of(y)));
+  }
+
+  /**
+   * It checks invariants required by the constraint. Namely that boolean variables have boolean
+   * domain.
+   *
+   * @return the string describing the violation of the invariant, null otherwise.
+   */
+  public String checkInvariants() {
+    String error = checkBooleanDomains(x);
+    if (error != null) {
+      return error;
+    }
+    return checkBooleanDomain(y);
+  }
+
+  @Override
+  public void consistency(final Store store) {
+    propagateXor(store, false);
+  }
+
+  @Override
+  public void notConsistency(final Store store) {
+    propagateXor(store, true);
+  }
+
+  private void propagateXor(final Store store, boolean negated) {
+    int oddVal = negated ? 0 : 1;
+    int evenVal = negated ? 1 : 0;
+
+    IntVar nonGround = null;
+    int numberOnes = 0;
+    int numberZeros = 0;
+
+    for (IntVar e : x) {
+      if (e.min() == 1) {
+        numberOnes++;
+      } else if (e.max() == 0) {
+        numberZeros++;
+      } else {
+        nonGround = e;
+      }
+    }
+
+    if (numberOnes + numberZeros == x.length) {
+      propagateXorAllGround(store, numberOnes, oddVal, evenVal);
+    } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
+      propagateXorOneNonGround(store, nonGround, numberOnes, oddVal, evenVal);
+    }
+  }
+
+  private void propagateXorAllGround(Store store, int numberOnes, int oddVal, int evenVal) {
+    int yVal = (numberOnes & 1) == 1 ? oddVal : evenVal;
+    y.domain.inValue(store.level, y, yVal);
+  }
+
+  private void propagateXorOneNonGround(
+      Store store, IntVar nonGround, int numberOnes, int oddVal, int evenVal) {
+    boolean oddParity = (numberOnes & 1) == 1;
+    if (y.min() == 1) {
+      nonGround.domain.inValue(store.level, nonGround, oddParity ? evenVal : oddVal);
+    } else if (y.max() == 0) {
+      nonGround.domain.inValue(store.level, nonGround, oddParity ? oddVal : evenVal);
+    }
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var v, boolean mode) {
+
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(v);
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
+      }
+      return IntDomain.GROUND;
+    } else { // If notConsistency function mode
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(v);
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
+      }
+      return IntDomain.BOUND;
+    }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (!grounded()) {
+      return false;
+    }
+
+    int sum = 0;
+    for (IntVar e : x) {
+      sum += e.value();
+    }
+
+    return ((sum & 1) == 1 && y.min() == 1) || ((sum & 1) == 0 && y.max() == 0);
+  }
+
+  @Override
+  public boolean notSatisfied() {
+
+    if (!y.singleton()) {
+      return false;
+    } else {
+      for (IntVar e : x) {
+        if (!e.singleton()) {
+          return false;
+        }
+      }
+    }
+
+    int sum = 0;
+    for (IntVar e : x) {
+      sum += e.value();
+    }
+
+    return ((sum & 1) == 1 && y.min() == 0) || ((sum & 1) == 0 && y.min() == 1);
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : XorBool( (" + Arrays.asList(x) + ") <=>  " + y + ")";
+  }
+}

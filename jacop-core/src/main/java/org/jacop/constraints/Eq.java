@@ -1,0 +1,181 @@
+/*
+ * Eq.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
+
+/**
+ * Constraint "constraint1"{@literal #<=>} "constraint2".
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+  public final QueueForward<PrimitiveConstraint> queueForward;
+
+  /**
+   * It specifies the first constraint which status must be equivalent to the status of the second
+   * constraint.
+   */
+  private final PrimitiveConstraint c1;
+
+  /**
+   * It specifies the second constraint which status must be equivalent to the status of the first
+   * constraint.
+   */
+  private final PrimitiveConstraint c2;
+
+  /**
+   * It constructs equality constraint between two constraints.
+   *
+   * @param c1 the first constraint
+   * @param c2 the second constraint
+   */
+  public Eq(PrimitiveConstraint c1, PrimitiveConstraint c2) {
+
+    PrimitiveConstraint[] scope = new PrimitiveConstraint[] {c1, c2};
+
+    checkInputForNullness(new String[] {"c1", "c2"}, scope);
+    numberId = idNumber.incrementAndGet();
+
+    this.c1 = c1;
+    this.c2 = c2;
+    setScope(scope);
+    setConstraintScope(scope);
+    queueForward = new QueueForward<>(new PrimitiveConstraint[] {c1, c2}, arguments());
+    this.queueIndex = Integer.max(c1.queueIndex, c2.queueIndex);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    // Does not need to loop due to propagation occuring.
+    if (c2.satisfied()) {
+      c1.consistency(store);
+    } else if (c2.notSatisfied()) {
+      c1.notConsistency(store);
+    }
+
+    if (c1.satisfied()) {
+      c2.consistency(store);
+    } else if (c1.notSatisfied()) {
+      c2.notConsistency(store);
+    }
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var v, boolean mode) {
+
+    return getConsistencyPruningEvent(v);
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise version exists.");
+  }
+
+  /**
+   * Helper method to compute pruning event for a variable, checking custom events first.
+   *
+   * @param v the variable
+   * @param customEvents the map of custom pruning events (may be null)
+   * @return the pruning event for the variable
+   */
+  private int getPruningEvent(Var v, Map<Var, Integer> customEvents) {
+    if (customEvents != null) {
+      Integer possibleEvent = customEvents.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    return computeMaxPruningEvent(v, c1, c2);
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    return getPruningEvent(v, consistencyPruningEvents);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise version exists.");
+  }
+
+  @Override
+  public int getNotConsistencyPruningEvent(Var v) {
+    return getPruningEvent(v, notConsistencyPruningEvents);
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+
+    // No need for fixpoint loop in this context. Fixpoint always achieved after one execution.
+    if (c2.satisfied()) {
+      c1.notConsistency(store);
+    } else if (c2.notSatisfied()) {
+      c1.consistency(store);
+    }
+
+    if (c1.satisfied()) {
+      c2.notConsistency(store);
+    } else if (c1.notSatisfied()) {
+      c2.consistency(store);
+    }
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    return (c1.satisfied() && c2.notSatisfied()) || (c1.notSatisfied() && c2.satisfied());
+  }
+
+  @Override
+  public boolean satisfied() {
+    return (c1.satisfied() && c2.satisfied()) || (c1.notSatisfied() && c2.notSatisfied());
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : Eq(" + c1 + ", " + c2 + " )";
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    queueForward.queueForward(level, v);
+  }
+}

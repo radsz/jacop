@@ -1,13 +1,26 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.jacop</groupId>
-    <artifactId>jacop</artifactId>
-    <version>4.11.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <artifactId>jacop-parent</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>jacop-core</module>
+        <module>jacop-floats</module>
+        <module>jacop-sets</module>
+        <module>jacop-sat</module>
+        <module>jacop-flatzinc</module>
+        <module>jacop-examples-java</module>
+        <module>jacop-benchmarks</module>
+        <module>jacop-scala</module>
+        <module>jacop-examples-scala</module>
+        <module>jacop-all</module>
+    </modules>
 
     <name>JaCoP</name>
     <url>http://jacop.osolpro.com</url>
@@ -45,12 +58,6 @@
         </license>
     </licenses>
 
-    <!-- <scm>
-        <connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
-        <developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
-        <url>http://sourceforge.net/projects/jacop-solver/</url>
-    </scm> -->
-
     <scm>
         <connection>scm:git:git@github.com:radsz/jacop.git</connection>
         <developerConnection>scm:git:git@github.com:radsz/jacop.git</developerConnection>
@@ -65,13 +72,30 @@
     </distributionManagement>
 
     <properties>
+        <revision>5.0-SNAPSHOT</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <aspectj.version>1.8.10</aspectj.version>
-        <scala.version>2.13.12</scala.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <scala.version>2.13.18</scala.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
+        <maven.surefire.version>3.5.4</maven.surefire.version>
+        <maven.surefire.report.version>3.5.4</maven.surefire.report.version>
+        <maven.javadoc.version>3.12.0</maven.javadoc.version>
+        <maven.source.version>3.4.0</maven.source.version>
+        <maven.gpg.version>3.2.8</maven.gpg.version>
+        <maven.compiler.version>3.14.1</maven.compiler.version>
+        <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
+        <maven.checkstyle.tool.version>13.0.0</maven.checkstyle.tool.version>
+        <maven.pmd.version>3.28.0</maven.pmd.version>
+        <checkstyle.suppressions.file>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+        </checkstyle.suppressions.file>
+        <jacoco.version>0.8.14</jacoco.version>
+        <spotless.version>3.1.0</spotless.version>
+        <google.java.format.version>1.33.0</google.java.format.version>
+        <scala.maven.plugin.version>4.9.8</scala.maven.plugin.version>
+        <assertj.version>3.27.6</assertj.version>
+        <lombok.version>1.18.42</lombok.version>
     </properties>
 
     <!-- In order to see logging output,
@@ -87,11 +111,64 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>3.1.1</version>
+                        <version>3.6.0</version>
                         <executions>
                             <execution>
                                 <id>checkstyle-check</id>
                                 <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>fast</id>
+            <properties>
+                <jacoco.skip>true</jacoco.skip>
+                <maven.javadoc.skip>true</maven.javadoc.skip>
+                <maven.source.skip>true</maven.source.skip>
+                <spotless.skip>true</spotless.skip>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>3.6.0</version>
+                        <executions>
+                            <execution>
+                                <id>checkstyle-check</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>jdeps</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jdeps-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <configuration>
+                            <multiRelease>25</multiRelease>
+                            <include>org.jacop.*</include>
+                            <dependenciesToAnalyzeExcludes>
+                                <exclude>net.bytebuddy:byte-buddy</exclude>
+                            </dependenciesToAnalyzeExcludes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jdkinternals</goal>
+                                    <goal>test-jdkinternals</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>
@@ -106,22 +183,26 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                                <include>**/MinizincBasedUpTo10MinutesTest.java</include>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
+                                <exclude>**/BenchmarkImporter.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -137,22 +218,26 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo10MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
+                                <exclude>**/BenchmarkImporter.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -168,22 +253,26 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo1MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo5MinutesTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo10MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
+                                <exclude>**/BenchmarkImporter.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -199,82 +288,32 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo1MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo5MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo10MinutesTest.java</include>
                             </includes>
                             <excludes>
-                                <include>**/MinizincBasedTestUpTo1Hours.java</include>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <include>**/MinizincBasedUpTo1HoursTest.java</include>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
+                                <exclude>**/MinizincByConstraintTest.java</exclude>
+                                <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                                <exclude>**/BenchmarkAdder.java</exclude>
+                                <exclude>**/BenchmarkImporter.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
         </profile>
-
-
-        <profile>
-            <id>logging</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>aspectj-maven-plugin</artifactId>
-                        <version>1.9</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>compile</goal>
-                                    <goal>test-compile</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <!--
-                            <aspectLibraries>
-                                    <aspectLibrary>
-                                        <groupId>org.perf4j</groupId>
-                                        <artifactId>log4j.aop.TimingAspect</artifactId>
-                                    </aspectLibrary>
-                            </aspectLibraries>
-                            -->
-                            <verbose>true</verbose>
-                            <source>${maven.compiler.source}</source>
-                            <target>${maven.compiler.target}</target>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjweaver</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjtools</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.aspectj</groupId>
-                    <artifactId>aspectjrt</artifactId>
-                    <version>${aspectj.version}</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
 
         <profile>
             <id>ossrh</id>
@@ -283,7 +322,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.5</version>
+                        <version>${maven.gpg.version}</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -298,6 +337,12 @@ setup to run configuration. -->
             </build>
         </profile>
 
+        <profile>
+            <id>all</id>
+            <properties>
+                <jacop-all.enabled>true</jacop-all.enabled>
+            </properties>
+        </profile>
 
     </profiles>
 
@@ -308,28 +353,49 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>3.0.0-M9</version>
+                    <version>${maven.surefire.report.version}</version>
                 </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>${maven.compiler.version}</version>
                 </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.1.1</version>
+                    <version>${maven.checkstyle.version}</version>
                     <dependencies>
                         <dependency>
                             <groupId>com.puppycrawl.tools</groupId>
                             <artifactId>checkstyle</artifactId>
-                            <version>8.38</version>
+                            <version>${maven.checkstyle.tool.version}</version>
                         </dependency>
                     </dependencies>
                     <configuration>
                         <configLocation>doc/checkstyle.xml</configLocation>
+                        <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                        </suppressionsLocation>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless.version}</version>
+                    <configuration>
+                        <java>
+                            <googleJavaFormat>
+                                <version>${google.java.format.version}</version>
+                                <style>GOOGLE</style>
+                            </googleJavaFormat>
+                            <removeUnusedImports>
+                                <engine>google-java-format</engine>
+                            </removeUnusedImports>
+                            <trimTrailingWhitespace/>
+                            <endWithNewline/>
+                        </java>
                     </configuration>
                 </plugin>
 
@@ -342,13 +408,32 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jdeps-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.2.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-pmd-plugin</artifactId>
+                    <version>${maven.pmd.version}</version>
+                    <configuration>
+                        <linkXRef>true</linkXRef>
+                        <targetJdk>${maven.compiler.target}</targetJdk>
+                        <!-- Exclude automatically generated files from jjtree and javacc -->
+                        <excludes>
+                            <exclude>**/fz/Parser.java</exclude>
+                            <exclude>**/fz/ParserTreeConstants.java</exclude>
+                            <exclude>**/fz/Node.java</exclude>
+                            <exclude>**/fz/TokenMgrError.java</exclude>
+                            <exclude>**/fz/ParserTokenManager.java</exclude>
+                            <exclude>**/fz/SimpleCharStream.java</exclude>
+                        </excludes>
+                    </configuration>
                 </plugin>
 
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
                     <artifactId>spotbugs-maven-plugin</artifactId>
-                    <version>4.1.4</version>
+                    <version>4.9.8.2</version>
                 </plugin>
 
                 <plugin>
@@ -357,94 +442,196 @@ setup to run configuration. -->
                     <version>4.0.0-M5</version>
                 </plugin>
 
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>${scala.maven.plugin.version}</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>javacc-maven-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.0.2</version>
+                </plugin>
+
             </plugins>
         </pluginManagement>
 
         <plugins>
 
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>6.27.0</version>
+                <configuration>
+                    <exportDatatables>true</exportDatatables>
+                    <activeRecipes>
+                        <recipe>org.openrewrite.java.testing.junit5.JUnit5BestPractices</recipe>
+                        <recipe>org.openrewrite.java.migrate.UpgradeToJava25</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizeLocalVariables</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizeMethodArguments</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizePrivateFields</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FixStringFormatExpressions</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ForLoopControlVariablePostfixOperators</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ForLoopIncrementInUpdate</recipe>
+                        <recipe>org.openrewrite.staticanalysis.HiddenField</recipe>
+                        <recipe>org.openrewrite.staticanalysis.HideUtilityClassConstructor</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfChecksShouldUseAStartPosition</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfReplaceableByContains</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfShouldNotCompareGreaterThanZero</recipe>
+                        <recipe>org.openrewrite.staticanalysis.InlineVariable</recipe>
+                        <recipe>org.openrewrite.staticanalysis.InstanceOfPatternMatch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IsEmptyCallOnCollections</recipe>
+                        <recipe>org.openrewrite.staticanalysis.LambdaBlockToExpression</recipe>
+                        <recipe>org.openrewrite.staticanalysis.LowercasePackage</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MaskCreditCardNumbers</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MethodNameCasing</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MinimumSwitchCases</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MultipleVariableDeclarations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NeedBraces</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NestedEnumsAreNotStatic</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NewStringBuilderBufferWithCharArgument</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoDoubleBraceInitialization</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoEmptyCollectionWithRawType</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoEqualityInForCondition</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PreferIncrementOperator</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PreferSystemGetPropertyOverGetenv</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PrimitiveWrapperClassConstructorToValueOf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RedundantFileCreation</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReferentialEqualityToObjectEquals</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveRedundantTypeCast</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveSystemOutPrintln</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveToStringCallsFromArrayInstances</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenameLocalVariablesToCamelCase</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenameMethodsNamedHashcodeEqualOrToString</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenamePrivateFieldsToCamelCase</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceLambdaWithMethodReference</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceOptionalIsPresentWithIfPresent</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceRedundantFormatWithPrintf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStackWithDeque</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStringBuilderWithString</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStringConcatenationWithStringValueOf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceTextBlockWithString</recipe>
+                        <recipe>
+                            org.openrewrite.staticanalysis.ReplaceValidateNotNullHavingVarargsWithObjectsRequireNonNull
+                        </recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceWeekYearWithYear</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyArraysAsList</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyBooleanExpression</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyConstantIfBranchExecution</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyDurationCreationUnits</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyElseBranch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyTernaryFalseTrue</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyTernaryTrueFalse</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SortedSetStreamToLinkedHashSet</recipe>
+                        <recipe>org.openrewrite.staticanalysis.StaticMethodNotFinal</recipe>
+                        <recipe>org.openrewrite.staticanalysis.StringLiteralEquality</recipe>
+                        <recipe>org.openrewrite.staticanalysis.TernaryOperatorsShouldNotBeNested</recipe>
+                        <recipe>org.openrewrite.staticanalysis.TypecastParenPad</recipe>
+                        <recipe>org.openrewrite.staticanalysis.URLEquals</recipe>
+                        <recipe>org.openrewrite.staticanalysis.URLHashCode</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryCatch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryCloseInTryWithResources</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryExplicitTypeArguments</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryParentheses</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryPrimitiveAnnotations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryReturnAsLastStatement</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryThrows</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnwrapElseAfterReturn</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnwrapRepeatableAnnotations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseForEachRemoveInsteadOfSetRemoveAll</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseJavaStyleArrayDeclarations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseLambdaForFunctionalInterface</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseListSort</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseObjectNotifyAll</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UsePortableNewlines</recipe>
+                        <recipe>org.openrewrite.codemods.format.SpacedComment</recipe>
+                        <!-- Excluded: org.openrewrite.java.format.MethodParamPad (conflicts with Spotless/google-java-format) -->
+                    </activeRecipes>
+                    <checkstyleConfigFile>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</checkstyleConfigFile>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-migrate-java</artifactId>
+                        <version>3.25.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-static-analysis</artifactId>
+                        <version>2.25.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-codemods</artifactId>
+                        <version>0.24.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.7.0</version>
+                <configuration>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Java plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.14.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>false</showWarnings>
                     <!--  <showDeprecation>true</showDeprecation>  -->
+                    <release>25</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
 
-            <!-- Scala plugin -->
-            <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>4.8.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <args>
-                                <arg>-deprecation</arg>
-                                <arg>-feature</arg>
-                            </args>
-                            <sendJavaToScalac>false</sendJavaToScalac>
-                            <sourceDir>src/main/scala</sourceDir>
-                            <includes>
-                                <include>**/*.scala</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- JJTree and javacc plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>javacc-maven-plugin</artifactId>
-                <version>2.6</version>
-                <executions>
-                    <execution>
-                        <id>javacc</id>
-                        <goals>
-                            <goal>jjtree-javacc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Defines sources -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <!-- <source>src/main/java</source> -->
-                                <source>src/main/scala</source>
-                                <source>src/main/jjtree</source>
-                                <source>src/main/minizinc</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
 
             <!-- Plugin for creation of jar file with sources -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>${maven.source.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -458,40 +645,33 @@ setup to run configuration. -->
                 </configuration>
             </plugin>
 
-            <!-- Plugin for creation of jar with executables -->
+
+            <!-- Spotless plugin for code formatting -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.jacop.examples.RunExample</mainClass>
-                            <packageName>org.jacop</packageName>
-                        </manifest>
-                        <manifestEntries>
-                            <mode>development</mode>
-                            <url>${project.url}</url>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>spotless-apply</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>apply</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Plugin for generating javadoc jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>${maven.javadoc.version}</version>
 
                 <configuration>
-                  <failOnWarnings>false</failOnWarnings>
+                    <failOnWarnings>false</failOnWarnings>
                     <!--- Possible solution to not print any warrnings
                         for Java 1.8 -->
                     <sourceFileExcludes>
-                        <sourcepath>
-                            ${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc
-                        </sourcepath>
-
                         <exclude>**/Node.java</exclude>
                         <exclude>**/SimpleNode.java</exclude>
                         <exclude>**/ParseException.java</exclude>
@@ -506,14 +686,14 @@ setup to run configuration. -->
                 </configuration>
                 <executions>
                     <execution>
-                      <id>attach-javadocs</id>
-                      <configuration>
-                        <failOnWarnings>false</failOnWarnings>
-                        <doclint>none</doclint>
-                      </configuration>
-                      <goals>
-                        <goal>jar</goal>
-                      </goals>
+                        <id>attach-javadocs</id>
+                        <configuration>
+                            <failOnWarnings>false</failOnWarnings>
+                            <doclint>none</doclint>
+                        </configuration>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -521,23 +701,27 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M9</version>
+                <version>${maven.surefire.version}</version>
                 <configuration>
-                  <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
                     </includes>
                     <excludes>
-                        <exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                        <include>**/MinizincBasedTestUpTo10Minutes.java</include>
-                        <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                        <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                        <exclude>**/MinizincBasedChosen.java</exclude>
+                        <exclude>**/MinizincBasedUpTo5SecondsTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                        <include>**/MinizincBasedUpTo10MinutesTest.java</include>
+                        <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                        <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                        <exclude>**/MizincBasedChosenTest.java</exclude>
+                        <exclude>**/MinizincByConstraintTest.java</exclude>
+                        <exclude>**/BenchmarkMetadataGenerator.java</exclude>
+                        <exclude>**/BenchmarkAdder.java</exclude>
+                        <exclude>**/BenchmarkImporter.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -554,11 +738,11 @@ setup to run configuration. -->
 
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.8</version>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
-                        <exclude>org/jacop/examples/scala/**/*.class</exclude>
-                        <exclude>org/jacop/scala/**/*.class</exclude>
+                        <exclude>**/org/jacop/examples/scala/**/*.class</exclude>
+                        <exclude>**/org/jacop/scala/**/*.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -581,24 +765,19 @@ setup to run configuration. -->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jdeps-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jdkinternals</goal> <!-- verify main classes -->
-                            <goal>test-jdkinternals</goal> <!-- verify test classes -->
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.6.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>13.0.0</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
-                    <encoding>UTF-8</encoding>
+                    <configLocation>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                    </suppressionsLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
@@ -627,7 +806,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.7.3.2</version>
+                <version>4.9.8.2</version>
                 <configuration>
                     <effort>Max</effort>      <!-- Other working value is Min -->
                     <threshold>Medium</threshold>  <!-- Other working value is Low, High -->
@@ -641,7 +820,7 @@ setup to run configuration. -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
                     <linkXRef>true</linkXRef>
-                    <targetJdk>1.8</targetJdk>
+                    <targetJdk>${maven.compiler.target}</targetJdk>
                     <!-- Exclude automatically generated files from jjtree and javacc -->
                     <excludes>
                         <exclude>**/fz/Parser.java</exclude>
@@ -652,21 +831,21 @@ setup to run configuration. -->
                         <exclude>**/fz/SimpleCharStream.java</exclude>
                     </excludes>
                 </configuration>
-                <version>3.21.0</version>
+                <version>${maven.pmd.version}</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>${maven.javadoc.version}</version>
                 <configuration>
-                  <failOnWarnings>false</failOnWarnings>
-                  <doclint>none</doclint>
+                    <failOnWarnings>false</failOnWarnings>
+                    <doclint>none</doclint>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>3.0.0-M9</version>
+                <version>${maven.surefire.report.version}</version>
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                 </configuration>
@@ -674,7 +853,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.6.0</version>
                 <reportSets>
                     <reportSet>
                         <reports>
@@ -684,11 +863,14 @@ setup to run configuration. -->
                 </reportSets>
                 <configuration>
                     <configLocation>doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                    </suppressionsLocation>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>                <version>0.8.8</version>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
                 <reportSets>
                     <reportSet>
                         <reports>
@@ -704,41 +886,54 @@ setup to run configuration. -->
     <dependencies>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.10.19</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <artifactId>mockito-core</artifactId>
+            <version>5.21.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.21.0</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-compiler</artifactId>
-            <version>${scala.version}</version>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.17.5</version>
         </dependency>
-	<!--
-	<dependency>
-	  <groupId>org.scala-lang.modules</groupId>
-	  <artifactId>scala-xml_2.13</artifactId>
-	  <version>1.2.0</version>
-	  </dependency>
-	 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.13.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <version>1.13.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.24</version>
+            <version>2.0.17</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.24</version>
+            <artifactId>slf4j-reload4j</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

@@ -1,0 +1,183 @@
+%% ========= DATA =============
+% MP3 decoder inspired
+%
+% Actors load
+% ===========
+%  1. huffman	38
+%  2. req	37
+%  3. reorder	18
+%  4. reqcopy	37
+%  5. reordercopy	18
+%  6. stereo		27
+%  7. antialias		1
+%  8. hybridsynth	4
+%  9. freqinv		3
+% 10. subbinv		933
+% 11. antialiascopy	1
+% 12. hybridsynthcopy	4
+% 13. freqinvcopy	3
+% 14. subbinvcopy	933
+
+
+% Communications
+% ==============
+%  1. huffman2req (1 -> 2)	36
+%  2. huffman2reqcopy (1 -> 4)	72
+%  3. req2reorder (2 -> 4)	72
+%  4. reqcopy2reordercopy (4 -> 5)	72
+%  5. reorder2stereo (3 -> 6)		72
+%  6. reordercopy2stereo (5 -> 6)		72
+%  7. stero2antialias (6 -> 7)		72
+%  8. stero2antialiascopy (6 -> 11)	72
+%  9. antialias2hybridsynth (7 -> 8)	72
+% 10. antialiascopy2hybridsynthcopy (11 -> 12)	72
+% 11. hybridsynth2freqinv (8 -> 9)	72
+% 12. hybridsynthcopy2freqinvcopy (12 -> 13)	72
+% 13. freqinv2subbinv (9 -> 10)		72
+% 14. freqinvcopy2subbinvcopy (13 -> 14)	72
+%
+% Architecture:
+%
+% ___   ___ 
+% |1 |--|2 |
+% ---   --- 
+%  |     |  
+% ___   ___ 
+% |3 |--|4 |
+% ---   --- 
+
+row = 2;
+col = 2;
+
+no_links = 2*2*(row-1)*col;
+
+no_actors = 14;
+no_flows = 14;
+
+link_bandwidth = 50;
+
+source_destination_actor = 
+			[| 1, 2 |
+			   1, 4 |
+			   2, 4 |
+			   4, 5 |
+			   3, 6 |
+			   5, 6 |
+			   6, 7 |
+			   6, 11 |
+			   7, 8 |
+			   11, 12 |
+			   8, 9 |
+			   12, 13 |
+			   9, 10 |
+			   13, 14
+			|];
+
+
+actor_processor = [flow_processor[1], %1
+		   flow_processor[3], % 2
+		   flow_processor[5],  % 3
+		   flow_processor[4], % 4
+		   flow_processor[6],  % 5
+		   flow_processor[7],  % 6
+		   flow_processor[9], % 7
+		   flow_processor[11],  % 8
+		   flow_processor[13],  % 9
+		   flow_processor[27], % 10
+		   flow_processor[10], % 11
+		   flow_processor[12], % 12
+		   flow_processor[14], % 13
+		   flow_processor[28] % 14
+		   ];
+
+inStream = [36, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72];
+
+b = [| 0, 0, 0, 0, inStream[1], -inStream[1] |
+       0, 0, 0, 0, inStream[2], -inStream[2] |
+       0, 0, 0, 0, inStream[3], -inStream[3] |
+       0, 0, 0, 0, inStream[4], -inStream[4] |
+       0, 0, 0, 0, inStream[5], -inStream[5] |
+       0, 0, 0, 0, inStream[6], -inStream[6] |
+       0, 0, 0, 0, inStream[7], -inStream[7] |
+       0, 0, 0, 0, inStream[8], -inStream[8] |
+       0, 0, 0, 0, inStream[9], -inStream[9] |
+       0, 0, 0, 0, inStream[10], -inStream[10] |
+       0, 0, 0, 0, inStream[11], -inStream[11] |
+       0, 0, 0, 0, inStream[12], -inStream[12] |
+       0, 0, 0, 0, inStream[13], -inStream[13] |
+       0, 0, 0, 0, inStream[14], -inStream[14] 
+       |];
+
+
+flows = array2d(1..no_flows, 1..m, 
+        [inFlow[1,i] | i in 1..k] ++ [commFlow[1,i] | i in 1..no_links] ++ [outFlow[1,i] | i in 1..k] ++
+        [inFlow[2,i] | i in 1..k] ++ [commFlow[2,i] | i in 1..no_links] ++ [outFlow[2,i] | i in 1..k] ++
+	[inFlow[3,i] | i in 1..k] ++ [commFlow[3,i] | i in 1..no_links] ++ [outFlow[3,i] | i in 1..k] ++
+	[inFlow[4,i] | i in 1..k] ++ [commFlow[4,i] | i in 1..no_links] ++ [outFlow[4,i] | i in 1..k] ++
+	[inFlow[5,i] | i in 1..k] ++ [commFlow[5,i] | i in 1..no_links] ++ [outFlow[5,i] | i in 1..k] ++
+	[inFlow[6,i] | i in 1..k] ++ [commFlow[6,i] | i in 1..no_links] ++ [outFlow[6,i] | i in 1..k] ++
+	[inFlow[7,i] | i in 1..k] ++ [commFlow[7,i] | i in 1..no_links] ++ [outFlow[7,i] | i in 1..k] ++
+	[inFlow[8,i] | i in 1..k] ++ [commFlow[8,i] | i in 1..no_links] ++ [outFlow[8,i] | i in 1..k] ++
+	[inFlow[9,i] | i in 1..k] ++ [commFlow[9,i] | i in 1..no_links] ++ [outFlow[9,i] | i in 1..k] ++
+	[inFlow[10,i] | i in 1..k] ++ [commFlow[10,i] | i in 1..no_links] ++ [outFlow[10,i] | i in 1..k] ++
+	[inFlow[11,i] | i in 1..k] ++ [commFlow[11,i] | i in 1..no_links] ++ [outFlow[11,i] | i in 1..k] ++
+	[inFlow[12,i] | i in 1..k] ++ [commFlow[12,i] | i in 1..no_links] ++ [outFlow[12,i] | i in 1..k] ++
+	[inFlow[13,i] | i in 1..k] ++ [commFlow[13,i] | i in 1..no_links] ++ [outFlow[13,i] | i in 1..k] ++
+	[inFlow[14,i] | i in 1..k] ++ [commFlow[14,i] | i in 1..no_links] ++ [outFlow[14,i] | i in 1..k] 
+	);
+
+balance = array2d(1..no_flows, 1..n, [b[i,j] | i in 1..no_flows, j in 1..n]);
+
+processor_load = 1000;
+
+% load for actors
+actor_load = [38, 37, 18, 37, 18, 27, 1, 4, 3, 933, 1, 4, 3, 933];
+
+load = array2d(1..2, 1..no_flows, 
+	[if (not exists (k in 1..i-1) (source_destination_actor[k,j+1] = source_destination_actor[i,j+1] \/ 
+	    	 	      	       source_destination_actor[k,((j+1) mod 2) + 1] = source_destination_actor[i,j+1])) 
+	    then actor_load[source_destination_actor[i,j+1]] else 0 endif | j in 0..1, i in 1..no_flows]);
+
+unit_cost = [ 0, 0, 0, 0, 
+	    1, 1, 1, 1, 1, 1, 1, 1,
+	    0, 0, 0, 0];
+arc =[| 
+    	%% from action to processors
+    	5, 1 |
+    	5, 2 |
+	5, 3 |
+	5, 4 |
+
+	1, 2 |
+	1, 3 |
+
+	2, 1 |
+	2, 4 |
+
+	3, 1 |
+	3, 4 |
+
+	4, 2 |
+	4, 3 |
+	
+	%% from processors to action
+	1, 6 |
+    	2, 6 |
+	3, 6 |
+	4, 6 
+	|];
+
+in_connections = [if ((i mod 2) mod 2) = 0 then (k+1)+(i div (2*k)) else ((i div 2) mod k + 1) endif | i in 0..2*no_flows*k-1];
+out_connections = [if ((i mod 2) mod 2) = 0 then ((i div 2) mod k + 1) else (k+no_flows+1)+(i div (2*k)) endif | i in 0..2*no_flows*k-1];
+
+all_connections = array2d(1..2*no_flows*k+no_links, 1..2, in_connections ++ [arc[i,j] | i in k+1..no_links+k, j in 1..2] ++ out_connections);
+
+total_flow = [flows[i,j] | i in 1..no_flows, j in 1..k] ++ 
+	     comm_full ++ 
+             [flows[i,j] | i in 1..no_flows, j in k+no_links+1..2*k+no_links];
+
+total_unit_cost = [0 | i in 1..no_flows, j in 1..k] ++ [ 1 | i in 1..no_links] ++ [0 | i in 1..no_flows, j in 1..k];
+
+total_balance = [0 | i in 1..k] ++ [balance[i,j] | i in 1..no_flows, j in k+1..k+1] ++ [balance[i,j] | i in 1..no_flows, j in k+2..k+2];
+
+link_str = ["1 -> 2 = ", "1 -> 3 = ", "2 -> 1 = ", "2 -> 4 = ", "3 -> 1 = ", "3 -> 4 = ", "4 -> 2 = ", "4 -> 3 = "];

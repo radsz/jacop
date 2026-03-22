@@ -1,0 +1,162 @@
+/*
+ * TransformExtensional.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ExtensionalSupportVa;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
+/**
+ * It defines an intialize listener which transforms part of the problem into an extensional
+ * constraint by searching for all partial solutions given the scope of the variables of interest.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+@Slf4j
+public class TransformExtensional implements InitializeListener {
+
+  static final boolean DEBUG = false;
+
+  /**
+   * It contains all the information which will become variables in the scope of the extensional
+   * constraint produced by this search listener.
+   */
+  public final List<IntVar> variablesTransformationScope = new ArrayList<>();
+
+  /**
+   * The limit of solutions upon reaching the transformation is abandoned and solution progress
+   * normally without any transformation.
+   */
+  public int solutionLimit = 10000;
+
+  InitializeListener[] initializeChildListeners;
+
+  /**
+   * It is executed at initialization of the search.
+   *
+   * @param store the constraint store in which the transformation will be applied.
+   */
+  public void executedAtInitialize(Store store) {
+
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            variablesTransformationScope.toArray(new IntVar[1]),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
+
+    Search<IntVar> search = new DepthFirstSearch<>();
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    search.getSolutionListener().setSolutionLimit(solutionLimit);
+    search.setAssignSolution(false);
+
+    boolean searchResult = search.labeling(store, select);
+    searchResult &= !search.getSolutionListener().solutionLimitReached();
+
+    if (searchResult) {
+      removeConstraintsInScope();
+      int[][] solutions = buildSolutionsArray(search);
+      IntVar[] vars = search.getSolutionListener().getVariables();
+      ExtensionalSupportVa transformationIntoExtensionalConstraint =
+          new ExtensionalSupportVa(vars, solutions);
+      store.impose(transformationIntoExtensionalConstraint);
+      if (DEBUG) {
+        log.debug("{}", transformationIntoExtensionalConstraint);
+      }
+    }
+  }
+
+  private void removeConstraintsInScope() {
+    for (Var v : variablesTransformationScope) {
+      Constraint[][] varConstraints = v.dom().modelConstraints;
+      int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
+      Set<Constraint> constraintsInQuestion = new HashSet<>();
+      for (int i = 0; i < toEvaluate.length; i++) {
+        constraintsInQuestion.addAll(Arrays.asList(varConstraints[i]).subList(0, toEvaluate[i]));
+      }
+      for (Constraint checkConstraint : constraintsInQuestion) {
+        boolean toBeRemoved = true;
+        for (Var m : checkConstraint.arguments()) {
+          if (!variablesTransformationScope.contains(m)) {
+            toBeRemoved = false;
+            break;
+          }
+        }
+        if (toBeRemoved) {
+          checkConstraint.removeConstraint();
+        }
+      }
+    }
+  }
+
+  private static int[][] buildSolutionsArray(Search<IntVar> search) {
+    int numSolutions = search.getSolutionListener().solutionsNo();
+    int[][] solutions = new int[numSolutions][];
+    for (int i = 1; i <= numSolutions; i++) {
+      Domain[] currentSolution = search.getSolution(i);
+      solutions[i - 1] = new int[currentSolution.length];
+      for (int j = 0; j < currentSolution.length; j++) {
+        solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
+      }
+    }
+    return solutions;
+  }
+
+  /**
+   * Sets an array of children initialize listeners.
+   *
+   * @param children the array of initialize listeners to be set as children.
+   */
+  public void setChildrenListeners(InitializeListener[] children) {
+    initializeChildListeners = children;
+  }
+
+  /**
+   * Sets a single child initialize listener.
+   *
+   * @param child the initialize listener to be set as a child.
+   */
+  public void setChildrenListeners(InitializeListener child) {
+    initializeChildListeners = new InitializeListener[1];
+    initializeChildListeners[0] = child;
+  }
+}

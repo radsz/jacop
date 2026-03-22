@@ -1,0 +1,525 @@
+/*
+ * Cumulative.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.cumulative;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * Cumulative implements the scheduling constraint using.
+ *
+ * <p>edge-finding (edgeFind) algorithms based on
+ *
+ * <p>Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative Resources in O(kn log
+ * n)", Principles and Practice of Constraint Programming - CP 2009 Volume 5732 of the series
+ * Lecture Notes in Computer Science pp 802-816.
+ *
+ * <p>and
+ *
+ * <p>Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
+ * University, Department of Information Technology, 2010, no IT 10 048,
+ *
+ * <p>edge-finding algorithm with quadratic complexity (edgeFindQuad) is based on
+ *
+ * <p>Roger Kameugne, Laure Pauline Fotso, Joseph Scott, and Youcheu Ngo-Kateu, "A quadratic
+ * edge-finding filtering algorithm for cumulative resource constraints", Constraints, 2014, July,
+ * vol. 19, no. 3, pp. 243--269.
+ *
+ * @author Krzysztof Kuchcinski
+ * @version 5.0
+ * @see <a
+ *     href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
+ */
+@Slf4j
+public class Cumulative extends CumulativeBasic {
+
+  protected final Comparator<TaskView> taskIncEstComparator =
+      (o1, o2) -> o1.est() == o2.est() ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
+  protected final Comparator<TaskView> taskDecLctComparator =
+      (o1, o2) -> o2.lct() == o1.lct() ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
+  final TaskView[] taskReversed;
+  final boolean doEdgeFind;
+  boolean doQuadraticEdgeFind;
+  private Set<Integer> preComputedCapacities;
+  private int[] preComputedCapMap;
+
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   */
+  public Cumulative(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
+
+    super(starts, durations, resources, limit);
+
+    taskReversed = new TaskReversedView[starts.length];
+    for (int i = 0; i < starts.length; i++) {
+      taskReversed[i] = new TaskReversedView(starts[i], durations[i], resources[i]);
+      taskReversed[i].index = i;
+    }
+
+    checkLimitOverflow(limit);
+    doEdgeFind = starts.length <= getEdgeFindSizeLimit();
+
+    if (!possibleZeroTasks && grounded(resources)) {
+      buildPreComputedCapMaps(starts.length);
+    }
+  }
+
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   */
+  public Cumulative(
+      List<? extends IntVar> starts,
+      List<? extends IntVar> durations,
+      List<? extends IntVar> resources,
+      IntVar limit) {
+
+    this(
+        starts.toArray(IntVar[]::new),
+        durations.toArray(IntVar[]::new),
+        resources.toArray(IntVar[]::new),
+        limit);
+  }
+
+  private void checkLimitOverflow(IntVar limit) {
+    if (limit != null) {
+      for (Task t : taskNormal) {
+        Math.addExact(t.start.max(), t.dur.max());
+      }
+    }
+  }
+
+  private static int getEdgeFindSizeLimit() {
+    String s = System.getProperty("max_edge_find_size");
+    int limitOnEdgeFind = 100;
+    if (s != null) {
+      limitOnEdgeFind = Integer.parseInt(s);
+    }
+    return limitOnEdgeFind;
+  }
+
+  private void buildPreComputedCapMaps(int numStarts) {
+    preComputedCapacities = new LinkedHashSet<>();
+    for (TaskView t : taskNormal) {
+      preComputedCapacities.add(t.res.min());
+    }
+
+    preComputedCapMap = new int[numStarts];
+    int capIndex = 0;
+    for (int ci : preComputedCapacities) {
+      for (TaskView aT : taskNormal) {
+        if (aT.res.min() == ci) {
+          preComputedCapMap[aT.index] = capIndex;
+        }
+      }
+      capIndex++;
+    }
+  }
+
+  /**
+   * Sets whether to use the quadratic edge-finding algorithm.
+   *
+   * @param doQef true to enable quadratic edge-finding, false otherwise.
+   */
+  public void doQuadraticEdgeFind(boolean doQef) {
+    doQuadraticEdgeFind = doQef;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      profileProp(store);
+
+      if (!store.propagationHasOccurred && doEdgeFind) {
+        if (doQuadraticEdgeFind) {
+          edgeFindQuad(store);
+        } else {
+          edgeFind(store);
+        }
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  void edgeFind(Store store) {
+
+    edgeFind(store, taskNormal);
+    edgeFind(store, taskReversed);
+  }
+
+  private void edgeFind(Store store, TaskView[] tn) {
+
+    // tasks sorted in non-decreasing order of est
+    TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
+    if (estList == null) {
+      return;
+    }
+
+    Arrays.sort(estList, taskIncEstComparator);
+
+    ThetaLambdaTree tree = new ThetaLambdaTree(limit);
+    tree.buildTree(estList);
+
+    // tasks sorted in non-increasing order of lct
+    TaskView[] lctList = new TaskView[estList.length];
+    System.arraycopy(estList, 0, lctList, 0, estList.length);
+    Arrays.sort(lctList, taskDecLctComparator);
+
+    int[] auxOrderListInv = new int[lctList.length];
+    for (int i = 0; i < lctList.length; i++) {
+      auxOrderListInv[lctList[i].index] = i;
+    }
+
+    // ========== Detect Order ============
+    int[] prec = detectOrder(tree, lctList, auxOrderListInv, limit.max());
+    // write ThetaLambdaTree as dot file for visualization
+
+    // ========== Adjust Bounds ============
+    adjustBounds(store, tree, lctList, prec, limit.max());
+  }
+
+  private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long capacity) {
+
+    int n = t.length;
+    int[] prec = initPrecFromEct(t, n);
+    processTasksForPrec(tree, t, prec, capacity);
+    return buildLctPrec(prec, lctInvOrder);
+  }
+
+  private static int[] initPrecFromEct(TaskView[] t, int n) {
+    int[] prec = new int[n];
+    for (TaskView aT1 : t) {
+      prec[aT1.index] = aT1.ect();
+    }
+    return prec;
+  }
+
+  private void processTasksForPrec(ThetaLambdaTree tree, TaskView[] t, int[] prec, long capacity) {
+    for (TaskView aT : t) {
+      if (tree.rootNode().env > capacity * aT.lct()) {
+        throw Store.failException;
+      }
+      while (tree.rootNode().envLambda > capacity * aT.lct()) {
+        int i = tree.rootNode().responsibleEnvLambda;
+        prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], aT.lct());
+        tree.removeFromLambda(i);
+      }
+      tree.moveToLambda(aT.treeIndex);
+    }
+  }
+
+  private static int[] buildLctPrec(int[] prec, int[] lctInvOrder) {
+    int[] lctPrec = new int[prec.length];
+    for (int i = 0; i < prec.length; i++) {
+      lctPrec[lctInvOrder[i]] = prec[i];
+    }
+    return lctPrec;
+  }
+
+  private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
+
+    int n = t.length;
+    Set<Integer> capacities;
+    int[] capMap;
+    if (preComputedCapacities == null) {
+      capacities = new LinkedHashSet<>();
+      for (TaskView aT1 : t) {
+        capacities.add(aT1.res.min());
+      }
+      capMap = buildCapMap(t, n, capacities);
+    } else {
+      capacities = preComputedCapacities;
+      capMap = preComputedCapMap;
+    }
+
+    int[][] update = fillUpdateMatrix(tree, t, capacities, cap, n);
+    applyPrecOrderUpdates(store, t, prec, update, capMap, n);
+  }
+
+  private static int[] buildCapMap(TaskView[] t, int n, Set<Integer> capacities) {
+    int[] capMap = new int[n];
+    int capIndex = 0;
+    for (int ci : capacities) {
+      for (TaskView aT : t) {
+        if (aT.res.min() == ci) {
+          capMap[aT.index] = capIndex;
+        }
+      }
+      capIndex++;
+    }
+    return capMap;
+  }
+
+  private int[][] fillUpdateMatrix(
+      ThetaLambdaTree tree, TaskView[] t, Set<Integer> capacities, long cap, int n) {
+    int[][] update = new int[capacities.size()][n];
+    int capi = 0;
+    for (int ci : capacities) {
+      tree.clearTree();
+      int upd = Integer.MIN_VALUE;
+      for (int l = n - 1; l >= 0; l--) {
+        tree.enableNode(t[l].treeIndex, ci);
+        long envlc = tree.calcEnvlc(t[l].lct(), ci);
+        int diff = Integer.MIN_VALUE;
+        if (envlc != Long.MIN_VALUE) {
+          long tmp = envlc - (cap - ci) * t[l].lct();
+          diff = long2int(IntDomain.divRoundUp(tmp, ci));
+        }
+        upd = Math.max(upd, diff);
+        update[capi][l] = upd;
+      }
+      capi++;
+    }
+    return update;
+  }
+
+  private void applyPrecOrderUpdates(
+      Store store, TaskView[] t, int[] prec, int[][] update, int[] capMap, int n) {
+    Integer[] precTaskOrder = new Integer[n];
+    for (int i = 0; i < n; i++) {
+      precTaskOrder[i] = i;
+    }
+    Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2] - prec[o1]);
+
+    int j = 0;
+    for (int i = 0; i < n; i++) {
+      TaskView taskI = t[precTaskOrder[i]];
+      int precI = prec[precTaskOrder[i]];
+      while (j < n && t[j].lct() > precI) {
+        j++;
+      }
+      if (j >= n) {
+        break;
+      }
+      int nj = j;
+      while (nj < n && t[nj].lct() == precI) {
+        if (t[nj].lct() < taskI.lct()) {
+          taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
+          break;
+        }
+        nj++;
+      }
+    }
+  }
+
+  void edgeFindQuad(Store store) {
+
+    edgeFindQuad(store, taskNormal);
+    edgeFindQuad(store, taskReversed);
+  }
+
+  private void edgeFindQuad(Store store, TaskView[] tn) {
+
+    final long capacity = limit.max();
+    TaskView[] ts = filterZeroTasks(tn);
+    if (ts == null) {
+      return;
+    }
+
+    int n = ts.length;
+    // sorted by non-decreasing deadline (lct)
+    Arrays.sort(ts, Comparator.comparingInt(TaskView::lct));
+
+    int[] lb = new int[n];
+    int[] Dupd = new int[n];
+    int[] SlUpd = new int[n];
+    for (int i = 0; i < n; i++) {
+      lb[i] = ts[i].est();
+    }
+    Arrays.fill(Dupd, Integer.MIN_VALUE);
+    Arrays.fill(SlUpd, Integer.MIN_VALUE);
+    final long[] E = new long[n];
+
+    Integer[] t1 = new Integer[n];
+    Integer[] t2 = new Integer[n];
+    for (int i = 0; i < n; i++) {
+      t1[i] = i;
+    }
+    System.arraycopy(t1, 0, t2, 0, n);
+
+    // tasks t1 sorted by non-incereasing relese dates (est)
+    Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2].est() - ts[o1].est());
+    // tasks t2 sorted by non-decreasing relese dates (est)
+    Arrays.sort(t2, Comparator.comparingInt((Integer o) -> ts[o].est()));
+
+    for (TaskView u : ts) {
+      edgeFindQuadProcessU(ts, u, t1, t2, capacity, lb, Dupd, SlUpd, E);
+    }
+
+    // update LB's
+    for (int i = 0; i < n; i++) {
+      ts[i].updateEdgeFind(store.level, lb[i]);
+    }
+  }
+
+  private static void edgeFindQuadProcessU(
+      TaskView[] ts,
+      TaskView u,
+      Integer[] t1,
+      Integer[] t2,
+      long capacityLimit,
+      int[] lb,
+      int[] dupdUpdates,
+      int[] slUpdUpdates,
+      long[] energyPrefix) {
+    long energy = 0;
+    long maxEnergy = 0;
+    int rr = Integer.MIN_VALUE;
+
+    for (int i : t1) {
+      TaskView t = ts[i];
+      if (t.lct() <= u.lct()) {
+        energy += t.energy();
+        if (rr == Integer.MIN_VALUE
+            || (double) energy / (u.lct() - t.est()) > (double) maxEnergy / (u.lct() - rr)) {
+          maxEnergy = energy;
+          rr = t.est();
+        }
+      } else if (rr != Integer.MIN_VALUE) {
+        long rest = maxEnergy - (capacityLimit - t.res().min()) * (u.lct() - rr);
+        if (rest > 0) {
+          dupdUpdates[i] =
+              (int) Math.max(dupdUpdates[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
+        }
+        if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > capacityLimit * (u.lct() - rr)) {
+          lb[i] = Math.max(lb[i], dupdUpdates[i]);
+        }
+      }
+      energyPrefix[i] = energy;
+    }
+
+    long minSl = Integer.MAX_VALUE;
+    int rt = u.lct();
+    for (int i : t2) {
+      TaskView t = ts[i];
+      if (capacityLimit * (u.lct() - t.est()) - energyPrefix[i] < minSl) {
+        rt = t.est();
+        minSl = capacityLimit * (u.lct() - rt) - energyPrefix[i];
+      }
+      if (t.lct() > u.lct()) {
+        long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
+        if (rt <= u.lct() && rest > 0) {
+          slUpdUpdates[i] =
+              (int) Math.max(slUpdUpdates[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+        }
+        if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
+          lb[i] = Math.max(Math.max(lb[i], dupdUpdates[i]), slUpdUpdates[i]);
+        }
+      }
+    }
+  }
+
+  TaskView[] filterZeroTasks(TaskView[] ts) {
+
+    if (possibleZeroTasks) {
+      TaskView[] nonZeroTasks = new TaskView[ts.length];
+      int k = 0;
+
+      for (TaskView t1 : ts) {
+        if (t1.exists()) {
+          nonZeroTasks[k] = t1;
+          t1.index = k++;
+        }
+      }
+
+      if (k == 0) {
+        return null;
+      }
+      TaskView[] t = new TaskView[k];
+      System.arraycopy(nonZeroTasks, 0, t, 0, k);
+      return t;
+    } else {
+      return ts;
+    }
+  }
+
+  /**
+   * Builds the common prefix of the toString representation.
+   *
+   * @param constraintName the name of the constraint (e.g., "cumulative", "cumulativeOptional")
+   * @return StringBuilder with the common prefix
+   */
+  protected StringBuilder buildToStringPrefix(String constraintName) {
+
+    StringBuilder result = new StringBuilder(id());
+    if (doEdgeFind) {
+      result.append(" : ").append(constraintName).append("([ ");
+    } else if (super.cumulativeForConstants != null) {
+      result.append(" : cumulativePrimary([ ");
+    } else {
+      result.append(" : cumulativeBasic([ ");
+    }
+
+    for (int i = 0; i < taskNormal.length - 1; i++) {
+      result.append(taskNormal[i]).append(", ");
+    }
+
+    result.append(taskNormal[taskNormal.length - 1]);
+
+    return result;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = buildToStringPrefix("cumulative");
+
+    result
+        .append(" ]")
+        .append(", limit = ")
+        .append(limit)
+        .append(", quad=")
+        .append(doQuadraticEdgeFind)
+        .append(" )");
+
+    return result.toString();
+  }
+}

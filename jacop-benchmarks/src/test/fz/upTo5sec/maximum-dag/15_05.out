@@ -1,0 +1,5 @@
+objective = 46;
+chosen = array1d(1..49, [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true]);
+distance = array1d(1..15, [0, true, 3, 3, 6, 4, 5, 2, 7, 5, 6, 1, 6, 1, 3]);
+----------
+==========

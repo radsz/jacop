@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jacop</groupId>
+        <artifactId>jacop-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>jacop-flatzinc</artifactId>
+    <packaging>jar</packaging>
+
+    <description>JaCoP FlatZinc/MiniZinc Format Support</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-floats</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-sets</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-sat</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>${project.parent.basedir}/doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${project.parent.basedir}/doc/suppression.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
+            <!--
+              JJTree/JavaCC generate TokenMgrError etc. into target/generated-sources/javacc.
+              If IntelliJ builds to target/, use "mvn clean test" from CLI for this module
+              to avoid "TokenMgrError cannot be resolved" from stale IDE-built classes.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>javacc-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>javacc</id>
+                        <goals>
+                            <goal>jjtree-javacc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Defines sources -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/main/jjtree</source>
+                                <source>src/main/minizinc</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

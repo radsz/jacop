@@ -1,0 +1,165 @@
+/*
+ * AtLeast.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.List;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * AtLeast constraint implements the counting over number of occurrences of a given value in a list
+ * of variables. The number of occurrences is specified by variable value.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class AtLeast extends AbstractAtLeastMost {
+
+  /**
+   * It constructs a AtLeast constraint.
+   *
+   * @param value value which is counted
+   * @param list variables which equality to val is counted.
+   * @param counter number of variables equal to val.
+   */
+  public AtLeast(IntVar[] list, int counter, int value) {
+    super(list, counter, value);
+  }
+
+  /**
+   * It constructs a AtLeast constraint.
+   *
+   * @param value value which is counted
+   * @param list variables which equality to val is counted.
+   * @param counter number of variables equal to val.
+   */
+  public AtLeast(List<? extends IntVar> list, int counter, int value) {
+    super(list, counter, value);
+  }
+
+  @Override
+  public void consistency(final Store store) {
+
+    int[] counts = computeCounts();
+    int numberEq = counts[0];
+    int numberMayBe = counts[1];
+    int start = counts[2];
+
+    if (numberMayBe + numberEq < counter) {
+      throw Store.failException;
+    } else if (numberEq >= counter) {
+      if (!reified) {
+        removeConstraint();
+      }
+    } else if (numberMayBe + numberEq == counter) {
+      for (int i = start; i < list.length; i++) {
+        IntVar v = list[i];
+        if (!v.singleton() && v.domain.contains(value)) {
+          v.domain.inValue(store.level, v, value);
+        }
+      }
+      if (!reified) {
+        removeConstraint();
+      }
+    }
+
+    updateState(numberEq, start);
+  }
+
+  @Override
+  public void notConsistency(final Store store) {
+    // at most counter - 1 values
+    int[] counts = computeCounts();
+    int numberEq = counts[0];
+    int numberMayBe = counts[1];
+    int start = counts[2];
+
+    if (numberEq > counter - 1) {
+      throw Store.failException;
+    } else if (numberEq + numberMayBe <= counter - 1) {
+      if (!reified) {
+        removeConstraint();
+      }
+    } else if (numberEq == counter - 1) {
+      for (int i = start; i < list.length; i++) {
+        IntVar v = list[i];
+        v.domain.inComplement(store.level, v, value, value);
+      }
+      if (!reified) {
+        removeConstraint();
+      }
+    }
+
+    updateState(numberEq, start);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    int numberEq = 0;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        numberEq++;
+      }
+    }
+
+    return numberEq >= counter;
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    int numberEq = 0;
+    int numberMayBe = 0;
+    for (IntVar v : list) {
+      if (v.domain.contains(value)) {
+        if (v.singleton()) {
+          numberEq++;
+        } else {
+          numberMayBe++;
+        }
+      }
+    }
+
+    return numberEq + numberMayBe <= counter - 1;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : AtLeast(").append(value).append(",[");
+    appendArrayToString(result, list);
+    result.append("], ").append(counter).append(" )");
+
+    return result.toString();
+  }
+}

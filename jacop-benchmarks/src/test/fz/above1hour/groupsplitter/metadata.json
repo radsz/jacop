@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_var_int_element", "int_lin_eq", "int_lin_le", "jacop_count", "jacop_table_int"],
+  "constraintFamilies": ["counting", "element", "linear", "table"],
+  "domains": []
+}

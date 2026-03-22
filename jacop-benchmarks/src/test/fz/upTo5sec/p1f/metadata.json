@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_var_int_element", "int_lin_eq", "jacop_alldiff", "jacop_assignment", "jacop_circuit", "jacop_lex_less_int"],
+  "constraintFamilies": ["alldifferent", "assignment", "circuit", "element", "linear", "ordering"],
+  "domains": []
+}

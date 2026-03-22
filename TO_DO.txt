@@ -1,0 +1,771 @@
+TODO items extracted from Java source code
+==========================================
+
+1. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+   Line: 235
+   Method: BoundSetDomain(IntDomain glb, IntDomain lub)
+   TODO: test the replacement of intervaldomain when possible by SmallDenseDomain.
+
+2. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/SimpleCpVarDomain.java
+   Line: 115
+   Method: isEqualityBoolVar(int literal)
+   TODO: later, use parity (be sure the equality literal is even)
+
+3. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/DomainClausesDatabase.java
+   Line: 119
+   Method: propagate(int literal, int assertedLiteral)
+   TODO: faster?
+
+4. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/DomainClausesDatabase.java
+   Line: 225
+   Method: size()
+   TODO: compute the number of clauses that *would* be needed
+
+5. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/DomainClausesDatabase.java
+   Line: 261
+   Method: toCnf(BufferedWriter output)
+   TODO: perform translation for toCNF operation only.
+
+6. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatChangesListener.java
+   Line: 47
+   Context: class-level
+   TODO: many efficiency improvements!!!
+
+7. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatChangesListener.java
+   Line: 88
+   Method: clear()
+   TODO: optimize clear(), which is often called
+
+8. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatWrapper.java
+   Line: 112
+   Context: class-level (field declarations)
+   TODO: find more efficient ? hard, because IntVar has no unique ID
+
+9. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatWrapper.java
+   Line: 114
+   Context: class-level (field declarations)
+   TODO: a way to add those only if needed
+
+10. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatWrapper.java
+    Line: 289
+    Method: consistency(Store store)
+    TODO: some flag to disable queueVariable() during propagation ?
+
+11. File: jacop-sat/src/main/java/org/jacop/satwrapper/SatWrapper.java
+    Line: 360
+    Method: addSatLevel()
+    TODO: inline the resizing of arrays
+
+12. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/SatCpBridge.java
+    Line: 40
+    Context: class-level
+    TODO: replace this by something embedded *inside* the CP variable itself
+
+13. File: jacop-sat/src/main/java/org/jacop/jasat/modules/ActivityModule.java
+    Line: 44
+    Context: class-level
+    TODO: polarity caching
+
+14. File: jacop-sat/src/main/java/org/jacop/jasat/modules/ActivityModule.java
+    Line: 45
+    Context: class-level
+    TODO: some nice data structure to have a real Priority queue
+
+15. File: jacop-sat/src/main/java/org/jacop/jasat/modules/ActivityModule.java
+    Line: 287
+    Method: rebase(int value)
+    TODO: kind of integer log
+
+16. File: jacop-sat/src/main/java/org/jacop/jasat/modules/HeuristicRestartModule.java
+    Line: 40
+    Context: class-level
+    TODO: some idea about the heuristic:
+      do not decide to restart only depending on some variable and the number of
+      conflicts since the last restart; instead, use some "scheme".
+      This scheme would be:
+      1) restart often (like, every 500 conflicts) for some number of times N.
+         This aims at finding good activities about literals.
+      2) Then, perform a long run without restart (or maybe 2 runs ?),
+         to try to reach a solution (too frequent restarts predate termination),
+         like 2000 or 3000 conflicts at most.
+      If it fails, do the same thing with a slightly higher value of N.
+
+17. File: jacop-sat/src/main/java/org/jacop/jasat/modules/HeuristicForgetModule.java
+    Line: 43
+    Context: class-level
+    TODO: finish the implementation
+
+18. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 39
+    Context: class-level
+    TODO: code bcp, and maybe reuse watch node lists in some other databases
+
+19. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 70
+    Method: addClause(int[] clause, boolean isModel)
+    TODO: reuse empty slots ?
+
+20. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 216
+    Method: removeClause(int clauseId)
+    TODO: Auto-generated method stub
+
+21. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 227
+    Method: canRemove(int clauseId)
+    TODO: Auto-generated method stub
+
+22. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 239
+    Method: resolutionWith(int clauseIndex, MapClause clause)
+    TODO: Auto-generated method stub
+
+23. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 249
+    Method: backjump(int level)
+    TODO: Auto-generated method stub
+
+24. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/LongClausesDatabase.java
+    Line: 274
+    Method: size()
+    TODO: Auto-generated method stub
+
+25. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/DefaultClausesDatabase.java
+    Line: 518
+    Context: class-level (inner helper section)
+    TODO: seriously improve performances. This code has been written to
+      be correct (because it is not that trivial and it is 2:30AM) but
+      it probably could be faster.
+
+26. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/UnaryClausesDatabase.java
+    Line: 47
+    Context: class-level (Javadoc)
+    TODO: Radek, just curious.
+      How is the conflict raised by this database? How is the propagation done?
+      After clauses are added, how is the unit propagation taking place?
+      => conflicts are only raised when a clause is added, because either we
+      propagate the only literal of the clause, either it is false (=> conflict).
+      However, a good question is: what if we add such a clause at level > 0 and
+      some backjump goes under this level, maybe we should watch literals after all.
+      ==> FIXME
+      Is the addClause a right place to do above? Would it cause troubles for
+      consistency of state of different components?
+
+27. File: jacop-sat/src/main/java/org/jacop/jasat/utils/Utils.java
+    Line: 139
+    Context: class-level
+    TODO: try to replace arithmetic negation by this var(), not() methods
+      (which should be faster) about representation of signed literals
+
+28. File: jacop-sat/src/main/java/org/jacop/jasat/core/ConflictLearning.java
+    Line: 85
+    Method: getLevelToBackjump(MapClause explanationClause)
+    TODO: see if iterating over the clause would be more efficient
+
+29. File: jacop-sat/src/main/java/org/jacop/jasat/core/ConflictLearning.java
+    Line: 128
+    Method: applyExplainUip(MapClause explanationClause)
+    TODO: if the resulting clause is too complicated, use subsumption
+      to get a simpler clause ?
+
+30. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 42
+    Context: class-level
+    TODO: test default function which use sparse (dense) representation.
+      Default code if domain is neither Interval nor Bound domain.
+
+31. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 627
+    Method: unionAdapt(FloatInterval i)
+    TODO: Move all check invariant code into Aspect CheckInvariants.
+
+32. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 2439
+    Method: inComplementToNewDomain(int storeLevel, Var v, double complement, int counter)
+    TODO: check and test inComplement below.
+
+33. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 2733
+    Method: removeSearchConstraint(int storeLevel, Var v, Constraint constraint)
+    TODO: improve by using interval find function.
+
+34. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatDomain.java
+    Line: 918
+    Context: class-level (abstract method area)
+    TODO: Value enumeration for floats
+
+35. File: jacop-flatzinc/src/main/java/org/jacop/fz/Tables.java
+    Line: 274
+    Method: addIntArray(String ident, int[] array)
+    TODO: asserts to prevent multiple array being put with the same identity?
+
+36. File: jacop-flatzinc/src/main/java/org/jacop/fz/Tables.java
+    Line: 336
+    Method: addFloatArray(String ident, double[] array)
+    TODO: asserts to prevent multiple array being put with the same identity?
+
+37. File: jacop-flatzinc/src/main/java/org/jacop/fz/OutputArrayAnnotation.java
+    Line: 50
+    Context: class-level (field declaration)
+    TODO: ArrayList of Sets? Why? Is a set needed? Maybe just IntervalDomain suffices?
+
+38. File: jacop-core/src/main/java/org/jacop/search/TraceGenerator.java
+    Line: 64
+    Context: class-level (Javadoc)
+    TODO: TraceGenerator should accept as input to constructor a Search object.
+      It should get all the previous listeners and establish itself as the parent
+      of those listeners and substitute them for itself in the search provided.
+      It should ask them to get the proper return value for listener functions which
+      are returning a code. It should later act as suggested by those listeners.
+      This way there may be no need for checking/informing trace if we search for
+      all solutions or just one.
+
+39. File: jacop-core/src/main/java/org/jacop/search/TraceGenerator.java
+    Line: 804
+    Method: generateFailcNode(int searchNodeId, int parentNode, String name, int size, Domain dom)
+    TODO: BUG? Why in the function above generateTrycNode, originally function
+      filter*(dom) was called and here our toString() for dom is being called.
+
+40. File: jacop-core/src/main/java/org/jacop/search/TraceGenerator.java
+    Line: 983
+    Context: class-level (between methods)
+    TODO: what happens if DepthFirstSearch first evaluates x != v branch
+      before evaluating x = v branch?
+
+41. File: jacop-core/src/main/java/org/jacop/search/SimpleSolutionListener.java
+    Line: 66
+    Context: class-level (field area)
+    TODO: change one solution only to limit of solutions.
+
+42. File: jacop-core/src/main/java/org/jacop/search/SimpleMatrixSelect.java
+    Line: 55
+    Context: class-level
+    TODO: implement subListSize functionality or remove it from the description.
+
+43. File: jacop-core/src/main/java/org/jacop/core/Store.java
+    Line: 208
+    Context: class-level (field area)
+    TODO: create setQueue function so all data structures are properly updated
+      upon changing the number of queues.
+
+44. File: jacop-core/src/main/java/org/jacop/core/Store.java
+    Line: 1083
+    Method: removeLevel(int level)
+    TODO: added functionality.
+
+45. File: jacop-core/src/main/java/org/jacop/core/Store.java
+    Line: 1115
+    Method: setLevel(int levelSetTo)
+    TODO: functionality added.
+
+46. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 569
+    Method: contains(IntDomain domain)
+    TODO: implement special code,
+      if (domain.domainId() == INTERVAL_DOMAIN_ID) { ... }
+
+47. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 590
+    Method: contains(int value)
+    TODO: CHECK.
+
+48. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 599
+    Method: contains(int min, int max)
+    TODO: test more.
+
+49. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 656
+    Method: eq(IntDomain domain)
+    TODO: implement special code, check the super implementation.
+
+50. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 997
+    Method: in(int storeLevel, Var v, IntDomain domain)
+    TODO: improve, it does not take yet holes in the domain.
+
+51. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1110
+    Method: inMax(int storeLevel, Var v, int max)
+    TODO: improve.
+
+52. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1121
+    Method: inMin(int storeLevel, Var v, int min)
+    TODO: improve.
+
+53. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1169
+    Method: inShift(int storeLevel, Var v, IntDomain domain, int shift)
+    TODO: improve, it does not take yet holes in the domain.
+
+54. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1182
+    Method: intersect(IntervalDomain input, int shift)
+    TODO: check all return empty domains to make sure that they are not being used
+
+55. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1273
+    Method: intersectAdapt(IntDomain domain)
+    TODO: do a bit more testing, although code has been derived from in function.
+
+56. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1343
+    Method: intersectAdapt(IntDomain domain)
+    TODO: test this special case.
+
+57. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1358
+    Method: intersectAdapt(IntDomain domain)
+    TODO: used by in functions of BoundSetDomain.
+
+58. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1366
+    Method: intersectAdapt(int min, int max)
+    TODO: test, recent code.
+
+59. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1445
+    Method: isIntersecting(int min, int max)
+    TODO: test.
+
+60. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1617
+    Method: recentDomainPruning(int storeLevel)
+    TODO: CHECK.
+
+61. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1651
+    Method: setDomain(IntDomain domain)
+    TODO: test it a bit more. SETADD.
+
+62. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1708
+    Method: setDomain(int min, int max)
+    TODO: test recent change.
+
+63. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1722
+    Method: singleton(int c)
+    TODO: check asserts.
+
+64. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1785
+    Method: subtract(IntDomain domain)
+    TODO: CRUCIAL implement special function for IntervalDomain.
+
+65. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1809
+    Method: subtract(int min, int max)
+    TODO: Test properly. SETADD
+
+66. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1835
+    Method: subtractAdapt(int min, int max)
+    TODO: Test properly. SETADD
+
+67. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1873
+    Method: subtractAdapt(int value)
+    TODO: test, SETADD.
+
+68. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1906
+    Method: union(IntDomain domain)
+    TODO: test it.
+
+69. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1934
+    Method: union(IntDomain domain)
+    TODO: take care in a nice fashion (no exception) if smalldensedomain
+      can not handle the result of union.
+
+70. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 1977
+    Method: unionAdapt(int min, int max)
+    TODO: Test properly. SETADD.
+
+71. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 2022
+    Method: valueEnumeration()
+    TODO: CHECK.
+
+72. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 2078
+    Method: isEmpty()
+    TODO: CHECK.
+
+73. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 2091
+    Method: isSparseRepresentation()
+    TODO: adapt the answer depending on the particular instance
+
+74. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 2156
+    Method: toStringConstraints()
+    TODO: implement properly.
+
+75. File: jacop-core/src/main/java/org/jacop/core/SmallDenseDomain.java
+    Line: 2163
+    Method: toStringFull()
+    TODO: implement properly.
+
+76. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 37
+    Context: class-level
+    TODO: test default function which use sparse (dense) representation.
+      Default code if domain is neither Interval nor Bound domain.
+
+77. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 260
+    Method: unionAdapt(Interval i)
+    TODO: Move all check invariant code into Aspect CheckInvariants.
+
+78. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 686
+    Method: contains(IntDomain domain)
+    TODO: CRUCIAL implement SmallDenseDomain case.
+
+79. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 864
+    Method: eq(IntDomain domain)
+    TODO: CRUCIAL, create special code for SmallDenseDomain.
+
+80. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 918
+    Method: intersect(IntDomain domain)
+    TODO: CRUCIAL implement proper SmallDenseDomain case.
+
+81. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 929
+    Method: intersect(IntDomain domain)
+    TODO: check correctness.
+
+82. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 1320
+    Method: subtract(IntDomain domain)
+    TODO: Check.
+
+83. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 1594
+    Method: union(IntDomain domain)
+    TODO: work with dense domain
+
+84. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/NetworkSimplex.java
+    Line: 472
+    Method: updateTree(Arc leaving, Arc entering)
+    TODO: prove (or disprove) correctness (and efficiency).
+
+85. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/NetworkSimplex.java
+    Line: 538
+    Method: treeSwap(Node a, Node b, Node c)
+    TODO: prove (or disprove) correctness.
+
+86. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/NetworkSimplex.java
+    Line: 540
+    Method: treeSwap(Node a, Node b, Node c)
+    TODO: can be 'inlined' in updateTree (but that would decrease readability)
+
+87. File: jacop-core/src/main/java/org/jacop/constraints/geost/Geost.java
+    Line: 664
+    Method: genInternalConstraints()
+    TODO: reuse different scopes if equal so that quadratic use of memory is avoided.
+      For a moment a simple solution is implemented: simple case where all constraints
+      apply to all objects.
+
+88. File: jacop-core/src/main/java/org/jacop/constraints/GCC.java
+    Line: 124
+    Context: class-level (field area, Javadoc)
+    TODO: An improvement to increase the incrementality even further.
+      1. The first matching uses minimal values. Remember which minimal value has
+         changed which removed from the domain the value which was used in the matching.
+         Reuse from old matching 1 all values smaller than the minimal which has changed.
+      Similar principle applies to matching 2 (skip the positions (variables) until the
+      first index for which m1 did change or for which the m2 value is no longer in the domain.
+      2. Use IndexDomainView instead of local solution.
+      3. boolean variable first - is it only once in the consistency function? Then this
+         functionality can be moved out of the while(newPropagation), if it should be executed
+         every time consistency is executed then (it should be setup to true somewhere).
+
+89. File: jacop-core/src/main/java/org/jacop/constraints/geost/AllowedArea.java
+    Line: 109
+    Method: isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c)
+    TODO: improve this implementation, which is slightly inefficient when c will
+      need to move next to the allowed area during a sweep. Indeed, this will cause
+      (at least) 2 steps to be used, but a box could be created to skip it all in
+      a single step. This is possible because the sweep direction is provided by the
+      order parameter.
+
+90. File: jacop-core/src/main/java/org/jacop/constraints/geost/AllowedArea.java
+    Line: 47
+    Context: class-level
+    TODO: What is the reason for using it? What are the limitation of using this solution?
+
+91. File: jacop-core/src/main/java/org/jacop/constraints/geost/AllowedArea.java
+    Line: 96
+    Method: cardInfeasible()
+    TODO: change it to Geost constant, capable of generating outboxes.
+
+92. File: jacop-core/src/main/java/org/jacop/constraints/geost/Geost.java
+    Line: 1308
+    Method: consistency(Store store)
+    TODO: think of easy way of preventing multiple objects being put to the list at the same level.
+
+93. File: jacop-core/src/main/java/org/jacop/constraints/geost/Geost.java
+    Line: 1766
+    Method: toString()
+    TODO: proper string representation of the constraint.
+
+94. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/NetworkSimplex.java
+    Line: 77
+    Context: class-level
+    TODO: convenience or overhead ?
+
+95. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/NetworkSimplex.java
+    Line: 149
+    Method: incrementDegree(Node node, Arc myArc)
+    TODO: CRUCIAL, BUG?, assert removed.
+
+96. File: jacop-sat/src/main/java/org/jacop/jasat/core/ConflictLearning.java
+    Line: 132
+    Method: findPositionTopLiteral(MapClause explanationClause, int level, int startingPosition)
+    TODO: improve perfs.
+
+97. File: jacop-sat/src/main/java/org/jacop/jasat/modules/HeuristicForgetModule.java
+    Line: 125
+    Method: onExplain(MapClause explanation)
+    TODO: try to bind it with the ID of the clause, because it will be added soon
+
+98. File: jacop-sat/src/main/java/org/jacop/jasat/modules/HeuristicForgetModule.java
+    Line: 160
+    Method: computeLbd(MapClause clause)
+    TODO: compute the number
+
+99. File: jacop-sat/src/main/java/org/jacop/jasat/core/Core.java
+    Line: 680
+    Method: printSolution()
+    TODO: clean it (factor code, avoid repetition)
+
+100. File: jacop-core/src/main/java/org/jacop/core/BoundDomain.java
+     Line: 1042
+     Method: sizeOfIntersection(IntDomain domain)
+     TODO: test it.
+
+101. File: jacop-core/src/main/java/org/jacop/core/IntDomain.java
+     Line: 1253
+     Method: removeSearchConstraint(int storeLevel, Var v, Constraint c)
+     TODO: improve by using interval find function.
+
+102. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Pruning.java
+     Line: 225
+     Method: pruneNodesWithSmallDegree()
+     TODO: filter arcs with x-variables first ?
+
+103. File: jacop-core/src/main/java/org/jacop/constraints/netflow/NetworkFlow.java
+     Line: 132
+     Method: processEvent(IntVar variable, MutableNetwork network) (VarHandler)
+     TODO: maybe here extra work that before was not being done can be done.
+
+104. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObject.java
+     Line: 129
+     Method: absInfeasible(Geost.SweepDirection minlex)
+     TODO: implement,
+
+105. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObject.java
+     Line: 150
+     Method: cardInfeasible()
+     TODO: correct
+
+106. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObject.java
+     Line: 293
+     Method: updateFrame()
+     TODO: Are the max and min functions here, put correctly?
+
+107. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObjectFrame.java
+     Line: 55
+     Context: class-level
+     TODO: introduce boolean switch computeArea(Precisely) which if is set to false
+       will not compute the area at all or precisely.
+
+108. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObjectFrame.java
+     Line: 59
+     Context: class-level
+     TODO: use << 2, instead of *4. Explain precisely why this scalling was needed.
+
+109. File: jacop-core/src/main/java/org/jacop/constraints/geost/ObstacleObjectFrame.java
+     Line: 68
+     Context: class-level
+     TODO: remove if not needed anymore, or better separate from other code
+       by putting it inside functions.
+
+110. File: jacop-core/src/main/java/org/jacop/constraints/geost/NonOverlapping.java
+     Line: 82
+     Method: NonOverlapping(GeostObject[] objects, int[] selectedDimensions)
+     TODO: replace by an array/ArrayList
+
+111. File: jacop-core/src/main/java/org/jacop/constraints/geost/Dbox.java
+     Line: 383
+     Method: containsPoint(int[] pointCoordinates)
+     TODO: BUG? describe why >= is used and not >, what are the assumptions?
+
+112. File: jacop-core/src/main/java/org/jacop/constraints/ExtensionalSupportVa.java
+     Line: 166
+     Context: class-level
+     TODO: raiseLevelBeforeConsistency may not be needed by this constraint.
+
+113. File: jacop-core/src/main/java/org/jacop/constraints/ExtensionalSupportMdd.java
+     Line: 130
+     Method: consistency(Store s)
+     TODO: initialize notSupportedIndexesYes to 0..domainLimits
+
+114. File: jacop-core/src/main/java/org/jacop/constraints/Alldistinct.java
+     Line: 1852
+     Method: getGuideVariable()
+     TODO: fix it, si does not return singleton variables.
+
+115. File: jacop-sets/src/main/java/org/jacop/set/constraints/SinA.java
+     Line: 134
+     Method: notConsistency(Store store)
+     TODO: test it properly.
+
+116. File: jacop-sets/src/main/java/org/jacop/set/constraints/ElementSet.java
+     Line: 136
+     Method: consistency(Store store)
+     TODO: implement some support functionality e.g. values in valueLUB can be
+       supported by element from the list.
+
+117. File: jacop-sets/src/main/java/org/jacop/set/constraints/AinS.java
+     Line: 136
+     Method: notConsistency(Store store)
+     TODO: test it properly.
+
+118. File: jacop-sat/src/main/java/org/jacop/jasat/utils/structures/IntHashMap.java
+     Line: 415
+     Method: remove() (KeysIterator inner class)
+     TODO: verify this more precisely
+
+119. File: jacop-sat/src/main/java/org/jacop/jasat/core/Config.java
+     Line: 128
+     Method: toString()
+     TODO: enhance
+
+120. File: jacop-floats/src/main/java/org/jacop/floats/constraints/PeqC.java
+     Line: 60
+     Method: PeqC(FloatVar p, double c)
+     TODO: BUG? why Integer constants used here?
+
+121. File: jacop-floats/src/main/java/org/jacop/floats/constraints/EquationSystem.java
+     Line: 115
+     Method: impose(Store store)
+     TODO: why do we call consistency of the whole store inside impose function
+       of the constraint???
+
+122. File: jacop-core/src/main/java/org/jacop/util/SparseSet.java
+     Line: 65
+     Method: SparseSet(int size)
+     TODO: test if that is still necessary after fixing a rare bug with addition.
+
+123. File: jacop-core/src/main/java/org/jacop/core/Domain.java
+     Line: 91
+     Context: class-level
+     TODO: change stamp name to level in ALL places, e.g. setStamp(int) too.
+
+124. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/Node.java
+     Line: 64
+     Context: class-level (field declaration)
+     TODO: useful (?) redundancy: parent == toParent.head
+
+125. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/Node.java
+     Line: 174
+     Method: toString()
+     TODO: only for debugging, otherwise we would use StringBuilder
+
+126. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/Danzig.java
+     Line: 64
+     Method: reset()
+     TODO: Auto-generated method stub
+
+127. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/Arc.java
+     Line: 226
+     Method: toString()
+     TODO: only for debugging, otherwise we would use StringBuilder
+
+128. File: jacop-core/src/main/java/org/jacop/constraints/netflow/simplex/Arc.java
+     Line: 256
+     Method: toFlow()
+     TODO: only for debugging, otherwise we would use StringBuilder
+
+129. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Network.java
+     Line: 164
+     Method: remove(Arc arc)
+     TODO: perform dual pivot instead ? (it is slower and may fail, but preserves optimality)
+
+130. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Network.java
+     Line: 235
+     Method: increaseLevel()
+     TODO: does this solve the problem below ?
+
+131. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Network.java
+     Line: 240
+     Method: increaseLevel()
+     TODO: the same arc can be marked as modified multiple times on the same level.
+
+132. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Network.java
+     Line: 272
+     Method: restore(ArcCompanion companion)
+     TODO: CRUCIAL, BUG, switched off. Is it ok?
+
+133. File: jacop-core/src/main/java/org/jacop/constraints/netflow/Network.java
+     Line: 299
+     Method: restore(ArcCompanion companion)
+     TODO: CRUCIAL, BUG, switched off. Is it ok?
+
+134. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 138
+     Method: processEvent(IntVar variable, MutableNetwork network)
+     TODO: can this happen after we implement arc grounding?
+
+135. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 145
+     Method: processEvent(IntVar variable, MutableNetwork network)
+     TODO: is this a bug ? BoundDomain.emptyDomain.getSize() == -1
+
+136. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 180
+     Method: groundArc(int arcId, boolean active, MutableNetwork network)
+     TODO: else here ? if queueVar performs update
+
+137. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 185
+     Method: groundArc(int arcId, boolean active, MutableNetwork network)
+     TODO: this isn't nice
+
+138. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 195
+     Method: groundArc(int arcId, boolean active, MutableNetwork network)
+     TODO: else here ? if queueVar performs update
+
+139. File: jacop-core/src/main/java/org/jacop/constraints/netflow/DomainStructure.java
+     Line: 199
+     Method: groundArc(int arcId, boolean active, MutableNetwork network)
+     TODO: this isn't nice either
+
+140. File: jacop-core/src/main/java/org/jacop/constraints/netflow/ArcCompanion.java
+     Line: 237
+     Method: processEvent(IntVar variable, MutableNetwork network)
+     TODO: already done by queue variable ?
+
+141. File: jacop-core/src/main/java/org/jacop/constraints/geost/Shape.java
+     Line: 73
+     Method: Shape(int no, Collection<Dbox> boxes)
+     TODO: is it really lazily initialized?
+
+142. File: jacop-core/src/main/java/org/jacop/constraints/geost/ForbiddenArea.java
+     Line: 120
+     Method: isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c)
+     TODO: are the dboxes within geost objects ordered according to its area?
+
+143. File: jacop-core/src/main/java/org/jacop/constraints/geost/ForbiddenArea.java
+     Line: 134
+     Method: isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c)
+     TODO: why -Integer.MAX_VALUE/2 and not Integer.MIN_VALUE for example?

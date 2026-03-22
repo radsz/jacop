@@ -1,0 +1,145 @@
+/*
+ * AunionBeqC.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.set.constraints;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
+
+/**
+ * It creates a constraint that makes sure that A union B is equal to C. A \/ B = C.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class AunionBeqC extends AbstractSetOpBeqC {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
+   *
+   * @param a variable representing the first parameter
+   * @param b variable representing the second parameter
+   * @param c variable that is restricted to be the union of a and b.
+   */
+  public AunionBeqC(SetVar a, SetVar b, SetVar c) {
+    super(idNumber, a, b, c);
+  }
+
+  @Override
+  protected void propagateOperation(
+      Store store, boolean changedA, boolean changedB, boolean changedC) {
+
+    SetDomain aDom = a.dom();
+    SetDomain bDom = b.dom();
+    SetDomain cDom = c.dom();
+
+    propagateUnionGlbA(store, bDom, cDom, changedB, changedC);
+    if (changedC) {
+      a.domain.inLub(store.level, a, cDom.lub());
+    }
+
+    propagateUnionGlbB(store, aDom, cDom, changedA, changedC);
+    if (changedC) {
+      b.domain.inLub(store.level, b, cDom.lub());
+    }
+
+    if (changedA) {
+      c.domain.inGlb(store.level, c, aDom.glb());
+    }
+    if (changedB) {
+      c.domain.inGlb(store.level, c, bDom.glb());
+    }
+    if (changedA || changedB) {
+      c.domain.inLub(store.level, c, aDom.lub().union(bDom.lub()));
+    }
+
+    if (performCardinalityReasoning) {
+      propagateUnionCardinality(store);
+    }
+  }
+
+  private void propagateUnionGlbA(
+      Store store, SetDomain domainB, SetDomain domainC, boolean changedB, boolean changedC) {
+    if ((changedC || changedB) && domainC.lub().getSize() > 0) {
+      IntDomain glbA = domainC.glb().subtract(domainB.lub());
+      if (glbA.getSize() > 0) {
+        a.domain.inGlb(store.level, a, glbA);
+      }
+    }
+  }
+
+  private void propagateUnionGlbB(
+      Store store, SetDomain domainA, SetDomain domainC, boolean changedA, boolean changedC) {
+    if ((changedA || changedC) && domainC.lub().getSize() > 0) {
+      IntDomain glbB = domainC.glb().subtract(domainA.lub());
+      if (glbB.getSize() > 0) {
+        b.domain.inGlb(store.level, b, glbB);
+      }
+    }
+  }
+
+  private void propagateUnionCardinality(Store store) {
+    int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+    int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+    int maxLeft = a.domain.card().min() - sizeOf_4;
+    int maxRight = b.domain.card().min() - sizeOf_8;
+
+    c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
+
+    int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
+
+    c.domain.inCardinality(store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
+
+    int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
+
+    a.domain.inCardinality(
+        store.level, a, c.domain.card().min() - sizeOf_2_3_7_8, c.domain.card().max() - sizeOf_8);
+
+    int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
+
+    b.domain.inCardinality(
+        store.level, b, c.domain.card().min() - sizeOf_1_2_4_5, c.domain.card().max() - sizeOf_4);
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && a.domain.union(b.domain).eq(c.domain);
+  }
+
+  @Override
+  public String toString() {
+    return id() + " : AunionBeqC(" + a + ", " + b + ", " + c + " )";
+  }
+}

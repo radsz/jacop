@@ -1,0 +1,345 @@
+/*
+ * Alldifferent.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.util.BipartiteGraphMatching;
+
+/**
+ * Alldifferent constraint assures that all FDVs has differnet values. It uses partial consistency
+ * technique.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies a list of variables which must take different values. */
+  protected IntVar[] list;
+
+  protected Map<IntVar, Integer> positionMapping;
+  protected TimeStamp<Integer> grounded;
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+
+  /** Protected constructor for subclassing purposes. */
+  protected Alldifferent() {}
+
+  /**
+   * It constructs the alldifferent constraint for the supplied variable.
+   *
+   * @param list variables which are constrained to take different values.
+   */
+  public Alldifferent(IntVar[] list) {
+
+    checkInputForNullness("list", list);
+    checkInputForDuplication("list", list);
+
+    this.numberId = idNumber.incrementAndGet();
+    this.list = Arrays.copyOf(list, list.length);
+    setScope(this.list);
+  }
+
+  /**
+   * It constructs the alldifferent constraint for the supplied variable.
+   *
+   * @param variables variables which are constrained to take different values.
+   */
+  public Alldifferent(List<? extends IntVar> variables) {
+    this(variables.toArray(new IntVar[0]));
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    int groundPos = grounded.value();
+    do {
+      store.propagationHasOccurred = false;
+      groundPos = processGroundedVariables(store, groundPos);
+    } while (store.propagationHasOccurred);
+    grounded.update(groundPos);
+
+    checkMatchingExcept(store, groundPos);
+  }
+
+  /**
+   * Processes grounded (singleton) variables to maintain consistency by removing their values from
+   * all other variables. Variables are moved to the front of the list once grounded.
+   *
+   * @param store the constraint store
+   * @param groundPos the current position marking the boundary between grounded and non-grounded
+   *     variables
+   * @return the updated position of the first non-grounded variable
+   */
+  protected int processGroundedVariables(Store store, int groundPos) {
+    LinkedHashSet<IntVar> fdvs = variableQueue;
+    variableQueue = new LinkedHashSet<>();
+
+    for (IntVar q : fdvs) {
+      if (!q.singleton()) {
+        continue;
+      }
+      int qPos = positionMapping.get(q);
+      if (qPos > groundPos) {
+        list[qPos] = list[groundPos];
+        list[groundPos] = q;
+        positionMapping.put(q, groundPos);
+        positionMapping.put(list[qPos], qPos);
+        groundPos++;
+      } else if (qPos == groundPos) {
+        groundPos++;
+      } else {
+        continue;
+      }
+      removeValueFromOthersIfNotException(store, groundPos, q.min());
+    }
+    return groundPos;
+  }
+
+  /**
+   * Removes the given value from the domain of all variables from groundPos onward, unless it is an
+   * exception value.
+   */
+  private void removeValueFromOthersIfNotException(Store store, int groundPos, int value) {
+    if (isExceptionValue(value)) {
+      return;
+    }
+    for (int i = groundPos; i < list.length; i++) {
+      list[i].domain.inComplement(store.level, list[i], value);
+    }
+  }
+
+  /**
+   * Determines whether the given value is an exception value that should not be subject to the
+   * alldifferent constraint. Subclasses override this to define exception sets.
+   *
+   * @param value the value to check
+   * @return true if the value is an exception, false otherwise
+   */
+  protected boolean isExceptionValue(int value) {
+    return false;
+  }
+
+  /**
+   * Determines whether the given variable's domain intersects with the set of exception values.
+   * Subclasses override this to define exception sets.
+   *
+   * @param v the variable to check
+   * @return true if the variable may take an exception value, false otherwise
+   */
+  protected boolean hasExceptionValues(IntVar v) {
+    return false;
+  }
+
+  /**
+   * Performs a matching-based consistency check on non-exception variables. Collects all
+   * non-grounded variables that cannot take exception values and verifies that a valid assignment
+   * exists using bipartite matching.
+   *
+   * @param store the constraint store
+   * @param groundPos the current position of the first non-grounded variable
+   */
+  protected void checkMatchingExcept(Store store, int groundPos) {
+    ArrayList<IntVar> vars = new ArrayList<>();
+    for (int i = groundPos; i < list.length; i++) {
+      if (!hasExceptionValues(list[i])) {
+        vars.add(list[i]);
+      }
+    }
+    if (vars.size() > 2 && notSatisfiedByMatching(vars.toArray(new IntVar[0]))) {
+      throw Store.failException;
+    }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    for (int i = grounded.value(); i < list.length; i++) {
+      if (!list[i].singleton()) {
+        return false;
+      }
+    }
+
+    Set<Integer> values = new HashSet<>();
+
+    for (IntVar aList : list) {
+      if (!values.add(aList.value())) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Performs a full consistency check to determine if the constraint is satisfied. Verifies that
+   * all variable domains are pairwise non-intersecting.
+   *
+   * @param store the constraint store
+   * @return true if all variable domains are disjoint, false otherwise
+   */
+  @SuppressWarnings("unused")
+  private boolean satisfiedFullCheck(Store store) {
+
+    int i = 0;
+
+    IntervalDomain result = new IntervalDomain();
+
+    while (i < list.length - 1) {
+
+      if (list[i].domain.isIntersecting(result)) {
+        return false;
+      }
+
+      result.addDom(list[i].domain);
+
+      i++;
+    }
+
+    return true;
+  }
+
+  /**
+   * Check whether the constraint is not satisfied based on bipartite graph matching.
+   *
+   * @return true if constraint is not satisfied
+   */
+  public boolean notSatisfied() {
+
+    Map<Integer, Integer> valueMap = new HashMap<>();
+    int valueIndex = 0;
+
+    int[][] adj = new int[list.length + 1][];
+    adj[0] = new int[0];
+
+    for (int i = 0; i < list.length; i++) {
+      IntVar v = list[i];
+
+      adj[i + 1] = new int[v.dom().getSize()];
+      int j = 0;
+      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int el = e.nextElement();
+        Integer elIndex = valueMap.get(el);
+        if (elIndex == null) {
+          valueMap.put(el, valueIndex);
+          adj[i + 1][j] = valueIndex + 1;
+          valueIndex++;
+        } else {
+          adj[i + 1][j] = elIndex + 1;
+        }
+        j++;
+      }
+    }
+    for (int i = 0; i < adj.length; i++) {
+      log.debug("{}: {}", i, Arrays.toString(adj[i]));
+    }
+    // compute maximal value for count
+    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
+    int maxNumberDifferent = matcher.hopcroftKarp();
+
+    return maxNumberDifferent < list.length;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    super.impose(store);
+    positionMapping = Var.positionMapping(list, false, this.getClass());
+    grounded = new TimeStamp<>(store, 0);
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((IntVar) v);
+  }
+
+  /**
+   * Checks if the constraint is satisfied based on variable bounds. Verifies that variable domains
+   * do not overlap based on their min/max values.
+   *
+   * @return true if all variable bounds are disjoint, false otherwise
+   */
+  @SuppressWarnings("unused")
+  private boolean satisfiedBound() {
+    boolean sat = true;
+    int i = 0;
+    while (sat && i < list.length) {
+      IntDomain vDom = list[i].dom();
+      int vMin = vDom.min();
+      int vMax = vDom.max();
+      int j = i + 1;
+      while (sat && j < list.length) {
+        IntDomain ljDom = list[j].dom();
+        sat = vMin > ljDom.max() || vMax < ljDom.min();
+        j++;
+      }
+      i++;
+    }
+    return sat;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : alldifferent([");
+    appendArrayToString(result, list);
+    result.append("])");
+
+    return result.toString();
+  }
+}

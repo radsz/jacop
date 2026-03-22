@@ -1,0 +1,1106 @@
+/*
+ * Diff.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntFunction;
+import lombok.Builder;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
+/**
+ * Diff constraint assures that any two rectangles from a vector of rectangles does not overlap in
+ * at least one direction. It is a simple implementation which does not use sophisticated techniques
+ * for efficient backtracking.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+
+  protected static final boolean TRACE = false;
+  protected static boolean traceOn = TRACE;
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+  private static final boolean TRACE_NARR = false;
+  private static boolean traceNarrOn = TRACE_NARR;
+  protected final IntFunction<Comparator<IntRectangle>> dimIthMinComparator =
+      dim ->
+          (IntRectangle o1, IntRectangle o2) -> {
+            int v1 = o1.origins[dim];
+            int v2 = o2.origins[dim];
+            return v1 - v2;
+          };
+
+  /** It specifies the list of rectangles which are of interest for this diff constraint. */
+  protected Rectangle[] rectangles;
+
+  Store currentStore;
+  int stamp;
+  Set<IntVar> variableQueue = new HashSet<>();
+
+  /** It specifies if the constraint should compute and use the profile. */
+  boolean doProfile = true;
+
+  private int minPosition;
+  // use to collect information on possible length of rectangles for pruning
+  private List<Integer> durMax;
+
+  /** It constructs an empty Diff constraint. */
+  protected Diff() {}
+
+  /**
+   * It specifies a diff constraint.
+   *
+   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   * @param doProfile should the constraint compute and use the profile functionality.
+   */
+  public Diff(Rectangle[] rectangles, boolean doProfile) {
+
+    checkInputForNullness("rectangles", rectangles);
+    checkInput(rectangles, r -> r.dim == 2, "rectangle has to have exactly two dimensions");
+
+    this.queueIndex = 2;
+    this.numberId = idNumber.incrementAndGet();
+
+    this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
+    this.doProfile = doProfile;
+
+    setScope(Rectangle.getStream(this.rectangles));
+  }
+
+  /**
+   * It specifies a diff constraint.
+   *
+   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   */
+  public Diff(IntVar[][] rectangles) {
+
+    if (rectangles == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
+    }
+
+    queueIndex = 2;
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
+    numberId = idNumber.incrementAndGet();
+    setScope(Rectangle.getStream(this.rectangles));
+  }
+
+  /**
+   * It constructs a diff constraint.
+   *
+   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
+   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
+   * @param l1 list of variables denoting length of the rectangle in the first dimension.
+   * @param l2 list of variables denoting length of the rectangle in the second dimension.
+   * @param profile it specifies if the profile should be computed and used.
+   */
+  @Builder
+  public Diff(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
+    this(o1, o2, l1, l2);
+    doProfile = profile;
+  }
+
+  /**
+   * It constructs a diff constraint.
+   *
+   * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
+   * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
+   * @param length1 list of variables denoting length of the rectangle in the first dimension.
+   * @param length2 list of variables denoting length of the rectangle in the second dimension.
+   */
+  public Diff(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
+
+    checkInputForNullness(
+        new String[] {"origin1", "origin2", "length1", "length2"},
+        origin1,
+        origin2,
+        length1,
+        length2);
+
+    queueIndex = 2;
+    this.rectangles = Rectangle.toArrayOf2dRectangles(origin1, origin2, length1, length2);
+    numberId = idNumber.incrementAndGet();
+    setScope(Rectangle.getStream(this.rectangles));
+  }
+
+  /**
+   * It specifies a diffn constraint.
+   *
+   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   */
+  public Diff(List<? extends List<? extends IntVar>> rectangles) {
+
+    queueIndex = 2;
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
+    numberId = idNumber.incrementAndGet();
+    setScope(Rectangle.getStream(this.rectangles));
+  }
+
+  /**
+   * It specifies a diff constraint.
+   *
+   * @param profile specifies is the profiles are used.
+   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   */
+  public Diff(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
+
+    this(rectangles);
+    doProfile = profile;
+  }
+
+  /**
+   * It constructs a diff constraint.
+   *
+   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
+   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
+   * @param l1 list of variables denoting length of the rectangle in the first dimension.
+   * @param l2 list of variables denoting length of the rectangle in the second dimension.
+   */
+  public Diff(
+      List<? extends IntVar> o1,
+      List<? extends IntVar> o2,
+      List<? extends IntVar> l1,
+      List<? extends IntVar> l2) {
+
+    this(
+        o1.toArray(IntVar[]::new),
+        o2.toArray(IntVar[]::new),
+        l1.toArray(IntVar[]::new),
+        l2.toArray(IntVar[]::new));
+  }
+
+  /**
+   * It constructs a diff constraint.
+   *
+   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
+   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
+   * @param l1 list of variables denoting length of the rectangle in the first dimension.
+   * @param l2 list of variables denoting length of the rectangle in the second dimension.
+   * @param profile it specifies if the profile should be computed and used.
+   */
+  public Diff(
+      List<? extends IntVar> o1,
+      List<? extends IntVar> o2,
+      List<? extends IntVar> l1,
+      List<? extends IntVar> l2,
+      boolean profile) {
+    this(o1, o2, l1, l2);
+    doProfile = profile;
+  }
+
+  /**
+   * It specifies a diff constraint.
+   *
+   * @param profile specifies is the profiles are used.
+   * @param rectangles list of rectangles which can not overlap in at least one dimension.
+   */
+  public Diff(IntVar[][] rectangles, boolean profile) {
+    this(rectangles);
+    doProfile = profile;
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    variableQueue.clear();
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    currentStore = store;
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      Set<IntVar> fdvs = variableQueue;
+      variableQueue = new HashSet<>();
+      narrowRectangles(fdvs);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  boolean containsChangedVariable(Rectangle r, Set<IntVar> fdvQueue) {
+    boolean contains = false;
+    int dim = r.dim;
+    int i = 0;
+    while (!contains && i < dim) {
+      contains = fdvQueue.contains(r.origin[i]) || fdvQueue.contains(r.length[i]);
+      i++;
+    }
+    return contains;
+  }
+
+  /**
+   * Returns the array of rectangles constrained by this diff constraint.
+   *
+   * @return the array of rectangles.
+   */
+  Rectangle[] getRectangles() {
+    return rectangles;
+  }
+
+  boolean intervalOverlap(int min1, int max1, int min2, int max2) {
+    return min1 < max2 && max1 > min2;
+  }
+
+  /**
+   * Helper method to check if a rectangle fits around barriers in a given dimension.
+   *
+   * @param barrier the profile barrier
+   * @param minJ minimum position in dimension j
+   * @param maxJ maximum position in dimension j
+   * @param durJ duration in dimension j
+   * @return true if the rectangle does not fit (excluded state)
+   */
+  protected boolean checkBarrierFit(Profile barrier, int minJ, int maxJ, int durJ) {
+    boolean excludedState = true;
+    int currentJposition = minJ;
+    int k = 0;
+    int barrierSize = barrier.size();
+    while (k < barrierSize && excludedState) {
+      ProfileItem p = barrier.get(k);
+      int hinderStart = p.min;
+      int hinderStop = p.max;
+      if (hinderStart - currentJposition >= durJ) {
+        excludedState = false;
+      }
+      currentJposition = hinderStop;
+      k++;
+    }
+    if (excludedState && maxJ - currentJposition >= durJ) {
+      excludedState = false;
+    }
+    return excludedState;
+  }
+
+  private Pair minForbiddenInterval(
+      int start, int i, Rectangle r, List<IntRectangle> consideredRect) {
+
+    if (notFit(i, r, consideredRect, start)) {
+      return new Pair(start, start + minPosition);
+    } else {
+      return new Pair(-1, -1);
+    }
+  }
+
+  private void narrowIth(
+      int i, Rectangle r, List<IntRectangle> usedRect, List<Rectangle> profileCandidates) {
+    final int rLengthiMin = r.length[i].min();
+
+    durMax = new ArrayList<>();
+    durMax.add(IntDomain.MAX_INT);
+
+    if (!profileCandidates.isEmpty() && doProfile) {
+      profileNarrowing(i, r, profileCandidates);
+    }
+
+    durMax = new ArrayList<>();
+    durMax.add(IntDomain.MAX_INT);
+
+    if (usedRect.isEmpty()) {
+      return;
+    }
+
+    IntRectangle[] usedRectArray = usedRect.toArray(IntRectangle[]::new);
+    TreeSet<IntRectangle> starts = buildStartsForNarrowIth(i, r, usedRectArray);
+    List<IntRectangle> consideredRect = new ArrayList<>();
+    for (IntRectangle ir : starts) {
+      int s = ir.origins[i];
+      consideredRect.clear();
+      for (IntRectangle t : usedRectArray) {
+        int tCompletion = t.origins[i] + t.lengths[i];
+        if (t.origins[i] <= s && s - rLengthiMin < tCompletion) {
+          consideredRect.add(t);
+        }
+      }
+      if (!consideredRect.isEmpty()) {
+        applyForbiddenIntervalIfInDomain(i, r, s, consideredRect);
+      }
+    }
+
+    if (traceOn) {
+      log.debug("10. length = {}", durMax);
+    }
+    int lengthLimit = 0;
+    for (int l : durMax) {
+      if (lengthLimit < l) {
+        lengthLimit = l;
+      }
+    }
+    if (traceNarrOn) {
+      log.debug("10. Duration {} <-- 0..{}", r.length[i], lengthLimit);
+    }
+    r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
+  }
+
+  private TreeSet<IntRectangle> buildStartsForNarrowIth(
+      int i, Rectangle r, IntRectangle[] usedRectArray) {
+    TreeSet<IntRectangle> starts = new TreeSet<>(dimIthMinComparator.apply(i));
+    Collections.addAll(starts, usedRectArray);
+    int sizeOfstartsOfR =
+        Math.max(r.origin[0].domain.noIntervals(), r.origin[1].domain.noIntervals());
+    IntRectangle[] startsOfR = new IntRectangle[sizeOfstartsOfR];
+    for (int k = 0; k < sizeOfstartsOfR; k++) {
+      startsOfR[k] = new IntRectangle(r.dim);
+    }
+    for (int k = 0; k < r.dim; k++) {
+      IntDomain rOrigin = r.origin[k].dom();
+      int rOriginSize = rOrigin.noIntervals();
+      for (int n = 0; n < sizeOfstartsOfR; n++) {
+        if (n < rOriginSize) {
+          startsOfR[n].add(rOrigin.leftElement(n), 0);
+        } else {
+          startsOfR[n].add(rOrigin.min(), 0);
+        }
+      }
+    }
+    Collections.addAll(starts, startsOfR);
+    return starts;
+  }
+
+  private void applyForbiddenIntervalIfInDomain(
+      int i, Rectangle r, int s, List<IntRectangle> consideredRect) {
+    IntDomain rIdom = r.origin[i].dom();
+    if (s < rIdom.min() || s > rIdom.max()) {
+      return;
+    }
+    Pair exclude = minForbiddenInterval(s, i, r, consideredRect);
+    if (exclude.max == -1) {
+      return;
+    }
+    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, exclude.min - r.length[i].min());
+    update.unionAdapt(exclude.max, IntDomain.MAX_INT);
+    if (traceNarrOn) {
+      log.debug(
+          "7. Obligatory rectangles Narrow {} in {} --> {}", r.origin[i], update, r.origin[i]);
+    }
+    r.origin[i].domain.in(currentStore.level, r.origin[i], update);
+    computeNewMaxDuration(r.origin[i], exclude.min, exclude.max);
+  }
+
+  private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
+    int dMax = findMaxDurationFromIntervals(start, excludeMin, excludeMax);
+    if (dMax < durMax.getLast()) {
+      durMax.set(durMax.size() - 1, dMax);
+    }
+    if (start.dom().contains(excludeMax)) {
+      durMax.add(IntDomain.MAX_INT);
+    }
+    if (traceOn) {
+      log.debug("+++ {}", durMax);
+    }
+  }
+
+  private int findMaxDurationFromIntervals(IntVar start, int excludeMin, int excludeMax) {
+    int dMax = IntDomain.MAX_INT;
+    for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements(); ) {
+      Interval i = ie.nextElement();
+      if (excludeMax >= i.min() && excludeMin <= i.max()) {
+        return excludeMin - i.min();
+      }
+    }
+    return dMax;
+  }
+
+  void narrowRectangle(
+      Rectangle r, List<IntRectangle> usedRect, List<Rectangle> profileCandidates) {
+
+    if (traceOn) {
+      log.debug("Narrowing {}", r);
+      log.debug("{}", usedRect);
+    }
+
+    for (int i = 0; i < r.dim; i++) {
+      // narrow in i-th dimension
+      narrowIth(i, r, usedRect, profileCandidates);
+    }
+  }
+
+  void narrowRectangles(Set<IntVar> fdvQueue) {
+    narrowRectanglesEval(null, fdvQueue, false, true);
+  }
+
+  private boolean notFit(
+      int i, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
+    int j = 0;
+    boolean excludedState = true;
+    while (excludedState && j < r.dim) {
+      if (i != j) {
+        excludedState = checkDimensionFits(i, j, r, consideredRect, barierPosition);
+      }
+      j++;
+    }
+    return excludedState;
+  }
+
+  private boolean checkDimensionFits(
+      int i, int j, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
+    Profile barrier = new Profile((short) Profile.DIFFN);
+    IntDomain rOriginJdom = r.origin[j].dom();
+    IntDomain rLengthJdom = r.length[j].dom();
+    int minJ = rOriginJdom.min();
+    final int maxJ = rOriginJdom.max() + rLengthJdom.min();
+    int durJ = rLengthJdom.min();
+
+    for (IntRectangle hinder : consideredRect) {
+      int hinderJ = hinder.origins[j];
+      int hinderValue = hinder.origins[i] + hinder.lengths[i] - barierPosition;
+      if (hinderValue > 0) {
+        barrier.addToProfile(hinderJ, hinderJ + hinder.lengths[j], hinderValue);
+      }
+    }
+
+    boolean excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
+    if (excludedState) {
+      fillBarrierGapsAndSetMinPosition(barrier, minJ, maxJ, durJ, 0);
+    }
+    return excludedState;
+  }
+
+  private void fillBarrierGapsAndSetMinPosition(
+      Profile barrier, int minJ, int maxJ, int durJ, int minimalAfter) {
+    ProfileItem first = barrier.getFirst();
+    ProfileItem last = barrier.getLast();
+    if (minJ < first.min) {
+      barrier.addToProfile(minJ, first.min, minimalAfter);
+    }
+    if (maxJ > last.max) {
+      barrier.addToProfile(last.max, maxJ, minimalAfter);
+    }
+    List<Interval> toAdd = new ArrayList<>();
+    for (int m = 0; m < barrier.size() - 1; m++) {
+      ProfileItem p = barrier.get(m);
+      ProfileItem pNext = barrier.get(m + 1);
+      if (p.max != pNext.min) {
+        toAdd.add(new Interval(p.max, pNext.min));
+      }
+    }
+    for (Interval v : toAdd) {
+      barrier.addToProfile(v.min(), v.max(), minimalAfter);
+    }
+
+    int minSizeAfterBarier = IntDomain.MAX_INT;
+    for (ProfileItem p : barrier) {
+      if (p.value < minSizeAfterBarier) {
+        if (p.value == minimalAfter && p.max - p.min >= durJ) {
+          minSizeAfterBarier = minimalAfter;
+          break;
+        }
+        if (p.value > minimalAfter) {
+          minSizeAfterBarier = p.value;
+        }
+      }
+    }
+    minPosition = minSizeAfterBarier;
+  }
+
+  /**
+   * Helper method to check if a profile item requires narrowing the start domain.
+   *
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param resources the resource variable
+   * @param dur the duration
+   * @param startDom the start domain
+   * @return true if start domain needs narrowing
+   */
+  protected boolean needsStartNarrowing(
+      ProfileItem p, int limit, IntVar resources, int dur, IntDomain startDom) {
+    return limit - p.value < resources.min()
+        && p.min - dur + 1 <= startDom.max()
+        && p.max - 1 >= startDom.min();
+  }
+
+  /**
+   * Helper method to check if a profile item requires narrowing the resources domain.
+   *
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param resources the resource variable
+   * @param dur the duration
+   * @param startDom the start domain
+   * @return true if resources domain needs narrowing
+   */
+  protected boolean needsResourcesNarrowing(
+      ProfileItem p, int limit, IntVar resources, int dur, IntDomain startDom) {
+    int startVal = startDom.max();
+    int stop = startDom.min() + dur;
+    return startVal < stop
+        && intervalOverlap(startVal, stop, p.min, p.max)
+        && limit - p.value < resources.max();
+  }
+
+  /**
+   * Helper method to narrow start domain based on profile item.
+   *
+   * @param store the store
+   * @param start the start variable
+   * @param p the profile item
+   * @param dur the duration
+   * @param traceMessage the trace message format (may be null)
+   */
+  protected void narrowStartDomain(
+      Store store, IntVar start, ProfileItem p, int dur, String traceMessage) {
+    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
+    update.unionAdapt(p.max, IntDomain.MAX_INT);
+
+    if (traceNarrOn && traceMessage != null) {
+      log.debug(traceMessage, start, update, start);
+    }
+
+    start.domain.in(store.level, start, update);
+  }
+
+  /**
+   * Helper method to narrow resources domain based on profile item.
+   *
+   * @param store the store
+   * @param resources the resources variable
+   * @param p the profile item
+   * @param limit the resource limit
+   * @param traceMessage the trace message format (may be null)
+   */
+  protected void narrowResourcesDomain(
+      Store store, IntVar resources, ProfileItem p, int limit, String traceMessage) {
+    int updateMax = limit - p.value;
+    IntervalDomain update = new IntervalDomain(0, updateMax);
+
+    if (traceNarrOn && traceMessage != null) {
+      log.debug(traceMessage, resources, update, resources);
+    }
+
+    resources.domain.in(store.level, resources, update);
+  }
+
+  private void profileCheckInterval(
+      Store store,
+      DiffnProfile profile,
+      int limit,
+      IntVar start,
+      IntVar duration,
+      int imin,
+      int imax,
+      IntVar resources) {
+    int dur = duration.min();
+    int intervalEnd = imax + dur;
+    for (ProfileItem p : profile) {
+      if (traceOn) {
+        log.debug("Comparing [{}, {}] with profile item {}", imin, imax, p);
+      }
+      if (!intervalOverlap(imin, intervalEnd, p.min, p.max)) {
+        continue;
+      }
+      applyProfilePruningForOverlap(store, limit, start, duration, p, dur, resources);
+    }
+  }
+
+  private void applyProfilePruningForOverlap(
+      Store store,
+      int limit,
+      IntVar start,
+      IntVar duration,
+      ProfileItem p,
+      int dur,
+      IntVar resources) {
+    IntDomain startDom = start.dom();
+    if (needsStartNarrowing(p, limit, resources, dur, startDom)) {
+      applyStartNarrowing(store, start, duration, p);
+    } else if (needsResourcesNarrowing(p, limit, resources, dur, startDom)) {
+      narrowResourcesDomain(store, resources, p, limit, "8. Profile Narrowed {} in {} => {}");
+    }
+  }
+
+  private void applyStartNarrowing(Store store, IntVar start, IntVar duration, ProfileItem p) {
+    narrowStartDomain(store, start, p, duration.min(), "6. Profile Narrowed {} \\ {} => {}");
+    computeNewMaxDuration(start, p.min, p.max);
+    int lengthLimit = 0;
+    for (int l : durMax) {
+      if (lengthLimit < l) {
+        lengthLimit = l;
+      }
+    }
+    if (traceNarrOn) {
+      log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
+    }
+    duration.domain.in(currentStore.level, duration, 0, lengthLimit);
+  }
+
+  void profileCheckRectangle(DiffnProfile profile, Rectangle r, int i, int j) {
+
+    IntVar s = r.origin[i];
+    IntVar dur = r.length[i];
+    IntVar resUse = r.length[j];
+    IntDomain rOriginJdom = r.origin[j].dom();
+    int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
+
+    if (traceOn) {
+      log.debug("Start time = {}, resource use = {}", s, resUse);
+    }
+
+    IntDomain sDom = s.dom();
+
+    for (int m = 0; m < sDom.noIntervals(); m++) {
+      profileCheckInterval(
+          currentStore, profile, limit, s, dur, sDom.leftElement(m), sDom.rightElement(m), resUse);
+    }
+  }
+
+  void profileNarrowing(int i, Rectangle r, List<Rectangle> profileCandidates) {
+    // check profile first
+
+    DiffnProfile profile = new DiffnProfile();
+
+    for (int j = 0; j < r.dim; j++) {
+      if (j != i) {
+        profile.make(j, i, r, profileCandidates);
+
+        if (!profile.isEmpty()) {
+          if (traceOn) {
+            log.debug("{}\n{}", r, profileCandidates);
+            log.debug("Profile in dimension {} and {}\n{}", i, j, profile);
+          }
+
+          profileCheckRectangle(profile, r, i, j);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (level == stamp) {
+      variableQueue.add((IntVar) v);
+    } else {
+      variableQueue.clear();
+      stamp = level;
+      variableQueue.add((IntVar) v);
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+    boolean sat = true;
+
+    Rectangle recti;
+    Rectangle rectj;
+    int i = 0;
+    while (sat && i < rectangles.length) {
+      recti = rectangles[i];
+      int j = i + 1;
+      while (sat && j < rectangles.length) {
+        rectj = rectangles[j];
+        sat = !recti.domOverlap(rectj);
+        j++;
+      }
+      i++;
+    }
+    return sat;
+  }
+
+  /**
+   * Checks satisfaction using evalRects (backtrackable rectangle sets). Shared by Diff2 and
+   * Disjoint.
+   *
+   * @param evalRects the backtrackable rectangle variables.
+   * @return true if no evaluated rectangle pairs overlap.
+   */
+  protected boolean satisfiedEval(Diff2Var[] evalRects) {
+    boolean sat = true;
+    int i = 0;
+    while (sat && i < rectangles.length) {
+      Rectangle recti = rectangles[i];
+      Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).rects;
+      int j = 0;
+      while (sat && j < toEvaluate.length) {
+        sat = !recti.domOverlap(toEvaluate[j]);
+        j++;
+      }
+      i++;
+    }
+    return sat;
+  }
+
+  /**
+   * Shared narrowRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
+   *
+   * @param evalRects the backtrackable rectangle variables (null for base Diff class).
+   * @param fdvQueue set of changed variables.
+   * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
+   *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
+   * @param checkAreaAlways if true, area-based failure checks are always performed; if false, they
+   *     are skipped.
+   */
+  protected void narrowRectanglesEval(
+      Diff2Var[] evalRects,
+      Set<IntVar> fdvQueue,
+      boolean allowZeroLength,
+      boolean checkAreaAlways) {
+
+    boolean needToNarrow = false;
+
+    for (int l = 0; l < rectangles.length; l++) {
+      Rectangle r = rectangles[l];
+      RectState state = computeRectangleState(r, allowZeroLength);
+      if (!shouldProcessRectangle(state, evalRects)) {
+        continue;
+      }
+
+      needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
+
+      List<IntRectangle> usedRect = new ArrayList<>();
+      List<Rectangle> profileCandidates = new ArrayList<>();
+      List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
+      Rectangle[] rectsToCheck =
+          evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
+      boolean ntN =
+          findRectanglesEval(
+              rectsToCheck,
+              r,
+              usedRect,
+              profileCandidates,
+              overlappingRects,
+              fdvQueue,
+              allowZeroLength,
+              checkAreaAlways);
+
+      needToNarrow = needToNarrow || ntN;
+
+      if (needToNarrow) {
+        maybeUpdateEvalRects(evalRects, overlappingRects, l);
+        narrowRectangle(r, usedRect, profileCandidates);
+      }
+    }
+  }
+
+  private record RectState(boolean settled, boolean minLengthEq0, int maxLevel) {}
+
+  private RectState computeRectangleState(Rectangle r, boolean allowZeroLength) {
+    boolean settled = true;
+    boolean minLengthEq0 = false;
+    int maxLevel = 0;
+    for (int i = 0; i < r.dim; i++) {
+      IntDomain rOrigin = r.origin[i].dom();
+      IntDomain rLength = r.length[i].dom();
+      settled = settled && rOrigin.singleton() && rLength.singleton();
+      minLengthEq0 = minLengthEq0 || (allowZeroLength ? rLength.min() < 0 : rLength.min() <= 0);
+      int originStamp = rOrigin.stamp;
+      int lengthStamp = rLength.stamp;
+      if (maxLevel < originStamp) {
+        maxLevel = originStamp;
+      }
+      if (maxLevel < lengthStamp) {
+        maxLevel = lengthStamp;
+      }
+    }
+    return new RectState(settled, minLengthEq0, maxLevel);
+  }
+
+  private boolean shouldProcessRectangle(RectState state, Diff2Var[] evalRects) {
+    if (evalRects != null) {
+      return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
+    }
+    return !state.settled() || state.maxLevel() >= currentStore.level;
+  }
+
+  private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {
+    if (evalRects == null
+        || overlappingRects == null
+        || overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
+      return;
+    }
+    Diff2VarValue newRects = new Diff2VarValue();
+    newRects.setValue(overlappingRects);
+    evalRects[l].update(newRects);
+  }
+
+  /**
+   * Shared findRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
+   *
+   * @param rectsToCheck the array of rectangles to check against rectangle r.
+   * @param r the rectangle being narrowed.
+   * @param usedRect output list of used rectangles.
+   * @param profileCandidates output list of profile candidate rectangles.
+   * @param overlappingRects output list of overlapping rectangles (may be null if not needed).
+   * @param fdvQueue set of changed variables.
+   * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
+   *     (Diff2).
+   * @param checkAreaAlways if true, area-based failure checks are always performed.
+   * @return true if the set of changed variables contains a variable from the overlapping
+   *     rectangles.
+   */
+  @SuppressWarnings("java:S3776") // cognitive complexity inherited from original code
+  protected boolean findRectanglesEval(
+      Rectangle[] rectsToCheck,
+      Rectangle r,
+      List<IntRectangle> usedRect,
+      List<Rectangle> profileCandidates,
+      List<Rectangle> overlappingRects,
+      Set<IntVar> fdvQueue,
+      boolean allowZeroLength,
+      boolean checkAreaAlways) {
+
+    boolean contains = false;
+    boolean checkArea = false;
+
+    long area = 0;
+    long commonArea = 0;
+    int totalNumberOfRectangles = 0;
+    int dim = r.dim;
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] rMin = new int[dim];
+    int[] rMax = new int[dim];
+    for (int i = 0; i < startMin.length; i++) {
+      IntDomain rLengthDom = r.length[i].dom();
+      startMin[i] = IntDomain.MAX_INT;
+      stopMax[i] = 0;
+      minLength[i] = rLengthDom.min();
+
+      IntDomain rOriginDom = r.origin[i].dom();
+      rMin[i] = rOriginDom.min();
+      rMax[i] = rOriginDom.max() + rLengthDom.max();
+    }
+
+    for (Rectangle s : rectsToCheck) {
+      boolean overlap = true;
+
+      if (r != s) {
+
+        boolean sChanged = containsChangedVariable(s, fdvQueue);
+
+        IntRectangle useRect = new IntRectangle(dim);
+        long sArea = 1;
+        long partialCommonArea = 1;
+
+        boolean use = true;
+        boolean minLength0 = false;
+        int sMin;
+        int sMax;
+        int start;
+        int stop;
+        int m = 0;
+        int j = 0;
+        int[] sOriginMin = new int[dim];
+        int[] sOriginMax = new int[dim];
+        int[] sLengthMin = new int[dim];
+
+        while (overlap && m < dim) {
+          // check if domains of r and s overlap
+          IntDomain sOriginIdom = s.origin[m].dom();
+          IntDomain sLengthIdom = s.length[m].dom();
+          final int sLengthiMin = sLengthIdom.min();
+          int sOriginiMax = sOriginIdom.max();
+          sMin = sOriginIdom.min();
+          sMax = sOriginiMax + sLengthIdom.max();
+          overlap = intervalOverlap(rMin[m], rMax[m], sMin, sMax);
+
+          // min start, max stop and min length
+          sOriginMin[m] = sMin;
+          sOriginMax[m] = sOriginiMax + sLengthiMin;
+          sLengthMin[m] = sLengthiMin;
+
+          // check if s occupies some space
+          start = sOriginiMax;
+          stop = sMin + sLengthiMin;
+          if (allowZeroLength ? start <= stop : start < stop) {
+            useRect.add(start, stop - start);
+            j++;
+          } else {
+            use = false;
+          }
+
+          minLength0 = minLength0 || (sLengthMin[m] <= 0);
+
+          m++;
+        }
+
+        if (overlap) {
+
+          if (overlappingRects != null) {
+            overlappingRects.add(s);
+          }
+
+          if (use) { // rectangles taking space
+            usedRect.add(useRect);
+            contains = contains || sChanged;
+          }
+
+          if (!minLength0) { // profile candidates
+            if (j > 0) {
+              profileCandidates.add(s);
+              contains = contains || sChanged;
+            }
+
+            checkArea = true;
+            totalNumberOfRectangles++;
+            for (int i = 0; i < dim; i++) {
+              if (sOriginMin[i] < startMin[i]) {
+                startMin[i] = sOriginMin[i];
+              }
+              if (sOriginMax[i] > stopMax[i]) {
+                stopMax[i] = sOriginMax[i];
+              }
+              if (minLength[i] > sLengthMin[i]) {
+                minLength[i] = sLengthMin[i];
+              }
+
+              sArea = sArea * sLengthMin[i];
+            }
+            area += sArea;
+          } // profile candidate end
+
+          // calculate area within rectangle r possible placement
+          for (int i = 0; i < dim; i++) {
+            if (sOriginMin[i] <= rMin[i]) {
+              if (sOriginMax[i] <= rMax[i]) {
+                int distance1 = sOriginMin[i] + sLengthMin[i] - rMin[i];
+                sLengthMin[i] = Math.max(distance1, 0);
+              } else {
+                // sOriginMax[i] > rMax[i])
+                int rmax = r.origin[i].max() + r.length[i].min();
+
+                int distance1 = sOriginMin[i] + sLengthMin[i] - rMin[i];
+                int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
+                if (distance1 > rmax - rMin[i]) {
+                  distance1 = rmax - rMin[i];
+                }
+                if (distance2 > rmax - rMin[i]) {
+                  distance2 = rmax - rMin[i];
+                }
+                if (distance1 < distance2) {
+                  sLengthMin[i] = Math.max(distance1, 0);
+                } else if (distance2 > 0) {
+                  if (distance2 < sLengthMin[i]) {
+                    sLengthMin[i] = distance2;
+                  }
+                } else {
+                  sLengthMin[i] = 0;
+                }
+              }
+            } else // sOriginMin[i] > rMin[i]
+            if (sOriginMax[i] > rMax[i]) {
+              int distance2 =
+                  sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
+              if (distance2 > 0) {
+                if (distance2 < sLengthMin[i]) {
+                  sLengthMin[i] = distance2;
+                }
+              } else {
+                sLengthMin[i] = 0;
+              }
+            }
+            partialCommonArea = partialCommonArea * sLengthMin[i];
+          }
+          commonArea += partialCommonArea;
+        }
+        if (checkAreaAlways
+            && commonArea + r.minArea() > (long) (rMax[0] - rMin[0]) * (rMax[1] - rMin[1])) {
+          throw Store.failException;
+        }
+      }
+    }
+
+    if (checkArea || checkAreaAlways) { // check whether there is
+      // enough room for all rectangles
+      area += r.minArea();
+      long availArea = 1;
+      long rectNumber = 1;
+      for (int i = 0; i < startMin.length; i++) {
+        IntDomain rOriginIdom = r.origin[i].dom();
+        IntDomain rLengthIdom = r.length[i].dom();
+        int rOriginiMin = rOriginIdom.min();
+        int rOriginiMax = rOriginIdom.max();
+        int rLengthiMin = rLengthIdom.min();
+        if (rOriginiMin < startMin[i]) {
+          startMin[i] = rOriginiMin;
+        }
+        if (rOriginiMax + rLengthiMin > stopMax[i]) {
+          stopMax[i] = rOriginiMax + rLengthiMin;
+        }
+      }
+      boolean checkRectNumber = true;
+      for (int i = 0; i < startMin.length; i++) {
+        availArea = availArea * (stopMax[i] - startMin[i]);
+        if (minLength[i] != 0) {
+          rectNumber *= (stopMax[i] - startMin[i]) / minLength[i];
+        } else {
+          checkRectNumber = false;
+        }
+      }
+
+      if (availArea < area || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1))) {
+        throw Store.failException;
+      }
+    }
+
+    return contains;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : diff (");
+
+    int i = 0;
+    for (Rectangle r : rectangles) {
+      result.append(r);
+      if (i < rectangles.length - 1) {
+        result.append(", ");
+      }
+      i++;
+    }
+    return result.append(")").toString();
+  }
+
+  record Pair(int min, int max) {}
+}

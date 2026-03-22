@@ -1,0 +1,73 @@
+/*
+ * LinearCalculator.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search.restart;
+
+/**
+ * Defines functionality for constant calculator for restart search.
+ *
+ * @author Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class LinearCalculator extends Calculator {
+
+  final long increment;
+  long n;
+
+  /**
+   * Constructs a linear calculator where the fail limit grows linearly.
+   *
+   * @param scale the increment value and initial fail limit.
+   */
+  public LinearCalculator(int scale) {
+    n = 1;
+    failLimit = scale;
+    increment = scale;
+  }
+
+  /**
+   * Resets the fail counter and calculates a new fail limit using linear progression. The new limit
+   * is calculated as n * increment where n is incremented each time.
+   */
+  public void newLimit() {
+    numberFails = 0;
+    failLimit = ++n * increment;
+  }
+
+  /**
+   * Returns a string representation of this linear calculator.
+   *
+   * @return a string describing the calculator with current fails and fail limit.
+   */
+  @Override
+  public String toString() {
+    return "constantCalculator: " + numberFails + "(" + failLimit + ")";
+  }
+}

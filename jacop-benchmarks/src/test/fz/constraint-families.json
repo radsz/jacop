@@ -1,0 +1,244 @@
+{
+  "alldifferent": [
+    "jacop_alldiff",
+    "jacop_alldistinct",
+    "jacop_alldifferent_except_0",
+    "jacop_alldifferent_except",
+    "jacop_softalldiff",
+    "jacop_all_equal_int"
+  ],
+  "gcc": [
+    "jacop_gcc",
+    "jacop_global_cardinality_closed",
+    "jacop_global_cardinality_low_up_closed",
+    "jacop_softgcc"
+  ],
+  "cumulative": [
+    "jacop_cumulative",
+    "jacop_cumulative_optional",
+    "jacop_disjunctive_optional"
+  ],
+  "circuit": [
+    "jacop_circuit",
+    "jacop_subcircuit"
+  ],
+  "element": [
+    "array_int_element",
+    "array_var_int_element",
+    "array_bool_element",
+    "array_var_bool_element",
+    "array_set_element",
+    "array_var_set_element",
+    "array_float_element",
+    "array_var_float_element"
+  ],
+  "table": [
+    "jacop_table_int",
+    "jacop_table_bool"
+  ],
+  "regular": [
+    "jacop_regular",
+    "jacop_regular_set"
+  ],
+  "knapsack": [
+    "jacop_knapsack"
+  ],
+  "binpacking": [
+    "jacop_bin_packing",
+    "jacop_bin_packing_capacity"
+  ],
+  "diffn": [
+    "jacop_diff2",
+    "jacop_diff2_strict",
+    "jacop_list_diff2",
+    "jacop_disjunctive_strict_optional"
+  ],
+  "linear": [
+    "int_lin_eq",
+    "int_lin_ne",
+    "int_lin_le",
+    "int_lin_lt",
+    "int_lin_eq_reif",
+    "int_lin_ne_reif",
+    "int_lin_le_reif",
+    "int_lin_lt_reif",
+    "int_lin_eq_imp",
+    "int_lin_ne_imp",
+    "int_lin_le_imp",
+    "int_lin_lt_imp",
+    "int_lin_gt_imp",
+    "int_lin_ge_imp",
+    "bool_lin_eq",
+    "bool_lin_ne",
+    "bool_lin_le",
+    "bool_lin_lt",
+    "bool_lin_eq_reif"
+  ],
+  "comparison": [
+    "int_eq",
+    "int_ne",
+    "int_le",
+    "int_lt",
+    "int_eq_reif",
+    "int_ne_reif",
+    "int_le_reif",
+    "int_lt_reif",
+    "int_eq_imp",
+    "int_ne_imp",
+    "int_le_imp",
+    "int_lt_imp",
+    "int_gt_imp",
+    "int_ge_imp",
+    "bool_eq",
+    "bool_ne",
+    "bool_le",
+    "bool_lt",
+    "bool_eq_reif",
+    "bool_ne_reif",
+    "bool_le_reif",
+    "bool_lt_reif",
+    "bool_eq_imp",
+    "bool_ne_imp",
+    "bool_le_imp",
+    "bool_lt_imp"
+  ],
+  "boolean": [
+    "bool_and",
+    "bool_or",
+    "bool_not",
+    "bool_xor",
+    "bool_clause",
+    "bool_clause_reif",
+    "bool_clause_imp",
+    "array_bool_and",
+    "array_bool_or",
+    "array_bool_xor",
+    "bool2int"
+  ],
+  "arithmetic": [
+    "int_min",
+    "int_max",
+    "int_abs",
+    "int_times",
+    "int_plus",
+    "int_div",
+    "int_mod",
+    "int_pow",
+    "int2float"
+  ],
+  "counting": [
+    "jacop_count",
+    "jacop_count_var",
+    "jacop_count_values",
+    "jacop_count_values_bounds",
+    "jacop_among",
+    "jacop_among_var",
+    "jacop_nvalue"
+  ],
+  "ordering": [
+    "jacop_lex_less_int",
+    "jacop_lex_lesseq_int",
+    "jacop_lex_less_bool",
+    "jacop_lex_lesseq_bool",
+    "jacop_increasing",
+    "jacop_strictly_increasing",
+    "jacop_decreasing",
+    "jacop_strictly_decreasing"
+  ],
+  "networkflow": [
+    "jacop_networkflow"
+  ],
+  "geost": [
+    "jacop_geost",
+    "jacop_geost_bb"
+  ],
+  "sequence": [
+    "jacop_sequence",
+    "jacop_stretch",
+    "jacop_value_precede_int",
+    "jacop_value_precede_chain_int",
+    "jacop_seq_precede_chain_int"
+  ],
+  "assignment": [
+    "jacop_assignment"
+  ],
+  "member": [
+    "jacop_member_int",
+    "jacop_member_bool"
+  ],
+  "set": [
+    "set_card",
+    "set_diff",
+    "set_eq",
+    "set_in",
+    "set_in_reif",
+    "set_in_imp",
+    "set_intersect",
+    "set_le",
+    "set_lt",
+    "set_ne",
+    "set_subset",
+    "set_subset_reif",
+    "set_symdiff",
+    "set_union",
+    "jacop_int_set_channel",
+    "jacop_link_set_to_booleans",
+    "jacop_partition_set"
+  ],
+  "float": [
+    "float_eq",
+    "float_ne",
+    "float_le",
+    "float_lt",
+    "float_eq_reif",
+    "float_ne_reif",
+    "float_le_reif",
+    "float_lt_reif",
+    "float_lin_eq",
+    "float_lin_ne",
+    "float_lin_le",
+    "float_lin_lt",
+    "float_lin_eq_reif",
+    "float_lin_ne_reif",
+    "float_lin_le_reif",
+    "float_lin_lt_reif",
+    "float_abs",
+    "float_acos",
+    "float_asin",
+    "float_atan",
+    "float_cos",
+    "float_exp",
+    "float_ln",
+    "float_log10",
+    "float_log2",
+    "float_sqrt",
+    "float_sin",
+    "float_tan",
+    "float_max",
+    "float_min",
+    "float_plus",
+    "float_times",
+    "float_div",
+    "float_pow",
+    "float_round",
+    "float_floor",
+    "float_ceil"
+  ],
+  "graph": [
+    "jacop_graph_match",
+    "jacop_digraph_match",
+    "jacop_sub_graph_match",
+    "jacop_sub_digraph_match",
+    "jacop_clique",
+    "jacop_graph_isomorphism"
+  ],
+  "channel": [
+    "jacop_channel"
+  ],
+  "minmax": [
+    "jacop_minimum",
+    "jacop_maximum",
+    "jacop_minimum_arg_int",
+    "jacop_maximum_arg_int"
+  ]
+}

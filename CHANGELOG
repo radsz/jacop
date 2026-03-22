@@ -1,7 +1,19 @@
 Version 4.11
 =============
 
-1. Bug corrections, code cleaning and performance improvements.
+1. Changes in XexpYeqZ to be compatible with minizinc definition for
+   negative exponents. Domain consistency implemented.
+
+2. Falzinc definitions for asinh, acosh and atanh.
+
+3. New constraints AlldifferentExceptZero and AlldifferentExcept
+   available also from minizinc.
+
+4. New constraints ElementBool available also from minizinc.
+
+5. Definition of impact variable selection method for minizinc.
+
+6. Bug corrections, code cleaning and performance improvements.
 
 Version 4.10
 =============

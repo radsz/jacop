@@ -1,0 +1,205 @@
+FIXME items extracted from Java source code
+============================================
+
+1. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+   Line: 56
+   Context: class-level (field declaration)
+   FIXME: do not use emptySet to assign to lub, glb.
+
+2. File: jacop-sat/src/main/java/org/jacop/satwrapper/translation/DomainClausesDatabase.java
+   Line: 163
+   Method: propagate(int literal, int assertedLiteral)
+   FIXME: check it
+
+3. File: jacop-sat/src/main/java/org/jacop/jasat/modules/ActivityModule.java
+   Line: 314
+   Method: initialize(Core core)
+   FIXME: what if maxVariable() increases ? (with wrapper, for instance)
+
+4. File: jacop-sat/src/main/java/org/jacop/jasat/core/Core.java
+   Line: 571
+   Method: triggerRestartEvent()
+   FIXME: is this correct? I guess so, but...
+
+5. File: jacop-sat/src/main/java/org/jacop/jasat/core/clauses/UnaryClausesDatabase.java
+   Line: 55
+   Context: class-level (Javadoc)
+   FIXME: (referenced from TODO #26) what if we add such a clause at level > 0
+     and some backjump goes under this level, maybe we should watch literals after all.
+
+6. File: jacop-core/src/main/java/org/jacop/core/IntDomain.java
+   Line: 47
+   Context: class-level
+   FIXME: implement as much as possible in general (inefficient) manner,
+     but in a correct way. Can be specialized by overriding functions.
+
+7. File: jacop-core/src/main/java/org/jacop/core/IntDomain.java
+   Line: 443
+   Method: unionAdapt(int value)
+   FIXME: how to setup events for domain extending events?
+
+8. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+   Line: 47
+   Context: class-level
+   FIXME: implement all already implemented functions from IntDomain
+
+9. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+   Line: 191
+   Method: IntervalDomain()
+   FIXME: check what is calling it and maybe remove some inappropriate callers.
+
+10. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 373
+    Method: unionAdapt(Interval i)
+    FIXME: implement this in more specialized manner.
+
+11. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 380
+    Method: unionAdapt(int value)
+    FIXME: how to setup events for domain extending events?
+
+12. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 631
+    Method: clone()
+    FIXME: use empty constructor and use the line below.
+
+13. File: jacop-core/src/main/java/org/jacop/core/IntervalDomain.java
+    Line: 672
+    Method: contains(IntDomain domain)
+    FIXME: check that FD(int) part does not assume to have different
+
+14. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatDomain.java
+    Line: 797
+    Method: unionAdapt(double value)
+    FIXME: how to setup events for domain extending events?
+
+15. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 51
+    Context: class-level
+    FIXME: implement all already implemented functions from IntDomain
+
+16. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 561
+    Method: FloatIntervalDomain()
+    FIXME: check what is calling it and maybe remove some inappropriate callers.
+
+17. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 744
+    Method: unionAdapt(FloatInterval i)
+    FIXME: implement this in more specialized manner.
+
+18. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 751
+    Method: unionAdapt(double value)
+    FIXME: how to setup events for domain extending events?
+
+19. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 883
+    Method: clone()
+    FIXME: use empty constructor and use the line below.
+
+20. File: jacop-floats/src/main/java/org/jacop/floats/core/FloatIntervalDomain.java
+    Line: 929
+    Method: contains(FloatDomain domain)
+    FIXME: check that FD(int) part does not assume to have different
+
+21. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 356
+    Method: cloneLight()
+    FIXME: why no glb and lub cloning is safe?
+
+22. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 366-367
+    Method: complement()
+    FIXME: is it right? it is not possible to express the complement of the set
+      interval using just one set.
+
+23. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 623
+    Method: isIntersecting(SetDomain domain)
+    FIXME: improve the implementation.
+
+24. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 635
+    Method: isIntersecting(int, int)
+    FIXME: improve the implementation.
+
+25. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 686
+    Method: setDomain(int, int)
+    FIXME: BUG?
+
+26. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 690
+    Method: setDomain(int, int)
+    FIXME: remove after checking.
+
+27. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 844
+    Method: union(int, int)
+    FIXME: why not max >= min?
+
+28. File: jacop-sets/src/main/java/org/jacop/set/core/BoundSetDomain.java
+    Line: 1008
+    Context: backtrack block
+    FIXME: allow specification of the sets in parts, so no unnecessary copying occur.
+
+29. File: jacop-sets/src/main/java/org/jacop/set/constraints/SumWeightedSet.java
+    Line: 136
+    Context: class-level
+    FIXME/TODO: Analyse all set constraints fixpoints.
+
+30. File: jacop-sets/src/main/java/org/jacop/set/constraints/SumWeightedSet.java
+    Line: 138
+    Context: class-level
+    FIXME/TODO: implement also cardinality reasoning for increasingCosts = false.
+
+31. File: jacop-sets/src/main/java/org/jacop/set/constraints/AintersectBeqC.java
+    Line: 59
+    Context: class-level
+    FIXME/TODO: implement cardinality reasoning as specified in the comments.
+
+32. File: jacop-core/src/main/java/org/jacop/constraints/ExtensionalSupportStr.java
+    Line: 143
+    Context: class-level
+    FIXME: remove the need for this attribute.
+
+33. File: jacop-core/src/main/java/org/jacop/constraints/AmongVar.java
+    Line: 97
+    Context: class-level
+    FIXME: check if timestamp over IntervalDomain is not better/cleaner.
+
+34. File: jacop-sets/src/main/java/org/jacop/set/core/SetDomain.java
+    Line: 380
+    Method: addConstraint(Constraint c)
+    FIXME: do not create a new array every time a new constraint is attached.
+
+35. File: jacop-sets/src/main/java/org/jacop/set/core/SetDomain.java
+    Line: 815
+    Context: class-level
+    FIXME: how to deal with repeated constraints without penalty hit.
+
+36. File: jacop-sets/src/main/java/org/jacop/set/constraints/EinA.java
+    Line: 102
+    Method: notConsistency(Store store)
+    FIXME/TODO: check notConsistency() functions in other set constraints.
+
+37. File: jacop-sets/src/main/java/org/jacop/set/constraints/AinB.java
+    Line: 48
+    Context: class-level
+    FIXME: check consistency and other methods like satisfied, notConsistency, notSatisfied.
+
+38. File: jacop-sets/src/main/java/org/jacop/set/constraints/AinB.java
+    Line: 96
+    Method: consistency(Store store)
+    FIXME: take into account strict relation.
+
+39. File: jacop-core/src/main/java/org/jacop/search/IndomainList.java
+    Line: 77
+    Method: indomain(IntVar var)
+    FIXME: there is no better way than just creating a BoundDomain object?
+
+40. File: jacop-core/src/main/java/org/jacop/constraints/XplusYeqC.java
+    Line: 90
+    Method: consistency(Store store)
+    FIXME: make propagation without object creation, scan x ->, and y <-, at the same time.

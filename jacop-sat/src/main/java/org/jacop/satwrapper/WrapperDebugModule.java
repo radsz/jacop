@@ -1,0 +1,275 @@
+/*
+ * WrapperDebugModule.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.satwrapper;
+
+import org.jacop.jasat.core.Core;
+import org.jacop.jasat.core.clauses.MapClause;
+import org.jacop.jasat.modules.interfaces.AssertionListener;
+import org.jacop.jasat.modules.interfaces.BackjumpListener;
+import org.jacop.jasat.modules.interfaces.ClauseListener;
+import org.jacop.jasat.modules.interfaces.ConflictListener;
+import org.jacop.jasat.modules.interfaces.ExplanationListener;
+import org.jacop.jasat.modules.interfaces.ForgetListener;
+import org.jacop.jasat.modules.interfaces.PropagateListener;
+import org.jacop.jasat.modules.interfaces.SolutionListener;
+import org.jacop.jasat.modules.interfaces.StartStopListener;
+import org.jacop.jasat.utils.Utils;
+
+/**
+ * A class used to debug, but with additional data.
+ *
+ * @author Simon Cruanes and Radoslaw Szymanek
+ * @version 5.0
+ */
+public final class WrapperDebugModule
+    implements AssertionListener,
+        BackjumpListener,
+        ConflictListener,
+        PropagateListener,
+        SolutionListener,
+        ForgetListener,
+        ExplanationListener,
+        ClauseListener,
+        StartStopListener,
+        WrapperComponent {
+
+  private final MapClause mapClause = new MapClause();
+  private Core core;
+  // the associate wrapper
+  private SatWrapper wrapper;
+
+  private static final String MEANING = " meaning ";
+
+  /** {@inheritDoc} */
+  public void onRestart(int oldLevel) {
+    printLine(true);
+    core.logc(3, "restart from level %d <=> CP level %d", oldLevel, wrapper.store.level);
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onConflict(MapClause conflictClause, int level) {
+    printLine(true);
+    core.logc(3, "conflict at level " + level);
+    core.logc(
+        "conflict clause : "
+            + conflictClause
+            + MEANING
+            + wrapper.showClauseMeaning(conflictClause));
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onBackjump(int oldLevel, int newLevel) {
+    printLine(true);
+    core.logc(
+        3,
+        "backjump from "
+            + oldLevel
+            + "( CP "
+            + wrapper.satToCpLevels[oldLevel]
+            + ") to "
+            + newLevel
+            + " (CP "
+            + wrapper.satToCpLevels[newLevel]
+            + ")");
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onAssertion(int literal, int level) {
+    printLine(true);
+
+    if (literal == 26 && level == 1) {
+      Thread.dumpStack();
+    }
+
+    core.logc(
+        3,
+        "(at SAT level "
+            + level
+            + ", CP level "
+            + wrapper.store.level
+            + ") assertion : "
+            + literal
+            + MEANING
+            + wrapper.showLiteralMeaning(literal));
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onPropagate(int literal, int clauseId) {
+    printLine(true);
+    core.logc(
+        3,
+        "propagate at level %d literal %d meaning %s",
+        core.currentLevel,
+        literal,
+        wrapper.showLiteralMeaning(literal));
+    // very dirty hack
+    if (core.dbStore.uniqueIdToDb(clauseId) == 0) {
+      core.logc(3, "cause: special database");
+    } else {
+      mapClause.clear();
+      core.dbStore.resolutionWith(clauseId, mapClause);
+      core.logc(3, "cause: " + mapClause + MEANING + wrapper.showClauseMeaning(mapClause));
+    }
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onSolution(boolean satisfiable) {
+    printLine(true);
+    core.logc(3, "current level : " + core.currentLevel);
+    int numOfSetVar = core.trail.size();
+    core.logc(3, "number of set vars : " + numOfSetVar);
+    core.logc(3, "solver state : " + core.currentState);
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onExplain(MapClause explanation) {
+    printLine(true);
+    core.logc(
+        "explanation clause : " + explanation + MEANING + wrapper.showClauseMeaning(explanation));
+    printTrail("var state :          ", explanation);
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
+    String c = Utils.showClause(clause);
+    mapClause.clear();
+    mapClause.addAll(clause);
+    core.logc(
+        3,
+        "add clause "
+            + (isModelClause ? "(model) " : "(learnt) ")
+            + c
+            + " at level "
+            + core.currentLevel
+            + MEANING
+            + wrapper.showClauseMeaning(mapClause));
+  }
+
+  /** {@inheritDoc} */
+  public void onClauseRemoval(int clauseId) {
+    core.logc(3, "remove clause " + clauseId);
+  }
+
+  /** {@inheritDoc} */
+  public void onForget() {
+    printLine(true);
+    core.logc(3, "forget() called");
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onStart() {
+    printLine(true);
+    core.logc(3, "solver started at " + core.getTime("start"));
+    printLine(false);
+    printBlank();
+  }
+
+  /** {@inheritDoc} */
+  public void onStop() {
+    printLine(true);
+    core.logc(3, "solver stopped at " + core.getTime("stop"));
+    printLine(false);
+    printBlank();
+  }
+
+  /**
+   * Prints a separator line in debug output.
+   *
+   * @param start true for opening line, false for closing line
+   */
+  private void printLine(boolean start) {
+    if (start) {
+      core.logc(3, "/==================================");
+    } else {
+      core.logc(3, "\\==================================");
+    }
+  }
+
+  /** Prints a blank line in debug output. */
+  private void printBlank() {
+    core.logc(3, "");
+  }
+
+  /**
+   * Prints the trail state for variables in a clause.
+   *
+   * @param prefix prefix string for the output
+   * @param clause the clause whose variables to print
+   */
+  private void printTrail(String prefix, MapClause clause) {
+    StringBuilder sb = new StringBuilder().append("[ ");
+    for (int varIdx : clause.literals.keySet()) {
+      int value = core.trail.values[varIdx];
+      if (value >= 0) {
+        sb.append(' ');
+      }
+      sb.append(value);
+      sb.append(' ');
+    }
+    core.logc(3, prefix + sb.append(']'));
+  }
+
+  /** {@inheritDoc} */
+  public void initialize(Core core) {
+    this.core = core;
+
+    org.jacop.jasat.modules.DebugModuleHelper.registerModule(
+        core, this, this, this, this, this, this, this, this, this);
+    // WrapperDebugModule also needs restart listener
+    core.restartModules[core.numRestartModules++] = this;
+
+    mapClause.clear();
+    core.verbosity = 3;
+  }
+
+  /** {@inheritDoc} */
+  public void initialize(SatWrapper wrapper) {
+    this.wrapper = wrapper;
+    initialize(wrapper.core);
+  }
+}
