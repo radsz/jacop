@@ -547,14 +547,10 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
   private void addTouchedState(RegState s) {
 
-    if (currentTouchedIndex < touchedStates.length) {
-      touchedStates[currentTouchedIndex++] = s;
-    } else {
-
-      RegState[] newTouchedStates = new RegState[touchedStates.length * 2];
-      System.arraycopy(touchedStates, 0, newTouchedStates, 0, touchedStates.length);
-      touchedStates = newTouchedStates;
+    if (currentTouchedIndex == touchedStates.length) {
+      touchedStates = Arrays.copyOf(touchedStates, Math.max(4, touchedStates.length * 2));
     }
+    touchedStates[currentTouchedIndex++] = s;
   }
 
   private void pruneArcForState(RegState s, IntDomain domVar, int varIndex, int nextVar) {
