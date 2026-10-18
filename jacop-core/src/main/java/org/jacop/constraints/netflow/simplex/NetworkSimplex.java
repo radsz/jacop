@@ -320,6 +320,13 @@ public class NetworkSimplex {
 
     root.computePotentials();
 
+    if (!failure && pivots != -1) {
+      // Removing the costs of the artificial arcs changes the potentials, so the flow found above
+      // need not be optimal any more; continue pivoting on the real costs until it is.
+      int morePivots = runPivotLoop(maxPivots - pivots);
+      pivots = morePivots == -1 ? -1 : pivots + morePivots;
+    }
+
     if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
     }

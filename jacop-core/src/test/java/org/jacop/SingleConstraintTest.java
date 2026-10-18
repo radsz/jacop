@@ -62,15 +62,19 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.SoftAlldifferent;
+import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
@@ -901,6 +905,51 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftAlldifferentOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] vars = {new IntVar(store, "v_0", 0, 1), new IntVar(store, "v_1", 0, 1)};
+    store.impose(new In(cost, new IntervalDomain(0, 0)));
+    store.impose(new In(vars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(vars[1], new IntervalDomain(0, 0)));
+
+    store.imposeDecomposition(
+        new SoftAlldifferent(vars, cost, ViolationMeasure.DECOMPOSITION_BASED));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftGccOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] xVars = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] hardCounters = {
+      new IntVar(store, "hardCounter0", 0, 2), new IntVar(store, "hardCounter1", 0, 2)
+    };
+    IntVar[] softCounters = {
+      new IntVar(store, "softCounter0", 0, 2), new IntVar(store, "softCounter1", 0, 2)
+    };
+    store.impose(new In(xVars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(xVars[1], new IntervalDomain(0, 0)));
+    store.impose(new In(hardCounters[0], new IntervalDomain(2, 2)));
+    store.impose(new In(softCounters[0], new IntervalDomain(1, 1)));
+    store.impose(new In(softCounters[1], new IntervalDomain(2, 2)));
+    store.impose(new In(cost, new IntervalDomain(1, 1)));
+
+    store.imposeDecomposition(
+        new SoftGCC(xVars, hardCounters, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isFalse();
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
