@@ -1685,6 +1685,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());
+      appendSolutionToOutputFile(printBuffer.toString());
     } else {
       lastSolution = printBuffer;
     }
@@ -1907,6 +1908,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } catch (IOException e) {
         log.error("Failed to write solution to {}", options.getOutputFilename(), e);
       }
+    }
+  }
+
+  /** With option -a every solution goes to the output file; the first one truncates it. */
+  private void appendSolutionToOutputFile(String solution) {
+    if (options.getOutputFilename().isEmpty()) {
+      return;
+    }
+    try {
+      Files.writeString(
+          Path.of(options.getOutputFilename()),
+          solution,
+          StandardOpenOption.CREATE,
+          numberSolutions == 1 ? StandardOpenOption.TRUNCATE_EXISTING : StandardOpenOption.APPEND);
+    } catch (IOException e) {
+      log.error("Failed to write solution to {}", options.getOutputFilename(), e);
     }
   }
 
