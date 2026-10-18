@@ -33,3 +33,4 @@ table-layout/en-1250-1479-line419.dzn
 template_design/catfood_3
 tpp/tpp_6_3_20_1
 trucking_hl/trucking_hl_5
+prop_stress/0200
