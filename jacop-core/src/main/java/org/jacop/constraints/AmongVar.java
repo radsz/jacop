@@ -614,8 +614,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       pureUbs.clear();
       // Construction of lbSdom
       while (!variableQueueY.isEmpty()) {
-        for (Integer yi : this.variableQueueY) {
-          y = this.listOfY[yi];
+        for (IntVar queued : takeQueuedY()) {
+          y = queued;
+          int yi = yIndex.get(y);
           if (y.singleton()) {
             if (DEBUG_ALL) {
               log.debug("New y {} was grouded to {}", y.id, y.value());
@@ -634,12 +635,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             }
             if (yi >= lastIndex) {
               if (yi != lastIndex) {
-                int yInt = yi;
                 IntVar tmp = listOfY[lastIndex];
                 listOfY[lastIndex] = y;
-                listOfY[yInt] = tmp;
+                listOfY[yi] = tmp;
                 yIndex.put(y, lastIndex);
-                yIndex.put(tmp, yInt);
+                yIndex.put(tmp, yi);
               }
               lastIndex++;
             }
@@ -653,7 +653,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             }
           }
         }
-        variableQueueY.clear();
         yGrounded.update(lastIndex);
 
         if (futureDom.getSize() > 0) {
@@ -1043,7 +1042,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             Math.min(n.max(), ub0));
       }
 
-      n.domain.in(store.level, n, Math.max(n.min(), lb0), Math.min(n.max(), ub0));
+      narrowN(store, lb0, ub0);
 
       if (lbSdom.getSize() > ubSdom.getSize() || lbSdom.getSize() > listOfY.length) {
         if (DEBUG_ALL) {
@@ -1087,6 +1086,30 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
   }
 
+  /**
+   * It returns the queued Y variables and clears the queue. Grounded Y are swapped to the front of
+   * listOfY during consistency, which changes the meaning of the queued indices, so the queued
+   * variables are resolved before any of them is processed.
+   */
+  private IntVar[] takeQueuedY() {
+    IntVar[] queuedY = new IntVar[variableQueueY.size()];
+    int q = 0;
+    for (Integer yi : variableQueueY) {
+      queuedY[q++] = listOfY[yi];
+    }
+    variableQueueY.clear();
+    return queuedY;
+  }
+
+  private void narrowN(Store store, int lb, int ub) {
+    int minN = Math.max(n.min(), lb);
+    int maxN = Math.min(n.max(), ub);
+    if (minN > maxN) {
+      throw Store.failException;
+    }
+    n.domain.in(store.level, n, minN, maxN);
+  }
+
   @Override
   public void impose(Store store) {
 
@@ -1100,8 +1123,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     lb0Ts = new TimeStamp<>(store, 0);
     ub0Ts = new TimeStamp<>(store, listOfX.length);
 
-    final int gx = (int) Arrays.stream(listOfX).filter(IntVar::singleton).count();
-    xGrounded = new TimeStamp<>(store, gx);
+    // super.impose() calls queueVariable() for every variable, which counts the grounded X.
+    xGrounded = new TimeStamp<>(store, 0);
     yGrounded = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;

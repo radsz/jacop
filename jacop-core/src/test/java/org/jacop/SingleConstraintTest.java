@@ -36,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -1002,6 +1004,91 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Geost(objects, constraints, shapes));
 
     return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/46
+  @Test
+  void testAmongVarWithGroundedX() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 2),
+      new IntVar(store, "x1", 0, 0),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 2, 2)
+    };
+    IntVar[] y = {new IntVar(store, "y0", 0, 0), new IntVar(store, "y1", 1, 2)};
+    IntVar n = new IntVar(store, "n", 1, 2);
+
+    store.impose(new AmongVar(x, y, n));
+
+    assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n})).isEqualTo(6);
+  }
+
+  // Compares AmongVar with a brute-force count on random small instances; it found that
+  // grounded Y could be skipped after being reordered (https://github.com/radsz/jacop/issues/46).
+  @Test
+  void testAmongVarAgainstBruteForce() {
+
+    Random random = new Random(46);
+    for (int trial = 0; trial < 300; trial++) {
+      int[][] xDomains = randomDomains(random, 1 + random.nextInt(4));
+      int[][] yDomains = randomDomains(random, 1 + random.nextInt(4));
+      int nMin = random.nextInt(2);
+      int nMax = nMin + random.nextInt(xDomains.length + 1);
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[xDomains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, xDomains[i][0], xDomains[i][1]);
+      }
+      IntVar[] y = new IntVar[yDomains.length];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, yDomains[i][0], yDomains[i][1]);
+      }
+      IntVar n = new IntVar(store, "n", nMin, nMax);
+
+      store.impose(new AmongVar(x, y, n));
+
+      assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n}))
+          .as(
+              "AmongVar x=%s y=%s n=%d..%d",
+              Arrays.deepToString(xDomains), Arrays.deepToString(yDomains), nMin, nMax)
+          .isEqualTo(amongVarBruteForce(xDomains, yDomains, nMin, nMax));
+    }
+  }
+
+  private static int[][] randomDomains(Random random, int size) {
+    int[][] domains = new int[size][];
+    for (int i = 0; i < size; i++) {
+      int min = random.nextInt(3);
+      domains[i] = new int[] {min, random.nextBoolean() ? min : min + random.nextInt(4)};
+    }
+    return domains;
+  }
+
+  private static int amongVarBruteForce(int[][] xDomains, int[][] yDomains, int nMin, int nMax) {
+    int[][] domains =
+        Stream.concat(Arrays.stream(xDomains), Arrays.stream(yDomains)).toArray(int[][]::new);
+    return amongVarBruteForce(domains, xDomains.length, new int[domains.length], 0, nMin, nMax);
+  }
+
+  private static int amongVarBruteForce(
+      int[][] domains, int xLength, int[] values, int index, int nMin, int nMax) {
+    if (index == domains.length) {
+      Set<Integer> yValues = new HashSet<>();
+      for (int i = xLength; i < values.length; i++) {
+        yValues.add(values[i]);
+      }
+      long count = IntStream.range(0, xLength).filter(i -> yValues.contains(values[i])).count();
+      return count >= nMin && count <= nMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int v = domains[index][0]; v <= domains[index][1]; v++) {
+      values[index] = v;
+      solutions += amongVarBruteForce(domains, xLength, values, index + 1, nMin, nMax);
+    }
+    return solutions;
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
