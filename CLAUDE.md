@@ -16,6 +16,8 @@ the work is truly done.
   1. The regression tests for the change (a test that fails before the fix and passes after it).
   2. `mvn spotless:check`
   3. `mvn -B -Pcommit verify`
+- Build with `mvn clean ...` before trusting a local result: an incremental `mvn install` re-packs
+  the previous all-in-one jar in `jacop-all`, so stale classes can hide or fake a failure.
 - Open the PR only after those pass. Do not use the PR's CI as a substitute for running them locally.
 - Each new commit pushed to an open PR re-runs the whole suite, so batch follow-up changes and
   verify them locally first.
