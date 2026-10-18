@@ -957,6 +957,16 @@ public final class ConstraintFncs {
     sc.gen_set_subset_reif(n);
   }
 
+  /** Handles the set_superset FlatZinc constraint (x is a superset of y). */
+  public void set_superset(SimpleNode n) {
+    sc.gen_set_superset(n);
+  }
+
+  /** Handles the set_superset_reif FlatZinc constraint (r iff x is a superset of y). */
+  public void set_superset_reif(SimpleNode n) {
+    sc.gen_set_superset_reif(n);
+  }
+
   /** Handles the set_symdiff FlatZinc constraint. */
   public void set_symdiff(SimpleNode n) {
     sc.gen_set_symdiff(n);

@@ -2207,6 +2207,15 @@ sum_set/sum_set
 sum_sets/sum_sets
 sum_to_100/sum_to_100
 sumbrero/sumbrero
+superset_course_plan/superset_course_plan
+superset_feature_model/superset_feature_model
+superset_package_deps/superset_package_deps
+superset_party/superset_party
+superset_recipes/superset_recipes
+superset_set_cover/superset_set_cover
+superset_team_skills/superset_team_skills
+superset_test_suite/superset_test_suite
+superset_toolbox/superset_toolbox
 survivor/survivor
 survo_puzzle/survo_puzzle
 symmetric/symmetric

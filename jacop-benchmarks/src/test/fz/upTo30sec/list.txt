@@ -155,6 +155,9 @@ stochastic-vrp/vrp-s2-v2-c7_vrp-v2-c7_det
 stochastic-vrp/vrp-s3-v2-c6_vrp-v2-c6_det
 sugiyama/g4_7_7_7_3
 sugiyama2/g4_7_7_7_3
+superset_laminar/superset_laminar
+superset_nested_chain/superset_nested_chain
+superset_role_mining/superset_role_mining
 table-layout/en-1000-1303-line1078
 table-layout/en-1000-251-line273
 tc-graph-color/k10_34
