@@ -282,7 +282,7 @@ class SetConstraints implements ParserTreeConstants {
     support.pose(new PartitionSet(s, u));
   }
 
-  // Not present in current flatzinc
+  // set_superset(x, y) means x is a superset of y, i.e. y is a subset of x
   void gen_set_superset(SimpleNode node) {
 
     SetVar v1 = support.getSetVariable(node, 0);
@@ -292,7 +292,7 @@ class SetConstraints implements ParserTreeConstants {
     support.pose(c);
   }
 
-  // Not present in current flatzinc
+  // set_superset_reif(x, y, r) means r <-> (y is a subset of x)
   void gen_set_superset_reif(SimpleNode node) {
 
     SetVar v1 = support.getSetVariable(node, 0);

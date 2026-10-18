@@ -179,6 +179,8 @@
     "set_ne",
     "set_subset",
     "set_subset_reif",
+    "set_superset",
+    "set_superset_reif",
     "set_symdiff",
     "set_union",
     "jacop_int_set_channel",
