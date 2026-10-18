@@ -24,7 +24,8 @@ the work is truly done.
 
 ## Bug fixes
 
-- One bug per branch and per pull request, based on `develop-5.0`.
+- Base bug-fix branches on `develop-5.0`. Group fixes into pull requests the way the maintainer
+  asks (for example all open correctness fixes in one PR), with one commit per bug.
 - Every fix comes with a regression test that reproduces the bug and fails without the fix.
 - Put the regression test in a test class that the `commit` profile runs (for constraint bugs,
   `jacop-core/src/test/java/org/jacop/SingleConstraintTest.java`), or add the new test class to the
