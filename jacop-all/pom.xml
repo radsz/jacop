@@ -142,6 +142,44 @@
                             </resources>
                         </configuration>
                     </execution>
+                    <!-- MiniZinc solver configuration; mznlib and executable paths are relative to the .msc file -->
+                    <execution>
+                        <id>copy-minizinc-solver-config</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>org.jacop.msc</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-minizinc-library</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/mznlib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc/org/jacop/minizinc</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
