@@ -215,6 +215,16 @@ class BoolConstraints implements ParserTreeConstants {
     }
   }
 
+  void gen_bool_or_imp(SimpleNode node) {
+
+    IntVar v1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar v2 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    // r -> (a \/ b) is the clause a \/ b \/ not r, i.e. a + b >= r
+    support.pose(new SumBool(new IntVar[] {v1, v2}, ">=", v3));
+  }
+
   void gen_bool_xor(SimpleNode node) {
 
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);

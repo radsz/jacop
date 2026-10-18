@@ -155,6 +155,7 @@ black-hole/8
 blending_problem/blending_problem
 blueberry_muffins/blueberry_muffins
 book_buy/book_buy
+bool_or_imp_test/bool_or_imp_test
 box/box
 bpp/bpp
 bratko_scheduling/bratko_scheduling

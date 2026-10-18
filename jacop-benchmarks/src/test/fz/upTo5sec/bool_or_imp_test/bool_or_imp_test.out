@@ -1,0 +1,36 @@
+a = false;
+b = false;
+r = false;
+c = true;
+----------
+a = false;
+b = true;
+r = false;
+c = true;
+----------
+a = false;
+b = true;
+r = true;
+c = true;
+----------
+a = true;
+b = false;
+r = false;
+c = true;
+----------
+a = true;
+b = false;
+r = true;
+c = true;
+----------
+a = true;
+b = true;
+r = false;
+c = true;
+----------
+a = true;
+b = true;
+r = true;
+c = true;
+----------
+==========

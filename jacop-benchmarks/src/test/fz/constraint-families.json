@@ -110,6 +110,7 @@
     "bool_clause",
     "bool_clause_reif",
     "bool_clause_imp",
+    "bool_or_imp",
     "array_bool_and",
     "array_bool_or",
     "array_bool_xor",
