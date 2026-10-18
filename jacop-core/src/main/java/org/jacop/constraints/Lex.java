@@ -374,9 +374,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     private void state0TransitionsLastRow(int i, int j, FsmState terminate) {
       state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(1, 1), terminate));
-      if (isLe) {
-        state[i][j][0].transitions.add(new FsmTransition(new IntervalDomain(0, 0), state[i][j][1]));
-      }
+      state0AddZeroTransitionToState1(i, j);
     }
 
     private void buildState1Transitions(int i, int j, FsmState terminate) {

@@ -5,4 +5,7 @@ predicate jacop_count_values(array[int] of var int: x,
 predicate fzn_global_cardinality_closed(array[int] of var int: x,
                                     array[int] of int: cover,
                                     array[int] of var int: counts) =
+    % closed: every variable takes a value from cover
+    forall(i in index_set(x))(x[i] in {d | d in cover})
+    /\
     jacop_count_values(x, cover, counts);

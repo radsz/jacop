@@ -591,7 +591,8 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
-      return max() >= domain.min() && domain.max() >= min();
+      // the holes of this domain matter, not only its bounds
+      return isIntersecting(domain.min(), domain.max());
     }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
@@ -1915,12 +1916,14 @@ public class IntervalDomain extends IntDomain {
           currentInterval1 = intervals[i1];
         }
 
-        // if current interval is glued or intersects with (min..max)
-        if (max + 1 >= currentInterval1.min()) {
-          result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
-          i1++;
-        } else {
-          result.unionAdapt(new Interval(tempMin, max));
+        if (i1 < size) {
+          // if current interval is glued or intersects with (min..max)
+          if (max + 1 >= currentInterval1.min()) {
+            result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
+            i1++;
+          } else {
+            result.unionAdapt(new Interval(tempMin, max));
+          }
         }
       }
     }
@@ -3957,7 +3960,7 @@ public class IntervalDomain extends IntDomain {
       if (maxValue < intervals[current].max()) {
         // one additional interval is being created.
 
-        if (intervals.length == size + 1) {
+        if (intervals.length <= size + 1) {
           // not enough space to insert new interval.
           Interval[] newIntervals = new Interval[intervals.length * 2];
           System.arraycopy(intervals, 0, newIntervals, 0, size);
@@ -3998,7 +4001,10 @@ public class IntervalDomain extends IntDomain {
         int i = current;
         for (; maxCurrent < size; i++, maxCurrent++) {
           intervals[i] = intervals[maxCurrent];
-          intervals[maxCurrent] = null;
+        }
+        // clear the slots freed by the shift (when nothing is shifted i equals the old position)
+        for (int j = i; j < size; j++) {
+          intervals[j] = null;
         }
 
         size = i;
@@ -4268,13 +4274,18 @@ public class IntervalDomain extends IntDomain {
       return returnedEvent;
     }
 
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Not implemented for other domain type " + domain.getClass()));
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+      if (domain.isEmpty()) {
+        size = 0;
+        return GROUND;
+      }
+      return intersectAdapt(domain.min(), domain.max());
     }
 
-    // Only to satisfy the compiler.
-    return NONE;
+    // any other representation is converted to intervals
+    IntervalDomain input = new IntervalDomain();
+    input.addDom(domain);
+    return intersectAdapt(input);
   }
 
   @Override

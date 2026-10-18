@@ -4,10 +4,21 @@ predicate jacop_knapsack(array[int] of int:w, array[int] of int:p,
 predicate fzn_knapsack(array[int] of int: w, array[int] of int:p, 
                    array[int] of var int:x, var int: W, var int: P) = 
 	let {
+	   % jacop_knapsack requires positive weights and profits; other items are added linearly
+	   set of int: items = {i | i in index_set(x) where w[i] > 0 /\ p[i] > 0},
+	   var 0..ub(W): weight,
 	   var 0..ub(P): profit,
-	} in 
-	    jacop_knapsack([w[i] | i in index_set(w) where w[i] > 0], [p[i] | i in index_set(p) where w[i] > 0], W, profit, [x[i] | i in index_set(x) where w[i] > 0])
+	} in
+	    forall(i in index_set(x))(x[i] >= 0)
 	    /\
-	    P = profit + sum( i in index_set(p) where w[i]=0) (p[i]*x[i]) 
+	    if card(items) = 0 then
+	      weight = 0 /\ profit = 0
+	    else
+	      jacop_knapsack([w[i] | i in items], [p[i] | i in items], weight, profit, [x[i] | i in items])
+	    endif
+	    /\
+	    W = weight + sum(i in index_set(x) where w[i] > 0 /\ p[i] = 0) (w[i]*x[i])
+	    /\
+	    P = profit + sum(i in index_set(x) where w[i] = 0) (p[i]*x[i])
 	;
 

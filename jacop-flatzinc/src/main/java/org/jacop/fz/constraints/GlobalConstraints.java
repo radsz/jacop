@@ -219,7 +219,12 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     if (s.length == 1) {
-      support.pose(new XlteqY(r[0], b));
+      if (d[0].min() > 0) {
+        support.pose(new XlteqY(r[0], b));
+      } else {
+        // a task that may have zero duration does not need to fit within the limit
+        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      }
       return;
     }
     if (s.length == 0) {
@@ -271,6 +276,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseCumulativeUnaryBranch(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     if (allVarOne(d) && allVarOne(r)) {
+      // the same start variable twice means two overlapping tasks
+      checkForDuplicateVariables(s);
       support.pose(new Alldiff(s));
     } else {
       support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
@@ -293,11 +300,11 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseCumulativeUnaryPossible(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     if (allVarOne(d)) {
+      // the same start variable twice means two overlapping tasks
+      checkForDuplicateVariables(s);
       support.pose(new Alldiff(s));
-      if (!b.singleton()) {
-        for (IntVar intVar : r) {
-          support.pose(new XlteqY(intVar, b));
-        }
+      for (IntVar intVar : r) {
+        support.pose(new XlteqY(intVar, b));
       }
     } else {
       support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
@@ -387,6 +394,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_circuit(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    // successors must all be different, so the same variable (or constant) twice is infeasible
+    checkForDuplicateVariables(v);
 
     support.pose(new Circuit(v));
 
@@ -401,6 +410,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_subcircuit(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    // successors must all be different, so the same variable (or constant) twice is infeasible
+    checkForDuplicateVariables(v);
     support.pose(new Subcircuit(v));
 
     if (support.domainConsistency
@@ -542,27 +553,12 @@ class GlobalConstraints implements ParserTreeConstants {
     // initialization; we collect all constraints and pose them at the end when all other
     // constraints are posed
 
-    // ---- KK, 2015-10-17
-    // among must not have duplicated variables there
-    // could be constants that have the same value and
-    // are duplicated.
-    IntVar[] xx = removeDuplicates(x);
-    IntVar[] ss = new IntVar[s.length];
-    HashSet<IntVar> varSet = new HashSet<>();
-    for (int i = 0; i < s.length; i++) {
-      if (varSet.contains(s[i]) && s[i].singleton()) {
-        ss[i] = new IntVar(store, s[i].min(), s[i].max());
-      } else {
-        ss[i] = s[i];
-        varSet.add(s[i]);
-      }
-    }
-    IntVar vv;
-    if (varSet.contains(v) && v.singleton()) {
-      vv = new IntVar(store, v.min(), v.max());
-    } else {
-      vv = v;
-    }
+    // AmongVar must not have the same variable twice; repeated variables or constants (that
+    // share one variable) are replaced by copies
+    Set<IntVar> seen = new HashSet<>();
+    IntVar[] xx = distinctCopies(x, seen);
+    IntVar[] ss = distinctCopies(s, seen);
+    IntVar vv = distinctCopies(new IntVar[] {v}, seen)[0];
 
     support.delayedConstraints.add(new AmongVar(xx, ss, vv));
   }
@@ -572,26 +568,11 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain s = support.getSetLiteral(node, 1);
     IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    // ---- KK, 2015-10-17
-    // among must not have duplicated variables. In x vecor
-    // could be constants that have the same value and
-    // are duplicated.
-    IntVar[] xx = new IntVar[x.length];
-    HashSet<IntVar> varSet = new HashSet<>();
-    for (int i = 0; i < x.length; i++) {
-      if (varSet.contains(x[i]) && x[i].singleton()) {
-        xx[i] = new IntVar(store, x[i].min(), x[i].max());
-      } else {
-        xx[i] = x[i];
-        varSet.add(x[i]);
-      }
-    }
-    IntVar vv;
-    if (varSet.contains(v) && v.singleton()) {
-      vv = new IntVar(store, v.min(), v.max());
-    } else {
-      vv = v;
-    }
+    // Among must not have the same variable twice; repeated variables or constants (that
+    // share one variable) are replaced by copies
+    Set<IntVar> seen = new HashSet<>();
+    IntVar[] xx = distinctCopies(x, seen);
+    IntVar vv = distinctCopies(new IntVar[] {v}, seen)[0];
 
     IntervalDomain setImpl = new IntervalDomain();
     for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements(); ) {
@@ -805,6 +786,26 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
+    // a repeated cover value is counted once and its counters are made equal
+    Map<Integer, Integer> firstPosition = new LinkedHashMap<>();
+    for (int i = 0; i < values.length; i++) {
+      Integer first = firstPosition.putIfAbsent(values[i], i);
+      if (first != null && counters[first] != counters[i]) {
+        support.pose(new XeqY(counters[first], counters[i]));
+      }
+    }
+    if (firstPosition.size() < values.length) {
+      int[] positions = firstPosition.values().stream().mapToInt(Integer::intValue).toArray();
+      int[] uniqueValues = new int[positions.length];
+      IntVar[] uniqueCounters = new IntVar[positions.length];
+      for (int i = 0; i < positions.length; i++) {
+        uniqueValues[i] = values[positions[i]];
+        uniqueCounters[i] = counters[positions[i]];
+      }
+      values = uniqueValues;
+      counters = uniqueCounters;
+    }
+
     if (allVarGround(counters)) {
       int[] lb = new int[counters.length];
       int[] ub = new int[counters.length];
@@ -823,6 +824,21 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+
+    // a repeated cover value is counted once within the intersection of its bounds
+    Map<Integer, int[]> bounds = new LinkedHashMap<>();
+    for (int i = 0; i < values.length; i++) {
+      int[] b = bounds.putIfAbsent(values[i], new int[] {lb[i], ub[i]});
+      if (b != null) {
+        b[0] = Math.max(b[0], lb[i]);
+        b[1] = Math.min(b[1], ub[i]);
+      }
+    }
+    if (bounds.size() < values.length) {
+      values = bounds.keySet().stream().mapToInt(Integer::intValue).toArray();
+      lb = bounds.values().stream().mapToInt(b -> b[0]).toArray();
+      ub = bounds.values().stream().mapToInt(b -> b[1]).toArray();
+    }
 
     int n = x.length;
     long z = Arrays.stream(lb).filter(v -> v == 0).count();
@@ -994,6 +1010,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
 
     int[][] t = filterFeasibleTuples(tbl, v, size);
+    if (t.length == 0) {
+      // no tuple is allowed by the domains
+      throw Store.failException;
+    }
 
     TableVarsTuples reduced = removeGroundVariablesFromTable(v, t, size);
     v = reduced.vars;
@@ -1119,6 +1139,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseTableWithUniqueVars(IntVar[] v, int[][] t, int[] vu) {
     int[][] nt = removeInfeasibleTuples(t);
+    if (nt.length == 0) {
+      throw Store.failException;
+    }
     IntVar[] nv = new IntVar[vu.length];
     for (int i = 0; i < vu.length; i++) {
       nv[i] = v[vu[i]];
@@ -1971,6 +1994,26 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] array = new IntVar[length];
     Arrays.fill(array, value);
     return array;
+  }
+
+  /**
+   * Returns the variables with every variable already in seen (or repeated in x) replaced by a copy
+   * constrained to be equal to it, and adds the returned variables to seen.
+   */
+  private IntVar[] distinctCopies(IntVar[] x, Set<IntVar> seen) {
+    IntVar[] xs = new IntVar[x.length];
+    for (int i = 0; i < x.length; i++) {
+      if (seen.contains(x[i])) {
+        xs[i] = new IntVar(store, x[i].min(), x[i].max());
+        if (!x[i].singleton()) {
+          support.pose(new XeqY(x[i], xs[i]));
+        }
+      } else {
+        xs[i] = x[i];
+      }
+      seen.add(xs[i]);
+    }
+    return xs;
   }
 
   IntVar[] removeDuplicates(IntVar[] x) {

@@ -496,7 +496,7 @@ public class Tables {
       IntDomain[] setA = setArrayTable.get(ident);
       a = new SetVar[setA.length];
       for (int i = 0; i < setA.length; i++) {
-        a[i] = new SetVar(store, "", new BoundSetDomain(setA[i], setA[i]));
+        a[i] = new SetVar(store, new BoundSetDomain(setA[i], setA[i]));
       }
     }
     return a;

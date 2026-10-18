@@ -172,7 +172,9 @@ public class LinearIntDom extends LinearInt {
         break;
 
       default:
-        log.error("Not implemented relation in LinearIntDom; implemented == and != only.");
+        // domain consistency is implemented for == and != only; other relations use the bounds
+        // consistency of LinearInt
+        super.propagate(rel);
         break;
     }
   }
@@ -188,6 +190,14 @@ public class LinearIntDom extends LinearInt {
   }
 
   void pruneEq() {
+
+    if (l == 0) {
+      // all weights are zero, so the sum is 0
+      if (b != 0) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     assignments = new int[l];
     support = new IntervalDomain[l];
@@ -205,16 +215,32 @@ public class LinearIntDom extends LinearInt {
 
   void pruneNeq() {
 
-    assignments = new int[l];
-    support = new IntervalDomain[l];
-
-    findSupport(0, 0L);
-
+    // With two or more unassigned variables every value has a support, since at most one value
+    // of the other unassigned variable makes the sum equal to b.
+    int free = -1;
+    long sum = 0;
     for (int i = 0; i < l; i++) {
-      if (support[i] == null) {
-        removeConstraint();
-      } else if (support[i].singleton()) {
-        x[i].domain.inComplement(store.level, x[i], support[i].value());
+      if (x[i].singleton()) {
+        sum += a[i] * x[i].value();
+      } else if (free == -1) {
+        free = i;
+      } else {
+        return;
+      }
+    }
+
+    if (free == -1) {
+      if (sum == b) {
+        throw Store.failException;
+      }
+      return;
+    }
+
+    long rest = b - sum;
+    if (rest % a[free] == 0) {
+      long val = rest / a[free];
+      if (val >= x[free].min() && val <= x[free].max()) {
+        x[free].domain.inComplement(store.level, x[free], (int) val);
       }
     }
   }

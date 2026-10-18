@@ -83,6 +83,8 @@ import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -1255,6 +1257,28 @@ class SingleConstraintTest extends TestHelper {
               arcs, weights, flowDomains, balance, costMin, costMax, flows, index + 1);
     }
     return solutions;
+  }
+
+  @Test
+  void testComparisonsOverInconsistentDomainsFailWithoutException() {
+
+    Store store = new Store();
+    IntVar two = new IntVar(store, "two", 2, 2);
+    IntVar small = new IntVar(store, "small", 1, 2);
+    store.impose(new XltY(two, small));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    two = new IntVar(store, "two", 2, 2);
+    small = new IntVar(store, "small", 1, 2);
+    store.impose(new XgtY(small, two));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    two = new IntVar(store, "two", 2, 2);
+    IntVar alsoTwo = new IntVar(store, "alsoTwo", 2, 2);
+    store.impose(new XneqY(two, alsoTwo));
+    assertThat(store.consistency()).isFalse();
   }
 
   // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
