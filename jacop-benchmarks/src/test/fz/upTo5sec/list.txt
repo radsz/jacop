@@ -651,7 +651,6 @@ kakuro/kakuro_8_8_hard
 kakuro/kakuro_8_8_super
 kakuro2/kakuro2
 kakuro3/kakuro3
-kaprekars_constant/kaprekars_constant
 kaprekars_constant2/kaprekars_constant2
 kenken2/kenken2
 killer_sudoku/killer_sudoku
@@ -1983,9 +1982,7 @@ rookwise_chain/rookwise_chain
 roots_test/roots_test
 roster/chicroster_dataset_11
 roster/chicroster_dataset_17
-roster/chicroster_dataset_2
 roster/chicroster_dataset_5
-roster/chicroster_dataset_7
 rostering/rostering
 rotating_discs/rotating_discs
 rotation2/rotation2

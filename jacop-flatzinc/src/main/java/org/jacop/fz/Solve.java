@@ -36,6 +36,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
@@ -66,6 +68,7 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestDomain;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -119,6 +122,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T> label;
   // --------
   DepthFirstSearch<T>[] finalSearch;
+  // labels the variables a search on output variables leaves out
+  DepthFirstSearch<T> completionSearch;
   // sequence search
   Search<T> finalSearchSeq;
   // Values for search created from flatzinc
@@ -562,7 +567,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> parentSearch = null;
     do {
       s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(true);
+      s.getSolutionListener().searchAll(s != completionSearch);
 
       if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
@@ -908,11 +913,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T>[] setSubSearchForAll(DepthFirstSearch<T> label, Options opt) {
 
-    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[4];
+    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[5];
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
-    if (!options.complementarySearch() && label != null) {
+    boolean outputVarsOnly = !options.complementarySearch() && label != null;
+    if (outputVarsOnly) {
       searchVars.outputVars();
     }
 
@@ -923,6 +929,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (shouldUseDefaultSearchVars(
         intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+      outputVarsOnly = false;
       searchVars.defaultVars();
       intSearchVariables = searchVars.getIntVars();
       setSearchVariables = searchVars.getSetVars();
@@ -1080,7 +1087,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       setSearchTimeout(floatSearch);
 
+      lastSearch = floatSearch;
       intAndSetSearch[3] = floatSearch;
+    }
+
+    if (outputVarsOnly && lastSearch != label) {
+      intAndSetSearch[4] = addCompletionSearch(lastSearch);
     }
 
     if (noSearchVariables(
@@ -1089,6 +1101,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     return intAndSetSearch;
+  }
+
+  /**
+   * Adds a search on the integer and Boolean variables that the search on output variables leaves
+   * out. Propagation alone does not guarantee that they can take values consistent with the output
+   * variables, so a solution is reported only once they do. One assignment is enough: the search
+   * stops at the first one, also when all solutions are requested.
+   */
+  @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
+    DefaultSearchVars allVars = new DefaultSearchVars(dictionary);
+    allVars.defaultVars();
+    LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
+    rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    if (rest.isEmpty()) {
+      return null;
+    }
+
+    DepthFirstSearch<T> completion = new DepthFirstSearch<>();
+    if (options.debug()) {
+      completion.setConsistencyListener(failStatistics);
+    }
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            rest.toArray(new IntVar[0]), new SmallestDomain<>(), new IndomainMin<>());
+    completion.setSelectChoicePoint((SelectChoicePoint<T>) select);
+    completion.setPrintInfo(false);
+    // the completion search finds solutions now, so it prints them
+    lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+    completion.setSolutionListener(new CostListener<>());
+    lastSearch.addChildSearch(completion);
+    setSearchTimeout(completion);
+    completionSearch = completion;
+    return completion;
   }
 
   private boolean shouldUseDefaultSearchVars(
