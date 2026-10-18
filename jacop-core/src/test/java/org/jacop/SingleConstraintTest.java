@@ -65,6 +65,7 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Stretch;
@@ -901,6 +902,46 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodViolatedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 2, 2)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodSatisfiedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 3, 3)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isTrue();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodWithSingletonsAndOneFreeVariable() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 3), new IntVar(store, "x3", 2, 2)
+    };
+
+    store.impose(new NoGood(x, new int[] {1, 2, 2}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1].dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(2);
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
