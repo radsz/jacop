@@ -273,12 +273,16 @@ public class NoGood extends Constraint {
   }
 
   private void imposeAsOneVariableNoGoodWhenFewWatches(Store store, int watchCount) {
+    if (watchCount == 0) {
+      // all variables are singletons; watch the first one so consistency can detect a violation.
+      firstWatch = listOfVars[0];
+      firstValue = listOfValues[0];
+    }
     secondWatch = firstWatch;
     secondValue = firstValue;
 
-    for (var _ : listOfVars) {
-      if (listOfVars[watchCount].getSize() == 1
-          && listOfVars[watchCount].value() != listOfValues[watchCount]) {
+    for (int i = 0; i < listOfVars.length; i++) {
+      if (listOfVars[i].singleton() && listOfVars[i].value() != listOfValues[i]) {
         return;
       }
     }
