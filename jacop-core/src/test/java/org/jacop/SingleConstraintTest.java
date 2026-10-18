@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -67,10 +68,12 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
@@ -78,6 +81,8 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
@@ -901,6 +906,161 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71
+  @Test
+  void testNetworkFlowCostMissingSolutions() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "A", 0, 0);
+    a.addDom(2, 2);
+    IntVar b = new IntVar(store, "B", 0, 0);
+    b.addDom(4, 4);
+    IntVar c = new IntVar(store, "C", 0, 4);
+    IntVar h = new IntVar(store, "H", 0, 0);
+    h.addDom(4, 4);
+    IntVar cost = new IntVar(store, "J", 0, 60);
+
+    int[][] arcs = {
+      {0, 1}, {0, 2}, {0, 3}, {1, 0}, {1, 2}, {1, 3}, {2, 0}, {2, 1}, {2, 3}, {3, 0}, {3, 1}, {3, 2}
+    };
+    int[] weights = {1, 2, 2, 2, 1, 2, 2, 1, 2, 0, 0, 1};
+    IntVar[] flows = {
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4),
+      a,
+      new IntVar(store, 0, 0),
+      new IntVar(store, 4, 4),
+      new IntVar(store, 4, 4),
+      c,
+      new IntVar(store, 3, 3),
+      h,
+      b,
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4)
+    };
+    int[] balance = {4, 1, -5, 0};
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node[] nodes = new Node[balance.length];
+    for (int i = 0; i < balance.length; i++) {
+      nodes[i] = net.addNode("n" + i, balance[i]);
+    }
+    for (int i = 0; i < arcs.length; i++) {
+      // weights are variables as in the FlatZinc interface
+      net.addArc(
+          nodes[arcs[i][0]],
+          nodes[arcs[i][1]],
+          new IntVar(store, weights[i], weights[i]),
+          flows[i]);
+    }
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // (J, A, B, C, H) = (41, 2, 0, 4, 0) and (41, 2, 4, 0, 4); J is labelled first as in the issue
+    assertThat(noOfAllSolutions(store, new IntVar[] {cost, a, b, c, h})).isEqualTo(2);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71: when the lower bound of the cost
+  // variable is above the optimal flow cost, values of valid solutions were pruned.
+  @Test
+  void testSoftAlldifferentWithCostAboveOptimum() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar cost = new IntVar(store, "cost", 2, 2);
+
+    store.imposeDecomposition(new SoftAlldifferent(x, cost, ViolationMeasure.VARIABLE_BASED));
+
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isEqualTo(1);
+  }
+
+  // Compares network flow with a brute-force count on random small networks.
+  @Test
+  void testNetworkFlowAgainstBruteForce() {
+
+    Random random = new Random(71);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] = (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(4);
+        int min = random.nextInt(2);
+        flowDomains[i] = new int[] {min, min + random.nextInt(3)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(6);
+      int costMax = costMin + random.nextInt(10);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
+  private static int networkFlowBruteForce(
+      int[][] arcs,
+      int[] weights,
+      int[][] flowDomains,
+      int[] balance,
+      int costMin,
+      int costMax,
+      int[] flows,
+      int index) {
+    if (index == flows.length) {
+      int[] actual = new int[balance.length];
+      int cost = 0;
+      for (int i = 0; i < flows.length; i++) {
+        actual[arcs[i][0]] += flows[i];
+        actual[arcs[i][1]] -= flows[i];
+        cost += weights[i] * flows[i];
+      }
+      return Arrays.equals(actual, balance) && cost >= costMin && cost <= costMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int f = flowDomains[index][0]; f <= flowDomains[index][1]; f++) {
+      flows[index] = f;
+      solutions +=
+          networkFlowBruteForce(
+              arcs, weights, flowDomains, balance, costMin, costMax, flows, index + 1);
+    }
+    return solutions;
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
