@@ -293,6 +293,23 @@ public class NetworkSimplex {
   }
 
   /**
+   * Removing the costs of the artificial arcs changes the potentials, so the flow found with them
+   * need not be optimal any more; this continues pivoting on the real costs until it is.
+   *
+   * @param maxPivots max value of the pivot
+   * @param pivots the number of pivots performed so far, or -1 if the maximum was reached
+   * @param failure whether clearing the artificial arcs found the network infeasible
+   * @return the total number of pivots, or -1 if the maximum number of pivots was reached.
+   */
+  private int continuePivoting(int maxPivots, int pivots, boolean failure) {
+    if (failure || pivots == -1) {
+      return pivots;
+    }
+    int morePivots = runPivotLoop(maxPivots - pivots);
+    return morePivots == -1 ? -1 : pivots + morePivots;
+  }
+
+  /**
    * Executes the network simplex algorithm to find an optimal solution.
    *
    * @param maxPivots max value of the pivot
@@ -319,6 +336,8 @@ public class NetworkSimplex {
     boolean failure = clearArtificialArcs();
 
     root.computePotentials();
+
+    pivots = continuePivoting(maxPivots, pivots, failure);
 
     if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
