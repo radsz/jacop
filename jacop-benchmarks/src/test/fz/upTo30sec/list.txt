@@ -1,4 +1,6 @@
 1d_rubiks_cube2/1d_rubiks_cube2
+2DBinPacking/Class1_20_5
+2DBinPacking/Class1_20_9
 QCP/qcp-15-120-2_ext
 QCP/qcp-15-120-5_ext
 amaze/2012-04-20
@@ -96,7 +98,6 @@ nonogram/non_fast_3
 nonogram/non_fast_4
 nonogram/non_fast_5
 nsp/test
-oocsp_racks/oocsp_racks_030_f7_cc
 oocsp_racks/oocsp_racks_100_r1
 open_stacks/problem_30_15_1
 open_stacks/wbop_10_20_1
@@ -132,7 +133,6 @@ rcpsp-data_at/st27_2
 rcpsp-data_at/st51_33
 rcpsp-data_bl/Bl2509
 rcpsp-data_ksd15_d/j3037_3
-road-cons/road_33
 road-cons/road_9
 rot13_2/rot13_2
 rotation/rotation
