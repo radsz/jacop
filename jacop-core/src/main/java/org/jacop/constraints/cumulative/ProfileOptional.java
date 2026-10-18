@@ -208,30 +208,23 @@ public class ProfileOptional {
     int sMin = tn[i].start().min();
     int sMax = tn[i].start().max();
 
-    boolean ok = false;
+    // Segment j of the profile has usage value() from date() until the next date (the last one
+    // is unbounded). Find the earliest start from sMin at which the task does not overload any
+    // segment it overlaps.
     for (int j = 0; j < n; j++) {
       Event e = utilizationProfile.get(j);
-      int t = e.date();
-      int u = e.value();
-
-      if (sMin + dur <= t) {
-        ok = true;
-        break;
+      if (sMin + dur <= e.date()) {
+        return;
       }
-      if (u + res > limitMax && j + 1 < n) {
-        sMin = utilizationProfile.get(j + 1).date();
-        if (sMin > sMax) {
+      boolean last = j + 1 == n;
+      int next = last ? Integer.MAX_VALUE : utilizationProfile.get(j + 1).date();
+      if (next > sMin && e.value() + res > limitMax) {
+        if (last || next > sMax) {
           opt[i].domain.in(store.level, opt[i], 0, 0);
           return;
         }
+        sMin = next;
       }
-    }
-    if (sMax > utilizationProfile.get(n - 1).date()) {
-      return;
-    }
-
-    if (!ok) {
-      opt[i].domain.in(store.level, opt[i], 0, 0);
     }
   }
 

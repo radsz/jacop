@@ -1400,6 +1400,16 @@ class SingleConstraintTest extends TestHelper {
         .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, false));
   }
 
+  @Test
+  void testCumulativeOptional() {
+
+    // An optional task that fits right after the profile of the present tasks was made absent.
+    assertThat(cumulativeSolutions(true, 2, 2, 1, new int[] {1, 1}, 1, true))
+        .isEqualTo(cumulativeBruteForce(2, 2, 1, new int[] {1, 1}, 1, true));
+    assertThat(cumulativeSolutions(true, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, true))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, true));
+  }
+
   /**
    * Counts the solutions of a cumulative constraint over tasks with starts in 0..horizon-1,
    * durations in 1..maxDuration and the given resource requirements.
