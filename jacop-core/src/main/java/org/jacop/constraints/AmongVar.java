@@ -614,8 +614,17 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       pureUbs.clear();
       // Construction of lbSdom
       while (!variableQueueY.isEmpty()) {
+        // Grounded Y are swapped to the front of listOfY below, which changes the meaning of the
+        // queued indices, so resolve the queued variables before processing any of them.
+        IntVar[] queuedY = new IntVar[variableQueueY.size()];
+        int q = 0;
         for (Integer yi : this.variableQueueY) {
-          y = this.listOfY[yi];
+          queuedY[q++] = this.listOfY[yi];
+        }
+        variableQueueY.clear();
+        for (IntVar queued : queuedY) {
+          y = queued;
+          int yi = yIndex.get(y);
           if (y.singleton()) {
             if (DEBUG_ALL) {
               log.debug("New y {} was grouded to {}", y.id, y.value());
@@ -634,12 +643,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             }
             if (yi >= lastIndex) {
               if (yi != lastIndex) {
-                int yInt = yi;
                 IntVar tmp = listOfY[lastIndex];
                 listOfY[lastIndex] = y;
-                listOfY[yInt] = tmp;
+                listOfY[yi] = tmp;
                 yIndex.put(y, lastIndex);
-                yIndex.put(tmp, yInt);
+                yIndex.put(tmp, yi);
               }
               lastIndex++;
             }
@@ -653,7 +661,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             }
           }
         }
-        variableQueueY.clear();
         yGrounded.update(lastIndex);
 
         if (futureDom.getSize() > 0) {
@@ -1043,7 +1050,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             Math.min(n.max(), ub0));
       }
 
-      n.domain.in(store.level, n, Math.max(n.min(), lb0), Math.min(n.max(), ub0));
+      minN = Math.max(n.min(), lb0);
+      maxN = Math.min(n.max(), ub0);
+      if (minN > maxN) {
+        throw Store.failException;
+      }
+      n.domain.in(store.level, n, minN, maxN);
 
       if (lbSdom.getSize() > ubSdom.getSize() || lbSdom.getSize() > listOfY.length) {
         if (DEBUG_ALL) {
@@ -1100,8 +1112,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     lb0Ts = new TimeStamp<>(store, 0);
     ub0Ts = new TimeStamp<>(store, listOfX.length);
 
-    final int gx = (int) Arrays.stream(listOfX).filter(IntVar::singleton).count();
-    xGrounded = new TimeStamp<>(store, gx);
+    // super.impose() calls queueVariable() for every variable, which counts the grounded X.
+    xGrounded = new TimeStamp<>(store, 0);
     yGrounded = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
