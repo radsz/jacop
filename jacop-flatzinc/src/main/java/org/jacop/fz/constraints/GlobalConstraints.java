@@ -116,7 +116,6 @@ import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
@@ -1442,14 +1441,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int max = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
 
     IntervalDomain setImpl = new IntervalDomain();
-    for (int i = 0; true; i++) {
-      Interval val = u.getInterval(i);
-      if (val != null) {
-        setImpl.unionAdapt(val);
-      } else {
-        break;
-      }
-    }
+    setImpl.addDom(u);
 
     DecomposedConstraint<Constraint> c =
         Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();

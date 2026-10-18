@@ -58,7 +58,15 @@ class MznlibGlobalsTest {
   private static final String SEPARATOR = "----------";
 
   @ParameterizedTest
-  @ValueSource(strings = {"hook_cumulatives", "hook_cumulatives_opt", "hook_cumulatives_lb"})
+  @ValueSource(
+      strings = {
+        "hook_cumulatives",
+        "hook_cumulatives_opt",
+        "hook_cumulatives_lb",
+        "hook_sliding_among_int",
+        "hook_sliding_among_bool",
+        "hook_sliding_among_edge"
+      })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
     Set<String> decompSolutions = solveAll(DIR + model + "-decomp.fzn");
