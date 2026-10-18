@@ -1433,8 +1433,15 @@ public class SmallDenseDomain extends IntDomain {
 
     bits = (bits << min - this.minBound) & result;
 
+    if (bits == 0) {
+      clear();
+      return GROUND;
+    }
+
+    // min and max may have been removed by the mask, the bounds are taken from the remaining bits
     this.minBound = min;
-    this.max = max;
+    adaptMin();
+    this.max = this.minBound + 63 - Long.numberOfTrailingZeros(bits);
     this.size = getSize(bits);
     this.singleton = this.size == 1;
 
