@@ -1,4 +1,4 @@
-![](https://travis-ci.org/radsz/jacop.svg?branch=develop)
+[![CI](https://github.com/radsz/jacop/actions/workflows/ci.yml/badge.svg)](https://github.com/radsz/jacop/actions/workflows/ci.yml)
 
 https://maven-badges.herokuapp.com/maven-central/org.jacop/jacop/badge.svg
 
