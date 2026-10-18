@@ -68,7 +68,7 @@ So the core algorithm is the right one: Compact-Table is still the reference GAC
 4. **No word-level support offsets.** CT stores, for each `(x, a)`, only the words between the first and last non-zero word. JaCoP allocates a full-length `long[]` per value, which costs memory and time on large tables.
 5. **Filtering re-checks the variable that caused the update.** CT skips the filtering step for a variable when it was the only one whose domain changed since the last run. JaCoP filters every non-singleton variable on every run.
 
-**Front-end bug (memory blow-up).** `GlobalConstraints.deduplicateTableRows` (`jacop-flatzinc/.../fz/constraints/GlobalConstraints.java:1098`) allocates each row as `new ArrayList<>(t.length)`, so the capacity is the number of tuples instead of the arity. Memory is quadratic in the table size. MiniZinc's `regression/bug284` (2 variables, 250,164 tuples) runs out of memory with a 12 GB heap for this reason, and Gecode solves it instantly. The fix is `new ArrayList<>(t[i].length)`, or sorting `int[]` rows directly without boxing.
+**Front-end bug (memory blow-up), fixed.** `GlobalConstraints.deduplicateTableRows` (`jacop-flatzinc/.../fz/constraints/GlobalConstraints.java:1098`) allocates each row as `new ArrayList<>(t.length)`, so the capacity is the number of tuples instead of the arity. Memory is quadratic in the table size. MiniZinc's `regression/bug284` (2 variables, 250,164 tuples) runs out of memory with a 12 GB heap for this reason, and Gecode solves it instantly. Fixed by allocating `new ArrayList<>(t[i].length)`; the instance now solves in about a second. Sorting `int[]` rows directly without boxing would be faster still.
 
 ### Missing extensional features (state of the art)
 | Feature | Reference | Why it matters |
@@ -84,7 +84,7 @@ So the core algorithm is the right one: Compact-Table is still the reference GAC
 
 ## 5. Suggested order of work
 
-1. **Test bench first, and fix the `deduplicateTableRows` memory bug.** One JUnit suite per global that, for small random instances, compares (a) the native propagator, (b) the MiniZinc decomposition and (c) brute-force enumeration: same solution set, and native pruning at least as strong as the decomposition. Run it on every change. This doubles as the correctness bench Radek asked for.
+1. **Test bench first.** One JUnit suite per global that, for small random instances, compares (a) the native propagator, (b) the MiniZinc decomposition and (c) brute-force enumeration: same solution set, and native pruning at least as strong as the decomposition. Run it on every change. This doubles as the correctness bench Radek asked for.
 2. **Compact-Table rewrite** (gaps 1–5 above) behind the same `Table` API, benchmarked against the current implementation on the `jacop-benchmarks` FlatZinc instances that use `table_int`.
 3. **CT\*, CT-neg and reified table**, then wire `table_int_reif`, `table_int_opt` and conflict tables from the front end.
 4. **Wire the "propagator exists" globals** from section 3a, starting with `mdd`, `sliding_sum`, `lex_chain`, `all_different` with an `except` set, and `count_*` var.

@@ -39,7 +39,7 @@ What actually breaks for a user out of the box is the **packaging**: `org.jacop.
 ### C. JaCoP bugs found by the suite (not version-related, same on 2.8.7)
 9. `regression/test_bug53`: nested `seq_search` of an ignored annotation → NPE in `Solve.getLastSearch` (`Solve.java:1284`). Gecode solves it.
 10. `types/tuple_if_then_else`: tiny model with `jacop_if_then_else_bool(..., true)` → JVM stack overflow, UNKNOWN. Gecode finds both solutions.
-11. `regression/bug284`: a 2-column `table` with 250,164 tuples → out of memory (default `-Xmx12G` script). Cause: `GlobalConstraints.deduplicateTableRows` allocates each row as `new ArrayList<>(t.length)`, which is quadratic in the number of tuples (see `globals-and-extensional.md`). Gecode solves it.
+11. *Fixed.* `regression/bug284`: a 2-column `table` with 250,164 tuples → out of memory (default `-Xmx12G` script). Cause: `GlobalConstraints.deduplicateTableRows` allocates each row as `new ArrayList<>(t.length)`, which is quadratic in the number of tuples (see `globals-and-extensional.md`). With the capacity fixed, JaCoP solves it in about a second.
 12. `general/multidim_array_concat`: MiniZinc 2.10.1 emits FlatZinc referencing an undeclared array (`X_INTRODUCED_43_`) when JaCoP's `jacop_strictly_increasing` is used. This looks like a MiniZinc compiler bug triggered by JaCoP's library; worth a minimal repro upstream.
 
 (One more difference, `general/test_set_lt_3`: JaCoP returns the expected `{1,4}` and Gecode wrongly says UNSAT, so JaCoP is right there.)
