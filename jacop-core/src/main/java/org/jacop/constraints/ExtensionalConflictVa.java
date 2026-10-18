@@ -111,12 +111,17 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
+    int pos = findPosition(value, values[varPosition]);
+    if (pos == -1) {
+      // no tuple disallows this value, so the first valid tuple supports it
+      return setFirstValid(varPosition, value);
+    }
+
     int[] t = getInitialSupportTuple(varPosition, value);
     if (ASSERTS_ENABLED && t == null) {
       throw new IllegalStateException(String.valueOf(" First valid tuple can not be null "));
     }
 
-    int pos = findPosition(value, values[varPosition]);
     int[][] tuplesVarValue = tuples[varPosition][pos];
     int[] lastofsequenceVarValue = lastofsequence[varPosition][pos];
 
@@ -156,9 +161,6 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   private int[] getInitialSupportTuple(int varPosition, int value) {
     int[] t = tuple;
     int pos = findPosition(value, values[varPosition]);
-    if (pos == -1) {
-      return setFirstValid(varPosition, value);
-    }
     try {
       if (supports[varPosition][pos] != null) {
         System.arraycopy(supports[varPosition][pos], 0, t, 0, list.length);
