@@ -57,7 +57,8 @@ public class XltY extends AbstractXcompY {
   @Override
   public void impose(Store store) {
 
-    if (notSatisfied()) {
+    // only the same variable twice is rejected here; other inconsistencies make consistency fail
+    if (x == y) {
       // XltY is trivially inconsistent.
       throw new IllegalArgumentException(
           "Arguments to XltY are the same, the model is trivially inconsistent.");

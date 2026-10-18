@@ -61,7 +61,8 @@ public class XneqY extends AbstractConstraintXandY {
   @Override
   public void impose(Store store) {
 
-    if (notSatisfied()) {
+    // only the same variable twice is rejected here; other inconsistencies make consistency fail
+    if (x == y) {
       // XneqY is trivially inconsistent.
       throw new IllegalArgumentException(
           "Arguments to XneqY are the same, the model is trivially inconsistent.");
