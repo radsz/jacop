@@ -55,6 +55,15 @@
 
     <build>
         <plugins>
+            <!-- Shade replaces this jar in place; without forceCreation an incremental build keeps the
+                 previously shaded jar and re-shades its stale classes over the freshly built modules. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -138,6 +147,44 @@
                                     <includes>
                                         <include>*.template</include>
                                     </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- MiniZinc solver configuration; mznlib and executable paths are relative to the .msc file -->
+                    <execution>
+                        <id>copy-minizinc-solver-config</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>org.jacop.msc</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-minizinc-library</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/mznlib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc/org/jacop/minizinc</directory>
+                                    <filtering>false</filtering>
                                 </resource>
                             </resources>
                         </configuration>

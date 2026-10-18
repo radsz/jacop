@@ -115,7 +115,6 @@ prize-collecting/25-5-5-4
 prize-collecting/25-5-5-9
 prize-collecting/28-4-7-3
 prize-collecting/28-4-7-9
-prop_stress/0200
 radiation/i7-9
 radiation/m06_15_15
 rcpsp-data-psplib-J30/J30_10_10
