@@ -31,6 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.XeqY;
@@ -49,6 +50,12 @@ class ChannelMap {
 
   final int minSize = 1;
 
+  // (x, v, b) triples collected by add, so that callers can tell them apart from other
+  // reifications of x = v that were not collected (for example bool_eq_reif).
+  private final Set<Entry> collected = new HashSet<>();
+
+  private record Entry(IntVar x, int v, IntVar b) {}
+
   final Support support;
 
   public ChannelMap(Support support) {
@@ -56,6 +63,7 @@ class ChannelMap {
   }
 
   public void add(IntVar x, int v, IntVar b) {
+    collected.add(new Entry(x, v, b));
     Map<Integer, IntVar> map = cs.get(x);
 
     if (map != null) {
@@ -70,6 +78,19 @@ class ChannelMap {
       map.put(v, b);
       cs.put(x, map);
     }
+  }
+
+  /**
+   * Checks whether the constraint b <=> (x = v) was collected and will be posted as part of a
+   * channeling constraint for x.
+   *
+   * @param x the integer variable
+   * @param v the value
+   * @param b the boolean variable
+   * @return true if the constraint must not be posted on its own
+   */
+  public boolean handles(IntVar x, int v, IntVar b) {
+    return size(x) > minSize && collected.contains(new Entry(x, v, b));
   }
 
   public int size(IntVar v) {
