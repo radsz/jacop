@@ -113,6 +113,11 @@ public final class ConstraintFncs {
     bc.gen_bool_or(n);
   }
 
+  /** Handles the bool_or_imp FlatZinc constraint. */
+  public void bool_or_imp(SimpleNode n) {
+    bc.gen_bool_or_imp(n);
+  }
+
   /** Handles the bool_xor FlatZinc constraint. */
   public void bool_xor(SimpleNode n) {
     bc.gen_bool_xor(n);
