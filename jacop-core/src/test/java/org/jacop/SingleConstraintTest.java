@@ -34,11 +34,15 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -62,15 +66,20 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.SoftAlldifferent;
+import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
@@ -78,12 +87,22 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.RegularExpressionParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -901,6 +920,462 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodViolatedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 2, 2)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodSatisfiedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 3, 3)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isTrue();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodWithSingletonsAndOneFreeVariable() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 3), new IntVar(store, "x3", 2, 2)
+    };
+
+    store.impose(new NoGood(x, new int[] {1, 2, 2}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1].dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(2);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostFailsWhenGroundedStartPlusDurationDiffersFromEnd() {
+
+    // object 1 is grounded in time with start 0, duration 1 and end 3, which is inconsistent.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 1, 1));
+
+    assertThat(noOfAllSolutions(store, vars)).isZero();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostEnforcesPositiveDuration() {
+
+    // object 1 must have start 0 + duration 3 = end 3; duration 0 is not allowed.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 0, 3));
+
+    // object 0 (x in 0..2, start 1, duration 1..2) overlaps object 1 (x 0, time 0..3)
+    // in time, so it must not overlap it in space: x0 in 2..2, duration0 in 1..2.
+    assertThat(noOfAllSolutions(store, vars)).isEqualTo(2);
+  }
+
+  /**
+   * Two objects of length 2 in one dimension plus time. Object 0: x in 0..2, start 1, duration in
+   * 1..2, end in 0..4. Object 1: x 0, start 0, the given duration, end 3.
+   */
+  private IntVar[] geostTimeModel(Store store, IntVar duration1) {
+
+    List<Shape> shapes =
+        List.of(
+            new Shape(0, new int[] {0}, new int[] {2}), new Shape(1, new int[] {0}, new int[] {2}));
+
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar start0 = new IntVar(store, "start0", 1, 1);
+    IntVar duration0 = new IntVar(store, "duration0", 1, 2);
+    IntVar end0 = new IntVar(store, "end0", 0, 4);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar start1 = new IntVar(store, "start1", 0, 0);
+    IntVar end1 = new IntVar(store, "end1", 3, 3);
+
+    List<GeostObject> objects =
+        List.of(
+            new GeostObject(
+                0, new IntVar[] {x0}, new IntVar(store, "shape0", 0, 0), start0, duration0, end0),
+            new GeostObject(
+                1, new IntVar[] {x1}, new IntVar(store, "shape1", 1, 1), start1, duration1, end1));
+    List<ExternalConstraint> constraints = List.of(new NonOverlapping(objects, new int[] {0, 1}));
+
+    store.impose(new Geost(objects, constraints, shapes));
+
+    return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/46
+  @Test
+  void testAmongVarWithGroundedX() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 2),
+      new IntVar(store, "x1", 0, 0),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 2, 2)
+    };
+    IntVar[] y = {new IntVar(store, "y0", 0, 0), new IntVar(store, "y1", 1, 2)};
+    IntVar n = new IntVar(store, "n", 1, 2);
+
+    store.impose(new AmongVar(x, y, n));
+
+    assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n})).isEqualTo(6);
+  }
+
+  // Compares AmongVar with a brute-force count on random small instances; it found that
+  // grounded Y could be skipped after being reordered (https://github.com/radsz/jacop/issues/46).
+  @Test
+  void testAmongVarAgainstBruteForce() {
+
+    Random random = new Random(46);
+    for (int trial = 0; trial < 300; trial++) {
+      int[][] xDomains = randomDomains(random, 1 + random.nextInt(4));
+      int[][] yDomains = randomDomains(random, 1 + random.nextInt(4));
+      int nMin = random.nextInt(2);
+      int nMax = nMin + random.nextInt(xDomains.length + 1);
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[xDomains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, xDomains[i][0], xDomains[i][1]);
+      }
+      IntVar[] y = new IntVar[yDomains.length];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, yDomains[i][0], yDomains[i][1]);
+      }
+      IntVar n = new IntVar(store, "n", nMin, nMax);
+
+      store.impose(new AmongVar(x, y, n));
+
+      assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n}))
+          .as(
+              "AmongVar x=%s y=%s n=%d..%d",
+              Arrays.deepToString(xDomains), Arrays.deepToString(yDomains), nMin, nMax)
+          .isEqualTo(amongVarBruteForce(xDomains, yDomains, nMin, nMax));
+    }
+  }
+
+  private static int[][] randomDomains(Random random, int size) {
+    int[][] domains = new int[size][];
+    for (int i = 0; i < size; i++) {
+      int min = random.nextInt(3);
+      domains[i] = new int[] {min, random.nextBoolean() ? min : min + random.nextInt(4)};
+    }
+    return domains;
+  }
+
+  private static int amongVarBruteForce(int[][] xDomains, int[][] yDomains, int nMin, int nMax) {
+    int[][] domains =
+        Stream.concat(Arrays.stream(xDomains), Arrays.stream(yDomains)).toArray(int[][]::new);
+    return amongVarBruteForce(domains, xDomains.length, new int[domains.length], 0, nMin, nMax);
+  }
+
+  private static int amongVarBruteForce(
+      int[][] domains, int xLength, int[] values, int index, int nMin, int nMax) {
+    if (index == domains.length) {
+      Set<Integer> yValues = new HashSet<>();
+      for (int i = xLength; i < values.length; i++) {
+        yValues.add(values[i]);
+      }
+      long count = IntStream.range(0, xLength).filter(i -> yValues.contains(values[i])).count();
+      return count >= nMin && count <= nMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int v = domains[index][0]; v <= domains[index][1]; v++) {
+      values[index] = v;
+      solutions += amongVarBruteForce(domains, xLength, values, index + 1, nMin, nMax);
+    }
+    return solutions;
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71
+  @Test
+  void testNetworkFlowCostMissingSolutions() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "A", 0, 0);
+    a.addDom(2, 2);
+    IntVar b = new IntVar(store, "B", 0, 0);
+    b.addDom(4, 4);
+    IntVar c = new IntVar(store, "C", 0, 4);
+    IntVar h = new IntVar(store, "H", 0, 0);
+    h.addDom(4, 4);
+    IntVar cost = new IntVar(store, "J", 0, 60);
+
+    int[][] arcs = {
+      {0, 1}, {0, 2}, {0, 3}, {1, 0}, {1, 2}, {1, 3}, {2, 0}, {2, 1}, {2, 3}, {3, 0}, {3, 1}, {3, 2}
+    };
+    int[] weights = {1, 2, 2, 2, 1, 2, 2, 1, 2, 0, 0, 1};
+    IntVar[] flows = {
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4),
+      a,
+      new IntVar(store, 0, 0),
+      new IntVar(store, 4, 4),
+      new IntVar(store, 4, 4),
+      c,
+      new IntVar(store, 3, 3),
+      h,
+      b,
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4)
+    };
+    int[] balance = {4, 1, -5, 0};
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node[] nodes = new Node[balance.length];
+    for (int i = 0; i < balance.length; i++) {
+      nodes[i] = net.addNode("n" + i, balance[i]);
+    }
+    for (int i = 0; i < arcs.length; i++) {
+      // weights are variables as in the FlatZinc interface
+      net.addArc(
+          nodes[arcs[i][0]],
+          nodes[arcs[i][1]],
+          new IntVar(store, weights[i], weights[i]),
+          flows[i]);
+    }
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // (J, A, B, C, H) = (41, 2, 0, 4, 0) and (41, 2, 4, 0, 4); J is labelled first as in the issue
+    assertThat(noOfAllSolutions(store, new IntVar[] {cost, a, b, c, h})).isEqualTo(2);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71: when the lower bound of the cost
+  // variable is above the optimal flow cost, values of valid solutions were pruned.
+  @Test
+  void testSoftAlldifferentWithCostAboveOptimum() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar cost = new IntVar(store, "cost", 2, 2);
+
+    store.imposeDecomposition(new SoftAlldifferent(x, cost, ViolationMeasure.VARIABLE_BASED));
+
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isEqualTo(1);
+  }
+
+  // Compares network flow with a brute-force count on random small networks.
+  @Test
+  void testNetworkFlowAgainstBruteForce() {
+
+    Random random = new Random(71);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] = (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(4);
+        int min = random.nextInt(2);
+        flowDomains[i] = new int[] {min, min + random.nextInt(3)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(6);
+      int costMax = costMin + random.nextInt(10);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
+  private static int networkFlowBruteForce(
+      int[][] arcs,
+      int[] weights,
+      int[][] flowDomains,
+      int[] balance,
+      int costMin,
+      int costMax,
+      int[] flows,
+      int index) {
+    if (index == flows.length) {
+      int[] actual = new int[balance.length];
+      int cost = 0;
+      for (int i = 0; i < flows.length; i++) {
+        actual[arcs[i][0]] += flows[i];
+        actual[arcs[i][1]] -= flows[i];
+        cost += weights[i] * flows[i];
+      }
+      return Arrays.equals(actual, balance) && cost >= costMin && cost <= costMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int f = flowDomains[index][0]; f <= flowDomains[index][1]; f++) {
+      flows[index] = f;
+      solutions +=
+          networkFlowBruteForce(
+              arcs, weights, flowDomains, balance, costMin, costMax, flows, index + 1);
+    }
+    return solutions;
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftAlldifferentOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] vars = {new IntVar(store, "v_0", 0, 1), new IntVar(store, "v_1", 0, 1)};
+    store.impose(new In(cost, new IntervalDomain(0, 0)));
+    store.impose(new In(vars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(vars[1], new IntervalDomain(0, 0)));
+
+    store.imposeDecomposition(
+        new SoftAlldifferent(vars, cost, ViolationMeasure.DECOMPOSITION_BASED));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftGccOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] xVars = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] hardCounters = {
+      new IntVar(store, "hardCounter0", 0, 2), new IntVar(store, "hardCounter1", 0, 2)
+    };
+    IntVar[] softCounters = {
+      new IntVar(store, "softCounter0", 0, 2), new IntVar(store, "softCounter1", 0, 2)
+    };
+    store.impose(new In(xVars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(xVars[1], new IntervalDomain(0, 0)));
+    store.impose(new In(hardCounters[0], new IntervalDomain(2, 2)));
+    store.impose(new In(softCounters[0], new IntervalDomain(1, 1)));
+    store.impose(new In(softCounters[1], new IntervalDomain(2, 2)));
+    store.impose(new In(cost, new IntervalDomain(1, 1)));
+
+    store.imposeDecomposition(
+        new SoftGCC(xVars, hardCounters, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30
+  @Test
+  void testRegularExpressionParser() {
+
+    assertThat(parseRegularExpression("(32.14*)").toString()).isEqualTo("32.(14)*");
+    assertThat(parseRegularExpression("1+2.3*").toString()).isEqualTo("(1+2.(3)*)");
+    // literals in a sum are kept first and in reverse order
+    assertThat(parseRegularExpression("(1+2).3").toString()).isEqualTo("(2+1).3");
+
+    assertThatThrownBy(() -> parseRegularExpression("(.32*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> parseRegularExpression("(32.*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    // a missing operator between ")" and "17" used to silently drop the rest of the input
+    assertThatThrownBy(() -> parseRegularExpression("(32.14*)17*.23"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30: compares the words accepted by a
+  // Regular constraint built from a parsed expression with java.util.regex on random expressions.
+  @Test
+  void testRegularExpressionAgainstJavaRegex() {
+
+    Random random = new Random(30);
+    for (int trial = 0; trial < 300; trial++) {
+      String[] expression = randomRegularExpression(random, 1 + random.nextInt(4));
+      int length = 1 + random.nextInt(4);
+
+      Fsm fsm = parseRegularExpression(expression[0]).parseToFsm();
+      Store store = new Store();
+      IntVar[] x = new IntVar[length];
+      for (int i = 0; i < length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 3);
+      }
+      store.impose(new Regular(fsm, x));
+
+      Pattern pattern = Pattern.compile(expression[1]);
+      int expected = 0;
+      for (int code = 0; code < Math.pow(3, length); code++) {
+        StringBuilder word = new StringBuilder();
+        for (int i = 0, c = code; i < length; i++, c /= 3) {
+          word.append(1 + c % 3);
+        }
+        if (pattern.matcher(word).matches()) {
+          expected++;
+        }
+      }
+
+      assertThat(noOfAllSolutions(store, x))
+          .as("expression %s, length %d", expression[0], length)
+          .isEqualTo(expected);
+    }
+  }
+
+  private static RegularExpressionParser.Expression parseRegularExpression(String expression) {
+    return new RegularExpressionParser(new StringReader(expression)).parse(false);
+  }
+
+  /** Returns a random expression over 1..3 in JaCoP syntax and in java.util.regex syntax. */
+  private static String[] randomRegularExpression(Random random, int depth) {
+    int kind = depth <= 0 ? 0 : random.nextInt(4);
+    if (kind == 0) {
+      String digit = String.valueOf(1 + random.nextInt(3));
+      return new String[] {digit, digit};
+    }
+    String[] a = randomRegularExpression(random, depth - 1);
+    if (kind == 3) {
+      return new String[] {"(" + a[0] + ")*", "(?:" + a[1] + ")*"};
+    }
+    String[] b = randomRegularExpression(random, depth - 1);
+    if (kind == 1) {
+      return new String[] {"(" + a[0] + "." + b[0] + ")", "(?:" + a[1] + b[1] + ")"};
+    }
+    return new String[] {"(" + a[0] + "+" + b[0] + ")", "(?:" + a[1] + "|" + b[1] + ")"};
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

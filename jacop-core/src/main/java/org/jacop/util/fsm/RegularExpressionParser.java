@@ -70,58 +70,34 @@ public class RegularExpressionParser {
   /**
    * It constructs a parser of the regular expression.
    *
+   * <p>The grammar uses "+" for alternatives (sum), "." for concatenation and "*" for the Kleene
+   * star, with the star binding tightest and the sum loosest; literals are integer words and
+   * parentheses group sub-expressions, for example {@code (1+2).3*}.
+   *
    * @param input string reader containing the regular expression.
    */
   public RegularExpressionParser(StringReader input) {
 
     lexer = new LexicalAnalyzer(input);
-
-    lexer.nextToken();
-
-    if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
-      // print error message and throw SyntaxException
-      expect(LexicalAnalyzer.BEGINNING);
-    }
+    token = lexer.nextToken();
   }
 
   /**
    * This method parses an expression that it reads from a given input stream.
    *
-   * @param parseOneNext if parsing should parse only one item.
+   * @param parseOneNext if true only the next starred item (a literal or a parenthesised
+   *     expression, followed by any number of stars) is parsed, otherwise the whole expression up
+   *     to the end of the input is parsed.
    * @return An expression that is the root of the parse tree produced by the parser.
+   * @throws IllegalArgumentException if the input is not a valid regular expression.
    */
   public Expression parse(boolean parseOneNext) {
-    Expression c = null;
-    boolean contin = true;
-    while (contin) {
-      contin = false;
-      switch (token) {
-        case LexicalAnalyzer.PLUS:
-          c = parsePlus(c);
-          break;
-        case LexicalAnalyzer.DOT:
-          c = parseDot(c);
-          contin = token != LexicalAnalyzer.EOF;
-          break;
-        case LexicalAnalyzer.LEFT_PAREN:
-          c = parseParen(c);
-          contin = token != LexicalAnalyzer.EOF;
-          break;
-        case LexicalAnalyzer.STAR:
-          c = new Star(c);
-          lexer.nextToken();
-          contin = token != LexicalAnalyzer.EOF;
-          break;
-        case LexicalAnalyzer.WORD:
-          c = parseWord(c);
-          contin = token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF;
-          break;
-        default:
-          break;
-      }
-      if (parseOneNext && token != LexicalAnalyzer.STAR) {
-        contin = false;
-      }
+    Expression c;
+    if (parseOneNext) {
+      c = parseStarred();
+    } else {
+      c = parseSum();
+      expect(LexicalAnalyzer.EOF);
     }
     if (Regular.DEBUG_ALL) {
       log.debug("Successful parsing of {}", c);
@@ -129,58 +105,58 @@ public class RegularExpressionParser {
     return c;
   }
 
-  private Expression parsePlus(Expression c) {
-    lexer.nextToken();
-    if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
-      expect(LexicalAnalyzer.BEGINNING);
-    }
-    Expression c2 = parse(false);
-    if (c.getType() == SUM && c2.getType() == SUM) {
-      ((Sum) c).addSum((Sum) c2);
-    } else if (c.getType() == SUM && c2.getType() != SUM) {
-      ((Sum) c).addExp(c2);
-    } else if (c.getType() != SUM && c2.getType() == SUM) {
-      ((Sum) c2).addExp(c);
-      c = c2;
-    } else if (c.getType() != SUM && c2.getType() != SUM) {
-      c = new Sum(c, c2);
+  // sum := concatenation ("+" concatenation)*
+  private Expression parseSum() {
+    Expression c = parseConcatenation();
+    while (token == LexicalAnalyzer.PLUS) {
+      token = lexer.nextToken();
+      Expression c2 = parseConcatenation();
+      if (c.getType() == SUM && c2.getType() == SUM) {
+        ((Sum) c).addSum((Sum) c2);
+      } else if (c.getType() == SUM) {
+        ((Sum) c).addExp(c2);
+      } else if (c2.getType() == SUM) {
+        ((Sum) c2).addExp(c);
+        c = c2;
+      } else {
+        c = new Sum(c, c2);
+      }
     }
     return c;
   }
 
-  private Expression parseDot(Expression c) {
-    lexer.nextToken();
-    if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
-      expect(LexicalAnalyzer.BEGINNING);
-    }
-    Expression c3 = parse(true);
-    c = new Concatenation(c, c3);
+  // concatenation := starred ("." starred)*
+  private Expression parseConcatenation() {
+    Expression c = parseStarred();
     while (token == LexicalAnalyzer.DOT) {
-      lexer.nextToken();
-      c3 = parse(true);
-      c = new Concatenation(c, c3);
+      token = lexer.nextToken();
+      c = new Concatenation(c, parseStarred());
     }
     return c;
   }
 
-  private Expression parseParen(Expression c) {
-    lexer.nextToken();
-    Expression result = parse(false);
-    expect(LexicalAnalyzer.RIGHT_PAREN);
-    lexer.nextToken();
-    return result;
+  // starred := primary "*"*
+  private Expression parseStarred() {
+    Expression c = parsePrimary();
+    while (token == LexicalAnalyzer.STAR) {
+      token = lexer.nextToken();
+      c = new Star(c);
+    }
+    return c;
   }
 
-  private Expression parseWord(Expression c) {
-    Expression result = new Literal(lexer.getString());
-    lexer.nextToken();
-    if (token != LexicalAnalyzer.RIGHT_PAREN
-        && token != LexicalAnalyzer.EOF
-        && token != LexicalAnalyzer.DOT
-        && token != LexicalAnalyzer.STAR
-        && token != LexicalAnalyzer.PLUS) {
-      expect(LexicalAnalyzer.OPERATOR);
+  // primary := word | "(" sum ")"
+  private Expression parsePrimary() {
+    if (token == LexicalAnalyzer.WORD) {
+      Expression result = new Literal(lexer.getString());
+      token = lexer.nextToken();
+      return result;
     }
+    expect(LexicalAnalyzer.LEFT_PAREN);
+    token = lexer.nextToken();
+    Expression result = parseSum();
+    expect(LexicalAnalyzer.RIGHT_PAREN);
+    token = lexer.nextToken();
     return result;
   }
 
@@ -192,10 +168,12 @@ public class RegularExpressionParser {
   private void expect(int t) {
 
     if (token != t) {
-
-      String msg = "found " + tokenName(token) + " when expecting " + tokenName(t);
-
-      log.error("Syntax error: {}", msg);
+      String msg =
+          "found "
+              + tokenName(token)
+              + " when expecting "
+              + tokenName(t == LexicalAnalyzer.LEFT_PAREN ? LexicalAnalyzer.BEGINNING : t);
+      throw new IllegalArgumentException("Syntax error in regular expression: " + msg);
     }
   }
 
@@ -206,8 +184,11 @@ public class RegularExpressionParser {
       case LexicalAnalyzer.LEFT_PAREN -> "(";
       case LexicalAnalyzer.RIGHT_PAREN -> ")";
       case LexicalAnalyzer.EOF -> "end of file";
-      case LexicalAnalyzer.BEGINNING -> "literal or right parenthesis";
+      case LexicalAnalyzer.BEGINNING -> "literal or left parenthesis";
       case LexicalAnalyzer.OPERATOR -> "operator . or *";
+      case LexicalAnalyzer.PLUS -> "+";
+      case LexicalAnalyzer.DOT -> ".";
+      case LexicalAnalyzer.STAR -> "*";
       default -> "???";
     };
   }
