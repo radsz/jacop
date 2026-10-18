@@ -67,7 +67,8 @@ class MznlibGlobalsTest {
         "hook_sliding_among_bool",
         "hook_sliding_among_edge",
         "hook_count_bool_var",
-        "hook_count_bool_par"
+        "hook_count_bool_par",
+        "hook_bin_packing_capa"
       })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
