@@ -156,6 +156,10 @@ public class ElementVariable extends AbstractElement
   public void consistency(Store store) {
 
     if (index.singleton()) {
+      if (firstConsistencyCheck) {
+        // restricts the index to the positions of the list before it is used
+        doFirstConsistencyCheck(store);
+      }
       enforceSingletonIndex(store);
     } else {
       if (firstConsistencyCheck) {
