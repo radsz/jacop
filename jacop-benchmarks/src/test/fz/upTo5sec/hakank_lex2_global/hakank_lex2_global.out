@@ -1,0 +1,43 @@
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, false, true, false, true, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, false, true, false, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, false, true, true, true, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, false, true, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, true, true, true, false, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, true, true, true, false, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, false, false, true, true, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, false, false, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, false, true, false, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, false, true, false, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, false, true, true, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, false, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, true, true, false, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, true, true, false, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, true, true, true, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, false, true, true, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, false, true, true, true, false, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, true, true, true, false, false, true, false, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, true, true, true, false, false, true, true, true]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, true, true, true, false, true, true, true, false]);
+----------
+X_INTRODUCED_16_ = array1d(1..9, [false, true, true, true, false, true, true, true, true]);
+----------
+==========

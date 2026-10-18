@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_abs", "int_eq_reif", "int_lin_eq", "jacop_bin_packing_capacity", "jacop_increasing"],
+  "constraintFamilies": ["arithmetic", "binpacking", "boolean", "comparison", "linear", "ordering"],
+  "domains": []
+}

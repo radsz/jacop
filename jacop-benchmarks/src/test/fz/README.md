@@ -100,3 +100,15 @@ This compiles the model to FlatZinc using `minizinc --compile --solver org.jacop
 JaCoP to produce the golden output, categorizes by execution time, generates `metadata.json`, and
 updates `list.txt`. Requires MiniZinc to be installed and JaCoP registered as a solver (see the
 `run-minizinc-jacop` skill).
+
+Cross-checked tests. Directories upTo5sec/hakank_* hold models from Hakan Kjellerstrand's MiniZinc
+collection (https://github.com/radsz/hakank), chosen because they use FlatZinc builtins and JaCoP
+globals that the rest of the suite rarely reaches. Some are variants that call a MiniZinc global
+where the original model spells it out. Their golden outputs are not simply JaCoP's first answer:
+script scripts/minizinc-crosscheck.py checks each one against Gecode and Chuffed before it is added.
+Models with few solutions enumerate all of them (options.opt passes -n 1000000), and the solution
+set must be the same for all three solvers. Larger models get a search annotation that is
+input_order/indomain_min on every decision variable, so that all solvers reach the same first (or
+optimal) solution. Each directory keeps the model it was flattened from (*.mzn) and a crosscheck.txt
+that says what was verified; "scripts/minizinc-crosscheck.py verify <dir>" repeats the check, for
+example after a change to the JaCoP MiniZinc library.
