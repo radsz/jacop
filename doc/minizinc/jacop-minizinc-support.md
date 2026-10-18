@@ -1,5 +1,7 @@
 # JaCoP and MiniZinc: current support level (checked 2026-10-18)
 
+*Status updated after PRs #80 to #87 were merged into `develop-5.0`: fixed items are marked in place, and items 17 to 20 below were found and fixed later by brute-force and differential testing (PR #87).*
+
 Tested: JaCoP `develop-5.0` (commit 8972bf26, built with JDK 25) against MiniZinc **2.10.1** (latest, 31 Aug 2026), with MiniZinc **2.8.7** as a baseline for anything that failed.
 
 ## How JaCoP plugs into MiniZinc
@@ -52,6 +54,15 @@ Bugs found and fixed while wiring the hooks in B5 (all with regression tests):
 15. *Fixed.* `jacop_sequence` (used by `sliding_among`) crashed on value sets with gaps.
 16. *Fixed.* `CumulativeOptional` failed on every propagation, and its profile made feasible optional tasks absent; `Cumulative` edge finding lost solutions (a capacity map built for the original task order was used after reordering).
 
+Bugs in the FlatZinc layer found by brute-force and differential testing (PR #87, all with regression tests):
+
+17. *Fixed.* FlatZinc posting: `among`/`among_var` threw on a repeated variable, `circuit`/`subcircuit` threw on a repeated variable or constant instead of failing, a `table` without tuples threw instead of failing, and a repeated cover value in `global_cardinality` overflowed `CountValues`.
+18. *Fixed.* `jacop_cumulative` bounded a single task's resource by the limit even with a possibly zero duration, did not post `resource <= limit` in the unary case with a constant limit, and threw when the same start appeared twice in the unary case.
+19. *Fixed.* mznlib: closed `global_cardinality` variants did not restrict the variables to the cover, `knapsack` threw for zero-profit items, `bin_packing` failed to flatten when all bins were fixed, `network_flow` left its cost unbounded (stack overflow), and `value_precede_chain` threw for repeated values.
+20. *Fixed.* Constant set arrays became set variables with the same empty name, which the store rejects once internal checks are on (this broke the `superset_*` tests after PR #85).
+
+Open items in this document: 4 (`on_restart`), 6 (JSON FlatZinc, optional), 7 (canonical parameter names), 8 (predicate defaults, low priority), 9 (nested `seq_search` NPE), 10 (`tuple_if_then_else` stack overflow) and 12 (likely a MiniZinc compiler bug).
+
 (One more difference, `general/test_set_lt_3`: JaCoP returns the expected `{1,4}` and Gecode wrongly says UNSAT, so JaCoP is right there.)
 
 ## Using JaCoP from MiniZinc
@@ -79,3 +90,4 @@ or copy those files into one directory and put that directory on `MZN_SOLVER_PAT
 - MiniZinc bundle: `MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz` from GitHub releases; JaCoP built with `mvn -DskipTests install -pl jacop-all -am` on JDK 25 (the pom hard-codes `<release>25</release>`, so JDK 21 cannot build develop-5.0).
 - Point `MZN_SOLVER_PATH` at `jacop-all/target` (see below).
 - The test models are `tests/spec/unit/**.mzn` from `MiniZinc/libminizinc` at tag `2.10.1`; run each with `minizinc --solver org.jacop --time-limit 20000` and compare with `--solver gecode`. This is a good candidate for the "test bench" for MiniZinc support.
+- Random one-global models against Chuffed: `python3 scripts/minizinc-differential.py <seed> <models-per-global> [global,...]` (needs `minizinc` with `org.jacop` installed).

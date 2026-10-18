@@ -61,6 +61,8 @@ all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, am
 | `ExtensionalSupportMdd` | MDD-based GAC | No |
 | `regular/Regular` | Layered-graph (Pesant) GAC for `regular` | Yes |
 
+Correctness fixes since this check (PR #87): `Mdd` now handles empty and fully filtered tables, `ExtensionalConflictVa` no longer indexes with -1 for values without conflicting tuples, the FlatZinc front end fails instead of throwing on a table without tuples, and `Regular` no longer loses solutions when its touched-state array grows. None of these changes the performance gaps below.
+
 So the core algorithm is the right one: Compact-Table is still the reference GAC propagator for positive tables. The implementation, however, is behind current best practice.
 
 ### Gaps in the Compact-Table implementation (`jacop-core/.../constraints/table/Table.java`, `AbstractTable.java`)
@@ -87,6 +89,7 @@ So the core algorithm is the right one: Compact-Table is still the reference GAC
 ## 5. Suggested order of work
 
 1. **Test bench first.** One JUnit suite per global that, for small random instances, compares (a) the native propagator, (b) the MiniZinc decomposition and (c) brute-force enumeration: same solution set, and native pruning at least as strong as the decomposition. Run it on every change. This doubles as the correctness bench Radek asked for.
+   *Mostly done:* (a) vs (c) by `GlobalConstraintBruteForceTest` (61 globals), (a) vs (b) by `MznlibGlobalsTest` and `scripts/minizinc-differential.py` (against Chuffed). Not yet checked: that native pruning is at least as strong as the decomposition.
 2. **Compact-Table rewrite** (gaps 1–5 above) behind the same `Table` API, benchmarked against the current implementation on the `jacop-benchmarks` FlatZinc instances that use `table_int`.
 3. **CT\*, CT-neg and reified table**, then wire `table_int_reif`, `table_int_opt` and conflict tables from the front end.
 4. **Wire the "propagator exists" globals** from section 3a, starting with `mdd`, `sliding_sum`, `lex_chain`, `all_different` with an `except` set, and `count_*` var.
