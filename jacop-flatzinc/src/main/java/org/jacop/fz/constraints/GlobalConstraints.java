@@ -219,7 +219,12 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     if (s.length == 1) {
-      support.pose(new XlteqY(r[0], b));
+      if (d[0].min() > 0) {
+        support.pose(new XlteqY(r[0], b));
+      } else {
+        // a task that may have zero duration does not need to fit within the limit
+        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      }
       return;
     }
     if (s.length == 0) {
@@ -271,6 +276,8 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseCumulativeUnaryBranch(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     if (allVarOne(d) && allVarOne(r)) {
+      // the same start variable twice means two overlapping tasks
+      checkForDuplicateVariables(s);
       support.pose(new Alldiff(s));
     } else {
       support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
@@ -293,11 +300,11 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseCumulativeUnaryPossible(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     if (allVarOne(d)) {
+      // the same start variable twice means two overlapping tasks
+      checkForDuplicateVariables(s);
       support.pose(new Alldiff(s));
-      if (!b.singleton()) {
-        for (IntVar intVar : r) {
-          support.pose(new XlteqY(intVar, b));
-        }
+      for (IntVar intVar : r) {
+        support.pose(new XlteqY(intVar, b));
       }
     } else {
       support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
