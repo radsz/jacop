@@ -31,10 +31,17 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 class ExampleBasedTest {
 
@@ -185,5 +192,41 @@ class ExampleBasedTest {
   @Timeout(TIMEOUT_MS)
   void testMinizincTsp2() {
     assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/tsp2.fzn"));
+  }
+
+  /**
+   * Regression test for quadratic memory use when deduplicating table tuples (MiniZinc
+   * regression/bug284): each tuple row reserved capacity for the whole table, so a large table ran
+   * out of memory before search started.
+   */
+  @Test
+  @Timeout(TIMEOUT_LONG_MS)
+  void testLargeTableIsPosted(@TempDir Path dir) throws IOException {
+    int n = 100_000;
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    fzn.append("var 1..").append(n).append(": a:: output_var;\n");
+    fzn.append("var 1..").append(n).append(": b:: output_var;\n");
+    fzn.append("array [1..").append(2 * n).append("] of int: t = [");
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i == 1 ? "" : ",").append(i).append(',').append(n + 1 - i);
+    }
+    fzn.append("];\n");
+    fzn.append("constraint jacop_table_int([a,b],t);\n");
+    fzn.append("constraint int_eq(a,7);\n");
+    fzn.append("solve satisfy;\n");
+    Path file = dir.resolve("large_table.fzn");
+    Files.writeString(file, fzn.toString());
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream captured = new ByteArrayOutputStream();
+    try {
+      System.setOut(new PrintStream(captured, true, StandardCharsets.UTF_8));
+      runFzn(file.toString());
+    } finally {
+      System.setOut(originalOut);
+    }
+    String output = captured.toString(StandardCharsets.UTF_8);
+    assertTrue(output.contains("b = " + (n - 6) + ";"), output);
   }
 }
