@@ -235,7 +235,7 @@ public class ProfileOptional {
     }
   }
 
-  private static class Event {
+  private static class Event implements CumulativeBasic.SweepEvent {
     final int type;
     final TaskView t;
     final int date;
@@ -248,19 +248,23 @@ public class ProfileOptional {
       this.value = value;
     }
 
-    int date() {
+    @Override
+    public int date() {
       return date;
     }
 
-    int type() {
+    @Override
+    public int type() {
       return type;
     }
 
-    int value() {
+    @Override
+    public int value() {
       return value;
     }
 
-    TaskView task() {
+    @Override
+    public TaskView task() {
       return t;
     }
 
