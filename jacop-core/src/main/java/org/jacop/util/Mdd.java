@@ -221,7 +221,8 @@ public class Mdd {
 
     freePosition = domainLimits[0];
 
-    diagram = new int[table.length * vars.length * maxDomainSize];
+    // at least the root node, which has no children if no tuple is allowed
+    diagram = new int[Math.max(1, table.length) * vars.length * maxDomainSize];
 
     mtree(table);
 
@@ -453,7 +454,7 @@ public class Mdd {
 
   private void mtree(int[][] table) {
 
-    int[] positions = new int[table[0].length];
+    int[] positions = new int[vars.length];
 
     for (int[] tuple : table) {
 
@@ -653,6 +654,11 @@ public class Mdd {
         diagram[node + k] = nodeChildren[k];
         numberOfChildren++;
       }
+    }
+
+    if (numberOfChildren == -1) {
+      // only the root can have no children, when no tuple is allowed
+      return node;
     }
 
     Integer existingId = findEqualNode(level, numberOfChildren, nodeChildren, node);
