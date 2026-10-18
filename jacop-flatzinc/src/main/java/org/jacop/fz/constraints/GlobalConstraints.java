@@ -1095,7 +1095,7 @@ class GlobalConstraints implements ParserTreeConstants {
   private int[][] deduplicateTableRows(int[][] t) {
     ArrayList<Integer>[] tl = new ArrayList[t.length];
     for (int i = 0; i < t.length; i++) {
-      ArrayList<Integer> tmp = new ArrayList<>(t.length);
+      ArrayList<Integer> tmp = new ArrayList<>(t[i].length);
       for (int j = 0; j < t[i].length; j++) {
         tmp.add(t[i][j]);
       }
