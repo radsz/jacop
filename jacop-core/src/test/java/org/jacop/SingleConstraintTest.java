@@ -1389,6 +1389,17 @@ class SingleConstraintTest extends TestHelper {
         .isEqualTo(cumulativeBruteForce(3, 4, 1, new int[] {1, 2, 1}, 2, false));
   }
 
+  @Test
+  void testCumulativeVariableDurations() {
+
+    // Two tasks that can never overload the resource; edge finding used a capacity map built for
+    // the original task order after the tasks had been reordered, and pruned valid starts.
+    assertThat(cumulativeSolutions(false, 2, 2, 3, new int[] {2, 1}, 3, false))
+        .isEqualTo(cumulativeBruteForce(2, 2, 3, new int[] {2, 1}, 3, false));
+    assertThat(cumulativeSolutions(false, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, false))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, false));
+  }
+
   /**
    * Counts the solutions of a cumulative constraint over tasks with starts in 0..horizon-1,
    * durations in 1..maxDuration and the given resource requirements.
