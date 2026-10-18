@@ -332,7 +332,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * consistency check. This flag is set back to true if the remove level function is removing the
    * level onto which the changes caused by the initial consistency were applied to.
    */
-  boolean firstConsistencyCheck;
+  boolean firstConsistencyCheck = true;
 
   /**
    * It remembers the level at which the consistency function was applied for the first time. If

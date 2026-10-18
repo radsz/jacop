@@ -78,6 +78,11 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
@@ -901,6 +906,61 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostFailsWhenGroundedStartPlusDurationDiffersFromEnd() {
+
+    // object 1 is grounded in time with start 0, duration 1 and end 3, which is inconsistent.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 1, 1));
+
+    assertThat(noOfAllSolutions(store, vars)).isZero();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostEnforcesPositiveDuration() {
+
+    // object 1 must have start 0 + duration 3 = end 3; duration 0 is not allowed.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 0, 3));
+
+    // object 0 (x in 0..2, start 1, duration 1..2) overlaps object 1 (x 0, time 0..3)
+    // in time, so it must not overlap it in space: x0 in 2..2, duration0 in 1..2.
+    assertThat(noOfAllSolutions(store, vars)).isEqualTo(2);
+  }
+
+  /**
+   * Two objects of length 2 in one dimension plus time. Object 0: x in 0..2, start 1, duration in
+   * 1..2, end in 0..4. Object 1: x 0, start 0, the given duration, end 3.
+   */
+  private IntVar[] geostTimeModel(Store store, IntVar duration1) {
+
+    List<Shape> shapes =
+        List.of(
+            new Shape(0, new int[] {0}, new int[] {2}), new Shape(1, new int[] {0}, new int[] {2}));
+
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar start0 = new IntVar(store, "start0", 1, 1);
+    IntVar duration0 = new IntVar(store, "duration0", 1, 2);
+    IntVar end0 = new IntVar(store, "end0", 0, 4);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar start1 = new IntVar(store, "start1", 0, 0);
+    IntVar end1 = new IntVar(store, "end1", 3, 3);
+
+    List<GeostObject> objects =
+        List.of(
+            new GeostObject(
+                0, new IntVar[] {x0}, new IntVar(store, "shape0", 0, 0), start0, duration0, end0),
+            new GeostObject(
+                1, new IntVar[] {x1}, new IntVar(store, "shape1", 1, 1), start1, duration1, end1));
+    List<ExternalConstraint> constraints = List.of(new NonOverlapping(objects, new int[] {0, 1}));
+
+    store.impose(new Geost(objects, constraints, shapes));
+
+    return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
