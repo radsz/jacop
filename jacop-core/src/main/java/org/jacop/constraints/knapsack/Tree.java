@@ -155,7 +155,7 @@ public class Tree {
 
   /**
    * It constructs a tree out of the list of items and creates proper supporting structures. It
-   * assumes the list of items is greater than 1.
+   * assumes the list of items is not empty; an odd number of items is padded with an empty leaf.
    *
    * @param items knapsack items used to create the tree.
    * @param varPositionMaping mapping of variables into positions within the tree.
@@ -168,8 +168,8 @@ public class Tree {
       TreeLeaf[] leaves,
       IntVar zero) {
 
-    if (ASSERTS_ENABLED && items.length <= 1) {
-      throw new IllegalStateException(String.valueOf("Number of items must be greater than 1"));
+    if (ASSERTS_ENABLED && items.length < 1) {
+      throw new IllegalStateException(String.valueOf("Number of items must be at least 1"));
     }
 
     TreeLeaf nullLeaf = new TreeLeaf(zero, 1, 0, items.length);
