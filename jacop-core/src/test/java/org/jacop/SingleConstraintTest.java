@@ -34,6 +34,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -92,12 +94,15 @@ import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.RegularExpressionParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -1295,6 +1300,82 @@ class SingleConstraintTest extends TestHelper {
         new SoftGCC(xVars, hardCounters, softCounters, cost, ViolationMeasure.VALUE_BASED));
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30
+  @Test
+  void testRegularExpressionParser() {
+
+    assertThat(parseRegularExpression("(32.14*)").toString()).isEqualTo("32.(14)*");
+    assertThat(parseRegularExpression("1+2.3*").toString()).isEqualTo("(1+2.(3)*)");
+    // literals in a sum are kept first and in reverse order
+    assertThat(parseRegularExpression("(1+2).3").toString()).isEqualTo("(2+1).3");
+
+    assertThatThrownBy(() -> parseRegularExpression("(.32*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> parseRegularExpression("(32.*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    // a missing operator between ")" and "17" used to silently drop the rest of the input
+    assertThatThrownBy(() -> parseRegularExpression("(32.14*)17*.23"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30: compares the words accepted by a
+  // Regular constraint built from a parsed expression with java.util.regex on random expressions.
+  @Test
+  void testRegularExpressionAgainstJavaRegex() {
+
+    Random random = new Random(30);
+    for (int trial = 0; trial < 300; trial++) {
+      String[] expression = randomRegularExpression(random, 1 + random.nextInt(4));
+      int length = 1 + random.nextInt(4);
+
+      Fsm fsm = parseRegularExpression(expression[0]).parseToFsm();
+      Store store = new Store();
+      IntVar[] x = new IntVar[length];
+      for (int i = 0; i < length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 3);
+      }
+      store.impose(new Regular(fsm, x));
+
+      Pattern pattern = Pattern.compile(expression[1]);
+      int expected = 0;
+      for (int code = 0; code < Math.pow(3, length); code++) {
+        StringBuilder word = new StringBuilder();
+        for (int i = 0, c = code; i < length; i++, c /= 3) {
+          word.append(1 + c % 3);
+        }
+        if (pattern.matcher(word).matches()) {
+          expected++;
+        }
+      }
+
+      assertThat(noOfAllSolutions(store, x))
+          .as("expression %s, length %d", expression[0], length)
+          .isEqualTo(expected);
+    }
+  }
+
+  private static RegularExpressionParser.Expression parseRegularExpression(String expression) {
+    return new RegularExpressionParser(new StringReader(expression)).parse(false);
+  }
+
+  /** Returns a random expression over 1..3 in JaCoP syntax and in java.util.regex syntax. */
+  private static String[] randomRegularExpression(Random random, int depth) {
+    int kind = depth <= 0 ? 0 : random.nextInt(4);
+    if (kind == 0) {
+      String digit = String.valueOf(1 + random.nextInt(3));
+      return new String[] {digit, digit};
+    }
+    String[] a = randomRegularExpression(random, depth - 1);
+    if (kind == 3) {
+      return new String[] {"(" + a[0] + ")*", "(?:" + a[1] + ")*"};
+    }
+    String[] b = randomRegularExpression(random, depth - 1);
+    if (kind == 1) {
+      return new String[] {"(" + a[0] + "." + b[0] + ")", "(?:" + a[1] + b[1] + ")"};
+    }
+    return new String[] {"(" + a[0] + "+" + b[0] + ")", "(?:" + a[1] + "|" + b[1] + ")"};
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

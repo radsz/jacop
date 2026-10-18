@@ -30,9 +30,13 @@
 
 package org.jacop.util.fsm;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -86,120 +90,135 @@ public class Fsm {
   }
 
   /**
-   * It computes a union of two Finite State Machines.
+   * It computes a union of two Finite State Machines. Neither of the two Fsm is modified.
    *
    * @param other the other Fsm which is used in the union computation.
-   * @return the resulting Fsm.
+   * @return the resulting Fsm, which accepts the words accepted by this or the other Fsm.
    */
   public Fsm union(Fsm other) {
     Fsm result = new Fsm();
+    Map<FsmState, FsmState> thisCopy = copyReachableStates(this, result.allStates);
+    Map<FsmState, FsmState> otherCopy = copyReachableStates(other, result.allStates);
+
+    // a fresh initial state with the outgoing transitions of both initial states
     result.initState = new FsmState();
     result.allStates.add(result.initState);
-    cloneTransitionsTo(initState, result.initState, result.allStates);
-    cloneFinalStatesTo(finalStates, result.finalStates, result.allStates);
-    cloneTransitionsTo(other.initState, result.initState, result.allStates);
-    cloneFinalStatesTo(other.finalStates, result.finalStates, result.allStates);
+    copyOutgoingTransitions(thisCopy.get(initState), result.initState);
+    copyOutgoingTransitions(otherCopy.get(other.initState), result.initState);
+
+    addCopiedFinalStates(finalStates, thisCopy, result.finalStates);
+    addCopiedFinalStates(other.finalStates, otherCopy, result.finalStates);
+    if (finalStates.contains(initState) || other.finalStates.contains(other.initState)) {
+      result.finalStates.add(result.initState);
+    }
     return result;
   }
 
-  private static void cloneTransitionsTo(FsmState from, FsmState toState, Set<FsmState> allStates) {
-    for (FsmTransition t : from.transitions) {
-      FsmState addState = t.successor.deepClone(allStates);
-      toState.addTransition(new FsmTransition(t.domain, addState));
-    }
-  }
-
-  private static void cloneFinalStatesTo(
-      Set<FsmState> from, Set<FsmState> to, Set<FsmState> allStates) {
-    for (FsmState f : from) {
-      to.add(f.deepClone(allStates));
-    }
-  }
-
   /**
-   * It does concatenation of two Fsm.
+   * It does concatenation of two Fsm. Neither of the two Fsm is modified.
    *
    * @param other the Fsm with which the concatenation takes place.
-   * @return the resulting Fsm.
+   * @return the resulting Fsm, which accepts a word accepted by this Fsm followed by a word
+   *     accepted by the other Fsm.
    */
   public Fsm concatenation(Fsm other) {
     Fsm result = new Fsm();
-    boolean otherIsStar =
-        other.finalStates.size() == 1 && other.finalStates.contains(other.initState);
-    result.initState = initState.deepClone(result.allStates);
+    Map<FsmState, FsmState> thisCopy = copyReachableStates(this, result.allStates);
+    Map<FsmState, FsmState> otherCopy = copyReachableStates(other, result.allStates);
 
+    result.initState = thisCopy.get(initState);
+    FsmState otherInit = otherCopy.get(other.initState);
     for (FsmState f : finalStates) {
-      FsmState ff = f.deepClone(result.allStates);
-      for (FsmTransition t : other.initState.transitions) {
-        FsmState addState = t.successor.deepClone(result.allStates);
-        ff.addTransition(new FsmTransition(t.domain, addState));
-        if (otherIsStar) {
-          redirectSuccessorsTo(result.allStates, other.initState.id, ff);
-          result.allStates.remove(other.initState);
-        }
+      FsmState copy = thisCopy.get(f);
+      if (copy != null) {
+        copyOutgoingTransitions(otherInit, copy);
       }
     }
 
-    if (!otherIsStar) {
-      cloneFinalStatesTo(other.finalStates, result.finalStates, result.allStates);
-    } else {
-      cloneFinalStatesTo(finalStates, result.finalStates, result.allStates);
+    addCopiedFinalStates(other.finalStates, otherCopy, result.finalStates);
+    if (other.finalStates.contains(other.initState)) {
+      addCopiedFinalStates(finalStates, thisCopy, result.finalStates);
     }
     return result;
   }
 
-  private static void redirectSuccessorsTo(
-      Set<FsmState> states, int targetId, FsmState newSuccessor) {
-    for (FsmState s : states) {
-      for (FsmTransition ts : s.transitions) {
-        if (ts.successor.id == targetId) {
-          ts.successor = newSuccessor;
-        }
-      }
-    }
-  }
-
   /**
-   * It performs star operation on this Fsm.
+   * It performs star operation on this Fsm. This Fsm is not modified.
    *
-   * @return the resulting Fsm.
+   * @return the resulting Fsm, which accepts any sequence of zero or more words accepted by this
+   *     Fsm.
    */
   public Fsm star() {
 
     Fsm result = new Fsm();
+    Map<FsmState, FsmState> copy = copyReachableStates(this, result.allStates);
+    FsmState init = copy.get(initState);
 
-    result.initState = new FsmState(initState);
-
+    // a fresh initial state accepting the empty word
+    result.initState = new FsmState();
     result.allStates.add(result.initState);
+    copyOutgoingTransitions(init, result.initState);
 
-    List<FsmState> set = new ArrayList<>();
-
-    set.add(result.initState);
-
-    int length = 1;
-    FsmState s;
-
-    for (int i = 0; i < length; i++) {
-      s = set.get(i);
-      FsmState orgS = getState(s.id);
-      for (FsmTransition t : orgS.transitions) {
-        if (!finalStates.contains(t.successor)) {
-          FsmState suc = result.getState(t.successor.id);
-          if (suc == null) {
-            suc = new FsmState(t.successor);
-            result.allStates.add(suc);
-            set.add(suc);
-            length = length + 1;
-          }
-          s.addTransition(new FsmTransition(t.domain, suc));
-        } else {
-          s.addTransition(new FsmTransition(t.domain, result.initState));
-        }
+    // after a complete word another word may start
+    for (FsmState f : finalStates) {
+      FsmState finalCopy = copy.get(f);
+      if (finalCopy != null) {
+        copyOutgoingTransitions(init, finalCopy);
       }
     }
+
+    addCopiedFinalStates(finalStates, copy, result.finalStates);
     result.finalStates.add(result.initState);
 
     return result;
+  }
+
+  /**
+   * It creates fresh copies, with new ids, of all states reachable from the initial state of a
+   * given Fsm, including their transitions.
+   *
+   * @param fsm the Fsm whose states are copied.
+   * @param allStates the set to which the copies are added.
+   * @return the mapping from the original states to their copies.
+   */
+  private static Map<FsmState, FsmState> copyReachableStates(Fsm fsm, Set<FsmState> allStates) {
+    Map<FsmState, FsmState> copy = new IdentityHashMap<>();
+    Deque<FsmState> toVisit = new ArrayDeque<>();
+    copy.put(fsm.initState, new FsmState());
+    toVisit.add(fsm.initState);
+    while (!toVisit.isEmpty()) {
+      FsmState state = toVisit.poll();
+      for (FsmTransition t : state.transitions) {
+        if (!copy.containsKey(t.successor)) {
+          copy.put(t.successor, new FsmState());
+          toVisit.add(t.successor);
+        }
+      }
+    }
+    for (Map.Entry<FsmState, FsmState> entry : copy.entrySet()) {
+      for (FsmTransition t : entry.getKey().transitions) {
+        entry.getValue().addTransition(new FsmTransition(t.domain, copy.get(t.successor)));
+      }
+      allStates.add(entry.getValue());
+    }
+    return copy;
+  }
+
+  private static void copyOutgoingTransitions(FsmState from, FsmState to) {
+    for (FsmTransition t : new ArrayList<>(from.transitions)) {
+      to.addTransition(new FsmTransition(t.domain, t.successor));
+    }
+  }
+
+  private static void addCopiedFinalStates(
+      Set<FsmState> finalStates, Map<FsmState, FsmState> copy, Set<FsmState> result) {
+    for (FsmState f : finalStates) {
+      FsmState finalCopy = copy.get(f);
+      // final states that are not reachable from the initial state are not copied
+      if (finalCopy != null) {
+        result.add(finalCopy);
+      }
+    }
   }
 
   /**
