@@ -55,6 +55,15 @@
 
     <build>
         <plugins>
+            <!-- Shade replaces this jar in place; without forceCreation an incremental build keeps the
+                 previously shaded jar and re-shades its stale classes over the freshly built modules. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
