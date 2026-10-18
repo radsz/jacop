@@ -391,7 +391,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
   private PrimitiveConstraint intComparisonConstVarEq(
       IntVar v2, int i1, IntVar v3, boolean isReified) {
-    if (isReified && support.reif.size(v2) > support.reif.minSize) {
+    if (isReified && support.reif.handles(v2, i1, v3)) {
       return null;
     }
     if (!v2.domain.contains(i1)) {
@@ -546,8 +546,7 @@ class ComparisonConstraints implements ParserTreeConstants {
 
   private PrimitiveConstraint intComparisonVarConstEq(
       IntVar v1, int i2, IntVar v3, boolean isReified) {
-    if ((isReified ? support.reif.size(v1) : support.imply.size(v1))
-        > (isReified ? support.reif.minSize : support.imply.minSize)) {
+    if (isReified ? support.reif.handles(v1, i2, v3) : support.imply.handles(v1, i2, v3)) {
       return null;
     }
     if (!v1.domain.contains(i2)) {

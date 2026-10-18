@@ -75,8 +75,6 @@ public class Cumulative extends CumulativeBasic {
   final TaskView[] taskReversed;
   final boolean doEdgeFind;
   boolean doQuadraticEdgeFind;
-  private Set<Integer> preComputedCapacities;
-  private int[] preComputedCapMap;
 
   /**
    * It creates a cumulative constraint.
@@ -98,10 +96,6 @@ public class Cumulative extends CumulativeBasic {
 
     checkLimitOverflow(limit);
     doEdgeFind = starts.length <= getEdgeFindSizeLimit();
-
-    if (!possibleZeroTasks && grounded(resources)) {
-      buildPreComputedCapMaps(starts.length);
-    }
   }
 
   /**
@@ -140,24 +134,6 @@ public class Cumulative extends CumulativeBasic {
       limitOnEdgeFind = Integer.parseInt(s);
     }
     return limitOnEdgeFind;
-  }
-
-  private void buildPreComputedCapMaps(int numStarts) {
-    preComputedCapacities = new LinkedHashSet<>();
-    for (TaskView t : taskNormal) {
-      preComputedCapacities.add(t.res.min());
-    }
-
-    preComputedCapMap = new int[numStarts];
-    int capIndex = 0;
-    for (int ci : preComputedCapacities) {
-      for (TaskView aT : taskNormal) {
-        if (aT.res.min() == ci) {
-          preComputedCapMap[aT.index] = capIndex;
-        }
-      }
-      capIndex++;
-    }
   }
 
   /**
@@ -267,18 +243,13 @@ public class Cumulative extends CumulativeBasic {
   private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
     int n = t.length;
-    Set<Integer> capacities;
-    int[] capMap;
-    if (preComputedCapacities == null) {
-      capacities = new LinkedHashSet<>();
-      for (TaskView aT1 : t) {
-        capacities.add(aT1.res.min());
-      }
-      capMap = buildCapMap(t, n, capacities);
-    } else {
-      capacities = preComputedCapacities;
-      capMap = preComputedCapMap;
+    // The map is rebuilt on every call: task indexes change between calls (sweep pruning and
+    // filtering of zero and absent tasks renumber them), so a map built once is not valid.
+    Set<Integer> capacities = new LinkedHashSet<>();
+    for (TaskView aT1 : t) {
+      capacities.add(aT1.res.min());
     }
+    int[] capMap = buildCapMap(t, n, capacities);
 
     int[][] update = fillUpdateMatrix(tree, t, capacities, cap, n);
     applyPrecOrderUpdates(store, t, prec, update, capMap, n);

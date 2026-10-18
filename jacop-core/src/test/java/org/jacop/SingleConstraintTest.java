@@ -89,6 +89,8 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -1400,6 +1402,115 @@ class SingleConstraintTest extends TestHelper {
       return new String[] {"(" + a[0] + "." + b[0] + ")", "(?:" + a[1] + b[1] + ")"};
     }
     return new String[] {"(" + a[0] + "+" + b[0] + ")", "(?:" + a[1] + "|" + b[1] + ")"};
+  }
+
+  @Test
+  void testCumulativeOptionalAllPresent() {
+
+    // All tasks present, so the optional profile is never used; this only ran into the
+    // reflective event accessors that could not read ProfileOptional events.
+    assertThat(cumulativeSolutions(true, 3, 4, 1, new int[] {1, 2, 1}, 2, false))
+        .isEqualTo(cumulativeBruteForce(3, 4, 1, new int[] {1, 2, 1}, 2, false));
+  }
+
+  @Test
+  void testCumulativeVariableDurations() {
+
+    // Two tasks that can never overload the resource; edge finding used a capacity map built for
+    // the original task order after the tasks had been reordered, and pruned valid starts.
+    assertThat(cumulativeSolutions(false, 2, 2, 3, new int[] {2, 1}, 3, false))
+        .isEqualTo(cumulativeBruteForce(2, 2, 3, new int[] {2, 1}, 3, false));
+    assertThat(cumulativeSolutions(false, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, false))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, false));
+  }
+
+  @Test
+  void testCumulativeOptional() {
+
+    // An optional task that fits right after the profile of the present tasks was made absent.
+    assertThat(cumulativeSolutions(true, 2, 2, 1, new int[] {1, 1}, 1, true))
+        .isEqualTo(cumulativeBruteForce(2, 2, 1, new int[] {1, 1}, 1, true));
+    assertThat(cumulativeSolutions(true, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, true))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, true));
+  }
+
+  /**
+   * Counts the solutions of a cumulative constraint over tasks with starts in 0..horizon-1,
+   * durations in 1..maxDuration and the given resource requirements.
+   */
+  private int cumulativeSolutions(
+      boolean optionalConstraint,
+      int noOfTasks,
+      int horizon,
+      int maxDuration,
+      int[] resources,
+      int limit,
+      boolean optionalTasks) {
+
+    Store store = new Store();
+
+    IntVar[] starts = getIntVars(store, "s", noOfTasks, horizon);
+    IntVar[] durations = new IntVar[noOfTasks];
+    IntVar[] res = new IntVar[noOfTasks];
+    IntVar[] present = new IntVar[noOfTasks];
+    for (int i = 0; i < noOfTasks; i++) {
+      durations[i] = new IntVar(store, "d" + i, 1, maxDuration);
+      res[i] = new IntVar(store, "r" + i, resources[i], resources[i]);
+      present[i] = new IntVar(store, "o" + i, optionalTasks ? 0 : 1, 1);
+    }
+    IntVar limitVar = new IntVar(store, "limit", limit, limit);
+
+    if (optionalConstraint) {
+      store.impose(new CumulativeOptional(starts, durations, res, limitVar, present));
+    } else {
+      store.impose(new Cumulative(starts, durations, res, limitVar));
+    }
+
+    return noOfAllSolutions(store, starts, durations, present);
+  }
+
+  /** Counts the same solutions as {@link #cumulativeSolutions} by enumerating all assignments. */
+  private static int cumulativeBruteForce(
+      int noOfTasks,
+      int horizon,
+      int maxDuration,
+      int[] resources,
+      int limit,
+      boolean optionalTasks) {
+
+    int perTask = horizon * maxDuration * (optionalTasks ? 2 : 1);
+    int combinations = (int) Math.pow(perTask, noOfTasks);
+    int count = 0;
+    for (int code = 0; code < combinations; code++) {
+      int rest = code;
+      int[] s = new int[noOfTasks];
+      int[] d = new int[noOfTasks];
+      boolean[] o = new boolean[noOfTasks];
+      for (int i = 0; i < noOfTasks; i++) {
+        s[i] = rest % horizon;
+        rest /= horizon;
+        d[i] = 1 + rest % maxDuration;
+        rest /= maxDuration;
+        o[i] = !optionalTasks || rest % 2 == 1;
+        if (optionalTasks) {
+          rest /= 2;
+        }
+      }
+      boolean ok = true;
+      for (int t = 0; t < horizon + maxDuration && ok; t++) {
+        int load = 0;
+        for (int i = 0; i < noOfTasks; i++) {
+          if (o[i] && s[i] <= t && t < s[i] + d[i]) {
+            load += resources[i];
+          }
+        }
+        ok = load <= limit;
+      }
+      if (ok) {
+        count++;
+      }
+    }
+    return count;
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

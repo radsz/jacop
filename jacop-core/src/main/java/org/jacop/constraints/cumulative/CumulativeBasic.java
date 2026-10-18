@@ -634,63 +634,37 @@ public class CumulativeBasic extends Constraint {
     void onProfileEvent(E event, int currentProfile);
   }
 
-  // Event accessor methods - handle both CumulativeBasic.Event (record) and ProfileOptional.Event
-  // (class)
-  @SuppressWarnings("unchecked")
+  /** Accessors shared by the events of the sweep in this class and in {@link ProfileOptional}. */
+  interface SweepEvent {
+    int type();
+
+    int date();
+
+    int value();
+
+    TaskView task();
+  }
+
   private static <E> int getEventType(E event) {
-    if (event instanceof Event typedEvent) {
-      return typedEvent.type();
-    }
-    // ProfileOptional.Event case - use reflection as fallback
-    try {
-      return (Integer) event.getClass().getMethod("type").invoke(event);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to get event type", e);
-    }
+    return ((SweepEvent) event).type();
   }
 
-  @SuppressWarnings("unchecked")
   private static <E> int getEventDate(E event) {
-    if (event instanceof Event datedEvent) {
-      return datedEvent.date();
-    }
-    // ProfileOptional.Event case
-    try {
-      return (Integer) event.getClass().getMethod("date").invoke(event);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to get event date", e);
-    }
+    return ((SweepEvent) event).date();
   }
 
-  @SuppressWarnings("unchecked")
   private static <E> int getEventValue(E event) {
-    if (event instanceof Event valuedEvent) {
-      return valuedEvent.value();
-    }
-    // ProfileOptional.Event case
-    try {
-      return (Integer) event.getClass().getMethod("value").invoke(event);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to get event value", e);
-    }
+    return ((SweepEvent) event).value();
   }
 
-  @SuppressWarnings("unchecked")
   private static <E> TaskView getEventTask(E event) {
-    if (event instanceof Event taskEvent) {
-      return taskEvent.task();
-    }
-    // ProfileOptional.Event case
-    try {
-      return (TaskView) event.getClass().getMethod("task").invoke(event);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to get event task", e);
-    }
+    return ((SweepEvent) event).task();
   }
 
-  private record Event(int type, TaskView t, int date, int value) {
+  private record Event(int type, TaskView t, int date, int value) implements SweepEvent {
 
-    TaskView task() {
+    @Override
+    public TaskView task() {
       return t;
     }
 

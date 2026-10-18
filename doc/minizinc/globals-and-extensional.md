@@ -14,11 +14,13 @@ The 2.10.1 standard library has **253 `fzn_*` predicates** (not counting `_reif`
 | Native via another global | 6 | `disjunctive`, `disjunctive_strict` → cumulative; `diffn_k` → geost; `diffn_nonstrict` → diff2; `distribute`, `exactly_int` → count |
 | MiniZinc decomposition | 181 | Not overridden. 60 of these are the new `count_*` bool/float/set variants. |
 
-Reified forms: the standard library has 188 `fzn_*_reif` files. JaCoP overrides only 13 (`all_equal_int`, `among`, `at_least/at_most`, `count_*`, `member_*`, `nvalue`). Every other reified global, including `table`, `regular`, `all_different` and `global_cardinality`, is decomposed.
+**Update.** Since this check, `develop-5.0` also posts natively: `cumulatives`, `cumulatives_opt`, `sliding_among_int/bool` and all `count_*_bool` variants (including `_par` and `_reif`). `bin_packing*_opt` and reified `regular` turned out to reach native propagators already through MiniZinc's default bodies. The counts below are from the original check.
+
+Reified forms: the standard library has 188 `fzn_*_reif` files. JaCoP overrides only 13 (`all_equal_int`, `among`, `at_least/at_most`, `count_*`, `member_*`, `nvalue`). Every other reified global, including `table`, `all_different` and `global_cardinality`, is decomposed.
 
 ## 2. Natively supported today
 
-all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, among, arg_max/arg_min (int, bool), at_least/at_most (int), bin_packing (plain, capa, load), circuit, subcircuit, count_eq (+par), count_geq/gt/leq/lt (par), cumulative, cumulative_opt, diffn, diffn_k, diffn_nonstrict, disjoint, disjunctive, disjunctive_strict, disjunctive_opt, disjunctive_strict_opt, distribute, exactly_int, geost, geost_bb, global_cardinality (all four int variants), if_then_else (bool/int/float/set, par and var), increasing (int, bool), strictly_increasing_int, int_set_channel, inverse, knapsack, lex_less/lex_lesseq (int, bool), link_set_to_booleans, member (int, bool), network_flow, network_flow_cost, nvalue, partition_set, regular, regular_set, seq_precede_chain_int, table_int, table_bool, value_precede_int, value_precede_chain_int.
+all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, among, arg_max/arg_min (int, bool), at_least/at_most (int), bin_packing (plain, capa, load, and their opt forms), circuit, subcircuit, count_eq (+par), count_geq/gt/leq/lt (par), count_* over bool (all forms), cumulative, cumulative_opt, cumulatives, cumulatives_opt, diffn, diffn_k, diffn_nonstrict, disjoint, disjunctive, disjunctive_strict, disjunctive_opt, disjunctive_strict_opt, distribute, exactly_int, geost, geost_bb, global_cardinality (all four int variants), if_then_else (bool/int/float/set, par and var), increasing (int, bool), strictly_increasing_int, int_set_channel, inverse, knapsack, lex_less/lex_lesseq (int, bool), link_set_to_booleans, member (int, bool), network_flow, network_flow_cost, nvalue, partition_set, regular (also reified), regular_set, seq_precede_chain_int, sliding_among (int, bool), table_int, table_bool, value_precede_int, value_precede_chain_int.
 
 ## 3. Gaps, ordered by impact
 
@@ -26,14 +28,14 @@ all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, am
 | MiniZinc global | Existing JaCoP class | Notes |
 |---|---|---|
 | `mdd`, `mdd_nondet` | `ExtensionalSupportMdd` | Needs translation from MiniZinc's MDD encoding to JaCoP's `MDD` |
-| `sliding_sum`, `sliding_among_int` | `Sequence`, `SumWeight`/`LinearInt` | `Sequence` covers among-seq; `sliding_sum` needs its own propagator or a chain of `LinearInt` |
+| `sliding_sum` | `SumWeight`/`LinearInt` | Needs its own propagator or a chain of `LinearInt` (`sliding_among` is done, via `Sequence`) |
 | `lex_chain_less(eq)_int/bool`, `lex2`, `strict_lex2` | `LexOrder` (pairwise) | Pairwise chaining is weaker than a dedicated lex-chain propagator, but better than MiniZinc's decomposition |
 | `all_different_int_opt`, `alldifferent_except` with an `except` set (2.10) | `Alldistinct`, `AlldifferentExcept` | The opt version maps to an except-value encoding |
-| `cumulatives`, `bin_packing*_opt`, `circuit_opt`, `inverse_opt` | `Cumulative*`, `Binpacking`, `Subcircuit` | The optional forms can be expressed with JaCoP's optional-task machinery |
+| `circuit_opt`, `inverse_opt` | `Subcircuit` | The optional forms can be expressed with JaCoP's optional-task machinery |
 | `count_neq`, `count_*` (var count), `at_least/at_most/exactly_set` | `Count*`, `AtLeast`/`AtMost` | Small library additions |
 | `increasing_float`, `strictly_increasing_float`, `lex_*_float` | `jacop-floats` | Float versions of existing int propagators |
 | `member_set`, `set_member`, `all_different_set`, `all_disjoint`, `all_equal_set`, `increasing_set`, `lex_*_set`, `value_precede*_set`, `global_cardinality_set` | `jacop-sets` | Set versions; lower priority for the MiniZinc Challenge |
-| `table_int_reif`, `regular` reified (2.10) | `Table`, `Regular` | Need reified versions, see section 4 |
+| `table_int_reif` | `Table` | Needs a reified version, see section 4 (reified `regular` already reaches `Regular`) |
 
 ### 3b. New propagators needed (medium/large)
 - **Scheduling with optional tasks:** `alternative`, `span`, `disjunctive_strict_opt` beyond the current form, `cumulative` with variable resource. These appear often in MiniZinc Challenge scheduling models.
