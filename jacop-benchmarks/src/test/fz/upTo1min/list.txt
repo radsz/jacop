@@ -19,9 +19,11 @@ nonogram/non_med_4
 nonogram/non_fast_7
 nonogram/non_fast_6
 oocsp_racks/oocsp_racks_030_ea4_cc
+oocsp_racks/oocsp_racks_030_f7_cc
 or_seating/or_seating
 pentominoes/04
 rcpsp-data_psplib-J30/J30_10_6
+road-cons/road_33
 scene_allocation/scene_allocation
 ship-schedule.cp/7ShipsMixedUnconst
 ship-schedule.cp/7Ships

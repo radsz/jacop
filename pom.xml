@@ -707,6 +707,10 @@ setup to run configuration. -->
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.version}</version>
                 <configuration>
+                    <!-- run JaCoP's internal consistency checks (Store.ASSERTS_ENABLED) in all tests -->
+                    <systemPropertyVariables>
+                        <jacop.asserts.enabled>true</jacop.asserts.enabled>
+                    </systemPropertyVariables>
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
