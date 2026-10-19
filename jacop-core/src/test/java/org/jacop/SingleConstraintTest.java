@@ -106,12 +106,16 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.jacop.util.fsm.RegularExpressionParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -634,6 +638,66 @@ class SingleConstraintTest extends TestHelper {
       assertThat(x1.dom() + " " + x2.dom() + " " + r.dom())
           .as(instance)
           .isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void testRegularPrunesAllUnsupportedValues() {
+
+    // Words of length 2 accepted by the automaton; with x1 = 1 only x0 = 3 has a support. The
+    // pruning loop of Regular removes values from a domain while enumerating it, and the
+    // enumeration stopped after the first removed value, so x0 = 4 stayed.
+    FsmState[] s = new FsmState[4];
+    Fsm fsm = new Fsm();
+    for (int i = 0; i < s.length; i++) {
+      s[i] = new FsmState();
+      fsm.allStates.add(s[i]);
+    }
+    fsm.initState = s[0];
+    fsm.finalStates.add(s[2]);
+    IntervalDomain oneOrFour = new IntervalDomain(1, 1);
+    oneOrFour.unionAdapt(4, 4);
+    s[0].addTransition(new FsmTransition(oneOrFour, s[0]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(2, 2), s[3]));
+    s[2].addTransition(new FsmTransition(new IntervalDomain(1, 1), s[2]));
+    s[3].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 4);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    store.impose(new Regular(fsm, new IntVar[] {x0, x1}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    x1.domain.inComplement(1, x1, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.value()).isEqualTo(1);
+    assertThat(x0.singleton()).isTrue();
+    assertThat(x0.value()).isEqualTo(3);
+  }
+
+  @Test
+  void testValueEnumerationContinuesAfterDomainChange() {
+
+    // Remove the value just returned and the next one, as Regular does while it prunes.
+    for (IntDomain domain : new IntDomain[] {new IntervalDomain(), new SmallDenseDomain()}) {
+      for (int v : new int[] {1, 3, 5}) {
+        domain.unionAdapt(v, v);
+      }
+      List<Integer> values = new ArrayList<>();
+      for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        values.add(v);
+        if (v == 1) {
+          domain.subtractAdapt(1);
+          domain.subtractAdapt(3);
+          e.domainHasChanged();
+        }
+      }
+      assertThat(values).as(domain.getClass().getSimpleName()).containsExactly(1, 5);
     }
   }
 
