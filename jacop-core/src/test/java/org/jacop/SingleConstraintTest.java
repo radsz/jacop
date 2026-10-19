@@ -2054,6 +2054,66 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, new IntVar[] {f1, f0, cost})).isEqualTo(3);
   }
 
+  // Compares network flow with a brute-force count on random small networks with negative costs,
+  // negative flows and loops (arcs from a node to itself).
+  @Test
+  void testNetworkFlowWithNegativeValuesAndLoopsAgainstBruteForce() {
+
+    Random random = new Random(1185);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] =
+            random.nextInt(5) == 0
+                ? arcs[i][0]
+                : (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(7) - 3;
+        int min = random.nextInt(5) - 2;
+        flowDomains[i] = new int[] {min, min + random.nextInt(4)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(14) - 6;
+      int costMax = costMin + random.nextInt(12);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 

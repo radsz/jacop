@@ -208,6 +208,15 @@ public class NetworkBuilder {
    * @return the newly created arc
    */
   public Arc addArc(Node from, Node to, int weight, int lowerCapacity, int upperCapacity) {
+    if (from == to) {
+      // The network simplex cannot hold a loop, so it goes through a new node instead. The second
+      // arc gets the same flow as the first one by the flow balance of the new node.
+      Node middle = addNode(from.name + "_loop", 0);
+      Arc arc = new Arc(from, middle, weight, lowerCapacity, upperCapacity);
+      arcList.add(arc);
+      arcList.add(new Arc(middle, to, 0, lowerCapacity, upperCapacity));
+      return arc;
+    }
     Arc arc = new Arc(from, to, weight, lowerCapacity, upperCapacity);
     arcList.add(arc);
     return arc;
