@@ -1001,6 +1001,64 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void alldiffBoundsReasoningOnHolesReachesFixpoint() {
+    // latin-squares-fd2/07: after x32 = 1 the Hall interval {5..7} lowers x30.max to 4, which lands
+    // on the hole and makes x30 = 2. Neither the new bound nor the new singleton was propagated,
+    // so x29 kept 2 and x31 kept 2 and 3.
+    Store store = new Store();
+    IntVar x28 = new IntVar(store, "x28", 6, 6);
+    IntVar x31 = new IntVar(store, "x31", 2, 4);
+    IntVar x29 = new IntVar(store, "x29", 1, 3);
+    IntVar x30 = new IntVar(store, "x30");
+    x30.addDom(2, 2);
+    x30.addDom(5, 5);
+    x30.addDom(7, 7);
+    IntVar x32 = new IntVar(store, "x32");
+    x32.addDom(1, 1);
+    x32.addDom(4, 4);
+    IntVar x34 = new IntVar(store, "x34");
+    x34.addDom(1, 1);
+    x34.addDom(5, 5);
+    x34.addDom(7, 7);
+    IntVar x33 = new IntVar(store, "x33");
+    x33.addDom(5, 5);
+    x33.addDom(7, 7);
+    store.impose(new Alldiff(new IntVar[] {x28, x31, x29, x30, x32, x34, x33}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x32.domain.inValue(store.level, x32, 1);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x30.singleton(2)).as("x30 = %s", x30.dom()).isTrue();
+    assertThat(x29.singleton(3)).as("x29 = %s", x29.dom()).isTrue();
+    assertThat(x31.singleton(4)).as("x31 = %s", x31.dom()).isTrue();
+  }
+
+  @Test
+  void alldiffKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(29);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(3);
+      IntVar[] vars = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        vars[i] = randomSubsetVar(store, "x" + i, 0, n, random);
+      }
+      String instance = "run " + run + " " + domainsOf(vars);
+      Alldiff alldiff = new Alldiff(vars);
+      store.impose(alldiff);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> bruteForce(vs, a -> Arrays.stream(a).distinct().count() == a.length),
+          () -> rerunAtNewLevel(store, alldiff, vars),
+          random);
+    }
+  }
+
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
     IntVar v = new IntVar(store, name);
     for (int i = min; i <= max; i++) {
