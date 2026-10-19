@@ -107,8 +107,12 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       firstConsistencyCheck = false;
     }
 
-    propagateFromIntVariables(store);
-    propagateFromSetVariables(store);
+    // The store does not re-queue this constraint for its own changes, so iterate to a fixpoint.
+    do {
+      store.propagationHasOccurred = false;
+      propagateFromIntVariables(store);
+      propagateFromSetVariables(store);
+    } while (store.propagationHasOccurred);
   }
 
   private void doFirstConsistencyCheck(Store store) {

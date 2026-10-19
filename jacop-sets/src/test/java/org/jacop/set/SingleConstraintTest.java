@@ -43,6 +43,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -128,6 +129,33 @@ class SingleConstraintTest {
                 s[i] = randomSetVar(store, random, "s" + i, 5);
               }
               return new PartitionSet(s, new IntervalDomain(1, 5));
+            });
+
+    assertThat(notAtFixpoint).isZero();
+  }
+
+  @Test
+  void testChannelIntSetReachesFixpoint() {
+
+    Random random = new Random(2);
+    int notAtFixpoint =
+        countNotAtFixpoint(
+            random,
+            store -> {
+              int n = 4;
+              IntVar[] x = new IntVar[n];
+              SetVar[] s = new SetVar[n];
+              for (int i = 0; i < n; i++) {
+                IntDomain d = randomSet(random, 1, n, 0.6);
+                if (d.isEmpty()) {
+                  return null;
+                }
+                x[i] = new IntVar(store, "x" + i, d);
+              }
+              for (int i = 0; i < n; i++) {
+                s[i] = randomSetVar(store, random, "s" + i, n);
+              }
+              return new ChannelIntSet(x, s, 1, 1);
             });
 
     assertThat(notAtFixpoint).isZero();
