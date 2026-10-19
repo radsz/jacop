@@ -143,17 +143,6 @@ public class Tree {
   }
 
   /**
-   * It creates a tree by making a shallow copy.
-   *
-   * @param tree tree to be constructed
-   */
-  public Tree(Tree tree) {
-    this.root = tree.root;
-    this.first = tree.first;
-    this.last = tree.last;
-  }
-
-  /**
    * It constructs a tree out of the list of items and creates proper supporting structures. It
    * assumes the list of items is not empty; an odd number of items is padded with an empty leaf.
    *
