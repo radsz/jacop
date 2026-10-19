@@ -258,9 +258,11 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
           xBound.unionAdapt(new Interval(y.min(), y.max()));
         }
 
-        x.domain.in(store.level, x, xBound);
-
+        // y gets only its upper bound here, so a change of x must start another iteration: x may
+        // no longer contain negative values, and then y needs the bounds of the first case.
         store.propagationHasOccurred = false;
+
+        x.domain.in(store.level, x, xBound);
 
         y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));
       }

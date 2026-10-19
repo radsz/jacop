@@ -104,6 +104,7 @@ import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.RegularExpressionParser;
@@ -410,6 +411,87 @@ class SingleConstraintTest extends TestHelper {
     IntVar y = null;
 
     assertThatThrownBy(() -> new AbsXeqY(x, y)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void absXeqYBoundConsistencyReachesFixpoint() {
+    // When pruning x left only non-negative values, y kept the lower bound 0, and the constraint
+    // was not run again. In all_interval this left |1| = {0..1} and gave non-solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x");
+    x.addDom(-3, -3);
+    x.addDom(1, 2);
+    x.addDom(4, 5);
+    IntVar y = new IntVar(store, "y");
+    y.addDom(0, 0);
+    y.addDom(2, 2);
+    y.addDom(6, 7);
+
+    store.impose(new AbsXeqY(x, y));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(2)).as("x = %s", x.dom()).isTrue();
+    assertThat(y.singleton(2)).as("y = %s", y.dom()).isTrue();
+  }
+
+  @Test
+  void absXeqYPrunesOnlyUnsupportedValuesAndReachesFixpoint() {
+    Random random = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      boolean domainConsistency = run % 2 == 0;
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", -5, 5, random);
+      IntVar y = randomSubsetVar(store, "y", -2, 6, random);
+      int[] xValues = valuesOf(x);
+      int[] yValues = valuesOf(y);
+      AbsXeqY abs = new AbsXeqY(x, y, domainConsistency);
+      store.impose(abs);
+
+      boolean supported = false;
+      for (int v : xValues) {
+        supported |= y.domain.contains(Math.abs(v));
+      }
+      boolean consistent = store.consistency();
+      String instance =
+          "run " + run + " x " + Arrays.toString(xValues) + " y " + Arrays.toString(yValues);
+      if (!supported) {
+        // bounds propagation may miss a failure that the search finds later
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      for (int v : xValues) {
+        if (Arrays.stream(yValues).anyMatch(w -> w == Math.abs(v))) {
+          assertThat(x.domain.contains(v)).as(instance).isTrue();
+          assertThat(y.domain.contains(Math.abs(v))).as(instance).isTrue();
+        }
+      }
+      String afterPropagation = x.dom() + " " + y.dom();
+      store.setLevel(store.level + 1);
+      abs.consistency(store);
+      assertThat(x.dom() + " " + y.dom()).as(instance).isEqualTo(afterPropagation);
+    }
+  }
+
+  private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
+    IntVar v = new IntVar(store, name);
+    for (int i = min; i <= max; i++) {
+      if (random.nextInt(3) > 0) {
+        v.addDom(i, i);
+      }
+    }
+    if (v.domain.isEmpty()) {
+      v.addDom(min, min);
+    }
+    return v;
+  }
+
+  private static int[] valuesOf(IntVar v) {
+    int[] values = new int[v.getSize()];
+    int i = 0;
+    for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      values[i++] = e.nextElement();
+    }
+    return values;
   }
 
   @Test
