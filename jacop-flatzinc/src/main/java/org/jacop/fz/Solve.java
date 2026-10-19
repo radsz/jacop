@@ -94,6 +94,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
+  boolean outputFileStarted;
   Tables dictionary;
   Options options;
   int initNumberConstraints;
@@ -1685,6 +1686,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());
+      appendSolutionToOutputFile(printBuffer.toString());
     } else {
       lastSolution = printBuffer;
     }
@@ -1907,6 +1909,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } catch (IOException e) {
         log.error("Failed to write solution to {}", options.getOutputFilename(), e);
       }
+    }
+  }
+
+  /**
+   * Appends one solution to the output file when all solutions are printed, so that the file holds
+   * every solution and not only the last one. The first solution truncates the file.
+   */
+  void appendSolutionToOutputFile(String solution) {
+    if (options.getOutputFilename().isEmpty()) {
+      return;
+    }
+    try {
+      Files.writeString(
+          Path.of(options.getOutputFilename()),
+          solution,
+          StandardOpenOption.CREATE,
+          outputFileStarted ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
+      outputFileStarted = true;
+    } catch (IOException e) {
+      log.error("Failed to write solution to {}", options.getOutputFilename(), e);
     }
   }
 
