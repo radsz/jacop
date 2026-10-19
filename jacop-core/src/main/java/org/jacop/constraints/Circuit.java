@@ -190,6 +190,12 @@ public class Circuit extends Alldiff implements Stateful {
 
   // redesign satisfied function since the implementation of alldiff has changed.
   @Override
+  public int getDefaultConsistencyPruningEvent() {
+    // the circuit reasoning uses every value of the domains, not only their bounds
+    return IntDomain.ANY;
+  }
+
+  @Override
   public boolean satisfied() {
 
     if (grounded.value() != list.length) {

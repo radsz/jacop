@@ -1,0 +1,25 @@
+
+predicate jacop_count_values(array [int] of var int: x,array [int] of int: cover,array [int] of var int: counter);
+predicate jacop_value_precede_chain_int(array [int] of int: T,array [int] of var int: X);
+array [1..4] of int: X_INTRODUCED_33_ = [4,4,4,4];
+array [1..4] of int: X_INTRODUCED_34_ = [1,2,3,4];
+var 1..4: X_INTRODUCED_16_;
+var 1..4: X_INTRODUCED_17_;
+var 1..4: X_INTRODUCED_18_;
+var 1..4: X_INTRODUCED_19_;
+var 1..4: X_INTRODUCED_20_;
+var 1..4: X_INTRODUCED_21_;
+var 1..4: X_INTRODUCED_22_;
+var 1..4: X_INTRODUCED_23_;
+var 1..4: X_INTRODUCED_24_;
+var 1..4: X_INTRODUCED_25_;
+var 1..4: X_INTRODUCED_26_;
+var 1..4: X_INTRODUCED_27_;
+var 1..4: X_INTRODUCED_28_;
+var 1..4: X_INTRODUCED_29_;
+var 1..4: X_INTRODUCED_30_;
+var 1..4: X_INTRODUCED_31_;
+array [1..16] of var int: x:: output_array([1..16]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_,X_INTRODUCED_25_,X_INTRODUCED_26_,X_INTRODUCED_27_,X_INTRODUCED_28_,X_INTRODUCED_29_,X_INTRODUCED_30_,X_INTRODUCED_31_];
+constraint jacop_count_values(x,X_INTRODUCED_34_,X_INTRODUCED_33_);
+constraint jacop_value_precede_chain_int(X_INTRODUCED_34_,x);
+solve :: seq_search([int_search(x,input_order,indomain_min,complete),int_search(x,input_order,indomain_min,complete)]) satisfy;

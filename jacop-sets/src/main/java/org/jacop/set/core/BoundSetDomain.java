@@ -450,6 +450,11 @@ public class BoundSetDomain extends SetDomain {
       throw Store.failException;
     }
 
+    // The new glb (glb union inGlb) must stay within the new lub (lub intersected with inLub).
+    if (!inLub.contains(glbDomain) || !lubDomain.contains(inGlb)) {
+      throw Store.failException;
+    }
+
     if (glbDomain.contains(inGlb) && inLub.contains(lubDomain)) {
       return;
     }
@@ -492,28 +497,27 @@ public class BoundSetDomain extends SetDomain {
       throw Store.failException;
     }
 
-    int eventCardinality = cardDomain.intersectAdapt(min, max);
+    cardDomain.intersectAdapt(min, max);
     if (cardDomain.isEmpty()) {
       throw Store.failException;
     }
 
-    if (eventCardinality != NONE) {
-      if (cardDomain.min() == lubDomain.getSize()) {
-        glbDomain = lubDomain;
-        cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-        v.domainHasChanged(GROUND);
-        return;
-      }
-      if (cardDomain.max() == glbDomain.getSize()) {
-        lubDomain = glbDomain;
-        cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-        v.domainHasChanged(GROUND);
-        return;
-      }
+    // The bounds may reach the cardinality even when the cardinality itself does not change.
+    if (cardDomain.min() == lubDomain.getSize()) {
+      glbDomain = lubDomain;
+      cardDomain.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
+      v.domainHasChanged(GROUND);
+      return;
+    }
+    if (cardDomain.max() == glbDomain.getSize()) {
+      lubDomain = glbDomain;
+      cardDomain.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
+      v.domainHasChanged(GROUND);
+      return;
     }
 
     if (eventGlb != NONE && eventLub != NONE) {
-      v.domainHasChanged(ANY);
+      v.domainHasChanged(BOUND);
     } else if (eventGlb != NONE) {
       v.domainHasChanged(GLB_EVENT);
     } else if (eventLub != NONE) {
@@ -532,22 +536,20 @@ public class BoundSetDomain extends SetDomain {
     IntDomain resultLub = lubDomain.cloneLight();
     int eventLub = resultLub.intersectAdapt(inLub);
 
-    IntDomain resultCardinality = cardDomain.intersect(glbDomain.getSize(), lubDomain.getSize());
+    // The cardinality is restricted by the sizes of the new bounds, not the old ones.
+    IntDomain resultCardinality = cardDomain.intersect(resultGlb.getSize(), resultLub.getSize());
     if (resultCardinality.isEmpty()) {
       throw Store.failException;
     }
 
-    if (!resultCardinality.eq(cardDomain)) {
-      if (cardDomain.min() == lubDomain.getSize()) {
-        resultGlb = lubDomain;
-        eventGlb = GLB_EVENT;
-        resultCardinality.intersectAdapt(lubDomain.getSize(), lubDomain.getSize());
-      }
-      if (cardDomain.max() == glbDomain.getSize()) {
-        resultLub = glbDomain;
-        eventLub = LUB_EVENT;
-        resultCardinality.intersectAdapt(glbDomain.getSize(), glbDomain.getSize());
-      }
+    if (resultCardinality.min() == resultLub.getSize()) {
+      resultGlb = resultLub;
+      eventGlb = GLB_EVENT;
+      resultCardinality.intersectAdapt(resultLub.getSize(), resultLub.getSize());
+    } else if (resultCardinality.max() == resultGlb.getSize()) {
+      resultLub = resultGlb;
+      eventLub = LUB_EVENT;
+      resultCardinality.intersectAdapt(resultGlb.getSize(), resultGlb.getSize());
     }
 
     BoundSetDomain result = new BoundSetDomain();
@@ -561,7 +563,7 @@ public class BoundSetDomain extends SetDomain {
     if (result.singleton()) {
       v.domainHasChanged(GROUND);
     } else {
-      if (eventGlb == GLB_EVENT && eventLub == LUB_EVENT) {
+      if (eventGlb != NONE && eventLub != NONE) {
         v.domainHasChanged(BOUND);
       } else if (eventGlb != NONE) {
         v.domainHasChanged(GLB_EVENT);

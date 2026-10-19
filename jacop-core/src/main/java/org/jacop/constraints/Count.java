@@ -90,37 +90,49 @@ public class Count extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
-    CountResult cr = countOccurrences(value);
-    int numberEq = cr.numberEq();
-    int numberMayBe = cr.numberMayBe();
-    int start = cr.start();
+    // Narrowing the counter can enable one of the cases below, and when the counter also occurs in
+    // the list it can change the counts themselves, so repeat until the counter bounds are stable.
+    while (true) {
 
-    if (numberMayBe == counter.min() - numberEq) {
-      for (int i = start; i < list.length; i++) {
-        IntVar v = list[i];
-        v.domain.inValue(store.level, v, value);
+      CountResult cr = countOccurrences(value);
+      int numberEq = cr.numberEq();
+      int numberMayBe = cr.numberMayBe();
+      int start = cr.start();
+
+      if (numberMayBe == counter.min() - numberEq) {
+        for (int i = start; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.inValue(store.level, v, value);
+        }
+
+        numberEq += numberMayBe;
+
+        counter.domain.inValue(store.level, counter, numberEq);
+        removeConstraint();
+        return;
+
+      } else if (numberEq == counter.max()) {
+        for (int i = start; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.inComplement(store.level, v, value);
+        }
+
+        counter.domain.inValue(store.level, counter, numberEq);
+        removeConstraint();
+        return;
       }
 
-      numberEq += numberMayBe;
+      int counterMin = counter.min();
+      int counterMax = counter.max();
 
-      counter.domain.inValue(store.level, counter, numberEq);
-      removeConstraint();
-      return;
+      counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
 
-    } else if (numberEq == counter.max()) {
-      for (int i = start; i < list.length; i++) {
-        IntVar v = list[i];
-        v.domain.inComplement(store.level, v, value);
+      updateState(numberEq, start);
+
+      if (counter.min() == counterMin && counter.max() == counterMax) {
+        return;
       }
-
-      counter.domain.inValue(store.level, counter, numberEq);
-      removeConstraint();
-      return;
     }
-
-    counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
-
-    updateState(numberEq, start);
   }
 
   @Override

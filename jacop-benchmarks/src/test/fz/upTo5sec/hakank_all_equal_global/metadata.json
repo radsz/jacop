@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_all_equal_int", "jacop_all_equal_int_reif"],
+  "constraintFamilies": ["alldifferent"],
+  "domains": []
+}

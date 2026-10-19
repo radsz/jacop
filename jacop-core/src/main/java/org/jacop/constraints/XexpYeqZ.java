@@ -115,6 +115,12 @@ public class XexpYeqZ extends AbstractXopYeqZ {
   }
 
   @Override
+  public int getDefaultConsistencyPruningEvent() {
+    // consistency keeps only supported values, so it uses the holes of the domains
+    return IntDomain.ANY;
+  }
+
+  @Override
   public boolean satisfied() {
 
     return grounded() && toInt(Math.pow(x.min(), y.min())) == z.min();

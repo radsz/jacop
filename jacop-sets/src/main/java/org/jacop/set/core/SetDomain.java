@@ -87,8 +87,8 @@ public abstract class SetDomain extends Domain {
     {LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // LUB event
     {BOUND, ANY, CARDINALITY_EVENT}, // BOUND event
     {ANY, CARDINALITY_EVENT}, // ANY event
-    {CARDINALITY_EVENT}
-  }; // CARDINALITY event
+    {ANY, CARDINALITY_EVENT} // CARDINALITY event, a change of the domain that ANY must also see
+  };
 
   /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
