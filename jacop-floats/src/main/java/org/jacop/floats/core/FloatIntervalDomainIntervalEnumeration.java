@@ -30,7 +30,7 @@
 
 package org.jacop.floats.core;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
+import java.util.NoSuchElementException;
 
 /**
  * Defines a methods for enumerating values contain in the intersal domain. It implements the
@@ -69,9 +69,6 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
       return domain.intervals[intervalNo];
     }
 
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException("Assertion failed");
-    }
-    return null;
+    throw new NoSuchElementException("No more intervals in the domain.");
   }
 }

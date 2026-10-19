@@ -249,7 +249,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (dense[0] > minHoleSize) {
-      if (noOfIntervals == 0) {
+      if (noOfIntervals < 2) {
         if (dense[0] > temporaryArray[1] - temporaryArray[0]) {
           temporaryArray[1] = dense[0] - 1;
           temporaryArray[0] = 0;

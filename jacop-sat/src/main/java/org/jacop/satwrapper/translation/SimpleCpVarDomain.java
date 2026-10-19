@@ -34,6 +34,7 @@ package org.jacop.satwrapper.translation;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
+import java.util.Objects;
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
 
@@ -245,6 +246,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
   /** {@inheritDoc} */
   @Override
   public void initialize(SatWrapper wrapper) {
+    Objects.requireNonNull(wrapper, "wrapper");
     super.initialize(wrapper);
     if (ASSERTS_ENABLED && wrapper.domainDatabase == null) {
       throw new IllegalStateException(String.valueOf("DomainClausesDatabase is needed"));

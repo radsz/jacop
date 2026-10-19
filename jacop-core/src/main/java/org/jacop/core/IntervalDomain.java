@@ -1152,8 +1152,8 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    if (ASSERTS_ENABLED && size == 0) {
-      throw new IllegalStateException("Assertion failed");
+    if (size == 0) {
+      throw new IllegalStateException("max() called on an empty domain");
     }
 
     return intervals[size - 1].max();

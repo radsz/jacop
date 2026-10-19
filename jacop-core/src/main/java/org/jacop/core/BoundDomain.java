@@ -316,7 +316,8 @@ class BoundDomain extends IntDomain {
       return new Interval(minBound, maxBound);
     }
 
-    return null;
+    throw new IndexOutOfBoundsException(
+        "Bound domain has only one interval, requested " + position);
   }
 
   @Override
