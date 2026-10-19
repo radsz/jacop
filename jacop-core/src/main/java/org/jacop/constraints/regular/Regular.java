@@ -36,11 +36,9 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
@@ -184,35 +182,174 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     setScope(list);
   }
 
+  private static IntervalDomain asIntervalDomain(IntDomain dom) {
+    if (dom instanceof IntervalDomain interval) {
+      return interval;
+    }
+    IntervalDomain result = new IntervalDomain();
+    result.unionAdapt(dom);
+    return result;
+  }
+
   /**
-   * Initialization phase of the algorithm.
-   *
-   * <p>Considering that it needs to initialize the array of graph States - stateLevels, and, thus,
-   * it needs to know the actual number of the states on each level I found nothing better then run
-   * the initialization phase with the complete NxN array of states and then copy the useful ones
-   * into a final array (which is ugly)
+   * Initialization phase of the algorithm. It unfolds the automaton into a layered graph with one
+   * layer per variable. A forward pass collects the states reachable at each layer, a backward pass
+   * keeps the states from which a final state can be reached, and only then the states and edges of
+   * the layered graph are created. All work is proportional to the number of reachable states and
+   * their transitions, so the memory does not grow with the square of the number of automaton
+   * states.
    *
    * @param dfa specification of deterministic finite automaton.
    */
   private void initializeArray(Fsm dfa) {
     int levels = this.list.length;
-    stateNumber = dfa.allStates.size();
-    final IntDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
-    final int[][] outdeg = new int[levels + 1][stateNumber];
-    final Set<FsmState> reachable = new HashSet<>();
-    final Set<FsmState> tmp = new HashSet<>();
-    this.stateLevels = new RegState[levels + 1][];
-    FsmState[] array = new FsmState[stateNumber];
     dfa.resize();
+    stateNumber = dfa.allStates.size();
+
+    // Transitions of each automaton state, indexed by state id.
+    final FsmState[] array = new FsmState[stateNumber];
     for (FsmState s : dfa.allStates) {
       array[s.id] = s;
     }
-    int level = initializeArrayForwardReachable(dfa, levels, outarc, reachable, tmp);
-    level =
-        initializeArrayBackwardReachable(level, stateNumber, outarc, outdeg, reachable, tmp, array);
-    stateLevels[0] = new RegState[1];
-    this.activeLevelsTemp = new int[this.list.length + 1];
-    initializeArrayCopyToStateLevels(levels, outarc, outdeg);
+    final FsmTransition[][] transitions = new FsmTransition[stateNumber][];
+    for (FsmState s : array) {
+      transitions[s.id] = s.transitions.toArray(new FsmTransition[0]);
+    }
+
+    // Forward pass: states reachable at each level, stored sparsely as lists of state ids.
+    final int[][] reachable = new int[levels + 1][];
+    final boolean[] marked = new boolean[stateNumber];
+    int[] buffer = new int[stateNumber];
+    reachable[0] = new int[] {dfa.initState.id};
+    for (int level = 0; level < levels; level++) {
+      IntDomain varDom = list[level].dom();
+      int count = 0;
+      for (int sId : reachable[level]) {
+        for (FsmTransition t : transitions[sId]) {
+          int sucId = t.successor.id;
+          if (marked[sucId]
+              || (level == levels - 1 && !dfa.finalStates.contains(t.successor))
+              || !t.domain.isIntersecting(varDom)) {
+            continue;
+          }
+          marked[sucId] = true;
+          buffer[count++] = sucId;
+        }
+      }
+      reachable[level + 1] = Arrays.copyOf(buffer, count);
+      for (int i = 0; i < count; i++) {
+        marked[buffer[i]] = false;
+      }
+    }
+
+    // Backward pass: keep only states from which a final state can be reached. For each kept
+    // state remember its arcs (successor id and the merged domain of values leading to it).
+    final int[][] index = new int[levels + 1][];
+    final int[][][] arcSuccessors = new int[levels][][];
+    final IntDomain[][][] arcDomains = new IntDomain[levels][][];
+    final boolean[] alive = new boolean[stateNumber];
+    final IntDomain[] arc = new IntDomain[stateNumber];
+    final int[] arcOrder = new int[stateNumber];
+
+    index[levels] = new int[reachable[levels].length];
+    for (int i = 0; i < reachable[levels].length; i++) {
+      index[levels][i] = i;
+    }
+    for (int level = levels - 1; level >= 0; level--) {
+      int[] next = reachable[level + 1];
+      for (int i = 0; i < next.length; i++) {
+        alive[next[i]] = index[level + 1][i] >= 0;
+      }
+      IntDomain varDom = list[level].dom();
+      int[] current = reachable[level];
+      index[level] = new int[current.length];
+      arcSuccessors[level] = new int[current.length][];
+      arcDomains[level] = new IntDomain[current.length][];
+      int count = 0;
+      for (int i = 0; i < current.length; i++) {
+        int arcs = 0;
+        for (FsmTransition t : transitions[current[i]]) {
+          int sucId = t.successor.id;
+          if (!alive[sucId]) {
+            continue;
+          }
+          IntDomain dom = t.domain.intersect(varDom);
+          if (dom.isEmpty()) {
+            continue;
+          }
+          if (arc[sucId] == null) {
+            arc[sucId] = dom;
+            arcOrder[arcs++] = sucId;
+          } else {
+            arc[sucId] = arc[sucId].union(dom);
+          }
+        }
+        if (arcs == 0) {
+          index[level][i] = -1;
+          continue;
+        }
+        Arrays.sort(arcOrder, 0, arcs);
+        arcSuccessors[level][i] = Arrays.copyOf(arcOrder, arcs);
+        arcDomains[level][i] = new IntDomain[arcs];
+        for (int k = 0; k < arcs; k++) {
+          arcDomains[level][i][k] = arc[arcOrder[k]];
+          arc[arcOrder[k]] = null;
+        }
+        index[level][i] = count++;
+      }
+      for (int sId : next) {
+        alive[sId] = false;
+      }
+    }
+
+    // Create the states of the layered graph, level by level, and connect them.
+    this.stateLevels = new RegState[levels + 1][];
+    this.activeLevelsTemp = new int[levels + 1];
+    final int[] successorMap = new int[stateNumber];
+    for (int level = levels; level >= 0; level--) {
+      int[] current = reachable[level];
+      int count = 0;
+      for (int i : index[level]) {
+        if (i >= 0) {
+          count++;
+        }
+      }
+      stateLevels[level] = new RegState[Math.max(count, level == 0 ? 1 : 0)];
+      activeLevelsTemp[level] = count;
+      for (int i = 0; i < current.length; i++) {
+        int pos = index[level][i];
+        if (pos < 0) {
+          continue;
+        }
+        int degree = 0;
+        if (level < levels) {
+          for (IntDomain dom : arcDomains[level][i]) {
+            degree += dom.getSize();
+          }
+        }
+        RegState s =
+            listRepresentation
+                ? new RegStateInt(level, current[i], degree, pos)
+                : new RegStateDom(level, current[i], degree, pos);
+        stateLevels[level][pos] = s;
+        if (level == levels) {
+          continue;
+        }
+        int[] sucIds = arcSuccessors[level][i];
+        for (int k = 0; k < sucIds.length; k++) {
+          RegState suc = stateLevels[level + 1][successorMap[sucIds[k]]];
+          s.addTransitions(suc, asIntervalDomain(arcDomains[level][i][k]));
+          if (DEBUG_ALL) {
+            log.debug(STATE_Q_DEGREES, level, s.id, s.inDegree, s.outDegree);
+            log.debug(STATE_Q_DEGREES, level + 1, suc.id, suc.inDegree, suc.outDegree);
+          }
+        }
+      }
+      // successorMap is used by the level above, which connects to the states created here.
+      for (int i = 0; i < current.length; i++) {
+        successorMap[current[i]] = index[level][i];
+      }
+    }
   }
 
   /**
@@ -374,124 +511,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       for (RegState state : layeredGraph[i]) {
         stateLevels[i][j] = state;
         j++;
-      }
-    }
-  }
-
-  private int initializeArrayForwardReachable(
-      Fsm dfa, int levels, IntDomain[][][] outarc, Set<FsmState> reachable, Set<FsmState> tmp) {
-    reachable.add(dfa.initState);
-    int level = 0;
-    while (level < levels) {
-      tmp.clear();
-      for (FsmState s : reachable) {
-        for (FsmTransition t : s.transitions) {
-          IntDomain dom = t.domain.intersect(list[level].dom());
-          if (outarc[level][s.id][t.successor.id] != null) {
-            outarc[level][s.id][t.successor.id].addDom(dom);
-          } else {
-            outarc[level][s.id][t.successor.id] = dom;
-          }
-          if (dom.getSize() > 0) {
-            if (level < levels - 1) {
-              tmp.add(t.successor);
-            } else if (dfa.finalStates.contains(t.successor)) {
-              tmp.add(t.successor);
-            }
-          }
-        }
-      }
-      reachable.clear();
-      reachable.addAll(tmp);
-      level++;
-    }
-    return level;
-  }
-
-  private int initializeArrayBackwardReachable(
-      int level,
-      int stateNum,
-      IntDomain[][][] outarc,
-      int[][] outdeg,
-      Set<FsmState> reachable,
-      Set<FsmState> tmp,
-      FsmState[] array) {
-    while (level > 0) {
-      tmp.clear();
-      stateLevels[level] = new RegState[reachable.size()];
-      for (int i = 0; i < stateNum; i++) {
-        for (int j = 0; j < stateNum; j++) {
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
-            if (!reachable.contains(array[i])) {
-              outarc[level - 1][j][i].clear();
-            } else {
-              outdeg[level - 1][j] += outarc[level - 1][j][i].getSize();
-              tmp.add(array[j]);
-            }
-          }
-        }
-      }
-      reachable.clear();
-      reachable.addAll(tmp);
-      level--;
-    }
-    return level;
-  }
-
-  private void initializeArrayCopyToStateLevels(
-      int levels, IntDomain[][][] outarc, int[][] outdeg) {
-    int nextLevelIndex = 0;
-    for (int level = 0; level < levels; level++) {
-      int index = nextLevelIndex;
-      nextLevelIndex = 0;
-      for (int i = 0; i < stateNumber; i++) {
-        if (outdeg[level][i] <= 0) {
-          continue;
-        }
-        RegState s = getState(level, i);
-        if (s == null) {
-          s =
-              listRepresentation
-                  ? new RegStateInt(level, i, outdeg[level][i], index)
-                  : new RegStateDom(level, i, outdeg[level][i], index);
-          stateLevels[level][index++] = s;
-          activeLevelsTemp[level] = index;
-          if (DEBUG_ALL) {
-            log.debug(
-                "Create new state q_{}{} with in degree : {} and out degree : {}",
-                level,
-                i,
-                s.inDegree,
-                s.outDegree);
-          }
-        }
-        for (int j = 0; j < stateNumber; j++) {
-          if (outarc[level][i][j] == null || outarc[level][i][j].getSize() == 0) {
-            continue;
-          }
-          RegState suc = getState(level + 1, j);
-          if (suc == null) {
-            suc =
-                listRepresentation
-                    ? new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex)
-                    : new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
-            stateLevels[level + 1][nextLevelIndex++] = suc;
-            activeLevelsTemp[level + 1] = nextLevelIndex;
-            if (DEBUG_ALL) {
-              log.debug(
-                  "Create new state q_{}{} with in degree : {} and out degree : {}",
-                  level + 1,
-                  j,
-                  suc.inDegree,
-                  suc.outDegree);
-            }
-          }
-          s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
-          if (DEBUG_ALL) {
-            log.debug(STATE_Q_DEGREES, level, i, s.inDegree, s.outDegree);
-            log.debug(STATE_Q_DEGREES, level + 1, j, suc.inDegree, suc.outDegree);
-          }
-        }
       }
     }
   }
