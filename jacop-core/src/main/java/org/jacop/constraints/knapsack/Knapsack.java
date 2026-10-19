@@ -456,6 +456,20 @@ public class Knapsack extends Constraint
   @Override
   public void consistency(Store store) {
 
+    // A pass is not idempotent: pruning an item, the capacity or the profit can enable further
+    // pruning, and the store does not re-queue this constraint for its own changes. Repeat a full
+    // pass until a pass changes nothing.
+    do {
+      store.propagationHasOccurred = false;
+      singlePass(store);
+      if (store.propagationHasOccurred) {
+        setFlagsForCapacityOrProfit();
+      }
+    } while (store.propagationHasOccurred);
+  }
+
+  private void singlePass(Store store) {
+
     // it is possible that there changes to variables which have no chance to cause any pruning.
     // it is already the case that constraint is not even notified of ANY pruning events.
     if (!needConsistency) {

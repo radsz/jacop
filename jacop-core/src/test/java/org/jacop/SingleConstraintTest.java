@@ -106,6 +106,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
@@ -1055,6 +1056,107 @@ class SingleConstraintTest extends TestHelper {
           vars,
           vs -> bruteForce(vs, a -> Arrays.stream(a).distinct().count() == a.length),
           () -> rerunAtNewLevel(store, alldiff, vars),
+          random);
+    }
+  }
+
+  private static String knapsackOnCopies(int[] profits, int[] weights, IntVar[] vars) {
+    Store copyStore = new Store();
+    IntVar[] copies = new IntVar[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      copies[i] = new IntVar(copyStore, vars[i].id());
+      copies[i].addDom(vars[i].dom());
+    }
+    int n = profits.length;
+    copyStore.impose(
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+    return copyStore.consistency() ? domainsOf(copies) : "FAIL";
+  }
+
+  private static List<int[]> knapsackSolutions(int[] profits, int[] weights, IntVar[] vars) {
+    int n = profits.length;
+    List<int[]> solutions = new ArrayList<>();
+    for (int[] q : bruteForce(Arrays.copyOf(vars, n), a -> true)) {
+      int capacity = 0;
+      int profit = 0;
+      for (int i = 0; i < n; i++) {
+        capacity += weights[i] * q[i];
+        profit += profits[i] * q[i];
+      }
+      if (vars[n].domain.contains(capacity) && vars[n + 1].domain.contains(profit)) {
+        int[] solution = Arrays.copyOf(q, n + 2);
+        solution[n] = capacity;
+        solution[n + 1] = profit;
+        solutions.add(solution);
+      }
+    }
+    return solutions;
+  }
+
+  @Test
+  void knapsackReachesFixpoint() {
+    // Raising the minimal profit made the mandatory part raise the used capacity, which allows a
+    // stronger capacity bound, but the pass was not repeated and the store does not re-run the
+    // constraint for its own changes.
+    int[] weights = {15, 11, 10, 15, 11, 11, 14, 6};
+    int[] profits = {18, 20, 25, 9, 10, 19, 24, 22};
+    Store store = new Store();
+    IntVar[] vars = new IntVar[weights.length + 2];
+    for (int i = 0; i < weights.length; i++) {
+      vars[i] = new IntVar(store, "q" + i, 0, i == 4 ? 3 : 1);
+    }
+    vars[weights.length] = new IntVar(store, "capacity", 0, 115);
+    vars[weights.length + 1] = new IntVar(store, "profit", 0, 167);
+    IntVar profit = vars[weights.length + 1];
+    store.impose(
+        new Knapsack(
+            profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    profit.domain.inMin(store.level, profit, 162);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(knapsackOnCopies(profits, weights, vars)).isEqualTo(domainsOf(vars));
+  }
+
+  @Test
+  void knapsackKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(31);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(12);
+        profits[i] = 1 + random.nextInt(20);
+        int max = random.nextBoolean() ? 1 : 1 + random.nextInt(3);
+        vars[i] = new IntVar(store, "q" + i, 0, max);
+        weightSum += weights[i] * max;
+        profitSum += profits[i] * max;
+      }
+      vars[n] = new IntVar(store, "capacity", 0, weightSum);
+      vars[n + 1] = new IntVar(store, "profit", 0, profitSum);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> knapsackSolutions(profits, weights, vs),
+          () -> knapsackOnCopies(profits, weights, vars),
           random);
     }
   }
