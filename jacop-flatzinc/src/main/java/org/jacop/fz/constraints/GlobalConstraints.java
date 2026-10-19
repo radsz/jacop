@@ -1495,7 +1495,9 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] balance = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
 
-    int minNode = Arrays.stream(arc).min().getAsInt();
+    // JaCoP's library numbers the nodes from 1, as the positions in the balance array. FlatZinc
+    // files compiled with older versions of the library number them from the lowest node in arc.
+    int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
     NetworkBuilder net = new NetworkBuilder();
 
