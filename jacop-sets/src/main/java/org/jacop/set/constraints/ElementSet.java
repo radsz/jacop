@@ -127,22 +127,27 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     ValueEnumeration enumer = indexDom.valueEnumeration();
     int el;
 
+    // Only the indexes whose set is compatible with the current domain of value (bounds and
+    // cardinality) remain, and only those support the new bounds of value; otherwise pruning
+    // index would require another run.
     while (enumer.hasMoreElements()) {
       el = enumer.nextElement() - 1 - indexOffset;
       if (el >= 0) {
         if (el >= list.length) {
           break;
         }
-        newValueGlb = newValueGlb.intersect(list[el]);
-        newValueLub.addDom(list[el]);
-        if (valueDom.lub().contains(list[el]) && list[el].contains(valueDom.glb())) {
+        if (valueDom.lub().contains(list[el])
+            && list[el].contains(valueDom.glb())
+            && valueDom.card().contains(list[el].getSize())) {
           newIndex.unionAdapt(el + 1 + indexOffset, el + 1 + indexOffset);
+          newValueGlb = newValueGlb.intersect(list[el]);
+          newValueLub.addDom(list[el]);
         }
       }
     }
 
-    value.domain.in(store.level, value, newValueGlb, newValueLub);
     index.domain.in(store.level, index, newIndex);
+    value.domain.in(store.level, value, newValueGlb, newValueLub);
   }
 
   @Override

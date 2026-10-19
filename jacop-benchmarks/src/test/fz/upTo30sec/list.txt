@@ -55,7 +55,6 @@ ghoulomb/3-8-16
 ghoulomb/3-8-20
 ghoulomb/3-9-16
 ghoulomb/4-7-20
-golfers/golfers_5_5_6
 grid-colouring/10_5
 groupsplitter/u5g1pref0
 gunport_problem1/gunport_problem1
@@ -110,7 +109,6 @@ parity-learning/44_22_5.3
 pattern_set_mining_k1/anneal
 pattern_set_mining_k1/mushroom
 pattern_set_mining_k1/segment
-pentominoes/04
 prize-collecting/25-5-5-2
 prize-collecting/25-5-5-4
 prize-collecting/25-5-5-9

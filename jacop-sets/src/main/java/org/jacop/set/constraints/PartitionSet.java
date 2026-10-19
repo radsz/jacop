@@ -103,9 +103,14 @@ public class PartitionSet extends Constraint {
       firstConsistencyCheck = false;
     }
 
-    for (int i = 0; i < n; i++) {
-      propagateUnionConstraintForIndex(store, i);
-    }
+    // Pruning one set changes the bounds of the others, and the store does not re-queue this
+    // constraint for its own changes, so iterate to a fixpoint.
+    do {
+      store.propagationHasOccurred = false;
+      for (int i = 0; i < n; i++) {
+        propagateUnionConstraintForIndex(store, i);
+      }
+    } while (store.propagationHasOccurred);
   }
 
   private void propagateUnionConstraintForIndex(Store store, int i) throws FailException {

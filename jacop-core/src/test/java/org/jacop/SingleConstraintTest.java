@@ -42,7 +42,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +55,10 @@ import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
@@ -69,7 +75,10 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -85,6 +94,7 @@ import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -96,16 +106,23 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.jacop.util.fsm.RegularExpressionParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -410,6 +427,760 @@ class SingleConstraintTest extends TestHelper {
     IntVar y = null;
 
     assertThatThrownBy(() -> new AbsXeqY(x, y)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void absXeqYBoundConsistencyReachesFixpoint() {
+    // When pruning x left only non-negative values, y kept the lower bound 0, and the constraint
+    // was not run again. In all_interval this left |1| = {0..1} and gave non-solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x");
+    x.addDom(-3, -3);
+    x.addDom(1, 2);
+    x.addDom(4, 5);
+    IntVar y = new IntVar(store, "y");
+    y.addDom(0, 0);
+    y.addDom(2, 2);
+    y.addDom(6, 7);
+
+    store.impose(new AbsXeqY(x, y));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(2)).as("x = %s", x.dom()).isTrue();
+    assertThat(y.singleton(2)).as("y = %s", y.dom()).isTrue();
+  }
+
+  @Test
+  void absXeqYPrunesOnlyUnsupportedValuesAndReachesFixpoint() {
+    Random random = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      boolean domainConsistency = run % 2 == 0;
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", -5, 5, random);
+      IntVar y = randomSubsetVar(store, "y", -2, 6, random);
+      int[] xValues = valuesOf(x);
+      int[] yValues = valuesOf(y);
+      AbsXeqY abs = new AbsXeqY(x, y, domainConsistency);
+      store.impose(abs);
+
+      boolean supported = false;
+      for (int v : xValues) {
+        supported |= y.domain.contains(Math.abs(v));
+      }
+      boolean consistent = store.consistency();
+      String instance =
+          "run " + run + " x " + Arrays.toString(xValues) + " y " + Arrays.toString(yValues);
+      if (!supported) {
+        // bounds propagation may miss a failure that the search finds later
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      for (int v : xValues) {
+        if (Arrays.stream(yValues).anyMatch(w -> w == Math.abs(v))) {
+          assertThat(x.domain.contains(v)).as(instance).isTrue();
+          assertThat(y.domain.contains(Math.abs(v))).as(instance).isTrue();
+        }
+      }
+      String afterPropagation = x.dom() + " " + y.dom();
+      store.setLevel(store.level + 1);
+      abs.consistency(store);
+      assertThat(x.dom() + " " + y.dom()).as(instance).isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void linearIntDomWakesUpOnHoleRemoval() {
+    // LinearIntDom is domain consistent but inherited the BOUND pruning event of LinearInt, so
+    // removing an inner value of a variable did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 2, 4);
+    IntVar z = new IntVar(store, "z", 5, 13);
+    // x + 4 * y - z = 4, so z = 4 * y - 3
+    store.impose(new LinearIntDom(new IntVar[] {x, y, z}, new int[] {1, 4, -1}, "==", 4));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{5, 9, 13}");
+
+    store.setLevel(store.level + 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(z.dom().toString()).isEqualTo("{5, 13}");
+  }
+
+  @Test
+  void xmodYeqZWakesUpOnHoleRemoval() {
+    // With y ground XmodYeqZ filters x with the holes of z, but it inherited the BOUND pruning
+    // event of AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 5, 5);
+    IntVar z = new IntVar(store, "z", 0, 4);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{1..5}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 1);
+    assertThat(store.consistency()).isTrue();
+
+    // 1 mod 5 = 1 is no longer in z
+    assertThat(x.dom().toString()).isEqualTo("{2..5}");
+  }
+
+  @Test
+  void xexpYeqZWakesUpOnHoleRemoval() {
+    // XexpYeqZ keeps only supported values but inherited the BOUND pruning event of
+    // AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 4);
+    IntVar y = new IntVar(store, "y", 2, 2);
+    IntVar z = new IntVar(store, "z", 4, 16);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{4, 9, 16}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 9);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x.dom().toString()).isEqualTo("{2, 4}");
+  }
+
+  @Test
+  void circuitWakesUpOnHoleRemoval() {
+    // Circuit inherited the BOUND pruning event of Alldiff, so removing an inner value did not
+    // re-run it. Here no variable can take 3 any more, so node 3 has no predecessor.
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    x[0] = new IntVar(store, "x0", 2, 4);
+    x[1] = new IntVar(store, "x1");
+    x[1].addDom(1, 1);
+    x[1].addDom(4, 4);
+    x[2] = new IntVar(store, "x2");
+    x[2].addDom(1, 2);
+    x[2].addDom(4, 4);
+    x[3] = new IntVar(store, "x3", 1, 2);
+    store.impose(new Circuit(x));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x[0].domain.inComplement(store.level, x[0], 3);
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void minSimpleReachesFixpoint() {
+    // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
+    // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 1, 1);
+    IntVar x2 = new IntVar(store, "x2");
+    x2.addDom(-4, -2);
+    x2.addDom(1, 1);
+    x2.addDom(5, 6);
+    IntVar min = new IntVar(store, "min");
+    min.addDom(-4, -2);
+    min.addDom(0, 0);
+    min.addDom(5, 5);
+
+    store.impose(new MinSimple(x1, x2, min));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(min.dom().toString()).isEqualTo("{-4..-2}");
+    assertThat(x2.dom().toString()).isEqualTo("{-4..-2}");
+  }
+
+  @Test
+  void minAndMaxSimpleKeepSupportsAndReachFixpoint() {
+    Random random = new Random(11);
+    for (int run = 0; run < 2000; run++) {
+      boolean minimum = run % 2 == 0;
+      Store store = new Store();
+      IntVar x1 = randomSubsetVar(store, "x1", -4, 6, random);
+      IntVar x2 = randomSubsetVar(store, "x2", -4, 6, random);
+      IntVar r = randomSubsetVar(store, "r", -4, 6, random);
+      int[] x1Values = valuesOf(x1);
+      int[] x2Values = valuesOf(x2);
+      int[] rValues = valuesOf(r);
+      Constraint c = minimum ? new MinSimple(x1, x2, r) : new MaxSimple(x1, x2, r);
+      store.impose(c);
+
+      Set<Integer> x1Support = new HashSet<>();
+      Set<Integer> x2Support = new HashSet<>();
+      Set<Integer> rSupport = new HashSet<>();
+      for (int a : x1Values) {
+        for (int b : x2Values) {
+          int v = minimum ? Math.min(a, b) : Math.max(a, b);
+          if (Arrays.stream(rValues).anyMatch(w -> w == v)) {
+            x1Support.add(a);
+            x2Support.add(b);
+            rSupport.add(v);
+          }
+        }
+      }
+      String instance =
+          (minimum ? "min" : "max")
+              + " run "
+              + run
+              + " x1 "
+              + Arrays.toString(x1Values)
+              + " x2 "
+              + Arrays.toString(x2Values)
+              + " r "
+              + Arrays.toString(rValues);
+      boolean consistent = store.consistency();
+      if (rSupport.isEmpty()) {
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      x1Support.forEach(v -> assertThat(x1.domain.contains(v)).as(instance).isTrue());
+      x2Support.forEach(v -> assertThat(x2.domain.contains(v)).as(instance).isTrue());
+      rSupport.forEach(v -> assertThat(r.domain.contains(v)).as(instance).isTrue());
+
+      String afterPropagation = x1.dom() + " " + x2.dom() + " " + r.dom();
+      store.setLevel(store.level + 1);
+      c.consistency(store);
+      assertThat(x1.dom() + " " + x2.dom() + " " + r.dom())
+          .as(instance)
+          .isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void testRegularPrunesAllUnsupportedValues() {
+
+    // Words of length 2 accepted by the automaton; with x1 = 1 only x0 = 3 has a support. The
+    // pruning loop of Regular removes values from a domain while enumerating it, and the
+    // enumeration stopped after the first removed value, so x0 = 4 stayed.
+    FsmState[] s = new FsmState[4];
+    Fsm fsm = new Fsm();
+    for (int i = 0; i < s.length; i++) {
+      s[i] = new FsmState();
+      fsm.allStates.add(s[i]);
+    }
+    fsm.initState = s[0];
+    fsm.finalStates.add(s[2]);
+    IntervalDomain oneOrFour = new IntervalDomain(1, 1);
+    oneOrFour.unionAdapt(4, 4);
+    s[0].addTransition(new FsmTransition(oneOrFour, s[0]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(2, 2), s[3]));
+    s[2].addTransition(new FsmTransition(new IntervalDomain(1, 1), s[2]));
+    s[3].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 4);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    store.impose(new Regular(fsm, new IntVar[] {x0, x1}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    x1.domain.inComplement(1, x1, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.value()).isEqualTo(1);
+    assertThat(x0.singleton()).isTrue();
+    assertThat(x0.value()).isEqualTo(3);
+  }
+
+  @Test
+  void testValueEnumerationContinuesAfterDomainChange() {
+
+    // Remove the value just returned and the next one, as Regular does while it prunes.
+    for (IntDomain domain : new IntDomain[] {new IntervalDomain(), new SmallDenseDomain()}) {
+      for (int v : new int[] {1, 3, 5}) {
+        domain.unionAdapt(v, v);
+      }
+      List<Integer> values = new ArrayList<>();
+      for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        values.add(v);
+        if (v == 1) {
+          domain.subtractAdapt(1);
+          domain.subtractAdapt(3);
+          e.domainHasChanged();
+        }
+      }
+      assertThat(values).as(domain.getClass().getSimpleName()).containsExactly(1, 5);
+    }
+  }
+
+  private static List<int[]> bruteForce(IntVar[] vars, Predicate<int[]> constraint) {
+    List<int[]> solutions = new ArrayList<>();
+    int[][] domains = Arrays.stream(vars).map(SingleConstraintTest::valuesOf).toArray(int[][]::new);
+    int[] index = new int[vars.length];
+    while (true) {
+      int[] assignment = new int[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        assignment[i] = domains[i][index[i]];
+      }
+      if (constraint.test(assignment)) {
+        solutions.add(assignment);
+      }
+      int k = 0;
+      while (k < vars.length && ++index[k] == domains[k].length) {
+        index[k] = 0;
+        k++;
+      }
+      if (k == vars.length) {
+        return solutions;
+      }
+    }
+  }
+
+  private static String domainsOf(IntVar[] vars) {
+    return Arrays.stream(vars).map(v -> v.dom().toString()).collect(Collectors.joining(" "));
+  }
+
+  private static String rerunAtNewLevel(Store store, Constraint c, IntVar[] vars) {
+    int level = store.level;
+    store.setLevel(level + 1);
+    String result;
+    try {
+      c.consistency(store);
+      result = domainsOf(vars);
+    } catch (FailException e) {
+      result = "FAIL";
+    }
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    return result;
+  }
+
+  /**
+   * Propagates, then makes random decisions. After each propagation it checks that no solution
+   * listed by the solver for the domains before propagation was removed, and that re-running the
+   * constraint does not prune anything more.
+   */
+  private static void checkSupportsAndFixpointAlongRandomWalk(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random) {
+    List<int[]> solutions = solver.apply(vars);
+    for (int step = 0; step < 6; step++) {
+      boolean consistent = store.consistency();
+      if (solutions.isEmpty()) {
+        // propagation does not have to detect every failure
+        return;
+      }
+      String state = instance + " step " + step;
+      assertThat(consistent).as(state).isTrue();
+      for (int[] solution : solutions) {
+        for (int i = 0; i < vars.length; i++) {
+          assertThat(vars[i].domain.contains(solution[i]))
+              .as(state + " keeps solution " + Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+      String propagated = domainsOf(vars);
+      assertThat(rerun.get()).as(state + " re-run").isEqualTo(propagated);
+
+      IntVar v = vars[random.nextInt(vars.length)];
+      if (v.singleton()) {
+        continue;
+      }
+      store.setLevel(store.level + 1);
+      int value = valuesOf(v)[random.nextInt(v.getSize())];
+      if (random.nextBoolean()) {
+        v.domain.inValue(store.level, v, value);
+      } else {
+        v.domain.inComplement(store.level, v, value);
+      }
+      solutions = solver.apply(vars);
+    }
+  }
+
+  @Test
+  void countWithCounterInTheListReachesFixpoint() {
+    // magicseq: count(4, [x0, x1, x2, x3], x3). Narrowing the counter x3 to {0..3} removed the
+    // value 4 from x3, which is also in the list, so the maximal count dropped to 2 but the
+    // constraint was not run again for its own change.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1");
+    x1.addDom(1, 2);
+    x1.addDom(4, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    IntVar x3 = new IntVar(store, "x3", 0, 4);
+
+    store.impose(new Count(new IntVar[] {x0, x1, x2, x3}, x3, 4));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x3.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void countAppliesCountedCaseAfterNarrowingCounter() {
+    // Narrowing counter {0, 5..9} to [0, 3] makes it 0, so value 1 must be removed from the list
+    // in the same call.
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "y0", 0, 1), new IntVar(store, "y1", 0, 1), new IntVar(store, "y2", 0, 1)
+    };
+    IntVar counter = new IntVar(store, "c");
+    counter.addDom(0, 0);
+    counter.addDom(5, 9);
+
+    store.impose(new Count(list, counter, 1));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(counter.singleton(0)).isTrue();
+    for (IntVar y : list) {
+      assertThat(y.singleton(0)).as("%s", y).isTrue();
+    }
+  }
+
+  @Test
+  void countKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(17);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      boolean aliased = random.nextBoolean();
+      IntVar counter =
+          aliased ? list[random.nextInt(n)] : randomSubsetVar(store, "c", 0, 4, random);
+      int value = random.nextInt(5);
+      IntVar[] vars =
+          aliased
+              ? list
+              : Stream.concat(Arrays.stream(list), Stream.of(counter)).toArray(IntVar[]::new);
+      int counterIndex = Arrays.asList(vars).indexOf(counter);
+      String instance =
+          "run " + run + " count(" + value + ", list, " + counter.id() + ") " + domainsOf(vars);
+      Count count = new Count(list, counter, value);
+      store.impose(count);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a -> IntStream.range(0, n).filter(i -> a[i] == value).count() == a[counterIndex]),
+          () -> rerunAtNewLevel(store, count, vars),
+          random);
+    }
+  }
+
+  @Test
+  void channelReifWithSharedBooleanReachesFixpoint() {
+    // self_referential_quiz: the same b is used for q = 1 and q = 4. Value 4 is not in q, so b
+    // becomes 0, but the item for value 1 had already been visited and q kept the value 1.
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q");
+    q.addDom(1, 3);
+    q.addDom(5, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar b2 = new IntVar(store, "b2", 0, 1);
+    IntVar b3 = new IntVar(store, "b3", 0, 1);
+
+    store.impose(new ChannelReif(q, new IntVar[] {b2, b3, b, b}, new int[] {2, 3, 1, 4}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(0)).isTrue();
+    assertThat(q.dom().toString()).isEqualTo("{2..3, 5}");
+  }
+
+  @Test
+  void channelReifKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(19);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", 0, 5, random);
+      int k = 2 + random.nextInt(3);
+      IntVar[] pool = new IntVar[1 + random.nextInt(k)];
+      for (int i = 0; i < pool.length; i++) {
+        pool[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      List<Integer> candidates = new ArrayList<>(List.of(0, 1, 2, 3, 4, 5));
+      java.util.Collections.shuffle(candidates, random);
+      int[] values = new int[k];
+      int[] bIndex = new int[k];
+      IntVar[] bs = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        values[i] = candidates.get(i);
+        bIndex[i] = random.nextInt(pool.length);
+        bs[i] = pool[bIndex[i]];
+      }
+      IntVar[] vars = Stream.concat(Stream.of(x), Arrays.stream(pool)).toArray(IntVar[]::new);
+      String instance =
+          "run "
+              + run
+              + " values "
+              + Arrays.toString(values)
+              + " b "
+              + Arrays.toString(bIndex)
+              + " "
+              + domainsOf(vars);
+      ChannelReif channel = new ChannelReif(x, bs, values);
+      store.impose(channel);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, k)
+                          .allMatch(i -> (a[1 + bIndex[i]] == 1) == (a[0] == values[i]))),
+          () -> rerunAtNewLevel(store, channel, vars),
+          random);
+    }
+  }
+
+  @Test
+  void amongReRunAfterLowerBorderReachesNDoesNotFail() {
+    // hakank_among_global: once the lower border reaches n the remaining variables are pruned
+    // out of the set and moved behind the new upper border; they are still in the variable queue.
+    // A variable at position ub (outside the half-open range [lb, ub)) was not skipped and was
+    // moved out a second time, so a re-run failed (or threw ArrayIndexOutOfBoundsException).
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "a0", 0, 3),
+      new IntVar(store, "a1", 0, 3),
+      new IntVar(store, "a2", 0, 3),
+      new IntVar(store, "a3", 0, 3)
+    };
+    IntVar n = new IntVar(store, "n", 2, 2);
+    Among among = new Among(list, new IntervalDomain(1, 3), n);
+    store.impose(among);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    list[0].domain.inValue(store.level, list[0], 1);
+    list[1].domain.inValue(store.level, list[1], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[2].singleton(0)).isTrue();
+    assertThat(list[3].singleton(0)).isTrue();
+
+    String propagated = domainsOf(list) + " " + n.dom();
+    store.setLevel(store.level + 1);
+    among.consistency(store);
+    assertThat(domainsOf(list) + " " + n.dom()).isEqualTo(propagated);
+  }
+
+  @Test
+  void amongKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(23);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int size = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      int low = random.nextInt(4);
+      int high = low + random.nextInt(3);
+      IntVar n = randomSubsetVar(store, "n", 0, size, random);
+      IntVar[] vars = Stream.concat(Arrays.stream(list), Stream.of(n)).toArray(IntVar[]::new);
+      String instance = "run " + run + " kset " + low + ".." + high + " " + domainsOf(vars);
+      Among among = new Among(list, new IntervalDomain(low, high), n);
+      store.impose(among);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, size).filter(i -> a[i] >= low && a[i] <= high).count()
+                          == a[size]),
+          () -> rerunAtNewLevel(store, among, vars),
+          random);
+    }
+  }
+
+  @Test
+  void alldiffBoundsReasoningOnHolesReachesFixpoint() {
+    // latin-squares-fd2/07: after x32 = 1 the Hall interval {5..7} lowers x30.max to 4, which lands
+    // on the hole and makes x30 = 2. Neither the new bound nor the new singleton was propagated,
+    // so x29 kept 2 and x31 kept 2 and 3.
+    Store store = new Store();
+    IntVar x28 = new IntVar(store, "x28", 6, 6);
+    IntVar x31 = new IntVar(store, "x31", 2, 4);
+    IntVar x29 = new IntVar(store, "x29", 1, 3);
+    IntVar x30 = new IntVar(store, "x30");
+    x30.addDom(2, 2);
+    x30.addDom(5, 5);
+    x30.addDom(7, 7);
+    IntVar x32 = new IntVar(store, "x32");
+    x32.addDom(1, 1);
+    x32.addDom(4, 4);
+    IntVar x34 = new IntVar(store, "x34");
+    x34.addDom(1, 1);
+    x34.addDom(5, 5);
+    x34.addDom(7, 7);
+    IntVar x33 = new IntVar(store, "x33");
+    x33.addDom(5, 5);
+    x33.addDom(7, 7);
+    store.impose(new Alldiff(new IntVar[] {x28, x31, x29, x30, x32, x34, x33}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x32.domain.inValue(store.level, x32, 1);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x30.singleton(2)).as("x30 = %s", x30.dom()).isTrue();
+    assertThat(x29.singleton(3)).as("x29 = %s", x29.dom()).isTrue();
+    assertThat(x31.singleton(4)).as("x31 = %s", x31.dom()).isTrue();
+  }
+
+  @Test
+  void alldiffKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(29);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(3);
+      IntVar[] vars = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        vars[i] = randomSubsetVar(store, "x" + i, 0, n, random);
+      }
+      String instance = "run " + run + " " + domainsOf(vars);
+      Alldiff alldiff = new Alldiff(vars);
+      store.impose(alldiff);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> bruteForce(vs, a -> Arrays.stream(a).distinct().count() == a.length),
+          () -> rerunAtNewLevel(store, alldiff, vars),
+          random);
+    }
+  }
+
+  private static String knapsackOnCopies(int[] profits, int[] weights, IntVar[] vars) {
+    Store copyStore = new Store();
+    IntVar[] copies = new IntVar[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      copies[i] = new IntVar(copyStore, vars[i].id());
+      copies[i].addDom(vars[i].dom());
+    }
+    int n = profits.length;
+    copyStore.impose(
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+    return copyStore.consistency() ? domainsOf(copies) : "FAIL";
+  }
+
+  private static List<int[]> knapsackSolutions(int[] profits, int[] weights, IntVar[] vars) {
+    int n = profits.length;
+    List<int[]> solutions = new ArrayList<>();
+    for (int[] q : bruteForce(Arrays.copyOf(vars, n), a -> true)) {
+      int capacity = 0;
+      int profit = 0;
+      for (int i = 0; i < n; i++) {
+        capacity += weights[i] * q[i];
+        profit += profits[i] * q[i];
+      }
+      if (vars[n].domain.contains(capacity) && vars[n + 1].domain.contains(profit)) {
+        int[] solution = Arrays.copyOf(q, n + 2);
+        solution[n] = capacity;
+        solution[n + 1] = profit;
+        solutions.add(solution);
+      }
+    }
+    return solutions;
+  }
+
+  @Test
+  void knapsackReachesFixpoint() {
+    // Raising the minimal profit made the mandatory part raise the used capacity, which allows a
+    // stronger capacity bound, but the pass was not repeated and the store does not re-run the
+    // constraint for its own changes.
+    int[] weights = {15, 11, 10, 15, 11, 11, 14, 6};
+    int[] profits = {18, 20, 25, 9, 10, 19, 24, 22};
+    Store store = new Store();
+    IntVar[] vars = new IntVar[weights.length + 2];
+    for (int i = 0; i < weights.length; i++) {
+      vars[i] = new IntVar(store, "q" + i, 0, i == 4 ? 3 : 1);
+    }
+    vars[weights.length] = new IntVar(store, "capacity", 0, 115);
+    vars[weights.length + 1] = new IntVar(store, "profit", 0, 167);
+    IntVar profit = vars[weights.length + 1];
+    store.impose(
+        new Knapsack(
+            profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    profit.domain.inMin(store.level, profit, 162);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(knapsackOnCopies(profits, weights, vars)).isEqualTo(domainsOf(vars));
+  }
+
+  @Test
+  void knapsackKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(31);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(12);
+        profits[i] = 1 + random.nextInt(20);
+        int max = random.nextBoolean() ? 1 : 1 + random.nextInt(3);
+        vars[i] = new IntVar(store, "q" + i, 0, max);
+        weightSum += weights[i] * max;
+        profitSum += profits[i] * max;
+      }
+      vars[n] = new IntVar(store, "capacity", 0, weightSum);
+      vars[n + 1] = new IntVar(store, "profit", 0, profitSum);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> knapsackSolutions(profits, weights, vs),
+          () -> knapsackOnCopies(profits, weights, vars),
+          random);
+    }
+  }
+
+  private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
+    IntVar v = new IntVar(store, name);
+    for (int i = min; i <= max; i++) {
+      if (random.nextInt(3) > 0) {
+        v.addDom(i, i);
+      }
+    }
+    if (v.domain.isEmpty()) {
+      v.addDom(min, min);
+    }
+    return v;
+  }
+
+  private static int[] valuesOf(IntVar v) {
+    int[] values = new int[v.getSize()];
+    int i = 0;
+    for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      values[i++] = e.nextElement();
+    }
+    return values;
   }
 
   @Test

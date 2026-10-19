@@ -154,9 +154,23 @@ public class Alldiff extends Alldifferent {
       }
     }
 
-    init();
-    updateLb();
-    updateUb();
+    // Bounds reasoning on domains with holes is not idempotent (a new bound can land on a hole) and
+    // variables grounded by this pass are queued only for this constraint, so repeat until stable.
+    do {
+      store.propagationHasOccurred = false;
+
+      init();
+      updateLb();
+      updateUb();
+
+      if (!variableQueue.isEmpty()) {
+        int groundPos = grounded.value();
+        while (!variableQueue.isEmpty()) {
+          groundPos = processGroundedVariables(store, groundPos);
+        }
+        grounded.update(groundPos);
+      }
+    } while (store.propagationHasOccurred);
   }
 
   /**

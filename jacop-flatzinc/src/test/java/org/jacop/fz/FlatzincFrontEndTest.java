@@ -76,6 +76,45 @@ class FlatzincFrontEndTest {
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
   }
 
+  @Test
+  void searchOnOutputVariablesAssignsTheOtherVariablesToo() throws IOException {
+    // The annotated search labels only x and then the output variables, also only x. For x = 1
+    // y, z and w must be pairwise different values in 1..2, which propagation of int_ne does not
+    // detect, so x = 1 was reported as a solution without y, z and w having values.
+    String fzn =
+        """
+        var 1..2: x:: output_var;
+        var 2..3: x1;
+        var 1..3: y;
+        var 1..3: z;
+        var 1..3: w;
+        constraint int_lin_eq([1,-1],[x1,x],1);
+        constraint int_le(y,x1);
+        constraint int_le(z,x1);
+        constraint int_le(w,x1);
+        constraint int_ne(y,z);
+        constraint int_ne(y,w);
+        constraint int_ne(z,w);
+        solve :: int_search([x], input_order, indomain_min, complete) satisfy;
+        """;
+
+    assertEquals(Set.of("x = 2;"), solveAll(fzn));
+  }
+
+  @Test
+  void outputFileGetsEverySolutionWhenAllAreRequested() throws IOException {
+    // With -a the output file kept only the last solution, so golden files of the MiniZinc
+    // based tests could not record all solutions.
+    Path fzn = tmp.resolve("all.fzn");
+    Path out = tmp.resolve("all.out");
+    Files.writeString(fzn, "var 1..3: x:: output_var;\nsolve satisfy;\n", StandardCharsets.UTF_8);
+    new Fz2jacop().callMain(new String[] {"-a", "--outputfile", out.toString(), fzn.toString()});
+
+    assertEquals(
+        "x = 1;\n----------\nx = 2;\n----------\nx = 3;\n----------\n",
+        Files.readString(out, StandardCharsets.UTF_8));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

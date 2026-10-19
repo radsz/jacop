@@ -188,6 +188,24 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(final Store store) {
 
+    // The same b variable may be used for several values, so fixing b for one value can affect an
+    // item that was already visited; repeat the pass until it does not change any domain.
+    do {
+      store.propagationHasOccurred = false;
+      if (!singlePass(store)) {
+        return;
+      }
+    } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * It executes one pass of the channeling propagation.
+   *
+   * @param store the constraint store.
+   * @return false if the constraint does not need any further propagation, true otherwise.
+   */
+  private boolean singlePass(final Store store) {
+
     int start = position.value();
     boolean startChanged = false;
 
@@ -219,12 +237,13 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
       if (!x.singleton()) {
         removeConstraint();
       }
-      return;
+      return false;
     }
 
     if (x.singleton()) {
       propagateWhenXisSingleton(store, start);
     }
+    return true;
   }
 
   record Item(IntVar b, int value) {

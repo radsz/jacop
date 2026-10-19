@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_lex_lesseq_int"],
+  "constraintFamilies": ["linear", "ordering"],
+  "domains": []
+}

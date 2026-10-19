@@ -1,0 +1,4 @@
+source: hakank/minizinc/four_numbers.mzn
+mode: all (satisfaction)
+verified: JaCoP, Gecode 6.3.0 and Chuffed 0.13.2 find 2 distinct solutions
+feasibility: 2 JaCoP solution(s) accepted by gecode as data

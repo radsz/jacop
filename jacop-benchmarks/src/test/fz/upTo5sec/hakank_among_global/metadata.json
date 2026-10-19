@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "jacop_among"],
+  "constraintFamilies": ["counting", "linear"],
+  "domains": []
+}

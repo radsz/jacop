@@ -95,7 +95,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     maxIntervalNo = domain.size - 1;
     if (intervalNo == -1) {
 
-      for (int j = 0; j < maxIntervalNo; j++) {
+      for (int j = 0; j <= maxIntervalNo; j++) {
         if (domain.intervals[j].min() > current) {
           current = domain.intervals[j].min();
           intervalNo = j;

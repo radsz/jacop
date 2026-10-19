@@ -82,7 +82,16 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
   @Override
   public void domainHasChanged() {
 
-    // current, denotes the last element which has been returned.
+    // current denotes the next candidate value; bits holds the domain shifted so that its highest
+    // bit stands for current.
+    if (current < domain.minBound) {
+      // The domain was rebased past current (e.g. its minimum was removed): no value below minBound
+      // remains, so continue from the new minimum. A negative shift would be taken modulo 64.
+      current = domain.minBound;
+      bits = domain.bits;
+      return;
+    }
+
     if (domain.minBound + 63 < current) {
       bits = 0;
       // no more elements.
