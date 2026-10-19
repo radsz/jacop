@@ -100,3 +100,14 @@ This compiles the model to FlatZinc using `minizinc --compile --solver org.jacop
 JaCoP to produce the golden output, categorizes by execution time, generates `metadata.json`, and
 updates `list.txt`. Requires MiniZinc to be installed and JaCoP registered as a solver (see the
 `run-minizinc-jacop` skill).
+
+## Extensional constraint benchmarks
+
+The problem directories `table_*` and `mdd_random` hold generated instances for table, negative
+table, short table, Boolean table and MDD constraints (random tables, Dubois parity, crosswords,
+kakuro, TSP with a distance table). They come from `scripts/extensional-benchmarks.py` with the
+parameters in `scripts/extensional-benchmarks-grid.txt`. Directories ending in `_all` enumerate all
+solutions (`options.opt` passes `-n 100000`). Together with `circular_except_0`, `nonogram_gchq`,
+`peacable_queens`, `pentominoes-zayenz`, `rotating-workforce` and `rotating-workforce-scheduling`
+(MiniZinc Challenge and hakank models) they cover `table_int`, `table_bool`, `not table`, `regular`
+and `mdd`. Run them alone with `-DconstraintFilter=table` or `-DconstraintFilter=regular`.
