@@ -242,9 +242,10 @@ public class NetworkFlow extends Constraint
       costVariable.domain.inMin(store.level, costVariable, (int) cost);
     }
 
+    // the cost variable is in the map as well, but it is the one being fixed here
     boolean allVarsGround = true;
     for (IntVar v : map.keySet()) {
-      if (!v.singleton()) {
+      if (v != costVariable && !v.singleton()) {
         allVarsGround = false;
         break;
       }

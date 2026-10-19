@@ -2114,6 +2114,31 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void testNetworkFlowFixesCostWhenFlowsAreFixed() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 0, 3);
+    IntVar f1 = new IntVar(store, "f1", 0, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node source = net.addNode("source", 3);
+    Node sink = net.addNode("sink", -3);
+    net.addArc(source, sink, 1, f0);
+    net.addArc(source, sink, 2, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    f1.domain.in(store.level, f1, 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(f0.value()).isEqualTo(1);
+    assertThat(cost.singleton()).isTrue();
+    assertThat(cost.value()).isEqualTo(5);
+  }
+
   // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
   // lower bound for flows that are not negative.
   @Test
