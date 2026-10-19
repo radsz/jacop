@@ -34,6 +34,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.BiFunction;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -110,6 +111,21 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, z, 3, 4)).isTrue();
     return x.dom().toString();
+  }
+
+  @Test
+  void testAlldifferentExceptZeroChecksMatchingWhenZeroIsRemoved() {
+
+    // Three variables over {3, 4} cannot all differ; the third one only joins the matching check
+    // once 0 is removed from its domain, which does not fix it.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 3, 4), new IntVar(store, "x1", 3, 4), variable(store, "x2", 0, 3, 4)
+    };
+    store.impose(new AlldifferentExceptZero(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, x[2], 0)).isFalse();
   }
 
   private static IntVar variable(Store store, String name, int... values) {
