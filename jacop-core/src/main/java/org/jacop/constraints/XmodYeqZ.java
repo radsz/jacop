@@ -228,6 +228,12 @@ public class XmodYeqZ extends AbstractXopYeqZ {
   }
 
   @Override
+  public int getDefaultConsistencyPruningEvent() {
+    // the propagation for a singleton y or x uses the holes of the domains of x and z
+    return IntDomain.ANY;
+  }
+
+  @Override
   public boolean satisfied() {
     return grounded() && z.min() == mod(x.min(), y.min());
   }

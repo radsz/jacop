@@ -436,6 +436,12 @@ public class LinearIntDom extends LinearInt {
   }
 
   @Override
+  public int getDefaultConsistencyPruningEvent() {
+    // pruneEq() and pruneNeq() use the holes of the domains, not only their bounds
+    return IntDomain.ANY;
+  }
+
+  @Override
   protected int getDefaultNestedConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

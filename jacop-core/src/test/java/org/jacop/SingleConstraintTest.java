@@ -52,6 +52,7 @@ import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Diff;
@@ -69,6 +70,7 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
@@ -85,6 +87,7 @@ import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -470,6 +473,88 @@ class SingleConstraintTest extends TestHelper {
       abs.consistency(store);
       assertThat(x.dom() + " " + y.dom()).as(instance).isEqualTo(afterPropagation);
     }
+  }
+
+  @Test
+  void linearIntDomWakesUpOnHoleRemoval() {
+    // LinearIntDom is domain consistent but inherited the BOUND pruning event of LinearInt, so
+    // removing an inner value of a variable did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 2, 4);
+    IntVar z = new IntVar(store, "z", 5, 13);
+    // x + 4 * y - z = 4, so z = 4 * y - 3
+    store.impose(new LinearIntDom(new IntVar[] {x, y, z}, new int[] {1, 4, -1}, "==", 4));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{5, 9, 13}");
+
+    store.setLevel(store.level + 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(z.dom().toString()).isEqualTo("{5, 13}");
+  }
+
+  @Test
+  void xmodYeqZWakesUpOnHoleRemoval() {
+    // With y ground XmodYeqZ filters x with the holes of z, but it inherited the BOUND pruning
+    // event of AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 5, 5);
+    IntVar z = new IntVar(store, "z", 0, 4);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{1..5}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 1);
+    assertThat(store.consistency()).isTrue();
+
+    // 1 mod 5 = 1 is no longer in z
+    assertThat(x.dom().toString()).isEqualTo("{2..5}");
+  }
+
+  @Test
+  void xexpYeqZWakesUpOnHoleRemoval() {
+    // XexpYeqZ keeps only supported values but inherited the BOUND pruning event of
+    // AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 4);
+    IntVar y = new IntVar(store, "y", 2, 2);
+    IntVar z = new IntVar(store, "z", 4, 16);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{4, 9, 16}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 9);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x.dom().toString()).isEqualTo("{2, 4}");
+  }
+
+  @Test
+  void circuitWakesUpOnHoleRemoval() {
+    // Circuit inherited the BOUND pruning event of Alldiff, so removing an inner value did not
+    // re-run it. Here no variable can take 3 any more, so node 3 has no predecessor.
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    x[0] = new IntVar(store, "x0", 2, 4);
+    x[1] = new IntVar(store, "x1");
+    x[1].addDom(1, 1);
+    x[1].addDom(4, 4);
+    x[2] = new IntVar(store, "x2");
+    x[2].addDom(1, 2);
+    x[2].addDom(4, 4);
+    x[3] = new IntVar(store, "x3", 1, 2);
+    store.impose(new Circuit(x));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x[0].domain.inComplement(store.level, x[0], 3);
+
+    assertThat(store.consistency()).isFalse();
   }
 
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
