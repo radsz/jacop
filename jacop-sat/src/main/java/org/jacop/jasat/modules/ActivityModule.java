@@ -86,7 +86,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
         int activity_i = getLiteralActivity(Math.abs(i), i > 0);
         int activity_j = getLiteralActivity(Math.abs(j), j > 0);
 
-        return activity_j - activity_i;
+        return Integer.compare(activity_j, activity_i);
       };
 
   private int activitiesIndex;
