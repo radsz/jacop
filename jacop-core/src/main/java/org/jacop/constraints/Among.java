@@ -180,7 +180,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     int ub = currentUb;
     for (IntVar v : variableQueue) {
       int posVar = position.get(v);
-      if (posVar < lb || posVar > ub) {
+      if (posVar < lb || posVar >= ub) {
         continue;
       }
       if (kSet.contains(v.domain)) {

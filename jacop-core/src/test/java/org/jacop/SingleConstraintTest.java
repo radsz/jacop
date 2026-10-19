@@ -938,6 +938,69 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void amongReRunAfterLowerBorderReachesNDoesNotFail() {
+    // hakank_among_global: once the lower border reaches n the remaining variables are pruned
+    // out of the set and moved behind the new upper border; they are still in the variable queue.
+    // A variable at position ub (outside the half-open range [lb, ub)) was not skipped and was
+    // moved out a second time, so a re-run failed (or threw ArrayIndexOutOfBoundsException).
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "a0", 0, 3),
+      new IntVar(store, "a1", 0, 3),
+      new IntVar(store, "a2", 0, 3),
+      new IntVar(store, "a3", 0, 3)
+    };
+    IntVar n = new IntVar(store, "n", 2, 2);
+    Among among = new Among(list, new IntervalDomain(1, 3), n);
+    store.impose(among);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    list[0].domain.inValue(store.level, list[0], 1);
+    list[1].domain.inValue(store.level, list[1], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[2].singleton(0)).isTrue();
+    assertThat(list[3].singleton(0)).isTrue();
+
+    String propagated = domainsOf(list) + " " + n.dom();
+    store.setLevel(store.level + 1);
+    among.consistency(store);
+    assertThat(domainsOf(list) + " " + n.dom()).isEqualTo(propagated);
+  }
+
+  @Test
+  void amongKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(23);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int size = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      int low = random.nextInt(4);
+      int high = low + random.nextInt(3);
+      IntVar n = randomSubsetVar(store, "n", 0, size, random);
+      IntVar[] vars = Stream.concat(Arrays.stream(list), Stream.of(n)).toArray(IntVar[]::new);
+      String instance = "run " + run + " kset " + low + ".." + high + " " + domainsOf(vars);
+      Among among = new Among(list, new IntervalDomain(low, high), n);
+      store.impose(among);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, size).filter(i -> a[i] >= low && a[i] <= high).count()
+                          == a[size]),
+          () -> rerunAtNewLevel(store, among, vars),
+          random);
+    }
+  }
+
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
     IntVar v = new IntVar(store, name);
     for (int i = min; i <= max; i++) {
