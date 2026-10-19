@@ -115,6 +115,24 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void testPartitionSetReachesFixpoint() {
+
+    Random random = new Random(3);
+    int notAtFixpoint =
+        countNotAtFixpoint(
+            random,
+            store -> {
+              SetVar[] s = new SetVar[3];
+              for (int i = 0; i < s.length; i++) {
+                s[i] = randomSetVar(store, random, "s" + i, 5);
+              }
+              return new PartitionSet(s, new IntervalDomain(1, 5));
+            });
+
+    assertThat(notAtFixpoint).isZero();
+  }
+
   /**
    * Imposes many random instances of a constraint and counts those for which a second call of
    * consistency() after store.consistency() still changes a domain or fails.
