@@ -2130,6 +2130,46 @@ class SingleConstraintTest extends TestHelper {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  // A variable whose domain had values that are not counted got the arc for those values once per
+  // counted value, and the copies pruned each other, so solutions were lost.
+  @Test
+  void testSoftGccWithValuesThatAreNotCounted() {
+
+    // x2 has the domain {1, 3}
+    int[][] domains = {{0, 3}, {0, 3}, {1, 1}};
+    int[] values = {1, 2};
+    int[][] hard = {{1, 3}, {0, 3}};
+    int[][] soft = {{1, 1}, {2, 3}};
+
+    int[] counts = new int[2];
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[domains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, domains[i][0], domains[i][1]);
+      }
+      x[2].addDom(3, 3);
+      IntVar[] hardCounters = new IntVar[values.length];
+      IntVar[] softCounters = new IntVar[values.length];
+      for (int i = 0; i < values.length; i++) {
+        hardCounters[i] = new IntVar(store, "h" + i, hard[i][0], hard[i][1]);
+        softCounters[i] = new IntVar(store, "s" + i, soft[i][0], soft[i][1]);
+      }
+      IntVar cost = new IntVar(store, "cost", 1, 5);
+      SoftGCC softGcc =
+          new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      counts[network ? 0 : 1] =
+          noOfAllSolutions(store, x, hardCounters, softCounters, new IntVar[] {cost});
+    }
+    assertThat(counts[1]).isPositive();
+    assertThat(counts[0]).isEqualTo(counts[1]);
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 
