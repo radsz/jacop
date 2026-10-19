@@ -71,7 +71,9 @@ import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -555,6 +557,84 @@ class SingleConstraintTest extends TestHelper {
     x[0].domain.inComplement(store.level, x[0], 3);
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void minSimpleReachesFixpoint() {
+    // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
+    // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 1, 1);
+    IntVar x2 = new IntVar(store, "x2");
+    x2.addDom(-4, -2);
+    x2.addDom(1, 1);
+    x2.addDom(5, 6);
+    IntVar min = new IntVar(store, "min");
+    min.addDom(-4, -2);
+    min.addDom(0, 0);
+    min.addDom(5, 5);
+
+    store.impose(new MinSimple(x1, x2, min));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(min.dom().toString()).isEqualTo("{-4..-2}");
+    assertThat(x2.dom().toString()).isEqualTo("{-4..-2}");
+  }
+
+  @Test
+  void minAndMaxSimpleKeepSupportsAndReachFixpoint() {
+    Random random = new Random(11);
+    for (int run = 0; run < 2000; run++) {
+      boolean minimum = run % 2 == 0;
+      Store store = new Store();
+      IntVar x1 = randomSubsetVar(store, "x1", -4, 6, random);
+      IntVar x2 = randomSubsetVar(store, "x2", -4, 6, random);
+      IntVar r = randomSubsetVar(store, "r", -4, 6, random);
+      int[] x1Values = valuesOf(x1);
+      int[] x2Values = valuesOf(x2);
+      int[] rValues = valuesOf(r);
+      Constraint c = minimum ? new MinSimple(x1, x2, r) : new MaxSimple(x1, x2, r);
+      store.impose(c);
+
+      Set<Integer> x1Support = new HashSet<>();
+      Set<Integer> x2Support = new HashSet<>();
+      Set<Integer> rSupport = new HashSet<>();
+      for (int a : x1Values) {
+        for (int b : x2Values) {
+          int v = minimum ? Math.min(a, b) : Math.max(a, b);
+          if (Arrays.stream(rValues).anyMatch(w -> w == v)) {
+            x1Support.add(a);
+            x2Support.add(b);
+            rSupport.add(v);
+          }
+        }
+      }
+      String instance =
+          (minimum ? "min" : "max")
+              + " run "
+              + run
+              + " x1 "
+              + Arrays.toString(x1Values)
+              + " x2 "
+              + Arrays.toString(x2Values)
+              + " r "
+              + Arrays.toString(rValues);
+      boolean consistent = store.consistency();
+      if (rSupport.isEmpty()) {
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      x1Support.forEach(v -> assertThat(x1.domain.contains(v)).as(instance).isTrue());
+      x2Support.forEach(v -> assertThat(x2.domain.contains(v)).as(instance).isTrue());
+      rSupport.forEach(v -> assertThat(r.domain.contains(v)).as(instance).isTrue());
+
+      String afterPropagation = x1.dom() + " " + x2.dom() + " " + r.dom();
+      store.setLevel(store.level + 1);
+      c.consistency(store);
+      assertThat(x1.dom() + " " + x2.dom() + " " + r.dom())
+          .as(instance)
+          .isEqualTo(afterPropagation);
+    }
   }
 
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
