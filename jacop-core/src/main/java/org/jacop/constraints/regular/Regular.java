@@ -30,18 +30,11 @@
 
 package org.jacop.constraints.regular;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
-import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -52,47 +45,37 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.Mdd;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
 
 /**
- * Regular constraint accepts only the assignment to variables which is accepted by an automaton.
- * This constraint implements a polynomial algorithm to establish GAC. There are number of
- * improvements (iterative execution, optimization of computational load upon backtracking) to
- * improve the constraint further.
+ * Regular constraint accepts only the assignment to variables which is accepted by an automaton. It
+ * achieves generalized arc consistency (domain consistency).
+ *
+ * <p>The automaton is unfolded into a layered graph with one layer of edges per variable. Every
+ * edge is labelled with a single value. Each node counts its alive incoming and outgoing edges; an
+ * edge is alive while its value and both its nodes are alive, so edges carry no state of their own.
+ * When a value is removed from a variable only the edges labelled with it are visited. A node whose
+ * incoming or outgoing count drops to zero is removed and only its edges on the other side are
+ * visited, which may remove further nodes. Afterwards each value of a level where edges were
+ * removed is checked for an alive edge, starting from the edge that supported it last time, and
+ * values without one are removed from the variable. The counters are trailed, so backtracking costs
+ * time proportional to the counters changed since the restored level. This follows the layered
+ * graph propagator of Gecode and the incremental approach of MDD4R (Perez and Regin, "Improving
+ * GAC-4 for Table and MDD Constraints", CP 2014), adapted to a trailing solver.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
-public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
+public class Regular extends Constraint implements UsesQueueVariable, Stateful {
 
   /** It specifies if debugging information should be printed out. */
   public static final boolean DEBUG_ALL = false;
 
-  private static final String STATE_Q_DEGREES =
-      "--  state q_{}{} with in degree : {} and out degree : {}";
-
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /**
-   * It specifies if the translation of Fsm into optimized Mdd should take place so minimal layered
-   * graph can be obtained. This option most of the time causes out of memory exception as it
-   * requires finding and storing all solutions in mtrie before translation to an optimized Mdd can
-   * take place. Fsm also has to be a deterministic one.
-   */
-  private final boolean optimizedMdd = false;
-
-  /** It specifies if the edges should have a list of values associated with them. */
-  private final boolean listRepresentation = true;
-
-  /** It specifies if the support functionality should be used. */
-  private final boolean oneSupport = true;
 
   /** It specifies finite state machine used by this regular. */
   public final Fsm fsm;
@@ -100,69 +83,95 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
 
-  /** Queue of changed variables. */
-  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
-
-  /**
-   * Name of the file to store the latex output after consistency call The output will be :
-   * file_name + "call number" + ".tex".
-   */
-  private String latexFile = "/home/radek/";
-
-  /**
-   * DNames contain a "name" for each value from the union of all variabl's domains. If Hashmap -
-   * dNames - is not null then upon saving the latex graph the values on the edges will be replaced
-   * with their "names".
-   */
-  private Map<Integer, String> dNames;
-
-  /** It keeps for each variable value pair a current support. */
-  private Map<Integer, RegEdge>[] supports;
-
-  /** Number of states in the graph used only during the printing to latex function. */
-  int stateNumber;
-
-  Map<IntVar, Integer> mapping;
-
-  /**
-   * Consistency function call the prune arc function for every pruned variable and collect
-   * information about the levels that had some changes in "levelHadChaged" array Then it collect
-   * the values of the edges that are still active on the levels that had chages and update the
-   * domains of the variables.
-   */
-  boolean firstConsistencyCheck = true;
-
-  boolean[] levelHadChanged;
-  int firstConsistencyLevel;
   List<Constraint> constraints;
-  RegState[] touchedStates;
-  int[] lastNumberOfActiveStates;
 
-  /** This is the counter of save-to-latex calls. */
-  private int calls;
+  private Map<IntVar, Integer> mapping;
 
-  /** The ith smallest level of Layered Graph which have changed. */
-  private TimeStamp<Integer> leftChange;
+  private boolean firstConsistencyCheck = true;
 
-  /** The ith largest level of Layered Graph which have changed. */
-  private TimeStamp<Integer> rightChange;
+  /** Set while this constraint prunes domains, so its own changes are not queued again. */
+  private boolean pruning;
 
-  /** The position of the currentTouchedIndex. */
-  private TimeStamp<Integer> touchedIndex;
+  /** Levels (variable positions) whose variables changed since the last consistency call. */
+  private int[] levelQueue;
 
-  /** Stores the states of all graph levels. */
-  private RegState[][] stateLevels;
+  private int levelQueueSize;
 
-  /** Time-stamp for the number of active states in each level. */
-  private TimeStamp<Integer>[] activeLevels;
+  private boolean[] levelQueued;
 
-  private int[] activeLevelsTemp;
-  private Integer leftPosition;
-  private Integer rightPosition;
-  private int currentTouchedIndex;
+  // Slots: a slot is a (level, value) pair. Slots of level i are
+  // levelSlotStart[i]..levelSlotStart[i+1]-1.
+  private int[] levelSlotStart;
+  private int[] slotValue;
+  private int[] slotLevel;
+
+  // Static adjacency of the layered graph. Edges leaving node u are at positions
+  // outStart[u]..outStart[u+1]-1 of outNode (destination) and outSlot; edges entering node u are at
+  // positions inStart[u]..inStart[u+1]-1 of inNode (source) and inSlot; edges of slot s are at
+  // positions slotStart[s]..slotStart[s+1]-1 of slotSrc and slotDst.
+  private int[] outStart;
+  private int[] outNode;
+  private int[] outSlot;
+  private int[] inStart;
+  private int[] inNode;
+  private int[] inSlot;
+  private int[] slotStart;
+  private int[] slotSrc;
+  private int[] slotDst;
+
+  // Backtrackable state, RECORD ints per record. Records 0..nodes-1 hold for each node the number
+  // of alive incoming and outgoing edges; a removed node has -1 incoming edges. The next records
+  // hold for each slot 1 while the value is alive and 0 once it is removed, followed by one record
+  // per level with the number of its values that are still alive. An edge is alive when its slot
+  // and both its nodes are alive. The third int of a record is the epoch in which the record was
+  // trailed last; it is kept next to the counters so that both are read together.
+  private static final int RECORD = 4;
+  private static final int STAMP = 2;
+
+  private int[] state;
+  private int slotBase;
+  private int levelBase;
 
   /**
-   * Constructor need Store to initialize the time-stamps.
+   * Epoch of the current consistency call. A new epoch starts whenever the store level differs from
+   * the one of the previous call or a level was removed, so a record trailed in an earlier epoch is
+   * trailed again before it changes. Epochs are never reused, so stamps need no restoring.
+   */
+  private int epoch;
+
+  private int epochLevel = -1;
+
+  // Trail of saved records (record and its two counters) and, for each level with trailed records,
+  // the level and the trail position where its records start.
+  private int[] trail = new int[256];
+  private int trailTop;
+  private int[] markLevel = new int[16];
+  private int[] markPosition = new int[16];
+  private int markTop;
+
+  private int currentLevel;
+
+  // Nodes that lost all their incoming or all their outgoing edges and must be removed.
+  private int[] deadNodes = new int[64];
+  private int deadNodesSize;
+
+  // Slots that lost all their edges during the current consistency call.
+  private int[] emptySlots;
+  private int emptySlotsSize;
+
+  /** Level of each node. */
+  private int[] nodeLevel;
+
+  /** For each slot, the position of an edge that was alive when last checked. */
+  private int[] residue;
+
+  // Levels where edges were removed by node removals; their values must be checked for support.
+  private int[] touchedLevels;
+  private int touchedLevelsSize;
+  private boolean[] levelTouched;
+
+  /**
+   * It constructs a regular constraint.
    *
    * @param fsm (deterministic) finite automaton
    * @param list variables which values have to be accepted by the automaton.
@@ -176,51 +185,31 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     this.list = Arrays.copyOf(list, list.length);
     this.fsm = fsm;
     numberId = idNumber.incrementAndGet();
-    leftPosition = 0;
-    rightPosition = list.length - 1;
-    touchedStates = new RegState[fsm.allStates.size() * list.length];
     setScope(list);
   }
 
-  private static IntervalDomain asIntervalDomain(IntDomain dom) {
-    if (dom instanceof IntervalDomain interval) {
-      return interval;
-    }
-    IntervalDomain result = new IntervalDomain();
-    result.unionAdapt(dom);
-    return result;
-  }
-
   /**
-   * Initialization phase of the algorithm. It unfolds the automaton into a layered graph with one
-   * layer per variable. A forward pass collects the states reachable at each layer, a backward pass
-   * keeps the states from which a final state can be reached, and only then the states and edges of
-   * the layered graph are created. All work is proportional to the number of reachable states and
-   * their transitions, so the memory does not grow with the square of the number of automaton
-   * states.
-   *
-   * @param dfa specification of deterministic finite automaton.
+   * It unfolds the automaton into the layered graph. A forward pass collects the states reachable
+   * at each layer, a backward pass keeps the states from which a final state can be reached, and
+   * only then the nodes and edges of the layered graph are created. All work is proportional to the
+   * number of reachable states and their transitions.
    */
-  private void initializeArray(Fsm dfa) {
-    int levels = this.list.length;
-    dfa.resize();
-    stateNumber = dfa.allStates.size();
+  private void buildLayeredGraph() {
+    int levels = list.length;
+    fsm.resize();
+    int stateNumber = fsm.allStates.size();
 
     // Transitions of each automaton state, indexed by state id.
-    final FsmState[] array = new FsmState[stateNumber];
-    for (FsmState s : dfa.allStates) {
-      array[s.id] = s;
-    }
     final FsmTransition[][] transitions = new FsmTransition[stateNumber][];
-    for (FsmState s : array) {
+    for (FsmState s : fsm.allStates) {
       transitions[s.id] = s.transitions.toArray(new FsmTransition[0]);
     }
 
     // Forward pass: states reachable at each level, stored sparsely as lists of state ids.
     final int[][] reachable = new int[levels + 1][];
     final boolean[] marked = new boolean[stateNumber];
-    int[] buffer = new int[stateNumber];
-    reachable[0] = new int[] {dfa.initState.id};
+    final int[] buffer = new int[stateNumber];
+    reachable[0] = new int[] {fsm.initState.id};
     for (int level = 0; level < levels; level++) {
       IntDomain varDom = list[level].dom();
       int count = 0;
@@ -228,7 +217,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         for (FsmTransition t : transitions[sId]) {
           int sucId = t.successor.id;
           if (marked[sucId]
-              || (level == levels - 1 && !dfa.finalStates.contains(t.successor))
+              || (level == levels - 1 && !fsm.finalStates.contains(t.successor))
               || !t.domain.isIntersecting(varDom)) {
             continue;
           }
@@ -243,26 +232,30 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     // Backward pass: keep only states from which a final state can be reached. For each kept
-    // state remember its arcs (successor id and the merged domain of values leading to it).
-    final int[][] index = new int[levels + 1][];
+    // state remember its arcs (successor and the merged domain of values leading to it). Kept
+    // states get consecutive node ids, level by level.
+    final int[][] node = new int[levels + 1][];
     final int[][][] arcSuccessors = new int[levels][][];
     final IntDomain[][][] arcDomains = new IntDomain[levels][][];
-    final boolean[] alive = new boolean[stateNumber];
+    final int[] nodeOfState = new int[stateNumber];
     final IntDomain[] arc = new IntDomain[stateNumber];
     final int[] arcOrder = new int[stateNumber];
+    Arrays.fill(nodeOfState, -1);
 
-    index[levels] = new int[reachable[levels].length];
+    node[levels] = new int[reachable[levels].length];
+    int[] levelNodeCount = new int[levels + 1];
+    levelNodeCount[levels] = reachable[levels].length;
     for (int i = 0; i < reachable[levels].length; i++) {
-      index[levels][i] = i;
+      node[levels][i] = i;
     }
     for (int level = levels - 1; level >= 0; level--) {
       int[] next = reachable[level + 1];
       for (int i = 0; i < next.length; i++) {
-        alive[next[i]] = index[level + 1][i] >= 0;
+        nodeOfState[next[i]] = node[level + 1][i];
       }
       IntDomain varDom = list[level].dom();
       int[] current = reachable[level];
-      index[level] = new int[current.length];
+      node[level] = new int[current.length];
       arcSuccessors[level] = new int[current.length][];
       arcDomains[level] = new IntDomain[current.length][];
       int count = 0;
@@ -270,7 +263,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         int arcs = 0;
         for (FsmTransition t : transitions[current[i]]) {
           int sucId = t.successor.id;
-          if (!alive[sucId]) {
+          if (nodeOfState[sucId] < 0) {
             continue;
           }
           IntDomain dom = t.domain.intersect(varDom);
@@ -285,793 +278,428 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
         if (arcs == 0) {
-          index[level][i] = -1;
+          node[level][i] = -1;
           continue;
         }
         Arrays.sort(arcOrder, 0, arcs);
-        arcSuccessors[level][i] = Arrays.copyOf(arcOrder, arcs);
+        arcSuccessors[level][i] = new int[arcs];
         arcDomains[level][i] = new IntDomain[arcs];
         for (int k = 0; k < arcs; k++) {
+          arcSuccessors[level][i][k] = nodeOfState[arcOrder[k]];
           arcDomains[level][i][k] = arc[arcOrder[k]];
           arc[arcOrder[k]] = null;
         }
-        index[level][i] = count++;
+        node[level][i] = count++;
       }
+      levelNodeCount[level] = count;
       for (int sId : next) {
-        alive[sId] = false;
+        nodeOfState[sId] = -1;
       }
     }
 
-    // Create the states of the layered graph, level by level, and connect them.
-    this.stateLevels = new RegState[levels + 1][];
-    this.activeLevelsTemp = new int[levels + 1];
-    final int[] successorMap = new int[stateNumber];
-    for (int level = levels; level >= 0; level--) {
-      int[] current = reachable[level];
-      int count = 0;
-      for (int i : index[level]) {
-        if (i >= 0) {
-          count++;
+    // Global node ids: level offsets.
+    int[] levelNodeStart = new int[levels + 2];
+    for (int level = 0; level <= levels; level++) {
+      levelNodeStart[level + 1] = levelNodeStart[level] + levelNodeCount[level];
+    }
+    int nodes = levelNodeStart[levels + 1];
+
+    // Slots: the values labelling edges of each level.
+    levelSlotStart = new int[levels + 1];
+    int[][] levelValues = new int[levels][];
+    for (int level = 0; level < levels; level++) {
+      IntervalDomain values = new IntervalDomain();
+      for (IntDomain[] domains : arcDomains[level]) {
+        if (domains != null) {
+          for (IntDomain dom : domains) {
+            values.unionAdapt(dom);
+          }
         }
       }
-      stateLevels[level] = new RegState[Math.max(count, level == 0 ? 1 : 0)];
-      activeLevelsTemp[level] = count;
-      for (int i = 0; i < current.length; i++) {
-        int pos = index[level][i];
-        if (pos < 0) {
+      levelValues[level] = new int[values.getSize()];
+      int k = 0;
+      for (ValueEnumeration e = values.valueEnumeration(); e.hasMoreElements(); ) {
+        levelValues[level][k++] = e.nextElement();
+      }
+      levelSlotStart[level + 1] = levelSlotStart[level] + k;
+    }
+    int slots = levelSlotStart[levels];
+    slotValue = new int[slots];
+    slotLevel = new int[slots];
+    for (int level = 0; level < levels; level++) {
+      System.arraycopy(
+          levelValues[level], 0, slotValue, levelSlotStart[level], levelValues[level].length);
+      Arrays.fill(slotLevel, levelSlotStart[level], levelSlotStart[level + 1], level);
+    }
+
+    // Count edges per node and per slot.
+    int[] outCount = new int[nodes + 1];
+    int[] inCount = new int[nodes + 1];
+    int[] slotCount = new int[slots + 1];
+    for (int level = 0; level < levels; level++) {
+      for (int i = 0; i < node[level].length; i++) {
+        if (node[level][i] < 0) {
           continue;
         }
-        int degree = 0;
-        if (level < levels) {
-          for (IntDomain dom : arcDomains[level][i]) {
-            degree += dom.getSize();
+        int src = levelNodeStart[level] + node[level][i];
+        for (int k = 0; k < arcSuccessors[level][i].length; k++) {
+          int dst = levelNodeStart[level + 1] + arcSuccessors[level][i][k];
+          for (ValueEnumeration e = arcDomains[level][i][k].valueEnumeration();
+              e.hasMoreElements(); ) {
+            int slot = slotOf(level, levelValues[level], e.nextElement());
+            outCount[src]++;
+            inCount[dst]++;
+            slotCount[slot]++;
           }
         }
-        RegState s =
-            listRepresentation
-                ? new RegStateInt(level, current[i], degree, pos)
-                : new RegStateDom(level, current[i], degree, pos);
-        stateLevels[level][pos] = s;
-        if (level == levels) {
+      }
+    }
+
+    outStart = segmentStarts(outCount);
+    inStart = segmentStarts(inCount);
+    slotStart = segmentStarts(slotCount);
+    int edges = outStart[nodes];
+    outNode = new int[edges];
+    outSlot = new int[edges];
+    inNode = new int[edges];
+    inSlot = new int[edges];
+    slotSrc = new int[edges];
+    slotDst = new int[edges];
+
+    slotBase = nodes;
+    levelBase = nodes + slots;
+    state = new int[RECORD * (levelBase + levels)];
+    int[] slotFill = new int[slots];
+    for (int level = 0; level < levels; level++) {
+      state[RECORD * (levelBase + level)] = levelSlotStart[level + 1] - levelSlotStart[level];
+    }
+
+    for (int level = 0; level < levels; level++) {
+      for (int i = 0; i < node[level].length; i++) {
+        if (node[level][i] < 0) {
           continue;
         }
-        int[] sucIds = arcSuccessors[level][i];
-        for (int k = 0; k < sucIds.length; k++) {
-          RegState suc = stateLevels[level + 1][successorMap[sucIds[k]]];
-          s.addTransitions(suc, asIntervalDomain(arcDomains[level][i][k]));
-          if (DEBUG_ALL) {
-            log.debug(STATE_Q_DEGREES, level, s.id, s.inDegree, s.outDegree);
-            log.debug(STATE_Q_DEGREES, level + 1, suc.id, suc.inDegree, suc.outDegree);
+        int src = levelNodeStart[level] + node[level][i];
+        for (int k = 0; k < arcSuccessors[level][i].length; k++) {
+          int dst = levelNodeStart[level + 1] + arcSuccessors[level][i][k];
+          for (ValueEnumeration e = arcDomains[level][i][k].valueEnumeration();
+              e.hasMoreElements(); ) {
+            int slot = slotOf(level, levelValues[level], e.nextElement());
+            int o = outStart[src] + state[RECORD * src + 1]++;
+            outNode[o] = dst;
+            outSlot[o] = slot;
+            int in = inStart[dst] + state[RECORD * dst]++;
+            inNode[in] = src;
+            inSlot[in] = slot;
+            int se = slotStart[slot] + slotFill[slot]++;
+            slotSrc[se] = src;
+            slotDst[se] = dst;
           }
         }
       }
-      // successorMap is used by the level above, which connects to the states created here.
-      for (int i = 0; i < current.length; i++) {
-        successorMap[current[i]] = index[level][i];
+    }
+
+    emptySlots = new int[Math.max(1, slots)];
+    residue = Arrays.copyOf(slotStart, slots);
+    for (int slot = 0; slot < slots; slot++) {
+      state[RECORD * (slotBase + slot)] = 1;
+    }
+    nodeLevel = new int[nodes];
+    for (int level = 0; level <= levels; level++) {
+      Arrays.fill(nodeLevel, levelNodeStart[level], levelNodeStart[level + 1], level);
+    }
+    touchedLevels = new int[levels];
+    levelTouched = new boolean[levels];
+  }
+
+  private int slotOf(int level, int[] values, int value) {
+    return levelSlotStart[level] + Arrays.binarySearch(values, value);
+  }
+
+  private static int[] segmentStarts(int[] counts) {
+    int[] start = new int[counts.length];
+    int position = 0;
+    for (int i = 0; i < counts.length; i++) {
+      start[i] = position;
+      position += counts[i];
+    }
+    return start;
+  }
+
+  /** It saves a record on the trail unless it was saved in the current epoch already. */
+  private void save(int record) {
+    int base = RECORD * record;
+    if (state[base + STAMP] == epoch) {
+      return;
+    }
+    state[base + STAMP] = epoch;
+    if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
+      if (markTop == markLevel.length) {
+        markLevel = Arrays.copyOf(markLevel, markTop * 2);
+        markPosition = Arrays.copyOf(markPosition, markTop * 2);
+      }
+      markLevel[markTop] = currentLevel;
+      markPosition[markTop++] = trailTop;
+    }
+    if (trailTop + 3 > trail.length) {
+      trail = Arrays.copyOf(trail, trail.length * 2);
+    }
+    trail[trailTop] = record;
+    trail[trailTop + 1] = state[base];
+    trail[trailTop + 2] = state[base + 1];
+    trailTop += 3;
+  }
+
+  private boolean alive(int node) {
+    return state[RECORD * node] >= 0;
+  }
+
+  private boolean slotAlive(int slot) {
+    return state[RECORD * (slotBase + slot)] > 0;
+  }
+
+  /** It decrements the number of incoming (degree 0) or outgoing (degree 1) edges of a node. */
+  private void decrementDegree(int node, int degree) {
+    save(node);
+    if (--state[RECORD * node + degree] == 0) {
+      if (deadNodesSize == deadNodes.length) {
+        deadNodes = Arrays.copyOf(deadNodes, deadNodesSize * 2);
+      }
+      deadNodes[deadNodesSize++] = node;
+    }
+  }
+
+  private void touchLevel(int level) {
+    if (!levelTouched[level]) {
+      levelTouched[level] = true;
+      touchedLevels[touchedLevelsSize++] = level;
+    }
+  }
+
+  /**
+   * It checks whether a value of a level still labels an alive edge. The search starts at the edge
+   * found last time (a residue, which needs no trailing) and wraps around.
+   */
+  private boolean hasSupport(int slot) {
+    int start = slotStart[slot];
+    int end = slotStart[slot + 1];
+    int r = residue[slot];
+    for (int e = r; e < end; e++) {
+      if (alive(slotSrc[e]) && alive(slotDst[e])) {
+        residue[slot] = e;
+        return true;
+      }
+    }
+    for (int e = start; e < r; e++) {
+      if (alive(slotSrc[e]) && alive(slotDst[e])) {
+        residue[slot] = e;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** It removes the values of touched levels that no longer label an alive edge. */
+  private void checkTouchedLevels() {
+    for (int i = 0; i < touchedLevelsSize; i++) {
+      int level = touchedLevels[i];
+      levelTouched[level] = false;
+      for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {
+        if (slotAlive(slot) && !hasSupport(slot)) {
+          int record = slotBase + slot;
+          save(record);
+          state[RECORD * record] = 0;
+          emptySlots[emptySlotsSize++] = slot;
+          removedSlotOfLevel(level);
+        }
+      }
+    }
+    touchedLevelsSize = 0;
+  }
+
+  /**
+   * It records that a level lost one of its values. A level without values means that no word is
+   * accepted, so the constraint fails at once instead of removing the rest of the graph.
+   */
+  private void removedSlotOfLevel(int level) {
+    int record = levelBase + level;
+    save(record);
+    if (--state[RECORD * record] == 0) {
+      throw Store.failException;
+    }
+  }
+
+  /** It removes a value of a level, together with all alive edges labelled with it. */
+  private void removeSlot(int slot) {
+    int record = slotBase + slot;
+    save(record);
+    state[RECORD * record] = 0;
+    removedSlotOfLevel(slotLevel[slot]);
+    for (int e = slotStart[slot]; e < slotStart[slot + 1]; e++) {
+      int src = slotSrc[e];
+      int dst = slotDst[e];
+      if (alive(src) && alive(dst)) {
+        decrementDegree(src, 1);
+        decrementDegree(dst, 0);
       }
     }
   }
 
   /**
-   * Initialization phase of the algorithm.
-   *
-   * <p>Considering that it needs to initialize the array of graph States - stateLevels, and, thus,
-   * it needs to know the actual number of the states on each level I found nothing better then run
-   * the initialization phase with the complete NxN array of states and then copy the useful ones
-   * into a final array (which is ugly)
+   * It removes the nodes that lost all their incoming or all their outgoing edges. Their remaining
+   * alive edges are removed too, which may remove further nodes and leave values without support.
    */
-  @SuppressWarnings("unchecked")
-  private void initializeArray(Mdd mdd) {
-
-    int levels = this.list.length;
-
-    // Initialization of the future state array
-    // and the time-stamps with the number of active states
-    this.stateLevels = new RegState[levels + 1][];
-
-    List<RegState>[] layeredGraph =
-        (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
-    for (int i = 0; i < layeredGraph.length; i++) {
-      layeredGraph[i] = new ArrayList<>();
-    }
-
-    this.activeLevelsTemp = new int[this.list.length + 1];
-
-    final int[] currentPosition = new int[list.length];
-    final int[] currentOffset = new int[list.length];
-    RegState[] currentState = new RegState[list.length + 1];
-
-    int currentLevel = 0;
-    int noNeighbours = 0;
-
-    for (int i = 0; i < list[0].getSize(); i++) {
-      if (mdd.diagram[i] != Mdd.NOEDGE) {
-        noNeighbours++;
+  private void removeDeadNodes() {
+    while (deadNodesSize > 0) {
+      int node = deadNodes[--deadNodesSize];
+      if (!alive(node)) {
+        continue;
       }
-    }
-
-    currentState[0] =
-        new RegStateInt(currentLevel, 0, noNeighbours, activeLevelsTemp[currentLevel]++);
-    currentState[list.length] = new RegStateInt(list.length, 0, 0, activeLevelsTemp[list.length]++);
-
-    layeredGraph[0].add(currentState[currentLevel]);
-    layeredGraph[list.length].add(currentState[list.length]);
-
-    currentPosition[0] = 0;
-    currentOffset[0] = 0;
-    currentLevel = 0;
-
-    while (currentLevel != -1) {
-      currentLevel =
-          initializeArrayStep(
-              mdd,
-              layeredGraph,
-              currentPosition,
-              currentOffset,
-              currentState,
-              currentLevel,
-              list.length);
-    }
-
-    copyLayeredGraphToStateLevels(layeredGraph);
-  }
-
-  /**
-   * Performs one step of the MDD traversal during initialization. Returns the new current level (or
-   * -1 when backtracking past start).
-   */
-  private int initializeArrayStep(
-      Mdd mdd,
-      List<RegState>[] layeredGraph,
-      int[] currentPosition,
-      int[] currentOffset,
-      RegState[] currentState,
-      int currentLevel,
-      int listLen) {
-    if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
-      int nextLevel = currentLevel - 1;
-      if (nextLevel >= 0) {
-        currentOffset[nextLevel]++;
-      }
-      return nextLevel;
-    }
-
-    int nextNodePosition = mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
-
-    if (nextNodePosition == Mdd.NOEDGE) {
-      currentOffset[currentLevel]++;
-      return currentLevel;
-    }
-
-    if (nextNodePosition == Mdd.TERMINAL) {
-      currentState[currentLevel].addTransition(
-          currentState[listLen], mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-      currentOffset[currentLevel]++;
-      return currentLevel;
-    }
-
-    RegState s = findStateInLayer(layeredGraph[currentLevel + 1], nextNodePosition);
-    boolean visited = s != null;
-    if (s == null) {
-      s =
-          createAndAddStateToLayeredGraph(
-              mdd, layeredGraph, currentLevel, nextNodePosition, listLen);
-    }
-
-    currentState[currentLevel].addTransition(
-        s, mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-
-    if (visited) {
-      currentOffset[currentLevel]++;
-      return currentLevel;
-    }
-
-    currentLevel++;
-    currentState[currentLevel] = s;
-    currentOffset[currentLevel] = 0;
-    currentPosition[currentLevel] = nextNodePosition;
-    return currentLevel;
-  }
-
-  private RegState findStateInLayer(List<RegState> layer, int id) {
-    for (RegState state : layer) {
-      if (state.id == id) {
-        return state;
-      }
-    }
-    return null;
-  }
-
-  private RegState createAndAddStateToLayeredGraph(
-      Mdd mdd, List<RegState>[] layeredGraph, int currentLevel, int nextNodePosition, int listLen) {
-    int noNeighbours = countNeighbours(mdd, currentLevel, nextNodePosition, listLen);
-    RegState s =
-        new RegStateInt(
-            currentLevel + 1, nextNodePosition, noNeighbours, activeLevelsTemp[currentLevel + 1]++);
-    layeredGraph[currentLevel + 1].add(s);
-    return s;
-  }
-
-  private int countNeighbours(Mdd mdd, int currentLevel, int nextNodePosition, int listLen) {
-    int noNeighbours = 0;
-    if (currentLevel + 1 < listLen) {
-      for (int j = nextNodePosition; j < nextNodePosition + list[currentLevel + 1].getSize(); j++) {
-        if (mdd.diagram[j] != Mdd.NOEDGE) {
-          noNeighbours++;
-        }
-      }
-    }
-    return noNeighbours;
-  }
-
-  private void copyLayeredGraphToStateLevels(List<RegState>[] layeredGraph) {
-    for (int i = 0; i < layeredGraph.length; i++) {
-      stateLevels[i] = new RegState[layeredGraph[i].size()];
-      int j = 0;
-      for (RegState state : layeredGraph[i]) {
-        stateLevels[i][j] = state;
-        j++;
-      }
-    }
-  }
-
-  /**
-   * Find the state with the corresponding id.
-   *
-   * @param level specifies the variable for which the state is seeked for.
-   * @param id specifies the id of the state.
-   * @return the state at given level with a given id.
-   */
-  public RegState getState(int level, int id) {
-
-    for (int i = 0; i < stateLevels[level].length; i++) {
-      if (stateLevels[level][i] != null && stateLevels[level][i].id == id) {
-        return stateLevels[level][i];
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Collects the damaged states, after pruning the domain of variable v, and put these states in
-   * two separated sets.
-   *
-   * <p>One with the states with zero incoming degree - these are the candidates for the forward
-   * part. The other set consists of states with zero out-coming degree - these are the candidates
-   * for backward part.
-   *
-   * @param varIndex the index of the variable which have changed.
-   */
-  public void pruneArc(int varIndex) {
-
-    int preThisLevelStateNb = this.activeLevels[varIndex].value();
-    int nextVar = varIndex + 1;
-    int preNextLevelStateNb = this.activeLevels[nextVar].value();
-
-    levelHadChanged[varIndex] = true;
-
-    IntDomain domVar = list[varIndex].domain;
-
-    for (int state = preThisLevelStateNb - 1; state >= 0; state--) {
-      RegState s = stateLevels[varIndex][state];
-      if (DEBUG_ALL) {
-        log.debug("{}: watch state q_{}{}", state, varIndex, s.id);
-      }
-      pruneArcForState(s, domVar, varIndex, nextVar);
-    }
-
-    unreachForwardLoop(preNextLevelStateNb, varIndex + 1);
-    unreachBackwardLoop(preThisLevelStateNb, varIndex - 1);
-  }
-
-  private void addTouchedState(RegState s) {
-
-    if (currentTouchedIndex == touchedStates.length) {
-      touchedStates = Arrays.copyOf(touchedStates, Math.max(4, touchedStates.length * 2));
-    }
-    touchedStates[currentTouchedIndex++] = s;
-  }
-
-  private void pruneArcForState(RegState s, IntDomain domVar, int varIndex, int nextVar) {
-    boolean alreadyTouched = false;
-    for (int i = s.outDegree - 1; i >= 0; i--) {
-      if (!s.intersects(domVar, i)) {
-        RegState suc = s.successors[i];
-        removeTransitionWithLog(s, i, suc, varIndex);
-        s.removeTransition(i);
-
-        if (!alreadyTouched) {
-          addTouchedState(s);
-          alreadyTouched = true;
-        }
-
-        if (DEBUG_ALL) {
-          log.debug(STATE_Q_DEGREES, s.level, s.id, s.inDegree, s.outDegree);
-          log.debug(STATE_Q_DEGREES, suc.level, suc.id, suc.inDegree, suc.outDegree);
-        }
-
-        if (ASSERTS_ENABLED && s.outDegree < 0) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        if (s.outDegree == 0) {
-          if (DEBUG_ALL) {
-            log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
-          }
-          if (ASSERTS_ENABLED && s.level != varIndex) {
-            throw new IllegalStateException("Assertion failed");
-          }
-          disableState(varIndex, s.pos);
-        }
-
-        if (ASSERTS_ENABLED && suc.inDegree < 0) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        if (suc.inDegree == 0) {
-          if (DEBUG_ALL) {
-            log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
-          }
-          if (ASSERTS_ENABLED && suc.level != varIndex + 1) {
-            throw new IllegalStateException("Assertion failed");
-          }
-          disableState(nextVar, suc.pos);
-          levelHadChanged[nextVar] = true;
-        }
-      }
-    }
-  }
-
-  private void removeTransitionWithLog(RegState s, int i, RegState suc, int varIndex) {
-    if (DEBUG_ALL) {
-      log.debug(
-          "must remove transition q_{}{} -{}-> q_{}{}",
-          varIndex,
-          s.id,
-          s.sucDomToString(i),
-          varIndex + 1,
-          suc.id);
-    }
-  }
-
-  /**
-   * It does backward check to remove inactive edges and states.
-   *
-   * @param sucPrevLimit previous number of states at a given level.
-   * @param level level for which the backward sweep is computed.
-   * @return level at which the sweep has ended.
-   */
-  public int unreachBackwardLoop(int sucPrevLimit, int level) {
-
-    RegState s;
-
-    boolean cont = sucPrevLimit != this.activeLevels[level + 1].value();
-
-    while (level >= 0 && cont) {
-
-      cont = false;
-
-      levelHadChanged[level] = true;
-
-      for (int sPos = this.activeLevels[level].value() - 1; sPos >= 0; sPos--) {
-
-        s = this.stateLevels[level][sPos];
-
-        boolean alreadyTouched = false;
-        for (int sucIndex = s.outDegree - 1; sucIndex >= 0; sucIndex--) {
-          if (!s.successors[sucIndex].isActive(activeLevels)) {
-            s.removeTransition(sucIndex);
-            if (!alreadyTouched) {
-              addTouchedState(s);
-              alreadyTouched = true;
-            }
+      // A node is removed because one of its counts dropped to zero, so only the other side can
+      // still have alive edges.
+      boolean scanOut = state[RECORD * node + 1] > 0;
+      boolean scanIn = state[RECORD * node] > 0;
+      save(node);
+      state[RECORD * node] = -1;
+      if (scanOut) {
+        touchLevel(nodeLevel[node]);
+        for (int e = outStart[node]; e < outStart[node + 1]; e++) {
+          int dst = outNode[e];
+          if (slotAlive(outSlot[e]) && alive(dst)) {
+            decrementDegree(dst, 0);
           }
         }
-
-        if (ASSERTS_ENABLED && s.outDegree < 0) {
-          throw new IllegalStateException(
-              String.valueOf("Negative successor number of q_" + s.level + s.id));
-        }
-
-        if (s.outDegree == 0) {
-          if (ASSERTS_ENABLED && s.level != level) {
-            throw new IllegalStateException("Assertion failed");
+      }
+      if (scanIn) {
+        touchLevel(nodeLevel[node] - 1);
+        for (int e = inStart[node]; e < inStart[node + 1]; e++) {
+          int src = inNode[e];
+          if (slotAlive(inSlot[e]) && alive(src)) {
+            decrementDegree(src, 1);
           }
-          disableState(level, sPos);
-          cont = true;
         }
       }
-
-      level--;
     }
-
-    return level;
-  }
-
-  /**
-   * Forward part deletes the outgoing edges of the damaged state and watch whether the successors
-   * are still active (in-degree {@literal >} 0 ), otherwise we collect it and continue the loop.
-   *
-   * @param end the position of the last active state at a given level.
-   * @param level level being examined.
-   */
-  public void unreachForwardLoop(int end, int level) {
-
-    int state;
-    RegState s;
-    RegState suc;
-
-    int preNextLevelStateNb;
-
-    int currentLimit = this.activeLevels[level].value();
-
-    boolean cont = currentLimit != end;
-
-    while (level < this.list.length && cont) {
-
-      levelHadChanged[level] = true;
-
-      cont = false;
-
-      preNextLevelStateNb = this.activeLevels[level + 1].value();
-
-      for (state = currentLimit; state < end; state++) {
-        s = stateLevels[level][state];
-
-        // We are removing a damaged state, thus, all its arcs are removed and
-        // we must remember maximal degree of it
-
-        for (int i = s.outDegree - 1; i >= 0; i--) {
-
-          suc = s.successors[i];
-          suc.inDegree--;
-
-          if (DEBUG_ALL) {
-            log.debug(
-                "watch transition q_{}{} -{}-> q_{}{}",
-                s.level,
-                s.id,
-                s.sucDomToString(i),
-                suc.level,
-                suc.id);
-          }
-
-          if (ASSERTS_ENABLED && suc.inDegree < 0) {
-            throw new IllegalStateException(
-                String.valueOf("Negative indegree of successor state" + suc.level + suc.id));
-          }
-
-          if (suc.inDegree == 0) {
-            if (DEBUG_ALL) {
-              log.debug("> Move IN state out of scope : q_{}{}", suc.level, suc.id);
-            }
-            // changed to directl disableState(int, int).
-            if (ASSERTS_ENABLED && suc.level != level + 1) {
-              throw new IllegalStateException("Assertion failed");
-            }
-            disableState(level + 1, suc.pos);
-            cont = true;
-          }
-        }
-
-        s.outDegree = 0;
-      }
-
-      end = preNextLevelStateNb;
-      currentLimit = activeLevels[level + 1].value();
-      level++;
-    }
-  }
-
-  /**
-   * It marks state as being not active.
-   *
-   * @param level level at which the state is residing.
-   * @param pos position of the state in the array of states.
-   */
-  public void disableState(int level, int pos) {
-
-    int lim = activeLevels[level].value();
-
-    if (ASSERTS_ENABLED && pos >= lim) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
-    RegState s = stateLevels[level][pos];
-
-    // it must be before the remaining operations
-    lim--;
-
-    stateLevels[level][pos] = stateLevels[level][lim];
-    stateLevels[level][pos].pos = pos;
-    stateLevels[level][lim] = s;
-    s.pos = lim;
-    activeLevels[level].update(lim);
   }
 
   @Override
   public void removeLevel(int level) {
 
-    if (ASSERTS_ENABLED && level <= firstConsistencyLevel) {
-      throw new IllegalStateException(
-          String.valueOf(
-              "Constraint has the level at which it has computed its initial state being removed."));
-    }
-
-    this.variableQueue.clear();
-
-    if (leftChange.value() < leftPosition) {
-      leftPosition = leftChange.value();
-    }
-
-    if (rightChange.value() > rightPosition) {
-      rightPosition = rightChange.value();
-    }
-
-    for (int l = leftPosition; l <= rightPosition; l++) {
-      lastNumberOfActiveStates[l] = activeLevels[l].value();
-    }
-  }
-
-  /** Sweep the graph upon backtracking. */
-  @Override
-  public void removeLevelLate(int level) {
-
-    int checkToIndex = touchedIndex.value();
-
-    while (currentTouchedIndex > checkToIndex) {
-      RegState curState = touchedStates[--currentTouchedIndex];
-      recomputeOutDegree(curState, curState.level);
-    }
-
-    for (int l = leftPosition; l <= rightPosition; l++) {
-      int stateNb = this.activeLevels[l].value();
-      for (int s = lastNumberOfActiveStates[l]; s < stateNb; s++) {
-        recomputeOutDegree(stateLevels[l][s], l);
+    while (markTop > 0 && markLevel[markTop - 1] >= level) {
+      int start = markPosition[--markTop];
+      while (trailTop > start) {
+        trailTop -= 3;
+        int base = RECORD * trail[trailTop];
+        state[base] = trail[trailTop + 1];
+        state[base + 1] = trail[trailTop + 2];
       }
     }
 
-    if (DEBUG_ALL) {
-      log.debug("..next prunning");
+    epochLevel = -1;
+    for (int i = 0; i < levelQueueSize; i++) {
+      levelQueued[levelQueue[i]] = false;
     }
-
-    leftPosition = list.length;
-    rightPosition = 0;
-  }
-
-  private void recomputeOutDegree(RegState curState, int level) {
-    RegState[] successors = curState.successors;
-    int prevVal = curState.outDegree;
-    curState.outDegree = successors.length;
-    for (int i = prevVal; i < curState.outDegree; i++) {
-      if (!successors[i].isActive(activeLevels) || !curState.intersects(list[level].domain, i)) {
-        curState.outDegree = i;
-      } else {
-        successors[i].inDegree++;
-      }
+    levelQueueSize = 0;
+    deadNodesSize = 0;
+    emptySlotsSize = 0;
+    for (int i = 0; i < touchedLevelsSize; i++) {
+      levelTouched[touchedLevels[i]] = false;
     }
+    touchedLevelsSize = 0;
   }
 
   @Override
   public void queueVariable(int level, Var v) {
 
-    variableQueue.add((IntVar) v);
+    if (pruning) {
+      return;
+    }
+    Integer position = mapping.get(v);
+    if (position != null && !levelQueued[position]) {
+      levelQueued[position] = true;
+      levelQueue[levelQueueSize++] = position;
+    }
   }
 
   @Override
   public void consistency(Store store) {
 
+    currentLevel = store.level;
+    if (epochLevel != currentLevel) {
+      if (++epoch == Integer.MAX_VALUE) {
+        for (int base = STAMP; base < state.length; base += RECORD) {
+          state[base] = 0;
+        }
+        epoch = 1;
+      }
+      epochLevel = currentLevel;
+    }
+    deadNodesSize = 0;
+    emptySlotsSize = 0;
+    touchedLevelsSize = 0;
+
     if (firstConsistencyCheck) {
-      doFirstConsistency(store);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
-      if (variableQueue.isEmpty()) {
-        return;
-      }
-    }
-
-    Arrays.fill(levelHadChanged, false);
-
-    for (Var v : variableQueue) {
-      pruneArc(mapping.get(v));
-    }
-
-    updateLeftChangeFromLevelHadChanged(store);
-    updateRightChangeFromLevelHadChanged(store);
-
-    if (oneSupport) {
-      consistencyOneSupportLevels(store);
-    } else {
-      consistencyVarDomLevels(store);
-    }
-
-    touchedIndex.update(this.currentTouchedIndex);
-  }
-
-  private void doFirstConsistency(Store store) {
-    if (oneSupport) {
-      for (int level = list.length - 1; level >= 0; level--) {
-        firstConsistencyOneSupportLevel(store, level);
-      }
-    } else {
-      for (int level = this.list.length - 1; level >= 0; level--) {
-        firstConsistencyVarDomLevel(store, level);
-      }
-    }
-  }
-
-  private void firstConsistencyOneSupportLevel(Store store, int level) {
-    IntervalDomain initial = new IntervalDomain();
-    for (Integer value : supports[level].keySet()) {
-      initial.unionAdapt(value, value);
-    }
-    this.list[level].domain.in(store.level, list[level], initial);
-
-    ValueEnumeration enumer = list[level].domain.valueEnumeration();
-    for (int v; enumer.hasMoreElements(); ) {
-      v = enumer.nextElement();
-      if (supports[level].get(v) == null) {
-        this.list[level].domain.inComplement(store.level, list[level], v);
-        enumer.domainHasChanged();
-        continue;
-      }
-      RegEdge edge = supports[level].get(v);
-      if (!edge.check(activeLevels)) {
-        boolean stillSuported = false;
-        for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
-          if (stateLevels[level][st].updateSupport(edge, v)) {
-            stillSuported = true;
-            break;
-          }
-        }
-        if (!stillSuported) {
-          list[level].domain.inComplement(store.level, list[level], v);
-          enumer.domainHasChanged();
+      for (int i = 0; i < list.length; i++) {
+        if (!levelQueued[i]) {
+          levelQueued[i] = true;
+          levelQueue[levelQueueSize++] = i;
         }
       }
     }
-  }
 
-  private void firstConsistencyVarDomLevel(Store store, int level) {
-    IntDomain varDom = new IntervalDomain();
-    for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
-      RegState state = this.stateLevels[level][s];
-      for (int i = state.outDegree - 1; i >= 0; i--) {
-        state.add(varDom, i);
+    for (int q = 0; q < levelQueueSize; q++) {
+      int level = levelQueue[q];
+      levelQueued[level] = false;
+      IntDomain dom = list[level].domain;
+      for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {
+        if (slotAlive(slot) && !dom.contains(slotValue[slot])) {
+          removeSlot(slot);
+        }
       }
     }
-    if (DEBUG_ALL) {
-      log.debug(
-          ">>> Variable x_{} had domain {} and now its {}", level, this.list[level].domain, varDom);
-    }
-    this.list[level].domain.in(store.level, list[level], varDom);
-  }
+    levelQueueSize = 0;
 
-  private int findFirstLevelHadChanged(int start, int end) {
-    for (int i = start; i < end; i++) {
-      if (levelHadChanged[i]) {
-        return i;
-      }
-    }
-    return -1;
-  }
+    removeDeadNodes();
+    checkTouchedLevels();
 
-  private void updateLeftChangeFromLevelHadChanged(Store store) {
-    int start = 0;
-    int end = leftChange.stamp() < store.level ? levelHadChanged.length : leftChange.value();
-    int found = findFirstLevelHadChanged(start, end);
-    if (found >= 0) {
-      leftChange.update(found);
-    }
-  }
-
-  private int findLastLevelHadChanged(int start, int end) {
-    for (int i = start; i > end; i--) {
-      if (levelHadChanged[i]) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  private void updateRightChangeFromLevelHadChanged(Store store) {
-    int start = levelHadChanged.length - 1;
-    int end = rightChange.stamp() < store.level ? -1 : rightChange.value();
-    int found = findLastLevelHadChanged(start, end);
-    if (found >= 0) {
-      rightChange.update(found);
-    }
-  }
-
-  private void consistencyOneSupportLevels(Store store) {
-    for (int level = this.list.length - 1; level >= 0; level--) {
-      if (!levelHadChanged[level]) {
-        continue;
-      }
-      ValueEnumeration enumer = this.list[level].domain.valueEnumeration();
-      for (int v; enumer.hasMoreElements(); ) {
-        v = enumer.nextElement();
-        RegEdge edge = supports[level].get(v);
-        if (!edge.check(activeLevels)) {
-          boolean stillSuported = false;
-          for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
-            if (stateLevels[level][st].updateSupport(edge, v)) {
-              stillSuported = true;
-              break;
+    pruning = true;
+    try {
+      if (firstConsistencyCheck) {
+        firstConsistencyCheck = false;
+        for (int level = 0; level < list.length; level++) {
+          IntervalDomain supported = new IntervalDomain();
+          for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {
+            if (slotAlive(slot)) {
+              supported.unionAdapt(slotValue[slot], slotValue[slot]);
             }
           }
-          if (!stillSuported) {
-            this.list[level].domain.inComplement(store.level, list[level], v);
-            enumer.domainHasChanged();
+          list[level].domain.in(store.level, list[level], supported);
+        }
+      } else {
+        for (int i = 0; i < emptySlotsSize; i++) {
+          int slot = emptySlots[i];
+          IntVar x = list[slotLevel[slot]];
+          if (x.domain.contains(slotValue[slot])) {
+            x.domain.inComplement(store.level, x, slotValue[slot]);
           }
         }
       }
-    }
-  }
-
-  private void consistencyVarDomLevels(Store store) {
-    for (int level = list.length - 1; level >= 0; level--) {
-      if (!levelHadChanged[level]) {
-        continue;
-      }
-      IntDomain varDom = new IntervalDomain();
-      for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
-        RegState state = stateLevels[level][s];
-        for (int i = state.outDegree - 1; i >= 0; i--) {
-          state.add(varDom, i);
-        }
-      }
-      if (DEBUG_ALL) {
-        log.debug(
-            ">>> Variable x_{} had domain {} and now its {}", level, list[level].domain, varDom);
-      }
-      list[level].domain.in(store.level, list[level], varDom);
+    } finally {
+      pruning = false;
+      emptySlotsSize = 0;
     }
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public void impose(Store store) {
 
-    if (optimizedMdd) {
-      initializeArray(fsm.transformIntoMdd(list));
-    } else {
-      initializeArray(fsm);
-    }
-
-    super.impose(store);
-
-    store.registerRemoveLevelLateListener(this);
+    buildLayeredGraph();
 
     mapping = Var.positionMapping(list, true, this.getClass());
+    levelQueue = new int[list.length];
+    levelQueued = new boolean[list.length];
 
-    lastNumberOfActiveStates = new int[list.length + 1];
-    activeLevels = new TimeStamp[list.length + 1];
-    for (int i = list.length; i >= 0; i--) {
-      activeLevels[i] = new TimeStamp<>(store, activeLevelsTemp[i]);
-    }
-
-    leftChange = new TimeStamp<>(store, 0);
-    touchedIndex = new TimeStamp<>(store, 0);
-
-    rightChange = new TimeStamp<>(store, list.length - 1);
-
-    activeLevelsTemp = null;
-
-    if (oneSupport) {
-      supports = (HashMap<Integer, RegEdge>[]) new HashMap[list.length];
-      RegState state;
-      for (int level = this.list.length - 1; level >= 0; level--) {
-        supports[level] = new HashMap<>();
-
-        for (int s = this.activeLevels[level].value() - 1; s >= 0; s--) {
-          state = this.stateLevels[level][s];
-          for (int i = state.outDegree - 1; i >= 0; i--) {
-            state.setSupports(supports[level], i);
-          }
-        }
-      }
-    }
-
-    levelHadChanged = new boolean[this.list.length + 1];
+    super.impose(store);
   }
 
   @Override
@@ -1148,18 +776,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     constraints.add(new In(q[q.length - 1], finalQ));
-
-    if (DEBUG_ALL) {
-      for (int[] tuple : tuples) {
-        StringBuilder sb = new StringBuilder();
-        for (int val : tuple) {
-          sb.append(val).append(" ");
-        }
-        log.debug("{}", sb);
-        log.debug("{}", fsm);
-        log.debug("{}", constraints);
-      }
-    }
 
     return constraints;
   }
