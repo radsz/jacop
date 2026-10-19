@@ -588,22 +588,12 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     VarWeightComparator() {}
 
     public int compare(T o1, T o2) {
-      double diffO1;
-      double diffO2;
+      return Double.compare(weightedWidth(o1), weightedWidth(o2));
+    }
 
-      if (o1 instanceof VarNode) {
-        diffO1 = o1.max() - o1.min();
-      } else {
-        diffO1 = (o1.max() - o1.min()) * ((VarWeightNode) o1).weight;
-      }
-
-      if (o2 instanceof VarNode) {
-        diffO2 = o2.max() - o2.min();
-      } else {
-        diffO2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
-      }
-
-      return Double.compare(diffO1, diffO2);
+    private static double weightedWidth(VariableNode node) {
+      double width = node.max() - node.min();
+      return node instanceof VarNode ? width : width * ((VarWeightNode) node).weight;
     }
   }
 }
