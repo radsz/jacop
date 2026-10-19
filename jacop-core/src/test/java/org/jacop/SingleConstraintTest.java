@@ -42,7 +42,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +57,7 @@ import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
@@ -106,6 +110,7 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -698,6 +703,170 @@ class SingleConstraintTest extends TestHelper {
         }
       }
       assertThat(values).as(domain.getClass().getSimpleName()).containsExactly(1, 5);
+    }
+  }
+
+  private static List<int[]> bruteForce(IntVar[] vars, Predicate<int[]> constraint) {
+    List<int[]> solutions = new ArrayList<>();
+    int[][] domains = Arrays.stream(vars).map(SingleConstraintTest::valuesOf).toArray(int[][]::new);
+    int[] index = new int[vars.length];
+    while (true) {
+      int[] assignment = new int[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        assignment[i] = domains[i][index[i]];
+      }
+      if (constraint.test(assignment)) {
+        solutions.add(assignment);
+      }
+      int k = 0;
+      while (k < vars.length && ++index[k] == domains[k].length) {
+        index[k] = 0;
+        k++;
+      }
+      if (k == vars.length) {
+        return solutions;
+      }
+    }
+  }
+
+  private static String domainsOf(IntVar[] vars) {
+    return Arrays.stream(vars).map(v -> v.dom().toString()).collect(Collectors.joining(" "));
+  }
+
+  private static String rerunAtNewLevel(Store store, Constraint c, IntVar[] vars) {
+    int level = store.level;
+    store.setLevel(level + 1);
+    String result;
+    try {
+      c.consistency(store);
+      result = domainsOf(vars);
+    } catch (FailException e) {
+      result = "FAIL";
+    }
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    return result;
+  }
+
+  /**
+   * Propagates, then makes random decisions. After each propagation it checks that no solution
+   * listed by the solver for the domains before propagation was removed, and that re-running the
+   * constraint does not prune anything more.
+   */
+  private static void checkSupportsAndFixpointAlongRandomWalk(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random) {
+    List<int[]> solutions = solver.apply(vars);
+    for (int step = 0; step < 6; step++) {
+      boolean consistent = store.consistency();
+      if (solutions.isEmpty()) {
+        // propagation does not have to detect every failure
+        return;
+      }
+      String state = instance + " step " + step;
+      assertThat(consistent).as(state).isTrue();
+      for (int[] solution : solutions) {
+        for (int i = 0; i < vars.length; i++) {
+          assertThat(vars[i].domain.contains(solution[i]))
+              .as(state + " keeps solution " + Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+      String propagated = domainsOf(vars);
+      assertThat(rerun.get()).as(state + " re-run").isEqualTo(propagated);
+
+      IntVar v = vars[random.nextInt(vars.length)];
+      if (v.singleton()) {
+        continue;
+      }
+      store.setLevel(store.level + 1);
+      int value = valuesOf(v)[random.nextInt(v.getSize())];
+      if (random.nextBoolean()) {
+        v.domain.inValue(store.level, v, value);
+      } else {
+        v.domain.inComplement(store.level, v, value);
+      }
+      solutions = solver.apply(vars);
+    }
+  }
+
+  @Test
+  void countWithCounterInTheListReachesFixpoint() {
+    // magicseq: count(4, [x0, x1, x2, x3], x3). Narrowing the counter x3 to {0..3} removed the
+    // value 4 from x3, which is also in the list, so the maximal count dropped to 2 but the
+    // constraint was not run again for its own change.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1");
+    x1.addDom(1, 2);
+    x1.addDom(4, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    IntVar x3 = new IntVar(store, "x3", 0, 4);
+
+    store.impose(new Count(new IntVar[] {x0, x1, x2, x3}, x3, 4));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x3.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void countAppliesCountedCaseAfterNarrowingCounter() {
+    // Narrowing counter {0, 5..9} to [0, 3] makes it 0, so value 1 must be removed from the list
+    // in the same call.
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "y0", 0, 1), new IntVar(store, "y1", 0, 1), new IntVar(store, "y2", 0, 1)
+    };
+    IntVar counter = new IntVar(store, "c");
+    counter.addDom(0, 0);
+    counter.addDom(5, 9);
+
+    store.impose(new Count(list, counter, 1));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(counter.singleton(0)).isTrue();
+    for (IntVar y : list) {
+      assertThat(y.singleton(0)).as("%s", y).isTrue();
+    }
+  }
+
+  @Test
+  void countKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(17);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      boolean aliased = random.nextBoolean();
+      IntVar counter =
+          aliased ? list[random.nextInt(n)] : randomSubsetVar(store, "c", 0, 4, random);
+      int value = random.nextInt(5);
+      IntVar[] vars =
+          aliased
+              ? list
+              : Stream.concat(Arrays.stream(list), Stream.of(counter)).toArray(IntVar[]::new);
+      int counterIndex = Arrays.asList(vars).indexOf(counter);
+      String instance =
+          "run " + run + " count(" + value + ", list, " + counter.id() + ") " + domainsOf(vars);
+      Count count = new Count(list, counter, value);
+      store.impose(count);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a -> IntStream.range(0, n).filter(i -> a[i] == value).count() == a[counterIndex]),
+          () -> rerunAtNewLevel(store, count, vars),
+          random);
     }
   }
 
