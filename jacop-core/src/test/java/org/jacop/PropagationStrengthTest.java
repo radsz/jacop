@@ -41,6 +41,8 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
@@ -126,6 +128,28 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
 
     assertThat(removeValues(store, x[2], 0)).isFalse();
+  }
+
+  @Test
+  void testNetworkFlowWakesOnRemovedValue() {
+
+    // The flows around a cycle of three nodes are equal; removing 3 from inside one of them must
+    // remove it from the other two.
+    Store store = new Store();
+    IntVar[] flow = {
+      new IntVar(store, "x0", 0, 5), new IntVar(store, "x1", 0, 5), new IntVar(store, "x2", 0, 5)
+    };
+    NetworkBuilder net = new NetworkBuilder(new IntVar(store, "cost", 0, 0));
+    Node[] nodes = {net.addNode("n0", 0), net.addNode("n1", 0), net.addNode("n2", 0)};
+    for (int i = 0; i < nodes.length; i++) {
+      net.addArc(nodes[i], nodes[(i + 1) % nodes.length], 0, flow[i]);
+    }
+    store.impose(net.build());
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, flow[0], 3)).isTrue();
+    assertThat(flow[1].dom().toString()).isEqualTo("{0..2, 4..5}");
+    assertThat(flow[2].dom().toString()).isEqualTo("{0..2, 4..5}");
   }
 
   private static IntVar variable(Store store, String name, int... values) {

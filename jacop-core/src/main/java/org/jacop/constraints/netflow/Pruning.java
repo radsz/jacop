@@ -223,13 +223,21 @@ public class Pruning extends Network {
   }
 
   void pruneNodesWithSmallDegree() {
-    for (Node node : nodes) {
-      if (node.degree == 1) {
-        pruneDegree1Node(node);
-      } else if (node.degree == 2) {
-        pruneDegree2Node(node);
+    // Repeat until nothing changes, as a value removed at one node can be removed further along a
+    // path of nodes with two arcs; the store does not wake this constraint for its own pruning.
+    boolean pruned = store.propagationHasOccurred;
+    do {
+      store.propagationHasOccurred = false;
+      for (Node node : nodes) {
+        if (node.degree == 1) {
+          pruneDegree1Node(node);
+        } else if (node.degree == 2) {
+          pruneDegree2Node(node);
+        }
       }
-    }
+      pruned |= store.propagationHasOccurred;
+    } while (store.propagationHasOccurred);
+    store.propagationHasOccurred = pruned;
   }
 
   private void pruneDegree1Node(Node node) {

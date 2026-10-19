@@ -235,13 +235,20 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // Interaction with structure variable
       // Note: this may throw a failException
 
+      // a value removed inside the domain leaves the capacity unchanged
+      int lower = flowOffset;
+      int upper = lower + arc.capacity + arc.sister.capacity;
+      if (!xVar.singleton() && xVar.min() == lower && xVar.max() == upper) {
+        return;
+      }
+
       boolean updated = false;
 
       if (structure != null && !structure.isGrounded(arcId)) {
         updated = updateSvar(network.getStoreLevel());
       }
 
-      // since we listen only to bound events, capacity changes for sure
+      // the bounds have changed, so the capacity changes for sure
       changeCapacity(xVar.min(), xVar.max());
       network.modified(this);
       if (xVar.singleton()) {
@@ -340,10 +347,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    * Returns the pruning event type that triggers processing for the given variable.
    *
    * @param v the variable to get the pruning event for.
-   * @return the pruning event constant (BOUND for X- and W-variables).
+   * @return the pruning event constant (ANY for X-variables, BOUND for W-variables).
    */
   public int getPruningEvent(Var v) {
-    return IntDomain.BOUND; // for X- and W-variables
+    // X-variables of a node with two arcs are kept equal up to a shift, so a value removed inside
+    // the domain of one must be removed from the other one as well.
+    return v == xVar ? IntDomain.ANY : IntDomain.BOUND;
   }
 
   /**
