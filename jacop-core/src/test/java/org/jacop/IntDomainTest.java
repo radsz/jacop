@@ -31,6 +31,7 @@
 package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -38,12 +39,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.NoSuchElementException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
+import org.jacop.core.ValueEnumeration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -893,6 +898,54 @@ class IntDomainTest {
     }
 
     return result;
+  }
+
+  @Test
+  void intervalEnumerationPastEndThrows() {
+    IntervalDomain domain = new IntervalDomain(1, 3);
+    domain.unionAdapt(5, 6);
+    IntervalEnumeration enumer = domain.intervalEnumeration();
+    Interval first = enumer.nextElement();
+    assertThat(new int[] {first.min(), first.max()}).containsExactly(1, 3);
+    Interval second = enumer.nextElement();
+    assertThat(new int[] {second.min(), second.max()}).containsExactly(5, 6);
+    assertThat(enumer.hasMoreElements()).isFalse();
+    assertThatThrownBy(enumer::nextElement).isInstanceOf(NoSuchElementException.class);
+  }
+
+  @Test
+  void valueEnumerationPastEndThrows() {
+    IntervalDomain domain = new IntervalDomain(1, 2);
+    domain.unionAdapt(4, 4);
+    ValueEnumeration enumer = domain.valueEnumeration();
+    assertThat(enumer.nextElement()).isEqualTo(1);
+    assertThat(enumer.nextElement()).isEqualTo(2);
+    assertThat(enumer.nextElement()).isEqualTo(4);
+    assertThat(enumer.hasMoreElements()).isFalse();
+    assertThatThrownBy(enumer::nextElement).isInstanceOf(NoSuchElementException.class);
+  }
+
+  @Test
+  void maxOfEmptyIntervalDomainThrows() {
+    IntervalDomain domain = new IntervalDomain();
+    assertThatThrownBy(domain::max).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void smallDenseDomainIntervalOutOfRangeThrows() {
+    SmallDenseDomain domain = new SmallDenseDomain(1, 3);
+    domain.unionAdapt(5, 6);
+    assertThat(domain.leftElement(1)).isEqualTo(5);
+    assertThat(domain.rightElement(1)).isEqualTo(6);
+    assertThatThrownBy(() -> domain.leftElement(2)).isInstanceOf(IndexOutOfBoundsException.class);
+  }
+
+  @Test
+  void subtractDomainUsesAllIntervals() {
+    IntervalDomain domain = new IntervalDomain(1, 10);
+    IntervalDomain removed = new IntervalDomain(2, 3);
+    removed.unionAdapt(7, 8);
+    assertThat(domain.subtract(removed).toString()).isEqualTo("{1, 4..6, 9..10}");
   }
 
   /**

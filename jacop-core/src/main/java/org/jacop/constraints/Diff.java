@@ -72,9 +72,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   protected final IntFunction<Comparator<IntRectangle>> dimIthMinComparator =
       dim ->
           (IntRectangle o1, IntRectangle o2) -> {
-            int v1 = o1.origins[dim];
-            int v2 = o2.origins[dim];
-            return v1 - v2;
+            return Integer.compare(o1.origins[dim], o2.origins[dim]);
           };
 
   /** It specifies the list of rectangles which are of interest for this diff constraint. */

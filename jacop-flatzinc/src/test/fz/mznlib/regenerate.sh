@@ -15,14 +15,14 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 mkdir "$TMP/empty"
 for lib in jacop std; do
-  if [ "$lib" = jacop ]; then dir=$MZNLIB; else dir=$TMP/empty; fi
+  if [[ "$lib" = jacop ]]; then dir=$MZNLIB; else dir=$TMP/empty; fi
   cat > "$TMP/$lib.msc" <<MSC
 {"id": "org.jacop.test.$lib", "name": "$lib", "version": "1.0", "mznlib": "$dir",
  "executable": "/bin/true", "inputType": "FZN", "stdFlags": ["-a"]}
 MSC
 done
 models=("$@")
-[ ${#models[@]} -eq 0 ] && models=(*.mzn)
+[[ ${#models[@]} -eq 0 ]] && models=(*.mzn)
 for m in "${models[@]}"; do
   base=${m%.mzn}
   "$MINIZINC" -c --solver "$TMP/jacop.msc" "$m" -o "$base.fzn" --no-output-ozn

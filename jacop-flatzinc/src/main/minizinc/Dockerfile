@@ -1,61 +1,53 @@
 #------------------------------------------------------------------------------#
-# This file contains the setup for building a base image for the MiniZinc
+# This file contains the setup for building a JaCoP image for the MiniZinc
 # challenges. It uses multi-stage builds in order to keep the images small.
-# Note that the statements ADD, RUN, and COPY can add image layers.
+#
+# Build it from the repository root so the current sources are used:
+#   docker build -f jacop-flatzinc/src/main/minizinc/Dockerfile -t jacop-mznc .
+#
+# MZNC_IMAGE selects the MiniZinc challenge base image.
 #------------------------------------------------------------------------------#
-# The build image
 
-FROM minizinc/mznc2018:1.0
+ARG MZNC_IMAGE=minizinc/mznc2025:latest
 
-# Install Java.
-RUN \
-  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
-  apt-get update && \
-  apt-get -y install software-properties-common python-software-properties && \
-  add-apt-repository -y ppa:webupd8team/java && \
-  apt-get update && \
-  apt-get install -y oracle-java8-installer && \
-  rm -rf /var/lib/apt/lists/* && \
-rm -rf /var/cache/oracle-jdk8-installer
+# Build JaCoP with Java 25.
 
-ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
+FROM maven:3.9-eclipse-temurin-25 AS build
 
-# Install Maven
+WORKDIR /jacop
+COPY . .
 
-ARG MAVEN_VERSION=3.5.4
-ARG USER_HOME_DIR="/root"
-ARG SHA=ce50b1c91364cb77efe3776f756a6d92b76d9038b0a0782f7d53acf1e997a14d
-ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+RUN mvn -B -Pall -DskipTests -Dspotless.skip=true package \
+  && mkdir -p /dist/lib /dist/mzn-lib \
+  && cp "$(ls jacop-all/target/jacop-all-*.jar | grep -v -e sources -e javadoc)" /dist/jacop.jar \
+  && cp -r jacop-all/target/lib/. /dist/lib/ \
+  && cp -r jacop-flatzinc/src/main/minizinc/org/jacop/minizinc/. /dist/mzn-lib/
 
-RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
-  && apt-get update \
-  && apt-get -y install curl \
-  && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
-  && echo "${SHA}  /tmp/apache-maven.tar.gz" | sha256sum -c - \
-  && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
-  && rm -f /tmp/apache-maven.tar.gz \
-  && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
+# Java 25 runtime.
 
-ENV MAVEN_HOME /usr/share/maven
-ENV MAVEN_CONFIG "$USER_HOME_DIR/.m2"
+FROM eclipse-temurin:25-jre AS jre
 
-# Retrieval of JaCoP
+# The challenge image.
 
-RUN apt-get update \
-&& apt-get install -y git \
-&& git clone https://github.com/radsz/jacop /jacop
+FROM ${MZNC_IMAGE}
 
-RUN cd /jacop && \
-git fetch && \
-git checkout 04b17f002bce && \
-mvn clean install -DskipTests && \
-cp -r /jacop/src/main/minizinc/org/jacop/minizinc/* /entry_data/mzn-lib/
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
+COPY --from=jre /opt/java/openjdk /opt/java/openjdk
+COPY --from=build /dist/jacop.jar /jacop/jacop.jar
+COPY --from=build /dist/lib /jacop/lib
+COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
 
-RUN \
-    echo "#!/bin/bash                                 " >  /entry_data/fzn-exec && \
-    echo "#------------------------------------------#" >> /entry_data/fzn-exec && \
-    echo "exec java -server -cp /jacop/target/jacop-*-SNAPSHOT.jar -Xmx10G -Xms100M org.jacop.fz.Fz2jacop -cs \"\$@\" " >> /entry_data/fzn-exec && \
-    chmod a+x /entry_data/fzn-exec
+RUN printf '%s\n' \
+    '#!/bin/bash' \
+    'exec java -server -Xmx10G -Xss100M -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
+    > /entry_data/fzn-exec \
+  && chmod a+x /entry_data/fzn-exec
 
+# Run as a regular user; it gets the challenge solver configuration from root's home.
+RUN useradd --create-home --shell /bin/bash jacop \
+  && cp -r /root/.minizinc /home/jacop/.minizinc \
+  && chown -R jacop:jacop /home/jacop/.minizinc
 
+USER jacop

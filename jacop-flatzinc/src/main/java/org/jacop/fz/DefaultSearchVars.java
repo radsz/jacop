@@ -54,9 +54,7 @@ public class DefaultSearchVars {
   final Tables dictionary;
   private final Comparator<Var> domainSizeComparator =
       (o1, o2) -> {
-        int v1 = o1.getSize();
-        int v2 = o2.getSize();
-        return v1 - v2;
+        return Integer.compare(o1.getSize(), o2.getSize());
       };
   IntVar[] intVars = new IntVar[0];
   SetVar[] setVars = new SetVar[0];

@@ -701,11 +701,7 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Interval with a given number does not exist."));
-    }
-    return null;
+    throw new IndexOutOfBoundsException("Interval with a given number does not exist.");
   }
 
   @Override

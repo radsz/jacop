@@ -422,6 +422,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
         return -1;
       }
     }
-    return that.pruningScore - this.pruningScore;
+    return Integer.compare(that.pruningScore, this.pruningScore);
   }
 }

@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import java.util.NoSuchElementException;
+
 /**
  * Defines a methods for enumerating values contain in the domain.
  *
@@ -67,6 +69,10 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public int nextElement() {
+
+    if (i == null) {
+      throw new NoSuchElementException("No more values in the domain.");
+    }
 
     int v;
 

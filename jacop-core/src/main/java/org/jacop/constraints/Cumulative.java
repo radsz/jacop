@@ -62,10 +62,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private static boolean debugNarrEnabled = DEBUG_NARR;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
   private final Task[] ts;
-  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> o2.max() - o1.max();
+  private final Comparator<IntDomain> domainMaxComparator =
+      (o1, o2) -> Integer.compare(o2.max(), o1.max());
   private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
   private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
-  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> o2.lst() - o1.lst();
+  private final Comparator<Task> taskDescLstComparator =
+      (o1, o2) -> Integer.compare(o2.lst(), o1.lst());
 
   /** It specifies the limit of the profile of cumulative use of resources. */
   private IntVar limit;
