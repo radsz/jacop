@@ -38,6 +38,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -150,6 +151,25 @@ class PropagationStrengthTest {
     assertThat(removeValues(store, flow[0], 3)).isTrue();
     assertThat(flow[1].dom().toString()).isEqualTo("{0..2, 4..5}");
     assertThat(flow[2].dom().toString()).isEqualTo("{0..2, 4..5}");
+  }
+
+  @Test
+  void testSubcircuitAppliesDominanceAtFixpoint() {
+
+    // x2 = 1 and x3 in {1, 2}; x0 = 3, x1 = 4 would give the two cycles 0-2-0 and 1-3-1, which
+    // the strongly connected components do not detect, but dominance from node 0 does.
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 2, 3, 4),
+      variable(store, "x1", 1, 3, 4),
+      variable(store, "x2", 1),
+      variable(store, "x3", 1, 2)
+    };
+    store.impose(new Subcircuit(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[0].dom().toString()).isEqualTo("4");
+    assertThat(x[1].dom().toString()).isEqualTo("3");
   }
 
   private static IntVar variable(Store store, String name, int... values) {
