@@ -33,6 +33,7 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,6 +58,22 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, y, 2, 3)).isTrue();
     assertThat(z.dom().toString()).isEqualTo("{4, 7}");
+  }
+
+  @Test
+  void testXmulYeqZWakesOnRemovedValue() {
+
+    // x = 1, so z = y; removing 8 from inside y must remove it from z.
+    Store store = new Store();
+    IntVar x = variable(store, "x", 1);
+    IntVar y = variable(store, "y", 5, 8, 100);
+    IntVar z = new IntVar(store, "z", 1, 100);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{5, 8, 100}");
+
+    assertThat(removeValues(store, y, 8)).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{5, 100}");
   }
 
   private static IntVar variable(Store store, String name, int... values) {
