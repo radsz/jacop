@@ -55,6 +55,7 @@ import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -866,6 +867,73 @@ class SingleConstraintTest extends TestHelper {
                   vs,
                   a -> IntStream.range(0, n).filter(i -> a[i] == value).count() == a[counterIndex]),
           () -> rerunAtNewLevel(store, count, vars),
+          random);
+    }
+  }
+
+  @Test
+  void channelReifWithSharedBooleanReachesFixpoint() {
+    // self_referential_quiz: the same b is used for q = 1 and q = 4. Value 4 is not in q, so b
+    // becomes 0, but the item for value 1 had already been visited and q kept the value 1.
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q");
+    q.addDom(1, 3);
+    q.addDom(5, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar b2 = new IntVar(store, "b2", 0, 1);
+    IntVar b3 = new IntVar(store, "b3", 0, 1);
+
+    store.impose(new ChannelReif(q, new IntVar[] {b2, b3, b, b}, new int[] {2, 3, 1, 4}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(0)).isTrue();
+    assertThat(q.dom().toString()).isEqualTo("{2..3, 5}");
+  }
+
+  @Test
+  void channelReifKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(19);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", 0, 5, random);
+      int k = 2 + random.nextInt(3);
+      IntVar[] pool = new IntVar[1 + random.nextInt(k)];
+      for (int i = 0; i < pool.length; i++) {
+        pool[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      List<Integer> candidates = new ArrayList<>(List.of(0, 1, 2, 3, 4, 5));
+      java.util.Collections.shuffle(candidates, random);
+      int[] values = new int[k];
+      int[] bIndex = new int[k];
+      IntVar[] bs = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        values[i] = candidates.get(i);
+        bIndex[i] = random.nextInt(pool.length);
+        bs[i] = pool[bIndex[i]];
+      }
+      IntVar[] vars = Stream.concat(Stream.of(x), Arrays.stream(pool)).toArray(IntVar[]::new);
+      String instance =
+          "run "
+              + run
+              + " values "
+              + Arrays.toString(values)
+              + " b "
+              + Arrays.toString(bIndex)
+              + " "
+              + domainsOf(vars);
+      ChannelReif channel = new ChannelReif(x, bs, values);
+      store.impose(channel);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, k)
+                          .allMatch(i -> (a[1 + bIndex[i]] == 1) == (a[0] == values[i]))),
+          () -> rerunAtNewLevel(store, channel, vars),
           random);
     }
   }
