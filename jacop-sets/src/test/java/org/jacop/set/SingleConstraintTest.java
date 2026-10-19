@@ -38,9 +38,12 @@ import java.util.function.Function;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
@@ -90,6 +93,26 @@ class SingleConstraintTest {
     assertThat(x.singleton()).isTrue();
     assertThat(y.singleton()).isTrue();
     assertThat(y.dom().glb().eq(new IntervalDomain(5, 6))).isTrue();
+  }
+
+  @Test
+  void testPartitionSetWakesOnCardinalityChange() {
+
+    // Two sets of cardinality 1 cannot partition {1..4}. Only the cardinalities change, which
+    // generates a CARDINALITY_EVENT that must reach constraints registered for ANY.
+    Store store = new Store();
+    SetVar x = new SetVar(store, "x", 1, 4);
+    SetVar y = new SetVar(store, "y", 1, 4);
+    IntVar card = new IntVar(store, "card", 0, 4);
+    store.impose(new PartitionSet(new SetVar[] {x, y}, new IntervalDomain(1, 4)));
+    store.impose(new CardAeqX(x, card));
+    store.impose(new CardAeqX(y, card));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    card.domain.in(1, card, 1, 1);
+
+    assertThat(store.consistency()).isFalse();
   }
 
   /**
