@@ -2114,6 +2114,22 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
+  // lower bound for flows that are not negative.
+  @Test
+  void testNetworkFlowRejectsVariableWeightOnNegativeFlow() {
+
+    Store store = new Store();
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    IntVar weight = new IntVar(store, "w", 1, 2);
+    IntVar flow = new IntVar(store, "f", -2, 0);
+
+    assertThatThrownBy(() -> net.addArc(n0, n1, weight, flow))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 

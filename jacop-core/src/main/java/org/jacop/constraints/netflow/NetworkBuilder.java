@@ -142,6 +142,10 @@ public class NetworkBuilder {
    */
   public Arc addArc(Node from, Node to, IntVar wvar, IntVar xvar) {
 
+    if (wvar.singleton()) {
+      return addArc(from, to, wvar.value(), xvar);
+    }
+
     Arc arc = addArc(from, to, wvar, xvar.min(), xvar.max());
 
     arc.companion.xVar = xvar;
@@ -183,6 +187,12 @@ public class NetworkBuilder {
    * @return the newly created arc
    */
   public Arc addArc(Node from, Node to, IntVar wvar, int lowerCapacity, int upperCapacity) {
+
+    // The arc cost is bounded from below by wvar.min() * flow, which only holds for flows >= 0.
+    if (lowerCapacity < 0 && !wvar.singleton()) {
+      throw new IllegalArgumentException(
+          "An arc with a variable weight needs a non-negative flow, arc " + from + "->" + to);
+    }
 
     int weight = wvar.min();
     Arc arc = addArc(from, to, weight, lowerCapacity, upperCapacity);
