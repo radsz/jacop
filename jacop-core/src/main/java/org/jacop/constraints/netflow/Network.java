@@ -315,7 +315,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
   @Override
   public long cost(long cutoff) {
-    return costOffset + super.cost(cutoff - costOffset);
+    return costOffset + super.cost(cutoff);
   }
 
   @Override

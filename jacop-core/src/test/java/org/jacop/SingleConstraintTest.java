@@ -2032,6 +2032,28 @@ class SingleConstraintTest extends TestHelper {
     return solutions;
   }
 
+  // The cost of a flow was summed with an early exit once it passed the cost bound, which is wrong
+  // when later arcs have negative costs: a feasible flow was taken as too expensive.
+  @Test
+  void testNetworkFlowWithNegativeCosts() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 1, 3);
+    IntVar f1 = new IntVar(store, "f1", 1, 3);
+    IntVar cost = new IntVar(store, "cost", -4, 6);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    net.addArc(n0, n1, -1, f0);
+    net.addArc(n1, n0, 3, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // f0 = f1 = f and cost = 2 * f; f1 is labelled first, so the flow 3 is tried first
+    assertThat(noOfAllSolutions(store, new IntVar[] {f1, f0, cost})).isEqualTo(3);
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 
