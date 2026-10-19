@@ -32,8 +32,10 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Constraint b {@literal =>} c (implication or half-reification).
@@ -76,6 +78,12 @@ public class Implies extends AbstractReifiedConstraint {
     } else if (b.min() == 1) {
       c.consistency(store);
     }
+  }
+
+  @Override
+  protected int getNestedPropagationEvent(Var v) {
+    // consistency() only ever runs c.consistency().
+    return isSimpleNestedConstraintOver(v) ? c.getConsistencyPruningEvent(v) : Domain.NONE;
   }
 
   @Override

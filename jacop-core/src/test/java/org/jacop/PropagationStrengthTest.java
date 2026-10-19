@@ -33,7 +33,12 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.BiFunction;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -74,6 +79,37 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, y, 8)).isTrue();
     assertThat(z.dom().toString()).isEqualTo("{5, 100}");
+  }
+
+  @Test
+  void testReifiedWakesOnRemovedValue() {
+
+    assertThat(nestedXplusCeqZPrunes(Reified::new)).isEqualTo("{1, 4}");
+  }
+
+  @Test
+  void testImpliesWakesOnRemovedValue() {
+
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Implies(b, c))).isEqualTo("{1, 4}");
+  }
+
+  /**
+   * Imposes b -> x + 1 = z with b = 1, removes 3 and 4 from inside z and returns the domain of x.
+   * XplusCeqZ only needs a ground variable to become satisfied, but once b is 1 its consistency()
+   * prunes x on any change of z.
+   */
+  private static String nestedXplusCeqZPrunes(
+      BiFunction<PrimitiveConstraint, IntVar, PrimitiveConstraint> reify) {
+
+    Store store = new Store();
+    IntVar b = variable(store, "b", 1);
+    IntVar x = new IntVar(store, "x", 1, 4);
+    IntVar z = new IntVar(store, "z", 2, 5);
+    store.impose(reify.apply(new XplusCeqZ(x, 1, z), b));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, z, 3, 4)).isTrue();
+    return x.dom().toString();
   }
 
   private static IntVar variable(Store store, String name, int... values) {
