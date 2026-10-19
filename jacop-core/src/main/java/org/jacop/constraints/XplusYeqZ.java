@@ -106,9 +106,11 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
     return IntDomain.GROUND;
   }
 
+  // Once x or y is a singleton, consistency() makes z and the other variable equal up to a shift,
+  // so a value removed inside a domain must wake the constraint as well.
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    return IntDomain.ANY;
   }
 
   @Override
