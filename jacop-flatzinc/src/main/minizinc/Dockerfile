@@ -44,3 +44,10 @@ RUN printf '%s\n' \
     'exec java -server -Xmx10G -Xss100M -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
     > /entry_data/fzn-exec \
   && chmod a+x /entry_data/fzn-exec
+
+# Run as a regular user; it gets the challenge solver configuration from root's home.
+RUN useradd --create-home --shell /bin/bash jacop \
+  && cp -r /root/.minizinc /home/jacop/.minizinc \
+  && chown -R jacop:jacop /home/jacop/.minizinc
+
+USER jacop
