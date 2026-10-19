@@ -146,9 +146,11 @@ public class XmulYeqZ extends AbstractXopYeqZ {
     } while (store.propagationHasOccurred);
   }
 
+  // Once x or y is 1, consistency() makes z and the other variable equal, so a value removed inside
+  // a domain must wake the constraint as well.
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    return IntDomain.ANY;
   }
 
   @Override

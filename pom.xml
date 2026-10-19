@@ -190,6 +190,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                             </includes>
                             <excludes>
@@ -226,6 +227,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
@@ -264,6 +266,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
@@ -302,6 +305,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>

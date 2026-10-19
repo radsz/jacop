@@ -65,7 +65,6 @@ public class Subcircuit extends Alldiff {
   int idd;
   int sccLength;
   int firstConsistencyLevel;
-  int sccCounter;
   int stackPointer;
   BitSet cycleVar;
 
@@ -145,14 +144,9 @@ public class Subcircuit extends Alldiff {
     if (useScc) {
       sccsBasedPruning(store); // strongly connected components
 
-      if (store.propagationHasOccurred) {
-        sccCounter = 0;
-      }
-
-      // if 10 consecutive applications of SCC based pruning did
-      // not give any pruning try domianance based pruning
-      if (useDominance && sccCounter++ > 10) {
-        sccCounter = 0;
+      // dominance finds prunings that the strongly connected components miss, so it runs as soon
+      // as they find nothing more, and the constraint reaches its fixpoint with both
+      if (useDominance && !store.propagationHasOccurred) {
         dominanceFilter(); // filter based on dominance of nodes
       }
     } else if (useDominance) {

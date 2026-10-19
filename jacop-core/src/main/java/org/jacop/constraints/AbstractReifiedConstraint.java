@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
@@ -83,7 +84,37 @@ public abstract class AbstractReifiedConstraint extends PrimitiveConstraint
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-    return getConsistencyPruningEventForReified(v, b, c);
+    int event = getConsistencyPruningEventForReified(v, b, c);
+    if (consistencyPruningEvents != null && consistencyPruningEvents.containsKey(v)) {
+      return event;
+    }
+    return Math.max(event, getNestedPropagationEvent(v));
+  }
+
+  /**
+   * Returns the event on v that the methods of c run by consistency() need once b is fixed. The
+   * nested pruning events of c only cover deciding whether c is satisfied, and for example
+   * XplusCeqZ needs a ground variable for that while its consistency() prunes on any change.
+   * Constraints composed of other constraints already report the events of their parts.
+   *
+   * @param v variable for which the event is computed.
+   * @return the pruning event, or NONE if c does not need one.
+   */
+  protected int getNestedPropagationEvent(Var v) {
+    if (!isSimpleNestedConstraintOver(v)) {
+      return Domain.NONE;
+    }
+    return Math.max(c.getConsistencyPruningEvent(v), c.getNotConsistencyPruningEvent(v));
+  }
+
+  /**
+   * Checks whether c is not composed of other constraints and has v among its arguments.
+   *
+   * @param v variable to look for.
+   * @return true if the events of c's own methods should be used for v.
+   */
+  protected boolean isSimpleNestedConstraintOver(Var v) {
+    return (c.constraintScope == null || c.constraintScope.isEmpty()) && c.arguments().contains(v);
   }
 
   @Override

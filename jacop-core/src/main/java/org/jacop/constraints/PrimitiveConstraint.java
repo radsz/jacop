@@ -68,7 +68,7 @@ public abstract class PrimitiveConstraint extends Constraint
       }
     }
 
-    if (!constraintScope.isEmpty()) {
+    if (constraintScope != null && !constraintScope.isEmpty()) {
 
       int eventAcross =
           constraintScope.stream()
