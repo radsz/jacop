@@ -44,6 +44,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelIntSet;
+import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -156,6 +157,50 @@ class SingleConstraintTest {
                 s[i] = randomSetVar(store, random, "s" + i, n);
               }
               return new ChannelIntSet(x, s, 1, 1);
+            });
+
+    assertThat(notAtFixpoint).isZero();
+  }
+
+  @Test
+  void testElementSetPrunesValueWithSupportingIndexesOnly() {
+
+    // Index 2 selects {5..6}, which does not fit into lub {1..4}; the bounds of value must be
+    // computed from the remaining indexes 1 and 3 only.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntDomain[] list = {
+      new IntervalDomain(1, 2), new IntervalDomain(5, 6), new IntervalDomain(1, 3)
+    };
+    SetVar value =
+        new SetVar(
+            store, "value", new BoundSetDomain(new IntervalDomain(1, 1), new IntervalDomain(1, 4)));
+    store.impose(new ElementSet(index, list, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.dom().eq(dom(1, 3))).isTrue();
+    assertThat(value.dom().glb().eq(new IntervalDomain(1, 2))).isTrue();
+    assertThat(value.dom().lub().eq(new IntervalDomain(1, 3))).isTrue();
+  }
+
+  @Test
+  void testElementSetReachesFixpoint() {
+
+    Random random = new Random(1);
+    int notAtFixpoint =
+        countNotAtFixpoint(
+            random,
+            store -> {
+              IntDomain[] list = new IntDomain[4];
+              for (int i = 0; i < list.length; i++) {
+                list[i] = randomSet(random, 1, 4, 0.5);
+              }
+              IntDomain indexDomain = randomSet(random, 1, 4, 0.5);
+              if (indexDomain.isEmpty()) {
+                return null;
+              }
+              IntVar index = new IntVar(store, "index", indexDomain);
+              return new ElementSet(index, list, randomSetVar(store, random, "value", 4));
             });
 
     assertThat(notAtFixpoint).isZero();
