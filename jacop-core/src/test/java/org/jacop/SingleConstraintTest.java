@@ -35,8 +35,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.StringReader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -125,6 +128,14 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.IndomainRandom;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.util.DominatorTree;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -329,6 +340,226 @@ class SingleConstraintTest extends TestHelper {
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = list[0];
     assertThatThrownBy(() -> new Subcircuit(list)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Subcircuit picks the dominance root at random; the choice must come from a fixed seed so the
+  // same model explores the same search tree on every run.
+  @Test
+  void testSubcircuitSearchIsReproducible() {
+
+    Set<Integer> failures = new HashSet<>();
+    for (int run = 0; run < 4; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[8];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, x.length);
+      }
+      store.impose(new Subcircuit(x));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.setPrintInfo(false);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      // 1 + sum over k = 2..8 of C(8, k) * (k - 1)! subcircuits
+      assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(16_065);
+      failures.add(search.getWrongDecisions());
+    }
+    assertThat(failures).hasSize(1);
+  }
+
+  // x is a subcircuit when x[i] = i + 1 marks node i as outside the circuit and the other nodes
+  // follow x as successors around exactly one cycle (no cycle at all is allowed too).
+  private static boolean isSubcircuit(int[] x) {
+    int n = x.length;
+    int start = -1;
+    int inCircuit = 0;
+    for (int i = 0; i < n; i++) {
+      if (x[i] < 1 || x[i] > n) {
+        return false;
+      }
+      if (x[i] != i + 1) {
+        start = i;
+        inCircuit++;
+      }
+    }
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int node = start;
+    do {
+      node = x[node] - 1;
+      length++;
+    } while (node != start && length <= n);
+    return node == start && length == inCircuit;
+  }
+
+  // Domains mix values inside 1..n with values outside it, so the first propagation also has to
+  // trim the list to 1..n.
+  private static IntVar[] randomSubcircuitVars(Store store, int n, Random random) {
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = randomSubsetVar(store, "x" + (i + 1), random.nextInt(4) == 0 ? 0 : 1, n, random);
+      if (random.nextInt(8) == 0) {
+        x[i].addDom(n + 1, n + 1);
+      }
+    }
+    return x;
+  }
+
+  // Subcircuit is not idempotent on purpose: dominator pruning pauses after calls that find
+  // nothing. So the walk checks that no solution is lost, and not the fixpoint.
+  @Test
+  void subcircuitKeepsSupports() {
+    Random random = new Random(31);
+    for (int run = 0; run < 3000; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      store.impose(new Subcircuit(x));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          x,
+          vs -> bruteForce(vs, SingleConstraintTest::isSubcircuit),
+          () -> domainsOf(x),
+          random);
+    }
+  }
+
+  // Nodes 3, 4 and 5 must be on the circuit, so nodes 1 and 2 stay out. Their component is found
+  // inside the search that starts at node 1, and the component pruning used to leave it unchecked.
+  @Test
+  void subcircuitKeepsNodesOutsideTheCircuitComponentOut() {
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 1, 3);
+    IntVar x2 = new IntVar(store, "x2", 1, 2);
+    IntVar x3 = new IntVar(store, "x3", 4, 5);
+    IntVar x4 = new IntVar(store, "x4", 3, 3);
+    x4.addDom(5, 5);
+    IntVar x5 = new IntVar(store, "x5", 3, 4);
+    // only the component pruning, dominator pruning would find this too
+    System.setProperty("sub_circuit_dominance_pruning", "false");
+    try {
+      store.impose(new Subcircuit(new IntVar[] {x1, x2, x3, x4, x5}));
+    } finally {
+      System.clearProperty("sub_circuit_dominance_pruning");
+    }
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.singleton(1)).as("%s", x1).isTrue();
+    assertThat(x2.singleton(2)).as("%s", x2).isTrue();
+  }
+
+  @Test
+  void subcircuitFindsExactlyTheBruteForceSolutions() {
+    Random random = new Random(37);
+    for (int run = 0; run < 1500; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      Set<String> expected =
+          bruteForce(x, SingleConstraintTest::isSubcircuit).stream()
+              .map(Arrays::toString)
+              .collect(Collectors.toSet());
+      store.impose(new Subcircuit(x));
+
+      Set<String> found = new HashSet<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> sel) {
+              int[] solution = Arrays.stream(x).mapToInt(IntVar::value).toArray();
+              assertThat(isSubcircuit(solution))
+                  .as(instance + " " + Arrays.toString(solution))
+                  .isTrue();
+              found.add(Arrays.toString(solution));
+              return super.executeAfterSolution(s, sel);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  // a dominates b iff b cannot be reached from the root once a is removed (a != root)
+  @Test
+  void dominatorTreeMatchesReachability() {
+    Random random = new Random(41);
+    for (int run = 0; run < 500; run++) {
+      int n = 1 + random.nextInt(9);
+      boolean[][] arc = new boolean[n][n];
+      DominatorTree tree = new DominatorTree(n);
+      for (int u = 0; u < n; u++) {
+        for (int v = 0; v < n; v++) {
+          if (random.nextInt(4) == 0) {
+            arc[u][v] = true;
+            tree.addArc(u, v);
+          }
+        }
+      }
+      int root = random.nextInt(n);
+      boolean allReached = reached(arc, root, -1).cardinality() == n;
+      assertThat(tree.compute(root)).as("run " + run).isEqualTo(allReached);
+      if (!allReached) {
+        continue;
+      }
+      for (int a = 0; a < n; a++) {
+        BitSet withoutA = a == root ? new BitSet() : reached(arc, root, a);
+        for (int b = 0; b < n; b++) {
+          boolean expected = a == b || !withoutA.get(b);
+          assertThat(tree.dominates(a, b))
+              .as("run " + run + " " + a + " dom " + b)
+              .isEqualTo(expected);
+        }
+      }
+    }
+  }
+
+  private static BitSet reached(boolean[][] arc, int root, int removed) {
+    BitSet seen = new BitSet();
+    if (root == removed) {
+      return seen;
+    }
+    Deque<Integer> todo = new ArrayDeque<>();
+    seen.set(root);
+    todo.push(root);
+    while (!todo.isEmpty()) {
+      int u = todo.pop();
+      for (int v = 0; v < arc.length; v++) {
+        if (arc[u][v] && v != removed && !seen.get(v)) {
+          seen.set(v);
+          todo.push(v);
+        }
+      }
+    }
+    return seen;
+  }
+
+  @Test
+  void testSeededRandomIsReproducible() {
+
+    try {
+      Store.setSeed(17);
+      int[] first = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      Store.setSeed(17);
+      int[] second = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      assertThat(second).containsExactly(first);
+
+      IndomainRandom<IntVar> a = new IndomainRandom<>(5);
+      IndomainRandom<IntVar> b = new IndomainRandom<>(5);
+      Store store = new Store();
+      IntVar v = new IntVar(store, "v", 0, 1000);
+      for (int i = 0; i < 20; i++) {
+        assertThat(b.indomain(v)).isEqualTo(a.indomain(v));
+      }
+    } finally {
+      Store.resetSeed();
+    }
   }
 
   @Test
