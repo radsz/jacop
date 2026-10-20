@@ -32,6 +32,7 @@ package org.jacop.constraints.table;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -227,7 +228,7 @@ public class HybridTable extends Constraint
       }
     }
     this.x = Arrays.copyOf(list, list.length);
-    this.tuples = Arrays.stream(tuples).map(Restriction[]::clone).toArray(Restriction[][]::new);
+    this.tuples = tuples.clone();
     this.varMap = Var.positionMapping(list, false, this.getClass());
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
@@ -245,16 +246,31 @@ public class HybridTable extends Constraint
     this(list, toRestrictions(tuples, star));
   }
 
-  private static Restriction[][] toRestrictions(int[][] tuples, int star) {
+  /**
+   * It constructs a table constraint over tuples of values.
+   *
+   * @param list the variables in the scope of the constraint.
+   * @param tuples the allowed tuples.
+   */
+  public HybridTable(IntVar[] list, int[][] tuples) {
+    this(list, toRestrictions(tuples, null));
+  }
+
+  private static Restriction[][] toRestrictions(int[][] tuples, Integer star) {
     if (tuples == null) {
       return null;
     }
+    // One restriction object per distinct value, so a large table costs one reference per entry.
+    Map<Integer, Restriction> equal = new HashMap<>();
     Restriction[][] result = new Restriction[tuples.length][];
     for (int t = 0; t < tuples.length; t++) {
       result[t] = new Restriction[tuples[t].length];
       for (int i = 0; i < tuples[t].length; i++) {
         int v = tuples[t][i];
-        result[t][i] = v == star ? Restriction.any() : Restriction.eq(v);
+        result[t][i] =
+            star != null && v == star
+                ? Restriction.any()
+                : equal.computeIfAbsent(v, Restriction::eq);
       }
     }
     return result;
