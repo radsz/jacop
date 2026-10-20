@@ -686,6 +686,116 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x0.value()).isEqualTo(3);
   }
 
+  // On graphs large enough for Regular to remove nodes a level at a time and to compact its
+  // adjacency arrays, its domains must equal those of its decomposition into a chain of ternary
+  // tables, which is domain consistent too because the chain is Berge-acyclic. Both stores take the
+  // same random dives and backtrack out of them again and again.
+  @Test
+  void testRegularMatchesDecompositionOnLargeGraphs() {
+
+    Random random = new Random(11);
+    for (int trial = 0; trial < 6; trial++) {
+      int n = 40 + random.nextInt(30);
+      int states = 120 + random.nextInt(60);
+      Fsm fsm = new Fsm();
+      FsmState[] s = new FsmState[states];
+      for (int q = 0; q < states; q++) {
+        s[q] = new FsmState();
+        fsm.allStates.add(s[q]);
+      }
+      fsm.initState = s[0];
+      for (int q = 0; q < states; q++) {
+        if (random.nextInt(4) > 0) {
+          fsm.finalStates.add(s[q]);
+        }
+        for (int c = 0; c < 4; c++) {
+          Set<Integer> successors = new HashSet<>();
+          for (int k = random.nextInt(3); k >= 0; k--) {
+            successors.add(random.nextInt(states));
+          }
+          for (int next : successors) {
+            s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+          }
+        }
+      }
+
+      Store regularStore = new Store();
+      Store tableStore = new Store();
+      IntVar[] x = new IntVar[n];
+      IntVar[] y = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(regularStore, "x" + i, 0, 3);
+        y[i] = new IntVar(tableStore, "x" + i, 0, 3);
+      }
+      regularStore.impose(new Regular(fsm, x));
+      new Regular(fsm, y).imposeDecomposition(tableStore);
+      String instance = "trial " + trial;
+      assertThat(regularStore.consistency()).as(instance).isEqualTo(tableStore.consistency());
+      assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+
+      // Level 1 fixes most of the variables, so most edges are removed below it. Every
+      // value left is in an accepted word, so any choice is consistent.
+      regularStore.setLevel(1);
+      tableStore.setLevel(1);
+      for (int i = 0; i < 3 * n / 4; i++) {
+        int[] values = valuesOf(x[i]);
+        int value = values[random.nextInt(values.length)];
+        x[i].domain.in(1, x[i], value, value);
+        y[i].domain.in(1, y[i], value, value);
+        assertThat(regularStore.consistency()).as(instance).isTrue();
+        assertThat(tableStore.consistency()).as(instance).isTrue();
+      }
+      assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+
+      for (int dive = 0; dive < 200; dive++) {
+        int base = regularStore.level;
+        String atBase = Arrays.toString(x);
+        boolean consistent = true;
+        while (consistent) {
+          List<Integer> free =
+              IntStream.range(0, n).filter(i -> !x[i].singleton()).boxed().toList();
+          if (free.isEmpty()) {
+            break;
+          }
+          int i = free.get(random.nextInt(free.size()));
+          int[] values = valuesOf(x[i]);
+          int value = values[random.nextInt(values.length)];
+          regularStore.setLevel(regularStore.level + 1);
+          tableStore.setLevel(tableStore.level + 1);
+          if (random.nextInt(5) == 0) {
+            x[i].domain.in(regularStore.level, x[i], value, value);
+            y[i].domain.in(tableStore.level, y[i], value, value);
+          } else {
+            x[i].domain.inComplement(regularStore.level, x[i], value);
+            y[i].domain.inComplement(tableStore.level, y[i], value);
+          }
+          consistent = regularStore.consistency();
+          assertThat(consistent).as(instance).isEqualTo(tableStore.consistency());
+          if (consistent) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+          }
+        }
+        // Backtrack to a random level below level 2, so that many dives share the subtree of
+        // level 2, and sometimes to level 1, which removes that subtree.
+        int deepest = regularStore.level;
+        int target =
+            deepest < 2 || random.nextInt(40) == 0
+                ? Math.min(1, deepest)
+                : 2 + random.nextInt(deepest - 1);
+        while (regularStore.level > target) {
+          regularStore.removeLevel(regularStore.level);
+          regularStore.setLevel(regularStore.level - 1);
+          tableStore.removeLevel(tableStore.level);
+          tableStore.setLevel(tableStore.level - 1);
+        }
+        assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+        if (target == base) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(atBase);
+        }
+      }
+    }
+  }
+
   // Regular on random (possibly non-deterministic) automata must keep every domain equal to the
   // values that appear in some accepted word, after each pruning step of a dive and after
   // backtracking out of it, and must fail exactly when no accepted word remains.
