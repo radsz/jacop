@@ -112,3 +112,7 @@ input_order/indomain_min on every decision variable, so that all solvers reach t
 optimal) solution. Each directory keeps the model it was flattened from (*.mzn) and a crosscheck.txt
 that says what was verified; "scripts/minizinc-crosscheck.py verify <dir>" repeats the check, for
 example after a change to the JaCoP MiniZinc library.
+Directories upTo5sec/shortest_path_flow_* hold instances of shortest_path from
+https://github.com/MiniZinc/minizinc-benchmarks, rewritten with network_flow_cost and checked the same
+way. Only instances that finish well within the time limit with JaCoP's internal checks enabled are kept,
+because the network simplex checks make each node much slower.
