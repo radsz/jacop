@@ -79,7 +79,8 @@ class MznlibGlobalsTest {
         "hook_mdd_nondet",
         "hook_network_flow_isolated",
         "hook_network_flow_cost_zero_based",
-        "hook_network_flow_cost_loop"
+        "hook_network_flow_cost_loop",
+        "hook_disjunctive_strict_opt_var"
       })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
