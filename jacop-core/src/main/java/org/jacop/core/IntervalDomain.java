@@ -2369,13 +2369,55 @@ public class IntervalDomain extends IntDomain {
    * both domains, and reports one event as {@link #in(int, Var, IntDomain)} does.
    */
   private void inRuns(int storeLevel, Var v, IntDomain domain, int shift) {
-    IntervalDomain result = intersectRuns(this, domain, shift);
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+    // the intervals the argument covers whole are kept; the result is built from the first one
+    // that is not covered
+    IntervalDomain result = null;
+    for (int k = 0; k < size; k++) {
+      Interval iv = intervals[k];
+      int lo = iv.min();
+      int hi = iv.max();
+      if (domain.contains(lo - shift, hi - shift)) {
+        if (result != null) {
+          result.unionAdapt(lo, hi);
+        }
+        continue;
+      }
+      if (result == null) {
+        result = new IntervalDomain(size + 1);
+        System.arraycopy(intervals, 0, result.intervals, 0, k);
+        result.size = k;
+      }
+      int y = lo - shift;
+      if (!domain.contains(y)) {
+        int next = domain.nextValue(y);
+        if (next <= y) {
+          break;
+        }
+        y = next;
+      }
+      while (y + shift <= hi) {
+        int end = Math.min(domain.runEnd(y) + shift, hi);
+        result.unionAdapt(y + shift, end);
+        if (end >= hi) {
+          break;
+        }
+        int next = domain.nextValue(end - shift);
+        if (next <= end - shift) {
+          break;
+        }
+        y = next;
+      }
+    }
+    if (result == null) {
+      return;
+    }
     if (result.isEmpty()) {
       throw failException;
     }
-    if (result.getSize() != getSize()) {
-      in(storeLevel, v, result);
-    }
+    in(storeLevel, v, result);
   }
 
   @Override

@@ -312,6 +312,10 @@ public class LazyBitSetDomain extends IntDomain {
   @Override
   @SuppressWarnings("unchecked")
   public void removeLevel(int level, Var v) {
+    // a level removal visits every variable when many of them changed, most of them not here
+    if (stamp < level) {
+      return;
+    }
     bitsVersion++;
     while (trailSize > 0 && trailInts[(trailSize - 1) * INT_FIELDS + 1] >= level) {
       trailSize--;
@@ -508,18 +512,23 @@ public class LazyBitSetDomain extends IntDomain {
       keepOnly(storeLevel, v, domain, 0);
       return;
     }
+    inIntervals(storeLevel, v, domain, 0);
+  }
+
+  /** It keeps the values x of this domain for which x - shift is in an interval domain. */
+  private void inIntervals(int storeLevel, Var v, IntDomain domain, int shift) {
     int intervals = domain.noIntervals();
     if (intervals == 1) {
-      in(storeLevel, v, domain.min(), domain.max());
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
       return;
     }
     // the new bounds: the first and the last value of this domain within domain
     int lo = max + 1;
     for (int i = 0; i < intervals && lo > max; i++) {
       Interval interval = domain.getInterval(i);
-      if (interval.max() >= min) {
-        int candidate = nextPresent(interval.min());
-        if (candidate <= interval.max()) {
+      if (interval.max() + shift >= min) {
+        int candidate = nextPresent(interval.min() + shift);
+        if (candidate <= interval.max() + shift) {
           lo = candidate;
         }
       }
@@ -530,9 +539,9 @@ public class LazyBitSetDomain extends IntDomain {
     int hi = min - 1;
     for (int i = intervals - 1; i >= 0 && hi < min; i--) {
       Interval interval = domain.getInterval(i);
-      if (interval.min() <= max) {
-        int candidate = previousPresent(interval.max());
-        if (candidate >= interval.min()) {
+      if (interval.min() + shift <= max) {
+        int candidate = previousPresent(interval.max() + shift);
+        if (candidate >= interval.min() + shift) {
           hi = candidate;
         }
       }
@@ -543,8 +552,8 @@ public class LazyBitSetDomain extends IntDomain {
     // values of this domain in the gaps of domain between lo and hi
     boolean saved = false;
     for (int i = 0; i < intervals - 1; i++) {
-      int gapLo = Math.max(domain.getInterval(i).max() + 1, lo + 1);
-      int gapHi = Math.min(domain.getInterval(i + 1).min() - 1, hi - 1);
+      int gapLo = Math.max(domain.getInterval(i).max() + shift + 1, lo + 1);
+      int gapHi = Math.min(domain.getInterval(i + 1).min() + shift - 1, hi - 1);
       if (gapLo <= gapHi && nextPresent(gapLo) <= gapHi) {
         if (!saved) {
           saveLevel(storeLevel, v);
@@ -579,14 +588,7 @@ public class LazyBitSetDomain extends IntDomain {
       keepOnly(storeLevel, v, domain, shift);
       return;
     }
-    int intervals = domain.noIntervals();
-    IntervalDomain shifted = new IntervalDomain(intervals);
-    for (int i = 0; i < intervals; i++) {
-      Interval interval = domain.getInterval(i);
-      shifted.intervals[i] = new Interval(interval.min() + shift, interval.max() + shift);
-    }
-    shifted.size = intervals;
-    in(storeLevel, v, shifted);
+    inIntervals(storeLevel, v, domain, shift);
   }
 
   /**
