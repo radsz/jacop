@@ -917,7 +917,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
-    boolean outputVarsOnly = !options.complementarySearch() && label != null;
+    // With all solutions requested the default search also labels the output variables first:
+    // labelling every variable would report a solution again for each assignment of variables
+    // that are not output, such as the Boolean of a half-reification.
+    boolean outputVarsOnly = !options.complementarySearch() && (label != null || options.getAll());
     if (outputVarsOnly) {
       searchVars.outputVars();
     }

@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
@@ -132,7 +133,26 @@ class FlatzincFrontEndTest {
         Files.readString(out, StandardCharsets.UTF_8));
   }
 
+  @Test
+  void allSolutionsAreReportedOncePerAssignmentOfOutputVariables() throws IOException {
+    // The default search labelled every variable, so with -a x = 0 was reported twice: once for
+    // each value of b, which x = 0 leaves free and which is not an output variable.
+    String fzn =
+        """
+        var 0..1: x:: output_var;
+        var bool: b;
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(List.of("x = 0;", "x = 1;"), solveAllInOrder(fzn));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
+    return new TreeSet<>(solveAllInOrder(model));
+  }
+
+  private List<String> solveAllInOrder(String model) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -143,11 +163,9 @@ class FlatzincFrontEndTest {
     } finally {
       System.setOut(originalOut);
     }
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(buffer.toString(StandardCharsets.UTF_8).split("----------"))
+    return Arrays.stream(buffer.toString(StandardCharsets.UTF_8).split("----------"))
         .map(s -> String.join(" ", new TreeSet<>(Arrays.asList(s.strip().split("\\R")))))
         .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
-        .forEach(solutions::add);
-    return solutions;
+        .toList();
   }
 }
