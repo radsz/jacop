@@ -141,6 +141,70 @@ public class IntervalDomain extends IntDomain {
   }
 
   /**
+   * Finds the first interval whose maximum is not smaller than the given value, by binary search.
+   *
+   * @param value the value
+   * @return the position of that interval, or size if all intervals end before the value
+   */
+  private int firstIntervalEndingAtOrAfter(int value) {
+    int low = 0;
+    int high = size;
+    while (low < high) {
+      int middle = (low + high) >>> 1;
+      if (intervals[middle].max() < value) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  /**
+   * Shrinks the domain to its first intervals, clearing the references to the removed ones.
+   *
+   * @param newSize the number of intervals kept
+   */
+  private void clearIntervalsFrom(int newSize) {
+    for (int i = newSize; i < size; i++) {
+      intervals[i] = null;
+    }
+    size = newSize;
+  }
+
+  /**
+   * Informs the variable that a bound of this domain, changed in place, has changed.
+   *
+   * @param v the variable of this domain
+   */
+  private void notifyInPlaceBoundChange(Var v) {
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+    v.domainHasChanged(singleton() ? GROUND : BOUND);
+  }
+
+  /**
+   * Finds the first interval whose minimum is larger than the given value, by binary search.
+   *
+   * @param value the value
+   * @return the position of that interval, or size if all intervals start at or before the value
+   */
+  private int firstIntervalStartingAfter(int value) {
+    int low = 0;
+    int high = size;
+    while (low < high) {
+      int middle = (low + high) >>> 1;
+      if (intervals[middle].min() <= value) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  /**
    * Appends a human-readable representation of the domain intervals to the given StringBuilder. If
    * the domain is a singleton, just the single interval is appended; otherwise the intervals are
    * wrapped in braces and separated by commas.
@@ -281,6 +345,20 @@ public class IntervalDomain extends IntDomain {
 
       intervals = new Interval[1 + ALLOCATION_MARGIN];
       intervals[size++] = new Interval(min, max);
+
+    } else if (min > intervals[size - 1].max() + 1) {
+
+      // the most common case when a domain is built in increasing order: append at the end
+      ensureCapacity();
+      intervals[size++] = new Interval(min, max);
+
+    } else if (min >= intervals[size - 1].min()) {
+
+      // min..max starts within or right after the last interval: only the last interval changes
+      Interval last = intervals[size - 1];
+      if (max > last.max()) {
+        intervals[size - 1] = new Interval(last.min(), max);
+      }
 
     } else {
 
@@ -653,10 +731,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    int i = 0;
-    while (i < size && intervals[i].max() < min) {
-      i++;
-    }
+    int i = firstIntervalEndingAtOrAfter(min);
 
     return i != size && intervals[i].min() <= max;
   }
@@ -819,6 +894,11 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
+    if (min <= max) {
+      int m = firstIntervalEndingAtOrAfter(max);
+      return m != size && intervals[m].min() <= min;
+    }
+
     for (int m = 0; m < size; m++) {
       Interval i = intervals[m];
       if (i.max() >= max && min >= i.min()) {
@@ -871,18 +951,18 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    for (int m = 0; m < size; m++) {
-      Interval i = intervals[m];
-      if (i.max() > value) {
-        if (value >= i.min() - 1) {
-          return value + 1;
-        } else {
-          return i.min();
-        }
-      }
+    // the first interval which ends after value
+    int m = value == Integer.MAX_VALUE ? size : firstIntervalEndingAtOrAfter(value + 1);
+    if (m == size) {
+      return value;
     }
 
-    return value;
+    Interval i = intervals[m];
+    if (value >= i.min() - 1) {
+      return value + 1;
+    } else {
+      return i.min();
+    }
   }
 
   @Override
@@ -2095,9 +2175,19 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    int pointer = 0;
-    while (intervals[pointer].max() < min) {
-      pointer++;
+    int pointer = firstIntervalEndingAtOrAfter(min);
+
+    if (stamp == storeLevel) {
+      // the domain already belongs to this level, the intervals are moved in place
+      Interval first = intervals[pointer];
+      int remaining = size - pointer;
+      System.arraycopy(intervals, pointer, intervals, 0, remaining);
+      if (first.min() < min) {
+        intervals[0] = new Interval(min, first.max());
+      }
+      clearIntervalsFrom(remaining);
+      notifyInPlaceBoundChange(v);
+      return;
     }
 
     int out = 0;
@@ -2135,9 +2225,17 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    int pointer = size - 1;
-    while (intervals[pointer].min() > max) {
-      pointer--;
+    int pointer = firstIntervalStartingAfter(max) - 1;
+
+    if (stamp == storeLevel) {
+      // the domain already belongs to this level, the intervals are cut in place
+      Interval last = intervals[pointer];
+      if (last.max() > max) {
+        intervals[pointer] = new Interval(last.min(), max);
+      }
+      clearIntervalsFrom(pointer + 1);
+      notifyInPlaceBoundChange(v);
+      return;
     }
 
     int out = 0;
@@ -2184,9 +2282,7 @@ public class IntervalDomain extends IntDomain {
     int pointer = 0;
 
     // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max() < min) {
-      pointer++;
-    }
+    pointer = firstIntervalEndingAtOrAfter(min);
 
     if (intervals[pointer].min() > max) {
       throw failException;
@@ -2987,11 +3083,7 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    int counter = 0;
-
-    while (intervals[counter].max() < min) {
-      counter++;
-    }
+    int counter = firstIntervalEndingAtOrAfter(min);
 
     if (intervals[counter].min() > max) {
       return;
@@ -3774,21 +3866,17 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int previousValue(int value) {
 
-    for (int m = size - 1; m >= 0; m--) {
-
-      Interval i = intervals[m];
-
-      // the max of previous interval is the seeked value.
-      if (i.min() < value) {
-        if (i.max() >= value) {
-          return value - 1;
-        }
-        // the value is equal
-        return i.max();
-      }
+    // the last interval which starts before value
+    int m = value == Integer.MIN_VALUE ? -1 : firstIntervalStartingAfter(value - 1) - 1;
+    if (m < 0) {
+      return value;
     }
 
-    return value;
+    Interval i = intervals[m];
+    if (i.max() >= value) {
+      return value - 1;
+    }
+    return i.max();
   }
 
   /**
@@ -3905,10 +3993,7 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void subtractAdapt(int minValue, int maxValue) {
 
-    int current = 0;
-    while (current < size && intervals[current].max() < minValue) {
-      current++;
-    }
+    int current = firstIntervalEndingAtOrAfter(minValue);
 
     if (current == size) {
       return;
@@ -4319,9 +4404,7 @@ public class IntervalDomain extends IntDomain {
     int pointer = 0;
 
     // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max() < min) {
-      pointer++;
-    }
+    pointer = firstIntervalEndingAtOrAfter(min);
 
     if (intervals[pointer].min() > max) {
       size = 0;

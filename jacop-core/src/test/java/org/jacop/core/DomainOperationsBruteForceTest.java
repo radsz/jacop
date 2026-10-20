@@ -50,25 +50,44 @@ class DomainOperationsBruteForceTest {
 
   private static final int TRIALS = 2000;
 
-  private static final int MAX_VALUE = 12;
+  /**
+   * The values of the random domains: a small range with few intervals, and a range of 64 values
+   * with many intervals that reaches both ends of the bits of a SmallDenseDomain.
+   */
+  private record Scale(String name, int minValue, int maxValue, int maxRuns, int maxRunLength) {}
+
+  private static final Scale SMALL = new Scale("small", 0, 12, 3, 4);
+
+  private static final Scale WIDE = new Scale("wide", -30, 33, 8, 8);
 
   static Stream<Arguments> kinds() {
-    return Stream.of(
-        Arguments.of("IntervalDomain", (Function<TreeSet<Integer>, IntDomain>) s -> interval(s)),
-        Arguments.of(
-            "SmallDenseDomain", (Function<TreeSet<Integer>, IntDomain>) s -> smallDense(s)));
+    Stream.Builder<Arguments> kinds = Stream.builder();
+    for (Scale scale : new Scale[] {SMALL, WIDE}) {
+      kinds.add(
+          Arguments.of(
+              "IntervalDomain " + scale.name(),
+              scale,
+              (Function<TreeSet<Integer>, IntDomain>) s -> interval(s)));
+      kinds.add(
+          Arguments.of(
+              "SmallDenseDomain " + scale.name(),
+              scale,
+              (Function<TreeSet<Integer>, IntDomain>) s -> smallDense(s)));
+    }
+    return kinds.build();
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("kinds")
-  void operationsMatchSets(String name, Function<TreeSet<Integer>, IntDomain> kind) {
+  void operationsMatchSets(String name, Scale scale, Function<TreeSet<Integer>, IntDomain> kind) {
     Random random = new Random(name.hashCode());
     for (int trial = 0; trial < TRIALS; trial++) {
-      TreeSet<Integer> a = randomSet(random);
-      TreeSet<Integer> b = randomSet(random);
-      int lo = random.nextInt(MAX_VALUE + 1);
-      int hi = lo + random.nextInt(MAX_VALUE + 1 - lo);
-      int value = random.nextInt(MAX_VALUE + 1);
+      TreeSet<Integer> a = randomSet(random, scale);
+      TreeSet<Integer> b = randomSet(random, scale);
+      int lo = randomValue(random, scale);
+      int hi = lo + random.nextInt(scale.maxValue() + 1 - lo);
+      // values just outside the range of the domains are queried too
+      int value = scale.minValue() - 2 + random.nextInt(scale.maxValue() - scale.minValue() + 5);
       TreeSet<Integer> range = range(lo, hi);
       String context = "a=" + a + " b=" + b + " range=" + lo + ".." + hi + " value=" + value;
 
@@ -84,6 +103,9 @@ class DomainOperationsBruteForceTest {
             .isEqualTo(!intersect(a, b).isEmpty());
         assertThat(da.contains(db)).as("contains(dom) " + c).isEqualTo(a.containsAll(b));
         assertThat(da.eq(db)).as("eq(dom) " + c).isEqualTo(a.equals(b));
+        assertThat(da.sizeOfIntersection(db))
+            .as("sizeOfIntersection(dom) " + c)
+            .isEqualTo(intersect(a, b).size());
 
         IntDomain adapted = kind.apply(a);
         adapted.unionAdapt(db);
@@ -100,7 +122,8 @@ class DomainOperationsBruteForceTest {
 
       IntDomain da = kind.apply(a);
       check(da.union(lo, hi), union(a, range), "union(min, max) " + context);
-      check(da.union(value), union(a, range(value, value)), "union(value) " + context);
+      // a SmallDenseDomain can only grow within 64 values, so the added value is within the scale
+      check(da.union(lo), union(a, range(lo, lo)), "union(value) " + context);
       check(da.intersect(lo, hi), intersect(a, range), "intersect(min, max) " + context);
       check(da.subtract(lo, hi), subtract(a, range), "subtract(min, max) " + context);
       check(da.subtract(value), subtract(a, range(value, value)), "subtract(value) " + context);
@@ -119,6 +142,8 @@ class DomainOperationsBruteForceTest {
       assertThat(da.previousValue(value))
           .as("previousValue " + context)
           .isEqualTo(previous == null ? value : previous);
+
+      checkStructure(da, a, context);
 
       IntDomain adapted = kind.apply(a);
       adapted.unionAdapt(lo, hi);
@@ -141,14 +166,15 @@ class DomainOperationsBruteForceTest {
   /** The pruning operations of a variable's domain, followed by backtracking to the old domain. */
   @ParameterizedTest(name = "{0}")
   @MethodSource("kinds")
-  void pruningMatchesSetsAndBacktracks(String name, Function<TreeSet<Integer>, IntDomain> kind) {
+  void pruningMatchesSetsAndBacktracks(
+      String name, Scale scale, Function<TreeSet<Integer>, IntDomain> kind) {
     Random random = new Random(name.hashCode() + 1);
     for (int trial = 0; trial < TRIALS; trial++) {
-      TreeSet<Integer> a = randomSet(random);
-      TreeSet<Integer> b = randomSet(random);
-      int lo = random.nextInt(MAX_VALUE + 1);
-      int hi = lo + random.nextInt(MAX_VALUE + 1 - lo);
-      int value = random.nextInt(MAX_VALUE + 1);
+      TreeSet<Integer> a = randomSet(random, scale);
+      TreeSet<Integer> b = randomSet(random, scale);
+      int lo = randomValue(random, scale);
+      int hi = lo + random.nextInt(scale.maxValue() + 1 - lo);
+      int value = randomValue(random, scale);
       int shift = random.nextInt(5) - 2;
       TreeSet<Integer> range = range(lo, hi);
       TreeSet<Integer> shifted = new TreeSet<>();
@@ -187,13 +213,13 @@ class DomainOperationsBruteForceTest {
       prune(
           kind,
           a,
-          intersect(a, range(value, MAX_VALUE)),
+          intersect(a, range(value, scale.maxValue())),
           "inMin " + context,
           (d, l, v) -> d.inMin(l, v, value));
       prune(
           kind,
           a,
-          intersect(a, range(0, value)),
+          intersect(a, range(scale.minValue(), value)),
           "inMax " + context,
           (d, l, v) -> d.inMax(l, v, value));
       prune(
@@ -214,6 +240,56 @@ class DomainOperationsBruteForceTest {
    * fail), then removes the level and checks that the domain is a again.
    */
   private static void prune(
+      Function<TreeSet<Integer>, IntDomain> kind,
+      TreeSet<Integer> a,
+      TreeSet<Integer> expected,
+      String operation,
+      Pruning pruning) {
+    pruneAtNewLevel(kind, a, expected, operation, pruning);
+    pruneAtSameLevel(kind, a, expected, operation, pruning);
+  }
+
+  /**
+   * Prunes a variable whose domain has already been changed at the current level, so the domain may
+   * be changed in place: the domain is a with one more value, which is removed first.
+   */
+  private static void pruneAtSameLevel(
+      Function<TreeSet<Integer>, IntDomain> kind,
+      TreeSet<Integer> a,
+      TreeSet<Integer> expected,
+      String operation,
+      Pruning pruning) {
+    Integer extra = null;
+    for (int v = a.first() - 1; v <= a.last() + 1 && extra == null; v++) {
+      if (!a.contains(v) && v - Math.min(v, a.first()) < 63 && Math.max(v, a.last()) - v < 63) {
+        extra = v;
+      }
+    }
+    if (extra == null) {
+      return;
+    }
+    TreeSet<Integer> initial = union(a, range(extra, extra));
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", kind.apply(initial));
+    store.setLevel(1);
+    x.domain.inComplement(store.level, x, extra);
+    check(x.domain, a, operation + " (same level) removal of " + extra);
+    boolean failed = false;
+    try {
+      pruning.apply(x.domain, store.level, x);
+    } catch (FailException e) {
+      failed = true;
+    }
+    assertThat(failed).as(operation + " (same level) failure").isEqualTo(expected.isEmpty());
+    if (!failed) {
+      check(x.domain, expected, operation + " (same level)");
+    }
+    store.removeLevel(1);
+    store.setLevel(0);
+    check(x.domain, initial, operation + " (same level) after backtracking");
+  }
+
+  private static void pruneAtNewLevel(
       Function<TreeSet<Integer>, IntDomain> kind,
       TreeSet<Integer> a,
       TreeSet<Integer> expected,
@@ -253,6 +329,44 @@ class DomainOperationsBruteForceTest {
     }
   }
 
+  /**
+   * Checks the interval structure of a domain against its values: the intervals, the elements by
+   * position and both enumerations.
+   */
+  private static void checkStructure(IntDomain domain, TreeSet<Integer> expected, String context) {
+    java.util.List<Interval> runs = new java.util.ArrayList<>();
+    for (int v : expected) {
+      if (!runs.isEmpty() && runs.get(runs.size() - 1).max() == v - 1) {
+        runs.set(runs.size() - 1, new Interval(runs.get(runs.size() - 1).min(), v));
+      } else {
+        runs.add(new Interval(v, v));
+      }
+    }
+    assertThat(domain.noIntervals()).as("noIntervals " + context).isEqualTo(runs.size());
+    java.util.List<Interval> enumerated = new java.util.ArrayList<>();
+    for (IntervalEnumeration e = domain.intervalEnumeration(); e.hasMoreElements(); ) {
+      enumerated.add(e.nextElement());
+    }
+    assertThat(enumerated).as("intervalEnumeration " + context).isEqualTo(runs);
+    for (int i = 0; i < runs.size(); i++) {
+      assertThat(domain.getInterval(i))
+          .as("getInterval " + i + " " + context)
+          .isEqualTo(runs.get(i));
+      assertThat(domain.leftElement(i)).as("leftElement " + context).isEqualTo(runs.get(i).min());
+      assertThat(domain.rightElement(i)).as("rightElement " + context).isEqualTo(runs.get(i).max());
+    }
+    int position = 0;
+    for (int v : expected) {
+      assertThat(domain.getElementAt(position++)).as("getElementAt " + context).isEqualTo(v);
+    }
+    assertThat(domain.toIntArray())
+        .as("toIntArray " + context)
+        .isEqualTo(expected.stream().mapToInt(Integer::intValue).toArray());
+    if (domain instanceof SmallDenseDomain dense) {
+      check(dense.toIntervalDomain(), expected, "toIntervalDomain " + context);
+    }
+  }
+
   /** The domain b in every representation able to hold it exactly. */
   private static IntDomain[] arguments(TreeSet<Integer> b) {
     if (b.last() - b.first() + 1 == b.size()) {
@@ -273,16 +387,22 @@ class DomainOperationsBruteForceTest {
     return d;
   }
 
-  /** A random non-empty subset of 0..MAX_VALUE, made of a few runs so that it has holes. */
-  private static TreeSet<Integer> randomSet(Random random) {
+  /**
+   * A random non-empty subset of the values of the scale, made of a few runs so that it has holes.
+   */
+  private static TreeSet<Integer> randomSet(Random random, Scale scale) {
     TreeSet<Integer> set = new TreeSet<>();
-    int runs = 1 + random.nextInt(3);
+    int runs = 1 + random.nextInt(scale.maxRuns());
     for (int r = 0; r < runs; r++) {
-      int min = random.nextInt(MAX_VALUE + 1);
-      int max = Math.min(MAX_VALUE, min + random.nextInt(4));
+      int min = randomValue(random, scale);
+      int max = Math.min(scale.maxValue(), min + random.nextInt(scale.maxRunLength()));
       set.addAll(range(min, max));
     }
     return set;
+  }
+
+  private static int randomValue(Random random, Scale scale) {
+    return scale.minValue() + random.nextInt(scale.maxValue() - scale.minValue() + 1);
   }
 
   private static TreeSet<Integer> range(int min, int max) {

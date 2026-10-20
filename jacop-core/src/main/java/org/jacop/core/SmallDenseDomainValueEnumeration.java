@@ -66,10 +66,9 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
       throw new IllegalStateException("No more elements");
     }
 
-    while (bits > 0) {
-      current++;
-      bits = bits << 1;
-    }
+    int zeros = Long.numberOfLeadingZeros(bits);
+    current += zeros;
+    bits = bits << zeros;
 
     int next = current;
 

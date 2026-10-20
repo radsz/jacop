@@ -128,8 +128,6 @@ public class SmallDenseDomain extends IntDomain {
     }
   }
 
-  final long first8 = 255L << 56;
-
   /**
    * The minimal value present in this domain encoding. The domain can only encode small domains
    * within a range [minBound .. minBound + 63].
@@ -215,6 +213,31 @@ public class SmallDenseDomain extends IntDomain {
       int shift = minBound - input.minBound;
       return shift < 64 ? input.bits << shift : 0;
     }
+  }
+
+  /**
+   * Returns the values of an interval domain which lie within [minBound .. minBound + 63], as bits
+   * aligned with this domain. This domain must not be empty.
+   *
+   * @param input the interval domain
+   * @return the bits of the input values that this domain could hold
+   */
+  private long windowBits(IntervalDomain input) {
+    long result = 0;
+    int windowMax = minBound + 63;
+    for (int i = 0; i < input.size; i++) {
+      Interval interval = input.intervals[i];
+      if (interval.max() < minBound) {
+        continue;
+      }
+      if (interval.min() > windowMax) {
+        break;
+      }
+      int low = Math.max(interval.min(), minBound) - minBound;
+      int high = Math.min(interval.max(), windowMax) - minBound;
+      result |= SEQ_ARRAY[high - low] << (63 - high);
+    }
+    return result;
   }
 
   /**
@@ -540,6 +563,11 @@ public class SmallDenseDomain extends IntDomain {
       return bitsResult == this.bits;
     }
 
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
+      // the bounds check above keeps all values of the input within the bits of this domain
+      return (windowBits((IntervalDomain) domain) & ~bits) == 0;
+    }
+
     if (size < domain.getSize()) {
       return false;
     }
@@ -633,21 +661,13 @@ public class SmallDenseDomain extends IntDomain {
     return super.eq(domain);
   }
 
-  private int getElementAtFromBits(long bitsVal, int startValue, int index) {
+  private static int getElementAtFromBits(long bitsVal, int startValue, int index) {
     long result = bitsVal;
-    int value = startValue;
-    while (index > 0) {
-      if (result < 0) {
-        index--;
-      }
-      result = result << 1;
-      value++;
+    // the highest set bit stands for the smallest remaining value, drop index of them
+    for (int i = 0; i < index; i++) {
+      result &= ~Long.highestOneBit(result);
     }
-    while (result > 0) {
-      result = result << 1;
-      value++;
-    }
-    return value;
+    return startValue + Long.numberOfLeadingZeros(result);
   }
 
   @Override
@@ -670,35 +690,21 @@ public class SmallDenseDomain extends IntDomain {
     int no = 0;
     int shift = 0;
     long result = bits;
-    boolean inInterval = false;
-    int begin = Integer.MIN_VALUE;
 
     while (result != 0) {
-      if (!inInterval && result < 0) {
-        inInterval = true;
-        if (no == position) {
-          begin = minBound + shift;
-        }
-        no++;
-        result = result << 1;
-        shift++;
+      int zeros = Long.numberOfLeadingZeros(result);
+      shift += zeros;
+      result = result << zeros;
+      int ones = Long.numberOfLeadingZeros(~result);
+      if (no == position) {
+        return new Interval(minBound + shift, minBound + shift + ones - 1);
       }
-      if (!inInterval) {
-        result = result << 1;
-        shift++;
+      if (ones == 64) {
+        break;
       }
-      if (inInterval && result < 0) {
-        result = result << 1;
-        shift++;
-      }
-      if (inInterval && result >= 0) {
-        if (no - 1 == position) {
-          return new Interval(begin, minBound + shift - 1);
-        }
-        inInterval = false;
-        result = result << 1;
-        shift++;
-      }
+      no++;
+      shift += ones;
+      result = result << ones;
     }
 
     throw new IndexOutOfBoundsException("Interval with a given number does not exist.");
@@ -723,22 +729,7 @@ public class SmallDenseDomain extends IntDomain {
    * @return the number of 1's.
    */
   public int getSize(long input) {
-
-    long xDown = input & 0xffffffffL;
-    xDown = xDown - ((xDown >>> 1) & 0x55555555);
-    xDown = (xDown & 0x33333333) + ((xDown >>> 2) & 0x33333333);
-    xDown = (xDown + (xDown >>> 4)) & 0x0f0f0f0f;
-    xDown = xDown + (xDown >>> 8);
-    xDown = xDown + (xDown >>> 16);
-
-    long xUp = input >>> 32;
-    xUp = xUp - ((xUp >>> 1) & 0x55555555);
-    xUp = (xUp & 0x33333333) + ((xUp >>> 2) & 0x33333333);
-    xUp = (xUp + (xUp >>> 4)) & 0x0f0f0f0f;
-    xUp = xUp + (xUp >>> 8);
-    xUp = xUp + (xUp >>> 16);
-
-    return ((int) xDown & 0x0000003f) + ((int) xUp & 0x0000003f);
+    return Long.bitCount(input);
   }
 
   @Override
@@ -1017,15 +1008,9 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf("Empty domain, min can not be adapted."));
     }
 
-    while ((bits & first8) == 0) {
-      minBound += 8;
-      bits = bits << 8;
-    }
-
-    while ((bits & TWO_N_ARRAY[63]) == 0) {
-      minBound++;
-      bits = bits << 1;
-    }
+    int zeros = Long.numberOfLeadingZeros(bits);
+    minBound += zeros;
+    bits = bits << zeros;
   }
 
   @Override
@@ -1486,6 +1471,10 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
+      return (windowBits((IntervalDomain) domain) & bits) != 0;
+    }
+
     boolean result = super.isIntersecting(domain);
 
     if (ASSERTS_ENABLED && result != this.toIntervalDomain().isIntersecting(domain)) {
@@ -1581,68 +1570,14 @@ public class SmallDenseDomain extends IntDomain {
       return value;
     }
 
-    while (true) {
-
-      long sequence8 = temp & first8;
-
-      if (sequence8 == 0) {
-        temp = temp << 8;
-        shift += 8;
-      } else {
-        return nextValueInByte(temp, shift);
-      }
-    }
-  }
-
-  /**
-   * Scans the high 8 bits of temp for the next set bit and returns the corresponding value.
-   *
-   * @param temp the shifted bit vector (high 8 bits are scanned).
-   * @param shift current shift amount (0-based position from minBound).
-   * @return minBound + shift for the first set bit in the high byte.
-   */
-  private int nextValueInByte(long temp, int shift) {
-
-    for (int i = 7; i >= 0; i--) {
-      if (temp < 0) {
-        return minBound + shift;
-      }
-      temp = temp << 1;
-      shift++;
-    }
-
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(String.valueOf("It should not be here."));
-    }
-    return minBound + shift;
+    return minBound + shift + Long.numberOfLeadingZeros(temp);
   }
 
   @Override
   public int noIntervals() {
 
-    int no = 0;
-    long result = bits;
-    boolean inInterval = false;
-
-    while (result != 0) {
-      if (!inInterval && result < 0) {
-        inInterval = true;
-        no++;
-        result = result << 1;
-      }
-      if (inInterval && result > 0) {
-        inInterval = false;
-        result = result << 1;
-      }
-      if (inInterval && result < 0) {
-        result = result << 1;
-      }
-      if (!inInterval && result > 0) {
-        result = result << 1;
-      }
-    }
-
-    return no;
+    // an interval starts at every set bit whose higher neighbour (the smaller value) is not set
+    return Long.bitCount(bits & ~(bits >>> 1));
   }
 
   @Override
@@ -1665,28 +1600,7 @@ public class SmallDenseDomain extends IntDomain {
       return value;
     }
 
-    while (true) {
-
-      long sequence8 = temp & 255;
-
-      if (sequence8 == 0) {
-        temp = temp >>> 8;
-        shift += 8;
-      } else {
-        for (int i = 7; i >= 0; i--) {
-          if ((temp & 0x1) != 0) {
-            return minBound + 63 - shift;
-          } else {
-            temp = temp >>> 1;
-            shift++;
-          }
-        }
-
-        if (ASSERTS_ENABLED) {
-          throw new IllegalStateException(String.valueOf("It should not be here."));
-        }
-      }
-    }
+    return minBound + 63 - shift - Long.numberOfTrailingZeros(temp);
   }
 
   @Override
@@ -1864,6 +1778,15 @@ public class SmallDenseDomain extends IntDomain {
       }
     }
 
+    if (domain.domainId() == INTERVAL_DOMAIN_ID && !isEmpty()) {
+      long result = this.bits & ~windowBits((IntervalDomain) domain);
+      if (result != 0) {
+        return new SmallDenseDomain(this.minBound, result);
+      } else {
+        return IntervalDomain.EMPTY;
+      }
+    }
+
     IntDomain result = super.subtract(domain);
 
     if (ASSERTS_ENABLED && !result.eq(this.toIntervalDomain().subtract(domain))) {
@@ -1987,6 +1910,24 @@ public class SmallDenseDomain extends IntDomain {
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
+  }
+
+  @Override
+  public int sizeOfIntersection(IntDomain domain) {
+
+    if (isEmpty() || domain.isEmpty()) {
+      return 0;
+    }
+
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
+      return Long.bitCount(alignBits((SmallDenseDomain) domain) & bits);
+    }
+
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
+      return Long.bitCount(windowBits((IntervalDomain) domain) & bits);
+    }
+
+    return super.sizeOfIntersection(domain);
   }
 
   @Override
@@ -2272,23 +2213,7 @@ public class SmallDenseDomain extends IntDomain {
   public int getRandomValue() {
 
     int number = Store.getRandom().nextInt(size);
-    int pos = 0;
-    long temp = bits;
-    while (number >= 0) {
-      if (temp < 0) {
-        if (number == 0) {
-          return minBound + pos;
-        }
-        number--;
-      }
-      temp = temp << 1;
-      pos++;
-    }
-
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException("Assertion failed");
-    }
-    return minBound;
+    return getElementAtFromBits(bits, minBound, number);
   }
 
   /**
@@ -2312,8 +2237,17 @@ public class SmallDenseDomain extends IntDomain {
     int noIntervals = this.noIntervals();
     IntervalDomain result = new IntervalDomain(noIntervals);
 
+    int shift = 0;
+    long rest = bits;
     for (int i = 0; i < noIntervals; i++) {
-      result.intervals[i] = this.getInterval(i);
+      int zeros = Long.numberOfLeadingZeros(rest);
+      shift += zeros;
+      rest = rest << zeros;
+      int ones = Long.numberOfLeadingZeros(~rest);
+      result.intervals[i] = new Interval(minBound + shift, minBound + shift + ones - 1);
+      shift += ones;
+      // a shift by 64 is a shift by 0 in Java, the last interval may end at the last bit
+      rest = ones == 64 ? 0 : rest << ones;
     }
 
     result.size = noIntervals;
