@@ -114,6 +114,8 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
+import org.jacop.constraints.table.Restriction;
+import org.jacop.constraints.table.TableCompressor;
 import org.jacop.constraints.table.TableReified;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
@@ -1249,7 +1251,17 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseTableBySize(IntVar[] v, int[][] t) {
-    support.pose(new HybridTable(v, t));
+    // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
+    // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
+    // slower overall on the FlatZinc benchmarks, so it is off by default.
+    String mode = System.getProperty("jacop.table", "plain");
+    Restriction[][] compressed =
+        "plain".equals(mode) ? null : TableCompressor.compress(v, t, "sets".equals(mode));
+    if (compressed != null && compressed.length < t.length) {
+      support.pose(new HybridTable(v, compressed));
+    } else {
+      support.pose(new HybridTable(v, t));
+    }
   }
 
   int[][] toIntArray(ArrayList<Integer>[] l) {

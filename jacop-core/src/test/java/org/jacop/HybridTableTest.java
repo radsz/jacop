@@ -45,6 +45,7 @@ import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.Restriction.Relation;
 import org.jacop.constraints.table.Table;
+import org.jacop.constraints.table.TableCompressor;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -243,6 +244,10 @@ class HybridTableTest {
   }
 
   private static void check(Instance instance, Random random) {
+    check(instance, random, true);
+  }
+
+  private static void check(Instance instance, Random random, boolean expand) {
     Set<List<Integer>> expected = new HashSet<>();
     enumerate(
         instance.domains(),
@@ -258,7 +263,7 @@ class HybridTableTest {
         });
     Store store = new Store();
     IntVar[] x = variables(store, instance.domains());
-    store.impose(new HybridTable(x, instance.tuples()));
+    store.impose(new HybridTable(x, instance.tuples(), expand));
     Set<List<Integer>> found = new HashSet<>();
     explore(store, x, instance.tuples(), random, found, instance.toString());
     assertThat(found).as("solutions %s", instance).isEqualTo(expected);
@@ -293,6 +298,96 @@ class HybridTableTest {
     Random random = new Random(4);
     for (int trial = 0; trial < TRIALS; trial++) {
       check(randomInstance(random, 10, true), random);
+    }
+  }
+
+  @Test
+  void restrictionsBetweenColumnsWithoutExpansionReachGacAndFindAllSolutions() {
+    Random random = new Random(5);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      check(randomInstance(random, 10, true), random, false);
+    }
+  }
+
+  @Test
+  void compressedTablesAllowExactlyTheSameTuples() {
+    Random random = new Random(41);
+    for (int trial = 0; trial < 4 * TRIALS; trial++) {
+      int n = 1 + random.nextInt(5);
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = randomDomain(random);
+      }
+      // Tuples within the domains: either random, or expanded from random short tuples, which
+      // the compression has something to find in.
+      Set<List<Integer>> allowed = new HashSet<>();
+      int k = random.nextInt(60);
+      boolean structured = random.nextBoolean();
+      for (int t = 0; t < k; t++) {
+        int[][] cells = new int[n][];
+        for (int i = 0; i < n; i++) {
+          int[] d = domains[i];
+          cells[i] =
+              structured && random.nextInt(3) == 0 ? d : new int[] {d[random.nextInt(d.length)]};
+        }
+        enumerate(cells, new int[n], 0, v -> allowed.add(Arrays.stream(v).boxed().toList()));
+      }
+      int[][] tuples =
+          allowed.stream()
+              .map(l -> l.stream().mapToInt(Integer::intValue).toArray())
+              .toArray(int[][]::new);
+      Store store = new Store();
+      IntVar[] x = variables(store, domains);
+      boolean sets = trial % 2 == 0;
+      Restriction[][] result = TableCompressor.compress(x, tuples, sets);
+      if (result == null) {
+        for (int[] a : tuples) {
+          for (int[] b : tuples) {
+            int differ = 0;
+            for (int i = 0; i < n; i++) {
+              differ += a[i] == b[i] ? 0 : 1;
+            }
+            assertThat(differ).as("no tuples to merge").isNotEqualTo(1);
+          }
+        }
+      }
+      Restriction[][] compressed =
+          result != null
+              ? result
+              : Arrays.stream(tuples)
+                  .map(t -> Arrays.stream(t).mapToObj(Restriction::eq).toArray(Restriction[]::new))
+                  .toArray(Restriction[][]::new);
+
+      String where = Arrays.deepToString(domains) + " " + Arrays.deepToString(tuples);
+      assertThat(compressed.length).as(where).isLessThanOrEqualTo(tuples.length);
+      if (!sets) {
+        for (Restriction[] tuple : compressed) {
+          for (Restriction r : tuple) {
+            assertThat(r.toString()).as(where).matches("\\*|-?[0-9]+");
+          }
+        }
+      }
+      Set<List<Integer>> accepted = new HashSet<>();
+      enumerate(
+          domains,
+          new int[n],
+          0,
+          v -> {
+            for (Restriction[] tuple : compressed) {
+              if (HybridTable.accepts(tuple, v)) {
+                accepted.add(Arrays.stream(v).boxed().toList());
+              }
+            }
+          });
+      assertThat(accepted).as(where).isEqualTo(allowed);
+      // No two compressed tuples overlap, so their number bounds the work of the propagator.
+      long covered = 0;
+      for (Restriction[] tuple : compressed) {
+        long[] count = new long[1];
+        enumerate(domains, new int[n], 0, v -> count[0] += HybridTable.accepts(tuple, v) ? 1 : 0);
+        covered += count[0];
+      }
+      assertThat(covered).as(where).isEqualTo(allowed.size());
     }
   }
 
@@ -367,6 +462,26 @@ class HybridTableTest {
     b.domain.in(1, b, 999_000, 999_000);
     assertThat(store.consistency()).isTrue();
     assertThat(a.min()).isEqualTo(999_011);
+  }
+
+  @Test
+  void expansionUsesTheDomainsAtImposition() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    // Built while a is fixed to 1, imposed after backtracking: b = a + 1 must allow every a.
+    store.setLevel(1);
+    a.domain.in(1, a, 1, 1);
+    HybridTable table =
+        new HybridTable(
+            new IntVar[] {a, b},
+            new Restriction[][] {{Restriction.any(), Restriction.column(Relation.EQ, 0, 1)}});
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.impose(table);
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.dom().toString()).isEqualTo("{0..2}");
+    assertThat(b.dom().toString()).isEqualTo("{1..3}");
   }
 
   @Test
