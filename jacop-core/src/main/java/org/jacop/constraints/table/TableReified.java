@@ -106,7 +106,6 @@ public class TableReified extends CompactGroundTable implements SatisfiedPresent
   public void consistency(Store store) {
     newEpochIfNeeded();
     pruning = false;
-    tableChanged = false;
     updateQueued();
     pruning = true;
     try {

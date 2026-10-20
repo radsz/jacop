@@ -65,7 +65,6 @@ public class NegativeTable extends CompactGroundTable implements SatisfiedPresen
   public void consistency(Store store) {
     newEpochIfNeeded();
     pruning = false;
-    tableChanged = false;
     updateQueued();
     if (isEmpty()) {
       removeConstraint();

@@ -144,24 +144,16 @@ public class HybridTable extends Constraint
   private int[][] live;
 
   // Reversible sparse bit-set of the valid tuples, as in Compact-Table: the non-zero words are
-  // index[0..limit]. State records 0..words-1 hold the words, record words holds the limit and
-  // record words + 1 + i the number of live classes of column i. All records are trailed.
+  // index[0..limit]. Record liveRecord + i of state holds the number of live classes of column i.
+  private TrailedTupleSet valid;
   private long[] state;
   private int[] index;
   private long[] mask;
-  private long[] temp;
-  private int limitRecord;
-  private int liveRecord;
 
-  private int[] savedEpoch;
-  private int epoch;
-  private int epochLevel = -1;
-  private long[] trail = new long[64];
-  private int trailTop;
-  private int[] markLevel = new int[16];
-  private int[] markPosition = new int[16];
-  private int markTop;
-  private int currentLevel;
+  /** Work space of the tuples whose in or not in restriction accepts a live class. */
+  private long[] temp;
+
+  private int liveRecord;
 
   /** Position of each variable indexed by its store index minus indexOffset, or -1. */
   private int[] positionByIndex;
@@ -173,9 +165,6 @@ public class HybridTable extends Constraint
   private boolean[] queued;
   private boolean pruning;
   private boolean firstConsistency = true;
-
-  /** Set when the current consistency call removed tuples. */
-  private boolean tableChanged;
 
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
@@ -281,26 +270,18 @@ public class HybridTable extends Constraint
 
     this.store = store;
     int n = tuples.length;
-    words = (n + 63) / 64;
+    valid = new TrailedTupleSet(n, arity);
+    words = valid.words;
     queue = new int[arity];
     queued = new boolean[arity];
     buildClasses();
     buildSupports();
 
-    state = new long[words + 1 + arity];
-    savedEpoch = new int[state.length];
-    limitRecord = words;
-    liveRecord = words + 1;
-    index = new int[words];
-    for (int w = 0; w < words; w++) {
-      index[w] = w;
-    }
-    mask = new long[words];
+    state = valid.state;
+    index = valid.index;
+    mask = valid.mask;
+    liveRecord = valid.limitRecord + 1;
     temp = new long[words];
-    for (int t = 0; t < n; t++) {
-      state[t >> 6] |= 1L << t;
-    }
-    state[limitRecord] = words - 1;
 
     // Initial live classes and removal of the tuples that are not valid.
     live = new int[arity][];
@@ -322,7 +303,7 @@ public class HybridTable extends Constraint
       }
       live[i] = l;
       state[liveRecord + i] = size;
-      clearMask();
+      valid.clearMask();
       for (int p = 0; p < size; p++) {
         addToMask(supports[i][l[p]]);
       }
@@ -330,17 +311,7 @@ public class HybridTable extends Constraint
         state[w] &= mask[w];
       }
     }
-    // The index lists the non-zero words first.
-    int front = 0;
-    int back = words - 1;
-    for (int w = 0; w < words; w++) {
-      if (state[w] != 0) {
-        index[front++] = w;
-      } else {
-        index[back--] = w;
-      }
-    }
-    state[limitRecord] = front - 1;
+    valid.rebuildIndex();
 
     work = new IntDomain[arity];
     binarySupport = new IntDomain[arity];
@@ -388,20 +359,8 @@ public class HybridTable extends Constraint
       }
     }
 
-    int minIndex = Integer.MAX_VALUE;
-    int maxIndex = Integer.MIN_VALUE;
-    for (IntVar v : x) {
-      minIndex = Math.min(minIndex, v.storeIndex);
-      maxIndex = Math.max(maxIndex, v.storeIndex);
-    }
-    if (minIndex >= 0 && (long) maxIndex - minIndex < 4L * arity + 64) {
-      indexOffset = minIndex;
-      positionByIndex = new int[maxIndex - minIndex + 1];
-      Arrays.fill(positionByIndex, -1);
-      for (int i = 0; i < arity; i++) {
-        positionByIndex[x[i].storeIndex - indexOffset] = i;
-      }
-    }
+    positionByIndex = TrailedTupleSet.positionByIndex(x);
+    indexOffset = TrailedTupleSet.minIndex(x);
 
     super.impose(store);
   }
@@ -614,54 +573,9 @@ public class HybridTable extends Constraint
   // ---------------------------------------------------------------------------------------------
   // Trailing.
 
-  private void newEpochIfNeeded() {
-    currentLevel = store.level;
-    if (epochLevel != currentLevel) {
-      if (epoch == Integer.MAX_VALUE) {
-        Arrays.fill(savedEpoch, 0);
-        epoch = 0;
-      }
-      epoch++;
-      epochLevel = currentLevel;
-    }
-  }
-
-  private void save(int record) {
-    if (savedEpoch[record] == epoch) {
-      return;
-    }
-    savedEpoch[record] = epoch;
-    if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
-      if (markTop == markLevel.length) {
-        markLevel = Arrays.copyOf(markLevel, markTop * 2);
-        markPosition = Arrays.copyOf(markPosition, markTop * 2);
-      }
-      markLevel[markTop] = currentLevel;
-      markPosition[markTop++] = trailTop;
-    }
-    if (trailTop + 2 > trail.length) {
-      trail = Arrays.copyOf(trail, trail.length * 2);
-    }
-    trail[trailTop] = record;
-    trail[trailTop + 1] = state[record];
-    trailTop += 2;
-  }
-
   @Override
   public void removeLevel(int level) {
-    if (queueSize == 0 && (markTop == 0 || markLevel[markTop - 1] < level)) {
-      epochLevel = -1;
-      pruning = false;
-      return;
-    }
-    while (markTop > 0 && markLevel[markTop - 1] >= level) {
-      int start = markPosition[--markTop];
-      while (trailTop > start) {
-        trailTop -= 2;
-        state[(int) trail[trailTop]] = trail[trailTop + 1];
-      }
-    }
-    epochLevel = -1;
+    valid.removeLevel(level);
     for (int p = 0; p < queueSize; p++) {
       queued[queue[p]] = false;
     }
@@ -674,14 +588,7 @@ public class HybridTable extends Constraint
     if (pruning) {
       return;
     }
-    int p;
-    if (positionByIndex != null) {
-      int k = v.storeIndex - indexOffset;
-      p = k >= 0 && k < positionByIndex.length ? positionByIndex[k] : -1;
-    } else {
-      Integer position = varMap.get(v);
-      p = position == null ? -1 : position;
-    }
+    int p = TrailedTupleSet.column(v, positionByIndex, indexOffset, varMap);
     if (p >= 0 && !queued[p]) {
       queued[p] = true;
       queue[queueSize++] = p;
@@ -692,24 +599,12 @@ public class HybridTable extends Constraint
   // Reversible sparse bit-set.
 
   private int limit() {
-    return (int) state[limitRecord];
-  }
-
-  private void clearMask() {
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      mask[index[p]] = 0L;
-    }
+    return valid.limit();
   }
 
   private void addToMask(long[] set) {
-    if (set == null) {
-      return;
-    }
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      int w = index[p];
-      mask[w] |= set[w];
+    if (set != null) {
+      valid.addToMask(set);
     }
   }
 
@@ -723,52 +618,6 @@ public class HybridTable extends Constraint
     for (int p = 0; p <= limit; p++) {
       int w = index[p];
       mask[w] |= all[w] & ~accepted[w];
-    }
-  }
-
-  private void reverseMask() {
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      int w = index[p];
-      mask[w] = ~mask[w];
-    }
-  }
-
-  private void intersectWithMask() {
-    int limit = limit();
-    for (int p = limit; p >= 0; p--) {
-      int w = index[p];
-      long old = state[w];
-      long word = old & mask[w];
-      if (word != old) {
-        tableChanged = true;
-        save(w);
-        state[w] = word;
-        if (word == 0L) {
-          index[p] = index[limit];
-          index[limit] = w;
-          limit--;
-        }
-      }
-    }
-    if (limit != limit()) {
-      save(limitRecord);
-      state[limitRecord] = limit;
-    }
-  }
-
-  /** It removes a single tuple from the bit-set. */
-  private void removeTuple(int t, int position) {
-    int w = t >> 6;
-    tableChanged = true;
-    save(w);
-    state[w] &= ~(1L << t);
-    if (state[w] == 0L) {
-      int limit = limit();
-      index[position] = index[limit];
-      index[limit] = w;
-      save(limitRecord);
-      state[limitRecord] = limit - 1;
     }
   }
 
@@ -815,9 +664,9 @@ public class HybridTable extends Constraint
   @Override
   public void consistency(Store store) {
 
-    newEpochIfNeeded();
+    valid.newEpochIfNeeded(store.level);
     pruning = false;
-    tableChanged = false;
+    valid.changed = false;
 
     if (limit() < 0) {
       throw Store.failException;
@@ -840,7 +689,7 @@ public class HybridTable extends Constraint
       firstConsistency = false;
       onlyChanged = -1;
       changed = arity;
-    } else if (!tableChanged && (binaryAll == null || !intersects(binaryAll))) {
+    } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
       // The valid tuples are those of the previous call, which supported every remaining value.
       return;
     }
@@ -869,8 +718,7 @@ public class HybridTable extends Constraint
   }
 
   private void setLiveSize(int i, int size) {
-    save(liveRecord + i);
-    state[liveRecord + i] = size;
+    valid.set(liveRecord + i, size);
   }
 
   /** It updates the valid tuples after the domain of variable i changed. */
@@ -900,7 +748,7 @@ public class HybridTable extends Constraint
     }
     setLiveSize(i, s);
 
-    clearMask();
+    valid.clearMask();
     long[][] sup = supports[i];
     if (s <= size - s) {
       for (int k = 0; k < s; k++) {
@@ -921,23 +769,33 @@ public class HybridTable extends Constraint
         addToMaskDifference(lowerAll[i], lowerAccept[i][classOf(i, d.max())]);
       }
       if (setAll[i] != null) {
-        long[] m = mask;
-        mask = temp;
-        clearMask();
-        for (int k = 0; k < s; k++) {
-          addToMask(setAccept[i][l[k]]);
-        }
-        temp = mask;
-        mask = m;
-        addToMaskDifference(setAll[i], temp);
+        addToMaskDifference(setAll[i], acceptedBySet(i, l, s));
       }
-      reverseMask();
+      valid.reverseMask();
     }
-    intersectWithMask();
+    valid.intersectWithMask();
 
     if (limit() < 0) {
       throw Store.failException;
     }
+  }
+
+  /** The tuples whose in or not in restriction on column i accepts one of the live classes. */
+  private long[] acceptedBySet(int i, int[] l, int s) {
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      temp[index[p]] = 0L;
+    }
+    for (int k = 0; k < s; k++) {
+      long[] accepted = setAccept[i][l[k]];
+      if (accepted != null) {
+        for (int p = 0; p <= limit; p++) {
+          int w = index[p];
+          temp[w] |= accepted[w];
+        }
+      }
+    }
+    return temp;
   }
 
   /**
@@ -968,16 +826,16 @@ public class HybridTable extends Constraint
         int b = Long.numberOfTrailingZeros(bits);
         bits &= bits - 1;
         int t = (w << 6) + b;
-        boolean valid;
+        boolean consistent;
         if (wordMasks) {
-          valid = reviseTupleOnWords(t);
+          consistent = reviseTupleOnWords(t);
         } else if (useMarks && binarySources[t].length == 1) {
-          valid = reviseSingleRestriction(t);
+          consistent = reviseSingleRestriction(t);
         } else {
-          valid = reviseTuple(t);
+          consistent = reviseTuple(t);
         }
-        if (!valid) {
-          removeTuple(t, p);
+        if (!consistent) {
+          valid.removeTuple(t, p);
         }
       }
     }

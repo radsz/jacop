@@ -63,9 +63,6 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
 
   Store store;
 
-  /** Number of words of the bit-sets. */
-  int words;
-
   /** The sorted values of each column that occur in some tuple. */
   int[][] values;
 
@@ -80,23 +77,16 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
   /** The value indices of each column that may still be in its domain, first liveSize of them. */
   private int[][] live;
 
-  // Words of the bit-set are records 0..words-1, the limit is record words and the number of live
-  // values of column i is record words + 1 + i.
-  long[] state;
-  int[] index;
-  private long[] mask;
-  private int limitRecord;
-  private int liveRecord;
+  /** The valid tuples; the number of live values of column i is record liveRecord + i. */
+  TrailedTupleSet valid;
 
-  private int[] savedEpoch;
-  private int epoch;
-  private int epochLevel = -1;
-  private long[] trail = new long[64];
-  private int trailTop;
-  private int[] markLevel = new int[16];
-  private int[] markPosition = new int[16];
-  private int markTop;
-  private int currentLevel;
+  /** The words of the valid tuples, followed by the limit and the live sizes. */
+  long[] state;
+
+  /** The words, non-zero ones first. */
+  int[] index;
+
+  private int liveRecord;
 
   private final Map<IntVar, Integer> varMap;
   private int[] positionByIndex;
@@ -110,9 +100,6 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
 
   /** Set while the constraint prunes, so that its own changes are not queued. */
   boolean pruning;
-
-  /** Set when the current consistency call removed tuples. */
-  boolean tableChanged;
 
   /**
    * It creates the shared part of a table over tuples of values.
@@ -157,7 +144,11 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
   public void impose(Store store) {
     this.store = store;
     int n = tuples.length;
-    words = (n + 63) / 64;
+    valid = new TrailedTupleSet(n, arity);
+    state = valid.state;
+    index = valid.index;
+    liveRecord = valid.limitRecord + 1;
+    int words = valid.words;
     queue = new int[arity];
     queued = new boolean[arity];
 
@@ -182,15 +173,6 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
       }
     }
 
-    state = new long[words + 1 + arity];
-    savedEpoch = new int[state.length];
-    limitRecord = words;
-    liveRecord = words + 1;
-    index = new int[words];
-    mask = new long[words];
-    for (int t = 0; t < n; t++) {
-      state[t >> 6] |= 1L << t;
-    }
     // Initial live values and removal of the tuples with a value outside the domains.
     for (int i = 0; i < arity; i++) {
       int[] vs = values[i];
@@ -211,31 +193,9 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
       live[i] = l;
       state[liveRecord + i] = front;
     }
-    int front = 0;
-    int back = words - 1;
-    for (int w = 0; w < words; w++) {
-      if (state[w] != 0) {
-        index[front++] = w;
-      } else {
-        index[back--] = w;
-      }
-    }
-    state[limitRecord] = front - 1;
-
-    int minIndex = Integer.MAX_VALUE;
-    int maxIndex = Integer.MIN_VALUE;
-    for (IntVar v : x) {
-      minIndex = Math.min(minIndex, v.storeIndex);
-      maxIndex = Math.max(maxIndex, v.storeIndex);
-    }
-    if (minIndex >= 0 && (long) maxIndex - minIndex < 4L * arity + 64) {
-      indexOffset = minIndex;
-      positionByIndex = new int[maxIndex - minIndex + 1];
-      Arrays.fill(positionByIndex, -1);
-      for (int i = 0; i < arity; i++) {
-        positionByIndex[x[i].storeIndex - indexOffset] = i;
-      }
-    }
+    valid.rebuildIndex();
+    positionByIndex = TrailedTupleSet.positionByIndex(x);
+    indexOffset = TrailedTupleSet.minIndex(x);
 
     super.impose(store);
   }
@@ -244,52 +204,13 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
     return Arrays.binarySearch(values[i], v);
   }
 
-  // ---------------------------------------------------------------------------------------------
-  // Trailing.
-
   void newEpochIfNeeded() {
-    currentLevel = store.level;
-    if (epochLevel != currentLevel) {
-      if (epoch == Integer.MAX_VALUE) {
-        Arrays.fill(savedEpoch, 0);
-        epoch = 0;
-      }
-      epoch++;
-      epochLevel = currentLevel;
-    }
-  }
-
-  private void save(int record) {
-    if (savedEpoch[record] == epoch) {
-      return;
-    }
-    savedEpoch[record] = epoch;
-    if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
-      if (markTop == markLevel.length) {
-        markLevel = Arrays.copyOf(markLevel, markTop * 2);
-        markPosition = Arrays.copyOf(markPosition, markTop * 2);
-      }
-      markLevel[markTop] = currentLevel;
-      markPosition[markTop++] = trailTop;
-    }
-    if (trailTop + 2 > trail.length) {
-      trail = Arrays.copyOf(trail, trail.length * 2);
-    }
-    trail[trailTop] = record;
-    trail[trailTop + 1] = state[record];
-    trailTop += 2;
+    valid.newEpochIfNeeded(store.level);
   }
 
   @Override
   public void removeLevel(int level) {
-    while (markTop > 0 && markLevel[markTop - 1] >= level) {
-      int start = markPosition[--markTop];
-      while (trailTop > start) {
-        trailTop -= 2;
-        state[(int) trail[trailTop]] = trail[trailTop + 1];
-      }
-    }
-    epochLevel = -1;
+    valid.removeLevel(level);
     for (int p = 0; p < queueSize; p++) {
       queued[queue[p]] = false;
     }
@@ -304,12 +225,7 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
    * @return the column.
    */
   int column(Var v) {
-    if (positionByIndex != null) {
-      int k = v.storeIndex - indexOffset;
-      return k >= 0 && k < positionByIndex.length ? positionByIndex[k] : -1;
-    }
-    Integer position = varMap.get(v);
-    return position == null ? -1 : position;
+    return TrailedTupleSet.column(v, positionByIndex, indexOffset, varMap);
   }
 
   @Override
@@ -328,57 +244,11 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
   // Reversible sparse bit-set.
 
   int limit() {
-    return (int) state[limitRecord];
+    return valid.limit();
   }
 
   boolean isEmpty() {
-    return limit() < 0;
-  }
-
-  private void clearMask() {
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      mask[index[p]] = 0L;
-    }
-  }
-
-  private void addToMask(long[] set) {
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      int w = index[p];
-      mask[w] |= set[w];
-    }
-  }
-
-  private void reverseMask() {
-    int limit = limit();
-    for (int p = 0; p <= limit; p++) {
-      int w = index[p];
-      mask[w] = ~mask[w];
-    }
-  }
-
-  private void intersectWithMask() {
-    int limit = limit();
-    for (int p = limit; p >= 0; p--) {
-      int w = index[p];
-      long old = state[w];
-      long word = old & mask[w];
-      if (word != old) {
-        tableChanged = true;
-        save(w);
-        state[w] = word;
-        if (word == 0L) {
-          index[p] = index[limit];
-          index[limit] = w;
-          limit--;
-        }
-      }
-    }
-    if (limit != limit()) {
-      save(limitRecord);
-      state[limitRecord] = limit;
-    }
+    return valid.isEmpty();
   }
 
   /** It tells whether some valid tuple has value k in column i, as residues allow. */
@@ -429,8 +299,7 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
   }
 
   private void setLiveSize(int i, int size) {
-    save(liveRecord + i);
-    state[liveRecord + i] = size;
+    valid.set(liveRecord + i, size);
   }
 
   /** It updates the valid tuples of the queued columns and empties the queue. */
@@ -468,19 +337,19 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
       return;
     }
     setLiveSize(i, s);
-    clearMask();
+    valid.clearMask();
     long[][] sup = supports[i];
     if (s <= size - s) {
       for (int k = 0; k < s; k++) {
-        addToMask(sup[l[k]]);
+        valid.addToMask(sup[l[k]]);
       }
     } else {
       for (int k = s; k < size; k++) {
-        addToMask(sup[l[k]]);
+        valid.addToMask(sup[l[k]]);
       }
-      reverseMask();
+      valid.reverseMask();
     }
-    intersectWithMask();
+    valid.intersectWithMask();
   }
 
   /** It removes the values of column i that no valid tuple contains (positive table). */
