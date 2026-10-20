@@ -4330,7 +4330,9 @@ public class IntervalDomain extends IntDomain {
       while (position < size && bits != 0) {
 
         if (current < intervals[position].min()) {
-          bits = bits << (intervals[position].min() - current);
+          // a shift by 64 or more would wrap around, all remaining bits are below the interval
+          long gap = (long) intervals[position].min() - current;
+          bits = gap >= 64 ? 0 : bits << gap;
           current = intervals[position].min();
           continue;
         }
