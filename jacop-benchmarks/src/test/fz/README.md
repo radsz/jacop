@@ -113,6 +113,16 @@ optimal) solution. Each directory keeps the model it was flattened from (*.mzn) 
 that says what was verified; "scripts/minizinc-crosscheck.py verify <dir>" repeats the check, for
 example after a change to the JaCoP MiniZinc library.
 
+Directories upTo5sec/gcc_* hold models written for the global cardinality review. They rely on
+global_cardinality and its closed and low_up variants (which the JaCoP MiniZinc library maps to
+CountValues and CountValuesBounds) and on JaCoP's own GCC predicate (the bounds consistent GCC
+propagator): magic sequences, Latin squares, car sequencing, nurse rostering, balanced assignment,
+de Bruijn sequences, and closed GCC with an unsorted cover and counters that are also counted. They
+were added with "scripts/minizinc-crosscheck.py add --origin ...". The two gcc_jacop_gcc_* models use
+the GCC predicate, which Gecode and Chuffed do not have, so they were checked against a decomposition
+into one count per value instead, as their crosscheck.txt says. Run them alone with
+-DconstraintFilter=gcc,counting.
+
 Directories upTo5sec/shortest_path_flow_* hold instances of shortest_path from
 https://github.com/MiniZinc/minizinc-benchmarks, rewritten with network_flow_cost and checked the same
 way. Only instances that finish well within the time limit with JaCoP's internal checks enabled are kept,

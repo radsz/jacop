@@ -30,6 +30,7 @@ name the JaCoP jar(s), e.g. jacop-all/target/jacop-all-<version>.jar plus slf4j-
 
 usage: scripts/minizinc-crosscheck.py add <model.mzn> [--mode auto|all|fixed] [--name NAME]
                                           [--category upTo5sec] [--source FILE --note TEXT]
+                                          [--origin TEXT]
                                           [--gecode-differs REASON]
        scripts/minizinc-crosscheck.py verify <test dir>...
 """
@@ -338,8 +339,13 @@ def add(args):
     if mode == "all" and opt:
         raise CheckError("mode all is for satisfaction models")
     source = args.source or os.path.basename(src)
-    header = (f"% Cross-checked regression test, from Hakan Kjellerstrand's {source}"
-              f"\n% (https://github.com/radsz/hakank/tree/master/minizinc).\n")
+    if args.origin:
+        header = f"% Cross-checked regression test, {args.origin}.\n"
+        source_line = f"source: {args.origin}\n"
+    else:
+        header = (f"% Cross-checked regression test, from Hakan Kjellerstrand's {source}"
+                  f"\n% (https://github.com/radsz/hakank/tree/master/minizinc).\n")
+        source_line = f"source: hakank/minizinc/{source}\n"
     if args.note:
         header += f"% {args.note}\n"
     if mode == "fixed":
@@ -363,7 +369,7 @@ def add(args):
             raise CheckError(f"JaCoP needs {t:.1f}s, more than {MAX_JACOP_SECONDS}s")
         report = verify(test_dir, args.gecode_differs)
         with open(os.path.join(test_dir, "crosscheck.txt"), "w") as f:
-            f.write(f"source: hakank/minizinc/{source}\n" + report)
+            f.write(source_line + report)
         write_metadata(test_dir, fzn)
         print(f"added {args.category}/{name}/{name}: {report.splitlines()[1]} ({t:.1f}s)")
     except BaseException:
@@ -381,6 +387,7 @@ def main():
     a.add_argument("--category", default="upTo5sec")
     a.add_argument("--source", help="hakank model a variant was derived from")
     a.add_argument("--note", help="one line saying how the model differs from its source")
+    a.add_argument("--origin", help="where a model that is not from hakank comes from")
     a.add_argument("--gecode-differs", metavar="REASON",
                    help="Gecode departs from the MiniZinc library here; verify with Chuffed only")
     v = sub.add_parser("verify")
