@@ -38,6 +38,7 @@ import java.util.Random;
 import java.util.function.Supplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XplusYeqC;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -131,6 +132,28 @@ class LazyBitSetDomainTest {
         }
       }
     }
+  }
+
+  @Test
+  void solutionsRecordedDuringSearchKeepTheirValues() {
+    // a solution listener records the domain objects of the variables; a lazy bit set domain
+    // object changes afterwards, so the recorded solution must not be that object
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    assertThat(x.dom()).isInstanceOf(LazyBitSetDomain.class);
+    store.impose(new XplusYeqC(x, y, 90));
+    store.impose(new XneqC(x, 50));
+    org.jacop.search.DepthFirstSearch<IntVar> search = new org.jacop.search.DepthFirstSearch<>();
+    org.jacop.search.SelectChoicePoint<IntVar> select =
+        new org.jacop.search.SimpleSelect<>(
+            new IntVar[] {x, y}, null, new org.jacop.search.IndomainMax<>());
+    search.setPrintInfo(false);
+    search.getSolutionListener().recordSolutions(true);
+    // minimizing y explores all solutions and then assigns the recorded best one
+    assertThat(search.labeling(store, select, y)).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("90");
+    assertThat(y.dom().toString()).isEqualTo("0");
   }
 
   /** The result of a domain operation, or the exception it throws, as a string. */

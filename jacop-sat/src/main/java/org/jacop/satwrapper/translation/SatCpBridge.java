@@ -31,7 +31,6 @@
 
 package org.jacop.satwrapper.translation;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
@@ -49,7 +48,10 @@ public abstract class SatCpBridge implements WrapperComponent {
   // the variable this object represents the range of
   public final IntVar variable;
   // the domain of the variable
-  private final IntDomain initialDomain;
+  // the bounds, not the domain object: a LazyBitSetDomain object changes during search
+  private final int initialMin;
+
+  private final int initialMax;
   // lower bound of the domain
   private int min;
   // upper bound of the domain
@@ -65,7 +67,8 @@ public abstract class SatCpBridge implements WrapperComponent {
    */
   public SatCpBridge(IntVar variable) {
     this.variable = variable;
-    this.initialDomain = variable.domain;
+    this.initialMin = variable.min();
+    this.initialMax = variable.max();
     // Note: satBridge registration is now done via SatWrapper.setSatBridge()
     // This will be called by the wrapper after construction
   }
@@ -94,7 +97,7 @@ public abstract class SatCpBridge implements WrapperComponent {
    * @return the *value* of the current left limit of the range
    */
   public final int getLeftLimit() {
-    return initialDomain.min();
+    return initialMin;
   }
 
   /**
@@ -103,7 +106,7 @@ public abstract class SatCpBridge implements WrapperComponent {
    * @return the *value* of the current right limit of the range
    */
   public final int getRightLimit() {
-    return initialDomain.max();
+    return initialMax;
   }
 
   /**

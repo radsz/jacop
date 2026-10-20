@@ -43,6 +43,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.LazyBitSetDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -210,7 +211,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       if (!vars[i].singleton()) {
         throw new RuntimeException("Variable is not grounded in the solution");
       }
-      dest[i] = vars[i].dom();
+      Domain d = vars[i].dom();
+      // a LazyBitSetDomain object keeps changing during search, so keep its value instead
+      dest[i] = d instanceof LazyBitSetDomain lazy ? lazy.cloneLight() : d;
     }
   }
 
