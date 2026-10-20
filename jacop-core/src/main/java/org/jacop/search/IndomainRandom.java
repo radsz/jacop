@@ -32,7 +32,6 @@ package org.jacop.search;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
-import java.security.SecureRandom;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
@@ -63,9 +62,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
    * @param seed it specifies the seed of the random generator.
    */
   public IndomainRandom(int seed) {
-    SecureRandom seeded = new SecureRandom();
-    seeded.setSeed(seed);
-    generator = seeded;
+    generator = new Random(seed); // NOSONAR not used for security
   }
 
   /**

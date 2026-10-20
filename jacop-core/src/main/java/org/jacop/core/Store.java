@@ -30,7 +30,6 @@
 
 package org.jacop.core;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import lombok.extern.slf4j.Slf4j;
@@ -77,8 +77,12 @@ public class Store {
 
   static boolean seedPresent;
 
-  /** Centralized random number generator used by all JaCoP components. */
-  private static SecureRandom random = new SecureRandom();
+  /**
+   * Centralized random number generator used by all JaCoP components. It is a plain {@link Random}
+   * because a {@link java.security.SecureRandom} mixes a seed into its own entropy, so runs with
+   * the same seed would differ.
+   */
+  private static Random random = new Random(); // NOSONAR not used for security
 
   private static final String CONSTRAINT_QUEUE_TOO_LARGE =
       "Constraint queue number larger than permitted by store.";
@@ -86,9 +90,9 @@ public class Store {
   /**
    * Returns the centralized random number generator.
    *
-   * @return the shared {@link SecureRandom} instance.
+   * @return the shared {@link Random} instance.
    */
-  public static SecureRandom getRandom() {
+  public static Random getRandom() {
     return random;
   }
 
@@ -327,8 +331,7 @@ public class Store {
   public static void setSeed(long s) {
     seed = s;
     seedPresent = true;
-    random = new SecureRandom();
-    random.setSeed(s);
+    random = new Random(s); // NOSONAR not used for security
   }
 
   /**
@@ -343,7 +346,7 @@ public class Store {
   /** Resets the seed for the random number generator, marking it as not present. */
   public static void resetSeed() {
     seedPresent = false;
-    random = new SecureRandom();
+    random = new Random(); // NOSONAR not used for security
   }
 
   /**

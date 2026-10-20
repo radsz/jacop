@@ -123,6 +123,10 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.IndomainRandom;
+import org.jacop.search.SimpleSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -327,6 +331,28 @@ class SingleConstraintTest extends TestHelper {
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = list[0];
     assertThatThrownBy(() -> new Subcircuit(list)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testSeededRandomIsReproducible() {
+
+    try {
+      Store.setSeed(17);
+      int[] first = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      Store.setSeed(17);
+      int[] second = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      assertThat(second).containsExactly(first);
+
+      IndomainRandom<IntVar> a = new IndomainRandom<>(5);
+      IndomainRandom<IntVar> b = new IndomainRandom<>(5);
+      Store store = new Store();
+      IntVar v = new IntVar(store, "v", 0, 1000);
+      for (int i = 0; i < 20; i++) {
+        assertThat(b.indomain(v)).isEqualTo(a.indomain(v));
+      }
+    } finally {
+      Store.resetSeed();
+    }
   }
 
   @Test
