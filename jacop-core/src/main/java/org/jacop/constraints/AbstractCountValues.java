@@ -68,6 +68,9 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   /** The counted values in increasing order. */
   private final int[] sortedValues;
 
+  /** True when the counted values form one interval, so a value's sorted position is computed. */
+  private final boolean contiguous;
+
   /** The position in values of each value of sortedValues. */
   private final int[] indexOfSorted;
 
@@ -76,6 +79,12 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
 
   /** The number of undecided variables that can take each value, reused by consistency. */
   private final int[] numberMayBe;
+
+  /**
+   * Differences between consecutive sorted values of the number of undecided variables that can
+   * take them; a run of counted values inside one interval of a domain costs two updates.
+   */
+  private final int[] mayBeDifference;
 
   /** Tracks the first position of undecided variables. */
   protected TimeStamp<Integer> position;
@@ -117,12 +126,15 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
 
     this.sortedValues = values.clone();
     Arrays.sort(sortedValues);
+    this.contiguous =
+        values.length > 0 && sortedValues[values.length - 1] - sortedValues[0] == values.length - 1;
     this.indexOfSorted = new int[values.length];
     for (int i = 0; i < values.length; i++) {
       indexOfSorted[Arrays.binarySearch(sortedValues, values[i])] = i;
     }
     this.numberEq = new int[values.length];
     this.numberMayBe = new int[values.length];
+    this.mayBeDifference = new int[values.length + 1];
   }
 
   @SuppressWarnings("unchecked")
@@ -283,7 +295,6 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       store.propagationHasOccurred = false;
 
       restMayBe = 0;
-      Arrays.fill(numberMayBe, 0);
 
       start = scanListAndCount(start, numberEq, numberMayBe);
 
@@ -313,10 +324,11 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    * without any counted value) are moved before the new start and counted for good.
    */
   private int scanListAndCount(int start, int[] numberEq, int[] numberMayBe) {
+    Arrays.fill(mayBeDifference, 0);
     for (int i = start; i < n; i++) {
       IntVar v = list[i];
       if (v.singleton()) {
-        int k = Arrays.binarySearch(sortedValues, v.value());
+        int k = sortedPosition(v.value());
         if (k >= 0) {
           numberEq[indexOfSorted[k]]++;
         } else {
@@ -327,7 +339,7 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
         continue;
       }
 
-      int matched = countMayBe(v.domain, numberMayBe);
+      int matched = countMayBe(v.domain);
       if (matched == 0) {
         swap(start, i);
         start++;
@@ -336,59 +348,90 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
         restMayBe++;
       }
     }
+    int mayBe = 0;
+    for (int k = 0; k < sortedValues.length; k++) {
+      mayBe += mayBeDifference[k];
+      numberMayBe[indexOfSorted[k]] = mayBe;
+    }
     return start;
   }
 
   /**
-   * Increments numberMayBe for every counted value in the domain, looking at either the counted
-   * values within the domain bounds or the domain values, whichever are fewer.
+   * Records in mayBeDifference that the counted values of the domain may be taken, looking at the
+   * intervals of the domain, or at either the counted values within the domain bounds or the domain
+   * values, whichever are fewer.
    *
    * @return the number of counted values in the domain.
    */
-  private int countMayBe(IntDomain domain, int[] numberMayBe) {
-    int matched = 0;
+  private int countMayBe(IntDomain domain) {
     if (domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       // every counted value between the bounds of an interval is in the domain
       IntervalDomain intervals = (IntervalDomain) domain;
+      int matched = 0;
       for (int i = 0; i < intervals.size; i++) {
         Interval interval = intervals.intervals[i];
-        int to = upperBound(interval.max());
-        for (int k = lowerBound(interval.min()); k < to; k++) {
-          numberMayBe[indexOfSorted[k]]++;
-          matched++;
-        }
+        matched += mayBeRange(lowerBound(interval.min()), upperBound(interval.max()));
       }
       return matched;
     }
     int from = lowerBound(domain.min());
     int to = upperBound(domain.max());
+    if (domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
+      return mayBeRange(from, to);
+    }
+    int matched = 0;
     if (to - from <= domain.getSize()) {
       for (int k = from; k < to; k++) {
         if (domain.contains(sortedValues[k])) {
-          numberMayBe[indexOfSorted[k]]++;
-          matched++;
+          matched += mayBeRange(k, k + 1);
         }
       }
     } else {
       for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
         int k = Arrays.binarySearch(sortedValues, from, to, e.nextElement());
         if (k >= 0) {
-          numberMayBe[indexOfSorted[k]]++;
-          matched++;
+          matched += mayBeRange(k, k + 1);
         }
       }
     }
     return matched;
   }
 
+  /**
+   * Records that the sorted values from position from (inclusive) to to (exclusive) may be taken.
+   */
+  private int mayBeRange(int from, int to) {
+    if (from >= to) {
+      return 0;
+    }
+    mayBeDifference[from]++;
+    mayBeDifference[to]--;
+    return to - from;
+  }
+
+  /** Returns the position of value among the sorted values, or a negative number if not counted. */
+  private int sortedPosition(int value) {
+    if (contiguous) {
+      long k = (long) value - sortedValues[0];
+      return k >= 0 && k < sortedValues.length ? (int) k : -1;
+    }
+    return Arrays.binarySearch(sortedValues, value);
+  }
+
   /** Returns the position of the first sorted value that is not smaller than value. */
   private int lowerBound(int value) {
+    if (contiguous) {
+      return (int) Math.clamp((long) value - sortedValues[0], 0, sortedValues.length);
+    }
     int k = Arrays.binarySearch(sortedValues, value);
     return k < 0 ? -k - 1 : k;
   }
 
   /** Returns the position of the first sorted value that is greater than value. */
   private int upperBound(int value) {
+    if (contiguous) {
+      return (int) Math.clamp((long) value - sortedValues[0] + 1, 0, sortedValues.length);
+    }
     int k = Arrays.binarySearch(sortedValues, value);
     return k < 0 ? -k - 1 : k + 1;
   }
