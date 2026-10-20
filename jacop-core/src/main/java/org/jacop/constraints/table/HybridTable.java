@@ -180,6 +180,25 @@ public class HybridTable extends Constraint
   private IntDomain[] work;
   private IntDomain[] binarySupport;
 
+  // When the columns involved in restrictions between columns have small spans, the values the
+  // tuples with such restrictions support are marked in bit-sets instead of collected in domains:
+  // value v of column i is bit v - markBase[i] of marks[i]. markCount[i] counts the marked values
+  // and markNeed[i] is the domain size, so a column whose values are all marked is skipped.
+  private boolean useMarks;
+  private int[] markBase;
+  private long[][] marks;
+  private int[] markCount;
+  private int[] markNeed;
+  private static final int MAX_MARK_SPAN = 1 << 16;
+
+  // When moreover these spans are at most 64, a tuple is checked on one word per column: the
+  // domain of column k as a bit-set relative to markBase[k] is domainMask[k], and the values the
+  // unary restriction of tuple t on column k accepts are unaryMask[t][k].
+  private boolean wordMasks;
+  private long[] domainMask;
+  private long[][] unaryMask;
+  private long[] maskWork;
+
   /**
    * It constructs a hybrid table constraint.
    *
@@ -309,6 +328,49 @@ public class HybridTable extends Constraint
 
     work = new IntDomain[arity];
     binarySupport = new IntDomain[arity];
+    if (binaryAll != null) {
+      useMarks = true;
+      markBase = new int[arity];
+      marks = new long[arity][];
+      markCount = new int[arity];
+      markNeed = new int[arity];
+      for (int i = 0; i < arity; i++) {
+        if (binaryColumn[i] != null) {
+          long span = (long) x[i].max() - x[i].min() + 1;
+          if (span > MAX_MARK_SPAN) {
+            useMarks = false;
+          } else {
+            markBase[i] = x[i].min();
+            marks[i] = new long[(int) ((span + 63) >> 6)];
+          }
+        }
+      }
+      wordMasks = useMarks;
+      for (int i = 0; i < arity && wordMasks; i++) {
+        wordMasks = marks[i] == null || marks[i].length == 1;
+      }
+      if (wordMasks) {
+        domainMask = new long[arity];
+        maskWork = new long[arity];
+        unaryMask = new long[n][];
+        for (int t = 0; t < n; t++) {
+          if (binaryColumns[t] == null) {
+            continue;
+          }
+          unaryMask[t] = new long[arity];
+          for (int k : binaryColumns[t]) {
+            long m = 0L;
+            long span = (long) x[k].max() - markBase[k] + 1;
+            for (int q = 0; q < span; q++) {
+              if (tuples[t][k].accepts(markBase[k] + q)) {
+                m |= 1L << q;
+              }
+            }
+            unaryMask[t][k] = m;
+          }
+        }
+      }
+    }
 
     int minIndex = Integer.MAX_VALUE;
     int maxIndex = Integer.MIN_VALUE;
@@ -868,7 +930,20 @@ public class HybridTable extends Constraint
    */
   private void reviseBinaryTuples() {
 
-    Arrays.fill(binarySupport, null);
+    if (useMarks) {
+      for (int i = 0; i < arity; i++) {
+        if (marks[i] != null) {
+          Arrays.fill(marks[i], 0L);
+          markCount[i] = 0;
+          markNeed[i] = x[i].getSize();
+          if (wordMasks) {
+            domainMask[i] = wordOf(i, x[i].dom());
+          }
+        }
+      }
+    } else {
+      Arrays.fill(binarySupport, null);
+    }
     int limit = limit();
     for (int p = limit; p >= 0; p--) {
       int w = index[p];
@@ -877,7 +952,15 @@ public class HybridTable extends Constraint
         int b = Long.numberOfTrailingZeros(bits);
         bits &= bits - 1;
         int t = (w << 6) + b;
-        if (!reviseTuple(t)) {
+        boolean valid;
+        if (wordMasks) {
+          valid = reviseTupleOnWords(t);
+        } else if (useMarks && binarySources[t].length == 1) {
+          valid = reviseSingleRestriction(t);
+        } else {
+          valid = reviseTuple(t);
+        }
+        if (!valid) {
           removeTuple(t, p);
         }
       }
@@ -885,6 +968,303 @@ public class HybridTable extends Constraint
     if (limit() < 0) {
       throw Store.failException;
     }
+  }
+
+  /** The values of d as a bit-set relative to markBase[i]. */
+  private long wordOf(int i, IntDomain d) {
+    long m = 0L;
+    int base = markBase[i];
+    int v = d.min();
+    while (true) {
+      m |= 1L << (v - base);
+      int next = d.nextValue(v);
+      if (next == v) {
+        return m;
+      }
+      v = next;
+    }
+  }
+
+  /** The bit-set of the positions p with p at most bound, for 64 positions. */
+  private static long atMostWord(long bound) {
+    if (bound < 0) {
+      return 0L;
+    }
+    return bound >= 63 ? -1L : (1L << (bound + 1)) - 1;
+  }
+
+  /** The bit-set of the positions p with p at least bound, for 64 positions. */
+  private static long atLeastWord(long bound) {
+    if (bound > 63) {
+      return 0L;
+    }
+    return bound <= 0 ? -1L : -1L << bound;
+  }
+
+  private static long shiftWord(long m, long by) {
+    if (by >= 64 || by <= -64) {
+      return 0L;
+    }
+    return by >= 0 ? m << by : m >>> -by;
+  }
+
+  /**
+   * It removes from mi the positions p without a position q in mj such that p relation q + offset.
+   */
+  private static long reviseWord(long mi, Restriction.Relation relation, long mj, long offset) {
+    return switch (relation) {
+      case LT -> mi & atMostWord(63 - Long.numberOfLeadingZeros(mj) + offset - 1);
+      case LE -> mi & atMostWord(63 - Long.numberOfLeadingZeros(mj) + offset);
+      case GT -> mi & atLeastWord(Long.numberOfTrailingZeros(mj) + offset + 1);
+      case GE -> mi & atLeastWord(Long.numberOfTrailingZeros(mj) + offset);
+      case EQ -> mi & shiftWord(mj, offset);
+      case NE -> Long.bitCount(mj) == 1 ? mi & ~shiftWord(mj, offset) : mi;
+    };
+  }
+
+  /** It checks a tuple by arc consistency on one word per column and marks what it supports. */
+  private boolean reviseTupleOnWords(int t) {
+    Restriction[] tuple = tuples[t];
+    int[] cols = binaryColumns[t];
+    long[] unary = unaryMask[t];
+    long[] m = maskWork;
+    for (int k : cols) {
+      long d = domainMask[k] & unary[k];
+      if (d == 0L) {
+        return false;
+      }
+      m[k] = d;
+    }
+    int[] sources = binarySources[t];
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (int i : sources) {
+        Restriction r = tuple[i];
+        int j = r.column;
+        // x[i] relation x[j] + offset in positions: p relation q + markBase[j] + offset -
+        // markBase[i]
+        long shift = (long) markBase[j] + r.offset - markBase[i];
+        long mi = reviseWord(m[i], r.relation, m[j], shift);
+        if (mi == 0L) {
+          return false;
+        }
+        long mj = reviseWord(m[j], converse(r.relation), mi, -shift);
+        if (mj == 0L) {
+          return false;
+        }
+        if (mi != m[i] || mj != m[j]) {
+          m[i] = mi;
+          m[j] = mj;
+          changed = true;
+        }
+      }
+    }
+    for (int k : cols) {
+      long[] mk = marks[k];
+      long before = mk[0];
+      long after = before | m[k];
+      if (after != before) {
+        mk[0] = after;
+        markCount[k] = Long.bitCount(after);
+      }
+    }
+    return true;
+  }
+
+  private boolean marked(int i, int v) {
+    int k = v - markBase[i];
+    return (marks[i][k >> 6] & 1L << k) != 0L;
+  }
+
+  private void mark(int i, int v) {
+    int k = v - markBase[i];
+    long bit = 1L << k;
+    long[] m = marks[i];
+    if ((m[k >> 6] & bit) == 0L) {
+      m[k >> 6] |= bit;
+      markCount[i]++;
+    }
+  }
+
+  private boolean fullyMarked(int i) {
+    return markCount[i] >= markNeed[i];
+  }
+
+  /**
+   * It marks the values of d between min and max that r accepts; it tells whether there are any.
+   */
+  private boolean markRange(int i, IntDomain d, Restriction r, long min, long max) {
+    long from = Math.max(min, d.min());
+    long to = Math.min(max, d.max());
+    if (from > to) {
+      return false;
+    }
+    boolean found = false;
+    int v = d.contains((int) from) ? (int) from : d.nextValue((int) from);
+    while (v <= to) {
+      if (r.accepts(v)) {
+        found = true;
+        mark(i, v);
+        if (fullyMarked(i)) {
+          return true;
+        }
+      }
+      int next = d.nextValue(v);
+      if (next == v) {
+        break;
+      }
+      v = next;
+    }
+    return found;
+  }
+
+  /** The smallest value of d that r accepts, or Long.MAX_VALUE if there is none. */
+  private static long firstAccepted(IntDomain d, Restriction r) {
+    int v = d.min();
+    while (true) {
+      if (r.accepts(v)) {
+        return v;
+      }
+      int next = d.nextValue(v);
+      if (next == v) {
+        return Long.MAX_VALUE;
+      }
+      v = next;
+    }
+  }
+
+  /** The largest value of d that r accepts, or Long.MIN_VALUE if there is none. */
+  private static long lastAccepted(IntDomain d, Restriction r) {
+    int v = d.max();
+    while (true) {
+      if (r.accepts(v)) {
+        return v;
+      }
+      int previous = d.previousValue(v);
+      if (previous == v) {
+        return Long.MIN_VALUE;
+      }
+      v = previous;
+    }
+  }
+
+  /**
+   * It checks a tuple with a single restriction between columns, x[i] relation x[j] + offset, and
+   * marks the values it supports in both columns, without building domains.
+   */
+  private boolean reviseSingleRestriction(int t) {
+    Restriction[] tuple = tuples[t];
+    int i = binarySources[t][0];
+    Restriction r = tuple[i];
+    int j = r.column;
+    Restriction rj = tuple[j];
+    Restriction any = Restriction.any();
+    IntDomain di = x[i].dom();
+    IntDomain dj = x[j].dom();
+    long c = r.offset;
+    long minJ = firstAccepted(dj, rj);
+    if (minJ == Long.MAX_VALUE) {
+      return false;
+    }
+    long maxJ = lastAccepted(dj, rj);
+    long minI = di.min();
+    long maxI = di.max();
+    switch (r.relation) {
+      case LT, LE -> {
+        long strict = r.relation == Restriction.Relation.LT ? 1 : 0;
+        // x[i] <= x[j] + c - strict
+        if (minI > maxJ + c - strict) {
+          return false;
+        }
+        if (!fullyMarked(i)) {
+          markRange(i, di, any, Long.MIN_VALUE, maxJ + c - strict);
+        }
+        if (!fullyMarked(j)) {
+          markRange(j, dj, rj, minI - c + strict, Long.MAX_VALUE);
+        }
+      }
+      case GT, GE -> {
+        long strict = r.relation == Restriction.Relation.GT ? 1 : 0;
+        // x[i] >= x[j] + c + strict
+        if (maxI < minJ + c + strict) {
+          return false;
+        }
+        if (!fullyMarked(i)) {
+          markRange(i, di, any, minJ + c + strict, Long.MAX_VALUE);
+        }
+        if (!fullyMarked(j)) {
+          markRange(j, dj, rj, Long.MIN_VALUE, maxI - c - strict);
+        }
+      }
+      case EQ -> {
+        boolean found = false;
+        long from = Math.max(minI, minJ + c);
+        long to = Math.min(maxI, maxJ + c);
+        if (from > to) {
+          return false;
+        }
+        int v = di.contains((int) from) ? (int) from : di.nextValue((int) from);
+        while (v <= to) {
+          long w = v - c;
+          if (dj.contains((int) w) && rj.accepts((int) w)) {
+            if (!found) {
+              found = true;
+            }
+            mark(i, v);
+            mark(j, (int) w);
+            if (fullyMarked(i) && fullyMarked(j)) {
+              break;
+            }
+          }
+          int next = di.nextValue(v);
+          if (next == v) {
+            break;
+          }
+          v = next;
+        }
+        return found;
+      }
+      case NE -> {
+        boolean singleI = minI == maxI;
+        boolean singleJ = minJ == maxJ;
+        if (singleI && singleJ && minI == minJ + c) {
+          return false;
+        }
+        if (!fullyMarked(i)) {
+          if (singleJ) {
+            markRange(
+                i,
+                di,
+                Restriction.ne(
+                    (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, minJ + c))),
+                Long.MIN_VALUE,
+                Long.MAX_VALUE);
+          } else {
+            markRange(i, di, any, Long.MIN_VALUE, Long.MAX_VALUE);
+          }
+        }
+        if (!fullyMarked(j)) {
+          if (singleI) {
+            long forbidden = minI - c;
+            int v = dj.min();
+            while (true) {
+              if (v != forbidden && rj.accepts(v)) {
+                mark(j, v);
+              }
+              int next = dj.nextValue(v);
+              if (next == v) {
+                break;
+              }
+              v = next;
+            }
+          } else {
+            markRange(j, dj, rj, Long.MIN_VALUE, Long.MAX_VALUE);
+          }
+        }
+      }
+    }
+    return true;
   }
 
   private boolean reviseTuple(int t) {
@@ -925,7 +1305,13 @@ public class HybridTable extends Constraint
       }
     }
     for (int i : cols) {
-      binarySupport[i] = binarySupport[i] == null ? work[i] : binarySupport[i].union(work[i]);
+      if (useMarks) {
+        if (!fullyMarked(i)) {
+          markRange(i, work[i], Restriction.any(), Long.MIN_VALUE, Long.MAX_VALUE);
+        }
+      } else {
+        binarySupport[i] = binarySupport[i] == null ? work[i] : binarySupport[i].union(work[i]);
+      }
     }
     return true;
   }
@@ -1023,10 +1409,10 @@ public class HybridTable extends Constraint
     long[] excluded = binaryColumn[i];
     IntDomain extra = null;
     if (excluded != null) {
-      if (intersects(excluded)) {
-        extra = binarySupport[i] == null ? new IntervalDomain() : binarySupport[i];
-      } else {
+      if (!intersects(excluded)) {
         excluded = null;
+      } else if (!useMarks) {
+        extra = binarySupport[i] == null ? new IntervalDomain() : binarySupport[i];
       }
     }
     int s = size;
@@ -1038,7 +1424,10 @@ public class HybridTable extends Constraint
       int hi = cMax[c];
       boolean alive = lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi);
       if (alive && (sup[c] == null || !intersects(i, c, sup[c], excluded))) {
-        if (extra == null) {
+        if (excluded != null && useMarks) {
+          removeUnmarked(i, xi, lo, hi);
+          alive = xi.dom().isIntersecting(lo, hi);
+        } else if (extra == null) {
           removeClass(xi, cMin[c], cMax[c]);
           alive = false;
         } else {
@@ -1059,6 +1448,29 @@ public class HybridTable extends Constraint
     }
     if (s != size) {
       setLiveSize(i, s);
+    }
+  }
+
+  /** It removes the values of x[i] between min and max that no tuple marked as supported. */
+  private void removeUnmarked(int i, IntVar xi, int min, int max) {
+    if (fullyMarked(i)) {
+      return;
+    }
+    IntDomain d = xi.dom();
+    int v = Math.max(min, d.min());
+    if (!d.contains(v)) {
+      v = d.nextValue(v);
+    }
+    while (v <= max && d.contains(v)) {
+      int next = d.nextValue(v);
+      if (!marked(i, v)) {
+        xi.domain.inComplement(store.level, xi, v);
+        d = xi.dom();
+      }
+      if (next == v) {
+        break;
+      }
+      v = next;
     }
   }
 
