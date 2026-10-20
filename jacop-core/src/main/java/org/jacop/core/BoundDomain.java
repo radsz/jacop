@@ -782,6 +782,8 @@ class BoundDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (domain.domainId() == BOUND_DOMAIN_ID) {
 
       BoundDomain boundDomain = (BoundDomain) domain;
