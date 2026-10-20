@@ -78,7 +78,8 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    *
    * @param idNum the id counter for the concrete subclass.
    * @param list the array of variables to count over.
-   * @param values the array of values to count.
+   * @param values the array of values to count, without repetitions.
+   * @throws IllegalArgumentException if a value is repeated.
    */
   protected AbstractCountValues(AtomicInteger idNum, IntVar[] list, int[] values) {
     this.queueIndex = 1;
@@ -90,6 +91,13 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     this.valuesDomain = new IntervalDomain();
     for (int v : values) {
       valuesDomain.unionAdapt(v);
+    }
+    if (valuesDomain.getSize() != values.length) {
+      throw new IllegalArgumentException(
+          "Constraint "
+              + getClass().getSimpleName()
+              + " has repeated values "
+              + Arrays.toString(values));
     }
     this.valuesDomainComplement = valuesDomain.complement();
   }
