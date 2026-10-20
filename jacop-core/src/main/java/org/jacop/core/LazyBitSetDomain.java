@@ -499,12 +499,14 @@ public class LazyBitSetDomain extends IntDomain {
     if (domain.isEmpty()) {
       throw failException;
     }
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      keepOnly(storeLevel, v, (LazyBitSetDomain) domain, 0);
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+      in(storeLevel, v, domain.min(), domain.max());
       return;
     }
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-      domain = ((SmallDenseDomain) domain).toIntervalDomain();
+    if (domain.domainId() != INTERVAL_DOMAIN_ID) {
+      // bit sets, this one or a small dense domain: 64 values at a time
+      keepOnly(storeLevel, v, domain, 0);
+      return;
     }
     int intervals = domain.noIntervals();
     if (intervals == 1) {
@@ -569,12 +571,13 @@ public class LazyBitSetDomain extends IntDomain {
     if (domain.isEmpty()) {
       throw failException;
     }
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      keepOnly(storeLevel, v, (LazyBitSetDomain) domain, shift);
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
       return;
     }
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-      domain = ((SmallDenseDomain) domain).toIntervalDomain();
+    if (domain.domainId() != INTERVAL_DOMAIN_ID) {
+      keepOnly(storeLevel, v, domain, shift);
+      return;
     }
     int intervals = domain.noIntervals();
     IntervalDomain shifted = new IntervalDomain(intervals);
@@ -590,7 +593,8 @@ public class LazyBitSetDomain extends IntDomain {
    * It returns the values lo..lo + 63 of this domain as bits: bit k is set when lo + k is in the
    * domain.
    */
-  private long window(int lo) {
+  @Override
+  public long bitsFrom(int lo) {
     if (size == 0 || lo > max || lo + 63 < min) {
       return 0;
     }
@@ -604,32 +608,51 @@ public class LazyBitSetDomain extends IntDomain {
     if (bits == null) {
       return mask;
     }
+    return extract(bits, base, lo) & mask;
+  }
+
+  /** The bits of words for the values lo..lo + 63, where value v has bit v - base. */
+  private static long extract(long[] words, int base, int lo) {
     int index = lo - base;
-    long w;
-    if (index >= 0) {
-      int word = index >>> 6;
-      int offset = index & 63;
-      w = bits[word] >>> offset;
-      if (offset != 0 && word + 1 < bits.length) {
-        w |= bits[word + 1] << (64 - offset);
-      }
-    } else {
-      w = bits[0] << -index;
+    if (index < -63) {
+      return 0;
     }
-    return w & mask;
+    if (index < 0) {
+      return words[0] << -index;
+    }
+    int word = index >>> 6;
+    if (word >= words.length) {
+      return 0;
+    }
+    int offset = index & 63;
+    long w = words[word] >>> offset;
+    if (offset != 0 && word + 1 < words.length) {
+      w |= words[word + 1] << (64 - offset);
+    }
+    return w;
+  }
+
+  /** It adds the runs of set bits of word, where bit k is the value start + k, to result. */
+  private static void appendRuns(IntervalDomain result, int start, long word) {
+    while (word != 0) {
+      int from = Long.numberOfTrailingZeros(word);
+      int length = Long.numberOfTrailingZeros(~(word >>> from));
+      result.unionAdapt(start + from, start + from + length - 1);
+      word &= ~bitRange(from, from + length - 1);
+    }
   }
 
   /** It keeps only the values x of this domain for which x - shift is in other. */
-  private void keepOnly(int storeLevel, Var v, LazyBitSetDomain other, int shift) {
-    int lo = Math.max(min, other.min + shift);
-    int hi = Math.min(max, other.max + shift);
+  private void keepOnly(int storeLevel, Var v, IntDomain other, int shift) {
+    int lo = Math.max(min, other.min() + shift);
+    int hi = Math.min(max, other.max() + shift);
     if (lo > hi) {
       throw failException;
     }
     // the new bounds: the first and the last common value
     int newMin = hi + 1;
     for (int start = lo; start <= hi; start += 64) {
-      long common = window(start) & other.window(start - shift);
+      long common = bitsFrom(start) & other.bitsFrom(start - shift);
       if (hi - start < 63) {
         common &= -1L >>> (63 - (hi - start));
       }
@@ -644,7 +667,7 @@ public class LazyBitSetDomain extends IntDomain {
     int newMax = newMin;
     for (int end = hi; end > newMin; end -= 64) {
       int start = Math.max(end - 63, newMin);
-      long common = window(start) & other.window(start - shift);
+      long common = bitsFrom(start) & other.bitsFrom(start - shift);
       common &= -1L >>> (63 - (end - start));
       if (common != 0) {
         newMax = start + 63 - Long.numberOfLeadingZeros(common);
@@ -656,7 +679,7 @@ public class LazyBitSetDomain extends IntDomain {
     int oldSize = size;
     // values strictly between the new bounds that other does not have
     if (newMax - newMin > 1
-        && other.count(newMin + 1 - shift, newMax - 1 - shift) < newMax - newMin - 1) {
+        && (bits != null || hasHole(other, newMin + 1 - shift, newMax - 1 - shift))) {
       bitsVersion++;
       if (bits == null) {
         // no holes yet, so the hole of other removes values
@@ -670,7 +693,7 @@ public class LazyBitSetDomain extends IntDomain {
       int to = newMax - 1 - base;
       int removed = 0;
       for (int i = from >>> 6; i <= to >>> 6; i++) {
-        long mask = ~other.window(base + (i << 6) - shift);
+        long mask = ~other.bitsFrom(base + (i << 6) - shift);
         if (i == from >>> 6) {
           mask &= -1L << from;
         }
@@ -701,11 +724,20 @@ public class LazyBitSetDomain extends IntDomain {
     }
   }
 
-  /** It returns the intervals of a domain that is not a lazy bit set domain, cheaply indexed. */
-  private static IntDomain indexed(IntDomain domain) {
-    return domain.domainId() == SMALL_DENSE_DOMAIN_ID
-        ? ((SmallDenseDomain) domain).toIntervalDomain()
-        : domain;
+  /** It tells if some value of lo..hi is not in the domain. */
+  private static boolean hasHole(IntDomain domain, int lo, int hi) {
+    for (int start = lo; start <= hi; start += 64) {
+      long all = -1L >>> (63 - Math.min(63, hi - start));
+      if ((domain.bitsFrom(start) & all) != all) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** It tells if the values of the domain are best read interval by interval. */
+  private static boolean byIntervals(IntDomain domain) {
+    return domain.domainId() == INTERVAL_DOMAIN_ID || domain.domainId() == BOUND_DOMAIN_ID;
   }
 
   // ---------- constraints ----------
@@ -838,16 +870,11 @@ public class LazyBitSetDomain extends IntDomain {
     return intervals().size;
   }
 
-  /** It tells if some value between min and max is missing. */
-  boolean hasHoles() {
-    return bits != null && size != max - min + 1;
-  }
-
   /**
    * The values of the domain as an interval domain, computed once until the domain changes. It must
    * not be modified.
    */
-  IntervalDomain intervals() {
+  private IntervalDomain intervals() {
     if (cachedIntervals == null
         || cachedVersion != bitsVersion
         || cachedMin != min
@@ -861,6 +888,11 @@ public class LazyBitSetDomain extends IntDomain {
   }
 
   /** The last value of the run of consecutive values starting at value, which is present. */
+  @Override
+  public int runEnd(int value) {
+    return endOfRun(value);
+  }
+
   private int endOfRun(int value) {
     if (bits == null) {
       return max;
@@ -985,12 +1017,7 @@ public class LazyBitSetDomain extends IntDomain {
     if ((trailLongs[entry] & 1L) != 0) {
       return new IntervalDomain(oldMin, oldMax);
     }
-    long[] old = bits.clone();
-    for (int e = trailSize - 1; e > entry; e--) {
-      int word = trailInts[e * INT_FIELDS];
-      old[word] = trailLongs[e];
-    }
-    return runs(old, base, oldMin, oldMax);
+    return runs(previousWords(entry), base, oldMin, oldMax);
   }
 
   /**
@@ -1032,11 +1059,32 @@ public class LazyBitSetDomain extends IntDomain {
     if (stamp < storeLevel) {
       return IntervalDomain.emptyDomain;
     }
-    IntDomain previous = getPreviousDomain();
-    if (previous == null) {
+    int entry = lastLevelEntry();
+    if (entry < 0) {
       return IntervalDomain.emptyDomain;
     }
-    return previous.subtract(intervals());
+    int i = entry * INT_FIELDS;
+    int oldMin = trailInts[i + 2];
+    int oldMax = trailInts[i + 3];
+    // the words before this level, or null when the domain had no holes then
+    long[] old = (trailLongs[entry] & 1L) != 0 ? null : previousWords(entry);
+    IntervalDomain result = new IntervalDomain(4);
+    for (int start = oldMin; start <= oldMax; start += 64) {
+      long range = bitRange(0, Math.min(63, oldMax - start));
+      long previous = old == null ? range : extract(old, base, start) & range;
+      appendRuns(result, start, previous & ~bitsFrom(start));
+    }
+    return result.isEmpty() ? IntervalDomain.emptyDomain : result;
+  }
+
+  /** The bit set as it was before the level of the given level entry. */
+  private long[] previousWords(int entry) {
+    long[] old = bits.clone();
+    for (int e = trailSize - 1; e > entry; e--) {
+      int word = trailInts[e * INT_FIELDS];
+      old[word] = trailLongs[e];
+    }
+    return old;
   }
 
   // ---------- operations creating new domains ----------
@@ -1048,7 +1096,7 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public IntDomain intersect(IntDomain dom) {
-    return intervals().intersect(dom);
+    return intersectRuns(this, dom, 0);
   }
 
   @Override
@@ -1068,12 +1116,12 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public IntDomain subtract(IntDomain domain) {
-    return intervals().subtract(domain);
+    return subtractRuns(this, domain);
   }
 
   @Override
   public IntDomain union(IntDomain domain) {
-    return intervals().union(domain);
+    return unionRuns(this, domain);
   }
 
   @Override
@@ -1094,16 +1142,16 @@ public class LazyBitSetDomain extends IntDomain {
     if (domain.min() < min || domain.max() > max) {
       return false;
     }
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      LazyBitSetDomain other = (LazyBitSetDomain) domain;
-      for (int start = other.min; start <= other.max; start += 64) {
-        if ((other.window(start) & ~window(start)) != 0) {
+    if (!byIntervals(domain)) {
+      int hi = domain.max();
+      for (int start = domain.min(); start <= hi; start += 64) {
+        if ((domain.bitsFrom(start) & ~bitsFrom(start)) != 0) {
           return false;
         }
       }
       return true;
     }
-    IntDomain intervals = indexed(domain);
+    IntDomain intervals = domain;
     for (int i = intervals.noIntervals() - 1; i >= 0; i--) {
       Interval interval = intervals.getInterval(i);
       if (count(interval.min(), interval.max()) != interval.max() - interval.min() + 1) {
@@ -1118,17 +1166,16 @@ public class LazyBitSetDomain extends IntDomain {
     if (size == 0 || domain.isEmpty() || domain.max() < min || domain.min() > max) {
       return false;
     }
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      LazyBitSetDomain other = (LazyBitSetDomain) domain;
-      int hi = Math.min(max, other.max);
-      for (int start = Math.max(min, other.min); start <= hi; start += 64) {
-        if ((window(start) & other.window(start)) != 0) {
+    if (!byIntervals(domain)) {
+      int hi = Math.min(max, domain.max());
+      for (int start = Math.max(min, domain.min()); start <= hi; start += 64) {
+        if ((bitsFrom(start) & domain.bitsFrom(start)) != 0) {
           return true;
         }
       }
       return false;
     }
-    IntDomain intervals = indexed(domain);
+    IntDomain intervals = domain;
     for (int i = 0, n = intervals.noIntervals(); i < n; i++) {
       Interval interval = intervals.getInterval(i);
       if (interval.min() > max) {
@@ -1152,15 +1199,14 @@ public class LazyBitSetDomain extends IntDomain {
       return 0;
     }
     int result = 0;
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      LazyBitSetDomain other = (LazyBitSetDomain) domain;
-      int hi = Math.min(max, other.max);
-      for (int start = Math.max(min, other.min); start <= hi; start += 64) {
-        result += Long.bitCount(window(start) & other.window(start));
+    if (!byIntervals(domain)) {
+      int hi = Math.min(max, domain.max());
+      for (int start = Math.max(min, domain.min()); start <= hi; start += 64) {
+        result += Long.bitCount(bitsFrom(start) & domain.bitsFrom(start));
       }
       return result;
     }
-    IntDomain intervals = indexed(domain);
+    IntDomain intervals = domain;
     for (int i = 0, n = intervals.noIntervals(); i < n; i++) {
       Interval interval = intervals.getInterval(i);
       int lo = Math.max(interval.min(), min);
@@ -1196,7 +1242,6 @@ public class LazyBitSetDomain extends IntDomain {
    */
   private void assign(IntDomain values) {
     bitsVersion++;
-    values = plain(values);
     if (values.isEmpty()) {
       min = 0;
       max = -1;
@@ -1213,12 +1258,8 @@ public class LazyBitSetDomain extends IntDomain {
     if (size != max - min + 1) {
       createBits(stamp);
       long[] fresh = new long[bits.length];
-      for (int i = 0; i < values.noIntervals(); i++) {
-        Interval interval = values.getInterval(i);
-        for (int value = interval.min(); value <= interval.max(); value++) {
-          int index = value - base;
-          fresh[index >>> 6] |= 1L << index;
-        }
+      for (int i = 0; i < fresh.length; i++) {
+        fresh[i] = values.bitsFrom(base + (i << 6));
       }
       bits = fresh;
     }
@@ -1236,7 +1277,7 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public int unionAdapt(IntDomain union) {
-    IntDomain result = toIntervalDomain().union(union);
+    IntDomain result = unionRuns(this, union);
     if (result.getSize() == size) {
       return NONE;
     }
@@ -1246,7 +1287,7 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public void addDom(IntDomain domain) {
-    assign(toIntervalDomain().union(domain));
+    assign(unionRuns(this, domain));
   }
 
   @Override
@@ -1261,7 +1302,7 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public int intersectAdapt(IntDomain intersect) {
-    IntDomain result = toIntervalDomain().intersect(intersect);
+    IntDomain result = intersectRuns(this, intersect, 0);
     if (result.getSize() == size) {
       return NONE;
     }
