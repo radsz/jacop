@@ -372,7 +372,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         subSearch.searchParameters(body, i);
 
         if (SEQ_SEARCH.equals(ann.getAnnId())) {
-          searchSeq.add(subSearch);
+          // a seq_search made only of ignored annotations has nothing to search
+          if (!subSearch.getSearchItems().isEmpty()) {
+            searchSeq.add(subSearch);
+          }
           continue;
         }
 

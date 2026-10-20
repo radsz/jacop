@@ -1196,6 +1196,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   void run_sequence_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
 
+    if (si.getSearchItems().isEmpty()) {
+      // every annotation in the sequence was ignored
+      run_single_search(solveKind, kind, null);
+      return;
+    }
+
     singleSearch = false;
     this.si = si;
 

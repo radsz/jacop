@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -148,6 +149,25 @@ class FlatzincFrontEndTest {
     assertEquals(List.of("x = 0;", "x = 1;"), solveAllInOrder(fzn));
   }
 
+  @Test
+  void seqSearchOfIgnoredAnnotationsFallsBackToDefaultSearch() throws IOException {
+    // A seq_search whose annotations were all ignored had no search, which ended in a
+    // NullPointerException, both nested (MiniZinc regression test_bug53) and at the top level.
+    String nested =
+        """
+        var 1..2: x:: output_var;
+        solve :: seq_search([seq_search([simpleann,simpleann]),seq_search([simpleann])]) satisfy;
+        """;
+    String top =
+        """
+        var 1..2: x:: output_var;
+        solve :: seq_search([simpleann]) satisfy;
+        """;
+
+    assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(nested));
+    assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(top));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
     return new TreeSet<>(solveAllInOrder(model));
   }
@@ -164,7 +184,13 @@ class FlatzincFrontEndTest {
       System.setOut(originalOut);
     }
     return Arrays.stream(buffer.toString(StandardCharsets.UTF_8).split("----------"))
-        .map(s -> String.join(" ", new TreeSet<>(Arrays.asList(s.strip().split("\\R")))))
+        .map(
+            s ->
+                String.join(
+                    " ",
+                    Arrays.stream(s.strip().split("\\R"))
+                        .filter(line -> !line.startsWith("%"))
+                        .collect(Collectors.toCollection(TreeSet::new))))
         .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
         .toList();
   }
