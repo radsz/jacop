@@ -35,9 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Abstract base for CountValues and CountValuesBounds constraints. Provides shared fields (list,
@@ -62,6 +64,18 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
 
   /** Length of the list. */
   final int n;
+
+  /** The counted values in increasing order. */
+  private final int[] sortedValues;
+
+  /** The position in values of each value of sortedValues. */
+  private final int[] indexOfSorted;
+
+  /** The number of variables equal to each value, reused by consistency. */
+  private final int[] numberEq;
+
+  /** The number of undecided variables that can take each value, reused by consistency. */
+  private final int[] numberMayBe;
 
   /** Tracks the first position of undecided variables. */
   protected TimeStamp<Integer> position;
@@ -100,6 +114,15 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
               + Arrays.toString(values));
     }
     this.valuesDomainComplement = valuesDomain.complement();
+
+    this.sortedValues = values.clone();
+    Arrays.sort(sortedValues);
+    this.indexOfSorted = new int[values.length];
+    for (int i = 0; i < values.length; i++) {
+      indexOfSorted[Arrays.binarySearch(sortedValues, values[i])] = i;
+    }
+    this.numberEq = new int[values.length];
+    this.numberMayBe = new int[values.length];
   }
 
   @SuppressWarnings("unchecked")
@@ -250,8 +273,6 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   public void consistency(final Store store) {
 
     int start = position.value();
-    int[] numberMayBe = new int[values.length];
-    int[] numberEq = new int[values.length];
     restEq = rest.value();
     for (int i = 0; i < values.length; i++) {
       numberEq[i] = equal[i].value();
@@ -286,44 +307,90 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     position.update(start);
   }
 
+  /**
+   * Counts, for the undecided variables from start on, how many are equal to or may take each value
+   * and how many may take a value that is not counted. Variables that become decided (assigned, or
+   * without any counted value) are moved before the new start and counted for good.
+   */
   private int scanListAndCount(int start, int[] numberEq, int[] numberMayBe) {
-    int[] startRef = new int[] {start};
     for (int i = start; i < n; i++) {
       IntVar v = list[i];
-      int noValuesInDomain = processVariableValues(v, numberEq, numberMayBe, startRef, i);
-      start = startRef[0];
-
-      if (!v.domain.subtract(valuesDomain).isEmpty()) {
-        restMayBe++;
+      if (v.singleton()) {
+        int k = Arrays.binarySearch(sortedValues, v.value());
+        if (k >= 0) {
+          numberEq[indexOfSorted[k]]++;
+        } else {
+          restEq++;
+        }
+        swap(start, i);
+        start++;
+        continue;
       }
 
-      if (noValuesInDomain == values.length) {
+      int matched = countMayBe(v.domain, numberMayBe);
+      if (matched == 0) {
         swap(start, i);
         start++;
         restEq++;
+      } else if (matched < v.domain.getSize()) {
+        restMayBe++;
       }
-      startRef[0] = start;
     }
     return start;
   }
 
-  private int processVariableValues(
-      IntVar v, int[] numberEq, int[] numberMayBe, int[] startRef, int i) {
-    int noValuesInDomain = 0;
-    for (int j = 0; j < values.length; j++) {
-      if (v.domain.contains(values[j])) {
-        if (v.singleton()) {
-          numberEq[j]++;
-          swap(startRef[0], i);
-          startRef[0]++;
-        } else {
-          numberMayBe[j]++;
+  /**
+   * Increments numberMayBe for every counted value in the domain, looking at either the counted
+   * values within the domain bounds or the domain values, whichever are fewer.
+   *
+   * @return the number of counted values in the domain.
+   */
+  private int countMayBe(IntDomain domain, int[] numberMayBe) {
+    int matched = 0;
+    if (domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+      // every counted value between the bounds of an interval is in the domain
+      IntervalDomain intervals = (IntervalDomain) domain;
+      for (int i = 0; i < intervals.size; i++) {
+        Interval interval = intervals.intervals[i];
+        int to = upperBound(interval.max());
+        for (int k = lowerBound(interval.min()); k < to; k++) {
+          numberMayBe[indexOfSorted[k]]++;
+          matched++;
         }
-      } else {
-        noValuesInDomain++;
+      }
+      return matched;
+    }
+    int from = lowerBound(domain.min());
+    int to = upperBound(domain.max());
+    if (to - from <= domain.getSize()) {
+      for (int k = from; k < to; k++) {
+        if (domain.contains(sortedValues[k])) {
+          numberMayBe[indexOfSorted[k]]++;
+          matched++;
+        }
+      }
+    } else {
+      for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int k = Arrays.binarySearch(sortedValues, from, to, e.nextElement());
+        if (k >= 0) {
+          numberMayBe[indexOfSorted[k]]++;
+          matched++;
+        }
       }
     }
-    return noValuesInDomain;
+    return matched;
+  }
+
+  /** Returns the position of the first sorted value that is not smaller than value. */
+  private int lowerBound(int value) {
+    int k = Arrays.binarySearch(sortedValues, value);
+    return k < 0 ? -k - 1 : k;
+  }
+
+  /** Returns the position of the first sorted value that is greater than value. */
+  private int upperBound(int value) {
+    int k = Arrays.binarySearch(sortedValues, value);
+    return k < 0 ? -k - 1 : k + 1;
   }
 
   private void updateExtendedCounters(Store store) {
@@ -347,6 +414,10 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
 
   private void assignOrPruneCounters(Store store, int start, int[] numberEq, int[] numberMayBe) {
     for (int i = 0; i < values.length; i++) {
+      if (numberMayBe[i] == 0) {
+        // no undecided variable can take the value, so there is nothing to assign or prune
+        continue;
+      }
       if (numberMayBe[i] == getCounterMin(i) - numberEq[i]) {
         assignValuesForCounter(store, start, i);
       } else if (numberEq[i] == getCounterMax(i)) {
@@ -372,10 +443,14 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   }
 
   private void assignOrPruneRest(Store store, int start) {
+    if (restMayBe == 0) {
+      // every undecided variable takes a counted value, so there is nothing to assign or prune
+      return;
+    }
     if (restMayBe == getCounterRestMin() - this.restEq) {
       for (int j = start; j < n; j++) {
         IntVar v = list[j];
-        if (!v.domain.subtract(valuesDomain).isEmpty()) {
+        if (!valuesDomain.contains(v.domain)) {
           v.domain.in(store.level, v, valuesDomainComplement);
         }
       }
