@@ -1,5 +1,5 @@
 /*
- * BoundsConsistencyTest.java
+ * ConsistencyChecker.java
  * <p>
  * This file is part of JaCoP.
  * <p>
@@ -96,8 +96,21 @@ import org.junit.jupiter.api.TestFactory;
  * <p>It also checks that propagation keeps every solution inside the domains it started from, and
  * fails only when there is none, so a propagator that prunes too much is reported as wrong rather
  * than strong.
+ *
+ * <p>This is a tool for improving propagators, not part of the build: no Maven profile includes it.
+ * Run it on demand (see CLAUDE.md):
+ *
+ * <pre>
+ * mvn -Pmin -pl jacop-core test -Dtest=ConsistencyChecker -Dsurefire.rerunFailingTestsCount=0
+ * mvn -Pmin -pl jacop-core test -Dtest=ConsistencyChecker -Dconsistency.cases=XmulYeqZ,GCC -Dconsistency.instances=5000
+ * </pre>
+ *
+ * <p>Each case prints the level reached, the node count and the first counterexample of the next
+ * level, and fails if it falls below the level recorded in {@link #cases()} or prunes wrongly. To
+ * check another propagator, add a {@link Case} with a generator of small random instances and the
+ * relation as a Java predicate on complete assignments.
  */
-class BoundsConsistencyTest {
+class ConsistencyChecker {
 
   /** Consistency levels from the weakest to the strongest. */
   enum Level {
@@ -111,7 +124,11 @@ class BoundsConsistencyTest {
   /** Box sizes above this are not enumerated; the node is skipped. */
   private static final long MAX_BOX = 200_000;
 
-  private static final int INSTANCES = Integer.getInteger("boundsConsistency.instances", 200);
+  /** Random instances per case, from -Dconsistency.instances. */
+  private static final int INSTANCES = Integer.getInteger("consistency.instances", 1000);
+
+  /** Comma-separated parts of case names to run, from -Dconsistency.cases; all cases if unset. */
+  private static final String CASES = System.getProperty("consistency.cases", "");
 
   private static final int DIVES = 3;
 
@@ -691,7 +708,7 @@ class BoundsConsistencyTest {
                       XmulYeqZ::new,
                       t -> t[0] * t[1] == t[2]);
               return new Model(
-                  m.constraint(), m.relation(), m.vars(), BoundsConsistencyTest::productOverReals);
+                  m.constraint(), m.relation(), m.vars(), ConsistencyChecker::productOverReals);
             }),
         new Case(
             "XmulCeqZ",
@@ -785,7 +802,7 @@ class BoundsConsistencyTest {
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
-        new Case("GCC", Level.BOUNDS_Z, BoundsConsistencyTest::gcc),
+        new Case("GCC", Level.BOUNDS_Z, ConsistencyChecker::gcc),
         new Case("ElementInteger", Level.DOMAIN, (s, r) -> element(s, r, false, false)),
         new Case("ElementIntegerFast", Level.BOUNDS_D, (s, r) -> element(s, r, false, true)),
         // rarely: index values whose list variable cannot reach value stay until the constraint
@@ -870,7 +887,9 @@ class BoundsConsistencyTest {
 
   @TestFactory
   Stream<DynamicTest> propagatorsReachTheirConsistency() {
+    List<String> wanted = Arrays.stream(CASES.split(",")).filter(w -> !w.isBlank()).toList();
     return cases().stream()
+        .filter(c -> wanted.isEmpty() || wanted.stream().anyMatch(w -> c.name().contains(w.trim())))
         .map(
             c ->
                 DynamicTest.dynamicTest(
