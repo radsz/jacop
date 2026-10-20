@@ -137,8 +137,9 @@ class LazyBitSetDomainTest {
   private static String outcome(Supplier<IntDomain> operation) {
     try {
       return operation.get().toString();
-    } catch (IllegalArgumentException e) {
-      return e.toString();
+    } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
+      // SmallDenseDomain.union of values spanning more than 64 fails, either way
+      return e.getClass().getName();
     }
   }
 
@@ -153,7 +154,10 @@ class LazyBitSetDomainTest {
         IntervalDomain values = randomDomain(random, lo, hi);
         apply(lazy, s -> s.x.domain.in(s.store.level, s.x, values));
       }
-      IntDomain argument = lazy.x.domain;
+      IntDomain argument =
+          run % 3 == 0
+              ? lazyOf(new IntervalDomain(lo + random.nextInt(30), hi - random.nextInt(30)))
+              : lazy.x.domain;
       IntervalDomain same = ((LazyBitSetDomain) argument).toIntervalDomain();
       IntervalDomain other = randomDomain(random, lo - 10, hi + 10);
       IntDomain[] receivers = {

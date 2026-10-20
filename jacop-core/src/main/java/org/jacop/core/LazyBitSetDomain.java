@@ -543,7 +543,7 @@ public class LazyBitSetDomain extends IntDomain {
     for (int i = 0; i < intervals - 1; i++) {
       int gapLo = Math.max(domain.getInterval(i).max() + 1, lo + 1);
       int gapHi = Math.min(domain.getInterval(i + 1).min() - 1, hi - 1);
-      if (gapLo <= gapHi && count(gapLo, gapHi) > 0) {
+      if (gapLo <= gapHi && nextPresent(gapLo) <= gapHi) {
         if (!saved) {
           saveLevel(storeLevel, v);
           saved = true;
@@ -838,8 +838,16 @@ public class LazyBitSetDomain extends IntDomain {
     return intervals().size;
   }
 
-  /** The intervals of a domain with holes, computed once until the domain changes. */
-  private IntervalDomain intervals() {
+  /** It tells if some value between min and max is missing. */
+  boolean hasHoles() {
+    return bits != null && size != max - min + 1;
+  }
+
+  /**
+   * The values of the domain as an interval domain, computed once until the domain changes. It must
+   * not be modified.
+   */
+  IntervalDomain intervals() {
     if (cachedIntervals == null
         || cachedVersion != bitsVersion
         || cachedMin != min
@@ -921,13 +929,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (bits == null) {
       return new IntervalDomain(min, max);
     }
-    IntervalDomain result = new IntervalDomain(4);
-    for (int value = min; value <= max; ) {
-      int end = endOfRun(value);
-      result.unionAdapt(value, end);
-      value = nextPresent(end + 1);
-    }
-    return result;
+    return runs(bits, base, min, max);
   }
 
   @Override
@@ -988,12 +990,39 @@ public class LazyBitSetDomain extends IntDomain {
       int word = trailInts[e * INT_FIELDS];
       old[word] = trailLongs[e];
     }
-    IntervalDomain result = new IntervalDomain(4);
-    for (int value = oldMin; value <= oldMax; value++) {
+    return runs(old, base, oldMin, oldMax);
+  }
+
+  /**
+   * It returns the values lo..hi whose bits are set in words, where value v has bit v - base, as an
+   * interval domain.
+   */
+  private static IntervalDomain runs(long[] words, int base, int lo, int hi) {
+    IntervalDomain result = new IntervalDomain(8);
+    int value = lo;
+    while (value <= hi) {
       int index = value - base;
-      if ((old[index >>> 6] & (1L << index)) != 0) {
-        result.unionAdapt(value, value);
+      int word = index >>> 6;
+      long w = words[word] & (-1L << index);
+      while (w == 0) {
+        if (++word >= words.length) {
+          return result;
+        }
+        w = words[word];
       }
+      int start = base + (word << 6) + Long.numberOfTrailingZeros(w);
+      if (start > hi) {
+        break;
+      }
+      index = start - base;
+      word = index >>> 6;
+      w = ~words[word] & (-1L << index);
+      while (w == 0 && word + 1 < words.length) {
+        w = ~words[++word];
+      }
+      int end = w == 0 ? hi : Math.min(hi, base + (word << 6) + Long.numberOfTrailingZeros(w) - 1);
+      result.unionAdapt(start, end);
+      value = end + 2;
     }
     return result;
   }

@@ -952,6 +952,10 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min(), domain.max());
+      return;
+    }
     domain = plain(domain);
 
     if (domain.singleton()) {
@@ -1165,6 +1169,10 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+      return;
+    }
     domain = plain(domain);
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
