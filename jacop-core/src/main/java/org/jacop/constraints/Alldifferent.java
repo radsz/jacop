@@ -70,6 +70,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   protected TimeStamp<Integer> grounded;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
+  // Empty set swapped with variableQueue while grounded variables are processed, so no set is
+  // allocated (and grown) per call.
+  private LinkedHashSet<IntVar> spareVariableQueue = new LinkedHashSet<>();
+
   /** Protected constructor for subclassing purposes. */
   protected Alldifferent() {}
 
@@ -121,25 +125,30 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
    */
   protected int processGroundedVariables(Store store, int groundPos) {
     LinkedHashSet<IntVar> fdvs = variableQueue;
-    variableQueue = new LinkedHashSet<>();
+    variableQueue = spareVariableQueue;
 
-    for (IntVar q : fdvs) {
-      if (!q.singleton()) {
-        continue;
+    try {
+      for (IntVar q : fdvs) {
+        if (!q.singleton()) {
+          continue;
+        }
+        int qPos = positionMapping.get(q);
+        if (qPos > groundPos) {
+          list[qPos] = list[groundPos];
+          list[groundPos] = q;
+          positionMapping.put(q, groundPos);
+          positionMapping.put(list[qPos], qPos);
+          groundPos++;
+        } else if (qPos == groundPos) {
+          groundPos++;
+        } else {
+          continue;
+        }
+        removeValueFromOthersIfNotException(store, groundPos, q.min());
       }
-      int qPos = positionMapping.get(q);
-      if (qPos > groundPos) {
-        list[qPos] = list[groundPos];
-        list[groundPos] = q;
-        positionMapping.put(q, groundPos);
-        positionMapping.put(list[qPos], qPos);
-        groundPos++;
-      } else if (qPos == groundPos) {
-        groundPos++;
-      } else {
-        continue;
-      }
-      removeValueFromOthersIfNotException(store, groundPos, q.min());
+    } finally {
+      fdvs.clear();
+      spareVariableQueue = fdvs;
     }
     return groundPos;
   }

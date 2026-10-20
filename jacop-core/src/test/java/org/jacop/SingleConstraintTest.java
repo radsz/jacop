@@ -1000,6 +1000,115 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // Alldiff must be bounds(Z) consistent: after propagation the minimum and the maximum of every
+  // variable take part in an all different assignment where every variable ranges over the interval
+  // between its bounds. It must also never remove a solution, along random dives and after
+  // backtracking.
+  @Test
+  void testAlldiffIsBoundsConsistentAcrossBacktracking() {
+
+    Random random = new Random(29);
+    for (int trial = 0; trial < 2000; trial++) {
+      int n = 1 + random.nextInt(6);
+      int m = n + random.nextInt(3);
+      boolean dense = trial % 2 == 0;
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = dense ? new SmallDenseDomain() : new IntervalDomain();
+        for (int k = 0; k < m; k++) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(k, k);
+          }
+        }
+        if (dom.isEmpty()) {
+          int k = random.nextInt(m);
+          dom.unionAdapt(k, k);
+        }
+        x[i] = new IntVar(store, "x" + i, dom);
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldiff(x));
+
+      List<int[]> solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+      boolean consistent = store.consistency();
+      assertAlldiffBoundsConsistent(x, solutions, consistent, instance);
+      while (consistent) {
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(2); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          if (random.nextInt(3) == 0) {
+            v.domain.in(store.level, v, value, value);
+          } else {
+            v.domain.inComplement(store.level, v, value);
+          }
+        }
+        solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+        consistent = store.consistency();
+        assertAlldiffBoundsConsistent(x, solutions, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.max(), v.max());
+          solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+          assertAlldiffBoundsConsistent(x, solutions, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+      }
+    }
+  }
+
+  private static boolean allDifferent(int[] a) {
+    return Arrays.stream(a).distinct().count() == a.length;
+  }
+
+  private static void assertAlldiffBoundsConsistent(
+      IntVar[] x, List<int[]> solutionsBefore, boolean consistent, String instance) {
+    String state = instance + " " + Arrays.toString(x);
+    if (!consistent) {
+      assertThat(solutionsBefore).as(state + " failed with solutions").isEmpty();
+      return;
+    }
+    for (int[] solution : solutionsBefore) {
+      for (int i = 0; i < x.length; i++) {
+        assertThat(x[i].domain.contains(solution[i]))
+            .as(state + " keeps solution " + Arrays.toString(solution))
+            .isTrue();
+      }
+    }
+    IntVar[] relaxed = new IntVar[x.length];
+    Store relaxedStore = new Store();
+    for (int i = 0; i < x.length; i++) {
+      relaxed[i] = new IntVar(relaxedStore, x[i].min(), x[i].max());
+    }
+    List<int[]> relaxedSolutions = bruteForce(relaxed, SingleConstraintTest::allDifferent);
+    for (int i = 0; i < x.length; i++) {
+      int position = i;
+      assertThat(relaxedSolutions.stream().anyMatch(w -> w[position] == x[position].min()))
+          .as(state + " min of x" + i + " supported")
+          .isTrue();
+      assertThat(relaxedSolutions.stream().anyMatch(w -> w[position] == x[position].max()))
+          .as(state + " max of x" + i + " supported")
+          .isTrue();
+    }
+  }
+
   @Test
   void testValueEnumerationContinuesAfterDomainChange() {
 
