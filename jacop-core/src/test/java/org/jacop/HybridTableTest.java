@@ -359,7 +359,7 @@ class HybridTableTest {
                   .toArray(Restriction[][]::new);
 
       String where = Arrays.deepToString(domains) + " " + Arrays.deepToString(tuples);
-      assertThat(compressed.length).as(where).isLessThanOrEqualTo(tuples.length);
+      assertThat(Arrays.asList(compressed)).as(where).hasSizeLessThanOrEqualTo(tuples.length);
       if (!sets) {
         for (Restriction[] tuple : compressed) {
           for (Restriction r : tuple) {
@@ -480,8 +480,8 @@ class HybridTableTest {
     store.setLevel(0);
     store.impose(table);
     assertThat(store.consistency()).isTrue();
-    assertThat(a.dom().toString()).isEqualTo("{0..2}");
-    assertThat(b.dom().toString()).isEqualTo("{1..3}");
+    assertThat(a.dom()).hasToString("{0..2}");
+    assertThat(b.dom()).hasToString("{1..3}");
   }
 
   @Test
@@ -498,13 +498,11 @@ class HybridTableTest {
     IntVar a = new IntVar(store, "a", 0, 3);
     IntVar b = new IntVar(store, "b", 0, 3);
     IntVar[] x = {a, b};
-    assertThatThrownBy(
-            () ->
-                new HybridTable(
-                    x,
-                    new Restriction[][] {{Restriction.column(Relation.EQ, 0), Restriction.any()}}))
+    Restriction[][] selfReference = {{Restriction.column(Relation.EQ, 0), Restriction.any()}};
+    Restriction[][] tooShort = {{Restriction.any()}};
+    assertThatThrownBy(() -> new HybridTable(x, selfReference))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> new HybridTable(x, new Restriction[][] {{Restriction.any()}}))
+    assertThatThrownBy(() -> new HybridTable(x, tooShort))
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(IntDomain.MAX_INT).isPositive();
   }

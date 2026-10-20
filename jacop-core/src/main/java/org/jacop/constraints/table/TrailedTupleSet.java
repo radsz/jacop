@@ -124,11 +124,11 @@ final class TrailedTupleSet {
     }
   }
 
-  void save(int record) {
-    if (savedEpoch[record] == epoch) {
+  void save(int slot) {
+    if (savedEpoch[slot] == epoch) {
       return;
     }
-    savedEpoch[record] = epoch;
+    savedEpoch[slot] = epoch;
     if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
       if (markTop == markLevel.length) {
         markLevel = Arrays.copyOf(markLevel, markTop * 2);
@@ -140,15 +140,15 @@ final class TrailedTupleSet {
     if (trailTop + 2 > trail.length) {
       trail = Arrays.copyOf(trail, trail.length * 2);
     }
-    trail[trailTop] = record;
-    trail[trailTop + 1] = state[record];
+    trail[trailTop] = slot;
+    trail[trailTop + 1] = state[slot];
     trailTop += 2;
   }
 
   /** It saves a record and sets it. */
-  void set(int record, long value) {
-    save(record);
-    state[record] = value;
+  void set(int slot, long value) {
+    save(slot);
+    state[slot] = value;
   }
 
   /** It tells whether some record was changed at the level or later. */

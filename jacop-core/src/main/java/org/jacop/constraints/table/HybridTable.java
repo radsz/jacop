@@ -219,6 +219,9 @@ public class HybridTable extends Constraint
    */
   public HybridTable(IntVar[] list, Restriction[][] tuples, boolean expandBetweenColumns) {
 
+    if (list == null || tuples == null) {
+      throw new IllegalArgumentException("HybridTable: list and tuples must not be null");
+    }
     checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
     checkInputForDuplication("list", list);
     this.arity = list.length;
@@ -370,7 +373,7 @@ public class HybridTable extends Constraint
 
   private static Restriction[][] toRestrictions(int[][] tuples, Integer star) {
     if (tuples == null) {
-      return null;
+      throw new IllegalArgumentException("HybridTable: tuples is null");
     }
     // One restriction object per distinct value, so a large table costs one reference per entry.
     Map<Integer, Restriction> equal = new HashMap<>();
@@ -1244,8 +1247,7 @@ public class HybridTable extends Constraint
             markRange(
                 i,
                 di,
-                Restriction.ne(
-                    (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, minJ + c))),
+                Restriction.ne(Math.clamp(minJ + c, Integer.MIN_VALUE, Integer.MAX_VALUE)),
                 Long.MIN_VALUE,
                 Long.MAX_VALUE);
           } else {

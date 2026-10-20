@@ -315,7 +315,8 @@ public final class Restriction {
               case GE -> ">=";
               case GT -> ">";
             };
-        yield op + "c" + column + (offset == 0 ? "" : (offset > 0 ? "+" : "") + offset);
+        String shift = offset > 0 ? "+" + offset : Integer.toString(offset);
+        yield op + "c" + column + (offset == 0 ? "" : shift);
       }
     };
   }
