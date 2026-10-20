@@ -36,6 +36,9 @@
     "jacop_table_int",
     "jacop_table_bool"
   ],
+  "mdd": [
+    "jacop_mdd"
+  ],
   "regular": [
     "jacop_regular",
     "jacop_regular_set"
