@@ -266,7 +266,7 @@ public class SgmpcsSearch {
    */
   boolean improveSolution() {
 
-    java.security.SecureRandom rand = Store.getRandom();
+    java.util.Random rand = Store.getRandom();
     searchStartTime = System.currentTimeMillis();
     search.setPrintInfo(printInfo);
 

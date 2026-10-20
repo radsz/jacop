@@ -102,6 +102,7 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
@@ -214,6 +215,7 @@ class GlobalConstraintBruteForceTest {
             "SumBool", (Function<Random, Instance>) GlobalConstraintBruteForceTest::sumBool),
         Arguments.of("Table", table("Table")),
         Arguments.of("SimpleTable", table("SimpleTable")),
+        Arguments.of("HybridTable", table("HybridTable")),
         Arguments.of("ExtensionalSupportVa", table("ExtensionalSupportVa")),
         Arguments.of("ExtensionalSupportStr", table("ExtensionalSupportStr")),
         Arguments.of("ExtensionalSupportMdd", table("ExtensionalSupportMdd")),
@@ -419,6 +421,7 @@ class GlobalConstraintBruteForceTest {
                 switch (kind) {
                   case "Table" -> new Table(x, copy);
                   case "SimpleTable" -> new SimpleTable(x, copy);
+                  case "HybridTable" -> new HybridTable(x, copy, Integer.MIN_VALUE);
                   case "ExtensionalSupportVa" -> new ExtensionalSupportVa(x, copy);
                   case "ExtensionalSupportStr" -> new ExtensionalSupportStr(x, copy);
                   case "ExtensionalSupportMdd" -> new ExtensionalSupportMdd(x, copy);

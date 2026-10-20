@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
@@ -76,6 +77,8 @@ public class ElementVariable extends AbstractElement
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
   final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
+  // a fixed seed keeps propagation, and so the search tree, the same on every run
+  final Random generator = new Random(2); // NOSONAR not used for security
   boolean indexHasChanged;
   // For each variable from the list it specifies the values it supports
   IntDomain[] supports;
@@ -294,7 +297,7 @@ public class ElementVariable extends AbstractElement
   }
 
   private int findNextSupportPosition(int lostSupport) {
-    int endingPosition = Store.getRandom().nextInt(list.length - 1);
+    int endingPosition = generator.nextInt(list.length - 1);
     for (int i = endingPosition + 1; ; ) {
       if (i == list.length) {
         i = 0;

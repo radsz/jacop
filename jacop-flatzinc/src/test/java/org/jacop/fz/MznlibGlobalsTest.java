@@ -87,7 +87,9 @@ class MznlibGlobalsTest {
         "hook_regular_nfa",
         "hook_regular_nfa_set",
         "hook_sum_set",
-        "hook_all_different_opt"
+        "hook_all_different_opt",
+        "hook_table_reif",
+        "hook_table_reif_wide"
       })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
