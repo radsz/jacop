@@ -32,6 +32,7 @@ package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -39,6 +40,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -83,6 +87,22 @@ class MznlibGlobalsTest {
 
     assertFalse(nativeSolutions.isEmpty(), model + " has no solutions");
     assertEquals(decompSolutions, nativeSolutions, model);
+  }
+
+  @Test
+  void atanhRedefinitionGivesTheInverseOfTanh() {
+    // float_atanh was redefined with t = ln(x) and y = (t + 1) / (t - 1) / 2, so atanh(0.5)
+    // was -0.0906 instead of 0.5493.
+    Set<String> solutions = solveAll(DIR + "redef_float_atanh.fzn");
+
+    assertEquals(3, solutions.size(), solutions.toString());
+    for (String solution : solutions) {
+      Matcher m = Pattern.compile("i = (\\d+);\\s+f = (\\S+);").matcher(solution);
+      assertTrue(m.find(), solution);
+      double x = Integer.parseInt(m.group(1)) / 4.0;
+      double expected = 0.5 * Math.log((1 + x) / (1 - x));
+      assertEquals(expected, Double.parseDouble(m.group(2)), 1e-6, solution);
+    }
   }
 
   private static Set<String> solveAll(String fzn) {
