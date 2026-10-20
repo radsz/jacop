@@ -686,6 +686,125 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x0.value()).isEqualTo(3);
   }
 
+  // Regular on random (possibly non-deterministic) automata must keep every domain equal to the
+  // values that appear in some accepted word, after each pruning step of a dive and after
+  // backtracking out of it, and must fail exactly when no accepted word remains.
+  @Test
+  void testRegularIsDomainConsistentAcrossBacktracking() {
+
+    Random random = new Random(7);
+    for (int trial = 0; trial < 400; trial++) {
+      int n = 1 + random.nextInt(6);
+      int states = 1 + random.nextInt(5);
+      // transitions[q][c] is the set of successors of state q on value c (bit mask).
+      int[][] transitions = new int[states][4];
+      FsmState[] s = new FsmState[states];
+      Fsm fsm = new Fsm();
+      for (int q = 0; q < states; q++) {
+        s[q] = new FsmState();
+        fsm.allStates.add(s[q]);
+      }
+      fsm.initState = s[0];
+      boolean[] accepting = new boolean[states];
+      for (int q = 0; q < states; q++) {
+        accepting[q] = random.nextInt(3) > 0;
+        if (accepting[q]) {
+          fsm.finalStates.add(s[q]);
+        }
+        for (int t = random.nextInt(2 * states + 3); t > 0; t--) {
+          int c = random.nextInt(4);
+          int next = random.nextInt(states);
+          if ((transitions[q][c] & (1 << next)) == 0) {
+            transitions[q][c] |= 1 << next;
+            s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+          }
+        }
+      }
+      Predicate<int[]> accepts =
+          word -> {
+            int current = 1;
+            for (int c : word) {
+              int next = 0;
+              for (int q = 0; q < states; q++) {
+                if ((current & (1 << q)) != 0) {
+                  next |= transitions[q][c];
+                }
+              }
+              current = next;
+            }
+            for (int q = 0; q < states; q++) {
+              if ((current & (1 << q)) != 0 && accepting[q]) {
+                return true;
+              }
+            }
+            return false;
+          };
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+        if (random.nextInt(4) == 0) {
+          x[i].domain.inComplement(0, x[i], random.nextInt(4));
+        }
+      }
+      String instance = "trial " + trial + " " + Arrays.deepToString(transitions);
+      store.impose(new Regular(fsm, x));
+
+      List<String> domainsAtLevel = new ArrayList<>();
+      boolean consistent = store.consistency();
+      assertRegularDomainConsistent(x, accepts, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.add(Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        IntVar v = free.get(random.nextInt(free.size()));
+        int[] values = valuesOf(v);
+        store.setLevel(store.level + 1);
+        v.domain.inComplement(store.level, v, values[random.nextInt(values.length)]);
+        consistent = store.consistency();
+        assertRegularDomainConsistent(x, accepts, consistent, instance);
+      }
+      // Backtrack level by level; domains must come back and propagation must still be correct.
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (store.level < domainsAtLevel.size()) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.min(), v.min());
+          assertRegularDomainConsistent(x, accepts, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          if (store.level < domainsAtLevel.size()) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+          }
+        }
+      }
+    }
+  }
+
+  private static void assertRegularDomainConsistent(
+      IntVar[] x, Predicate<int[]> accepts, boolean consistent, String instance) {
+    if (!consistent) {
+      assertThat(bruteForce(x, accepts)).as(instance + " failed with solutions").isEmpty();
+      return;
+    }
+    List<int[]> solutions = bruteForce(x, accepts);
+    assertThat(solutions).as(instance + " no solution " + Arrays.toString(x)).isNotEmpty();
+    for (int i = 0; i < x.length; i++) {
+      int position = i;
+      int[] supported = solutions.stream().mapToInt(w -> w[position]).distinct().sorted().toArray();
+      assertThat(valuesOf(x[i])).as(instance + " " + Arrays.toString(x)).containsExactly(supported);
+    }
+  }
+
   @Test
   void testValueEnumerationContinuesAfterDomainChange() {
 

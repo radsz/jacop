@@ -112,7 +112,19 @@ input_order/indomain_min on every decision variable, so that all solvers reach t
 optimal) solution. Each directory keeps the model it was flattened from (*.mzn) and a crosscheck.txt
 that says what was verified; "scripts/minizinc-crosscheck.py verify <dir>" repeats the check, for
 example after a change to the JaCoP MiniZinc library.
+
 Directories upTo5sec/shortest_path_flow_* hold instances of shortest_path from
 https://github.com/MiniZinc/minizinc-benchmarks, rewritten with network_flow_cost and checked the same
 way. Only instances that finish well within the time limit with JaCoP's internal checks enabled are kept,
 because the network simplex checks make each node much slower.
+
+## Extensional constraint benchmarks
+
+The problem directories `table_*` and `mdd_random` hold generated instances for table, negative
+table, short table, Boolean table and MDD constraints (random tables, Dubois parity, crosswords,
+kakuro, TSP with a distance table). They come from `scripts/extensional-benchmarks.py` with the
+parameters in `scripts/extensional-benchmarks-grid.txt`. Directories ending in `_all` enumerate all
+solutions (`options.opt` passes `-n 100000`). Together with `circular_except_0`, `nonogram_gchq`,
+`peacable_queens`, `pentominoes-zayenz`, `rotating-workforce` and `rotating-workforce-scheduling`
+(MiniZinc Challenge and hakank models) they cover `table_int`, `table_bool`, `not table`, `regular`
+and `mdd`. Run them alone with `-DconstraintFilter=table` or `-DconstraintFilter=regular`.

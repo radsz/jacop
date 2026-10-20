@@ -133,6 +133,7 @@ rcpsp-data_bl/Bl2509
 rcpsp-data_ksd15_d/j3037_3
 road-cons/road_9
 rot13_2/rot13_2
+rotating-workforce/Example1479
 rotation/rotation
 routing-flexible/routing_GCM_0013
 ship-schedule/3Ships
@@ -158,6 +159,9 @@ superset_nested_chain/superset_nested_chain
 superset_role_mining/superset_role_mining
 table-layout/en-1000-1303-line1078
 table-layout/en-1000-251-line273
+table_random/rt3_s2
+table_random/rt5_s1
+table_random/rt5_s4
 tc-graph-color/k10_34
 tc-graph-color/k5_05
 template_design/catfood_3
