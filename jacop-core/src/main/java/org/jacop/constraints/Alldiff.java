@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Alldiff constraint assures that all FDVs has different values. It uses bounds consistency
@@ -55,8 +56,10 @@ import org.jacop.core.Store;
 public class Alldiff extends Alldifferent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private final Comparator<Element> maxVariable = Comparator.comparingInt(o -> o.v.max());
-  private final Comparator<Element> minVariable = Comparator.comparingInt(o -> o.v.min());
+
+  private static final int INSERTION_SORT_LIMIT = 256;
+  private static final Comparator<Element> BY_MIN = Comparator.comparingInt(o -> o.min);
+  private static final Comparator<Element> BY_MAX = Comparator.comparingInt(o -> o.max);
   // it stores the store locally so all the private functions which
   // are part of the consistency function can throw failure exception
   // without passing store argument every time their function is called.
@@ -77,6 +80,11 @@ public class Alldiff extends Alldifferent {
 
   private Element[] minsorted;
   private Element[] maxsorted;
+
+  // Alldiff is woken on bound changes, but only grounded variables need their value removed from
+  // the others, so only those are queued, in the order they became grounded.
+  private IntVar[] groundedQueue = new IntVar[8];
+  private int groundedQueueSize;
 
   /** Protected constructor for subclassing purposes. */
   protected Alldiff() {}
@@ -142,11 +150,7 @@ public class Alldiff extends Alldifferent {
 
     if (store.currentQueue == queueIndex) {
 
-      int groundPos = grounded.value();
-      while (!variableQueue.isEmpty()) {
-        groundPos = processGroundedVariables(store, groundPos);
-      }
-      grounded.update(groundPos);
+      grounded.update(processGroundedQueue(store, grounded.value()));
 
       if (queueIndex + 1 < store.queueNo) {
         store.changed[queueIndex + 1].add(this);
@@ -163,14 +167,56 @@ public class Alldiff extends Alldifferent {
       updateLb();
       updateUb();
 
-      if (!variableQueue.isEmpty()) {
-        int groundPos = grounded.value();
-        while (!variableQueue.isEmpty()) {
-          groundPos = processGroundedVariables(store, groundPos);
-        }
-        grounded.update(groundPos);
+      if (groundedQueueSize > 0) {
+        grounded.update(processGroundedQueue(store, grounded.value()));
       }
     } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (v.singleton()) {
+      if (groundedQueueSize == groundedQueue.length) {
+        groundedQueue = Arrays.copyOf(groundedQueue, 2 * groundedQueueSize);
+      }
+      groundedQueue[groundedQueueSize++] = (IntVar) v;
+    }
+  }
+
+  /**
+   * Removes the values of queued grounded variables from all not grounded variables. Variables
+   * grounded by this pruning are queued and processed in the same call.
+   *
+   * @param store the constraint store
+   * @param groundPos the position of the first not grounded variable in list
+   * @return the updated position of the first not grounded variable
+   */
+  private int processGroundedQueue(Store store, int groundPos) {
+    try {
+      for (int k = 0; k < groundedQueueSize; k++) {
+        IntVar q = groundedQueue[k];
+        if (!q.singleton()) {
+          continue;
+        }
+        int qPos = positionMapping.get(q);
+        if (qPos > groundPos) {
+          list[qPos] = list[groundPos];
+          list[groundPos] = q;
+          positionMapping.put(q, groundPos);
+          positionMapping.put(list[qPos], qPos);
+        } else if (qPos < groundPos) {
+          continue;
+        }
+        groundPos++;
+        int value = q.min();
+        for (int i = groundPos; i < list.length; i++) {
+          list[i].domain.inComplement(store.level, list[i], value);
+        }
+      }
+    } finally {
+      groundedQueueSize = 0;
+    }
+    return groundPos;
   }
 
   /**
@@ -179,11 +225,16 @@ public class Alldiff extends Alldifferent {
    */
   private void init() {
     int n = list.length;
-    Arrays.sort(minsorted, 0, n, minVariable);
-    Arrays.sort(maxsorted, 0, n, maxVariable);
+    for (int i = 0; i < n; i++) {
+      Element el = minsorted[i];
+      el.min = el.v.min();
+      el.max = el.v.max();
+    }
+    sortByMin(minsorted, n);
+    sortByMax(maxsorted, n);
 
-    int min = minsorted[0].v.min();
-    int max = maxsorted[0].v.max() + 1;
+    int min = minsorted[0].min;
+    int max = maxsorted[0].max + 1;
     int last = min - 2;
     int numBounds = 0;
     bounds[0] = last;
@@ -197,7 +248,7 @@ public class Alldiff extends Alldifferent {
 
         minsorted[i].minrank = numBounds;
         if (++i < n) {
-          min = minsorted[i].v.min();
+          min = minsorted[i].min;
         }
 
       } else {
@@ -210,11 +261,48 @@ public class Alldiff extends Alldifferent {
           break;
         }
 
-        max = maxsorted[j].v.max() + 1;
+        max = maxsorted[j].max + 1;
       }
     }
     this.nb = numBounds;
     bounds[numBounds + 1] = bounds[numBounds] + 2;
+  }
+
+  // Stable insertion sorts: the arrays keep their order between calls and bounds change little, so
+  // they are almost sorted and these run in near linear time. The result is the same as a stable
+  // sort by the same key.
+  private static void sortByMin(Element[] a, int n) {
+    if (n > INSERTION_SORT_LIMIT) {
+      Arrays.sort(a, 0, n, BY_MIN);
+      return;
+    }
+    for (int i = 1; i < n; i++) {
+      Element el = a[i];
+      int key = el.min;
+      int j = i - 1;
+      while (j >= 0 && a[j].min > key) {
+        a[j + 1] = a[j];
+        j--;
+      }
+      a[j + 1] = el;
+    }
+  }
+
+  private static void sortByMax(Element[] a, int n) {
+    if (n > INSERTION_SORT_LIMIT) {
+      Arrays.sort(a, 0, n, BY_MAX);
+      return;
+    }
+    for (int i = 1; i < n; i++) {
+      Element el = a[i];
+      int key = el.max;
+      int j = i - 1;
+      while (j >= 0 && a[j].max > key) {
+        a[j + 1] = a[j];
+        j--;
+      }
+      a[j + 1] = el;
+    }
   }
 
   /**
@@ -380,5 +468,8 @@ public class Alldiff extends Alldifferent {
     private IntVar v;
     private int minrank;
     private int maxrank;
+    // bounds of v cached for sorting
+    private int min;
+    private int max;
   }
 }
