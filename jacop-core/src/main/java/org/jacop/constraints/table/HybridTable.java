@@ -46,6 +46,7 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
@@ -84,8 +85,16 @@ public class HybridTable extends Constraint
   /** Variables within the scope of the constraint. */
   final IntVar[] x;
 
-  /** The hybrid tuples. */
-  final Restriction[][] tuples;
+  /**
+   * The restrictions of the hybrid tuples, tuple t in cells[t * arity .. t * arity + arity - 1].
+   */
+  Restriction[] cells;
+
+  /** The number of hybrid tuples. */
+  int tupleCount;
+
+  /** True to expand the tuples with restrictions between columns when the constraint is imposed. */
+  private final boolean expandBetweenColumns;
 
   private final Map<IntVar, Integer> varMap;
 
@@ -196,6 +205,19 @@ public class HybridTable extends Constraint
    * @param tuples the hybrid tuples, each with one restriction per variable.
    */
   public HybridTable(IntVar[] list, Restriction[][] tuples) {
+    this(list, tuples, true);
+  }
+
+  /**
+   * It constructs a hybrid table constraint.
+   *
+   * @param list the variables in the scope of the constraint.
+   * @param tuples the hybrid tuples, each with one restriction per variable.
+   * @param expandBetweenColumns true to replace, where it is cheap, a tuple with restrictions
+   *     between columns by one tuple per value of the columns they refer to, so that only unary
+   *     restrictions remain and the bit-sets handle it.
+   */
+  public HybridTable(IntVar[] list, Restriction[][] tuples, boolean expandBetweenColumns) {
 
     checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
     checkInputForDuplication("list", list);
@@ -217,11 +239,112 @@ public class HybridTable extends Constraint
       }
     }
     this.x = Arrays.copyOf(list, list.length);
-    this.tuples = tuples.clone();
+    this.expandBetweenColumns = expandBetweenColumns;
+    setTuples(tuples);
     this.varMap = Var.positionMapping(list, false, this.getClass());
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     setScope(list);
+  }
+
+  private void setTuples(Restriction[][] rows) {
+    tupleCount = rows.length;
+    cells = new Restriction[tupleCount * arity];
+    for (int t = 0; t < tupleCount; t++) {
+      System.arraycopy(rows[t], 0, cells, t * arity, arity);
+    }
+  }
+
+  /** A tuple is expanded only if the columns it refers to have at most this many combinations. */
+  private static final int EXPANSION_LIMIT = 64;
+
+  /**
+   * It replaces each tuple with restrictions between columns, whose referred columns have unary
+   * restrictions and few values, by one tuple per combination of values of the referred columns. In
+   * each of them the referred columns are fixed and the restrictions between columns become
+   * comparisons with constants, so the tuples allow the same assignments of the current domains.
+   */
+  private static Restriction[][] expandBetweenColumns(IntVar[] x, Restriction[][] tuples) {
+    List<Restriction[]> result = null;
+    for (int t = 0; t < tuples.length; t++) {
+      Restriction[][] expanded = expandTuple(x, tuples[t]);
+      if (expanded != null && result == null) {
+        result = new ArrayList<>(Arrays.asList(tuples).subList(0, t));
+      }
+      if (result != null) {
+        result.addAll(
+            expanded == null ? List.<Restriction[]>of(tuples[t]) : Arrays.asList(expanded));
+      }
+    }
+    return result == null ? tuples : result.toArray(new Restriction[0][]);
+  }
+
+  /** The expansion of a tuple, or null if it has no restriction between columns or is too large. */
+  private static Restriction[][] expandTuple(IntVar[] x, Restriction[] tuple) {
+    int arity = tuple.length;
+    boolean[] referred = new boolean[arity];
+    boolean binary = false;
+    for (Restriction r : tuple) {
+      if (r.isBinary()) {
+        binary = true;
+        referred[r.column] = true;
+      }
+    }
+    if (!binary) {
+      return null;
+    }
+    // The values of each referred column that its own restriction accepts.
+    int[][] values = new int[arity][];
+    long combinations = 1;
+    for (int j = 0; j < arity; j++) {
+      if (referred[j]) {
+        if (tuple[j].isBinary() || x[j].getSize() > EXPANSION_LIMIT) {
+          return null;
+        }
+        List<Integer> accepted = new ArrayList<>();
+        for (ValueEnumeration e = x[j].dom().valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          if (tuple[j].accepts(v)) {
+            accepted.add(v);
+          }
+        }
+        values[j] = accepted.stream().mapToInt(Integer::intValue).toArray();
+        combinations *= values[j].length;
+        if (combinations > EXPANSION_LIMIT) {
+          return null;
+        }
+      }
+    }
+    List<Restriction[]> rows = new ArrayList<>();
+    int[] choice = new int[arity];
+    for (long c = 0; c < combinations; c++) {
+      long rest = c;
+      for (int j = 0; j < arity; j++) {
+        if (referred[j]) {
+          choice[j] = values[j][(int) (rest % values[j].length)];
+          rest /= values[j].length;
+        }
+      }
+      Restriction[] row = new Restriction[arity];
+      boolean representable = true;
+      for (int i = 0; i < arity && representable; i++) {
+        Restriction r = tuple[i];
+        if (referred[i]) {
+          row[i] = Restriction.eq(choice[i]);
+        } else if (r.isBinary()) {
+          long bound = (long) choice[r.column] + r.offset;
+          representable = bound >= Integer.MIN_VALUE && bound <= Integer.MAX_VALUE;
+          row[i] = representable ? Restriction.compare(r.relation, (int) bound) : null;
+        } else {
+          row[i] = r;
+        }
+      }
+      if (!representable) {
+        return null;
+      }
+      rows.add(row);
+    }
+    return rows.toArray(new Restriction[0][]);
   }
 
   /**
@@ -269,7 +392,18 @@ public class HybridTable extends Constraint
   public void impose(Store store) {
 
     this.store = store;
-    int n = tuples.length;
+    if (expandBetweenColumns && Arrays.stream(cells).anyMatch(Restriction::isBinary)) {
+      // The expansion depends on the domains, so it is done for the domains at imposition.
+      Restriction[][] rows = new Restriction[tupleCount][];
+      for (int t = 0; t < tupleCount; t++) {
+        rows[t] = Arrays.copyOfRange(cells, t * arity, t * arity + arity);
+      }
+      Restriction[][] expanded = expandBetweenColumns(x, rows);
+      if (expanded != rows) {
+        setTuples(expanded);
+      }
+    }
+    int n = tupleCount;
     valid = new TrailedTupleSet(n, arity);
     words = valid.words;
     queue = new int[arity];
@@ -349,7 +483,7 @@ public class HybridTable extends Constraint
             long m = 0L;
             long span = (long) x[k].max() - markBase[k] + 1;
             for (int q = 0; q < span; q++) {
-              if (tuples[t][k].accepts(markBase[k] + q)) {
+              if (cells[t * arity + k].accepts(markBase[k] + q)) {
                 m |= 1L << q;
               }
             }
@@ -371,8 +505,8 @@ public class HybridTable extends Constraint
     classMax = new int[arity][];
     for (int i = 0; i < arity; i++) {
       List<Integer> values = new ArrayList<>();
-      for (Restriction[] tuple : tuples) {
-        Restriction r = tuple[i];
+      for (int t = 0; t < tupleCount; t++) {
+        Restriction r = cells[t * arity + i];
         switch (r.kind) {
           case EQ, NE, LE, GE -> values.add(r.value);
           case IN, NOT_IN -> {
@@ -431,7 +565,7 @@ public class HybridTable extends Constraint
   }
 
   private void buildSupports() {
-    int n = tuples.length;
+    int n = tupleCount;
     supports = new long[arity][][];
     equalSupports = new long[arity][][];
     notEqualSupports = new long[arity][][];
@@ -457,7 +591,7 @@ public class HybridTable extends Constraint
       long[][] set = new long[classes][];
       boolean onlyEquality = true;
       for (int t = 0; t < n; t++) {
-        Restriction r = tuples[t][i];
+        Restriction r = cells[t * arity + i];
         if (r.kind != Restriction.Kind.EQ) {
           onlyEquality = false;
         }
@@ -520,7 +654,7 @@ public class HybridTable extends Constraint
       }
       if (!onlyEquality) {
         for (int t = 0; t < n; t++) {
-          Restriction r = tuples[t][i];
+          Restriction r = cells[t * arity + i];
           if (r.kind == Restriction.Kind.EQ) {
             setBit(eq, classOf(i, r.value), t, words);
           }
@@ -539,7 +673,7 @@ public class HybridTable extends Constraint
       boolean[] involved = new boolean[arity];
       int sources = 0;
       for (int i = 0; i < arity; i++) {
-        Restriction r = tuples[t][i];
+        Restriction r = cells[t * arity + i];
         if (r.isBinary()) {
           involved[i] = true;
           involved[r.column] = true;
@@ -562,7 +696,7 @@ public class HybridTable extends Constraint
       int[] src = new int[sources];
       int s = 0;
       for (int i = 0; i < arity; i++) {
-        if (tuples[t][i].isBinary()) {
+        if (cells[t * arity + i].isBinary()) {
           src[s++] = i;
         }
       }
@@ -898,7 +1032,7 @@ public class HybridTable extends Constraint
 
   /** It checks a tuple by arc consistency on one word per column and marks what it supports. */
   private boolean reviseTupleOnWords(int t) {
-    Restriction[] tuple = tuples[t];
+    int base = t * arity;
     int[] cols = binaryColumns[t];
     long[] unary = unaryMask[t];
     long[] m = maskWork;
@@ -914,7 +1048,7 @@ public class HybridTable extends Constraint
     while (changed) {
       changed = false;
       for (int i : sources) {
-        Restriction r = tuple[i];
+        Restriction r = cells[base + i];
         int j = r.column;
         // x[i] relation x[j] + offset in positions: p relation q + markBase[j] + offset -
         // markBase[i]
@@ -1028,11 +1162,11 @@ public class HybridTable extends Constraint
    * marks the values it supports in both columns, without building domains.
    */
   private boolean reviseSingleRestriction(int t) {
-    Restriction[] tuple = tuples[t];
+    int base = t * arity;
     int i = binarySources[t][0];
-    Restriction r = tuple[i];
+    Restriction r = cells[base + i];
     int j = r.column;
-    Restriction rj = tuple[j];
+    Restriction rj = cells[base + j];
     Restriction any = Restriction.any();
     IntDomain di = x[i].dom();
     IntDomain dj = x[j].dom();
@@ -1142,10 +1276,10 @@ public class HybridTable extends Constraint
   }
 
   private boolean reviseTuple(int t) {
-    Restriction[] tuple = tuples[t];
+    int base = t * arity;
     int[] cols = binaryColumns[t];
     for (int i : cols) {
-      IntDomain d = unary(t, i, tuple[i], x[i].dom());
+      IntDomain d = unary(t, i, cells[base + i], x[i].dom());
       if (d.isEmpty()) {
         return false;
       }
@@ -1156,7 +1290,7 @@ public class HybridTable extends Constraint
     while (changed) {
       changed = false;
       for (int i : sources) {
-        Restriction r = tuple[i];
+        Restriction r = cells[base + i];
         int j = r.column;
         IntDomain di = work[i];
         IntDomain dj = work[j];
@@ -1370,8 +1504,8 @@ public class HybridTable extends Constraint
     for (int i = 0; i < arity; i++) {
       values[i] = x[i].value();
     }
-    for (Restriction[] tuple : tuples) {
-      if (accepts(tuple, values)) {
+    for (int t = 0; t < tupleCount; t++) {
+      if (accepts(cells, t * arity, arity, values)) {
         return true;
       }
     }
@@ -1386,8 +1520,12 @@ public class HybridTable extends Constraint
    * @return true if every restriction of the hybrid tuple holds.
    */
   public static boolean accepts(Restriction[] tuple, int[] values) {
-    for (int i = 0; i < tuple.length; i++) {
-      Restriction r = tuple[i];
+    return accepts(tuple, 0, tuple.length, values);
+  }
+
+  private static boolean accepts(Restriction[] cells, int base, int arity, int[] values) {
+    for (int i = 0; i < arity; i++) {
+      Restriction r = cells[base + i];
       if (r.isBinary() ? !r.accepts(values[i], values[r.column]) : !r.accepts(values[i])) {
         return false;
       }
@@ -1399,9 +1537,9 @@ public class HybridTable extends Constraint
   public String toString() {
     StringBuilder s = new StringBuilder(id());
     s.append(" : hybridTable(").append(Arrays.asList(x)).append(", [");
-    for (int t = 0; t < tuples.length; t++) {
-      s.append(Arrays.toString(tuples[t]));
-      if (t < tuples.length - 1) {
+    for (int t = 0; t < tupleCount; t++) {
+      s.append(Arrays.toString(Arrays.copyOfRange(cells, t * arity, t * arity + arity)));
+      if (t < tupleCount - 1) {
         s.append(", ");
       }
     }

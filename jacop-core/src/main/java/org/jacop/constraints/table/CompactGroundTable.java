@@ -32,6 +32,7 @@ package org.jacop.constraints.table;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -56,8 +57,14 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
   /** Variables of the columns. */
   final IntVar[] x;
 
-  /** The tuples, without duplicates. */
-  final int[][] tuples;
+  /**
+   * The tuples, sorted and without duplicates, tuple t in cells[t * arity .. t * arity + arity -
+   * 1].
+   */
+  final int[] cells;
+
+  /** The number of tuples. */
+  final int tupleCount;
 
   final int arity;
 
@@ -116,7 +123,8 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
         tuples, t -> t.length == list.length, "tuple need to have the same size as list argument.");
     this.x = Arrays.copyOf(list, list.length);
     this.arity = list.length;
-    this.tuples = distinct(tuples);
+    this.cells = distinct(tuples, list.length);
+    this.tupleCount = list.length == 0 ? 0 : cells.length / list.length;
     this.varMap = Var.positionMapping(list, false, this.getClass());
     this.queueIndex = 1;
     if (extra == null) {
@@ -128,22 +136,24 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
     }
   }
 
-  private static int[][] distinct(int[][] tuples) {
-    int[][] sorted = Arrays.stream(tuples).map(int[]::clone).toArray(int[][]::new);
+  private static int[] distinct(int[][] tuples, int arity) {
+    int[][] sorted = tuples.clone();
     Arrays.sort(sorted, Arrays::compare);
+    int[] flat = new int[sorted.length * arity];
     int k = 0;
     for (int t = 0; t < sorted.length; t++) {
-      if (k == 0 || !Arrays.equals(sorted[k - 1], sorted[t])) {
-        sorted[k++] = sorted[t];
+      if (t == 0 || !Arrays.equals(sorted[t - 1], sorted[t])) {
+        System.arraycopy(sorted[t], 0, flat, k * arity, arity);
+        k++;
       }
     }
-    return Arrays.copyOf(sorted, k);
+    return k == sorted.length ? flat : Arrays.copyOf(flat, k * arity);
   }
 
   @Override
   public void impose(Store store) {
     this.store = store;
-    int n = tuples.length;
+    int n = tupleCount;
     valid = new TrailedTupleSet(n, arity);
     state = valid.state;
     index = valid.index;
@@ -159,7 +169,8 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
     live = new int[arity][];
     for (int i = 0; i < arity; i++) {
       final int column = i;
-      int[] vs = Arrays.stream(tuples).mapToInt(t -> t[column]).sorted().distinct().toArray();
+      int[] vs =
+          IntStream.range(0, n).map(t -> cells[t * arity + column]).sorted().distinct().toArray();
       values[i] = vs;
       IntDomain d = new IntervalDomain();
       for (int v : vs) {
@@ -169,7 +180,7 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
       supports[i] = new long[vs.length][words];
       residues[i] = new int[vs.length];
       for (int t = 0; t < n; t++) {
-        supports[i][valueIndex(i, tuples[t][i])][t >> 6] |= 1L << t;
+        supports[i][valueIndex(i, cells[t * arity + i])][t >> 6] |= 1L << t;
       }
     }
 
@@ -442,7 +453,21 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
     for (int i = 0; i < arity; i++) {
       v[i] = x[i].value();
     }
-    return Arrays.binarySearch(tuples, v, Arrays::compare) >= 0;
+    int low = 0;
+    int high = tupleCount - 1;
+    while (low <= high) {
+      int middle = (low + high) >>> 1;
+      int c = Arrays.compare(cells, middle * arity, middle * arity + arity, v, 0, arity);
+      if (c == 0) {
+        return true;
+      }
+      if (c < 0) {
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return false;
   }
 
   /**
@@ -453,9 +478,9 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
    */
   StringBuilder appendTuples(StringBuilder s) {
     s.append(Arrays.asList(x)).append(", [");
-    for (int t = 0; t < tuples.length; t++) {
-      s.append(Arrays.toString(tuples[t]));
-      if (t < tuples.length - 1) {
+    for (int t = 0; t < tupleCount; t++) {
+      s.append(Arrays.toString(Arrays.copyOfRange(cells, t * arity, t * arity + arity)));
+      if (t < tupleCount - 1) {
         s.append(", ");
       }
     }

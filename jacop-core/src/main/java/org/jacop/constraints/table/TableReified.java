@@ -148,7 +148,7 @@ public class TableReified extends CompactGroundTable implements SatisfiedPresent
   /** The number of combinations of values of the variables, capped above the number of tuples. */
   private long combinations() {
     long product = 1;
-    for (int i = 0; i < arity && product <= tuples.length; i++) {
+    for (int i = 0; i < arity && product <= tupleCount; i++) {
       product *= x[i].getSize();
     }
     return product;
