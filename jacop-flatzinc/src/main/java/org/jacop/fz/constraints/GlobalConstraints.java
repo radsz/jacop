@@ -36,6 +36,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +90,6 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
-import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -112,8 +112,11 @@ import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
-import org.jacop.constraints.table.SimpleTable;
-import org.jacop.constraints.table.Table;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.NegativeTable;
+import org.jacop.constraints.table.Restriction;
+import org.jacop.constraints.table.TableCompressor;
+import org.jacop.constraints.table.TableReified;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -1039,6 +1042,77 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * It posts a reified (b = 1 if and only if x is a tuple) or half-reified (b = 1 implies that x is
+   * a tuple) table constraint.
+   *
+   * @param node the constraint node.
+   * @param implication true for the half-reification.
+   */
+  void gen_jacop_table_int_reif(SimpleNode node, boolean implication) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    if (b.min() == 1) {
+      gen_jacop_table_int(node);
+      return;
+    }
+    if (b.max() == 0 && implication) {
+      return;
+    }
+
+    // Keep the tuples that can match the domains and project them onto the distinct variables
+    // that are not fixed; a tuple that gives two values to the same variable cannot match.
+    int size = v.length;
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      if (!x.singleton()) {
+        position.putIfAbsent(x, position.size());
+      }
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] tuple = new int[nv.length];
+      boolean[] set = new boolean[nv.length];
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        if (!v[j].domain.contains(value)) {
+          possible = false;
+        } else if (!v[j].singleton()) {
+          int k = position.get(v[j]);
+          if (set[k] && tuple[k] != value) {
+            possible = false;
+          }
+          tuple[k] = value;
+          set[k] = true;
+        }
+      }
+      if (possible) {
+        kept.add(tuple);
+      }
+    }
+    int[][] t = kept.toArray(new int[0][]);
+
+    if (nv.length == 0 || t.length == 0) {
+      // The truth of the table is known: x is a tuple exactly when a tuple is left.
+      boolean holds = t.length > 0;
+      if (!holds) {
+        b.domain.in(store.level, b, 0, 0);
+      } else if (!implication) {
+        b.domain.in(store.level, b, 1, 1);
+      }
+      return;
+    }
+    if (b.max() == 0) {
+      support.pose(new NegativeTable(nv, t));
+    } else {
+      support.pose(new TableReified(nv, t, b, implication));
+    }
+  }
+
   private int[][] filterFeasibleTuples(int[] tbl, IntVar[] v, int size) {
     int[][] t = new int[tbl.length / size][size];
     boolean[] tuplesToRemove = new boolean[t.length];
@@ -1177,10 +1251,16 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseTableBySize(IntVar[] v, int[][] t) {
-    if (t.length <= 64) {
-      generateTableConstraints(v, t);
+    // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
+    // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
+    // slower overall on the FlatZinc benchmarks, so it is off by default.
+    String mode = System.getProperty("jacop.table", "plain");
+    Restriction[][] compressed =
+        "plain".equals(mode) ? null : TableCompressor.compress(v, t, "sets".equals(mode));
+    if (compressed != null && compressed.length < t.length) {
+      support.pose(new HybridTable(v, compressed));
     } else {
-      support.pose(new Table(v, t, true));
+      support.pose(new HybridTable(v, t));
     }
   }
 
@@ -1197,107 +1277,6 @@ class GlobalConstraints implements ParserTreeConstants {
   boolean equalRows(int[] r1, int[] r2) {
     for (int i = 0; i < r1.length; i++) {
       if (r1[i] != r2[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  void generateTableConstraints(IntVar[] v, int[][] t) {
-
-    int size = Arrays.stream(v).mapToInt(x -> x.dom().getSize()).reduce(1, (a, b) -> a * b);
-
-    if (v.length > 3 || size > 70) {
-      support.pose(new SimpleTable(v, t, true));
-      return;
-    }
-    int[][] c = conflictTuples(v, t);
-    if (c == null || c.length > 3) {
-      support.pose(new SimpleTable(v, t, true));
-      return;
-    }
-    poseConflictTuplesAsConstraints(v, c);
-  }
-
-  private void poseConflictTuplesAsConstraints(IntVar[] v, int[][] c) {
-    if (v.length == 1) {
-      for (int[] ints : c) {
-        v[0].domain.inComplement(store.level, v[0], ints[0]);
-        if (support.options.debug()) {
-          log.info("% " + v[0] + " \\ " + ints[0]);
-        }
-      }
-    } else {
-      for (int[] ints : c) {
-        XneqC[] x = new XneqC[ints.length];
-        for (int j = 0; j < ints.length; j++) {
-          x[j] = new XneqC(v[j], ints[j]);
-        }
-        support.pose(new Or(x));
-      }
-    }
-  }
-
-  int[][] conflictTuples(IntVar[] v, int[][] t) {
-
-    int[][] r = product(v, t);
-
-    ArrayList<int[]> c = new ArrayList<>();
-    for (int[] value : r) {
-      boolean exists = false;
-      for (int[] ints : t) {
-        if (eqTuples(value, ints)) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists) {
-        c.add(value);
-      }
-    }
-
-    return c.toArray(new int[c.size()][2]);
-  }
-
-  int[][] product(IntVar[] v, int[][] t) {
-
-    if (v.length == 1) {
-      int[][] r = new int[v[0].domain.getSize()][1];
-      int j = 0;
-      ValueEnumeration e1 = v[0].domain.valueEnumeration();
-      while (e1.hasMoreElements()) {
-        r[j++][0] = e1.nextElement();
-      }
-
-      return r;
-    } else {
-      IntVar[] vs = new IntVar[v.length - 1];
-      System.arraycopy(v, 1, vs, 0, v.length - 1);
-      int[][] rs = product(vs, t);
-      int n = v[0].domain.getSize() * rs.length;
-      int m = rs[0].length + 1;
-      int[][] r = new int[n][m];
-
-      int k = 0;
-      ValueEnumeration e1 = v[0].domain.valueEnumeration();
-      while (e1.hasMoreElements()) {
-        int val = e1.nextElement();
-
-        for (int i = 0; i < rs.length; i++) {
-          r[i + k][0] = val;
-          System.arraycopy(rs[i], 0, r[i + k], 1, rs[i].length);
-        }
-        k += rs.length;
-      }
-
-      return r;
-    }
-  }
-
-  boolean eqTuples(int[] a, int[] b) {
-
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
         return false;
       }
     }

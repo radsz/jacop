@@ -3,7 +3,8 @@
 #
 # For every model X.mzn it writes
 #   X.fzn         compiled with JaCoP's MiniZinc library (native propagators), and
-#   X-decomp.fzn  compiled with the MiniZinc standard library only (standard decompositions).
+#   X-decomp.fzn  compiled with the MiniZinc standard library only (standard decompositions),
+#                 from decomp/X-decomp.mzn instead when the standard library has no decomposition for X.
 # The test checks that JaCoP finds the same solutions for both.
 #
 # Usage: MINIZINC=/path/to/minizinc ./regenerate.sh [model.mzn ...]
@@ -26,7 +27,9 @@ models=("$@")
 for m in "${models[@]}"; do
   base=${m%.mzn}
   "$MINIZINC" -c --solver "$TMP/jacop.msc" "$m" -o "$base.fzn" --no-output-ozn
-  "$MINIZINC" -c --solver "$TMP/std.msc" "$m" -o "$base-decomp.fzn" --no-output-ozn
+  decomp=$m
+  [[ -f "decomp/$base-decomp.mzn" ]] && decomp=decomp/$base-decomp.mzn
+  "$MINIZINC" -c --solver "$TMP/std.msc" "$decomp" -o "$base-decomp.fzn" --no-output-ozn
   # Drop the header lines that record local paths.
   sed -i '/^% Solver library:/d; /^% Command line invocation:/d' "$base.fzn" "$base-decomp.fzn"
 done
