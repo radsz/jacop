@@ -333,6 +333,31 @@ class SingleConstraintTest extends TestHelper {
     assertThatThrownBy(() -> new Subcircuit(list)).isInstanceOf(IllegalArgumentException.class);
   }
 
+  // Subcircuit picks the dominance root at random; the choice must come from a fixed seed so the
+  // same model explores the same search tree on every run.
+  @Test
+  void testSubcircuitSearchIsReproducible() {
+
+    Set<Integer> failures = new HashSet<>();
+    for (int run = 0; run < 4; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[8];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, x.length);
+      }
+      store.impose(new Subcircuit(x));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.setPrintInfo(false);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      // 1 + sum over k = 2..8 of C(8, k) * (k - 1)! subcircuits
+      assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(16_065);
+      failures.add(search.getWrongDecisions());
+    }
+    assertThat(failures).hasSize(1);
+  }
+
   @Test
   void testSeededRandomIsReproducible() {
 
