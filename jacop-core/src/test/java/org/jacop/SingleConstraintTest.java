@@ -64,6 +64,7 @@ import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
+import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
@@ -448,6 +449,20 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x.singleton(2)).as("x = %s", x.dom()).isTrue();
     assertThat(y.singleton(2)).as("y = %s", y.dom()).isTrue();
+  }
+
+  @Test
+  void distanceIsNeverNegative() {
+    // |x - y| = z: the value -2 of z has no support, but the propagator only imposed z >= 0 when
+    // a flag that was never initialised to true was set.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 3);
+    IntVar z = new IntVar(store, "z", -2, 7);
+    store.impose(new Distance(x, y, z));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(0);
   }
 
   @Test

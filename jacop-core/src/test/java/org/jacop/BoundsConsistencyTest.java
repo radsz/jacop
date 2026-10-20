@@ -734,10 +734,9 @@ class BoundsConsistencyTest {
               return new Model(
                   new AbsXeqY(x, y, false), t -> Math.abs(t[0]) == t[1], new IntVar[] {x, y});
             }),
-        // z >= 0 is never imposed: firstConsistencyCheck starts as false
         new Case(
             "Distance",
-            Level.NONE,
+            Level.BOUNDS_Z,
             (s, r) ->
                 xyz(
                     s,
