@@ -189,6 +189,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -226,6 +227,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -265,6 +267,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -304,6 +307,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -726,6 +730,7 @@ setup to run configuration. -->
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
+                        <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
