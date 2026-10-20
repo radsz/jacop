@@ -37,8 +37,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
@@ -51,6 +53,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -912,6 +915,88 @@ class SingleConstraintTest extends TestHelper {
       int position = i;
       int[] supported = solutions.stream().mapToInt(w -> w[position]).distinct().sorted().toArray();
       assertThat(valuesOf(x[i])).as(instance + " " + Arrays.toString(x)).containsExactly(supported);
+    }
+  }
+
+  // Alldistinct must keep exactly the values that appear in some solution (domain consistency)
+  // after every propagation of a dive, also when several domains change between two calls, after
+  // backtracking (the matching is reused), and for dense, interval and sparse value sets.
+  @Test
+  void testAlldistinctIsDomainConsistentAcrossBacktracking() {
+
+    Random random = new Random(23);
+    Predicate<int[]> distinct = a -> Arrays.stream(a).distinct().count() == a.length;
+    for (int trial = 0; trial < 2000; trial++) {
+      int n = 1 + random.nextInt(6);
+      int m = n + random.nextInt(3);
+      int kind = trial % 3;
+      // kind 0: SmallDenseDomain, 1: IntervalDomain, 2: IntervalDomain with sparse values
+      int[] base = IntStream.range(0, m).map(k -> kind == 2 ? 100_000 * k - 7 : k - 2).toArray();
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = kind == 0 ? new SmallDenseDomain() : new IntervalDomain();
+        for (int k = 0; k < m; k++) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(base[k], base[k]);
+          }
+        }
+        if (dom.isEmpty()) {
+          int k = random.nextInt(m);
+          dom.unionAdapt(base[k], base[k]);
+        }
+        x[i] = new IntVar(store, "x" + i, dom);
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldistinct(x));
+
+      // imposition raises the level before the first propagation
+      Map<Integer, String> domainsAtLevel = new HashMap<>();
+      boolean consistent = store.consistency();
+      assertRegularDomainConsistent(x, distinct, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.put(store.level, Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(2); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          if (random.nextInt(3) == 0) {
+            v.domain.in(store.level, v, value, value);
+          } else {
+            v.domain.inComplement(store.level, v, value);
+          }
+        }
+        consistent = store.consistency();
+        assertRegularDomainConsistent(x, distinct, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (domainsAtLevel.containsKey(store.level)) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.max(), v.max());
+          assertRegularDomainConsistent(x, distinct, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          if (domainsAtLevel.containsKey(store.level)) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+          }
+        }
+      }
     }
   }
 
