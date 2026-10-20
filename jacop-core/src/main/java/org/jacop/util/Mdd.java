@@ -33,7 +33,10 @@ package org.jacop.util;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import lombok.AccessLevel;
@@ -91,8 +94,9 @@ public class Mdd {
   /** It specifies the first position in the array which is available for use. */
   public int freePosition;
 
-  List<int[]>[][] same;
-  List<Integer>[][] id;
+  /** The nodes kept by the reduction at each level, by their children. */
+  List<Map<Children, Integer>> unique;
+
   TreeMap<Integer, Integer> reducedNodes;
   int memorySavings;
 
@@ -599,17 +603,13 @@ public class Mdd {
   }
 
   /** It reduces Mdd to minimal canonical form by identifying and merging equivalent nodes. */
-  @SuppressWarnings("unchecked")
   public void reduce() {
 
     reducedNodes = new TreeMap<>();
 
-    same = new ArrayList[vars.length][];
-    id = new ArrayList[vars.length][];
-
+    unique = new ArrayList<>(vars.length);
     for (int i = 0; i < vars.length; i++) {
-      same[i] = new ArrayList[domainLimits[i]];
-      id[i] = new ArrayList[domainLimits[i]];
+      unique.add(new HashMap<>());
     }
 
     memorySavings = 0;
@@ -618,8 +618,7 @@ public class Mdd {
 
     shrink();
 
-    same = null;
-    id = null;
+    unique = null;
     reducedNodes = null;
   }
 
@@ -632,13 +631,8 @@ public class Mdd {
     // The first key ingredient is to find if there is already a node with the
     // same children.
 
-    // The same children means
-    // a) nodes must be at the same level
-    // b) nodes must have the same number of kids.
-    // c) kids must be the same.
-    // A three dimensional array - 1st index node level, 2nd index number of kids
-    // a third index - kid with a given number. A linear scan through all values of
-    // a third index.
+    // The same children means that the nodes are at the same level and have the same kids. The
+    // nodes kept at each level are hashed by their kids.
 
     // The second ingredient is to remove dead nodes from the middle of an array.
 
@@ -661,43 +655,35 @@ public class Mdd {
       return node;
     }
 
-    Integer existingId = findEqualNode(level, numberOfChildren, nodeChildren, node);
+    Integer existingId = unique.get(level).putIfAbsent(new Children(nodeChildren), node);
     if (existingId != null) {
+      reducedNodes.put(node, domainLimits[level]);
+      memorySavings += domainLimits[level];
       return existingId;
     }
-
-    if (same[level][numberOfChildren] == null) {
-      same[level][numberOfChildren] = new ArrayList<>();
-      id[level][numberOfChildren] = new ArrayList<>();
-    }
-
-    id[level][numberOfChildren].add(node);
-    same[level][numberOfChildren].add(nodeChildren);
 
     return node;
   }
 
-  private Integer findEqualNode(int level, int numberOfChildren, int[] nodeChildren, int node) {
+  /** The kids of a node, compared by value. */
+  private static final class Children {
+    private final int[] kids;
+    private final int hash;
 
-    if (same[level][numberOfChildren] == null) {
-      return null;
+    Children(int[] kids) {
+      this.kids = kids;
+      this.hash = Arrays.hashCode(kids);
     }
-    for (int j = same[level][numberOfChildren].size() - 1; j >= 0; j--) {
-      int[] currentNode = same[level][numberOfChildren].get(j);
-      boolean equal = true;
-      for (int i = currentNode.length - 1; i >= 0; i--) {
-        if (currentNode[i] != nodeChildren[i]) {
-          equal = false;
-          break;
-        }
-      }
-      if (equal) {
-        reducedNodes.put(node, domainLimits[level]);
-        memorySavings += domainLimits[level];
-        return id[level][numberOfChildren].get(j);
-      }
+
+    @Override
+    public int hashCode() {
+      return hash;
     }
-    return null;
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Children other && other.hash == hash && Arrays.equals(other.kids, kids);
+    }
   }
 
   /**
