@@ -132,6 +132,42 @@ class FlatzincFrontEndTest {
         Files.readString(out, StandardCharsets.UTF_8));
   }
 
+  @Test
+  void listDomainsKeepExactlyTheListedValues() throws IOException {
+    // Value lists spanning at most 64 values become small dense domains, wider ones stay
+    // interval domains; both must hold exactly the listed values, also at the 64 value boundary.
+    String fzn =
+        """
+        var {-3,0,1,2,60}: x:: output_var;
+        var {5,68}: y:: output_var;
+        var {7,71}: z:: output_var;
+        array [1..2] of var {1,5,9}: a:: output_array([1..2]);
+        solve satisfy;
+        """;
+
+    Set<String> expected = new TreeSet<>();
+    for (int x : new int[] {-3, 0, 1, 2, 60}) {
+      for (int y : new int[] {5, 68}) {
+        for (int z : new int[] {7, 71}) {
+          for (int a1 : new int[] {1, 5, 9}) {
+            for (int a2 : new int[] {1, 5, 9}) {
+              expected.add(
+                  String.join(
+                      " ",
+                      new TreeSet<>(
+                          Set.of(
+                              "x = " + x + ";",
+                              "y = " + y + ";",
+                              "z = " + z + ";",
+                              "a = array1d(1..2, [" + a1 + ", " + a2 + "]);"))));
+            }
+          }
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

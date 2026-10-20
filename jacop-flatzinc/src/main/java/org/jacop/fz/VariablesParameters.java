@@ -41,6 +41,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqQ;
@@ -317,16 +318,35 @@ public class VariablesParameters implements ParserTreeConstants {
   private void generateIntListVariable(
       Store store, SimpleNode node, int initChild, Tables table, boolean outputVar) {
     String ident = ((ASTVarDeclItem) node).getIdent();
-    IntVar varInt = new IntVar(store, ident);
+    IntervalDomain dom = new IntervalDomain();
     for (Integer e : intList) {
       int element = e;
       if (CHECK_BOUNDS && (element < IntDomain.MIN_INT || element > IntDomain.MAX_INT)) {
         throw new ArithmeticException(
             "Domain value for " + ident + " is too high/low (" + element + ")");
       }
-      varInt.addDom(element, element);
+      dom.unionAdapt(element, element);
     }
+    IntVar varInt = new IntVar(store, ident, denseIfSmall(dom));
     initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
+  }
+
+  /**
+   * Returns a small dense domain with the values of the given domain when they span at most 64
+   * values, as for variables declared with a range; otherwise the given domain.
+   */
+  private static IntDomain denseIfSmall(IntervalDomain dom) {
+    if (INTERVAL || dom.isEmpty() || (long) dom.max() - dom.min() > 63L) {
+      return dom;
+    }
+    int min = dom.min();
+    long bits = 0;
+    for (int i = 0; i < dom.size; i++) {
+      for (int v = dom.intervals[i].min(); v <= dom.intervals[i].max(); v++) {
+        bits |= 1L << (63 - (v - min));
+      }
+    }
+    return new SmallDenseDomain(min, bits);
   }
 
   /**
@@ -605,7 +625,7 @@ public class VariablesParameters implements ParserTreeConstants {
         for (Integer e : intList) {
           dom.unionAdapt(e, e);
         }
-        varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", dom);
+        varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", denseIfSmall(dom));
       }
       table.addSearchArray(varArrayInt);
     }
