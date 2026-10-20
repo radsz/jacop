@@ -210,17 +210,17 @@ public class NetworkFlow extends Constraint
       throw Store.failException;
     }
 
-    int cost = (int) network.cost(costVariable.max() + 1L);
+    long cost = network.cost(costVariable.max() + 1L);
     if (cost > costVariable.max()) {
       throw Store.failException;
     }
     if (cost > costVariable.min()) {
-      costVariable.domain.inMin(store.level, costVariable, cost);
+      costVariable.domain.inMin(store.level, costVariable, (int) cost);
     }
 
     // Slack between the optimal flow cost and the largest allowed cost. costVariable.min() can be
     // larger than the optimum, so it must not be used here or arcs of valid solutions get pruned.
-    int costLimit = costVariable.max() - cost;
+    int costLimit = (int) Math.min(Integer.MAX_VALUE, costVariable.max() - cost);
     network.pruneNodesWithSmallDegree();
     network.analyze(costLimit);
 
@@ -234,23 +234,24 @@ public class NetworkFlow extends Constraint
 
   /** Prunes cost minimum from current flow cost, then if all vars are ground, prunes cost max. */
   private void finishConsistencyCostPruning(Store store) {
-    int cost = (int) network.cost(costVariable.max() + 1L);
+    long cost = network.cost(costVariable.max() + 1L);
     if (cost > costVariable.max()) {
       throw Store.failException;
     }
     if (cost > costVariable.min()) {
-      costVariable.domain.inMin(store.level, costVariable, cost);
+      costVariable.domain.inMin(store.level, costVariable, (int) cost);
     }
 
+    // the cost variable is in the map as well, but it is the one being fixed here
     boolean allVarsGround = true;
     for (IntVar v : map.keySet()) {
-      if (!v.singleton()) {
+      if (v != costVariable && !v.singleton()) {
         allVarsGround = false;
         break;
       }
     }
     if (allVarsGround) {
-      costVariable.domain.inMax(store.level, costVariable, cost);
+      costVariable.domain.inMax(store.level, costVariable, (int) cost);
     }
   }
 

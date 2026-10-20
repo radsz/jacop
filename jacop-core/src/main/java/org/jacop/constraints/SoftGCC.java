@@ -542,11 +542,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             arcs.add(addArc(variableNodes[i], valueNodes[j], 0, 1));
             domains.add(doms[j]);
           }
-          IntDomain notCounted = vDom.subtract(all);
-          if (!notCounted.isEmpty()) {
-            arcs.add(addArc(variableNodes[i], t, 0, 1));
-            domains.add(notCounted);
-          }
+        }
+        // one arc for all the values that are not counted
+        IntDomain notCounted = vDom.subtract(all);
+        if (!notCounted.isEmpty()) {
+          arcs.add(addArc(variableNodes[i], t, 0, 1));
+          domains.add(notCounted);
         }
         handlerList.add(new DomainStructure(v, domains, arcs));
       }

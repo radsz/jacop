@@ -716,27 +716,23 @@ public class NetworkSimplex {
   }
 
   /**
-   * Computes the total cost of the current flow solution, stopping early if the cutoff is reached.
+   * Computes the total cost of the current flow solution.
    *
-   * @param cutoff the maximum cost value; computation stops and returns this value if exceeded.
-   * @return the total cost of the current flow, or the cutoff value if the cost exceeds it.
+   * <p>The cost is always summed over all arcs: arcs can have negative costs, so a partial sum
+   * above the cutoff does not mean that the total is above it.
+   *
+   * @param cutoff not used; kept for compatibility.
+   * @return the total cost of the current flow.
    */
   public long cost(long cutoff) {
     long cost = 0;
     // non-tree arcs
     for (int i = 0; i < numArcs; i++) {
-      Arc arc = lower[i];
-      cost += arc.longCost();
-      if (cost >= cutoff) {
-        return cutoff;
-      }
+      cost += lower[i].longCost();
     }
     // tree arcs
     for (Node node = root.thread; node != root; node = node.thread) {
       cost += node.toParent.longCost();
-      if (cost >= cutoff) {
-        return cutoff;
-      }
     }
     return cost;
   }

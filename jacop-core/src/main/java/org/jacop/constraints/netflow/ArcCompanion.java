@@ -142,9 +142,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    */
   public void changeMinCapacity(int min) {
 
-    if (ASSERTS_ENABLED && min < 0) {
-      throw new IllegalStateException("Assertion failed");
-    }
+    // min can be negative: flows below zero are handled through flowOffset
     if (ASSERTS_ENABLED && min > flowOffset + arc.capacity + arc.sister.capacity) {
       throw new IllegalStateException("Assertion failed");
     }

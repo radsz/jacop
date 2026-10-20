@@ -2151,6 +2151,169 @@ class SingleConstraintTest extends TestHelper {
     return solutions;
   }
 
+  // The cost of a flow was summed with an early exit once it passed the cost bound, which is wrong
+  // when later arcs have negative costs: a feasible flow was taken as too expensive.
+  @Test
+  void testNetworkFlowWithNegativeCosts() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 1, 3);
+    IntVar f1 = new IntVar(store, "f1", 1, 3);
+    IntVar cost = new IntVar(store, "cost", -4, 6);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    net.addArc(n0, n1, -1, f0);
+    net.addArc(n1, n0, 3, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // f0 = f1 = f and cost = 2 * f; f1 is labelled first, so the flow 3 is tried first
+    assertThat(noOfAllSolutions(store, new IntVar[] {f1, f0, cost})).isEqualTo(3);
+  }
+
+  // Compares network flow with a brute-force count on random small networks with negative costs,
+  // negative flows and loops (arcs from a node to itself).
+  @Test
+  void testNetworkFlowWithNegativeValuesAndLoopsAgainstBruteForce() {
+
+    Random random = new Random(1185);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] =
+            random.nextInt(5) == 0
+                ? arcs[i][0]
+                : (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(7) - 3;
+        int min = random.nextInt(5) - 2;
+        flowDomains[i] = new int[] {min, min + random.nextInt(4)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(14) - 6;
+      int costMax = costMin + random.nextInt(12);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
+  @Test
+  void testNetworkFlowFixesCostWhenFlowsAreFixed() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 0, 3);
+    IntVar f1 = new IntVar(store, "f1", 0, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node source = net.addNode("source", 3);
+    Node sink = net.addNode("sink", -3);
+    net.addArc(source, sink, 1, f0);
+    net.addArc(source, sink, 2, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    f1.domain.in(store.level, f1, 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(f0.value()).isEqualTo(1);
+    assertThat(cost.singleton()).isTrue();
+    assertThat(cost.value()).isEqualTo(5);
+  }
+
+  // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
+  // lower bound for flows that are not negative.
+  @Test
+  void testNetworkFlowRejectsVariableWeightOnNegativeFlow() {
+
+    Store store = new Store();
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    IntVar weight = new IntVar(store, "w", 1, 2);
+    IntVar flow = new IntVar(store, "f", -2, 0);
+
+    assertThatThrownBy(() -> net.addArc(n0, n1, weight, flow))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // A variable whose domain had values that are not counted got the arc for those values once per
+  // counted value, and the copies pruned each other, so solutions were lost.
+  @Test
+  void testSoftGccWithValuesThatAreNotCounted() {
+
+    // x2 has the domain {1, 3}
+    int[][] domains = {{0, 3}, {0, 3}, {1, 1}};
+    int[] values = {1, 2};
+    int[][] hard = {{1, 3}, {0, 3}};
+    int[][] soft = {{1, 1}, {2, 3}};
+
+    int[] counts = new int[2];
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[domains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, domains[i][0], domains[i][1]);
+      }
+      x[2].addDom(3, 3);
+      IntVar[] hardCounters = new IntVar[values.length];
+      IntVar[] softCounters = new IntVar[values.length];
+      for (int i = 0; i < values.length; i++) {
+        hardCounters[i] = new IntVar(store, "h" + i, hard[i][0], hard[i][1]);
+        softCounters[i] = new IntVar(store, "s" + i, soft[i][0], soft[i][1]);
+      }
+      IntVar cost = new IntVar(store, "cost", 1, 5);
+      SoftGCC softGcc =
+          new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      counts[network ? 0 : 1] =
+          noOfAllSolutions(store, x, hardCounters, softCounters, new IntVar[] {cost});
+    }
+    assertThat(counts[1]).isPositive();
+    assertThat(counts[0]).isEqualTo(counts[1]);
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 

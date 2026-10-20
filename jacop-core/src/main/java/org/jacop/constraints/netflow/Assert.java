@@ -394,9 +394,8 @@ public class Assert {
       if (ASSERTS_ENABLED && p != i.toParent.head) {
         throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
       }
-      if (ASSERTS_ENABLED && i.toParent.reducedCost() != 0) {
-        throw new IllegalStateException(String.valueOf(MSG_I + i + MSG_P + p + "\n"));
-      }
+      // Tree arcs need not have reduced cost 0 here: a weight variable can change the cost of a
+      // tree arc, and the potentials are only recomputed when the network simplex runs next.
       boolean b1 = tree.contains(i.toParent);
       boolean b2 = tree.contains(i.toParent.sister);
       if (ASSERTS_ENABLED && b1 == b2) {

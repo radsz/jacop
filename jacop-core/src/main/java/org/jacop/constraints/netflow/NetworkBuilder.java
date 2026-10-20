@@ -142,6 +142,10 @@ public class NetworkBuilder {
    */
   public Arc addArc(Node from, Node to, IntVar wvar, IntVar xvar) {
 
+    if (wvar.singleton()) {
+      return addArc(from, to, wvar.value(), xvar);
+    }
+
     Arc arc = addArc(from, to, wvar, xvar.min(), xvar.max());
 
     arc.companion.xVar = xvar;
@@ -184,6 +188,12 @@ public class NetworkBuilder {
    */
   public Arc addArc(Node from, Node to, IntVar wvar, int lowerCapacity, int upperCapacity) {
 
+    // The arc cost is bounded from below by wvar.min() * flow, which only holds for flows >= 0.
+    if (lowerCapacity < 0 && !wvar.singleton()) {
+      throw new IllegalArgumentException(
+          "An arc with a variable weight needs a non-negative flow, arc " + from + "->" + to);
+    }
+
     int weight = wvar.min();
     Arc arc = addArc(from, to, weight, lowerCapacity, upperCapacity);
 
@@ -208,6 +218,15 @@ public class NetworkBuilder {
    * @return the newly created arc
    */
   public Arc addArc(Node from, Node to, int weight, int lowerCapacity, int upperCapacity) {
+    if (from == to) {
+      // The network simplex cannot hold a loop, so it goes through a new node instead. The second
+      // arc gets the same flow as the first one by the flow balance of the new node.
+      Node middle = addNode(from.name + "_loop", 0);
+      Arc arc = new Arc(from, middle, weight, lowerCapacity, upperCapacity);
+      arcList.add(arc);
+      arcList.add(new Arc(middle, to, 0, lowerCapacity, upperCapacity));
+      return arc;
+    }
     Arc arc = new Arc(from, to, weight, lowerCapacity, upperCapacity);
     arcList.add(arc);
     return arc;
