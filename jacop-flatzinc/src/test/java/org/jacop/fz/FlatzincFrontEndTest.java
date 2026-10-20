@@ -168,6 +168,33 @@ class FlatzincFrontEndTest {
     assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(top));
   }
 
+  @Test
+  void defaultSearchReachesValuesOfUnboundedVariables() throws IOException {
+    // MiniZinc test tuple_if_then_else: x and y are unbounded and only x = 3 has a support. The
+    // default search tried x = min, x != min one value after another, nesting one choice per
+    // value, which overflowed the stack.
+    String fzn =
+        """
+        var bool: b:: output_var;
+        var int: x:: output_var;
+        var int: y:: output_var;
+        var bool: e3;
+        var bool: e4;
+        var bool: c4;
+        var bool: e5;
+        var bool: c5;
+        constraint jacop_if_then_else_bool([b,true],[c4,c5],true);
+        constraint int_eq_reif(x,3,e3);
+        constraint int_eq_reif(y,4,e4);
+        constraint array_bool_and([e3,e4],c4);
+        constraint int_eq_reif(y,5,e5);
+        constraint array_bool_and([e3,e5],c5);
+        solve satisfy;
+        """;
+
+    assertEquals(Set.of("b = true; x = 3; y = 4;", "b = false; x = 3; y = 5;"), solveAll(fzn));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
     return new TreeSet<>(solveAllInOrder(model));
   }

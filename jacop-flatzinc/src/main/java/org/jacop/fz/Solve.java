@@ -60,6 +60,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
 import org.jacop.search.Lds;
@@ -69,6 +70,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -995,7 +997,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<IntVar> intSelect =
           options.freeSearch() || options.complementarySearch()
               ? new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>())
-              : new SimpleSelect<>(intSearchVariables, null, new IndomainMin<>());
+              // x <= middle keeps the order of the solutions of x = min, but needs only a
+              // logarithmic number of nested choices to reach a value of a large domain
+              : new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) intSelect;
