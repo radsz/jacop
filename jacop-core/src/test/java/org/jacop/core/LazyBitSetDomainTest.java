@@ -157,33 +157,61 @@ class LazyBitSetDomainTest {
       IntervalDomain same = ((LazyBitSetDomain) argument).toIntervalDomain();
       IntervalDomain other = randomDomain(random, lo - 10, hi + 10);
       IntDomain[] receivers = {
-        other, toSmallDense(randomDomain(random, lo + 10, lo + 70)), new BoundDomain(lo + 5, hi - 5)
+        other,
+        toSmallDense(randomDomain(random, lo + 10, lo + 70)),
+        new BoundDomain(lo + 5, hi - 5),
+        lazyOf(randomDomain(random, lo - 10, hi + 10)),
+        lazyOf(new IntervalDomain(lo - random.nextInt(20), hi + random.nextInt(20)))
       };
       for (IntDomain receiver : receivers) {
+        IntDomain reference =
+            receiver instanceof LazyBitSetDomain l ? l.toIntervalDomain() : receiver;
         String context = "run " + run + " " + receiver + " with " + argument;
         assertThat(receiver.intersect(argument).toString())
             .as(context + " intersect")
-            .isEqualTo(receiver.intersect(same).toString());
+            .isEqualTo(reference.intersect(same).toString());
         assertThat(outcome(() -> receiver.union(argument)))
             .as(context + " union")
-            .isEqualTo(outcome(() -> receiver.union(same)));
+            .isEqualTo(outcome(() -> reference.union(same)));
         assertThat(receiver.subtract(argument).toString())
             .as(context + " subtract")
-            .isEqualTo(receiver.subtract(same).toString());
+            .isEqualTo(reference.subtract(same).toString());
         assertThat(receiver.contains(argument))
             .as(context + " contains")
-            .isEqualTo(receiver.contains(same));
+            .isEqualTo(reference.contains(same));
         assertThat(receiver.isIntersecting(argument))
             .as(context + " isIntersecting")
-            .isEqualTo(receiver.isIntersecting(same));
-        assertThat(receiver.eq(argument)).as(context + " eq").isEqualTo(receiver.eq(same));
+            .isEqualTo(reference.isIntersecting(same));
+        assertThat(receiver.eq(argument)).as(context + " eq").isEqualTo(reference.eq(same));
         assertThat(receiver.sizeOfIntersection(argument))
             .as(context + " sizeOfIntersection")
-            .isEqualTo(receiver.sizeOfIntersection(same));
+            .isEqualTo(reference.sizeOfIntersection(same));
+        if (receiver instanceof LazyBitSetDomain) {
+          IntDomain small = toSmallDense(randomDomain(random, lo + 10, lo + 70));
+          for (IntDomain plainArgument : new IntDomain[] {same, small}) {
+            String with = context + " plain argument " + plainArgument;
+            assertThat(receiver.contains(plainArgument))
+                .as(with + " contains")
+                .isEqualTo(reference.contains(plainArgument));
+            assertThat(receiver.isIntersecting(plainArgument))
+                .as(with + " isIntersecting")
+                .isEqualTo(reference.isIntersecting(plainArgument));
+            assertThat(receiver.eq(plainArgument))
+                .as(with + " eq")
+                .isEqualTo(reference.eq(plainArgument));
+            assertThat(receiver.sizeOfIntersection(plainArgument))
+                .as(with + " sizeOfIntersection")
+                .isEqualTo(reference.sizeOfIntersection(plainArgument));
+          }
+        }
         int shift = random.nextInt(5) - 2;
         for (int kind = 0; kind < 2; kind++) {
-          Side withArgument = new Side(receiver.cloneLight());
-          Side withSame = new Side(receiver.cloneLight());
+          Side withArgument =
+              new Side(
+                  receiver instanceof LazyBitSetDomain l
+                      ? lazyOf(l.toIntervalDomain())
+                      : receiver.cloneLight());
+          Side withSame = new Side(reference.cloneLight());
           withArgument.store.setLevel(1);
           withSame.store.setLevel(1);
           Step a =
@@ -260,6 +288,13 @@ class LazyBitSetDomainTest {
         IntervalDomain d = randomDomain(random, min - 7, max - 3);
         yield named("inShift 5 " + d, s -> s.x.domain.inShift(s.store.level, s.x, d, 5));
       }
+      case 13 -> {
+        LazyBitSetDomain d = lazyOf(randomDomain(random, min - 9, max + 2));
+        int shift = random.nextInt(9) - 4;
+        yield named(
+            "inShift " + shift + " lazy " + d,
+            s -> s.x.domain.inShift(s.store.level, s.x, d, shift));
+      }
       case 12 -> {
         int c = random.nextInt(6);
         int event = random.nextInt(3);
@@ -286,6 +321,13 @@ class LazyBitSetDomainTest {
         yield named("remove " + c, s -> s.x.removeConstraint(s.constraints[c]));
       }
     };
+  }
+
+  /** A lazy bit set domain with the values of d, with holes when d has them. */
+  private static LazyBitSetDomain lazyOf(IntervalDomain d) {
+    LazyBitSetDomain result = new LazyBitSetDomain(d.min(), d.max());
+    result.setDomain(d);
+    return result;
   }
 
   private static IntervalDomain randomDomain(Random random, int lo, int hi) {
