@@ -119,7 +119,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.core.FloatVar;
@@ -587,38 +586,13 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int indexMin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    int indexMax = indexMin + c.length - 1;
 
-    for (IntVar intVar : x) {
-      if (indexMin > intVar.max() || indexMax < intVar.min()) {
-        throw new IllegalArgumentException("%% ERROR: gcc domain error in variable " + intVar);
-      }
-      if (indexMin > intVar.min() && indexMin < intVar.max()) {
-        intVar.domain.inMin(store.level, intVar, indexMin);
-      }
-      if (indexMax < intVar.max() && indexMax > intVar.min()) {
-        intVar.domain.inMax(store.level, intVar, indexMax);
-      }
-    }
-
-    // =========> remove all non-existing-values counters
-    IntDomain gccDom = new IntervalDomain();
-    for (IntVar v : x) {
-      gccDom = gccDom.union(v.dom());
-    }
-    ArrayList<Var> cList = new ArrayList<>();
+    // c[i] counts value indexMin + i, and x takes only counted values
+    int[] cover = new int[c.length];
     for (int i = 0; i < c.length; i++) {
-      if (gccDom.contains(i + indexMin)) {
-        cList.add(c[i]);
-      } else {
-        support.pose(new XeqC(c[i], 0));
-      }
+      cover[i] = indexMin + i;
     }
-    IntVar[] cArray = new IntVar[cList.size()];
-    cArray = cList.toArray(cArray);
-    // =========>
-
-    support.pose(new GCC(x, cArray));
+    poseClosedGcc(x, cover, c);
   }
 
   void gen_jacop_global_cardinality_closed(SimpleNode node) {
@@ -626,15 +600,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] cover = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] counter = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-    IntDomain gccDom = new IntervalDomain();
-    for (int e : cover) {
-      gccDom = gccDom.union(e);
-    }
-    for (IntVar v : x) {
-      v.domain.in(store.level, v, gccDom);
-    }
-
-    support.pose(new GCC(x, counter));
+    poseClosedGcc(x, cover, counter);
   }
 
   void gen_jacop_global_cardinality_low_up_closed(SimpleNode node) {
@@ -643,30 +609,15 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] low = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     int[] up = support.getIntArray((SimpleNode) node.jjtGetChild(3));
 
-    IntDomain gccDom = new IntervalDomain();
-    int[] newCover = new int[cover.length];
-    int n = 0;
+    IntVar[] counter = new IntVar[cover.length];
     for (int i = 0; i < cover.length; i++) {
-      int e = cover[i];
-      if (varsContain(x, e)) {
-        newCover[n++] = i;
-      } else if (low[i] != 0) {
+      if (low[i] > up[i]) {
         throw Store.failException;
       }
-
-      gccDom = gccDom.union(e);
+      counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
     }
 
-    for (IntVar v : x) {
-      v.domain.in(store.level, v, gccDom);
-    }
-
-    IntVar[] counter = new IntVar[n];
-    for (int i = 0; i < n; i++) {
-      counter[i] = new IntVar(store, "counter" + i, low[newCover[i]], up[newCover[i]]);
-    }
-
-    support.pose(new GCC(x, counter));
+    poseClosedGcc(x, cover, counter);
 
     if (support.domainConsistency && !support.options.getBoundConsistency()) {
       // we add additional CountBounds constraint if domain consistency is required
@@ -676,14 +627,69 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
-  boolean varsContain(IntVar[] x, int e) {
+  /**
+   * Posts GCC over x restricted to the cover values, where counter[i] counts the occurrences of
+   * cover[i]. The cover may be unsorted, may repeat values and may contain values no variable can
+   * take, and x may repeat variables. GCC itself needs distinct non-singleton variables and one
+   * counter for each value of the union of the variable domains, in increasing order of values.
+   */
+  private void poseClosedGcc(IntVar[] x, int[] cover, IntVar[] counter) {
+    IntervalDomain coverDomain = new IntervalDomain();
+    for (int v : cover) {
+      coverDomain.unionAdapt(v, v);
+    }
     for (IntVar v : x) {
-      if (v.domain.contains(e)) {
-        return true;
+      v.domain.in(store.level, v, coverDomain);
+    }
+
+    IntVar[] xs = new IntVar[x.length];
+    Set<IntVar> seen = new HashSet<>();
+    for (int i = 0; i < x.length; i++) {
+      if (!x[i].singleton() && !seen.add(x[i])) {
+        xs[i] = new IntVar(store, x[i].dom().cloneLight());
+        support.pose(new XeqY(x[i], xs[i]));
+      } else {
+        xs[i] = x[i];
       }
     }
 
-    return false;
+    // a repeated cover value is counted once and its counters are made equal
+    Map<Integer, IntVar> counterOf = new HashMap<>();
+    for (int i = 0; i < cover.length; i++) {
+      IntVar first = counterOf.putIfAbsent(cover[i], counter[i]);
+      if (first != null && first != counter[i]) {
+        support.pose(new XeqY(first, counter[i]));
+      }
+    }
+
+    // a counter of a value no variable can take is zero; it may also be one of the variables, so
+    // the union is recomputed until no counter is fixed any more
+    IntDomain union;
+    boolean changed;
+    do {
+      union = new IntervalDomain();
+      for (IntVar v : xs) {
+        union.unionAdapt(v.dom());
+      }
+      changed = false;
+      for (Map.Entry<Integer, IntVar> e : counterOf.entrySet()) {
+        IntVar zero = e.getValue();
+        if (!union.contains(e.getKey()) && !zero.singleton(0)) {
+          zero.domain.inValue(store.level, zero, 0);
+          changed = true;
+        }
+      }
+    } while (changed);
+    if (xs.length == 0) {
+      return;
+    }
+
+    IntVar[] gccCounter = new IntVar[union.getSize()];
+    int k = 0;
+    for (ValueEnumeration e = union.valueEnumeration(); e.hasMoreElements(); ) {
+      gccCounter[k++] = counterOf.get(e.nextElement());
+    }
+    support.pose(new GCC(xs, gccCounter));
   }
 
   void gen_jacop_diff2(SimpleNode node) {

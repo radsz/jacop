@@ -57,7 +57,7 @@ public class CountValues extends AbstractCountValues {
   /**
    * It constructs a CountValues constraint.
    *
-   * @param values values that are counted
+   * @param values values that are counted, without repetitions
    * @param list variables which equality to values is counted.
    * @param counter number of variables equal to a value.
    */
@@ -80,7 +80,7 @@ public class CountValues extends AbstractCountValues {
   /**
    * It constructs a CountValues constraint.
    *
-   * @param values value taht are counted
+   * @param values values that are counted, without repetitions
    * @param list variables which equality to values is counted.
    * @param counter number of variables equal to values.
    */

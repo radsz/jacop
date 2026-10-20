@@ -62,7 +62,7 @@ public class CountValuesBounds extends AbstractCountValues {
   /**
    * It constructs a CountValuesBounds constraint.
    *
-   * @param values values that are counted
+   * @param values values that are counted, without repetitions
    * @param list variables which equality to values is counted.
    * @param lb minimal number of variables equal to a value.
    * @param ub maximal number of variables equal to a value.
@@ -92,7 +92,7 @@ public class CountValuesBounds extends AbstractCountValues {
   /**
    * It constructs a CountValuesBounds constraint.
    *
-   * @param values values that are counted
+   * @param values values that are counted, without repetitions
    * @param list variables which equality to values is counted.
    * @param lb minimal number of variables equal to a value.
    * @param ub maximal number of variables equal to a value.
