@@ -456,7 +456,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     int[] outFill = new int[nodes];
     int[] inFill = new int[nodes];
     for (int level = 0; level < levels; level++) {
-      state[levelBase + level] = levelSlotStart[level + 1] - levelSlotStart[level];
+      state[levelBase + level] = (long) levelSlotStart[level + 1] - levelSlotStart[level];
     }
     state[edgeRecord] = edges;
 
@@ -782,7 +782,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     save(record);
     state[record] &= ~VALUE;
     removedSlotOfLevel(slotLevel[slot]);
-    wastedVisits += slotStart[slot + 1] - slotStart[slot];
+    wastedVisits += (long) slotStart[slot + 1] - slotStart[slot];
     for (int e = slotStart[slot]; e < slotStart[slot + 1]; e++) {
       int src = slotEdge[2 * e];
       int dst = slotEdge[2 * e + 1];
@@ -878,7 +878,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     state[node] |= REMOVED;
     if (scanOut) {
       touchLevel(nodeLevel[node]);
-      wastedVisits += outStart[node + 1] - outStart[node];
+      wastedVisits += (long) outStart[node + 1] - outStart[node];
       for (int e = outStart[node]; e < outStart[node + 1]; e++) {
         int dst = outEdge[2 * e];
         if (slotAlive(outEdge[2 * e + 1]) && alive(dst)) {
@@ -890,7 +890,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     }
     if (scanIn) {
       touchLevel(nodeLevel[node] - 1);
-      wastedVisits += inStart[node + 1] - inStart[node];
+      wastedVisits += (long) inStart[node + 1] - inStart[node];
       for (int e = inStart[node]; e < inStart[node + 1]; e++) {
         int src = inEdge[2 * e];
         if (slotAlive(inEdge[2 * e + 1]) && alive(src)) {
@@ -946,7 +946,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful {
     long subtreeWaste = level <= openLevel ? wastedVisits - levelWaste[level] : 0;
     openLevel = Math.min(openLevel, level - 1);
     pendingCompaction =
-        subtreeWaste > edges + levelBase
+        subtreeWaste > (long) edges + levelBase
                 && aliveEdges < edges / 2
                 && adjacency[adjacencyTop - 1].level < level - 1
             ? level - 1
