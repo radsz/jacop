@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -136,14 +137,49 @@ public class XmulYeqZ extends AbstractXopYeqZ {
       store.propagationHasOccurred = false;
 
       // Bounds for X
-      Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), y.min(), y.max());
+      Interval xBounds = factorBounds(x, y);
       x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
       // Bounds for Y
-      Interval yBounds = IntDomain.divIntBounds(z.min(), z.max(), x.min(), x.max());
+      Interval yBounds = factorBounds(y, x);
       y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Bounds of factor v in v * other = z. When the interval of other contains 0 but z does not, the
+   * quotient z / other is taken separately over the negative and the positive part of other, each
+   * cut to the bounds of v, so that v is still pruned.
+   */
+  private Interval factorBounds(IntVar v, IntVar other) {
+    if (other.min() >= 0 || other.max() <= 0 || (z.min() <= 0 && z.max() >= 0)) {
+      return IntDomain.divIntBounds(z.min(), z.max(), other.min(), other.max());
+    }
+    Interval negative = quotientWithin(v, other.min(), -1);
+    Interval positive = quotientWithin(v, 1, other.max());
+    if (negative == null && positive == null) {
+      throw Store.failException;
+    }
+    if (negative == null || positive == null) {
+      return negative == null ? positive : negative;
+    }
+    return new Interval(
+        Math.min(negative.min(), positive.min()), Math.max(negative.max(), positive.max()));
+  }
+
+  /** The values of z / [c, d] within the bounds of v, or null if there are none. */
+  private Interval quotientWithin(IntVar v, int c, int d) {
+    int min;
+    int max;
+    try {
+      Interval q = IntDomain.divIntBounds(z.min(), z.max(), c, d);
+      min = Math.max(q.min(), v.min());
+      max = Math.min(q.max(), v.max());
+    } catch (FailException e) {
+      return null;
+    }
+    return min <= max ? new Interval(min, max) : null;
   }
 
   // Once x or y is 1, consistency() makes z and the other variable equal, so a value removed inside

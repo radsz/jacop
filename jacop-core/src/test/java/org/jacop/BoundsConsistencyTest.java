@@ -678,11 +678,10 @@ class BoundsConsistencyTest {
             "XplusYlteqZ",
             Level.DOMAIN,
             (s, r) -> xyz(s, r, small, XplusYlteqZ::new, t -> t[0] + t[1] <= t[2])),
-        // not even bounds(R): no pruning of x or y while the interval of the other factor contains
-        // 0
+        // bounds(Z) would also need the bounds of z to be products, e.g. no 11 from x, y in -4..4
         new Case(
             "XmulYeqZ",
-            Level.NONE,
+            Level.BOUNDS_R,
             (s, r) -> {
               Model m =
                   xyz(
