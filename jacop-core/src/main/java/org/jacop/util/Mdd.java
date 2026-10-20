@@ -115,7 +115,7 @@ public class Mdd {
   public Mdd(IntVar[] vars, int[] diagram, int[] domainLimits) {
 
     this.vars = new IntVar[vars.length];
-    System.arraycopy(vars, 0, vars, 0, vars.length);
+    System.arraycopy(vars, 0, this.vars, 0, vars.length);
 
     this.domainLimits = new int[vars.length];
 
