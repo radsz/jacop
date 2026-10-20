@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,12 +42,19 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.SophisticatedLengauerTarjan;
+import org.jacop.util.DominatorTree;
 
 /**
  * Subcircuit constraint assures that all variables build a subcircuit. Value of every variable x[i]
  * points to the next variable in the subcircuit. If a variable does not belong to a subcircuit it
  * has value of its position, i.e., x[i] = i.
+ *
+ * <p>Propagation removes fixed values from the other variables, then prunes with the strongly
+ * connected components of the successor graph and, when those find nothing more, with the
+ * dominators of a node that must be in the circuit. Dominator pruning is expensive and seldom
+ * prunes, so after a call that prunes nothing it is skipped for a growing number of calls, at most
+ * 32 or the value of the system property sub_circuit_dominance_skip (0 runs it every time, for the
+ * strongest pruning).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -56,20 +62,40 @@ import org.jacop.util.SophisticatedLengauerTarjan;
 public class Subcircuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  final int[] val;
+
   final Map<Var, Integer> valueIndex = new HashMap<>();
-  final SophisticatedLengauerTarjan graphDominance;
-  final int[] stack; // stack for strongly connected compoents algorithm
+  final DominatorTree graphDominance;
   // a fixed seed keeps propagation, and so the search tree, the same on every run
   final Random random = new Random(0); // NOSONAR not used for security
   boolean firstConsistencyCheck = true;
   boolean useScc = true;
   boolean useDominance = true;
-  int idd;
-  int sccLength;
   int firstConsistencyLevel;
-  int stackPointer;
-  BitSet cycleVar;
+  // the largest number of consecutive calls that skip the dominator pruning
+  int maxDominanceSkip = 32;
+
+  // successor graph of the current domains: arcs v -> w (w != v) of node v are at positions
+  // arcStart[v] .. arcStart[v + 1] - 1, and selfLoop[v] tells whether v may stay out of the circuit
+  private int[] arcStart;
+  private int[] arcTo;
+  private boolean[] selfLoop;
+  private int arcCount;
+
+  // strongly connected components: comp[v] is the component of v
+  private final int[] comp;
+  private final int[] compSize;
+  private int compCount;
+  private final int[] tarjanIndex;
+  private final int[] tarjanLow;
+  private final int[] tarjanStack;
+  private final int[] callStack;
+  private final int[] callArc;
+
+  private final int[] possibleRoots;
+
+  // calls left before dominator pruning runs again, and the length of the current pause
+  private int dominanceWait;
+  private int dominanceSkip;
 
   /**
    * It constructs a circuit constraint.
@@ -83,7 +109,8 @@ public class Subcircuit extends Alldiff {
 
     this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
-    this.graphDominance = new SophisticatedLengauerTarjan(list.length + 1);
+    int n = list.length;
+    this.graphDominance = new DominatorTree(n + 1);
 
     this.queueIndex = 2;
 
@@ -92,10 +119,17 @@ public class Subcircuit extends Alldiff {
       valueIndex.put(v, i++);
     }
 
-    val = new int[list.length];
-
-    stack = new int[list.length];
-    stackPointer = 0;
+    arcStart = new int[n + 1];
+    arcTo = new int[n];
+    selfLoop = new boolean[n];
+    comp = new int[n];
+    compSize = new int[n];
+    tarjanIndex = new int[n];
+    tarjanLow = new int[n];
+    tarjanStack = new int[n];
+    callStack = new int[n];
+    callArc = new int[n];
+    possibleRoots = new int[n];
 
     String scc = System.getProperty("sub_circuit_scc_pruning");
     String dominance = System.getProperty("sub_circuit_dominance_pruning");
@@ -104,6 +138,10 @@ public class Subcircuit extends Alldiff {
     }
     if (dominance != null) {
       useDominance = Boolean.parseBoolean(dominance);
+    }
+    String dominanceSkip = System.getProperty("sub_circuit_dominance_skip");
+    if (dominanceSkip != null) {
+      maxDominanceSkip = Integer.parseInt(dominanceSkip);
     }
     if (!useScc && !useDominance) {
       throw new IllegalArgumentException("Wrong property configuration for Subcircuit");
@@ -144,17 +182,26 @@ public class Subcircuit extends Alldiff {
 
     } while (store.propagationHasOccurred);
 
+    collectArcs();
     if (useScc) {
-      sccsBasedPruning(store); // strongly connected components
-
-      // dominance finds prunings that the strongly connected components miss, so it runs as soon
-      // as they find nothing more, and the constraint reaches its fixpoint with both
-      if (useDominance && !store.propagationHasOccurred) {
-        dominanceFilter(); // filter based on dominance of nodes
-      }
-    } else if (useDominance) {
-      dominanceFilter(); // filter based on dominance of nodes
+      sccsBasedPruning(store);
     }
+
+    // the arcs are still those of the current domains when the components pruned nothing
+    if (useDominance && !store.propagationHasOccurred) {
+      if (dominanceWait > 0) {
+        dominanceWait--;
+      } else {
+        dominanceFilter();
+        if (store.propagationHasOccurred) {
+          dominanceSkip = 0;
+        } else {
+          dominanceSkip = Math.min(2 * dominanceSkip + 1, maxDominanceSkip);
+        }
+        dominanceWait = dominanceSkip;
+      }
+    }
+
     if (store.propagationHasOccurred) {
       store.addChanged(this);
     }
@@ -172,12 +219,6 @@ public class Subcircuit extends Alldiff {
     }
     return IntDomain.ANY;
   }
-
-  // --- Strongly Connected Conmponents
-
-  // Uses Trajan's algorithm to find strongly connected components
-  // Based on the algorithm from the book
-  // Robert Sedgewick, Algorithms, 1988, p. 482.
 
   boolean needsListPruning() {
 
@@ -205,17 +246,29 @@ public class Subcircuit extends Alldiff {
   @Override
   public boolean satisfied() {
 
-    if (grounded.value() != list.length) {
+    if (grounded.value() != list.length || !super.satisfied()) {
       return false;
     }
 
-    boolean sat = super.satisfied(); // alldifferent
-
-    if (sat) {
-      // check if there are subcricuits that together cover all nodes
-      sat = sccs() == list.length;
+    // the nodes that do not point to themselves must form a single cycle
+    int start = -1;
+    int inCircuit = 0;
+    for (int v = 0; v < list.length; v++) {
+      if (list[v].value() != v + 1) {
+        start = v;
+        inCircuit++;
+      }
     }
-    return sat;
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int v = start;
+    do {
+      v = list[v].value() - 1;
+      length++;
+    } while (v != start && length <= inCircuit);
+    return v == start && length == inCircuit;
   }
 
   @Override
@@ -229,118 +282,121 @@ public class Subcircuit extends Alldiff {
     return result.toString();
   }
 
-  private void sccsBasedPruning(Store store) {
-    Arrays.fill(val, 0);
-    idd = 0;
-    BitSet realCycle = null;
-
-    for (int i = 0; i < list.length; i++) {
-      sccLength = 0;
-      if (val[i] != 0) {
-        continue;
+  private void collectArcs() {
+    int n = list.length;
+    arcCount = 0;
+    for (int v = 0; v < n; v++) {
+      IntDomain d = list[v].domain;
+      if (arcCount + d.getSize() > arcTo.length) {
+        arcTo = Arrays.copyOf(arcTo, Math.max(2 * arcTo.length, arcCount + d.getSize()));
       }
-      visit(i);
-      if (sccLength == 1) {
-        list[i].domain.inValue(store.level, list[i], i + 1);
-      }
-      realCycle = checkCycleAndGetRealCycle(realCycle);
-    }
-
-    if (realCycle != null && realCycle.cardinality() < list.length) {
-      for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1)) {
-        list[j].domain.inValue(store.level, list[j], j + 1);
+      selfLoop[v] = false;
+      arcStart[v] = arcCount;
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int w = e.nextElement() - 1;
+        if (w == v) {
+          selfLoop[v] = true;
+        } else {
+          arcTo[arcCount++] = w;
+        }
       }
     }
+    arcStart[n] = arcCount;
   }
 
-  /** Checks the current cycleVar for validity; returns the BitSet to use as realCycle or throws. */
-  private BitSet checkCycleAndGetRealCycle(BitSet currentRealCycle) {
-    for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
-      if (!list[cv].domain.contains(cv + 1)) {
-        if (currentRealCycle != null) {
+  // A node alone in its component cannot be on a cycle, the nodes that must be on the circuit have
+  // to share one component, nodes outside that component stay out of the circuit, and an arc
+  // between two components is on no cycle.
+  private void sccsBasedPruning(Store store) {
+    stronglyConnectedComponents();
+    int n = list.length;
+    int circuitComp = -1;
+    for (int v = 0; v < n; v++) {
+      if (!selfLoop[v]) {
+        if (circuitComp == -1) {
+          circuitComp = comp[v];
+        } else if (circuitComp != comp[v]) {
           throw Store.failException;
         }
-        return cycleVar;
       }
     }
-    return currentRealCycle;
-  }
-
-  private int sccs() {
-
-    int totalNodes = 0;
-
-    Arrays.fill(val, 0);
-
-    idd = 0;
-
-    for (int i = 0; i < list.length; i++) {
-
-      sccLength = 0;
-
-      if (val[i] == 0) {
-
-        visit(i);
-
-        totalNodes += sccLength;
-      }
-    }
-
-    return totalNodes;
-  }
-
-  private int visit(int k) {
-
-    idd++;
-    val[k] = idd;
-    int min = idd;
-
-    // stack push
-    stack[stackPointer++] = k;
-
-    for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
-
-      int t = e.nextElement() - 1;
-
-      int m;
-      if (val[t] == 0) {
-        m = visit(t);
+    for (int v = 0; v < n; v++) {
+      if (compSize[comp[v]] == 1 || (circuitComp != -1 && comp[v] != circuitComp)) {
+        list[v].domain.inValue(store.level, list[v], v + 1);
       } else {
-        m = val[t];
-      }
-      if (m < min) {
-        min = m;
+        for (int a = arcStart[v]; a < arcStart[v + 1]; a++) {
+          int w = arcTo[a];
+          if (comp[w] != comp[v]) {
+            list[v].domain.inComplement(store.level, list[v], w + 1);
+          }
+        }
       }
     }
+  }
 
-    if (min == val[k]) {
-
-      cycleVar = new BitSet(list.length);
-      sccLength = 0;
-
-      int n;
-      do {
-        // stack pop
-        n = stack[--stackPointer];
-        cycleVar.set(n);
-
-        val[n] = list.length + 1;
-
-        sccLength++;
-      } while (n != k);
+  // Tarjan's algorithm over the collected arcs, without recursion.
+  private void stronglyConnectedComponents() {
+    int n = list.length;
+    Arrays.fill(tarjanIndex, -1);
+    int index = 0;
+    int sp = 0;
+    compCount = 0;
+    for (int s = 0; s < n; s++) {
+      if (tarjanIndex[s] != -1) {
+        continue;
+      }
+      int top = 0;
+      callStack[0] = s;
+      callArc[0] = arcStart[s];
+      tarjanIndex[s] = index;
+      tarjanLow[s] = index++;
+      tarjanStack[sp++] = s;
+      comp[s] = -1;
+      while (top >= 0) {
+        int v = callStack[top];
+        int a = callArc[top];
+        if (a < arcStart[v + 1]) {
+          callArc[top] = a + 1;
+          int w = arcTo[a];
+          if (tarjanIndex[w] == -1) {
+            tarjanIndex[w] = index;
+            tarjanLow[w] = index++;
+            tarjanStack[sp++] = w;
+            comp[w] = -1;
+            top++;
+            callStack[top] = w;
+            callArc[top] = arcStart[w];
+          } else if (comp[w] == -1 && tarjanIndex[w] < tarjanLow[v]) {
+            // w is still on the stack
+            tarjanLow[v] = tarjanIndex[w];
+          }
+          continue;
+        }
+        if (tarjanLow[v] == tarjanIndex[v]) {
+          int size = 0;
+          int w;
+          do {
+            w = tarjanStack[--sp];
+            comp[w] = compCount;
+            size++;
+          } while (w != v);
+          compSize[compCount++] = size;
+        }
+        top--;
+        if (top >= 0 && tarjanLow[v] < tarjanLow[callStack[top]]) {
+          tarjanLow[callStack[top]] = tarjanLow[v];
+        }
+      }
     }
-
-    return min;
   }
 
   private void dominanceFilter() {
     int n = list.length;
 
-    // find possible roots
-    int[] possibleRoots = new int[n];
+    // possible roots are the nodes that must be in the circuit
     int pr = 0;
     for (int v = 0; v < n; v++) {
-      if (!list[v].dom().contains(v + 1)) {
+      if (!selfLoop[v]) {
         possibleRoots[pr++] = v;
       }
     }
@@ -350,38 +406,31 @@ public class Subcircuit extends Alldiff {
     }
   }
 
+  // Graph from a source n that replaces the root's outgoing arcs and reaches every node that may
+  // stay out of the circuit. If w dominates v there, arc v -> w closes a cycle without the root.
   private boolean graphDominance(int root) {
     int n = list.length;
-    graphDominance.init();
-    buildGraphForDominance(root, n);
-    if (!graphDominance.dominators(n)) {
-      throw Store.failException;
-    }
-    return applyGraphDominancePruning(root, n);
-  }
-
-  private void buildGraphForDominance(int root, int n) {
+    graphDominance.clear();
     for (int v = 0; v < n; v++) {
-      for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int w = e.nextElement() - 1;
-        if (v == root || v == w) {
-          graphDominance.addArc(n, w);
-        } else {
-          graphDominance.addArc(v, w);
-        }
+      if (selfLoop[v]) {
+        graphDominance.addArc(n, v);
+      }
+      int from = v == root ? n : v;
+      for (int a = arcStart[v]; a < arcStart[v + 1]; a++) {
+        graphDominance.addArc(from, arcTo[a]);
       }
     }
-  }
-
-  private boolean applyGraphDominancePruning(int root, int n) {
+    if (!graphDominance.compute(n)) {
+      throw Store.failException;
+    }
     boolean pruning = false;
     for (int v = 0; v < n; v++) {
       if (v == root) {
         continue;
       }
-      for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int w = e.nextElement() - 1;
-        if (v != w && graphDominance.dominatedBy(v, w)) {
+      for (int a = arcStart[v]; a < arcStart[v + 1]; a++) {
+        int w = arcTo[a];
+        if (graphDominance.dominates(w, v)) {
           pruning = true;
           list[v].domain.inComplement(store.level, list[v], w + 1);
           list[w].domain.inComplement(store.level, list[w], w + 1);
@@ -391,38 +440,31 @@ public class Subcircuit extends Alldiff {
     return pruning;
   }
 
+  // The same on the reversed graph: if v dominates w there, arc v -> w closes a cycle without the
+  // root.
   private boolean reversedGraphDominance(int root) {
     int n = list.length;
-    graphDominance.init();
-    buildReversedGraphForDominance(root, n);
-    if (!graphDominance.dominators(n)) {
-      throw Store.failException;
-    }
-    return applyReversedDominancePruning(root, n);
-  }
-
-  private void buildReversedGraphForDominance(int root, int n) {
+    graphDominance.clear();
     for (int v = 0; v < n; v++) {
-      for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int w = e.nextElement() - 1;
-        if (w == root || v == w) {
-          graphDominance.addArc(n, v);
-        } else {
-          graphDominance.addArc(w, v);
-        }
+      if (selfLoop[v]) {
+        graphDominance.addArc(n, v);
+      }
+      for (int a = arcStart[v]; a < arcStart[v + 1]; a++) {
+        int w = arcTo[a];
+        graphDominance.addArc(w == root ? n : w, v);
       }
     }
-  }
-
-  private boolean applyReversedDominancePruning(int root, int n) {
+    if (!graphDominance.compute(n)) {
+      throw Store.failException;
+    }
     boolean pruning = false;
     for (int v = 0; v < n; v++) {
       if (v == root) {
         continue;
       }
-      for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int w = e.nextElement() - 1;
-        if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
+      for (int a = arcStart[v]; a < arcStart[v + 1]; a++) {
+        int w = arcTo[a];
+        if (w != root && graphDominance.dominates(v, w)) {
           pruning = true;
           list[v].domain.inComplement(store.level, list[v], w + 1);
           list[v].domain.inComplement(store.level, list[v], v + 1);
