@@ -231,6 +231,39 @@ class FlatzincFrontEndTest {
     assertEquals(expected, solveAll(fzn));
   }
 
+  @Test
+  void strictFloatLinearRejectsASumEqualToTheBound() throws IOException {
+    // -0.5 * x < 1 accepted x = -2: the product was rounded outward to [prev(1), next(1)], which
+    // the strict check min >= 1 never rejects.
+    String fzn =
+        """
+        var -2..2: i:: output_var;
+        var -2.0..2.0: x;
+        constraint int2float(i,x);
+        constraint float_lin_lt([-0.5],[x],1.0);
+        solve satisfy;
+        """;
+    String reified =
+        """
+        var -2..2: i:: output_var;
+        var bool: b:: output_var;
+        var -2.0..2.0: x;
+        constraint int2float(i,x);
+        constraint float_lin_lt_reif([-0.5],[x],1.0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(Set.of("i = -1;", "i = 0;", "i = 1;", "i = 2;"), solveAll(fzn));
+    assertEquals(
+        Set.of(
+            "b = false; i = -2;",
+            "b = true; i = -1;",
+            "b = true; i = 0;",
+            "b = true; i = 1;",
+            "b = true; i = 2;"),
+        solveAll(reified));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
     return new TreeSet<>(solveAllInOrder(model));
   }
