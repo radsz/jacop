@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Alldiff constraint assures that all FDVs has different values. It uses bounds consistency
@@ -79,6 +80,11 @@ public class Alldiff extends Alldifferent {
 
   private Element[] minsorted;
   private Element[] maxsorted;
+
+  // Alldiff is woken on bound changes, but only grounded variables need their value removed from
+  // the others, so only those are queued, in the order they became grounded.
+  private IntVar[] groundedQueue = new IntVar[8];
+  private int groundedQueueSize;
 
   /** Protected constructor for subclassing purposes. */
   protected Alldiff() {}
@@ -144,11 +150,7 @@ public class Alldiff extends Alldifferent {
 
     if (store.currentQueue == queueIndex) {
 
-      int groundPos = grounded.value();
-      while (!variableQueue.isEmpty()) {
-        groundPos = processGroundedVariables(store, groundPos);
-      }
-      grounded.update(groundPos);
+      grounded.update(processGroundedQueue(store, grounded.value()));
 
       if (queueIndex + 1 < store.queueNo) {
         store.changed[queueIndex + 1].add(this);
@@ -165,14 +167,56 @@ public class Alldiff extends Alldifferent {
       updateLb();
       updateUb();
 
-      if (!variableQueue.isEmpty()) {
-        int groundPos = grounded.value();
-        while (!variableQueue.isEmpty()) {
-          groundPos = processGroundedVariables(store, groundPos);
-        }
-        grounded.update(groundPos);
+      if (groundedQueueSize > 0) {
+        grounded.update(processGroundedQueue(store, grounded.value()));
       }
     } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (v.singleton()) {
+      if (groundedQueueSize == groundedQueue.length) {
+        groundedQueue = Arrays.copyOf(groundedQueue, 2 * groundedQueueSize);
+      }
+      groundedQueue[groundedQueueSize++] = (IntVar) v;
+    }
+  }
+
+  /**
+   * Removes the values of queued grounded variables from all not grounded variables. Variables
+   * grounded by this pruning are queued and processed in the same call.
+   *
+   * @param store the constraint store
+   * @param groundPos the position of the first not grounded variable in list
+   * @return the updated position of the first not grounded variable
+   */
+  private int processGroundedQueue(Store store, int groundPos) {
+    try {
+      for (int k = 0; k < groundedQueueSize; k++) {
+        IntVar q = groundedQueue[k];
+        if (!q.singleton()) {
+          continue;
+        }
+        int qPos = positionMapping.get(q);
+        if (qPos > groundPos) {
+          list[qPos] = list[groundPos];
+          list[groundPos] = q;
+          positionMapping.put(q, groundPos);
+          positionMapping.put(list[qPos], qPos);
+        } else if (qPos < groundPos) {
+          continue;
+        }
+        groundPos++;
+        int value = q.min();
+        for (int i = groundPos; i < list.length; i++) {
+          list[i].domain.inComplement(store.level, list[i], value);
+        }
+      }
+    } finally {
+      groundedQueueSize = 0;
+    }
+    return groundPos;
   }
 
   /**

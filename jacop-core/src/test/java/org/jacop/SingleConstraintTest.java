@@ -551,6 +551,73 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void circuitAndSubcircuitSolutionCountsMatchBruteForce() {
+    Random random = new Random(5);
+    for (int trial = 0; trial < 300; trial++) {
+      int n = 2 + random.nextInt(5);
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] =
+            random.ints(1, n + 1).limit(1 + random.nextInt(n)).distinct().sorted().toArray();
+      }
+      for (boolean sub : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        store.impose(sub ? new Subcircuit(x) : new Circuit(x));
+        int expected = circuitSolutions(domains, new int[n], 0, sub);
+        int actual = store.consistency() ? noOfAllSolutions(store, x) : 0;
+        assertThat(actual)
+            .as("trial %d, subcircuit %b, domains %s", trial, sub, Arrays.deepToString(domains))
+            .isEqualTo(expected);
+      }
+    }
+  }
+
+  private static int circuitSolutions(int[][] domains, int[] values, int i, boolean sub) {
+    int n = values.length;
+    if (i == n) {
+      boolean[] seen = new boolean[n];
+      int inCycle = 0;
+      int start = -1;
+      for (int j = 0; j < n; j++) {
+        if (seen[values[j] - 1]) {
+          return 0;
+        }
+        seen[values[j] - 1] = true;
+        if (values[j] != j + 1) {
+          inCycle++;
+          start = j;
+        }
+      }
+      if (!sub && inCycle < n) {
+        return 0;
+      }
+      if (start < 0) {
+        return 1;
+      }
+      int length = 0;
+      int j = start;
+      do {
+        j = values[j] - 1;
+        length++;
+      } while (j != start);
+      return length == inCycle ? 1 : 0;
+    }
+    int count = 0;
+    for (int v : domains[i]) {
+      values[i] = v;
+      count += circuitSolutions(domains, values, i + 1, sub);
+    }
+    return count;
+  }
+
+  @Test
   void circuitWakesUpOnHoleRemoval() {
     // Circuit inherited the BOUND pruning event of Alldiff, so removing an inner value did not
     // re-run it. Here no variable can take 3 any more, so node 3 has no predecessor.

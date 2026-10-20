@@ -96,6 +96,13 @@ public class Circuit extends Alldiff implements Stateful {
     this(list.toArray(new IntVar[0]));
   }
 
+  // Alldiff queues only grounded variables, but consistency() here reads every changed variable
+  // from variableQueue.
+  @Override
+  public void queueVariable(int level, Var v) {
+    variableQueue.add((IntVar) v);
+  }
+
   @Override
   public void consistency(Store store) {
 
