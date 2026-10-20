@@ -543,6 +543,49 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new AlldifferentExcept(xs, s));
   }
 
+  /**
+   * Posts all_different on optional variables: x holds the values and occurs whether each variable
+   * is present. A present variable keeps its value and an absent one takes a value below every
+   * domain, which AlldifferentExcept leaves out.
+   */
+  void gen_jacop_alldifferent_opt(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] occurs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+    int dummy = IntDomain.MAX_INT;
+    for (IntVar v : x) {
+      dummy = Math.min(dummy, v.min());
+    }
+    dummy--;
+
+    ArrayList<IntVar> values = new ArrayList<>();
+    Set<IntVar> seen = new HashSet<>();
+    for (int i = 0; i < x.length; i++) {
+      if (occurs[i].singleton(0)) {
+        continue;
+      }
+      IntVar xi = x[i];
+      if (seen.contains(xi)) {
+        IntVar copy = new IntVar(store, xi.dom().cloneLight());
+        support.pose(new XeqY(xi, copy));
+        xi = copy;
+      }
+      seen.add(x[i]);
+      if (occurs[i].singleton(1)) {
+        values.add(xi);
+      } else {
+        IntDomain dom = xi.dom().cloneLight();
+        dom.unionAdapt(dummy, dummy);
+        IntVar y = new IntVar(store, dom);
+        support.pose(new IfThenElse(new XeqC(occurs[i], 1), new XeqY(xi, y), new XeqC(y, dummy)));
+        values.add(y);
+      }
+    }
+    if (values.size() > 1) {
+      support.pose(new AlldifferentExcept(values, new IntervalDomain(dummy, dummy)));
+    }
+  }
+
   void gen_jacop_among_var(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] s = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -903,6 +946,46 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     support.pose(new Reified(new CountVar(x, c, y), b));
+  }
+
+  /** Poses count(x, y) + k {@literal <=} c (count_geq, count_gt with a variable value or count). */
+  void gen_jacop_count_var_le(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    support.pose(new XplusClteqZ(countOf(x, y), k, c));
+  }
+
+  /** Poses count(x, y) {@literal >=} c + k (count_leq, count_lt with a variable value or count). */
+  void gen_jacop_count_var_ge(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    support.pose(new XplusClteqZ(c, k, countOf(x, y)));
+  }
+
+  /** Returns a variable equal to the number of variables of x equal to y. */
+  private IntVar countOf(IntVar[] x, IntVar y) {
+    ArrayList<IntVar> xs = new ArrayList<>();
+    for (IntVar v : x) {
+      if (v.domain.isIntersecting(y.domain)) {
+        xs.add(v);
+      }
+    }
+    IntVar counter = new IntVar(store, 0, xs.size());
+    if (xs.isEmpty()) {
+      return counter;
+    }
+    if (y.singleton()) {
+      support.pose(new Count(xs, counter, y.value()));
+    } else {
+      support.pose(new CountVar(xs, counter, y));
+    }
+    return counter;
   }
 
   void gen_jacop_atleast(SimpleNode node) {
@@ -1410,6 +1493,53 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
+  }
+
+  /**
+   * Posts regular_nfa: d is the flattened array of the sets of next states, with rows indexed by
+   * states from minState and columns by symbols from minSymbol; only the symbols in S are allowed.
+   * Regular accepts several transitions from a state with the same symbol.
+   */
+  void gen_jacop_regular_nfa(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntDomain symbols = support.getSetLiteral(node, 2);
+    IntDomain[] d = support.getSetArray((SimpleNode) node.jjtGetChild(3));
+    int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    IntDomain finalStates = support.getSetLiteral(node, 5);
+    int minState = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    int minSymbol = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(7));
+    int columns = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(8));
+
+    IntVar[] xx = removeDuplicates(x);
+
+    Object[] dfaParts = buildDfaStructure(numStates, q0, finalStates.intersect(1, numStates));
+    Fsm nfa = (Fsm) dfaParts[0];
+    FsmState[] s = (FsmState[]) dfaParts[1];
+
+    for (int q = 1; q <= numStates; q++) {
+      int row = q - minState;
+      if (row < 0 || (row + 1) * columns > d.length) {
+        continue;
+      }
+      Map<Integer, IntDomain> condition = new HashMap<>();
+      for (int j = 0; j < columns; j++) {
+        int symbol = minSymbol + j;
+        if (!symbols.contains(symbol)) {
+          continue;
+        }
+        ValueEnumeration next = d[row * columns + j].valueEnumeration();
+        while (next.hasMoreElements()) {
+          int nextState = next.nextElement();
+          if (nextState >= 1 && nextState <= numStates) {
+            addTransitionValue(condition, nextState - 1, symbol);
+          }
+        }
+      }
+      addTransitionsFromCondition(s[q - 1], condition, s);
+    }
+
+    support.delayedConstraints.add(new Regular(nfa, xx));
   }
 
   void gen_jacop_mdd(SimpleNode node) {

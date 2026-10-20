@@ -588,6 +588,41 @@ public final class ConstraintFncs {
     gc.gen_jacop_count_var(n);
   }
 
+  /** Handles the jacop_count_var_le FlatZinc constraint. */
+  public void jacop_count_var_le(SimpleNode n) {
+    gc.gen_jacop_count_var_le(n);
+  }
+
+  /** Handles the jacop_count_var_ge FlatZinc constraint. */
+  public void jacop_count_var_ge(SimpleNode n) {
+    gc.gen_jacop_count_var_ge(n);
+  }
+
+  /** Handles the jacop_regular_nfa FlatZinc constraint. */
+  public void jacop_regular_nfa(SimpleNode n) {
+    gc.gen_jacop_regular_nfa(n);
+  }
+
+  /** Handles the jacop_alldifferent_opt FlatZinc constraint. */
+  public void jacop_alldifferent_opt(SimpleNode n) {
+    gc.gen_jacop_alldifferent_opt(n);
+  }
+
+  /** Handles the jacop_sum_set FlatZinc constraint. */
+  public void jacop_sum_set(SimpleNode n) {
+    sc.gen_jacop_sum_set(n);
+  }
+
+  /** Handles the jacop_array_var_int_element_nonshifted FlatZinc constraint. */
+  public void jacop_array_var_int_element_nonshifted(SimpleNode n) {
+    ec.gen_jacop_array_var_int_element_nonshifted(n);
+  }
+
+  /** Handles the jacop_array_var_bool_element_nonshifted FlatZinc constraint. */
+  public void jacop_array_var_bool_element_nonshifted(SimpleNode n) {
+    ec.gen_jacop_array_var_int_element_nonshifted(n);
+  }
+
   /** Handles the jacop_count_var_reif FlatZinc constraint. */
   public void jacop_count_var_reif(SimpleNode n) {
     gc.gen_jacop_count_var_reif(n);

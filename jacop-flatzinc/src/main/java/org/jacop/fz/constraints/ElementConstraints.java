@@ -79,6 +79,16 @@ class ElementConstraints implements ParserTreeConstants {
     generateVarElementConstraint(node);
   }
 
+  /**
+   * Element on an array whose first index is the fourth argument (array_var_int_element_nonshifted
+   * and array_var_bool_element_nonshifted), so no auxiliary variable is needed for the shifted
+   * index.
+   */
+  void gen_jacop_array_var_int_element_nonshifted(SimpleNode node) {
+    int first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    generateVarElementConstraint(node, first);
+  }
+
   void gen_array_var_set_element(SimpleNode node) {
     generateVarSetElementConstraint(node);
   }
@@ -101,21 +111,25 @@ class ElementConstraints implements ParserTreeConstants {
     int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    poseElementInteger(p1, p2, p3);
+    poseElementInteger(p1, p2, p3, 1);
   }
 
-  void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
-    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
+  /** Poses p2[p1] = p3 where first is the index of p2[0]. */
+  void poseElementInteger(IntVar p1, int[] p2, IntVar p3, int first) {
+    p1.domain.in(store.level, p1, first, IntDomain.MAX_INT);
 
-    int[] newP2 = extractSubArray(p1, p2);
+    int[] newP2 = extractSubArray(p1, p2, first);
+    if (newP2.length == 0) {
+      throw Store.failException;
+    }
 
     if (p2.length > 1 && allEqual(p2)) {
       p3.domain.in(store.level, p3, p2[0], p2[0]);
-      p1.domain.in(store.level, p1, 1, p2.length);
+      p1.domain.in(store.level, p1, first, first + p2.length - 1);
       return;
     }
 
-    if (p1.singleton(1) && newP2.length == 1) {
+    if (p1.singleton() && newP2.length == 1) {
       support.pose(new XeqC(p3, newP2[0]));
     } else if (support.options.getBoundConsistency()) {
       support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
@@ -131,7 +145,7 @@ class ElementConstraints implements ParserTreeConstants {
 
     p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
 
-    int[] newP2 = extractSubArray(p1, p2);
+    int[] newP2 = extractSubArray(p1, p2, 1);
 
     if (p2.length > 1 && allEqual(p2)) {
       p3.domain.in(store.level, p3, p2[0], p2[0]);
@@ -146,17 +160,23 @@ class ElementConstraints implements ParserTreeConstants {
     }
   }
 
-  private int[] extractSubArray(IntVar p1, int[] p2) {
+  /** Returns the part of p2 from index p1.min(), where first is the index of p2[0]. */
+  private int[] extractSubArray(IntVar p1, int[] p2, int first) {
     int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = Math.min(p2.length, newP2Length);
+    int listLength = Math.max(0, Math.min(p2.length - (p1.min() - first), newP2Length));
     int[] newP2 = new int[listLength];
     for (int i = 0; i < listLength; i++) {
-      newP2[i] = p2[p1.min() - 1 + i];
+      newP2[i] = p2[p1.min() - first + i];
     }
     return newP2;
   }
 
   void generateVarElementConstraint(SimpleNode node) throws FailException {
+    generateVarElementConstraint(node, 1);
+  }
+
+  /** Poses array_var_int_element where first is the index of the first array element. */
+  void generateVarElementConstraint(SimpleNode node, int first) throws FailException {
     IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
     IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
@@ -168,18 +188,21 @@ class ElementConstraints implements ParserTreeConstants {
         p2int[i] = p2var[i].value();
       }
 
-      poseElementInteger(p1, p2int, p3);
+      poseElementInteger(p1, p2int, p3, first);
     } else {
-      p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
+      p1.domain.in(store.level, p1, first, IntDomain.MAX_INT);
 
       int newP2Length = p1.max() - p1.min() + 1;
-      int listLength = Math.min(p2var.length, newP2Length);
+      int listLength = Math.max(0, Math.min(p2var.length - (p1.min() - first), newP2Length));
       IntVar[] newP2 = new IntVar[listLength];
       for (int i = 0; i < listLength; i++) {
-        newP2[i] = p2var[p1.min() - 1 + i];
+        newP2[i] = p2var[p1.min() - first + i];
+      }
+      if (newP2.length == 0) {
+        throw Store.failException;
       }
 
-      if (p1.singleton(1) && newP2.length == 1) {
+      if (p1.singleton() && newP2.length == 1) {
         support.pose(new XeqY(newP2[0], p3));
       } else if (support.boundsConsistency || support.options.getBoundConsistency()) {
         support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
