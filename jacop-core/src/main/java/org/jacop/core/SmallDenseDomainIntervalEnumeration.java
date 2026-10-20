@@ -66,17 +66,16 @@ public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
       throw new IllegalStateException("No more elements");
     }
 
-    while (bits > 0) {
-      current++;
-      bits = bits << 1;
-    }
+    int zeros = Long.numberOfLeadingZeros(bits);
+    current += zeros;
+    bits = bits << zeros;
 
     int min = current;
 
-    while (bits < 0) {
-      current++;
-      bits = bits << 1;
-    }
+    int ones = Long.numberOfLeadingZeros(~bits);
+    current += ones;
+    // a shift by 64 is a shift by 0 in Java, the interval may end at the last bit
+    bits = ones == 64 ? 0 : bits << ones;
 
     return new Interval(min, current - 1);
   }
