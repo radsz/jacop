@@ -1,0 +1,1125 @@
+/*
+ * HybridTable.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.table;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
+/**
+ * HybridTable is a table constraint whose tuples may contain restrictions instead of values: the
+ * wildcard {@code *} of short tables, {@code != v}, {@code < v}, {@code <= v}, {@code > v}, {@code
+ * >= v}, {@code in S}, {@code not in S}, and comparisons with another column of the same tuple such
+ * as {@code x[i] <= x[j] + c}. A tuple of values is allowed if some hybrid tuple accepts it in
+ * every column. Such tables are called hybrid tables (Lecoutre et al., IJCAI 2026) or smart tables
+ * (Mairy, Deville and Lecoutre, CPAIOR 2015). Ordinary tables, short tables and compressed tables
+ * are special cases.
+ *
+ * <p>Filtering follows CT^bs, "Extending Compact-Table to Basic Smart Tables", Hélène Verhaeghe,
+ * Christophe Lecoutre, Yves Deville and Pierre Schaus, CP 2017, which builds on Compact-Table
+ * (Demeulenaere et al., CP 2016) and CT* (Verhaeghe, Lecoutre and Schaus, AAAI 2017). The valid
+ * hybrid tuples are kept in a reversible sparse bit-set. The values of each column are split into
+ * classes, the constants of the column and the intervals between them, so that every unary
+ * restriction accepts whole classes; this keeps the bit-sets small even for huge domains. When a
+ * variable loses values the bit-set is updated either from the classes that remain (reset) or
+ * incrementally from the classes that were removed, with dedicated bit-sets for tuples whose column
+ * is {@code = v}, {@code != v}, a lower or an upper bound. Tuples with restrictions between columns
+ * are also kept in the bit-set, and in addition are checked one by one, as in tabular reduction, by
+ * arc consistency on their restrictions.
+ *
+ * <p>The constraint achieves generalized arc consistency when the restrictions between columns of
+ * each tuple form a forest, which includes all tables without such restrictions. Otherwise it
+ * enforces arc consistency on each tuple and is weaker, but still correct.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public class HybridTable extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** Variables within the scope of the constraint. */
+  final IntVar[] x;
+
+  /** The hybrid tuples. */
+  final Restriction[][] tuples;
+
+  private final Map<IntVar, Integer> varMap;
+
+  private final int arity;
+
+  private Store store;
+
+  /** Number of 64-bit words of the bit-sets. */
+  private int words;
+
+  // Value classes of each column: constants[i] are the sorted constants mentioned by the unary
+  // restrictions of column i. Class 2p + 1 is the constant constants[i][p] and class 2p the
+  // interval between constants[i][p - 1] and constants[i][p] (both excluded, unbounded at the
+  // ends). Every unary restriction accepts whole classes.
+  private int[][] constants;
+  private int[][] classMin;
+  private int[][] classMax;
+
+  /** The tuples whose restriction on column i accepts class c, null when there are none. */
+  private long[][][] supports;
+
+  /** The tuples whose restriction on column i is {@code = v} for the constant of class c. */
+  private long[][][] equalSupports;
+
+  /** The tuples whose restriction on column i is {@code != v} for the constant of class c. */
+  private long[][][] notEqualSupports;
+
+  // Tuples whose restriction on column i is an upper bound (lower bound, set membership): all of
+  // them, and those that accept class c. An upper bound holds iff it accepts the class of the
+  // minimum, a lower bound iff it accepts the class of the maximum.
+  private long[][] upperAll;
+  private long[][][] upperAccept;
+  private long[][] lowerAll;
+  private long[][][] lowerAccept;
+  private long[][] setAll;
+  private long[][][] setAccept;
+
+  /** Tuples with a restriction between columns, null when there are none. */
+  private long[] binaryAll;
+
+  /** Tuples with a restriction between columns that involves column i. */
+  private long[][] binaryColumn;
+
+  /** For each tuple with restrictions between columns, the columns these involve. */
+  private int[][] binaryColumns;
+
+  /** For each tuple with restrictions between columns, the columns holding such restrictions. */
+  private int[][] binarySources;
+
+  /** The domains of the IN and NOT_IN restrictions, by tuple and column. */
+  private IntDomain[][] setDomains;
+
+  private int[][] residues;
+
+  /** The classes of each column that may still intersect its domain, first liveSize of them. */
+  private int[][] live;
+
+  // Reversible sparse bit-set of the valid tuples, as in Compact-Table: the non-zero words are
+  // index[0..limit]. State records 0..words-1 hold the words, record words holds the limit and
+  // record words + 1 + i the number of live classes of column i. All records are trailed.
+  private long[] state;
+  private int[] index;
+  private long[] mask;
+  private long[] temp;
+  private int limitRecord;
+  private int liveRecord;
+
+  private int[] savedEpoch;
+  private int epoch;
+  private int epochLevel = -1;
+  private long[] trail = new long[64];
+  private int trailTop;
+  private int[] markLevel = new int[16];
+  private int[] markPosition = new int[16];
+  private int markTop;
+  private int currentLevel;
+
+  /** Position of each variable indexed by its store index minus indexOffset, or -1. */
+  private int[] positionByIndex;
+
+  private int indexOffset;
+
+  private int[] queue;
+  private int queueSize;
+  private boolean[] queued;
+  private boolean pruning;
+  private boolean firstConsistency = true;
+
+  /** Set when the current consistency call removed tuples. */
+  private boolean tableChanged;
+
+  // Work space of the tuples with restrictions between columns.
+  private IntDomain[] work;
+  private IntDomain[] binarySupport;
+
+  /**
+   * It constructs a hybrid table constraint.
+   *
+   * @param list the variables in the scope of the constraint.
+   * @param tuples the hybrid tuples, each with one restriction per variable.
+   */
+  public HybridTable(IntVar[] list, Restriction[][] tuples) {
+
+    checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
+    checkInputForDuplication("list", list);
+    this.arity = list.length;
+    for (Restriction[] tuple : tuples) {
+      if (tuple == null || tuple.length != arity) {
+        throw new IllegalArgumentException(
+            "HybridTable: each tuple needs one restriction per variable");
+      }
+      for (int i = 0; i < arity; i++) {
+        Restriction r = tuple[i];
+        if (r == null) {
+          throw new IllegalArgumentException("HybridTable: a restriction is null");
+        }
+        if (r.isBinary() && (r.column >= arity || r.column == i)) {
+          throw new IllegalArgumentException(
+              "HybridTable: restriction " + r + " of column " + i + " refers to a wrong column");
+        }
+      }
+    }
+    this.x = Arrays.copyOf(list, list.length);
+    this.tuples = Arrays.stream(tuples).map(Restriction[]::clone).toArray(Restriction[][]::new);
+    this.varMap = Var.positionMapping(list, false, this.getClass());
+    this.queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    setScope(list);
+  }
+
+  /**
+   * It constructs a short table constraint, a table in which a special value stands for any value.
+   *
+   * @param list the variables in the scope of the constraint.
+   * @param tuples the tuples.
+   * @param star the value which stands for any value.
+   */
+  public HybridTable(IntVar[] list, int[][] tuples, int star) {
+    this(list, toRestrictions(tuples, star));
+  }
+
+  private static Restriction[][] toRestrictions(int[][] tuples, int star) {
+    if (tuples == null) {
+      return null;
+    }
+    Restriction[][] result = new Restriction[tuples.length][];
+    for (int t = 0; t < tuples.length; t++) {
+      result[t] = new Restriction[tuples[t].length];
+      for (int i = 0; i < tuples[t].length; i++) {
+        int v = tuples[t][i];
+        result[t][i] = v == star ? Restriction.any() : Restriction.eq(v);
+      }
+    }
+    return result;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    this.store = store;
+    int n = tuples.length;
+    words = (n + 63) / 64;
+    queue = new int[arity];
+    queued = new boolean[arity];
+    buildClasses();
+    buildSupports();
+
+    state = new long[words + 1 + arity];
+    savedEpoch = new int[state.length];
+    limitRecord = words;
+    liveRecord = words + 1;
+    index = new int[words];
+    for (int w = 0; w < words; w++) {
+      index[w] = w;
+    }
+    mask = new long[words];
+    temp = new long[words];
+    for (int t = 0; t < n; t++) {
+      state[t >> 6] |= 1L << t;
+    }
+    state[limitRecord] = words - 1;
+
+    // Initial live classes and removal of the tuples that are not valid.
+    live = new int[arity][];
+    for (int i = 0; i < arity; i++) {
+      int classes = classMin[i].length;
+      int[] l = new int[classes];
+      int size = 0;
+      IntDomain d = x[i].dom();
+      for (int c = 0; c < classes; c++) {
+        if (classMin[i][c] <= classMax[i][c] && d.isIntersecting(classMin[i][c], classMax[i][c])) {
+          l[size++] = c;
+        }
+      }
+      int removed = size;
+      for (int c = 0; c < classes; c++) {
+        if (classMin[i][c] > classMax[i][c] || !d.isIntersecting(classMin[i][c], classMax[i][c])) {
+          l[removed++] = c;
+        }
+      }
+      live[i] = l;
+      state[liveRecord + i] = size;
+      clearMask();
+      for (int p = 0; p < size; p++) {
+        addToMask(supports[i][l[p]]);
+      }
+      for (int w = 0; w < words; w++) {
+        state[w] &= mask[w];
+      }
+    }
+    // The index lists the non-zero words first.
+    int front = 0;
+    int back = words - 1;
+    for (int w = 0; w < words; w++) {
+      if (state[w] != 0) {
+        index[front++] = w;
+      } else {
+        index[back--] = w;
+      }
+    }
+    state[limitRecord] = front - 1;
+
+    work = new IntDomain[arity];
+    binarySupport = new IntDomain[arity];
+
+    int minIndex = Integer.MAX_VALUE;
+    int maxIndex = Integer.MIN_VALUE;
+    for (IntVar v : x) {
+      minIndex = Math.min(minIndex, v.storeIndex);
+      maxIndex = Math.max(maxIndex, v.storeIndex);
+    }
+    if (minIndex >= 0 && (long) maxIndex - minIndex < 4L * arity + 64) {
+      indexOffset = minIndex;
+      positionByIndex = new int[maxIndex - minIndex + 1];
+      Arrays.fill(positionByIndex, -1);
+      for (int i = 0; i < arity; i++) {
+        positionByIndex[x[i].storeIndex - indexOffset] = i;
+      }
+    }
+
+    super.impose(store);
+  }
+
+  private void buildClasses() {
+    constants = new int[arity][];
+    classMin = new int[arity][];
+    classMax = new int[arity][];
+    for (int i = 0; i < arity; i++) {
+      List<Integer> values = new ArrayList<>();
+      for (Restriction[] tuple : tuples) {
+        Restriction r = tuple[i];
+        switch (r.kind) {
+          case EQ, NE, LE, GE -> values.add(r.value);
+          case IN, NOT_IN -> {
+            for (int v : r.values) {
+              values.add(v);
+            }
+          }
+          default -> {
+            // ANY and COLUMN accept every class.
+          }
+        }
+      }
+      int[] cs = values.stream().mapToInt(Integer::intValue).sorted().distinct().toArray();
+      constants[i] = cs;
+      int classes = 2 * cs.length + 1;
+      classMin[i] = new int[classes];
+      classMax[i] = new int[classes];
+      for (int c = 0; c < classes; c++) {
+        int p = c >> 1;
+        if ((c & 1) == 1) {
+          classMin[i][c] = cs[p];
+          classMax[i][c] = cs[p];
+        } else {
+          long lo = p == 0 ? IntDomain.MIN_INT : (long) cs[p - 1] + 1;
+          long hi = p == cs.length ? IntDomain.MAX_INT : (long) cs[p] - 1;
+          lo = Math.max(lo, IntDomain.MIN_INT);
+          hi = Math.min(hi, IntDomain.MAX_INT);
+          if (lo > hi) {
+            classMin[i][c] = 1;
+            classMax[i][c] = 0;
+          } else {
+            classMin[i][c] = (int) lo;
+            classMax[i][c] = (int) hi;
+          }
+        }
+      }
+    }
+  }
+
+  private int classOf(int i, int v) {
+    int p = Arrays.binarySearch(constants[i], v);
+    return p >= 0 ? 2 * p + 1 : -2 * (p + 1);
+  }
+
+  private static void setBit(long[][] sets, int c, int t, int words) {
+    if (sets[c] == null) {
+      sets[c] = new long[words];
+    }
+    sets[c][t >> 6] |= 1L << t;
+  }
+
+  private static long[] setBit(long[] set, int t, int words) {
+    long[] s = set == null ? new long[words] : set;
+    s[t >> 6] |= 1L << t;
+    return s;
+  }
+
+  private void buildSupports() {
+    int n = tuples.length;
+    supports = new long[arity][][];
+    equalSupports = new long[arity][][];
+    notEqualSupports = new long[arity][][];
+    upperAll = new long[arity][];
+    upperAccept = new long[arity][][];
+    lowerAll = new long[arity][];
+    lowerAccept = new long[arity][][];
+    setAll = new long[arity][];
+    setAccept = new long[arity][][];
+    binaryColumn = new long[arity][];
+    residues = new int[arity][];
+    binaryColumns = new int[n][];
+    binarySources = new int[n][];
+    setDomains = new IntDomain[n][];
+
+    for (int i = 0; i < arity; i++) {
+      int classes = classMin[i].length;
+      long[][] sup = new long[classes][];
+      long[][] eq = new long[classes][];
+      long[][] ne = new long[classes][];
+      long[][] upper = new long[classes][];
+      long[][] lower = new long[classes][];
+      long[][] set = new long[classes][];
+      boolean onlyEquality = true;
+      for (int t = 0; t < n; t++) {
+        Restriction r = tuples[t][i];
+        if (r.kind != Restriction.Kind.EQ) {
+          onlyEquality = false;
+        }
+        switch (r.kind) {
+          case EQ -> {
+            int c = classOf(i, r.value);
+            setBit(sup, c, t, words);
+          }
+          case NE -> {
+            setBit(ne, classOf(i, r.value), t, words);
+            for (int c = 0; c < classes; c++) {
+              if (c != classOf(i, r.value)) {
+                setBit(sup, c, t, words);
+              }
+            }
+          }
+          case LE, GE -> {
+            for (int c = 0; c < classes; c++) {
+              if (classMin[i][c] <= classMax[i][c] && r.accepts(classMin[i][c])) {
+                setBit(sup, c, t, words);
+                setBit(r.kind == Restriction.Kind.LE ? upper : lower, c, t, words);
+              }
+            }
+            if (r.kind == Restriction.Kind.LE) {
+              upperAll[i] = setBit(upperAll[i], t, words);
+            } else {
+              lowerAll[i] = setBit(lowerAll[i], t, words);
+            }
+          }
+          case IN, NOT_IN -> {
+            for (int c = 0; c < classes; c++) {
+              if (classMin[i][c] <= classMax[i][c] && r.accepts(classMin[i][c])) {
+                setBit(sup, c, t, words);
+                setBit(set, c, t, words);
+              }
+            }
+            setAll[i] = setBit(setAll[i], t, words);
+            if (setDomains[t] == null) {
+              setDomains[t] = new IntDomain[arity];
+            }
+            IntDomain d = new IntervalDomain();
+            for (int v : r.values) {
+              d.unionAdapt(v, v);
+            }
+            setDomains[t][i] = d;
+          }
+          default -> {
+            // ANY and COLUMN accept every class.
+            for (int c = 0; c < classes; c++) {
+              setBit(sup, c, t, words);
+            }
+          }
+        }
+      }
+      // The equality tuples of a class are its supports when every restriction is an equality.
+      for (int c = 0; c < classes; c++) {
+        if (onlyEquality) {
+          eq[c] = sup[c];
+        }
+      }
+      if (!onlyEquality) {
+        for (int t = 0; t < n; t++) {
+          Restriction r = tuples[t][i];
+          if (r.kind == Restriction.Kind.EQ) {
+            setBit(eq, classOf(i, r.value), t, words);
+          }
+        }
+      }
+      supports[i] = sup;
+      equalSupports[i] = eq;
+      notEqualSupports[i] = Arrays.stream(ne).allMatch(a -> a == null) ? null : ne;
+      upperAccept[i] = upper;
+      lowerAccept[i] = lower;
+      setAccept[i] = set;
+      residues[i] = new int[classes];
+    }
+
+    for (int t = 0; t < n; t++) {
+      boolean[] involved = new boolean[arity];
+      int sources = 0;
+      for (int i = 0; i < arity; i++) {
+        Restriction r = tuples[t][i];
+        if (r.isBinary()) {
+          involved[i] = true;
+          involved[r.column] = true;
+          sources++;
+        }
+      }
+      if (sources == 0) {
+        continue;
+      }
+      binaryAll = setBit(binaryAll, t, words);
+      int[] cols = new int[arity];
+      int count = 0;
+      for (int i = 0; i < arity; i++) {
+        if (involved[i]) {
+          cols[count++] = i;
+          binaryColumn[i] = setBit(binaryColumn[i], t, words);
+        }
+      }
+      binaryColumns[t] = Arrays.copyOf(cols, count);
+      int[] src = new int[sources];
+      int s = 0;
+      for (int i = 0; i < arity; i++) {
+        if (tuples[t][i].isBinary()) {
+          src[s++] = i;
+        }
+      }
+      binarySources[t] = src;
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Trailing.
+
+  private void newEpochIfNeeded() {
+    currentLevel = store.level;
+    if (epochLevel != currentLevel) {
+      if (epoch == Integer.MAX_VALUE) {
+        Arrays.fill(savedEpoch, 0);
+        epoch = 0;
+      }
+      epoch++;
+      epochLevel = currentLevel;
+    }
+  }
+
+  private void save(int record) {
+    if (savedEpoch[record] == epoch) {
+      return;
+    }
+    savedEpoch[record] = epoch;
+    if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
+      if (markTop == markLevel.length) {
+        markLevel = Arrays.copyOf(markLevel, markTop * 2);
+        markPosition = Arrays.copyOf(markPosition, markTop * 2);
+      }
+      markLevel[markTop] = currentLevel;
+      markPosition[markTop++] = trailTop;
+    }
+    if (trailTop + 2 > trail.length) {
+      trail = Arrays.copyOf(trail, trail.length * 2);
+    }
+    trail[trailTop] = record;
+    trail[trailTop + 1] = state[record];
+    trailTop += 2;
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    if (queueSize == 0 && (markTop == 0 || markLevel[markTop - 1] < level)) {
+      epochLevel = -1;
+      pruning = false;
+      return;
+    }
+    while (markTop > 0 && markLevel[markTop - 1] >= level) {
+      int start = markPosition[--markTop];
+      while (trailTop > start) {
+        trailTop -= 2;
+        state[(int) trail[trailTop]] = trail[trailTop + 1];
+      }
+    }
+    epochLevel = -1;
+    for (int p = 0; p < queueSize; p++) {
+      queued[queue[p]] = false;
+    }
+    queueSize = 0;
+    pruning = false;
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (pruning) {
+      return;
+    }
+    int p;
+    if (positionByIndex != null) {
+      int k = v.storeIndex - indexOffset;
+      p = k >= 0 && k < positionByIndex.length ? positionByIndex[k] : -1;
+    } else {
+      Integer position = varMap.get(v);
+      p = position == null ? -1 : position;
+    }
+    if (p >= 0 && !queued[p]) {
+      queued[p] = true;
+      queue[queueSize++] = p;
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Reversible sparse bit-set.
+
+  private int limit() {
+    return (int) state[limitRecord];
+  }
+
+  private void clearMask() {
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      mask[index[p]] = 0L;
+    }
+  }
+
+  private void addToMask(long[] set) {
+    if (set == null) {
+      return;
+    }
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      mask[w] |= set[w];
+    }
+  }
+
+  /** It adds to the mask the tuples of all that are not in accepted. */
+  private void addToMaskDifference(long[] all, long[] accepted) {
+    int limit = limit();
+    if (accepted == null) {
+      addToMask(all);
+      return;
+    }
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      mask[w] |= all[w] & ~accepted[w];
+    }
+  }
+
+  private void reverseMask() {
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      mask[w] = ~mask[w];
+    }
+  }
+
+  private void intersectWithMask() {
+    int limit = limit();
+    for (int p = limit; p >= 0; p--) {
+      int w = index[p];
+      long old = state[w];
+      long word = old & mask[w];
+      if (word != old) {
+        tableChanged = true;
+        save(w);
+        state[w] = word;
+        if (word == 0L) {
+          index[p] = index[limit];
+          index[limit] = w;
+          limit--;
+        }
+      }
+    }
+    if (limit != limit()) {
+      save(limitRecord);
+      state[limitRecord] = limit;
+    }
+  }
+
+  /** It removes a single tuple from the bit-set. */
+  private void removeTuple(int t, int position) {
+    int w = t >> 6;
+    tableChanged = true;
+    save(w);
+    state[w] &= ~(1L << t);
+    if (state[w] == 0L) {
+      int limit = limit();
+      index[position] = index[limit];
+      index[limit] = w;
+      save(limitRecord);
+      state[limitRecord] = limit - 1;
+    }
+  }
+
+  /** It checks whether the valid tuples, without the excluded ones, meet the set. */
+  private boolean intersects(int i, int c, long[] set, long[] excluded) {
+    int[] res = residues[i];
+    int r = res[c];
+    if (excluded == null) {
+      if ((state[r] & set[r]) != 0L) {
+        return true;
+      }
+    } else if ((state[r] & set[r] & ~excluded[r]) != 0L) {
+      return true;
+    }
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      long word = state[w] & set[w];
+      if (excluded != null) {
+        word &= ~excluded[w];
+      }
+      if (word != 0L) {
+        res[c] = w;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean intersects(long[] set) {
+    int limit = limit();
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      if ((state[w] & set[w]) != 0L) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Propagation.
+
+  @Override
+  public void consistency(Store store) {
+
+    newEpochIfNeeded();
+    pruning = false;
+    tableChanged = false;
+
+    if (limit() < 0) {
+      throw Store.failException;
+    }
+
+    int changed = queueSize;
+    int onlyChanged = queueSize == 1 ? queue[0] : -1;
+    for (int p = 0; p < queueSize; p++) {
+      int i = queue[p];
+      queued[i] = false;
+      updateTable(i);
+    }
+    queueSize = 0;
+
+    if (binaryAll != null) {
+      reviseBinaryTuples();
+    }
+
+    if (firstConsistency) {
+      firstConsistency = false;
+      onlyChanged = -1;
+      changed = arity;
+    } else if (!tableChanged && (binaryAll == null || !intersects(binaryAll))) {
+      // The valid tuples are those of the previous call, which supported every remaining value.
+      return;
+    }
+
+    pruning = true;
+    int notGround = 0;
+    for (int i = 0; i < arity; i++) {
+      IntVar xi = x[i];
+      boolean wasSingleton = xi.singleton();
+      if (i != onlyChanged && (!wasSingleton || changed > 0)) {
+        filterDomain(i);
+      }
+      if (!xi.singleton()) {
+        notGround++;
+      }
+    }
+    pruning = false;
+
+    if (notGround <= 1) {
+      removeConstraint();
+    }
+  }
+
+  private int liveSize(int i) {
+    return (int) state[liveRecord + i];
+  }
+
+  private void setLiveSize(int i, int size) {
+    save(liveRecord + i);
+    state[liveRecord + i] = size;
+  }
+
+  /** It updates the valid tuples after the domain of variable i changed. */
+  private void updateTable(int i) {
+
+    IntDomain d = x[i].dom();
+    int[] l = live[i];
+    int size = liveSize(i);
+    int[] cMin = classMin[i];
+    int[] cMax = classMax[i];
+    int s = size;
+    int p = 0;
+    while (p < s) {
+      int c = l[p];
+      int lo = cMin[c];
+      int hi = cMax[c];
+      if (lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi)) {
+        p++;
+      } else {
+        s--;
+        l[p] = l[s];
+        l[s] = c;
+      }
+    }
+    if (s == size) {
+      return;
+    }
+    setLiveSize(i, s);
+
+    clearMask();
+    long[][] sup = supports[i];
+    if (s <= size - s) {
+      for (int k = 0; k < s; k++) {
+        addToMask(sup[l[k]]);
+      }
+    } else {
+      long[][] eq = equalSupports[i];
+      for (int k = s; k < size; k++) {
+        addToMask(eq[l[k]]);
+      }
+      if (notEqualSupports[i] != null && d.singleton()) {
+        addToMask(notEqualSupports[i][classOf(i, d.value())]);
+      }
+      if (upperAll[i] != null) {
+        addToMaskDifference(upperAll[i], upperAccept[i][classOf(i, d.min())]);
+      }
+      if (lowerAll[i] != null) {
+        addToMaskDifference(lowerAll[i], lowerAccept[i][classOf(i, d.max())]);
+      }
+      if (setAll[i] != null) {
+        long[] m = mask;
+        mask = temp;
+        clearMask();
+        for (int k = 0; k < s; k++) {
+          addToMask(setAccept[i][l[k]]);
+        }
+        temp = mask;
+        mask = m;
+        addToMaskDifference(setAll[i], temp);
+      }
+      reverseMask();
+    }
+    intersectWithMask();
+
+    if (limit() < 0) {
+      throw Store.failException;
+    }
+  }
+
+  /**
+   * It checks every valid tuple with restrictions between columns by arc consistency on its
+   * restrictions, removes the tuples that fail and collects the values the others support.
+   */
+  private void reviseBinaryTuples() {
+
+    Arrays.fill(binarySupport, null);
+    int limit = limit();
+    for (int p = limit; p >= 0; p--) {
+      int w = index[p];
+      long bits = state[w] & binaryAll[w];
+      while (bits != 0L) {
+        int b = Long.numberOfTrailingZeros(bits);
+        bits &= bits - 1;
+        int t = (w << 6) + b;
+        if (!reviseTuple(t)) {
+          removeTuple(t, p);
+        }
+      }
+    }
+    if (limit() < 0) {
+      throw Store.failException;
+    }
+  }
+
+  private boolean reviseTuple(int t) {
+    Restriction[] tuple = tuples[t];
+    int[] cols = binaryColumns[t];
+    for (int i : cols) {
+      IntDomain d = unary(t, i, tuple[i], x[i].dom());
+      if (d.isEmpty()) {
+        return false;
+      }
+      work[i] = d;
+    }
+    int[] sources = binarySources[t];
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (int i : sources) {
+        Restriction r = tuple[i];
+        int j = r.column;
+        IntDomain di = work[i];
+        IntDomain dj = work[j];
+        IntDomain ni = revise(di, r.relation, dj, r.offset);
+        if (ni.isEmpty()) {
+          return false;
+        }
+        IntDomain nj = revise(dj, converse(r.relation), ni, -(long) r.offset);
+        if (nj.isEmpty()) {
+          return false;
+        }
+        if (ni != di) {
+          work[i] = ni;
+          changed = true;
+        }
+        if (nj != dj) {
+          work[j] = nj;
+          changed = true;
+        }
+      }
+    }
+    for (int i : cols) {
+      binarySupport[i] = binarySupport[i] == null ? work[i] : binarySupport[i].union(work[i]);
+    }
+    return true;
+  }
+
+  private IntDomain unary(int t, int i, Restriction r, IntDomain d) {
+    return switch (r.kind) {
+      case ANY, COLUMN -> d;
+      case EQ -> d.contains(r.value) ? new IntervalDomain(r.value, r.value) : new IntervalDomain();
+      case NE -> d.contains(r.value) ? d.subtract(r.value) : d;
+      case LE -> atMost(d, r.value);
+      case GE -> atLeast(d, r.value);
+      case IN -> d.intersect(setDomains[t][i]);
+      case NOT_IN -> d.subtract(setDomains[t][i]);
+    };
+  }
+
+  private static Restriction.Relation converse(Restriction.Relation relation) {
+    return switch (relation) {
+      case LT -> Restriction.Relation.GT;
+      case LE -> Restriction.Relation.GE;
+      case EQ -> Restriction.Relation.EQ;
+      case NE -> Restriction.Relation.NE;
+      case GE -> Restriction.Relation.LE;
+      case GT -> Restriction.Relation.LT;
+    };
+  }
+
+  /** It removes from d the values v without a value w of e such that v relation w + offset. */
+  private static IntDomain revise(
+      IntDomain d, Restriction.Relation relation, IntDomain e, long offset) {
+    return switch (relation) {
+      case LT -> atMost(d, e.max() + offset - 1);
+      case LE -> atMost(d, e.max() + offset);
+      case GT -> atLeast(d, e.min() + offset + 1);
+      case GE -> atLeast(d, e.min() + offset);
+      case EQ -> {
+        IntDomain shifted = shift(e, offset);
+        yield shifted.contains(d) ? d : d.intersect(shifted);
+      }
+      case NE -> {
+        if (e.singleton()) {
+          long v = e.value() + offset;
+          yield v >= d.min() && v <= d.max() && d.contains((int) v) ? d.subtract((int) v) : d;
+        }
+        yield d;
+      }
+    };
+  }
+
+  private static IntDomain atMost(IntDomain d, long max) {
+    if (max >= d.max()) {
+      return d;
+    }
+    if (max < d.min()) {
+      return new IntervalDomain();
+    }
+    return d.intersect(d.min(), (int) max);
+  }
+
+  private static IntDomain atLeast(IntDomain d, long min) {
+    if (min <= d.min()) {
+      return d;
+    }
+    if (min > d.max()) {
+      return new IntervalDomain();
+    }
+    return d.intersect((int) min, d.max());
+  }
+
+  private static IntDomain shift(IntDomain d, long offset) {
+    if (offset == 0) {
+      return d;
+    }
+    IntervalDomain result = new IntervalDomain(d.noIntervals() + 1);
+    for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements(); ) {
+      Interval in = e.nextElement();
+      long lo = Math.max(in.min() + offset, IntDomain.MIN_INT);
+      long hi = Math.min(in.max() + offset, IntDomain.MAX_INT);
+      if (lo <= hi) {
+        result.unionAdapt((int) lo, (int) hi);
+      }
+    }
+    return result;
+  }
+
+  /** It removes the values of variable i that no valid tuple supports. */
+  private void filterDomain(int i) {
+
+    IntVar xi = x[i];
+    int[] l = live[i];
+    int size = liveSize(i);
+    int[] cMin = classMin[i];
+    int[] cMax = classMax[i];
+    long[][] sup = supports[i];
+    long[] excluded = binaryColumn[i];
+    IntDomain extra = null;
+    if (excluded != null) {
+      if (intersects(excluded)) {
+        extra = binarySupport[i] == null ? new IntervalDomain() : binarySupport[i];
+      } else {
+        excluded = null;
+      }
+    }
+    int s = size;
+    int p = 0;
+    while (p < s) {
+      int c = l[p];
+      IntDomain d = xi.dom();
+      int lo = cMin[c];
+      int hi = cMax[c];
+      boolean alive = lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi);
+      if (alive && (sup[c] == null || !intersects(i, c, sup[c], excluded))) {
+        if (extra == null) {
+          removeClass(xi, cMin[c], cMax[c]);
+          alive = false;
+        } else {
+          IntDomain unsupported = d.intersect(cMin[c], cMax[c]).subtract(extra);
+          for (int k = 0; k < unsupported.noIntervals(); k++) {
+            removeClass(xi, unsupported.leftElement(k), unsupported.rightElement(k));
+          }
+          alive = xi.dom().isIntersecting(cMin[c], cMax[c]);
+        }
+      }
+      if (alive) {
+        p++;
+      } else {
+        s--;
+        l[p] = l[s];
+        l[s] = c;
+      }
+    }
+    if (s != size) {
+      setLiveSize(i, s);
+    }
+  }
+
+  private void removeClass(IntVar xi, int min, int max) {
+    if (min == max) {
+      xi.domain.inComplement(store.level, xi, min);
+    } else {
+      xi.domain.inComplement(store.level, xi, min, max);
+    }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  public boolean satisfied() {
+    if (!grounded()) {
+      return false;
+    }
+    int[] values = new int[arity];
+    for (int i = 0; i < arity; i++) {
+      values[i] = x[i].value();
+    }
+    for (Restriction[] tuple : tuples) {
+      if (accepts(tuple, values)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * It checks whether a hybrid tuple accepts a tuple of values.
+   *
+   * @param tuple the hybrid tuple.
+   * @param values the values, one per column.
+   * @return true if every restriction of the hybrid tuple holds.
+   */
+  public static boolean accepts(Restriction[] tuple, int[] values) {
+    for (int i = 0; i < tuple.length; i++) {
+      Restriction r = tuple[i];
+      if (r.isBinary() ? !r.accepts(values[i], values[r.column]) : !r.accepts(values[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder s = new StringBuilder(id());
+    s.append(" : hybridTable(").append(Arrays.asList(x)).append(", [");
+    for (int t = 0; t < tuples.length; t++) {
+      s.append(Arrays.toString(tuples[t]));
+      if (t < tuples.length - 1) {
+        s.append(", ");
+      }
+    }
+    s.append("])");
+    return s.toString();
+  }
+}

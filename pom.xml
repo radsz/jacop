@@ -193,6 +193,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/HybridTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                             </includes>
@@ -231,6 +232,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/HybridTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -273,6 +275,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/HybridTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -315,6 +318,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/HybridTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -738,6 +742,7 @@ setup to run configuration. -->
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
                         <include>**/MddTest.java</include>
+                        <include>**/HybridTableTest.java</include>
                     </includes>
                     <excludes>
                         <exclude>**/MinizincBasedUpTo5SecondsTest.java</exclude>
