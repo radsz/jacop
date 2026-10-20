@@ -48,7 +48,7 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck;
+  boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
 
   /**

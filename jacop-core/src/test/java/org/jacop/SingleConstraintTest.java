@@ -67,6 +67,7 @@ import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
+import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
@@ -99,6 +100,7 @@ import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
@@ -451,6 +453,42 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x.singleton(2)).as("x = %s", x.dom()).isTrue();
     assertThat(y.singleton(2)).as("y = %s", y.dom()).isTrue();
+  }
+
+  @Test
+  void distanceIsNeverNegative() {
+    // |x - y| = z: the value -2 of z has no support, but the propagator only imposed z >= 0 when
+    // a flag that was never initialised to true was set.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 3);
+    IntVar z = new IntVar(store, "z", -2, 7);
+    store.impose(new Distance(x, y, z));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(0);
+  }
+
+  @Test
+  void xmulYeqZPrunesFactorWhenOtherFactorSpansZero() {
+    // x * y = -11 with y in -3..2: over the reals x = -11 / y is at least 11 / 3 for y < 0 and at
+    // most -5.5 for y > 0, so only x = 4 is left in -3..4; y = -11 / 4 is no integer, so it fails.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 4);
+    IntVar y = new IntVar(store, "y", -3, 2);
+    IntVar z = new IntVar(store, "z", -11, -11);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    // with z = -8, x in -3..4 and y in -3..2: y < 0 gives x >= 8 / 3, y > 0 gives x <= -4
+    store = new Store();
+    x = new IntVar(store, "x", -3, 4);
+    y = new IntVar(store, "y", -3, 2);
+    z = new IntVar(store, "z", -8, -8);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("4");
+    assertThat(y.dom().toString()).isEqualTo("-2");
   }
 
   @Test
