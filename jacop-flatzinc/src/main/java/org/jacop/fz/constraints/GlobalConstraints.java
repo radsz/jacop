@@ -62,6 +62,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -1403,6 +1404,19 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
+  }
+
+  void gen_jacop_mdd(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] level = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] from = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
+    int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+
+    // the layered graph must not have duplicated variables
+    IntVar[] xx = removeDuplicates(x);
+
+    support.delayedConstraints.add(new ExtensionalSupportMdd(xx, level, from, label, to));
   }
 
   void gen_jacop_regular_set(SimpleNode node) {

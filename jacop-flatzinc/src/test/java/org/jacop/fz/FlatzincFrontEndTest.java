@@ -102,6 +102,23 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void mddWithRepeatedVariableAndNonDeterministicEdges() throws IOException {
+    // jacop_mdd is the native mdd and mdd_nondet. The diagram over [x1, x2, x1] has two edges
+    // leaving the root with the value 1, labels given as sets and ranges, and x1 twice, which the
+    // front end replaces by a copy. Allowed words: (0,0,0..1), (1,0,0..1), (1,2,0..1), so with the
+    // repeated x1 the solutions are x1 = 0, x2 = 0; x1 = 1, x2 = 0 and x1 = 1, x2 = 2.
+    String fzn =
+        """
+        var 0..2: x1:: output_var;
+        var 0..2: x2:: output_var;
+        constraint jacop_mdd([x1,x2,x1],[1,2,2,3],[1,1,2,3,4],[0..1,{1},{0},{2},0..1],[2,3,4,4,0]);
+        solve satisfy;
+        """;
+
+    assertEquals(Set.of("x1 = 0; x2 = 0;", "x1 = 1; x2 = 0;", "x1 = 1; x2 = 2;"), solveAll(fzn));
+  }
+
+  @Test
   void outputFileGetsEverySolutionWhenAllAreRequested() throws IOException {
     // With -a the output file kept only the last solution, so golden files of the MiniZinc
     // based tests could not record all solutions.

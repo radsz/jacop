@@ -71,6 +71,8 @@ class MznlibGlobalsTest {
         "hook_bin_packing_capa",
         "hook_bin_packing_opt",
         "hook_regular_reif",
+        "hook_mdd",
+        "hook_mdd_nondet",
         "hook_network_flow_isolated",
         "hook_network_flow_cost_zero_based",
         "hook_network_flow_cost_loop"
