@@ -32,46 +32,45 @@ package org.jacop.constraints;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
-import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntervalDomainValueEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-import org.jacop.core.Var;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * GCC constraint counts the number of occurences of given values in x variables. The counters are
  * specified by y's. The occurence of all values in the domain of xs is counted.
+ *
+ * <p>It implements the bound consistency algorithm of I. Katriel and S. Thiel, "Complete bound
+ * consistency for the global cardinality constraint", Constraints 10(3), 2005. The bounds of the x
+ * variables (over the union of their values) and the bounds of the counters are made bound
+ * consistent.
  *
  * <p>We would like to thank Irit Katriel for making the code of GCC in C she wrote available to us.
  *
  * @author Jocelyne Lotfi and Radoslaw Szymanek.
  * @version 5.0
  */
-@Slf4j
 @SuppressWarnings(
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
-public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class GCC extends Constraint implements Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean DEBUG = false;
 
-  /** It specifies variables x whose values are counted. */
+  /**
+   * It specifies variables x whose values are counted. The variables before the stamp are not
+   * singletons, the ones after it are.
+   */
   private final IntVar[] x;
 
   /**
@@ -80,61 +79,73 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   protected final IntVar[] counters;
 
-  /**
-   * The array which stores the first computed matching, which may not take into account the lower
-   * bound of count variables.
-   */
+  private final int xSize;
+  private final int ySize;
+
+  /** Counters of values that no x variable can take, set to zero at the first consistency call. */
+  private Set<IntVar> zeroCounters;
+
+  /** The counted values in increasing order; a value is referred to by its position here. */
+  private int[] domainHash;
+
+  /** Whether the counted values form an interval, so the position of a value is value - base. */
+  private boolean contiguous;
+
+  private int base;
+
+  /** The bounds of the counters, less the variables that are already assigned. */
+  private final int[] yMin;
+
+  private final int[] yMax;
+
+  /** The number of assigned x variables taking each value. */
+  private final int[] singletons;
+
+  /** The unassigned x variables sorted by the position of their minimum: index and bounds. */
+  private final int[] slotX;
+
+  private final int[] slotMin;
+  private final int[] slotMax;
+  private final int[] unsortedMin;
+  private final int[] unsortedMax;
+  private final int[] countOfMin;
+
+  /** The first matching, which may not respect the lower bounds of the counters. */
   private final int[] match1;
 
-  /**
-   * The array which stores the second computed matching, which may not take into account the upper
-   * bound of count variables.
-   */
+  /** The second matching, which may not respect the upper bounds of the counters. */
   private final int[] match2;
 
-  /**
-   * The array which stores the third proper matching, constructed from the first one and second one
-   * so both lower and upper bounds are respected.
-   */
+  /** The matching respecting both bounds, constructed from the first and the second one. */
   private final int[] match3;
 
   private final int[] match1xOrder;
   private final int[] match2xOrder;
   private final int[] nbOfMatchPerY;
   private final int[] compOfY;
-  private final Xdomain[] xDomain;
-  private final int[][] yDomain;
-  private final int xSize;
-  private final int ySize;
-  private final ArrayDeque<Integer> s1;
-  private final ArrayDeque<Component> s2;
-  private final PriorityQueue<Xdomain> pFirst;
-  private final PriorityQueue<Xdomain> pSecond;
-  private final PriorityQueue<Integer> pCount;
-  private final Map<IntVar, Integer> xNodesHash;
-  private final Comparator<Xdomain> compareLowerBound =
-      (o1, o2) -> {
-        if (o1.min() < o2.min()) {
-          return -1;
-        } else if (o1.min() > o2.min()) {
-          return 1;
-        }
-        return 0;
-      };
+  private final int[] compReachesLeft;
+  private final int[] compReachesRight;
+  private final int[] yReachesLeft;
+  private final int[] yReachesRight;
+  private final boolean[] reachedFromS;
+  private final boolean[] reachesS;
+  private final int[] maxU;
+  private final int[] minL;
+
+  /** Stack of values and stack of components (root, rightmost value, maximum reached value). */
+  private final int[] s1;
+
+  private final int[] s2Root;
+  private final int[] s2RightmostY;
+  private final int[] s2MaxX;
+
+  private final IntHeap heap;
 
   boolean firstConsistencyCheck = true;
 
   TimeStamp<Integer> stamp;
   int firstConsistencyLevel;
-  private int[] domainHash;
   private int stampValue;
-  private Set<IntVar> zeroCounters;
-
-  /**
-   * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to
-   * be revisited in the consistency method.
-   */
-  private Set<IntVar> changedVariables = new HashSet<>();
 
   /**
    * It constructs global cardinality constraint.
@@ -155,43 +166,38 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     xSize = x.length;
     ySize = counters.length;
 
-    this.x = new IntVar[xSize];
-    this.counters = new IntVar[ySize];
+    this.x = Arrays.copyOf(x, xSize);
+    this.counters = Arrays.copyOf(counters, ySize);
 
-    System.arraycopy(x, 0, this.x, 0, xSize);
-    System.arraycopy(counters, 0, this.counters, 0, ySize);
-
-    this.xDomain = new Xdomain[xSize];
-    this.yDomain = new int[2][ySize];
-
-    // rest of the init
+    yMin = new int[ySize];
+    yMax = new int[ySize];
+    singletons = new int[ySize];
+    slotX = new int[xSize];
+    slotMin = new int[xSize];
+    slotMax = new int[xSize];
+    unsortedMin = new int[xSize];
+    unsortedMax = new int[xSize];
+    countOfMin = new int[ySize + 1];
     match1 = new int[xSize];
     match2 = new int[xSize];
     match3 = new int[xSize];
     match1xOrder = new int[xSize];
     match2xOrder = new int[xSize];
-
     nbOfMatchPerY = new int[ySize];
     compOfY = new int[ySize];
-
-    s1 = new ArrayDeque<>();
-    s2 = new ArrayDeque<>();
-    Comparator<Xdomain> sortPriorityMinOrder =
-        (o1, o2) -> {
-          if (o1.max() < o2.max()) {
-            return -1;
-          } else if (o1.max() > o2.max()) {
-            return 1;
-          }
-
-          return 0;
-        };
-    pFirst = new PriorityQueue<>(10, sortPriorityMinOrder);
-    pSecond = new PriorityQueue<>(10, sortPriorityMinOrder);
-    Comparator<Integer> sortPriorityMaxOrder = Comparator.reverseOrder();
-    pCount = new PriorityQueue<>(10, sortPriorityMaxOrder);
-
-    xNodesHash = Var.createEmptyPositioning();
+    compReachesLeft = new int[ySize];
+    compReachesRight = new int[ySize];
+    yReachesLeft = new int[ySize];
+    yReachesRight = new int[ySize];
+    reachedFromS = new boolean[ySize];
+    reachesS = new boolean[ySize];
+    maxU = new int[ySize];
+    minL = new int[ySize];
+    s1 = new int[ySize];
+    s2Root = new int[ySize];
+    s2RightmostY = new int[ySize];
+    s2MaxX = new int[ySize];
+    heap = new IntHeap(xSize);
 
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
   }
@@ -209,20 +215,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
-    // here I will put normalization
     IntervalDomain d = new IntervalDomain();
 
     for (IntVar aX : x) {
       d = (IntervalDomain) d.union(aX.domain);
     }
 
-    // I check the consistency of the x and y variable
+    // there must be a counter for every value of the union of the x domains, or for every value
+    // between its minimum and its maximum; it is not guessed which counters are superfluous
     if (d.getSize() != counters.length && (d.max() - d.min() + 1) != counters.length) {
-      // if there are more y variable than x variable there is a mistake of conception
-      // as the rest of y variables are 0 in any case. The problem is to know which y variable
-      // should not be here. With normalization we assume that it is the last ones in the
-      // list but it is an assumption, it's better to throw an exception there and let the
-      // user determine what is correct.
       throw new IllegalArgumentException(
           "GCC failure : join domain of x variables doesn't cover all count variables");
     }
@@ -258,200 +259,136 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   @Override
   public void consistency(Store store) {
     if (firstConsistencyCheck) {
-      consistencyFirstCheck(store);
-    }
-    do {
-      store.propagationHasOccurred = false;
-      consistencyProcessChangedVariables();
-      if (ASSERTS_ENABLED && !checkXorder()) {
-        throw new IllegalStateException(
-            String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
+      if (zeroCounters != null) {
+        for (IntVar zeroCounter : zeroCounters) {
+          zeroCounter.domain.inValue(store.level, zeroCounter, 0);
+        }
       }
-      stampValue = stamp.value();
-      consistencyLogStampAndXdomain();
-      consistencyUpdateXdomainAndYdomain();
-      consistencyApplySingletonYDomain();
-      consistencyLogYDomain();
+      firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
+    }
+    // The new bounds are the bounds over the solutions of the problem in which every variable
+    // ranges over its bounds, so imposing them leaves that problem with the same solutions. Only
+    // when a variable ends up with other bounds, because of a hole in its domain or because it is
+    // both counted and a counter, the problem changes and the propagation is repeated.
+    boolean repeat;
+    do {
+      moveSingletonsToTheEnd();
+      readCounterBounds();
       sortXbyDomainMin();
       findGeneralizedMatching();
       sccs();
       countBoundConsistency(store);
-      consistencyPruneXDomains(store);
-      consistencyVerifyYDomainAfterPruning();
-    } while (store.propagationHasOccurred);
+      pruneXDomains(store);
+      repeat = boundsDifferFromPruned();
+      verifyCountersAfterPruning();
+    } while (repeat);
   }
 
-  private void consistencyFirstCheck(Store store) {
-    if (zeroCounters != null) {
-      for (IntVar zeroCounter : zeroCounters) {
-        zeroCounter.domain.inValue(store.level, zeroCounter, 0);
-      }
-    }
-    stamp.update(xSize);
+  /** Moves the assigned variables after the stamp, which then counts the unassigned ones. */
+  private void moveSingletonsToTheEnd() {
+    int end = stamp.value();
     int k = 0;
-    while (k < stamp.value()) {
+    while (k < end) {
       if (x[k].singleton()) {
-        if (stamp.value() > 0) {
-          stamp.update(stamp.value() - 1);
-          putToTheEnd(x, k);
-        }
+        end--;
+        IntVar v = x[k];
+        x[k] = x[end];
+        x[end] = v;
       } else {
         k++;
       }
     }
-    firstConsistencyCheck = false;
-    firstConsistencyLevel = store.level;
-    if (ASSERTS_ENABLED && !checkXorder()) {
-      throw new IllegalStateException(
-          String.valueOf("Inconsistent X variable order: " + Arrays.toString(this.x)));
+    if (end != stamp.value()) {
+      stamp.update(end);
     }
+    stampValue = end;
   }
 
-  private void consistencyProcessChangedVariables() {
-    Set<IntVar> changedVariablesCopy = this.changedVariables;
-    this.changedVariables = new HashSet<>();
-    for (IntVar v : changedVariablesCopy) {
-      if (!v.singleton() || !xNodesHash.containsKey(v) || xNodesHash.get(v) >= stamp.value()) {
-        continue;
-      }
-      if (DEBUG) {
-        log.debug(" in xVariableToChange: {}", v);
-      }
-      if (stamp.value() > 0) {
-        stamp.update(stamp.value() - 1);
-        putToTheEnd(x, xNodesHash.get(v));
-      }
-    }
-  }
-
-  private void consistencyLogStampAndXdomain() {
-    if (DEBUG) {
-      log.debug("XNodes");
-      for (int i = 0; i < xSize; i++) {
-        log.debug("{}", x[i]);
-      }
-      log.debug("stamp before {}", stamp.value());
-      log.debug("stamp after {}", stampValue);
-      log.debug("Xdomain");
-    }
-  }
-
-  private void consistencyUpdateXdomainAndYdomain() {
-    for (int i = 0; i < stampValue; i++) {
-      xDomain[i].setDomain(
-          findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
-      xDomain[i].twin = x[i];
-      if (DEBUG) {
-        log.debug("{}", xDomain[i]);
-      }
-    }
-    if (DEBUG) {
-      log.debug("YDomain");
-    }
+  /** Reads the counter bounds and takes out the variables that are already assigned. */
+  private void readCounterBounds() {
     for (int i = 0; i < ySize; i++) {
-      yDomain[0][i] = counters[i].min();
-      yDomain[1][i] = counters[i].max();
-      if (DEBUG) {
-        log.debug("{}", yDomain[i]);
-      }
+      yMin[i] = counters[i].min();
+      yMax[i] = counters[i].max();
     }
-    if (DEBUG) {
-      log.debug("take out singleton xNodes");
-    }
-  }
-
-  private void consistencyApplySingletonYDomain() {
-    for (int i = 0; i < xSize; i++) {
-      if (!x[i].singleton()) {
-        continue;
+    Arrays.fill(singletons, 0);
+    for (int k = stampValue; k < xSize; k++) {
+      int value = position(x[k].value());
+      singletons[value]++;
+      if (yMin[value] > 0) {
+        yMin[value]--;
       }
-      int value = findPosition(x[i].value(), domainHash);
-      if (yDomain[0][value] > 0) {
-        yDomain[0][value]--;
-      }
-      yDomain[1][value]--;
-      if (yDomain[1][value] < 0) {
+      yMax[value]--;
+      if (yMax[value] < 0) {
         throw Store.failException;
       }
     }
   }
 
-  private void consistencyLogYDomain() {
-    if (DEBUG) {
-      log.debug("pass in consistency");
-      log.debug("YDomain");
-      for (int i = 0; i < ySize; i++) {
-        log.debug("{}", yDomain[i]);
-      }
+  /** Sorts the unassigned variables by the position of their minimum with a counting sort. */
+  private void sortXbyDomainMin() {
+    Arrays.fill(countOfMin, 0);
+    for (int k = 0; k < stampValue; k++) {
+      unsortedMin[k] = position(x[k].min());
+      unsortedMax[k] = position(x[k].max());
+      countOfMin[unsortedMin[k] + 1]++;
+    }
+    for (int i = 1; i <= ySize; i++) {
+      countOfMin[i] += countOfMin[i - 1];
+    }
+    for (int k = 0; k < stampValue; k++) {
+      int j = countOfMin[unsortedMin[k]]++;
+      slotX[j] = k;
+      slotMin[j] = unsortedMin[k];
+      slotMax[j] = unsortedMax[k];
     }
   }
 
-  private void consistencyPruneXDomains(Store store) {
+  private void pruneXDomains(Store store) {
     for (int j = 0; j < stampValue; j++) {
-      if (ASSERTS_ENABLED && (match3[j] < 0 || match3[j] >= ySize)) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && (compOfY[match3[j]] < 0 || compOfY[match3[j]] > ySize)) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      int cutMin = xDomain[j].min();
-      int cutMax = xDomain[j].max();
-      if (DEBUG) {
-        log.debug("cutmax {}", cutMax);
-      }
-      while (compOfY[match3[j]] != compOfY[cutMin]) {
+      int comp = compOfY[match3[j]];
+      int cutMin = slotMin[j];
+      int cutMax = slotMax[j];
+      while (comp != compOfY[cutMin]) {
         cutMin++;
       }
-      while (compOfY[match3[j]] != compOfY[cutMax]) {
+      while (comp != compOfY[cutMax]) {
         cutMax--;
       }
-      int id = xNodesHash.get(xDomain[j].twin);
-      if (DEBUG) {
-        log.debug("do pruning [{},{}] => [{},{}]", x[id].min(), x[id].max(), cutMin, cutMax);
-      }
-      xDomain[j].setDomain(cutMin, cutMax);
-      IntVar v = x[id];
+      IntVar v = x[slotX[j]];
       v.domain.in(store.level, v, domainHash[cutMin], domainHash[cutMax]);
+      slotMin[j] = cutMin;
+      slotMax[j] = cutMax;
     }
   }
 
-  private void consistencyVerifyYDomainAfterPruning() {
+  /** Whether some variable has bounds other than the ones the propagation has just imposed. */
+  private boolean boundsDifferFromPruned() {
+    for (int j = 0; j < stampValue; j++) {
+      IntVar v = x[slotX[j]];
+      if (v.min() != domainHash[slotMin[j]] || v.max() != domainHash[slotMax[j]]) {
+        return true;
+      }
+    }
+    for (int i = 0; i < ySize; i++) {
+      if (counters[i].min() != yMin[i] || counters[i].max() != yMax[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void verifyCountersAfterPruning() {
     for (int i = 0; i < xSize; i++) {
       if (!x[i].singleton()) {
         continue;
       }
-      int value = findPosition(x[i].value(), domainHash);
-      yDomain[1][value]--;
-      if (yDomain[1][value] < 0) {
-        if (DEBUG) {
-          log.debug("failure in putting back yNodes domain");
-        }
+      int value = position(x[i].value());
+      yMax[value]--;
+      if (yMax[value] < 0) {
         throw Store.failException;
       }
     }
-  }
-
-  /**
-   * A method to be called in asserts that checks whether all grounded X variables are correctly put
-   * at the end of the list.
-   *
-   * @return false if the X variable order is inconsistent
-   */
-  private boolean checkXorder() {
-
-    for (int i = this.stamp.value() - 1; i >= 0; i--) {
-      if (this.x[i].singleton()) {
-        return false;
-      }
-    }
-
-    for (int i = this.stamp.value(); i < this.x.length; i++) {
-      if (!this.x[i].singleton()) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   @Override
@@ -464,60 +401,26 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     stamp = new TimeStamp<>(store, xSize);
 
-    // first I will put all the xNodes in a hashTable to be able to use
-    // it with the queueVariable function
-    // KK, 2015-10-18
-    // only non ground variables need to be added
-    // no duplicates allowed
-    Var.addPositionMapping(xNodesHash, x, true, this.getClass());
-
-    // here I will put normalization
     IntervalDomain d = new IntervalDomain();
 
     for (int i = 0; i < xSize; i++) {
       d = (IntervalDomain) d.union(x[i].domain);
     }
 
-    // I check the consistency of the x and y variable
     if (d.getSize() != ySize) {
-      // if there are more y variable than x variable there is a mistake of conception
-      // as the rest of y variables are 0 in any case. The problem is to know which y variable
-      // should not be here. With normalization we assume that it is the last ones in the
-      // list but it is an assumption, it's better to throw an exception there and let the
-      // user determine what is correct.
       throw new IllegalArgumentException(
           "GCC failure : join domain of x variables doesn't cover all count variables");
     }
 
-    domainHash = new int[d.getSize()];
-    IntervalDomainValueEnumeration venum = new IntervalDomainValueEnumeration(d);
+    domainHash = new int[ySize];
     int i = 0;
-    do {
-
-      int j = venum.nextElement();
-      domainHash[i++] = j;
-
-    } while (venum.hasMoreElements());
-
-    for (i = 0; i < xSize; i++) {
-      this.xDomain[i] =
-          new Xdomain(
-              x[i], findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
+    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+      domainHash[i++] = e.nextElement();
     }
+    base = domainHash[0];
+    contiguous = domainHash[ySize - 1] - base + 1 == ySize;
 
-    for (i = 0; i < ySize; i++) {
-      this.yDomain[0][i] = counters[i].min();
-      this.yDomain[1][i] = counters[i].max();
-    }
     super.impose(store);
-  }
-
-  @Override
-  public void queueVariable(int level, Var v) {
-    if (DEBUG) {
-      log.debug("in queue variable {} level {}", v, level);
-    }
-    this.changedVariables.add((IntVar) v);
   }
 
   @Override
@@ -527,21 +430,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       return false;
     }
 
-    int[] count = new int[domainHash.length];
-
+    int[] count = new int[ySize];
     for (IntVar xVar : x) {
-      int xValue = xVar.value();
-      int position = 0;
-      while (position < count.length && domainHash[position] != xValue) {
-        position++;
-      }
-      if (ASSERTS_ENABLED && position >= count.length) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      count[position]++;
+      count[position(xVar.value())]++;
     }
 
-    for (int i = 0; i < counters.length; i++) {
+    for (int i = 0; i < ySize; i++) {
       if (counters[i].value() != count[i]) {
         return false;
       }
@@ -569,223 +463,96 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     return toString.toString();
   }
 
-  // private methods
-
   // -----------------------FIND_GENERALIZED_MATCHING--------------------------------//
 
   private void findGeneralizedMatching() {
 
     Arrays.fill(nbOfMatchPerY, 0);
 
-    if (DEBUG) {
-      log.debug("Xdomain");
-      for (int i = 0; i < stampValue; i++) {
-        log.debug("{} [{}-{}]", i, xDomain[i].min(), xDomain[i].max());
-      }
-    }
-    // first pass
     firstPass();
-
-    // check we are in the good ranges for match1 and match1xOrder
-    if (ASSERTS_ENABLED && !checkFirstPass()) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
     secondPass();
-
-    if (ASSERTS_ENABLED && !checkSecondPass()) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
     thirdPass();
 
-    if (ASSERTS_ENABLED && !checkThirdPass()) {
-      throw new IllegalStateException("Assertion failed");
+    if (ASSERTS_ENABLED) {
+      for (int j = 0; j < stampValue; j++) {
+        if (match3[j] < slotMin[j] || match3[j] > slotMax[j]) {
+          throw new IllegalStateException("GCC matching outside the domain of a variable");
+        }
+      }
     }
   }
 
-  private boolean checkFirstPass() {
-
-    for (int j = 0; j < stampValue; j++) {
-      if (ASSERTS_ENABLED && match1[j] < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && match1[j] >= ySize) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && match1xOrder[j] < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && match1xOrder[j] >= stampValue) {
-        throw new IllegalStateException("Assertion failed");
-      }
-    }
-
-    return true;
-  }
-
-  private boolean checkSecondPass() {
-
-    for (int j = 1; j < stampValue; j++) {
-      if (ASSERTS_ENABLED && match2[match2xOrder[j]] < match2[match2xOrder[j - 1]]) {
-        throw new IllegalStateException("Assertion failed");
-      }
-    }
-
-    return true;
-  }
-
-  private boolean checkThirdPass() {
-
-    for (int j = 0; j < stampValue; j++) {
-      if (ASSERTS_ENABLED && xDomain[j].min() > match3[j]) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && xDomain[j].max() < match3[j]) {
-        throw new IllegalStateException("Assertion failed");
-      }
-    }
-
-    return true;
-  }
-
+  /** Matches the variables to values by earliest deadline, respecting the counter maximums. */
   private void firstPass() {
 
-    pFirst.clear();
+    heap.clear(slotMax);
     int xIndex = 0;
-    int match1xOrderIndex = 0;
+    int orderIndex = 0;
 
     for (int i = 0; i < ySize; i++) {
-      while ((xIndex < stampValue) && xDomain[xIndex].min() == i) {
-        xDomain[xIndex].index = xIndex;
-        pFirst.add(xDomain[xIndex]);
-        xIndex++;
+      while (xIndex < stampValue && slotMin[xIndex] == i) {
+        heap.push(xIndex++);
       }
-      int maxY = yDomain[1][i];
-      int u = 0;
-      while (!pFirst.isEmpty() && u < maxY) {
-        int top = pFirst.remove().index;
+      int maxY = yMax[i];
+      for (int u = 0; u < maxY && !heap.isEmpty(); u++) {
+        int top = heap.pop();
+        if (slotMax[top] < i) {
+          throw Store.failException;
+        }
         match1[top] = i;
-        u++;
-        match1xOrder[match1xOrderIndex] = top;
-        match1xOrderIndex++;
-        failFirstPassIfInvalid(top, i);
+        match1xOrder[orderIndex++] = top;
       }
     }
 
-    failFirstPassIfQueueNonEmpty();
-    logMatch1Debug();
-  }
-
-  private void failFirstPassIfInvalid(int top, int i) {
-    if (xDomain[top].max() < i) {
-      if (DEBUG) {
-        log.debug("failure first pass");
-      }
+    if (!heap.isEmpty()) {
       throw Store.failException;
     }
   }
 
-  private void failFirstPassIfQueueNonEmpty() {
-    if (!pFirst.isEmpty()) {
-      if (DEBUG) {
-        log.debug("failure the queue is not empty");
-      }
-      throw Store.failException;
-    }
-  }
-
-  private void logMatch1Debug() {
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("match1Xorder : ");
-      for (int aMatch1XOrder : match1xOrder) {
-        sb.append(aMatch1XOrder).append(" ");
-      }
-      log.debug("{}", sb);
-      sb = new StringBuilder("match1 : ");
-      for (int aMatch1 : match1) {
-        sb.append(aMatch1).append(" ");
-      }
-      log.debug("{}", sb);
-    }
-  }
-
+  /** Moves matched variables to the right so that the counter minimums are respected. */
   private void secondPass() {
 
-    pSecond.clear();
+    heap.clear(slotMax);
     int xIndex = 0;
-    int match2xOrderIndex = 0;
+    int orderIndex = 0;
 
     for (int i = 0; i < ySize; i++) {
-      while ((xIndex < stampValue) && (match1[match1xOrder[xIndex]] == i)) {
-        int order = match1xOrder[xIndex];
-        xDomain[order].index = order;
-        pSecond.add(xDomain[order]);
-        xIndex++;
+      while (xIndex < stampValue && match1[match1xOrder[xIndex]] == i) {
+        heap.push(match1xOrder[xIndex++]);
       }
-      int minY = yDomain[0][i];
-      for (int l = 0; l < minY; l++) {
-        failSecondPassIfEmpty();
-        assignSecondPassMatch(pSecond.remove().index, i, match2xOrderIndex++);
+      for (int l = 0; l < yMin[i]; l++) {
+        if (heap.isEmpty()) {
+          throw Store.failException;
+        }
+        int top = heap.pop();
+        match2[top] = i;
+        match2xOrder[orderIndex++] = top;
         nbOfMatchPerY[i]++;
       }
-      while (!pSecond.isEmpty() && pSecond.element().max() < i + 1) {
-        assignSecondPassMatch(pSecond.remove().index, i, match2xOrderIndex++);
+      while (!heap.isEmpty() && slotMax[heap.peek()] < i + 1) {
+        int top = heap.pop();
+        match2[top] = i;
+        match2xOrder[orderIndex++] = top;
         nbOfMatchPerY[i]++;
       }
     }
-
-    logMatch2Debug();
   }
 
-  private void failSecondPassIfEmpty() {
-    if (pSecond.isEmpty()) {
-      if (DEBUG) {
-        log.debug("failure second pass");
-      }
-      throw Store.failException;
-    }
-  }
-
-  private void assignSecondPassMatch(int top, int i, int orderIndex) {
-    match2[top] = i;
-    match2xOrder[orderIndex] = top;
-  }
-
-  private void logMatch2Debug() {
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("match2Xorder : ");
-      for (int aMatch2XOrder : match2xOrder) {
-        sb.append(aMatch2XOrder).append(" ");
-      }
-      log.debug("{}", sb);
-      sb = new StringBuilder("match2 : ");
-      for (int aMatch2 : match2) {
-        sb.append(aMatch2).append(" ");
-      }
-      log.debug("{}", sb);
-    }
-  }
-
+  /** Combines both matchings into one that respects the minimums and the maximums. */
   private void thirdPass() {
 
     int xIndex = stampValue - 1;
-    int e;
     int xIdx = 0;
 
     System.arraycopy(match2, 0, match3, 0, stampValue);
 
     for (int i = ySize - 1; i >= 0; i--) {
-      while ((xIndex >= 0) && (match2[match2xOrder[xIndex]] > i)) {
+      while (xIndex >= 0 && match2[match2xOrder[xIndex]] > i) {
         xIndex--;
       }
 
-      e = nbOfMatchPerY[i] - yDomain[1][i]; // excess of y mates
-      while (e > 0) {
-
-        if (ASSERTS_ENABLED && match2[match2xOrder[xIndex]] != i) {
-          throw new IllegalStateException("Assertion failed");
-        }
+      int excess = nbOfMatchPerY[i] - yMax[i];
+      while (excess > 0) {
 
         while (xIndex >= 0) {
           xIdx = match2xOrder[xIndex];
@@ -796,117 +563,43 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           }
         }
 
-        if (ASSERTS_ENABLED && match1[xIdx] >= i) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        if (ASSERTS_ENABLED && match2[xIdx] != i) {
-          throw new IllegalStateException("Assertion failed");
+        if (ASSERTS_ENABLED && (match1[xIdx] >= i || match2[xIdx] != i)) {
+          throw new IllegalStateException("GCC third pass found no variable to move");
         }
 
         match3[xIdx] = match1[xIdx];
         nbOfMatchPerY[i]--;
         nbOfMatchPerY[match1[xIdx]]++;
         xIndex--;
-        e--;
+        excess--;
       }
-    }
-    logMatch3Debug();
-  }
-
-  private void logMatch3Debug() {
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("match3 : ");
-      for (int aMatch3 : match3) {
-        sb.append(aMatch3).append(" ");
-      }
-      log.debug("{}", sb);
     }
   }
 
   // --------------------------------SCCs-------------------------------------//
 
   private void sccs() {
-    int[] compReachesLeft = new int[ySize];
-    int[] compReachesRight = new int[ySize];
-    int[] yreachesLeft = new int[ySize];
-    int[] yreachesRight = new int[ySize];
     for (int i = 0; i < ySize; i++) {
       compOfY[i] = i;
     }
-    int sccNb = sccsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
-    sccsLogCompReaches(sccNb, compReachesLeft, compReachesRight);
-    boolean[] reachedFromS = new boolean[sccNb];
-    boolean[] reachesS = new boolean[sccNb];
-    sccsInitReachedFromS(reachedFromS, reachesS, sccNb);
-    sccsPropagateReachedFromS(compReachesLeft, compReachesRight, reachedFromS, reachesS, sccNb);
-    sccsPropagateReachedFromSReverse(
-        compReachesLeft, compReachesRight, reachedFromS, reachesS, sccNb);
-    sccsMergeComponentsThroughS(sccNb, reachedFromS, reachesS);
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("compOfY after S ");
-      for (int aCompOfY : compOfY) {
-        sb.append(aCompOfY).append(" ");
-      }
-      log.debug("{}", sb);
-    }
-  }
+    int sccNb = sccsWithoutS();
+    Arrays.fill(reachedFromS, 0, sccNb, false);
+    Arrays.fill(reachesS, 0, sccNb, false);
 
-  private void sccsLogCompReaches(int sccNb, int[] compReachesLeft, int[] compReachesRight) {
-    if (!DEBUG) {
-      return;
-    }
-    log.debug("sccNb : {}", sccNb);
-    StringBuilder sb = new StringBuilder("compReachesLeft ");
-    for (int aCompReachesLeft : compReachesLeft) {
-      sb.append(aCompReachesLeft).append(" ");
-    }
-    log.debug("{}", sb);
-    sb = new StringBuilder("compReachesRight ");
-    for (int aCompReachesRight : compReachesRight) {
-      sb.append(aCompReachesRight).append(" ");
-    }
-    log.debug("{}", sb);
-    sb = new StringBuilder("compOfY ");
-    for (int aCompOfY : compOfY) {
-      sb.append(aCompOfY).append(" ");
-    }
-    log.debug("{}", sb);
-  }
-
-  private void sccsInitReachedFromS(boolean[] reachedFromS, boolean[] reachesS, int sccNb) {
     for (int i = 0; i < ySize; i++) {
       int comp = compOfY[i];
-      if (ASSERTS_ENABLED && comp < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && comp > sccNb) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (yDomain[0][i] < nbOfMatchPerY[i]) {
+      if (yMin[i] < nbOfMatchPerY[i]) {
         reachedFromS[comp] = true;
       }
-      if (yDomain[1][i] > nbOfMatchPerY[i]) {
+      if (yMax[i] > nbOfMatchPerY[i]) {
         reachesS[comp] = true;
       }
     }
-  }
 
-  private void sccsPropagateReachedFromS(
-      int[] compReachesLeft,
-      int[] compReachesRight,
-      boolean[] reachedFromS,
-      boolean[] reachesS,
-      int sccNb) {
     int maxYreachedFromS = -1;
     int maxYreachesS = -1;
     for (int i = 0; i < ySize; i++) {
       int c = compOfY[i];
-      if (ASSERTS_ENABLED && c < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && c > sccNb) {
-        throw new IllegalStateException("Assertion failed");
-      }
       if (maxYreachedFromS >= i) {
         reachedFromS[c] = true;
       }
@@ -920,24 +613,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         maxYreachesS = Math.max(maxYreachesS, i);
       }
     }
-  }
 
-  private void sccsPropagateReachedFromSReverse(
-      int[] compReachesLeft,
-      int[] compReachesRight,
-      boolean[] reachedFromS,
-      boolean[] reachesS,
-      int sccNb) {
     int minYreachedFromS = ySize;
     int minYreachesS = ySize;
     for (int i = ySize - 1; i >= 0; i--) {
       int c = compOfY[i];
-      if (ASSERTS_ENABLED && c < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && c > sccNb) {
-        throw new IllegalStateException("Assertion failed");
-      }
       if (minYreachedFromS <= i) {
         reachedFromS[c] = true;
       }
@@ -951,9 +631,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         minYreachesS = Math.min(minYreachesS, i);
       }
     }
-  }
 
-  private void sccsMergeComponentsThroughS(int sccNb, boolean[] reachedFromS, boolean[] reachesS) {
+    // the components that reach the sink and are reached from it form one component
     for (int i = 0; i < ySize; i++) {
       if (reachesS[compOfY[i]] && reachedFromS[compOfY[i]]) {
         compOfY[i] = sccNb;
@@ -961,338 +640,239 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private int sccsWithoutS(
-      int[] compReachesLeft, int[] compReachesRight, int[] yreachesLeft, int[] yreachesRight) {
+  /** Computes the components of the values in the residual graph without the sink. */
+  private int sccsWithoutS() {
 
     int sccNb = 0;
-    s1.clear();
-    s2.clear();
+    int s1Size = 0;
+    int s2Size = 0;
 
-    reachedFromY(yreachesLeft, yreachesRight);
+    reachedFromY();
 
-    for (int y = 0; y < ySize; y++) {
-      compReachesLeft[y] = yreachesLeft[y];
-      compReachesRight[y] = yreachesRight[y];
-    }
+    System.arraycopy(yReachesLeft, 0, compReachesLeft, 0, ySize);
+    System.arraycopy(yReachesRight, 0, compReachesRight, 0, ySize);
 
     for (int y = 0; y < ySize; y++) {
-      Component C = new Component(y, y, yreachesRight[y]);
+      int root = y;
+      int rightmostY = y;
+      int maxX = yReachesRight[y];
 
-      if (s2.isEmpty()) {
-        s1.push(y);
-        s2.push(C);
-        continue;
+      while (s2Size > 0 && s2MaxX[s2Size - 1] < root) {
+        s2Size--;
+        s1Size = popComponent(sccNb++, s1Size, s2Root[s2Size], s2RightmostY[s2Size]);
       }
 
-      while (!s2.isEmpty() && s2.peek().maxX < C.root) {
-        sccNb =
-            popComponentAndUpdate(
-                compReachesLeft, compReachesRight, yreachesLeft, yreachesRight, sccNb);
+      while (s2Size > 0 && yReachesLeft[y] <= s2RightmostY[s2Size - 1]) {
+        s2Size--;
+        maxX = Math.max(maxX, s2MaxX[s2Size]);
+        root = s2Root[s2Size];
+        rightmostY = y;
       }
 
-      while (!s2.isEmpty() && yreachesLeft[y] <= s2.peek().rightmostY) {
-        Component C1 = s2.pop();
-        C.maxX = Math.max(C.maxX, C1.maxX);
-        C.root = C1.root;
-        C.rightmostY = y;
-      }
-
-      s1.push(y);
-      s2.push(C);
+      s1[s1Size++] = y;
+      s2Root[s2Size] = root;
+      s2RightmostY[s2Size] = rightmostY;
+      s2MaxX[s2Size] = maxX;
+      s2Size++;
     }
 
-    while (!s2.isEmpty()) {
-      sccNb =
-          popComponentAndUpdate(
-              compReachesLeft, compReachesRight, yreachesLeft, yreachesRight, sccNb);
+    while (s2Size > 0) {
+      s2Size--;
+      s1Size = popComponent(sccNb++, s1Size, s2Root[s2Size], s2RightmostY[s2Size]);
     }
 
-    if (ASSERTS_ENABLED && !s1.isEmpty()) {
-      throw new IllegalStateException("Assertion failed");
+    if (ASSERTS_ENABLED && s1Size != 0) {
+      throw new IllegalStateException("GCC left values outside of the components");
     }
     return sccNb;
   }
 
-  private int popComponentAndUpdate(
-      int[] compReachesLeft,
-      int[] compReachesRight,
-      int[] yreachesLeft,
-      int[] yreachesRight,
-      int sccNb) {
+  private int popComponent(int sccNb, int s1Size, int root, int rightmostY) {
     compReachesLeft[sccNb] = ySize;
     compReachesRight[sccNb] = -1;
-    if (ASSERTS_ENABLED && s1.isEmpty()) {
-      throw new IllegalStateException("Assertion failed");
-    }
-    Component C = s2.pop();
-    while (!s1.isEmpty() && s1.peek() >= C.root && s1.peek() <= C.rightmostY) {
-      int popY = s1.pop();
+    while (s1Size > 0 && s1[s1Size - 1] >= root && s1[s1Size - 1] <= rightmostY) {
+      int popY = s1[--s1Size];
       compOfY[popY] = sccNb;
-      compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[popY]);
-      compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[popY]);
+      compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yReachesLeft[popY]);
+      compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yReachesRight[popY]);
     }
-    return sccNb + 1;
+    return s1Size;
   }
 
-  private void reachedFromY(int[] yreachesLeft, int[] yreachesRight) {
+  /** Computes, for every value, the smallest and the largest value its matched variables reach. */
+  private void reachedFromY() {
 
     for (int i = 0; i < ySize; i++) {
-      yreachesLeft[i] = i;
-      yreachesRight[i] = i;
+      yReachesLeft[i] = i;
+      yReachesRight[i] = i;
     }
 
-    int i;
-    // we check what is the minimum ymin and the maximum ymax reachable by y.
-    // For that we check every x linked to y to keep the minimal and maximal domain
-    // bondaries of these xs.
     for (int j = 0; j < stampValue; j++) {
-      i = match3[j];
-      if (ASSERTS_ENABLED && i < 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      if (ASSERTS_ENABLED && i >= ySize) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      yreachesLeft[i] = Math.min(yreachesLeft[i], xDomain[j].min());
-      yreachesRight[i] = Math.max(yreachesRight[i], xDomain[j].max());
+      int i = match3[j];
+      yReachesLeft[i] = Math.min(yReachesLeft[i], slotMin[j]);
+      yReachesRight[i] = Math.max(yReachesRight[i], slotMax[j]);
     }
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("yreachesLeft ");
-      for (i = 0; i < yreachesLeft.length; i++) {
-        sb.append(yreachesLeft[i]).append(" ");
-      }
-      log.debug("{}", sb);
-
-      sb = new StringBuilder("yreachesRight ");
-      for (i = 0; i < yreachesRight.length; i++) {
-        sb.append(yreachesRight[i]).append(" ");
-      }
-      log.debug("{}", sb);
-    }
-  }
-
-  // ------------------------USED_FOR_REDUCING_DOMAIN--------------------------//
-
-  private void putToTheEnd(IntVar[] list, int element) {
-    // I swap the element with the last one before the stamp
-    // which have nothing to do in the no-more-seen variables
-    IntVar v1 = list[element];
-    int currentStampValue = stamp.value();
-    list[element] = list[currentStampValue];
-    // update the index of the moved element which was behind the stamp value
-    xNodesHash.put(list[currentStampValue], element);
-    // and update the one put to the end
-    xNodesHash.put(v1, currentStampValue);
-    list[currentStampValue] = v1;
   }
 
   // ---------------------------COUNT_BOUND_CONCISTENCY-----------------------//
 
   private void countBoundConsistency(Store store) {
-    int[] maxU = new int[ySize];
-    Arrays.fill(maxU, ySize - 1);
 
-    int[] minL = new int[ySize];
-    Arrays.fill(minL, 0);
+    upperCount();
+    lowerCount();
 
-    upperCount(maxU);
-    lowerCount(minL);
-
-    logMaxUAndMinLDebug(maxU, minL);
+    // the counters also count the assigned variables; yMax is reused by the check after pruning
     for (int i = 0; i < ySize; i++) {
-      applyYDomainPruningForI(i, maxU, minL);
-    }
-    // add the rest of nodes not treated in this pass that was already singleton
-    if (DEBUG) {
-      log.debug("increase yDomain with xNodes singleton");
-    }
-
-    for (int i = 0; i < xSize; i++) {
-      if (x[i].singleton()) {
-        // Change, check.
-        int value = findPosition(x[i].value(), domainHash);
-        yDomain[1][value]++;
-        yDomain[0][value]++;
-      }
-    }
-
-    if (DEBUG) {
-      log.debug("set yNodes");
+      yMin[i] = minL[i] + singletons[i];
+      yMax[i] = maxU[i] + singletons[i];
     }
 
     for (int i = 0; i < ySize; i++) {
-      counters[i].domain.in(store.level, counters[i], yDomain[0][i], yDomain[1][i]);
+      counters[i].domain.in(store.level, counters[i], yMin[i], yMax[i]);
     }
   }
 
-  private void logMaxUAndMinLDebug(int[] maxU, int[] minL) {
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("maxU ");
-      for (int aMaxU : maxU) {
-        sb.append(aMaxU).append(" ");
-      }
-      log.debug("{}", sb);
+  private void upperCount() {
 
-      sb = new StringBuilder("min_l ");
-      for (int aMinL : minL) {
-        sb.append(aMinL).append(" ");
-      }
-      log.debug("{}", sb);
-    }
-  }
-
-  private void applyYDomainPruningForI(int i, int[] maxU, int[] minL) {
-    if (DEBUG) {
-      log.debug(
-          "do pruning [{},{}] => [{},{}]", counters[i].min(), counters[i].max(), minL[i], maxU[i]);
-    }
-
-    if (yDomain[1][i] != maxU[i] || yDomain[0][i] != minL[i]) {
-      yDomain[0][i] = minL[i];
-      yDomain[1][i] = maxU[i];
-    }
-  }
-
-  private void upperCount(int[] maxU) {
-
-    int xIndex;
-    int xIdx;
-    pCount.clear();
-    xIndex = stampValue - 1;
+    heap.clear(null);
+    int xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
       while (xIndex >= 0) {
-        xIdx = match2xOrder[xIndex];
+        int xIdx = match2xOrder[xIndex];
         if (match2[xIdx] == i) {
-          pCount.add(match1[xIdx]);
+          // a max-heap of the first matching, kept as a min-heap of negated values
+          heap.push(-match1[xIdx]);
           xIndex--;
         } else {
           break;
         }
       }
-      maxU[i] = Math.min(yDomain[1][i], pCount.size());
-      for (int l = 0; l < yDomain[0][i]; l++) {
-        if (ASSERTS_ENABLED && pCount.isEmpty()) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        pCount.remove();
+      maxU[i] = Math.min(yMax[i], heap.size());
+      for (int l = 0; l < yMin[i]; l++) {
+        heap.pop();
       }
 
-      // well see how it works for the second part of the condition
-      while (!pCount.isEmpty() && pCount.peek() == i) {
-        pCount.remove();
+      while (!heap.isEmpty() && -heap.peek() == i) {
+        heap.pop();
       }
     }
   }
 
-  private void lowerCount(int[] minL) {
-    int xIndex;
-    int count;
-    int xIdx;
-    pCount.clear();
-    xIndex = stampValue - 1;
+  private void lowerCount() {
+
+    heap.clear(null);
+    int xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
-      count = 0;
+      int count = 0;
       while (xIndex >= 0) {
-        xIdx = match2xOrder[xIndex];
+        int xIdx = match2xOrder[xIndex];
         if (match2[xIdx] == i) {
-          pCount.add(match1[xIdx]);
+          heap.push(-match1[xIdx]);
           xIndex--;
         } else {
           break;
         }
       }
 
-      for (int l = 0; l < yDomain[0][i]; l++) {
-        if (ASSERTS_ENABLED && pCount.isEmpty()) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        pCount.remove();
+      for (int l = 0; l < yMin[i]; l++) {
+        heap.pop();
         count++;
       }
 
-      while (!pCount.isEmpty() && pCount.peek() == i) {
-        pCount.remove();
+      while (!heap.isEmpty() && -heap.peek() == i) {
+        heap.pop();
         count++;
       }
 
       minL[i] = count;
-      while ((!pCount.isEmpty()) && (count < yDomain[1][i])) {
-        pCount.remove();
+      while (!heap.isEmpty() && count < yMax[i]) {
+        heap.pop();
         count++;
       }
     }
   }
 
-  // ----------------------------SORT_AND_COMPARATOR--------------------------//
-
-  private void sortXbyDomainMin() {
-    // I need to sort only the part concern, otherwise old values still after
-    // the stamp value will interfer with the sorting
-    Arrays.sort(xDomain, 0, stampValue, compareLowerBound);
-  }
-
-  private int findPosition(int value, int[] values) {
-
-    int left = 0;
-    int right = values.length - 1;
-
-    int position = (left + right) >> 1;
-
-    if (DEBUG) {
-      StringBuilder sb = new StringBuilder("Looking for ").append(value);
-      for (int v : values) {
-        sb.append(" val ").append(v);
-      }
-      log.debug("{}", sb);
+  /** Returns the position of a counted value. */
+  private int position(int value) {
+    if (contiguous) {
+      return value - base;
     }
-
-    while (left + 1 < right) {
-
-      if (DEBUG) {
-        log.debug("left {} right {} position {}", left, right, position);
-      }
-
-      if (values[position] > value) {
-        right = position;
-      } else {
-        left = position;
-      }
-
-      position = (left + right) >> 1;
-    }
-
-    if (values[left] == value) {
-      return left;
-    }
-
-    if (values[right] == value) {
-      return right;
-    }
-
-    return -1;
+    return Arrays.binarySearch(domainHash, value);
   }
 
   // -----------------------INNER CLASSES-----------------------------------//
-  private static class Component {
 
-    int root;
-    int rightmostY;
-    int maxX;
+  /** A binary min-heap of ints ordered by keys[element], or by the element itself without keys. */
+  private static final class IntHeap {
 
-    public Component(int root, int rightmostY, int maxX) {
-      this.root = root;
-      this.rightmostY = rightmostY;
-      this.maxX = maxX;
+    private final int[] elements;
+    private int size;
+    private int[] keys;
+
+    IntHeap(int capacity) {
+      elements = new int[Math.max(capacity, 1)];
     }
-  }
 
-  private static class Xdomain extends IntervalDomain {
-    Var twin;
-    int index;
+    void clear(int[] keys) {
+      this.keys = keys;
+      size = 0;
+    }
 
-    Xdomain(Var twin, int min, int max) {
-      super(min, max);
-      this.twin = twin;
+    boolean isEmpty() {
+      return size == 0;
+    }
+
+    int size() {
+      return size;
+    }
+
+    int peek() {
+      return elements[0];
+    }
+
+    private int key(int element) {
+      return keys == null ? element : keys[element];
+    }
+
+    void push(int element) {
+      int i = size++;
+      int k = key(element);
+      while (i > 0) {
+        int parent = (i - 1) >>> 1;
+        if (key(elements[parent]) <= k) {
+          break;
+        }
+        elements[i] = elements[parent];
+        i = parent;
+      }
+      elements[i] = element;
+    }
+
+    int pop() {
+      if (size == 0) {
+        throw Store.failException;
+      }
+      int top = elements[0];
+      int last = elements[--size];
+      int k = key(last);
+      int i = 0;
+      int half = size >>> 1;
+      while (i < half) {
+        int child = 2 * i + 1;
+        int right = child + 1;
+        if (right < size && key(elements[right]) < key(elements[child])) {
+          child = right;
+        }
+        if (k <= key(elements[child])) {
+          break;
+        }
+        elements[i] = elements[child];
+        i = child;
+      }
+      if (size > 0) {
+        elements[i] = last;
+      }
+      return top;
     }
   }
 }
