@@ -76,6 +76,8 @@ public class Cumulative extends CumulativeBasic {
   boolean doOverload = true;
   boolean doTimeTableEdgeFind = true;
   boolean doTimeTableDisjunctive = true;
+  boolean doHorizontallyElasticEdgeFind;
+  private HorizontallyElasticEdgeFinder horizontallyElastic;
   // one per view, so that each keeps its task orders between calls
   final EnergyReasoning energy = new EnergyReasoning();
   final EnergyReasoning energyReversed = new EnergyReasoning();
@@ -193,6 +195,19 @@ public class Cumulative extends CumulativeBasic {
     doTimeTableDisjunctive = doTtdr;
   }
 
+  /**
+   * Sets whether to use horizontally elastic edge finding (Gingras and Quimper, IJCAI 2016). It is
+   * off by default.
+   *
+   * @param doHeef true to enable horizontally elastic edge finding, false otherwise.
+   */
+  public void doHorizontallyElasticEdgeFind(boolean doHeef) {
+    doHorizontallyElasticEdgeFind = doHeef;
+    if (doHeef && horizontallyElastic == null) {
+      horizontallyElastic = new HorizontallyElasticEdgeFinder();
+    }
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -227,7 +242,10 @@ public class Cumulative extends CumulativeBasic {
 
     // edge finding and time-table edge finding both detect every overload this check finds
     boolean overload = doOverload && !doEdgeFind && !doTimeTableEdgeFind;
-    if (!overload && !doTimeTableDisjunctive && !doTimeTableEdgeFind) {
+    if (!overload
+        && !doTimeTableDisjunctive
+        && !doTimeTableEdgeFind
+        && !doHorizontallyElasticEdgeFind) {
       return;
     }
     TaskView[] tn = filterZeroTasks(taskNormal);
@@ -259,6 +277,13 @@ public class Cumulative extends CumulativeBasic {
         energyReversed.load(tr, n);
       }
       energyReversed.timeTableEdgeFind(tr, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        return;
+      }
+    }
+    if (doHorizontallyElasticEdgeFind) {
+      horizontallyElastic.filter(tn, n, capacity, store);
+      horizontallyElastic.filter(tr, n, capacity, store);
     }
   }
 
@@ -706,6 +731,8 @@ public class Cumulative extends CumulativeBasic {
         .append(doTimeTableEdgeFind)
         .append(", ttdr=")
         .append(doTimeTableDisjunctive)
+        .append(", heef=")
+        .append(doHorizontallyElasticEdgeFind)
         .append(" )");
 
     return result.toString();

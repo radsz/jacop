@@ -154,6 +154,24 @@ class CumulativeBruteForceTest {
                 "TT+TTDR", false, false, v -> cumulative(v, false, false, false, true, false)),
             new Config("all", false, false, v -> cumulative(v, true, true, true, true, false)),
             new Config(
+                "TT+HEEF",
+                false,
+                false,
+                v -> {
+                  Cumulative c = (Cumulative) cumulative(v, false, false, false, false, false);
+                  c.doHorizontallyElasticEdgeFind(true);
+                  return c;
+                }),
+            new Config(
+                "all+HEEF",
+                false,
+                false,
+                v -> {
+                  Cumulative c = (Cumulative) cumulative(v, true, true, true, true, false);
+                  c.doHorizontallyElasticEdgeFind(true);
+                  return c;
+                }),
+            new Config(
                 "optional",
                 true,
                 false,
@@ -229,12 +247,14 @@ class CumulativeBruteForceTest {
    */
   @Test
   void rulesAreStrongerThanTimeTable() {
-    record Rule(String name, boolean ef, boolean overload, boolean ttef, boolean ttdr) {}
+    record Rule(
+        String name, boolean ef, boolean overload, boolean ttef, boolean ttdr, boolean heef) {}
     List<Rule> rules =
         List.of(
-            new Rule("EF", true, false, false, false),
-            new Rule("TTEF", false, false, true, false),
-            new Rule("TTDR", false, false, false, true));
+            new Rule("EF", true, false, false, false, false),
+            new Rule("TTEF", false, false, true, false, false),
+            new Rule("TTDR", false, false, false, true, false),
+            new Rule("HEEF", false, false, false, false, true));
     Random random = new Random(42);
     int[] stronger = new int[rules.size()];
     for (int trial = 0; trial < 3000; trial++) {
@@ -245,7 +265,14 @@ class CumulativeBruteForceTest {
         String withRule =
             rootDomains(
                 instance,
-                v -> cumulative(v, rule.ef(), rule.overload(), rule.ttef(), rule.ttdr(), false));
+                v -> {
+                  Cumulative c =
+                      (Cumulative)
+                          cumulative(
+                              v, rule.ef(), rule.overload(), rule.ttef(), rule.ttdr(), false);
+                  c.doHorizontallyElasticEdgeFind(rule.heef());
+                  return c;
+                });
         if (base == null) {
           assertThat(withRule).as("%s %s", rule.name(), instance).isNull();
         } else if (withRule == null || !withRule.equals(base)) {
