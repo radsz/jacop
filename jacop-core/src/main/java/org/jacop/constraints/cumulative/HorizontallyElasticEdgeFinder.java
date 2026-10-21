@@ -300,7 +300,7 @@ class HorizontallyElasticEdgeFinder {
             hmax += resMax[k];
             break;
           case RAMP_END:
-            slope -= resMax[k] - rest[k];
+            slope -= (long) resMax[k] - rest[k];
             break;
           case RAMP_REST:
             slope -= rest[k];
@@ -402,7 +402,7 @@ class HorizontallyElasticEdgeFinder {
             hmax += resMax[k];
             break;
           case RAMP_END:
-            slope -= resMax[k] - rest[k];
+            slope -= (long) resMax[k] - rest[k];
             break;
           case RAMP_REST:
             slope -= rest[k];
@@ -420,7 +420,7 @@ class HorizontallyElasticEdgeFinder {
             hmax += resMax[extra];
             break;
           case RAMP_END:
-            slope -= resMax[extra] - rest[extra];
+            slope -= (long) resMax[extra] - rest[extra];
             break;
           default:
             slope -= rest[extra];
