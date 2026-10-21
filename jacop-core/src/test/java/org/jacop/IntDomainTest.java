@@ -948,6 +948,25 @@ class IntDomainTest {
     assertThat(domain.subtract(removed).toString()).isEqualTo("{1, 4..6, 9..10}");
   }
 
+  @Test
+  void intersectAdaptWithSmallDenseDomainAcrossWideGaps() {
+    // the gaps before 60 and 116 are 64 values or more away from the small dense domain
+    IntervalDomain domain = new IntervalDomain(-61, -34);
+    domain.unionAdapt(60, 85);
+    domain.unionAdapt(116, 130);
+    domain.intersectAdapt(new SmallDenseDomain(-7, 11));
+    assertThat(domain.isEmpty()).isTrue();
+  }
+
+  @Test
+  void unionOfSmallDenseDomainsSpanningMoreThan64Values() {
+    SmallDenseDomain low = new SmallDenseDomain(0, 10);
+    SmallDenseDomain high = new SmallDenseDomain(100, 110);
+    assertThat(low.union(high).toString()).isEqualTo("{0..10, 100..110}");
+    assertThat(high.union(low).toString()).isEqualTo("{0..10, 100..110}");
+    assertThat(low.union(new IntervalDomain(100, 110)).toString()).isEqualTo("{0..10, 100..110}");
+  }
+
   /**
    * It is used by the reflection used by the parametrization parameters. It has to stay public.
    *

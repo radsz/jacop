@@ -564,7 +564,16 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void addDom(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID || domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
+      for (int x = domain.min(); ; x = domain.nextValue(x)) {
+        int end = domain.runEnd(x);
+        unionAdapt(x, end);
+        if (end >= domain.max()) {
+          return;
+        }
+        x = end;
+      }
+    }
 
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
       addDomFromIntervalDomain((IntervalDomain) domain);
@@ -573,11 +582,6 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
       addDomForBoundDomain(domain);
-      return;
-    }
-
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-      this.addDom(((SmallDenseDomain) domain).toIntervalDomain());
       return;
     }
 
@@ -618,7 +622,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public boolean isIntersecting(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return isIntersectingRuns(this, domain);
+    }
 
     if (domain.isEmpty()) {
       return false;
@@ -696,7 +702,7 @@ public class IntervalDomain extends IntDomain {
       if (input.getSize() <= 8) {
         return isIntersectingSmallDense(input);
       } else {
-        return isIntersecting(((SmallDenseDomain) domain).toIntervalDomain());
+        return isIntersectingRuns(this, domain);
       }
     }
 
@@ -799,6 +805,10 @@ public class IntervalDomain extends IntDomain {
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return containsRuns(this, domain);
     }
 
     if (isEmpty()) {
@@ -949,6 +959,23 @@ public class IntervalDomain extends IntDomain {
    * <p>The provided value does not have to belong to the domain.
    */
   @Override
+  public int runEnd(int value) {
+    return intervals[firstIntervalEndingAtOrAfter(value)].max();
+  }
+
+  @Override
+  public long bitsFrom(int lo) {
+    long hi = (long) lo + 63;
+    long result = 0;
+    for (int i = firstIntervalEndingAtOrAfter(lo); i < size && intervals[i].min() <= hi; i++) {
+      int from = Math.max(intervals[i].min(), lo);
+      int to = (int) Math.min(intervals[i].max(), hi);
+      result |= bitRange(from - lo, to - lo);
+    }
+    return result;
+  }
+
+  @Override
   public int nextValue(int value) {
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
@@ -996,7 +1023,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public boolean eq(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return getSize() == domain.getSize() && containsRuns(this, domain);
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1046,7 +1075,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntDomain intersect(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return intersectRuns(this, domain, 0);
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1061,10 +1092,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
-      SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      return this.intersect(input.toIntervalDomain());
+      return intersectRuns(this, domain, 0);
     }
 
     if (domain.isSparseRepresentation()) {
@@ -1334,7 +1362,11 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      clear();
+      addDom(domain);
+      return;
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1471,7 +1503,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return subtractRuns(this, domain);
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1792,7 +1826,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public IntDomain union(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return unionRuns(this, domain);
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -2328,14 +2364,73 @@ public class IntervalDomain extends IntDomain {
     installArrayResult(copy, out, storeLevel, v);
   }
 
+  /**
+   * It keeps the values x of this domain for which x - shift is in the domain, walking the runs of
+   * both domains, and reports one event as {@link #in(int, Var, IntDomain)} does.
+   */
+  private void inRuns(int storeLevel, Var v, IntDomain domain, int shift) {
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+    // the intervals the argument covers whole are kept; the result is built from the first one
+    // that is not covered
+    IntervalDomain result = null;
+    for (int k = 0; k < size; k++) {
+      Interval iv = intervals[k];
+      if (domain.contains(iv.min() - shift, iv.max() - shift)) {
+        if (result != null) {
+          result.unionAdapt(iv.min(), iv.max());
+        }
+        continue;
+      }
+      if (result == null) {
+        result = new IntervalDomain(size + 1);
+        System.arraycopy(intervals, 0, result.intervals, 0, k);
+        result.size = k;
+      }
+      addShiftedRuns(result, domain, shift, iv.min(), iv.max());
+    }
+    if (result == null) {
+      return;
+    }
+    if (result.isEmpty()) {
+      throw failException;
+    }
+    in(storeLevel, v, result);
+  }
+
+  /** It adds to result the values x of lo..hi for which x - shift is in domain. */
+  private static void addShiftedRuns(
+      IntervalDomain result, IntDomain domain, int shift, int lo, int hi) {
+    int y = lo - shift;
+    if (!domain.contains(y)) {
+      int next = domain.nextValue(y);
+      if (next <= y) {
+        return;
+      }
+      y = next;
+    }
+    while (y + shift <= hi) {
+      int end = Math.min(domain.runEnd(y) + shift, hi);
+      result.unionAdapt(y + shift, end);
+      if (end >= hi) {
+        return;
+      }
+      int next = domain.nextValue(end - shift);
+      if (next <= end - shift) {
+        return;
+      }
+      y = next;
+    }
+  }
+
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
-    if (isLazyWithoutHoles(domain)) {
-      in(storeLevel, v, domain.min(), domain.max());
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      inRuns(storeLevel, v, domain, 0);
       return;
     }
-    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -3386,11 +3481,10 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
-    if (isLazyWithoutHoles(domain)) {
-      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      inRuns(storeLevel, v, domain, shift);
       return;
     }
-    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -4126,7 +4220,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public int intersectAdapt(IntDomain domain) {
 
-    domain = plain(domain);
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return intersectAdapt(intersectRuns(this, domain, 0));
+    }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -4330,7 +4426,9 @@ public class IntervalDomain extends IntDomain {
       while (position < size && bits != 0) {
 
         if (current < intervals[position].min()) {
-          bits = bits << (intervals[position].min() - current);
+          // a shift by 64 or more would wrap around, all remaining bits are below the interval
+          long gap = (long) intervals[position].min() - current;
+          bits = gap >= 64 ? 0 : bits << gap;
           current = intervals[position].min();
           continue;
         }
@@ -4493,6 +4591,10 @@ public class IntervalDomain extends IntDomain {
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return intersectRuns(this, domain, 0).getSize();
     }
 
     if (domain.isEmpty()) {

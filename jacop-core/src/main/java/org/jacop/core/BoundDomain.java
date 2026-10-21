@@ -720,6 +720,20 @@ class BoundDomain extends IntDomain {
   }
 
   @Override
+  public int runEnd(int value) {
+    return maxBound;
+  }
+
+  @Override
+  public long bitsFrom(int lo) {
+    long hi = (long) lo + 63;
+    if (isEmpty() || maxBound < lo || minBound > hi) {
+      return 0;
+    }
+    return bitRange(Math.max(minBound, lo) - lo, (int) Math.min(maxBound, hi) - lo);
+  }
+
+  @Override
   public int nextValue(int value) {
     if (value < this.minBound) {
       return minBound;
@@ -781,8 +795,6 @@ class BoundDomain extends IntDomain {
 
   @Override
   public void setDomain(IntDomain domain) {
-
-    domain = plain(domain);
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
 

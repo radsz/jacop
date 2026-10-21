@@ -96,30 +96,6 @@ public abstract class IntDomain extends Domain {
   public IntDomain previousDomain;
 
   /**
-   * It tells if the domain is a lazy bit set domain without holes, so a single interval.
-   *
-   * @param domain the domain.
-   * @return true if the domain is a lazy bit set domain holding all values from min to max.
-   */
-  static boolean isLazyWithoutHoles(IntDomain domain) {
-    return domain.domainId() == LAZY_BIT_SET_DOMAIN_ID && !((LazyBitSetDomain) domain).hasHoles();
-  }
-
-  /**
-   * It returns the given domain, or for a lazy bit set domain an interval domain with the same
-   * values, so that code specialized for the other domain types can use it. The interval domain may
-   * be shared and must not be modified.
-   *
-   * @param domain the domain.
-   * @return a domain with the same values that is not a lazy bit set domain.
-   */
-  static IntDomain plain(IntDomain domain) {
-    return domain.domainId() == LAZY_BIT_SET_DOMAIN_ID
-        ? ((LazyBitSetDomain) domain).intervals()
-        : domain;
-  }
-
-  /**
    * Finds the result interval for multiplication of {a..b} * {c..d}.
    *
    * @param a the minimum of the first interval.
@@ -599,6 +575,235 @@ public abstract class IntDomain extends Domain {
    * @return it returns the value before the one specified as a parameter.
    */
   public abstract int previousValue(int value);
+
+  /**
+   * It returns the last value of the run of consecutive values of this domain that contains the
+   * given value. Together with {@link #nextValue(int)} it walks the domain run by run, which is how
+   * the domain classes work on an argument of another class without converting it to intervals.
+   *
+   * @param value a value of this domain.
+   * @return the largest value v such that all values from value to v are in this domain.
+   */
+  public int runEnd(int value) {
+    int end = value;
+    while (end < max() && contains(end + 1)) {
+      end++;
+    }
+    return end;
+  }
+
+  /**
+   * It returns the values lo..lo + 63 of this domain as bits: bit k is set when lo + k is in this
+   * domain. Bit set domains answer it with a few word operations, so an operation between two
+   * domains can work on 64 values at a time whatever the classes of the two domains are.
+   *
+   * @param lo the value of bit 0.
+   * @return the values lo..lo + 63 of this domain as bits.
+   */
+  public long bitsFrom(int lo) {
+    if (isEmpty()) {
+      return 0;
+    }
+    long hi = (long) lo + 63;
+    if (max() < lo || min() > hi) {
+      return 0;
+    }
+    long result = 0;
+    int value = contains(lo) ? lo : nextValue(lo);
+    while (value >= lo && value <= hi) {
+      int end = runEnd(value);
+      result |= bitRange(value - lo, (int) Math.min(end, hi) - lo);
+      if (end >= hi) {
+        break;
+      }
+      int next = nextValue(end);
+      if (next <= end) {
+        break;
+      }
+      value = next;
+    }
+    return result;
+  }
+
+  /**
+   * It returns a word with the bits from..to set.
+   *
+   * @param from the lowest bit, 0..63.
+   * @param to the highest bit, from..63.
+   * @return the word.
+   */
+  static long bitRange(int from, int to) {
+    return (-1L << from) & (-1L >>> (63 - to));
+  }
+
+  /**
+   * It returns the values x of a for which x - shift is in b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @param shift the shift of the values of b.
+   * @return the intersection of a and b shifted by shift.
+   */
+  static IntervalDomain intersectRuns(IntDomain a, IntDomain b, int shift) {
+    IntervalDomain result = new IntervalDomain(4);
+    if (a.isEmpty() || b.isEmpty()) {
+      return result;
+    }
+    int aMax = a.max();
+    int bMax = b.max();
+    int x = a.min();
+    int y = b.min();
+    int xEnd = a.runEnd(x);
+    int yEnd = b.runEnd(y);
+    while (true) {
+      int lo = Math.max(x, y + shift);
+      int hi = Math.min(xEnd, yEnd + shift);
+      if (lo <= hi) {
+        result.unionAdapt(lo, hi);
+      }
+      if (xEnd <= yEnd + shift) {
+        if (xEnd >= aMax) {
+          break;
+        }
+        x = a.nextValue(xEnd);
+        xEnd = a.runEnd(x);
+      } else {
+        if (yEnd >= bMax) {
+          break;
+        }
+        y = b.nextValue(yEnd);
+        yEnd = b.runEnd(y);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * It tells if every value of b is in a, walking the runs of b.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return true if a contains b.
+   */
+  static boolean containsRuns(IntDomain a, IntDomain b) {
+    if (b.isEmpty()) {
+      return true;
+    }
+    int bMax = b.max();
+    for (int y = b.min(); ; y = b.nextValue(y)) {
+      int end = b.runEnd(y);
+      if (!a.contains(y, end)) {
+        return false;
+      }
+      if (end >= bMax) {
+        return true;
+      }
+      y = end;
+    }
+  }
+
+  /**
+   * It tells if a and b have a common value, walking the runs of b.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return true if a and b intersect.
+   */
+  static boolean isIntersectingRuns(IntDomain a, IntDomain b) {
+    if (a.isEmpty() || b.isEmpty()) {
+      return false;
+    }
+    int bMax = b.max();
+    for (int y = b.nextValue(a.min() - 1); y <= a.max(); y = b.nextValue(y)) {
+      if (!b.contains(y)) {
+        return false;
+      }
+      int end = b.runEnd(y);
+      if (a.isIntersecting(y, end)) {
+        return true;
+      }
+      if (end >= bMax) {
+        return false;
+      }
+      y = end;
+    }
+    return false;
+  }
+
+  /**
+   * It returns the values of a that are not in b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return a without the values of b.
+   */
+  static IntervalDomain subtractRuns(IntDomain a, IntDomain b) {
+    IntervalDomain result = new IntervalDomain(4);
+    if (a.isEmpty()) {
+      return result;
+    }
+    int aMax = a.max();
+    for (int x = a.min(); ; x = a.nextValue(x)) {
+      int xEnd = a.runEnd(x);
+      addRunWithout(result, x, xEnd, b);
+      if (xEnd >= aMax) {
+        return result;
+      }
+      x = xEnd;
+    }
+  }
+
+  /** It adds to result the values from..to that are not in b. */
+  private static void addRunWithout(IntervalDomain result, int from, int to, IntDomain b) {
+    while (from <= to) {
+      int hole = b.contains(from) ? from : b.nextValue(from);
+      if (hole <= from && !b.contains(from)) {
+        // no value of b at or after from
+        hole = to + 1;
+      }
+      if (hole > from) {
+        result.unionAdapt(from, Math.min(to, hole - 1));
+      }
+      if (hole > to) {
+        return;
+      }
+      int holeEnd = b.runEnd(hole);
+      if (holeEnd >= to) {
+        return;
+      }
+      from = holeEnd + 1;
+    }
+  }
+
+  /**
+   * It returns the values of a or b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return the union of a and b.
+   */
+  static IntervalDomain unionRuns(IntDomain a, IntDomain b) {
+    IntervalDomain result = new IntervalDomain(4);
+    addRuns(result, a);
+    addRuns(result, b);
+    return result;
+  }
+
+  /** It adds the runs of domain to result. */
+  private static void addRuns(IntervalDomain result, IntDomain domain) {
+    if (domain.isEmpty()) {
+      return;
+    }
+    int max = domain.max();
+    for (int x = domain.min(); ; x = domain.nextValue(x)) {
+      int end = domain.runEnd(x);
+      result.unionAdapt(x, end);
+      if (end >= max) {
+        return;
+      }
+      x = end;
+    }
+  }
 
   /**
    * It returns value enumeration of the domain values.
