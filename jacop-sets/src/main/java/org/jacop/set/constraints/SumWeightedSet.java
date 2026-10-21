@@ -30,13 +30,14 @@
 
 package org.jacop.set.constraints;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
@@ -63,6 +64,9 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   /** It provides a quick access to the weights of given elements of the set. */
   final Map<Integer, Integer> elementWeights;
 
+  /** The elements that have a weight, which are the only ones allowed in the set. */
+  private final IntDomain allowedElements;
+
   /**
    * It specifies if the costs of elements are increasing given the lexical order of the elements.
    */
@@ -74,7 +78,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
    * @param a a set variable for which the weighted sum of its element is computed.
    * @param elements it specifies the elements which are allowed and for which the weight is
    *     specified.
-   * @param weights the weight for each element present in a.lub().
+   * @param weights the non-negative weight of the element at the same position in elements.
    * @param totalWeight an integer variable equal to the total weight of the elements in set
    *     variable a.
    */
@@ -89,20 +93,44 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     this.totalWeight = totalWeight;
     this.a = a;
 
+    if (elements.length != weights.length) {
+      throw new IllegalArgumentException(
+          "SumWeightedSet needs one weight per element: "
+              + elements.length
+              + " elements and "
+              + weights.length
+              + " weights.");
+    }
+
+    // The weight of each element is the weight given at its position in elements; an element of
+    // a.lub() that is not among the elements is not allowed in the set.
+    elementWeights = new TreeMap<>();
+    for (int i = 0; i < elements.length; i++) {
+      if (weights[i] < 0) {
+        throw new IllegalArgumentException(
+            "SumWeightedSet needs non-negative weights; element "
+                + elements[i]
+                + " has weight "
+                + weights[i]
+                + ".");
+      }
+      elementWeights.merge(elements[i], weights[i], Integer::sum);
+    }
+
+    allowedElements = new IntervalDomain();
+    for (int element : elementWeights.keySet()) {
+      allowedElements.unionAdapt(element, element);
+    }
+
+    // the costs are increasing if they do not decrease in the order of the elements
     this.increasingCosts = true;
-    for (int i = 0; i < weights.length - 1; i++) {
-      if (weights[i] > weights[i + 1]) {
+    int previousWeight = Integer.MIN_VALUE;
+    for (int weight : elementWeights.values()) {
+      if (weight < previousWeight) {
         this.increasingCosts = false;
         break;
       }
-    }
-
-    elementWeights = new HashMap<>(weights.length);
-    ValueEnumeration enumer = a.domain.lub().valueEnumeration();
-    int i = 0;
-
-    while (enumer.hasMoreElements()) {
-      elementWeights.put(enumer.nextElement(), weights[i++]);
+      previousWeight = weight;
     }
 
     setScope(a, totalWeight);
@@ -125,7 +153,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
    * a set variable has a weight equal to its value.
    *
    * @param a set variable being used in weighted set constraint.
-   * @param weights it specifies a weight for each possible element of a set variable.
+   * @param weights it specifies a non-negative weight for each element of a.lub(), in the
+   *     increasing order of the elements.
    * @param totalWeight integer variable containing information about total weight of the elements
    *     in set variable a.
    */
@@ -135,6 +164,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
   @Override
   public void consistency(Store store) {
+
+    a.domain.inLub(store.level, a, allowedElements);
 
     boolean fixpointReached = false;
     while (!fixpointReached) {

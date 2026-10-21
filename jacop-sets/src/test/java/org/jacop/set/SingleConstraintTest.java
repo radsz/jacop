@@ -31,6 +31,7 @@
 package org.jacop.set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -46,6 +47,7 @@ import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SumWeightedSet;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
@@ -237,6 +239,91 @@ class SingleConstraintTest {
       }
     }
     return notAtFixpoint;
+  }
+
+  @Test
+  void testSumWeightedSetUsesTheWeightsOfTheGivenElements() {
+
+    // The constructor ignored elements and gave weights[i] to the i-th element of a.lub(), so
+    // elements {4, 1, 2} with weights {5, 0, 3} on lub {1..4} failed with an index out of bounds,
+    // and elements listed in another order than the lub got the wrong weights. An element of the
+    // lub without a weight (3 here) is not allowed in the set.
+    assertSumWeightedSetMatchesBruteForce(
+        dom(1, 2, 3, 4), new int[] {4, 1, 2}, new int[] {5, 0, 3});
+    assertSumWeightedSetMatchesBruteForce(dom(1, 2, 3), new int[] {3, 1, 2}, new int[] {1, 4, 2});
+
+    Random random = new Random(4);
+    for (int trial = 0; trial < 100; trial++) {
+      IntDomain lub = randomSet(random, 1, 5, 0.7);
+      int[] elements = randomSet(random, 1, 6, 0.6).toIntArray();
+      int[] weights = random.ints(elements.length, 0, 5).toArray();
+      for (int i = elements.length - 1; i > 0; i--) {
+        int j = random.nextInt(i + 1);
+        int e = elements[i];
+        elements[i] = elements[j];
+        elements[j] = e;
+      }
+      assertSumWeightedSetMatchesBruteForce(lub, elements, weights);
+    }
+  }
+
+  @Test
+  void testSumWeightedSetRejectsNegativeWeights() {
+
+    // The pruning assumes that adding an element never decreases the sum.
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(new IntervalDomain(), dom(1, 2)));
+    IntVar total = new IntVar(store, "total", -5, 5);
+
+    assertThatThrownBy(() -> new SumWeightedSet(a, new int[] {1, 2}, new int[] {2, -1}, total))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /**
+   * Checks every assignment of the set (a subset of lub) and of the total: the constraint must
+   * accept exactly the sets made of weighted elements whose weights add up to the total.
+   */
+  private static void assertSumWeightedSetMatchesBruteForce(
+      IntDomain lub, int[] elements, int[] weights) {
+    int[] lubValues = lub.toIntArray();
+    int maxTotal = Arrays.stream(weights).sum() + 1;
+    for (int mask = 0; mask < 1 << lubValues.length; mask++) {
+      IntDomain set = new IntervalDomain();
+      boolean allowed = true;
+      int sum = 0;
+      for (int i = 0; i < lubValues.length; i++) {
+        if ((mask & 1 << i) != 0) {
+          set.unionAdapt(lubValues[i], lubValues[i]);
+          boolean weighted = false;
+          for (int j = 0; j < elements.length; j++) {
+            if (elements[j] == lubValues[i]) {
+              sum += weights[j];
+              weighted = true;
+            }
+          }
+          allowed &= weighted;
+        }
+      }
+      for (int t = 0; t <= maxTotal; t++) {
+        Store store = new Store();
+        SetVar a = new SetVar(store, "a", new BoundSetDomain(new IntervalDomain(), lub));
+        IntVar total = new IntVar(store, "total", 0, maxTotal);
+        store.impose(new SumWeightedSet(a, elements, weights, total));
+        boolean accepted;
+        try {
+          a.domain.in(store.level, a, set, set);
+          total.domain.in(store.level, total, t, t);
+          accepted = store.consistency();
+        } catch (FailException e) {
+          accepted = false;
+        }
+        assertThat(accepted)
+            .as(
+                "lub %s, elements %s, weights %s, set %s, total %d",
+                lub, Arrays.toString(elements), Arrays.toString(weights), set, t)
+            .isEqualTo(allowed && sum == t);
+      }
+    }
   }
 
   private static String domains(Constraint constraint) {

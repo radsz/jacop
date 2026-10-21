@@ -60,19 +60,22 @@ public class XexpYeqZ extends AbstractXopYeqZ {
     super(idNumber, x, y, z);
   }
 
+  // Outside the domain of every IntVar, so it cannot be mistaken for a negative power.
+  private static final int NO_VALUE = Integer.MIN_VALUE;
+
   private int computeZi(int xi, int yi, IntVar zvar) {
     if (xi == 0) {
       if (yi == 0) {
         return 1;
       }
       if (yi < 0) {
-        return -1; // 0 to negative exponent is infinity; signal skip
+        return NO_VALUE; // 0 to negative exponent is infinity
       }
       return 0;
     }
     long zl = toLong(Math.pow(xi, yi));
     if (zl < zvar.min() || zl > zvar.max()) {
-      return -1; // signal skip
+      return NO_VALUE;
     }
     return long2int(zl);
   }
@@ -83,7 +86,7 @@ public class XexpYeqZ extends AbstractXopYeqZ {
       for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
         int yi = ey.nextElement();
         int zi = computeZi(xi, yi, z);
-        if (zi < 0) {
+        if (zi == NO_VALUE) {
           continue;
         }
         if (z.domain.contains(zi)) {

@@ -60,6 +60,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
 import org.jacop.search.Lds;
@@ -69,6 +70,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -917,7 +919,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
-    boolean outputVarsOnly = !options.complementarySearch() && label != null;
+    // With all solutions requested the default search also labels the output variables first:
+    // labelling every variable would report a solution again for each assignment of variables
+    // that are not output, such as the Boolean of a half-reification.
+    boolean outputVarsOnly = !options.complementarySearch() && (label != null || options.getAll());
     if (outputVarsOnly) {
       searchVars.outputVars();
     }
@@ -992,7 +997,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<IntVar> intSelect =
           options.freeSearch() || options.complementarySearch()
               ? new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>())
-              : new SimpleSelect<>(intSearchVariables, null, new IndomainMin<>());
+              // x <= middle keeps the order of the solutions of x = min, but needs only a
+              // logarithmic number of nested choices to reach a value of a large domain
+              : new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) intSelect;
@@ -1192,6 +1199,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   @SuppressWarnings("unchecked")
   void run_sequence_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
+
+    if (si.getSearchItems().isEmpty()) {
+      // every annotation in the sequence was ignored
+      run_single_search(solveKind, kind, null);
+      return;
+    }
 
     singleSearch = false;
     this.si = si;

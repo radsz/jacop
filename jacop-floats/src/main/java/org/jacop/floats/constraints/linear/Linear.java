@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints.linear;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -319,6 +320,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     pruneRelation();
 
+    checkStrictRelationWhenGround(relationType);
+
     if (relationType != EQ && entailed(relationType)) {
       removeConstraint();
     }
@@ -332,9 +335,43 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     pruneRelation();
 
+    checkStrictRelationWhenGround(NEG_REL[relationType]);
+
     if (NEG_REL[relationType] != EQ && entailed(NEG_REL[relationType])) {
       removeConstraint();
     }
+  }
+
+  /**
+   * Checks a strict relation exactly once all variables are fixed. The bounds of the tree are
+   * rounded outward, so a weighted sum equal to sum keeps a bound on the right side of sum and a
+   * strict relation would accept it.
+   *
+   * @param rel the relation that must hold.
+   */
+  private void checkStrictRelationWhenGround(byte rel) {
+
+    if (rel != LT && rel != GT) {
+      return;
+    }
+
+    BigDecimal total = BigDecimal.ZERO;
+    for (int i = 0; i < list.length; i++) {
+      double value = list[i].min();
+      if (value != list[i].max() || !Double.isFinite(value)) {
+        return;
+      }
+      total = total.add(exactValue(value).multiply(exactValue(weights[i])));
+    }
+
+    int comparison = total.compareTo(exactValue(sum));
+    if (rel == LT ? comparison >= 0 : comparison <= 0) {
+      throw Store.failException;
+    }
+  }
+
+  private static BigDecimal exactValue(double value) {
+    return new BigDecimal(value); // NOSONAR the exact binary value is intended, not the decimal one
   }
 
   private void pruneRelation() {

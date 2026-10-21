@@ -22,10 +22,7 @@ predicate float_acosh(var float: x, var float: y) =
     y = ln(x + sqrt(x^2.0 - 1));
 
 predicate float_atanh(var float: x, var float: y) =
-    let {
-       var float: t = ln(x)
-    } in
-    y = ((t + 1.0) / (t - 1.0)) / 2.0;
+    y = 0.5 * (ln(1.0 + x) - ln(1.0 - x));
 
 
 predicate array_bool_and_imp(array [int] of var bool: as, var bool: r);
