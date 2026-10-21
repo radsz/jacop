@@ -238,6 +238,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
@@ -283,6 +284,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
@@ -328,6 +330,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
