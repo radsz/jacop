@@ -3132,6 +3132,20 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testCumulativeZeroDurationTaskWithFixedDurations() {
+
+    // With fixed durations and resources the sweep of CumulativePrimary also pruned the start of
+    // a task of zero duration, which does not occupy the resource, against the profile.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 0), new IntVar(store, 0, 1)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 0)};
+    IntVar[] r = {new IntVar(store, 1, 1), new IntVar(store, 3, 3)};
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 3, 3)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(s[1].min()).isZero();
+  }
+
+  @Test
   void testCumulativeVariableDurations() {
 
     // Two tasks that can never overload the resource; edge finding used a capacity map built for
