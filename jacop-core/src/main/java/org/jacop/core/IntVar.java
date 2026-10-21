@@ -220,7 +220,18 @@ public class IntVar extends Var {
    * @return true if the variable domain is a singleton, false otherwise.
    */
   public boolean singleton() {
-    return domain.singleton();
+    IntDomain d = domain;
+    // a test per domain class keeps each call monomorphic, so the JIT can inline it
+    if (d instanceof IntervalDomain interval) {
+      return interval.singleton();
+    }
+    if (d instanceof SmallDenseDomain smallDense) {
+      return smallDense.singleton();
+    }
+    if (d instanceof LazyBitSetDomain lazy) {
+      return lazy.singleton();
+    }
+    return d.singleton();
   }
 
   /**
@@ -229,7 +240,18 @@ public class IntVar extends Var {
    * @return the maximum value belonging to the domain.
    */
   public int max() {
-    return domain.max();
+    IntDomain d = domain;
+    // a test per domain class keeps each call monomorphic, so the JIT can inline it
+    if (d instanceof IntervalDomain interval) {
+      return interval.max();
+    }
+    if (d instanceof SmallDenseDomain smallDense) {
+      return smallDense.max();
+    }
+    if (d instanceof LazyBitSetDomain lazy) {
+      return lazy.max();
+    }
+    return d.max();
   }
 
   /**
@@ -238,7 +260,18 @@ public class IntVar extends Var {
    * @return the minimum value beloning to the domain.
    */
   public int min() {
-    return domain.min();
+    IntDomain d = domain;
+    // a test per domain class keeps each call monomorphic, so the JIT can inline it
+    if (d instanceof IntervalDomain interval) {
+      return interval.min();
+    }
+    if (d instanceof SmallDenseDomain smallDense) {
+      return smallDense.min();
+    }
+    if (d instanceof LazyBitSetDomain lazy) {
+      return lazy.min();
+    }
+    return d.min();
   }
 
   /**

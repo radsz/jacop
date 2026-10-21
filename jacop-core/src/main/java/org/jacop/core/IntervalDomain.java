@@ -135,7 +135,8 @@ public class IntervalDomain extends IntDomain {
   private void ensureCapacity() {
     if (size >= intervals.length) {
       Interval[] old = intervals;
-      intervals = new Interval[old.length + 5];
+      // grow geometrically, so that building a domain value by value stays linear
+      intervals = new Interval[old.length + Math.max(5, old.length >> 1)];
       System.arraycopy(old, 0, intervals, 0, size);
     }
   }
@@ -362,97 +363,32 @@ public class IntervalDomain extends IntDomain {
 
     } else {
 
-      int i = 0;
-      for (; i < size; i++) {
-        // i - position of the interval which touches with or intersects with min..max
-        if ((max + 1 >= intervals[i].min() && max <= intervals[i].max() + 1)
-            || (min + 1 >= intervals[i].min() && min <= intervals[i].max() + 1)
-            || (min <= intervals[i].min() && intervals[i].max() <= max)) {
-          break;
-        }
-        if (max + 1 < intervals[i].min()) {
-          // interval is inserted at position i
+      // min..max starts before the last interval: the first interval it touches, by binary search
+      int i = firstIntervalEndingAtOrAfter(min - 1);
 
-          ensureCapacity();
+      if (max + 1 < intervals[i].min()) {
 
-          // empty intervals are available
-          Interval temp = intervals[i];
-          intervals[i] = new Interval(min, max);
-
-          int t = size;
-          while (t > i) {
-            intervals[t] = intervals[t - 1];
-            t--;
-          }
-          intervals[i + 1] = temp;
-          size++;
-
-          if (ASSERTS_ENABLED && checkInvariants() != null) {
-            throw new IllegalStateException(String.valueOf(checkInvariants()));
-          }
-          if (ASSERTS_ENABLED && !contains(min)) {
-            throw new IllegalStateException(String.valueOf(ASSERT_MIN_ADDED));
-          }
-          if (ASSERTS_ENABLED && !contains(max)) {
-            throw new IllegalStateException(String.valueOf(ASSERT_MAX_ADDED));
-          }
-
-          return;
-        }
-      }
-
-      if (i == size) {
-
+        // min..max touches no interval, so it is inserted at position i
         ensureCapacity();
-
-        intervals[size] = new Interval(min, max);
+        System.arraycopy(intervals, i, intervals, i + 1, size - i);
+        intervals[i] = new Interval(min, max);
         size++;
 
-        if (ASSERTS_ENABLED && checkInvariants() != null) {
-          throw new IllegalStateException(String.valueOf(checkInvariants()));
-        }
-        if (ASSERTS_ENABLED && !contains(min)) {
-          throw new IllegalStateException(String.valueOf(ASSERT_MIN_ADDED));
-        }
-        if (ASSERTS_ENABLED && !contains(max)) {
-          throw new IllegalStateException(String.valueOf(ASSERT_MAX_ADDED));
-        }
-
-        return;
-      }
-
-      int newMin;
-      // interval(min, max) intersects with current domain
-      if (min < intervals[i].min()) {
-        newMin = min;
       } else {
-        newMin = intervals[i].min();
-      }
 
-      int target = i;
-      int newMax;
-
-      while (target < size && max >= intervals[target].max()) {
-        target++;
-      }
-
-      if (target == size) {
-        newMax = max;
-      } else if (intervals[target].min() > max + 1) {
-        newMax = max;
-      } else {
-        newMax = intervals[target].max();
-        target++;
-      }
-
-      intervals[i] = new Interval(newMin, newMax);
-
-      while (target < size) {
-        intervals[++i] = intervals[target++];
-      }
-
-      while (size > i + 1) {
-        intervals[--size] = null;
+        // the intervals i..j - 1 touch min..max and are merged with it
+        int j = i + 1;
+        while (j < size && intervals[j].min() <= max + 1) {
+          j++;
+        }
+        int newMin = Math.min(min, intervals[i].min());
+        int newMax = Math.max(max, intervals[j - 1].max());
+        intervals[i] = new Interval(newMin, newMax);
+        int removed = j - i - 1;
+        if (removed > 0) {
+          System.arraycopy(intervals, j, intervals, i + 1, size - j);
+          clearIntervalsFrom(size - removed);
+        }
       }
     }
 
