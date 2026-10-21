@@ -763,6 +763,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_regular(n);
   }
 
+  /** Handles the jacop_cost_regular FlatZinc constraint. */
+  public void jacop_cost_regular(SimpleNode n) {
+    gc.gen_jacop_cost_regular(n);
+  }
+
   /** Handles the jacop_mdd FlatZinc constraint. */
   public void jacop_mdd(SimpleNode n) {
     gc.gen_jacop_mdd(n);

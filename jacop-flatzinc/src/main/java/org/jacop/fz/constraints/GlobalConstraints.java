@@ -111,6 +111,7 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
@@ -1472,6 +1473,45 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
+  }
+
+  void gen_jacop_cost_regular(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int alphabetSize = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+    int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    IntDomain finalSet = support.getSetLiteral(node, 5);
+    int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(6));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(7));
+
+    // the constraint must not have duplicated variables, nor the cost among them
+    IntVar[] xx = removeDuplicates(x);
+    for (int i = 0; i < xx.length; i++) {
+      if (xx[i] == cost && !cost.singleton()) {
+        IntVar tmp = new IntVar(store, cost.min(), cost.max());
+        support.pose(new XeqY(cost, tmp));
+        xx[i] = tmp;
+      }
+    }
+
+    // MiniZinc numbers states from 1 and values from 1; state 0 is the failing state
+    int[][] transition = new int[numStates][alphabetSize];
+    int[][] costs = new int[numStates][alphabetSize];
+    for (int q = 0; q < numStates; q++) {
+      for (int j = 0; j < alphabetSize; j++) {
+        transition[q][j] = d[q * alphabetSize + j] - 1;
+        costs[q][j] = c[q * alphabetSize + j];
+      }
+    }
+    int[] finalStates = new int[finalSet.getSize()];
+    int k = 0;
+    for (ValueEnumeration e = finalSet.valueEnumeration(); e.hasMoreElements(); ) {
+      finalStates[k++] = e.nextElement() - 1;
+    }
+
+    support.delayedConstraints.add(
+        new CostRegular(xx, transition, 1, q0 - 1, finalStates, costs, cost));
   }
 
   /**

@@ -101,6 +101,7 @@ import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
@@ -176,6 +177,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Subcircuit", circuit(true)),
         Arguments.of(
             "Regular", (Function<Random, Instance>) GlobalConstraintBruteForceTest::regular),
+        Arguments.of("CostRegular", costRegular(false)),
+        Arguments.of("CostRegularDecomposition", costRegular(true)),
         Arguments.of(
             "Sequence", (Function<Random, Instance>) GlobalConstraintBruteForceTest::sequence),
         Arguments.of(
@@ -297,6 +300,70 @@ class GlobalConstraintBruteForceTest {
           return accepting[q];
         },
         "delta=" + Arrays.deepToString(delta) + " accepting=" + Arrays.toString(accepting));
+  }
+
+  /** Cost regular over the alphabet {0, 1, 2}; the last variable is the cost. */
+  private static Function<Random, Instance> costRegular(boolean decomposition) {
+    return random -> {
+      int n = random.nextInt(5);
+      int states = 1 + random.nextInt(3);
+      int[][] delta = new int[states][3];
+      for (int[] row : delta) {
+        for (int c = 0; c < 3; c++) {
+          row[c] = random.nextInt(states + 1) - 1;
+        }
+      }
+      List<Integer> accepting = new ArrayList<>();
+      for (int q = 0; q < states; q++) {
+        if (random.nextBoolean()) {
+          accepting.add(q);
+        }
+      }
+      int[] finals = accepting.stream().mapToInt(Integer::intValue).toArray();
+      // costs per position, sometimes the same matrix for every position
+      boolean layered = random.nextBoolean();
+      int[][][] costs = new int[n][][];
+      for (int i = 0; i < n; i++) {
+        if (i > 0 && !layered) {
+          costs[i] = costs[0];
+          continue;
+        }
+        costs[i] = new int[states][3];
+        for (int[] row : costs[i]) {
+          for (int c = 0; c < 3; c++) {
+            row[c] = random.nextInt(6) - 2;
+          }
+        }
+      }
+      return new Instance(
+          append(domains(random, n, 0, 2), domain(random, -3, 8)),
+          (store, x) -> {
+            CostRegular c = new CostRegular(Arrays.copyOf(x, n), delta, 0, 0, finals, costs, x[n]);
+            if (decomposition) {
+              store.imposeDecomposition(c);
+            } else {
+              store.impose(c);
+            }
+          },
+          x -> {
+            int q = 0;
+            int sum = 0;
+            for (int i = 0; i < n; i++) {
+              sum += costs[i][q][x[i]];
+              q = delta[q][x[i]];
+              if (q < 0) {
+                return false;
+              }
+            }
+            return accepting.contains(q) && sum == x[n];
+          },
+          "delta="
+              + Arrays.deepToString(delta)
+              + " accepting="
+              + accepting
+              + " costs="
+              + Arrays.deepToString(costs));
+    };
   }
 
   private static Instance sequence(Random random) {

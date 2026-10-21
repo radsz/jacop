@@ -41,7 +41,8 @@
   ],
   "regular": [
     "jacop_regular",
-    "jacop_regular_set"
+    "jacop_regular_set",
+    "jacop_cost_regular"
   ],
   "knapsack": [
     "jacop_knapsack"

@@ -14,7 +14,7 @@ The 2.10.1 standard library has **253 `fzn_*` predicates** (not counting `_reif`
 | Native via another global | 6 | `disjunctive`, `disjunctive_strict` → cumulative; `diffn_k` → geost; `diffn_nonstrict` → diff2; `distribute`, `exactly_int` → count |
 | MiniZinc decomposition | 181 | Not overridden. 60 of these are the new `count_*` bool/float/set variants. |
 
-**Update.** Since this check, `develop-5.0` also posts natively: `cumulatives`, `cumulatives_opt`, `sliding_among_int/bool` and all `count_*_bool` variants (including `_par` and `_reif`). `bin_packing*_opt` and reified `regular` turned out to reach native propagators already through MiniZinc's default bodies. The counts below are from the original check.
+**Update.** Since this check, `develop-5.0` also posts natively: `cost_regular` (`CostRegular`), `cumulatives`, `cumulatives_opt`, `sliding_among_int/bool` and all `count_*_bool` variants (including `_par` and `_reif`). `bin_packing*_opt` and reified `regular` turned out to reach native propagators already through MiniZinc's default bodies. The counts below are from the original check.
 
 Reified forms: the standard library has 188 `fzn_*_reif` files. JaCoP overrides only 13 (`all_equal_int`, `among`, `at_least/at_most`, `count_*`, `member_*`, `nvalue`). Every other reified global, including `table`, `all_different` and `global_cardinality`, is decomposed.
 
@@ -41,7 +41,7 @@ all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, am
 - **Scheduling with optional tasks:** `alternative`, `span`, `disjunctive_strict_opt` beyond the current form, `cumulative` with variable resource. These appear often in MiniZinc Challenge scheduling models.
 - **Sorting family:** `sort`, `arg_sort_int/float`, `arg_val_*`. JaCoP has no sortedness propagator.
 - **Graph family:** `connected`, `dconnected`, `tree`, `dtree`, `path`, `dpath`, `bounded_path`, `reachable`, `dreachable`, `steiner`, `dsteiner`, `wst`, `dwst`, `dag`, `subgraph`. JaCoP has graph matching constraints in `jacop.mzn` but none of the MiniZinc graph globals.
-- **Cost automata:** `cost_regular`, `cost_mdd`, `regular_nfa`, `regular_regexp` (the last is a front-end translation to `regular`).
+- **Cost automata:** `cost_regular` (done, `regular/CostRegular`), `cost_mdd`, `regular_nfa`, `regular_regexp` (the last is a front-end translation to `regular`).
 - **Others:** `symmetric_all_different`, `inverse_set`, `inverse_in_range`, `roots`, `range`, `piecewise_linear` (+ non-continuous), `var_perm_sym`, `var_sqr_sym`, `neural_net`, `arg_max/min_float`, `write`/`writes`/`writes_seq`, `sum_pred`, `sum_set`, `geost_nonoverlap_k`, `geost_smallest_bb`, `diffn_nonstrict_k`, `seq_precede_chain_set`, `fzn_assume` (2.10), `blackbox` (2.10).
 
 ### 3c. Library hygiene that blocks "following the standard"
@@ -60,6 +60,7 @@ all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, am
 | `ExtensionalSupportVa`, `ExtensionalConflictVa` | Valid/allowed-tuple search (GAC-va) | No |
 | `ExtensionalSupportMdd` | MDD-based GAC | No |
 | `regular/Regular` | Layered-graph (Pesant) GAC for `regular` | Yes |
+| `regular/CostRegular` | Layered graph with shortest and longest paths (Demassey, Pesant and Rousseau) for `cost_regular` | Yes |
 
 So the core algorithm is the right one: Compact-Table is still the reference GAC propagator for positive tables. The implementation, however, is behind current best practice.
 
