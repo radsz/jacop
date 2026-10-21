@@ -63,7 +63,6 @@ import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
-import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
@@ -236,7 +235,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DiffnStrict", rectangles("DiffnStrict")),
         Arguments.of("Nooverlap", rectangles("Nooverlap")),
         Arguments.of("DiffnDecomposed", rectangles("DiffnDecomposed")),
-        Arguments.of("Diff2", rectangles("Diff2")));
+        Arguments.of("Diff2", rectangles("Diff2")),
+        Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -1087,7 +1087,6 @@ class GlobalConstraintBruteForceTest {
               case "DiffnStrict" -> store.impose(new Diffn(rectangles, true));
               case "DiffnDecomposed" -> store.imposeDecomposition(new DiffnDecomposed(rectangles));
               case "Nooverlap" -> store.impose(new Nooverlap(rectangles, false));
-              case "Diff" -> store.impose(new Diff(rectangles));
               case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));
               case "DisjointConditional" ->
                   store.impose(new DisjointConditional(rectangles, pairs, condition));

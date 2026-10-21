@@ -337,6 +337,14 @@ public class Diff2 extends Diff {
   }
 
   @Override
+  void profileNarrowing(int i, Rectangle r, List<Rectangle> profileCandidates) {
+    // the profile adds up rectangles, which is wrong when excluded pairs may overlap each other
+    if (!exceptionListPresent) {
+      super.profileNarrowing(i, r, profileCandidates);
+    }
+  }
+
+  @Override
   public boolean satisfied() {
     return satisfiedEval(evalRects);
   }
