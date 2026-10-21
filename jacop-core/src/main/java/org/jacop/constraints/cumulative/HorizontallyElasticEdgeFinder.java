@@ -326,7 +326,7 @@ class HorizontallyElasticEdgeFinder {
   private boolean fitsInFreeCapacity(int i, int d, long capacity) {
     long needed = energy[i];
     for (int g = segCount - 1; g >= 0 && segStart[g + 1] > est[i]; g--) {
-      long length = segStart[g + 1] - Math.max(segStart[g], est[i]);
+      long length = (long) segStart[g + 1] - Math.max(segStart[g], est[i]);
       needed -= Math.min(resMax[i], capacity - segRate[g]) * length;
       if (needed <= 0) {
         return true;
