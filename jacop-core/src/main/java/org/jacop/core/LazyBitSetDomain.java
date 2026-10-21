@@ -517,35 +517,16 @@ public class LazyBitSetDomain extends IntDomain {
 
   /** It keeps the values x of this domain for which x - shift is in an interval domain. */
   private void inIntervals(int storeLevel, Var v, IntDomain domain, int shift) {
-    int intervals = domain.noIntervals();
-    if (intervals == 1) {
+    if (domain.noIntervals() == 1) {
       in(storeLevel, v, domain.min() + shift, domain.max() + shift);
       return;
     }
     // the new bounds: the first and the last value of this domain within domain
-    int lo = max + 1;
-    for (int i = 0; i < intervals && lo > max; i++) {
-      Interval interval = domain.getInterval(i);
-      if (interval.max() + shift >= min) {
-        int candidate = nextPresent(interval.min() + shift);
-        if (candidate <= interval.max() + shift) {
-          lo = candidate;
-        }
-      }
-    }
+    int lo = firstValueIn(domain, shift);
     if (lo > max) {
       throw failException;
     }
-    int hi = min - 1;
-    for (int i = intervals - 1; i >= 0 && hi < min; i--) {
-      Interval interval = domain.getInterval(i);
-      if (interval.min() + shift <= max) {
-        int candidate = previousPresent(interval.max() + shift);
-        if (candidate >= interval.min() + shift) {
-          hi = candidate;
-        }
-      }
-    }
+    int hi = lastValueIn(domain, shift);
     int oldMin = min;
     int oldMax = max;
     int oldSize = size;
@@ -556,17 +537,51 @@ public class LazyBitSetDomain extends IntDomain {
       min = lo;
       max = hi;
     }
-    // values of this domain in the gaps of domain between lo and hi
+    clearGaps(storeLevel, v, domain, shift);
+    if (size != oldSize) {
+      changed(v, oldMin, oldMax);
+    }
+  }
+
+  /** The first value x of this domain for which x - shift is in an interval domain, or max + 1. */
+  private int firstValueIn(IntDomain domain, int shift) {
+    int intervals = domain.noIntervals();
+    for (int i = 0; i < intervals; i++) {
+      Interval interval = domain.getInterval(i);
+      if (interval.max() + shift >= min) {
+        int candidate = nextPresent(interval.min() + shift);
+        if (candidate <= interval.max() + shift) {
+          return candidate;
+        }
+      }
+    }
+    return max + 1;
+  }
+
+  /** The last value x of this domain for which x - shift is in an interval domain, or min - 1. */
+  private int lastValueIn(IntDomain domain, int shift) {
+    for (int i = domain.noIntervals() - 1; i >= 0; i--) {
+      Interval interval = domain.getInterval(i);
+      if (interval.min() + shift <= max) {
+        int candidate = previousPresent(interval.max() + shift);
+        if (candidate >= interval.min() + shift) {
+          return candidate;
+        }
+      }
+    }
+    return min - 1;
+  }
+
+  /** It removes the values within the bounds that fall, shifted, between intervals of domain. */
+  private void clearGaps(int storeLevel, Var v, IntDomain domain, int shift) {
+    int intervals = domain.noIntervals();
     for (int i = 0; i < intervals - 1; i++) {
-      int gapLo = Math.max(domain.getInterval(i).max() + shift + 1, lo + 1);
-      int gapHi = Math.min(domain.getInterval(i + 1).min() + shift - 1, hi - 1);
+      int gapLo = Math.max(domain.getInterval(i).max() + shift + 1, min + 1);
+      int gapHi = Math.min(domain.getInterval(i + 1).min() + shift - 1, max - 1);
       if (gapLo <= gapHi && nextPresent(gapLo) <= gapHi) {
         saveLevel(storeLevel, v);
         clear(storeLevel, gapLo, gapHi);
       }
-    }
-    if (size != oldSize) {
-      changed(v, oldMin, oldMax);
     }
   }
 
@@ -647,30 +662,11 @@ public class LazyBitSetDomain extends IntDomain {
       throw failException;
     }
     // the new bounds: the first and the last common value
-    int newMin = hi + 1;
-    for (int start = lo; start <= hi; start += 64) {
-      long common = bitsFrom(start) & other.bitsFrom(start - shift);
-      if (hi - start < 63) {
-        common &= -1L >>> (63 - (hi - start));
-      }
-      if (common != 0) {
-        newMin = start + Long.numberOfTrailingZeros(common);
-        break;
-      }
-    }
+    int newMin = firstCommon(other, shift, lo, hi);
     if (newMin > hi) {
       throw failException;
     }
-    int newMax = newMin;
-    for (int end = hi; end > newMin; end -= 64) {
-      int start = Math.max(end - 63, newMin);
-      long common = bitsFrom(start) & other.bitsFrom(start - shift);
-      common &= -1L >>> (63 - (end - start));
-      if (common != 0) {
-        newMax = start + 63 - Long.numberOfLeadingZeros(common);
-        break;
-      }
-    }
+    int newMax = lastCommon(other, shift, newMin, hi);
     int oldMin = min;
     int oldMax = max;
     int oldSize = size;
@@ -684,42 +680,74 @@ public class LazyBitSetDomain extends IntDomain {
     // values strictly between the new bounds that other does not have
     if (newMax - newMin > 1
         && (bits != null || hasHole(other, newMin + 1 - shift, newMax - 1 - shift))) {
-      bitsVersion++;
-      if (bits == null) {
-        // no holes yet, so the hole of other removes values
-        saveLevel(storeLevel, v);
-        createBits(storeLevel);
-      } else if (bitsShared) {
-        bits = bits.clone();
-        bitsShared = false;
-      }
-      int from = newMin + 1 - base;
-      int to = newMax - 1 - base;
-      int removed = 0;
-      for (int i = from >>> 6; i <= to >>> 6; i++) {
-        long mask = ~other.bitsFrom(base + (i << 6) - shift);
-        if (i == from >>> 6) {
-          mask &= -1L << from;
-        }
-        if (i == to >>> 6) {
-          mask &= -1L >>> (63 - (to & 63));
-        }
-        long old = bits[i];
-        long cleared = old & mask;
-        if (cleared != 0) {
-          saveLevel(storeLevel, v);
-          if (wordStamp[i] < storeLevel) {
-            pushWord(i, storeLevel, old);
-          }
-          bits[i] = old & ~mask;
-          removed += Long.bitCount(cleared);
-        }
-      }
-      size -= removed;
+      removeMissing(storeLevel, v, other, shift);
     }
     if (size != oldSize) {
       changed(v, oldMin, oldMax);
     }
+  }
+
+  /** The first value x in lo..hi of this domain for which x - shift is in other, or hi + 1. */
+  private int firstCommon(IntDomain other, int shift, int lo, int hi) {
+    for (int start = lo; start <= hi; start += 64) {
+      long common = bitsFrom(start) & other.bitsFrom(start - shift);
+      if (hi - start < 63) {
+        common &= -1L >>> (63 - (hi - start));
+      }
+      if (common != 0) {
+        return start + Long.numberOfTrailingZeros(common);
+      }
+    }
+    return hi + 1;
+  }
+
+  /** The last value x in lo..hi of this domain for which x - shift is in other, or lo. */
+  private int lastCommon(IntDomain other, int shift, int lo, int hi) {
+    for (int end = hi; end > lo; end -= 64) {
+      int start = Math.max(end - 63, lo);
+      long common = bitsFrom(start) & other.bitsFrom(start - shift);
+      common &= -1L >>> (63 - (end - start));
+      if (common != 0) {
+        return start + 63 - Long.numberOfLeadingZeros(common);
+      }
+    }
+    return lo;
+  }
+
+  /** It removes the values strictly inside the bounds for which value - shift is not in other. */
+  private void removeMissing(int storeLevel, Var v, IntDomain other, int shift) {
+    bitsVersion++;
+    if (bits == null) {
+      // no holes yet, so the hole of other removes values
+      saveLevel(storeLevel, v);
+      createBits(storeLevel);
+    } else if (bitsShared) {
+      bits = bits.clone();
+      bitsShared = false;
+    }
+    int from = min + 1 - base;
+    int to = max - 1 - base;
+    int removed = 0;
+    for (int i = from >>> 6; i <= to >>> 6; i++) {
+      long mask = ~other.bitsFrom(base + (i << 6) - shift);
+      if (i == from >>> 6) {
+        mask &= -1L << from;
+      }
+      if (i == to >>> 6) {
+        mask &= -1L >>> (63 - (to & 63));
+      }
+      long old = bits[i];
+      long cleared = old & mask;
+      if (cleared != 0) {
+        saveLevel(storeLevel, v);
+        if (wordStamp[i] < storeLevel) {
+          pushWord(i, storeLevel, old);
+        }
+        bits[i] = old & ~mask;
+        removed += Long.bitCount(cleared);
+      }
+    }
+    size -= removed;
   }
 
   /** It tells if some value of lo..hi is not in the domain. */

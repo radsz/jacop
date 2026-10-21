@@ -2377,11 +2377,9 @@ public class IntervalDomain extends IntDomain {
     IntervalDomain result = null;
     for (int k = 0; k < size; k++) {
       Interval iv = intervals[k];
-      int lo = iv.min();
-      int hi = iv.max();
-      if (domain.contains(lo - shift, hi - shift)) {
+      if (domain.contains(iv.min() - shift, iv.max() - shift)) {
         if (result != null) {
-          result.unionAdapt(lo, hi);
+          result.unionAdapt(iv.min(), iv.max());
         }
         continue;
       }
@@ -2390,26 +2388,7 @@ public class IntervalDomain extends IntDomain {
         System.arraycopy(intervals, 0, result.intervals, 0, k);
         result.size = k;
       }
-      int y = lo - shift;
-      if (!domain.contains(y)) {
-        int next = domain.nextValue(y);
-        if (next <= y) {
-          break;
-        }
-        y = next;
-      }
-      while (y + shift <= hi) {
-        int end = Math.min(domain.runEnd(y) + shift, hi);
-        result.unionAdapt(y + shift, end);
-        if (end >= hi) {
-          break;
-        }
-        int next = domain.nextValue(end - shift);
-        if (next <= end - shift) {
-          break;
-        }
-        y = next;
-      }
+      addShiftedRuns(result, domain, shift, iv.min(), iv.max());
     }
     if (result == null) {
       return;
@@ -2418,6 +2397,31 @@ public class IntervalDomain extends IntDomain {
       throw failException;
     }
     in(storeLevel, v, result);
+  }
+
+  /** It adds to result the values x of lo..hi for which x - shift is in domain. */
+  private static void addShiftedRuns(
+      IntervalDomain result, IntDomain domain, int shift, int lo, int hi) {
+    int y = lo - shift;
+    if (!domain.contains(y)) {
+      int next = domain.nextValue(y);
+      if (next <= y) {
+        return;
+      }
+      y = next;
+    }
+    while (y + shift <= hi) {
+      int end = Math.min(domain.runEnd(y) + shift, hi);
+      result.unionAdapt(y + shift, end);
+      if (end >= hi) {
+        return;
+      }
+      int next = domain.nextValue(end - shift);
+      if (next <= end - shift) {
+        return;
+      }
+      y = next;
+    }
   }
 
   @Override

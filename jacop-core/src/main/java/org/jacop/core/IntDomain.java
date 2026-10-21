@@ -743,35 +743,36 @@ public abstract class IntDomain extends Domain {
       return result;
     }
     int aMax = a.max();
-    int x = a.min();
-    while (true) {
+    for (int x = a.min(); ; x = a.nextValue(x)) {
       int xEnd = a.runEnd(x);
-      // the part x..xEnd without b
-      int from = x;
-      while (from <= xEnd) {
-        int hole = b.contains(from) ? from : b.nextValue(from);
-        if (hole <= from && !b.contains(from)) {
-          // no value of b at or after from
-          hole = xEnd + 1;
-        }
-        if (hole > from) {
-          result.unionAdapt(from, Math.min(xEnd, hole - 1));
-        }
-        if (hole > xEnd) {
-          break;
-        }
-        int holeEnd = b.runEnd(hole);
-        if (holeEnd >= xEnd) {
-          break;
-        }
-        from = holeEnd + 1;
-      }
+      addRunWithout(result, x, xEnd, b);
       if (xEnd >= aMax) {
-        break;
+        return result;
       }
-      x = a.nextValue(xEnd);
+      x = xEnd;
     }
-    return result;
+  }
+
+  /** It adds to result the values from..to that are not in b. */
+  private static void addRunWithout(IntervalDomain result, int from, int to, IntDomain b) {
+    while (from <= to) {
+      int hole = b.contains(from) ? from : b.nextValue(from);
+      if (hole <= from && !b.contains(from)) {
+        // no value of b at or after from
+        hole = to + 1;
+      }
+      if (hole > from) {
+        result.unionAdapt(from, Math.min(to, hole - 1));
+      }
+      if (hole > to) {
+        return;
+      }
+      int holeEnd = b.runEnd(hole);
+      if (holeEnd >= to) {
+        return;
+      }
+      from = holeEnd + 1;
+    }
   }
 
   /**
@@ -783,51 +784,25 @@ public abstract class IntDomain extends Domain {
    */
   static IntervalDomain unionRuns(IntDomain a, IntDomain b) {
     IntervalDomain result = new IntervalDomain(4);
-    if (a.isEmpty() || b.isEmpty()) {
-      IntDomain other = a.isEmpty() ? b : a;
-      if (!other.isEmpty()) {
-        for (int x = other.min(); ; x = other.nextValue(x)) {
-          int end = other.runEnd(x);
-          result.unionAdapt(x, end);
-          if (end >= other.max()) {
-            break;
-          }
-          x = end;
-        }
-      }
-      return result;
-    }
-    int aMax = a.max();
-    int bMax = b.max();
-    int x = a.min();
-    int y = b.min();
-    int xEnd = a.runEnd(x);
-    int yEnd = b.runEnd(y);
-    boolean aDone = false;
-    boolean bDone = false;
-    while (!aDone || !bDone) {
-      // take the run that starts first
-      boolean takeA = !aDone && (bDone || x <= y);
-      int lo = takeA ? x : y;
-      int hi = takeA ? xEnd : yEnd;
-      result.unionAdapt(lo, hi);
-      if (takeA) {
-        if (xEnd >= aMax) {
-          aDone = true;
-        } else {
-          x = a.nextValue(xEnd);
-          xEnd = a.runEnd(x);
-        }
-      } else {
-        if (yEnd >= bMax) {
-          bDone = true;
-        } else {
-          y = b.nextValue(yEnd);
-          yEnd = b.runEnd(y);
-        }
-      }
-    }
+    addRuns(result, a);
+    addRuns(result, b);
     return result;
+  }
+
+  /** It adds the runs of domain to result. */
+  private static void addRuns(IntervalDomain result, IntDomain domain) {
+    if (domain.isEmpty()) {
+      return;
+    }
+    int max = domain.max();
+    for (int x = domain.min(); ; x = domain.nextValue(x)) {
+      int end = domain.runEnd(x);
+      result.unionAdapt(x, end);
+      if (end >= max) {
+        return;
+      }
+      x = end;
+    }
   }
 
   /**

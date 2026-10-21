@@ -960,12 +960,6 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      // the values of the argument within the 64 values of this domain, as one word
-      in(storeLevel, v, window(domain, 0));
-      return;
-    }
-
     if (domain.singleton()) {
       in(storeLevel, v, domain.value(), domain.value());
       return;
@@ -1013,11 +1007,8 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && domain.max() - domain.min() + 1 != domain.getSize()) {
-      throw new IllegalStateException(String.valueOf("Loosing propagation" + domain));
-    }
-
-    in(storeLevel, v, domain.min(), domain.max());
+    // other domains: the values of the argument within the 64 values of this domain, as one word
+    in(storeLevel, v, window(domain, 0));
   }
 
   private void adaptMin() {
@@ -1242,10 +1233,6 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain intersect(IntDomain domain) {
 
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      return intersect(window(domain, 0));
-    }
-
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -1278,25 +1265,8 @@ public class SmallDenseDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      IntervalDomain input = new IntervalDomain(domain.min(), domain.max());
-
-      SmallDenseDomain result = intersect(input, 0);
-
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      return result;
-    }
-
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Not implemented for class " + domain.getClass()));
-    }
-
-    return null;
+    // other domains: the values of the argument within the 64 values of this domain, as one word
+    return intersect(window(domain, 0));
   }
 
   @Override
@@ -1700,11 +1670,6 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID && domain.max() - domain.min() <= 63) {
-      setDomain(new SmallDenseDomain(domain.min(), Long.reverse(domain.bitsFrom(domain.min()))));
-      return;
-    }
-
     if (domain.isEmpty()) {
       clear();
       return;
@@ -1748,14 +1713,8 @@ public class SmallDenseDomain extends IntDomain {
       }
 
     } else {
-
-      this.clear();
-
-      IntervalEnumeration enumer = domain.intervalEnumeration();
-
-      while (enumer.hasMoreElements()) {
-        this.unionAdapt(enumer.nextElement());
-      }
+      // the values of the argument, read as one word
+      setDomain(new SmallDenseDomain(domain.min(), Long.reverse(domain.bitsFrom(domain.min()))));
     }
   }
 
