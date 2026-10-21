@@ -158,7 +158,7 @@ class HorizontallyElasticEdgeFinder {
       long ramp = energy[i] / resMax[i];
       rest[i] = (int) (energy[i] % resMax[i]);
       addEvent(est[i], START, i);
-      addEvent((int) Math.min(Integer.MAX_VALUE - 1, est[i] + ramp), RAMP_END, i);
+      addEvent((int) Math.min(Integer.MAX_VALUE - 1L, est[i] + ramp), RAMP_END, i);
       if (rest[i] > 0) {
         addEvent((int) Math.min(Integer.MAX_VALUE, est[i] + ramp + 1), RAMP_REST, i);
       }
@@ -207,7 +207,7 @@ class HorizontallyElasticEdgeFinder {
         }
         // i ends after Omega if it cannot end by d, or if the relaxation of both cannot
         if (est[i] + dur[i] <= d) {
-          if (fitsInFreeCapacity(i, d, capacity)) {
+          if (fitsInFreeCapacity(i, capacity)) {
             // Omega as scheduled alone and i in the capacity it leaves form a relaxed schedule
             continue;
           }
@@ -322,8 +322,8 @@ class HorizontallyElasticEdgeFinder {
     return max;
   }
 
-  // whether task i, from its est at rate at most resMax, fits by d in the capacity Omega leaves
-  private boolean fitsInFreeCapacity(int i, int d, long capacity) {
+  // whether task i, from its est at rate at most resMax, fits in the capacity Omega leaves by d
+  private boolean fitsInFreeCapacity(int i, long capacity) {
     long needed = energy[i];
     for (int g = segCount - 1; g >= 0 && segStart[g + 1] > est[i]; g--) {
       long length = (long) segStart[g + 1] - Math.max(segStart[g], est[i]);
@@ -346,7 +346,7 @@ class HorizontallyElasticEdgeFinder {
       long ramp = energy[extra] / resMax[extra];
       extraEvents[extraCount++] = ((long) est[extra] << 32) | ((long) START << 28) | extra;
       extraEvents[extraCount++] =
-          (Math.min(Integer.MAX_VALUE - 1, est[extra] + ramp) << 32)
+          (Math.min(Integer.MAX_VALUE - 1L, est[extra] + ramp) << 32)
               | ((long) RAMP_END << 28)
               | extra;
       if (rest[extra] > 0) {

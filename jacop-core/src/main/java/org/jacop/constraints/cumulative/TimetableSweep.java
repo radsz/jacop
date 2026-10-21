@@ -238,7 +238,7 @@ class TimetableSweep {
           break;
 
         default:
-          throw new RuntimeException("Internal error");
+          throw new IllegalStateException("Unknown event type");
       }
     }
 

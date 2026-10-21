@@ -330,9 +330,7 @@ class UnaryReasoning {
    */
   void notLast(TaskView[] ts, int n, Store store) {
     buildTree(n);
-    for (int i = 0; i < n; i++) {
-      update[i] = lct[i];
-    }
+    System.arraycopy(lct, 0, update, 0, n);
     int indexQ = 0;
     for (int p = 0; p < n; p++) {
       int i = lctOrder[p];

@@ -146,6 +146,9 @@ import org.jacop.util.fsm.FsmTransition;
 @Slf4j
 class GlobalConstraints implements ParserTreeConstants {
 
+  // default value of the boolean system properties that switch off a filtering rule
+  private static final String FALSE = "false";
+
   final Store store;
   final Support support;
   final Comparator<ArrayList<Integer>> rowComparator =
@@ -330,7 +333,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseCumulativeBasicWithImplied(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
-    if (Boolean.parseBoolean(System.getProperty("fz_cumulative_variable_basic", "false"))) {
+    if (Boolean.parseBoolean(System.getProperty("fz_cumulative_variable_basic", FALSE))) {
       support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
     } else {
       // edge finding and the energy rules use minimal durations and resource use, so they are
@@ -362,7 +365,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     // time-table edge finding with time-table disjunctive reasoning solved more cumulative
     // benchmarks than with edge finding added, which cost more time than its pruning gained
-    c.doEdgeFind(Boolean.parseBoolean(System.getProperty("fz_cumulative_ef", "false")));
+    c.doEdgeFind(Boolean.parseBoolean(System.getProperty("fz_cumulative_ef", FALSE)));
     p = System.getProperty("fz_cumulative_quad_ef");
     if (p != null) {
       c.doQuadraticEdgeFind(Boolean.parseBoolean(p));
@@ -372,7 +375,7 @@ class GlobalConstraints implements ParserTreeConstants {
       c.doOverload(Boolean.parseBoolean(p));
     }
     c.doHorizontallyElasticEdgeFind(
-        Boolean.parseBoolean(System.getProperty("fz_cumulative_heef", "false")));
+        Boolean.parseBoolean(System.getProperty("fz_cumulative_heef", FALSE)));
     return c;
   }
 
@@ -2188,7 +2191,7 @@ class GlobalConstraints implements ParserTreeConstants {
     CumulativeUnaryOptional c = new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true);
     // off by default: on the flexible job shop benchmarks it cost time without removing nodes
     c.doOptionalOverload(
-        Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", "false")));
+        Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
   }
 
