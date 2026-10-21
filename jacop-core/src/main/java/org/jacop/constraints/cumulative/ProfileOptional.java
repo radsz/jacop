@@ -31,7 +31,6 @@
 package org.jacop.constraints.cumulative;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
@@ -60,11 +59,7 @@ public class ProfileOptional {
   /** It specifies the limit of the PROFILE of cumulative use of resources. */
   private final IntVar limit;
 
-  private final Comparator<Event> eventComparator =
-      (Event o1, Event o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
-      };
+  private final TimetableSweep sweep = new TimetableSweep();
   List<Event> utilizationProfile;
   boolean existsOpt = true;
 
@@ -145,12 +140,10 @@ public class ProfileOptional {
     }
 
     // Profile update callback for building utilizationProfile
-    CumulativeBasic.ProfileUpdateCallback<Event> profileUpdateCallback =
+    TimetableSweep.ProfileListener profileUpdateCallback =
         existsOpt
-            ? (event, currentProfile) -> {
+            ? (eventDate, eventValue) -> {
               Event ce = utilizationProfile.get(profilePointer[0]);
-              int eventDate = event.date();
-              int eventValue = event.value();
               if (ce.date() == eventDate) {
                 ce.value += eventValue;
                 if (ce.date() > 0
@@ -169,16 +162,7 @@ public class ProfileOptional {
     // Post-process callback for pruneOpt
     Runnable postProcessCallback = existsOpt ? () -> pruneOpt(store, tn, opt) : null;
 
-    CumulativeBasic.sweepPruningCore(
-        store,
-        ts,
-        limit,
-        debug,
-        debugNarr,
-        (type, t, date, value) -> new Event(type, t, date, value),
-        eventComparator,
-        profileUpdateCallback,
-        postProcessCallback);
+    sweep.prune(store, ts, limit, debug, debugNarr, profileUpdateCallback, postProcessCallback);
   }
 
   void pruneOpt(Store store, TaskView[] tn, IntVar[] opt) {
@@ -230,7 +214,7 @@ public class ProfileOptional {
     }
   }
 
-  private static class Event implements CumulativeBasic.SweepEvent {
+  private static class Event {
     final int type;
     final TaskView t;
     final int date;
@@ -243,23 +227,19 @@ public class ProfileOptional {
       this.value = value;
     }
 
-    @Override
-    public int date() {
+    int date() {
       return date;
     }
 
-    @Override
-    public int type() {
+    int type() {
       return type;
     }
 
-    @Override
-    public int value() {
+    int value() {
       return value;
     }
 
-    @Override
-    public TaskView task() {
+    TaskView task() {
       return t;
     }
 
