@@ -30,8 +30,6 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
@@ -56,12 +54,9 @@ public class CumulativeUnary extends Cumulative {
    */
   final TaskView[] tvn;
   final TaskView[] tvr;
-  private final Comparator<TaskView> taskIncLctComparator =
-      (o1, o2) -> o1.lct() == o2.lct() ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
-  private final Comparator<TaskView> taskIncLstComparator =
-      (o1, o2) -> o1.lst() == o2.lst() ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
-  private final Comparator<TaskView> taskIncEctComparator =
-      (o1, o2) -> o1.ect() == o2.ect() ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
+  // the rules of each view; they keep their task orders between calls
+  private final UnaryReasoning unaryNormal = new UnaryReasoning();
+  private final UnaryReasoning unaryReversed = new UnaryReasoning();
   boolean doProfile;
   boolean doUnaryEdgeFind;
 
@@ -223,171 +218,29 @@ public class CumulativeUnary extends Cumulative {
   }
 
   void overload(TaskView[] ts) {
-
-    TaskView[] t = new TaskView[ts.length];
-    System.arraycopy(ts, 0, t, 0, ts.length);
-    // tasks sorted in ascending order of EST for Theta tree
-    Arrays.sort(t, taskIncEstComparator);
-
-    ThetaTree tree = new ThetaTree();
-    tree.initTree(t);
-
-    // tasks sorted in ascending order of lct
-    Arrays.sort(t, taskIncLctComparator);
-
-    for (TaskView aT : t) {
-      tree.enableNode(aT.treeIndex);
-      if (tree.get(tree.root()).ect > aT.lct()) {
-        throw Store.failException;
-      }
-    }
+    unaryNormal.load(ts, ts.length);
+    unaryNormal.overload(ts.length);
   }
 
   void notFirstNotLast(Store store, TaskView[] tn, TaskView[] tr) {
-
-    notFirstNotLastPhase(store, tn);
-    notFirstNotLastPhase(store, tr);
-  }
-
-  private void notFirstNotLastPhase(Store store, TaskView[] tc) {
-
-    TaskView[] t = new TaskView[tc.length];
-    System.arraycopy(tc, 0, t, 0, tc.length);
-    // tasks sorted in ascending order of EST for Theta tree
-    Arrays.sort(t, taskIncEstComparator);
-
-    ThetaTree tree = new ThetaTree();
-    tree.initTree(t);
-
-    // tasks sorted in ascending order of lct
-    Arrays.sort(t, taskIncLctComparator);
-
-    // tasks sorted in ascending order of lct - p (lst)
-    TaskView[] q = new TaskView[t.length];
-    System.arraycopy(t, 0, q, 0, t.length);
-    Arrays.sort(q, taskIncLstComparator);
-
-    notLast(store, tree, t, q, tc);
-  }
-
-  private void notLast(Store store, ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] tc) {
-
-    int n = t.length;
-    int[] updateLct = new int[n];
-    for (int i = 0; i < n; i++) {
-      updateLct[i] = t[i].lct();
-    }
-
-    int indexQ = 0;
-    for (int i = 0; i < n; i++) {
-      int j = -1;
-
-      while (indexQ < n && t[i].lct() > q[indexQ].lst()) {
-
-        if (tree.ect(t[i].treeIndex) > t[i].lst()) {
-          updateLct[i] = Math.min(q[indexQ - 1].lst(), updateLct[i]);
-        }
-
-        j = tc[q[indexQ].index].treeIndex;
-        tree.enableNode(j);
-        indexQ++;
-      }
-
-      if (j >= 0 && tree.ect(t[i].treeIndex) > t[i].lst()) {
-        updateLct[i] = Math.min(q[indexQ - 1].lst(), updateLct[i]);
-      }
-    }
-
-    for (int i = 0; i < n; i++) {
-      t[i].updateNotFirstNotLast(store.level, updateLct[i]);
-    }
+    unaryNormal.load(tn, tn.length);
+    unaryNormal.notLast(tn, tn.length, store);
+    unaryReversed.load(tr, tr.length);
+    unaryReversed.notLast(tr, tr.length, store);
   }
 
   void detectable(Store store, TaskView[] tn, TaskView[] tr) {
-    detectablePhase(store, tn);
-    detectablePhase(store, tr);
-  }
-
-  private void detectable(Store store, ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] to) {
-
-    int n = t.length;
-    int[] updateEst = new int[n];
-
-    int indexQ = 0;
-    for (int i = 0; i < n; i++) {
-      int j;
-
-      while (indexQ < n && t[i].ect() > q[indexQ].lst()) {
-        j = to[q[indexQ].index].treeIndex;
-        tree.enableNode(j);
-        indexQ++;
-      }
-      updateEst[i] = Math.max(t[i].est(), tree.ect(t[i].treeIndex));
-    }
-
-    for (int i = 0; i < n; i++) {
-      t[i].updateDetectable(store.level, updateEst[i]);
-    }
-  }
-
-  private void detectablePhase(Store store, TaskView[] tc) {
-
-    TaskView[] t = new TaskView[tc.length];
-    System.arraycopy(tc, 0, t, 0, tc.length);
-    // tasks sorted in ascending order of EST for Theta tree
-    Arrays.sort(t, taskIncEstComparator);
-
-    ThetaTree tree = new ThetaTree();
-    tree.initTree(t);
-
-    // tasks sorted in ascending order of lct
-    Arrays.sort(t, taskIncEctComparator);
-
-    // tasks sorted in ascending order of lct - p (lst)
-    TaskView[] q = new TaskView[t.length];
-    System.arraycopy(t, 0, q, 0, t.length);
-    Arrays.sort(q, taskIncLstComparator);
-
-    detectable(store, tree, t, q, tc);
+    unaryNormal.load(tn, tn.length);
+    unaryNormal.detectable(tn, tn.length, store);
+    unaryReversed.load(tr, tr.length);
+    unaryReversed.detectable(tr, tr.length, store);
   }
 
   void edgeFind(Store store, TaskView[] tn, TaskView[] tr) {
-
-    edgeFindPhase(store, tn);
-    edgeFindPhase(store, tr);
-  }
-
-  private void edgeFindPhase(Store store, TaskView[] tc) {
-
-    // tasks sorted in non-decreasing order of est
-    TaskView[] estList = new TaskView[tc.length];
-    System.arraycopy(tc, 0, estList, 0, tc.length);
-    Arrays.sort(estList, taskIncEstComparator);
-
-    ThetaLambdaUnaryTree tree = new ThetaLambdaUnaryTree();
-    tree.buildTree(estList);
-
-    // tasks sorted in non-increasing order of lct
-    TaskView[] lctList = new TaskView[estList.length];
-    System.arraycopy(estList, 0, lctList, 0, estList.length);
-    Arrays.sort(lctList, taskDecLctComparator);
-
-    int n = lctList.length;
-    TaskView t = lctList[0];
-    for (int i = 0; i < n - 1; i++) {
-      if (tree.ect() > t.lct()) {
-        throw Store.failException;
-      }
-
-      tree.moveToLambda(t.treeIndex);
-      t = lctList[i + 1];
-
-      while (tree.ectLambda() > t.lct()) {
-        int j = tree.rootNode().responsibleEctLambda;
-        tc[tree.get(j).task.index].updateEdgeFind(store.level, tree.ect());
-        tree.removeFromLambda(j);
-      }
-    }
+    unaryNormal.load(tn, tn.length);
+    unaryNormal.edgeFind(tn, tn.length, store);
+    unaryReversed.load(tr, tr.length);
+    unaryReversed.edgeFind(tr, tr.length, store);
   }
 
   @Override

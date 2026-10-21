@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -173,6 +174,16 @@ class CumulativeBruteForceTest {
                   c.doEdgeFind(false);
                   return c;
                 }),
+            new Config(
+                "unary",
+                false,
+                true,
+                v -> new CumulativeUnary(v.s(), v.d(), v.r(), v.limit(), true, true)),
+            new Config(
+                "unaryNoProfile",
+                false,
+                true,
+                v -> new CumulativeUnary(v.s(), v.d(), v.r(), v.limit(), false, true)),
             new Config(
                 "unaryOptional",
                 true,
