@@ -2688,3 +2688,6 @@ gcc_magic_sequence/gcc_magic_sequence
 gcc_magic_sequence_all/gcc_magic_sequence_all
 gcc_nurse_rostering/gcc_nurse_rostering
 gcc_unsorted_cover_all/gcc_unsorted_cover_all
+cost_regular/cost_regular_opt_20_1
+cost_regular/cost_regular_opt_20_2
+cost_regular/cost_regular_opt_30_1
