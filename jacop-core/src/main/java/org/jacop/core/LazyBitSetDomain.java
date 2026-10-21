@@ -549,26 +549,21 @@ public class LazyBitSetDomain extends IntDomain {
     int oldMin = min;
     int oldMax = max;
     int oldSize = size;
+    // the bounds first, so that a bit set created below covers only the new bounds
+    if (lo != min || hi != max) {
+      saveLevel(storeLevel, v);
+      size -= count(min, lo - 1) + count(hi + 1, max);
+      min = lo;
+      max = hi;
+    }
     // values of this domain in the gaps of domain between lo and hi
-    boolean saved = false;
     for (int i = 0; i < intervals - 1; i++) {
       int gapLo = Math.max(domain.getInterval(i).max() + shift + 1, lo + 1);
       int gapHi = Math.min(domain.getInterval(i + 1).min() + shift - 1, hi - 1);
       if (gapLo <= gapHi && nextPresent(gapLo) <= gapHi) {
-        if (!saved) {
-          saveLevel(storeLevel, v);
-          saved = true;
-        }
+        saveLevel(storeLevel, v);
         clear(storeLevel, gapLo, gapHi);
       }
-    }
-    if (lo != min || hi != max) {
-      if (!saved) {
-        saveLevel(storeLevel, v);
-      }
-      size -= count(min, lo - 1) + count(hi + 1, max);
-      min = lo;
-      max = hi;
     }
     if (size != oldSize) {
       changed(v, oldMin, oldMax);
@@ -679,6 +674,13 @@ public class LazyBitSetDomain extends IntDomain {
     int oldMin = min;
     int oldMax = max;
     int oldSize = size;
+    // the bounds first, so that a bit set created below covers only the new bounds
+    if (newMin != min || newMax != max) {
+      saveLevel(storeLevel, v);
+      size -= count(min, newMin - 1) + count(newMax + 1, max);
+      min = newMin;
+      max = newMax;
+    }
     // values strictly between the new bounds that other does not have
     if (newMax - newMin > 1
         && (bits != null || hasHole(other, newMin + 1 - shift, newMax - 1 - shift))) {
@@ -714,12 +716,6 @@ public class LazyBitSetDomain extends IntDomain {
         }
       }
       size -= removed;
-    }
-    if (newMin != min || newMax != max) {
-      saveLevel(storeLevel, v);
-      size -= count(min, newMin - 1) + count(newMax + 1, max);
-      min = newMin;
-      max = newMax;
     }
     if (size != oldSize) {
       changed(v, oldMin, oldMax);
