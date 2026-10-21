@@ -361,13 +361,17 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       if (value != list[i].max() || !Double.isFinite(value)) {
         return;
       }
-      total = total.add(new BigDecimal(value).multiply(new BigDecimal(weights[i])));
+      total = total.add(exactValue(value).multiply(exactValue(weights[i])));
     }
 
-    int comparison = total.compareTo(new BigDecimal(sum));
+    int comparison = total.compareTo(exactValue(sum));
     if (rel == LT ? comparison >= 0 : comparison <= 0) {
       throw Store.failException;
     }
+  }
+
+  private static BigDecimal exactValue(double value) {
+    return new BigDecimal(value); // NOSONAR the exact binary value is intended, not the decimal one
   }
 
   private void pruneRelation() {
