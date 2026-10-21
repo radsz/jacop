@@ -76,7 +76,9 @@ public class Cumulative extends CumulativeBasic {
   boolean doOverload = true;
   boolean doTimeTableEdgeFind = true;
   boolean doTimeTableDisjunctive = true;
+  // one per view, so that each keeps its task orders between calls
   final EnergyReasoning energy = new EnergyReasoning();
+  final EnergyReasoning energyReversed = new EnergyReasoning();
   private TaskView[] optionalTasks;
   private boolean[] optionalPresent;
   private IntVar[] optionalVars;
@@ -162,8 +164,8 @@ public class Cumulative extends CumulativeBasic {
   }
 
   /**
-   * Sets whether to use the O(n log n) overload check when edge finding is not used (edge finding
-   * includes it). It is on by default.
+   * Sets whether to use the O(n log n) overload check when neither edge finding nor time-table edge
+   * finding is used (both include it). It is on by default.
    *
    * @param doOverloadCheck true to enable the overload check, false otherwise.
    */
@@ -223,7 +225,8 @@ public class Cumulative extends CumulativeBasic {
    */
   void energyProp(Store store) {
 
-    boolean overload = doOverload && !doEdgeFind;
+    // edge finding and time-table edge finding both detect every overload this check finds
+    boolean overload = doOverload && !doEdgeFind && !doTimeTableEdgeFind;
     if (!overload && !doTimeTableDisjunctive && !doTimeTableEdgeFind) {
       return;
     }
@@ -235,24 +238,27 @@ public class Cumulative extends CumulativeBasic {
     int n = tn.length;
     long capacity = limit.max();
 
+    energy.load(tn, n);
+    energyReversed.load(tr, n);
     if (overload) {
-      energy.load(tn, n);
       energy.overload(capacity, n);
     }
     if (doTimeTableDisjunctive) {
-      energy.load(tn, n);
       energy.timeTableDisjunctive(tn, n, capacity, store);
-      energy.load(tr, n);
-      energy.timeTableDisjunctive(tr, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        energyReversed.load(tr, n);
+      }
+      energyReversed.timeTableDisjunctive(tr, n, capacity, store);
       if (store.propagationHasOccurred) {
         return;
       }
     }
     if (doTimeTableEdgeFind) {
-      energy.load(tn, n);
       energy.timeTableEdgeFind(tn, n, capacity, store);
-      energy.load(tr, n);
-      energy.timeTableEdgeFind(tr, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        energyReversed.load(tr, n);
+      }
+      energyReversed.timeTableEdgeFind(tr, n, capacity, store);
     }
   }
 

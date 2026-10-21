@@ -73,10 +73,14 @@ class EnergyReasoning {
   private int[] update = new int[0];
   private long[] energyBeforeEst = new long[0];
 
-  // tasks sorted by est and by lct
+  // tasks sorted by est, lct, lst and ect; the orders are kept between calls and re-sorted by
+  // insertion, since the bounds change little between two calls
   private int[] estOrder = new int[0];
   private int[] lctOrder = new int[0];
-  private long[] keys = new long[0];
+  private int[] lstOrder = new int[0];
+  private int[] ectOrder = new int[0];
+  private int ordered = -1;
+  private boolean profileValid;
 
   // compulsory part profile: height profileHeight[k] on [profileTime[k], profileTime[k + 1])
   private int[] profileTime = new int[0];
@@ -84,7 +88,6 @@ class EnergyReasoning {
   // energy of the profile before profileTime[k]
   private long[] profileEnergy = new long[0];
   private int profileSize;
-  private long[] events = new long[0];
 
   // theta-lambda tree over tasks sorted by est
   private long[] treeEnergy = new long[0];
@@ -111,11 +114,12 @@ class EnergyReasoning {
     energyBeforeEst = new long[n];
     estOrder = new int[n];
     lctOrder = new int[n];
-    keys = new long[n];
+    lstOrder = new int[n];
+    ectOrder = new int[n];
+    ordered = -1;
     profileTime = new int[2 * n + 1];
     profileHeight = new int[2 * n + 1];
     profileEnergy = new long[2 * n + 1];
-    events = new long[2 * n];
     int size = 1;
     while (size < n) {
       size <<= 1;
@@ -159,54 +163,84 @@ class EnergyReasoning {
       dur[i] = t.dur.min();
       res[i] = unit ? 1 : t.res.min();
     }
+    if (ordered != n) {
+      for (int i = 0; i < n; i++) {
+        estOrder[i] = i;
+        lctOrder[i] = i;
+        lstOrder[i] = i;
+        ectOrder[i] = i;
+      }
+      ordered = n;
+    }
     sortBy(est, estOrder, n);
     sortBy(lct, lctOrder, n);
+    profileValid = false;
   }
 
-  private void sortBy(int[] value, int[] order, int n) {
-    for (int i = 0; i < n; i++) {
-      keys[i] = ((long) value[i] << 32) | i;
-    }
-    Arrays.sort(keys, 0, n);
-    for (int i = 0; i < n; i++) {
-      order[i] = (int) keys[i];
+  // insertion sort of order by (value, index), starting from the order of the previous call
+  private static void sortBy(int[] value, int[] order, int n) {
+    for (int k = 1; k < n; k++) {
+      int i = order[k];
+      int v = value[i];
+      int m = k - 1;
+      while (m >= 0 && (value[order[m]] > v || value[order[m]] == v && order[m] > i)) {
+        order[m + 1] = order[m];
+        m--;
+      }
+      order[m + 1] = i;
     }
   }
 
   /**
    * Builds the compulsory part profile of the loaded tasks; tasks for which present[i] is false do
-   * not contribute.
+   * not contribute. The profile of all tasks is kept until the next load.
    */
   private void buildProfile(int n, boolean[] present) {
-    int m = 0;
-    for (int i = 0; i < n; i++) {
-      if (lst[i] < ect[i] && (present == null || present[i])) {
-        // low bits: 0 ends a compulsory part, 1 starts one; the index is not needed
-        events[m++] = ((long) lst[i] << 32) | 1L;
-        events[m++] = ((long) ect[i] << 32);
-        events[m - 2] |= (long) i << 1;
-        events[m - 1] |= (long) i << 1;
-      }
+    if (present == null && profileValid) {
+      return;
     }
-    Arrays.sort(events, 0, m);
+    sortBy(lst, lstOrder, n);
+    sortBy(ect, ectOrder, n);
     int k = 0;
     int height = 0;
     long energy = 0;
-    for (int e = 0; e < m; e++) {
-      int time = (int) (events[e] >> 32);
-      int i = (int) (events[e] & 0xFFFFFFFFL) >>> 1;
+    int s = 0;
+    int e = 0;
+    while (true) {
+      // next start (lst) and next end (ect) of a compulsory part
+      while (s < n && !hasCore(lstOrder[s], present)) {
+        s++;
+      }
+      while (e < n && !hasCore(ectOrder[e], present)) {
+        e++;
+      }
+      if (s == n && e == n) {
+        break;
+      }
+      int time;
+      if (e == n || s < n && lst[lstOrder[s]] < ect[ectOrder[e]]) {
+        time = lst[lstOrder[s]];
+        height += res[lstOrder[s++]];
+      } else {
+        time = ect[ectOrder[e]];
+        height -= res[ectOrder[e++]];
+      }
       if (k > 0 && profileTime[k - 1] == time) {
         k--;
       } else if (k > 0) {
         energy += (long) profileHeight[k - 1] * (time - profileTime[k - 1]);
       }
-      height += (events[e] & 1L) == 1L ? res[i] : -res[i];
       profileTime[k] = time;
       profileHeight[k] = height;
       profileEnergy[k] = energy;
       k++;
     }
     profileSize = k;
+    profileValid = present == null;
+  }
+
+  private boolean hasCore(int i, boolean[] present) {
+    return lst[i] < ect[i] && (present == null || present[i]);
   }
 
   // the index of the last profile segment starting at or before t, -1 if none
@@ -241,9 +275,8 @@ class EnergyReasoning {
     return min;
   }
 
-  // energy of the profile before time t
-  private long profileEnergyBefore(int t) {
-    int k = segment(t);
+  // energy of the profile before time t, given the last segment k starting at or before t
+  private long energyBefore(int k, int t) {
     return k < 0 ? 0 : profileEnergy[k] + (long) profileHeight[k] * (t - profileTime[k]);
   }
 
@@ -444,21 +477,36 @@ class EnergyReasoning {
    */
   void timeTableEdgeFind(TaskView[] ts, int n, long capacity, Store store) {
     buildProfile(n, null);
-    for (int i = 0; i < n; i++) {
+    // profile energy before each est, sweeping the profile in est order
+    int k = -1;
+    for (int p = 0; p < n; p++) {
+      int i = estOrder[p];
       update[i] = est[i];
-      energyBeforeEst[i] = profileEnergyBefore(est[i]);
+      while (k + 1 < profileSize && profileTime[k + 1] <= est[i]) {
+        k++;
+      }
+      energyBeforeEst[i] = energyBefore(k, est[i]);
     }
 
+    k = profileSize - 1;
+    // tasks estOrder[0..last] have est < b; b decreases with q
+    int last = n - 1;
     for (int q = n - 1; q >= 0; q--) {
       int b = lct[lctOrder[q]];
       if (q < n - 1 && lct[lctOrder[q + 1]] == b) {
         continue;
       }
-      long energyBeforeB = profileEnergyBefore(b);
+      while (k >= 0 && profileTime[k] > b) {
+        k--;
+      }
+      long energyBeforeB = energyBefore(k, b);
+      while (last >= 0 && est[estOrder[last]] >= b) {
+        last--;
+      }
       long freeEnergy = 0;
       int best = -1;
       long bestEnergy = 0;
-      for (int p = n - 1; p >= 0; p--) {
+      for (int p = last; p >= 0; p--) {
         int j = estOrder[p];
         int freeDuration = dur[j] - Math.max(0, ect[j] - lst[j]);
         if (lct[j] <= b) {
