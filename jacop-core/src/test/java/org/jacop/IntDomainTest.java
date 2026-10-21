@@ -40,6 +40,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.TreeSet;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -946,6 +948,30 @@ class IntDomainTest {
     IntervalDomain removed = new IntervalDomain(2, 3);
     removed.unionAdapt(7, 8);
     assertThat(domain.subtract(removed).toString()).isEqualTo("{1, 4..6, 9..10}");
+  }
+
+  @Test
+  void unionAdaptInAnyOrderMatchesTheValues() {
+    Random random = new Random(7);
+    for (int run = 0; run < 500; run++) {
+      IntervalDomain domain = new IntervalDomain();
+      TreeSet<Integer> values = new TreeSet<>();
+      for (int step = 0; step < 40; step++) {
+        int min = random.nextInt(200) - 100;
+        int max = min + random.nextInt(random.nextBoolean() ? 3 : 30);
+        domain.unionAdapt(min, max);
+        for (int v = min; v <= max; v++) {
+          values.add(v);
+        }
+        IntervalDomain expected = new IntervalDomain();
+        for (int v : values) {
+          expected.unionAdapt(v, v);
+        }
+        assertThat(domain.checkInvariants()).isNull();
+        assertThat(domain.getSize()).isEqualTo(values.size());
+        assertThat(domain.toString()).isEqualTo(expected.toString());
+      }
+    }
   }
 
   @Test
