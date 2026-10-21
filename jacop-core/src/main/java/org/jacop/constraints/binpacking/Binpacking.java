@@ -263,7 +263,7 @@ public class Binpacking extends Constraint
       Iterator<IntVar> it = itemQueue.iterator();
       IntVar v = it.next();
       it.remove();
-      IntDomain pd = v.dom().previousDomain;
+      IntDomain pd = v.dom().getPreviousDomain();
       if (pd != null) {
         d.addDom(pd);
       } else {

@@ -33,6 +33,8 @@ package org.jacop.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -60,6 +62,9 @@ class DomainOperationsBruteForceTest {
 
   private static final Scale WIDE = new Scale("wide", -30, 33, 8, 8);
 
+  /** Values beyond what a SmallDenseDomain holds, over several words of a lazy bit set. */
+  private static final Scale LARGE = new Scale("large", -70, 150, 10, 30);
+
   static Stream<Arguments> kinds() {
     Stream.Builder<Arguments> kinds = Stream.builder();
     for (Scale scale : new Scale[] {SMALL, WIDE}) {
@@ -74,6 +79,18 @@ class DomainOperationsBruteForceTest {
               scale,
               (Function<TreeSet<Integer>, IntDomain>) s -> smallDense(s)));
     }
+    for (Scale scale : new Scale[] {SMALL, WIDE, LARGE}) {
+      kinds.add(
+          Arguments.of(
+              "LazyBitSetDomain " + scale.name(),
+              scale,
+              (Function<TreeSet<Integer>, IntDomain>) s -> lazy(s)));
+    }
+    kinds.add(
+        Arguments.of(
+            "IntervalDomain " + LARGE.name(),
+            LARGE,
+            (Function<TreeSet<Integer>, IntDomain>) s -> interval(s)));
     return kinds.build();
   }
 
@@ -369,10 +386,22 @@ class DomainOperationsBruteForceTest {
 
   /** The domain b in every representation able to hold it exactly. */
   private static IntDomain[] arguments(TreeSet<Integer> b) {
-    if (b.last() - b.first() + 1 == b.size()) {
-      return new IntDomain[] {interval(b), smallDense(b), new BoundDomain(b.first(), b.last())};
+    List<IntDomain> result = new ArrayList<>();
+    result.add(interval(b));
+    if (b.last() - b.first() < 64) {
+      result.add(smallDense(b));
     }
-    return new IntDomain[] {interval(b), smallDense(b)};
+    result.add(lazy(b));
+    if (b.last() - b.first() + 1 == b.size()) {
+      result.add(new BoundDomain(b.first(), b.last()));
+    }
+    return result.toArray(new IntDomain[0]);
+  }
+
+  private static IntDomain lazy(TreeSet<Integer> values) {
+    LazyBitSetDomain d = new LazyBitSetDomain(values.first(), values.last());
+    d.setDomain(interval(values));
+    return d;
   }
 
   private static IntDomain interval(TreeSet<Integer> values) {

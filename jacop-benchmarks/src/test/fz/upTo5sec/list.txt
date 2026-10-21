@@ -2717,3 +2717,6 @@ mrcpsp_optional/mm_n0_n0_9_1
 mrcpsp_optional/mm_n1_n1_3_9
 mrcpsp_optional/mm_r3_r3_35_2
 rcpsp_cumulatives/rcpsp_03
+cost_regular/cost_regular_opt_20_1
+cost_regular/cost_regular_opt_20_2
+cost_regular/cost_regular_opt_30_1

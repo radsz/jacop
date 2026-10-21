@@ -541,6 +541,14 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public boolean contains(IntDomain domain) {
 
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return domain.isEmpty()
+          || (!isEmpty()
+              && domain.min() >= min()
+              && domain.max() <= max()
+              && contains(window(domain, 0)));
+    }
+
     if (domain.isEmpty()) {
       return true;
     }
@@ -612,6 +620,10 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public boolean eq(IntDomain domain) {
+
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return getSize() == domain.getSize() && contains(domain);
+    }
 
     if (this.isEmpty()) {
       return domain.isEmpty();
@@ -995,11 +1007,8 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && domain.max() - domain.min() + 1 != domain.getSize()) {
-      throw new IllegalStateException(String.valueOf("Loosing propagation" + domain));
-    }
-
-    in(storeLevel, v, domain.min(), domain.max());
+    // other domains: the values of the argument within the 64 values of this domain, as one word
+    in(storeLevel, v, window(domain, 0));
   }
 
   private void adaptMin() {
@@ -1159,6 +1168,11 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      in(storeLevel, v, window(domain, shift));
+      return;
+    }
+
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
       SmallDenseDomain input = (SmallDenseDomain) domain;
       in(storeLevel, v, computeInShiftBitsForSmallDense(input, shift));
@@ -1251,25 +1265,8 @@ public class SmallDenseDomain extends IntDomain {
       return result;
     }
 
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      IntervalDomain input = new IntervalDomain(domain.min(), domain.max());
-
-      SmallDenseDomain result = intersect(input, 0);
-
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      return result;
-    }
-
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Not implemented for class " + domain.getClass()));
-    }
-
-    return null;
+    // other domains: the values of the argument within the 64 values of this domain, as one word
+    return intersect(window(domain, 0));
   }
 
   @Override
@@ -1284,6 +1281,10 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public int intersectAdapt(IntDomain domain) {
+
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return intersectAdapt(window(domain, 0));
+    }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1446,6 +1447,10 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public boolean isIntersecting(IntDomain domain) {
 
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return isIntersecting(window(domain, 0));
+    }
+
     if (domain.isEmpty() || isEmpty()) {
       return false;
     }
@@ -1543,6 +1548,33 @@ public class SmallDenseDomain extends IntDomain {
     }
 
     return minBound;
+  }
+
+  @Override
+  public int runEnd(int value) {
+    // the bit of minBound + k is bit 63 - k, so the values from value on are the high bits of
+    // bits << (value - minBound)
+    long following = ~(bits << (value - minBound));
+    return value + Long.numberOfLeadingZeros(following) - 1;
+  }
+
+  @Override
+  public long bitsFrom(int lo) {
+    // bit k of the result is the value lo + k, which is bit 63 - (lo + k - minBound) of bits
+    long ordered = Long.reverse(bits);
+    long offset = (long) lo - minBound;
+    if (offset >= 64 || offset <= -64) {
+      return 0;
+    }
+    return offset >= 0 ? ordered >>> offset : ordered << -offset;
+  }
+
+  /**
+   * It returns the values of this domain's 64 value window, from minBound, for which value - shift
+   * is in the given domain, as a small dense domain.
+   */
+  private SmallDenseDomain window(IntDomain domain, int shift) {
+    return new SmallDenseDomain(minBound, Long.reverse(domain.bitsFrom(minBound - shift)));
   }
 
   @Override
@@ -1681,14 +1713,8 @@ public class SmallDenseDomain extends IntDomain {
       }
 
     } else {
-
-      this.clear();
-
-      IntervalEnumeration enumer = domain.intervalEnumeration();
-
-      while (enumer.hasMoreElements()) {
-        this.unionAdapt(enumer.nextElement());
-      }
+      // the values of the argument, read as one word
+      setDomain(new SmallDenseDomain(domain.min(), Long.reverse(domain.bitsFrom(domain.min()))));
     }
   }
 
@@ -1746,6 +1772,10 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public IntDomain subtract(IntDomain domain) {
+
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return subtract(window(domain, 0));
+    }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1915,6 +1945,10 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 
+    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
+      return sizeOfIntersection(window(domain, 0));
+    }
+
     if (isEmpty() || domain.isEmpty()) {
       return 0;
     }
@@ -1933,42 +1967,22 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public IntDomain union(IntDomain domain) {
 
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
-      SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      int newMax = Math.max(this.max, input.max);
-
-      if (this.minBound <= input.minBound) {
-
-        if (ASSERTS_ENABLED && this.minBound + 63 < newMax) {
-          throw new IllegalStateException(
-              String.valueOf("Union of two SmallDenseDomain does not fit in SmallDenseDomain"));
-        }
-
-        long bitsResult = this.bits | (input.bits >>> (input.minBound - this.minBound));
-
-        return new SmallDenseDomain(this.minBound, bitsResult);
-
-      } else {
-
-        if (ASSERTS_ENABLED && input.minBound + 63 < newMax) {
-          throw new IllegalStateException(
-              String.valueOf("Union of two SmallDenseDomain does not fit in SmallDenseDomain"));
-        }
-
-        long bitsResult = input.bits | (this.bits >>> (this.minBound - input.minBound));
-
-        return new SmallDenseDomain(input.minBound, bitsResult);
-      }
+    if (isEmpty()) {
+      return domain.cloneLight();
+    }
+    if (domain.isEmpty()) {
+      return cloneLight();
     }
 
-    IntDomain result = super.union(domain);
-
-    if (ASSERTS_ENABLED && !result.eq(this.toIntervalDomain().union(domain))) {
-      throw new IllegalStateException(
-          String.valueOf("Union not properly implemented " + this + "d" + domain + "res" + result));
+    int lo = Math.min(min(), domain.min());
+    int hi = Math.max(max(), domain.max());
+    if ((long) hi - lo > 63) {
+      // the union does not fit in 64 values
+      return unionRuns(this, domain);
     }
+
+    // both domains as words of the values lo..lo + 63
+    IntDomain result = new SmallDenseDomain(lo, Long.reverse(bitsFrom(lo) | domain.bitsFrom(lo)));
 
     if (ASSERTS_ENABLED && result.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
