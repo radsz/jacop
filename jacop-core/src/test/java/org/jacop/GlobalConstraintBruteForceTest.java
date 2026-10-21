@@ -63,7 +63,9 @@ import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
+import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -99,6 +101,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.CostRegular;
@@ -232,6 +235,7 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Diffn", rectangles("Diffn")),
         Arguments.of("DiffnStrict", rectangles("DiffnStrict")),
         Arguments.of("Nooverlap", rectangles("Nooverlap")),
+        Arguments.of("DiffnDecomposed", rectangles("DiffnDecomposed")),
         Arguments.of("Diff2", rectangles("Diff2")));
   }
 
@@ -1043,27 +1047,63 @@ class GlobalConstraintBruteForceTest {
   private static Function<Random, Instance> rectangles(String kind) {
     return random -> {
       int n = 1 + random.nextInt(3);
-      boolean strict = kind.equals("DiffnStrict");
+      boolean strict = kind.equals("DiffnStrict") || kind.equals("DiffnDecomposed");
+      boolean conditional = kind.equals("DisjointConditional");
+      // pairs of rectangles (numbered from 1) that may overlap: always for Diff2 with an exclusive
+      // list, and for DisjointConditional when the pair's condition variable, which follows the
+      // rectangles, is 0
+      List<List<Integer>> pairs = new ArrayList<>();
+      if (conditional || kind.equals("Diff2Exclusive")) {
+        for (int i = 1; i <= n; i++) {
+          for (int j = i + 1; j <= n; j++) {
+            if (random.nextBoolean()) {
+              pairs.add(List.of(i, j));
+            }
+          }
+        }
+      }
+      int conditions = conditional ? pairs.size() : 0;
+      int[][] domains = domains(random, 4 * n + conditions, 0, 2);
+      for (int p = 0; p < conditions; p++) {
+        domains[4 * n + p] = new int[] {0, 1};
+      }
+      // DisjointConditional treats zero-length rectangles neither strictly nor non-strictly
+      if (conditional) {
+        for (int i = 0; i < n; i++) {
+          domains[4 * i + 2] = domain(random, 1, 2);
+          domains[4 * i + 3] = domain(random, 1, 2);
+        }
+      }
       return new Instance(
-          domains(random, 4 * n, 0, 2),
+          domains,
           (store, x) -> {
             IntVar[][] rectangles = new IntVar[n][];
             for (int i = 0; i < n; i++) {
               rectangles[i] = Arrays.copyOfRange(x, 4 * i, 4 * i + 4);
             }
-            store.impose(
-                switch (kind) {
-                  case "Diffn" -> new Diffn(rectangles, false);
-                  case "DiffnStrict" -> new Diffn(rectangles, true);
-                  case "Nooverlap" -> new Nooverlap(rectangles, false);
-                  default -> new Diff2(Arrays.stream(rectangles).map(Arrays::asList).toList());
-                });
+            List<IntVar> condition = Arrays.asList(x).subList(4 * n, 4 * n + conditions);
+            switch (kind) {
+              case "Diffn" -> store.impose(new Diffn(rectangles, false));
+              case "DiffnStrict" -> store.impose(new Diffn(rectangles, true));
+              case "DiffnDecomposed" -> store.imposeDecomposition(new DiffnDecomposed(rectangles));
+              case "Nooverlap" -> store.impose(new Nooverlap(rectangles, false));
+              case "Diff" -> store.impose(new Diff(rectangles));
+              case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));
+              case "DisjointConditional" ->
+                  store.impose(new DisjointConditional(rectangles, pairs, condition));
+              default ->
+                  store.impose(new Diff2(Arrays.stream(rectangles).map(Arrays::asList).toList()));
+            }
           },
           x -> {
             // rectangle i is (x[4i], x[4i+1]) with width x[4i+2] and height x[4i+3]; unless
             // strict, a rectangle with zero width or height may overlap anything
             for (int i = 0; i < n; i++) {
               for (int j = i + 1; j < n; j++) {
+                int p = pairs.indexOf(List.of(i + 1, j + 1));
+                if (p >= 0 && (!conditional || x[4 * n + p] == 0)) {
+                  continue;
+                }
                 int xi = x[4 * i];
                 int yi = x[4 * i + 1];
                 int wi = x[4 * i + 2];
@@ -1081,7 +1121,7 @@ class GlobalConstraintBruteForceTest {
             }
             return true;
           },
-          "");
+          "pairs=" + pairs);
     };
   }
 
