@@ -39,8 +39,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -133,6 +135,67 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void allSolutionsAreReportedOncePerAssignmentOfOutputVariables() throws IOException {
+    // The default search labelled every variable, so with -a x = 0 was reported twice: once for
+    // each value of b, which x = 0 leaves free and which is not an output variable.
+    String fzn =
+        """
+        var 0..1: x:: output_var;
+        var bool: b;
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(List.of("x = 0;", "x = 1;"), solveAllInOrder(fzn));
+  }
+
+  @Test
+  void seqSearchOfIgnoredAnnotationsFallsBackToDefaultSearch() throws IOException {
+    // A seq_search whose annotations were all ignored had no search, which ended in a
+    // NullPointerException, both nested (MiniZinc regression test_bug53) and at the top level.
+    String nested =
+        """
+        var 1..2: x:: output_var;
+        solve :: seq_search([seq_search([simpleann,simpleann]),seq_search([simpleann])]) satisfy;
+        """;
+    String top =
+        """
+        var 1..2: x:: output_var;
+        solve :: seq_search([simpleann]) satisfy;
+        """;
+
+    assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(nested));
+    assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(top));
+  }
+
+  @Test
+  void defaultSearchReachesValuesOfUnboundedVariables() throws IOException {
+    // MiniZinc test tuple_if_then_else: x and y are unbounded and only x = 3 has a support. The
+    // default search tried x = min, x != min one value after another, nesting one choice per
+    // value, which overflowed the stack.
+    String fzn =
+        """
+        var bool: b:: output_var;
+        var int: x:: output_var;
+        var int: y:: output_var;
+        var bool: e3;
+        var bool: e4;
+        var bool: c4;
+        var bool: e5;
+        var bool: c5;
+        constraint jacop_if_then_else_bool([b,true],[c4,c5],true);
+        constraint int_eq_reif(x,3,e3);
+        constraint int_eq_reif(y,4,e4);
+        constraint array_bool_and([e3,e4],c4);
+        constraint int_eq_reif(y,5,e5);
+        constraint array_bool_and([e3,e5],c5);
+        solve satisfy;
+        """;
+
+    assertEquals(Set.of("b = true; x = 3; y = 4;", "b = false; x = 3; y = 5;"), solveAll(fzn));
+  }
+
+  @Test
   void listDomainsKeepExactlyTheListedValues() throws IOException {
     // Value lists spanning at most 64 values become small dense domains, wider ones stay
     // interval domains; both must hold exactly the listed values, also at the 64 value boundary.
@@ -168,7 +231,44 @@ class FlatzincFrontEndTest {
     assertEquals(expected, solveAll(fzn));
   }
 
+  @Test
+  void strictFloatLinearRejectsASumEqualToTheBound() throws IOException {
+    // -0.5 * x < 1 accepted x = -2: the product was rounded outward to [prev(1), next(1)], which
+    // the strict check min >= 1 never rejects.
+    String fzn =
+        """
+        var -2..2: i:: output_var;
+        var -2.0..2.0: x;
+        constraint int2float(i,x);
+        constraint float_lin_lt([-0.5],[x],1.0);
+        solve satisfy;
+        """;
+    String reified =
+        """
+        var -2..2: i:: output_var;
+        var bool: b:: output_var;
+        var -2.0..2.0: x;
+        constraint int2float(i,x);
+        constraint float_lin_lt_reif([-0.5],[x],1.0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(Set.of("i = -1;", "i = 0;", "i = 1;", "i = 2;"), solveAll(fzn));
+    assertEquals(
+        Set.of(
+            "b = false; i = -2;",
+            "b = true; i = -1;",
+            "b = true; i = 0;",
+            "b = true; i = 1;",
+            "b = true; i = 2;"),
+        solveAll(reified));
+  }
+
   private Set<String> solveAll(String model) throws IOException {
+    return new TreeSet<>(solveAllInOrder(model));
+  }
+
+  private List<String> solveAllInOrder(String model) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -179,11 +279,15 @@ class FlatzincFrontEndTest {
     } finally {
       System.setOut(originalOut);
     }
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(buffer.toString(StandardCharsets.UTF_8).split("----------"))
-        .map(s -> String.join(" ", new TreeSet<>(Arrays.asList(s.strip().split("\\R")))))
+    return Arrays.stream(buffer.toString(StandardCharsets.UTF_8).split("----------"))
+        .map(
+            s ->
+                String.join(
+                    " ",
+                    Arrays.stream(s.strip().split("\\R"))
+                        .filter(line -> !line.startsWith("%"))
+                        .collect(Collectors.toCollection(TreeSet::new))))
         .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
-        .forEach(solutions::add);
-    return solutions;
+        .toList();
   }
 }

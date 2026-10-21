@@ -820,6 +820,31 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void xexpYeqZKeepsNegativePowers() {
+    // computeZi returned -1 to mean "no value", so every negative power such as (-2)^3 or
+    // (-1)^-1 was dropped. A negative exponent truncates towards zero, as in Gecode.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 3);
+    IntVar y = new IntVar(store, "y", -3, 3);
+    IntVar z = new IntVar(store, "z", -30, 30);
+    store.impose(new XexpYeqZ(x, y, z));
+
+    int expected = 0;
+    for (int xi = -3; xi <= 3; xi++) {
+      for (int yi = -3; yi <= 3; yi++) {
+        if (xi != 0 || yi >= 0) {
+          long zi = (long) Math.pow(xi, yi);
+          if (zi >= -30 && zi <= 30) {
+            expected++;
+          }
+        }
+      }
+    }
+    assertThat(expected).isEqualTo(46);
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y, z})).isEqualTo(expected);
+  }
+
+  @Test
   void circuitAndSubcircuitSolutionCountsMatchBruteForce() {
     Random random = new Random(5);
     for (int trial = 0; trial < 300; trial++) {

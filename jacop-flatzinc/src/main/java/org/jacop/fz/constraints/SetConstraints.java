@@ -25,6 +25,8 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.HashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
@@ -49,6 +51,7 @@ import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SumWeightedSet;
 import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
@@ -84,6 +87,30 @@ class SetConstraints implements ParserTreeConstants {
     } else {
       support.pose(new CardAeqX(v1, v2));
     }
+  }
+
+  /**
+   * Posts sum_set: total is the sum of weights[j] over the j with values[j] in selected. The
+   * weights are non-negative. SumWeightedSet takes one weight per element of the upper bound of
+   * selected, so elements that are not among the values weigh 0.
+   */
+  void gen_jacop_sum_set(SimpleNode node) {
+    int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    int[] weights = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    SetVar selected = support.getSetVariable(node, 2);
+    IntVar total = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    Map<Integer, Integer> weightOf = new HashMap<>();
+    for (int j = 0; j < values.length; j++) {
+      weightOf.merge(values[j], weights[j], Integer::sum);
+    }
+    int[] lub = selected.domain.lub().toIntArray();
+    int[] lubWeights = new int[lub.length];
+    for (int i = 0; i < lub.length; i++) {
+      lubWeights[i] = weightOf.getOrDefault(lub[i], 0);
+    }
+
+    support.pose(new SumWeightedSet(selected, lubWeights, total));
   }
 
   void gen_set_diff(SimpleNode node) {
