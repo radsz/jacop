@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqQ;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AeqS;
@@ -131,6 +133,32 @@ public class VariablesParameters implements ParserTreeConstants {
           "Maximal value for " + varKind + " " + ident + " too high; changed to " + MAX_FLOAT);
       highFloatInterval = MAX_FLOAT;
     }
+  }
+
+  /**
+   * Widens the bounds of a float variable whose bounds MiniZinc computed, by the float precision.
+   * MiniZinc evaluates such a bound in double arithmetic and prints it as a decimal, so the exact
+   * value of the defining expression can lie just outside it: for b = 1.0 + 0.1 * i with i in 1..5
+   * it writes 1.1..1.5, but 1.0 + 0.1 * 1 is below the double 1.1, and sound propagation then
+   * removes i = 1. A bound that is exact in binary (such as 1.5) is kept.
+   */
+  private void widenComputedFloatBounds() {
+    if (lowFloatInterval == highFloatInterval) {
+      return;
+    }
+    if (!isShortDecimal(lowFloatInterval) && lowFloatInterval > MIN_FLOAT) {
+      lowFloatInterval =
+          Math.max(MIN_FLOAT, lowFloatInterval - FloatDomain.epsilon(lowFloatInterval));
+    }
+    if (!isShortDecimal(highFloatInterval) && highFloatInterval < MAX_FLOAT) {
+      highFloatInterval =
+          Math.min(MAX_FLOAT, highFloatInterval + FloatDomain.epsilon(highFloatInterval));
+    }
+  }
+
+  private static boolean isShortDecimal(double d) {
+    BigDecimal exact = new BigDecimal(d); // NOSONAR the exact binary value is intended
+    return exact.compareTo(new BigDecimal(Double.toString(d))) == 0;
   }
 
   /**
@@ -290,6 +318,9 @@ public class VariablesParameters implements ParserTreeConstants {
       case 9: // float interval
         ident = ((ASTVarDeclItem) node).getIdent();
         validateFloatInterval(ident, "float variable");
+        if (annotations.contains("is_defined_var") || annotations.contains("var_is_introduced")) {
+          widenComputedFloatBounds();
+        }
         varFloat = new FloatVar(store, ident, lowFloatInterval, highFloatInterval);
         initAndRegisterFloatVar(store, ident, varFloat, node, initChild, table, outputVar);
         break;

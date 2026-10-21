@@ -118,6 +118,21 @@ class MznlibGlobalsTest {
     }
   }
 
+  @Test
+  void computedFloatBoundsKeepSolutionsOnTheBound() {
+    // MiniZinc writes the bounds of b = 1.0 + 0.1 * i as 1.1..1.5, but 1.0 + 0.1 * 1 is below the
+    // double 1.1 (and 1.0 + 1.0e-9 * 5 above 1.000000005), so i = 1 and i = 5 were lost.
+    Set<String> solutions = solveAll(DIR + "defined_float_bounds.fzn");
+
+    Set<String> values = new TreeSet<>();
+    for (String solution : solutions) {
+      Matcher m = Pattern.compile("i = (\\d+);").matcher(solution);
+      assertTrue(m.find(), solution);
+      values.add(m.group(1));
+    }
+    assertEquals(Set.of("1", "2", "3", "4", "5"), values, solutions.toString());
+  }
+
   private static Set<String> solveAll(String fzn) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
