@@ -236,7 +236,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Nooverlap", rectangles("Nooverlap")),
         Arguments.of("DiffnDecomposed", rectangles("DiffnDecomposed")),
         Arguments.of("Diff2", rectangles("Diff2")),
-        Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")));
+        Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")),
+        Arguments.of("DisjointConditional", rectangles("DisjointConditional")));
   }
 
   @ParameterizedTest(name = "{0}")

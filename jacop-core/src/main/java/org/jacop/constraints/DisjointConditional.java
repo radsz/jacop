@@ -719,7 +719,9 @@ public class DisjointConditional extends Diff {
     long rectSize = 0;
     for (IntRectangle t : usedRectArray) {
       int tempMin = t.origins[i] + t.lengths[i];
-      if (t.origins[i] - s < rlengthiMin && s < tempMin) {
+      // the forbidden origins found below reach down to s - rlengthiMin + 1, so only rectangles
+      // that start at or before s overlap r at all of them
+      if (t.origins[i] <= s && s < tempMin) {
         consideredRect.add(t);
         rectSize += t.lengths[j];
         if (tempMin < minI) {
