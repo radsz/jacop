@@ -564,6 +564,8 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void addDom(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
       addDomFromIntervalDomain((IntervalDomain) domain);
       return;
@@ -615,6 +617,8 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public boolean isIntersecting(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.isEmpty()) {
       return false;
@@ -992,6 +996,8 @@ public class IntervalDomain extends IntDomain {
   @Override
   public boolean eq(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
@@ -1039,6 +1045,8 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public IntDomain intersect(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1326,6 +1334,8 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
@@ -1460,6 +1470,8 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public IntDomain subtract(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -1779,6 +1791,8 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public IntDomain union(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -2316,6 +2330,12 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
+
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min(), domain.max());
+      return;
+    }
+    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -3366,6 +3386,12 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+      return;
+    }
+    domain = plain(domain);
+
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
@@ -4099,6 +4125,8 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public int intersectAdapt(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));

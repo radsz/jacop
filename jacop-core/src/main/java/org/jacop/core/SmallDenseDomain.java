@@ -541,6 +541,8 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public boolean contains(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (domain.isEmpty()) {
       return true;
     }
@@ -612,6 +614,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public boolean eq(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (this.isEmpty()) {
       return domain.isEmpty();
@@ -948,6 +952,12 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min(), domain.max());
+      return;
+    }
+    domain = plain(domain);
+
     if (domain.singleton()) {
       in(storeLevel, v, domain.value(), domain.value());
       return;
@@ -1159,6 +1169,12 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
+    if (isLazyWithoutHoles(domain)) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+      return;
+    }
+    domain = plain(domain);
+
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
       SmallDenseDomain input = (SmallDenseDomain) domain;
       in(storeLevel, v, computeInShiftBitsForSmallDense(input, shift));
@@ -1218,6 +1234,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public IntDomain intersect(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1284,6 +1302,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public int intersectAdapt(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1445,6 +1465,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public boolean isIntersecting(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.isEmpty() || isEmpty()) {
       return false;
@@ -1638,6 +1660,8 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void setDomain(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (domain.isEmpty()) {
       clear();
       return;
@@ -1746,6 +1770,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public IntDomain subtract(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
@@ -1915,6 +1941,8 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 
+    domain = plain(domain);
+
     if (isEmpty() || domain.isEmpty()) {
       return 0;
     }
@@ -1932,6 +1960,8 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public IntDomain union(IntDomain domain) {
+
+    domain = plain(domain);
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 

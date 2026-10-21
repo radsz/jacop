@@ -76,6 +76,9 @@ public abstract class IntDomain extends Domain {
   /** Unique identifier for a small dense domain type. */
   public static final int SMALL_DENSE_DOMAIN_ID = 2;
 
+  /** Unique identifier for a lazy bit set domain type. */
+  public static final int LAZY_BIT_SET_DOMAIN_ID = 4;
+
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.
@@ -91,6 +94,30 @@ public abstract class IntDomain extends Domain {
    * and can be easily restored if necessary.
    */
   public IntDomain previousDomain;
+
+  /**
+   * It tells if the domain is a lazy bit set domain without holes, so a single interval.
+   *
+   * @param domain the domain.
+   * @return true if the domain is a lazy bit set domain holding all values from min to max.
+   */
+  static boolean isLazyWithoutHoles(IntDomain domain) {
+    return domain.domainId() == LAZY_BIT_SET_DOMAIN_ID && !((LazyBitSetDomain) domain).hasHoles();
+  }
+
+  /**
+   * It returns the given domain, or for a lazy bit set domain an interval domain with the same
+   * values, so that code specialized for the other domain types can use it. The interval domain may
+   * be shared and must not be modified.
+   *
+   * @param domain the domain.
+   * @return a domain with the same values that is not a lazy bit set domain.
+   */
+  static IntDomain plain(IntDomain domain) {
+    return domain.domainId() == LAZY_BIT_SET_DOMAIN_ID
+        ? ((LazyBitSetDomain) domain).intervals()
+        : domain;
+  }
 
   /**
    * Finds the result interval for multiplication of {a..b} * {c..d}.

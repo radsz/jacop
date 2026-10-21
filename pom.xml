@@ -190,6 +190,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -232,6 +233,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -278,6 +280,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -324,6 +327,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
@@ -751,6 +755,7 @@ setup to run configuration. -->
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
+                        <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
