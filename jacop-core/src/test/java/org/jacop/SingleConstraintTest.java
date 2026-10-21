@@ -3146,6 +3146,21 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testCumulativeOptionalZeroDurationTask() {
+
+    // An optional task of zero duration was made absent when the profile had no room at its
+    // start, although it does not occupy the resource.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 3, 3), new IntVar(store, 3, 3), new IntVar(store, 1, 1)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 0), new IntVar(store, 2, 2)};
+    IntVar[] r = {new IntVar(store, 2, 2), new IntVar(store, 1, 1), new IntVar(store, 2, 2)};
+    IntVar[] o = {new IntVar(store, 1, 1), new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    store.impose(new CumulativeOptional(s, d, r, new IntVar(store, 2, 2), o));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o[1].max()).isEqualTo(1);
+  }
+
+  @Test
   void testCumulativeVariableDurations() {
 
     // Two tasks that can never overload the resource; edge finding used a capacity map built for
