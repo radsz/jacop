@@ -1,0 +1,5 @@
+objective = 23;
+mrun = array1d(1..36, [false, true, false, false, false, true, true, false, false, true, false, false, true, false, false, true, false, false, true, false, false, true, false, false, false, false, true, false, false, true, true, false, false, false, false, true]);
+start = array1d(1..12, [0, 0, 0, 5, 8, 5, 8, 12, 12, 13, 19, 12]);
+----------
+==========

@@ -171,3 +171,7 @@ tpp/tpp_5_3_20_1
 tpp/tpp_6_3_20_1
 trucking_hl/trucking_hl_5
 urban_planning/urban_planning
+mrcpsp_optional/mm_n3_n3_9_3
+rcpsp-data_bl/Bl2501
+rcpsp-data_psplib-J30/J30_5_6
+rcpsp-data_psplib-J30/J30_5_9

@@ -310,7 +310,8 @@ class CumulativePrimary extends Constraint {
     for (int i = first; i < start.length; i++) {
       int k = activeMap[i];
 
-      if (!start[k].singleton()) {
+      // a task with zero duration or zero resource use does not occupy the resource
+      if (!start[k].singleton() && dur[k] > 0 && res[k] > 0) {
         int min = start[k].min();
         int max = start[k].max() + dur[k];
         if (min <= maxProfile && max >= minProfile) {

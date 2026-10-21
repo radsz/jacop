@@ -50,6 +50,8 @@ public class CumulativeOptional extends Cumulative {
 
   final ProfileOptional up;
 
+  boolean doOptionalOverload = true;
+
   /**
    * It creates a cumulative constraint.
    *
@@ -100,6 +102,16 @@ public class CumulativeOptional extends Cumulative {
         opt.toArray(IntVar[]::new));
   }
 
+  /**
+   * Sets whether to use the overload check with optional tasks, which makes absent the optional
+   * tasks that would overload the resource. It is on by default.
+   *
+   * @param doOptOverload true to enable the check, false otherwise.
+   */
+  public void doOptionalOverload(boolean doOptOverload) {
+    doOptionalOverload = doOptOverload;
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -108,6 +120,14 @@ public class CumulativeOptional extends Cumulative {
       store.propagationHasOccurred = false;
 
       up.sweepPruning(store, taskNormal, opt);
+
+      if (!store.propagationHasOccurred && doOptionalOverload) {
+        optionalOverload(store, opt, false);
+      }
+
+      if (!store.propagationHasOccurred) {
+        energyProp(store);
+      }
 
       if (!store.propagationHasOccurred && doEdgeFind) {
         if (doQuadraticEdgeFind) {

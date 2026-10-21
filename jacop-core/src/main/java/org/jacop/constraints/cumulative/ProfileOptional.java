@@ -197,7 +197,9 @@ public class ProfileOptional {
    * @param i task index
    */
   private void pruneTaskIfInfeasible(Store store, TaskView[] tn, IntVar[] opt, int i) {
-    if (opt[i].singleton()) {
+    // a task that may have zero duration or zero resource use can be present without using the
+    // resource
+    if (opt[i].singleton() || tn[i].dur().min() == 0 || tn[i].res().min() == 0) {
       return;
     }
 

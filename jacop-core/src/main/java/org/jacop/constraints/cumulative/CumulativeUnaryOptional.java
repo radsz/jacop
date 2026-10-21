@@ -45,6 +45,8 @@ import org.jacop.core.Store;
  */
 public class CumulativeUnaryOptional extends CumulativeUnary {
 
+  boolean doOptionalOverload = true;
+
   final IntVar[] opt;
 
   final ProfileOptional up;
@@ -178,6 +180,16 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         doProfile);
   }
 
+  /**
+   * Sets whether to use the overload check with optional tasks, which makes absent the optional
+   * tasks that would overload the resource. It is on by default.
+   *
+   * @param doOptOverload true to enable the check, false otherwise.
+   */
+  public void doOptionalOverload(boolean doOptOverload) {
+    doOptionalOverload = doOptOverload;
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -188,6 +200,13 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       if (doProfile) {
 
         up.sweepPruning(store, tvn, opt);
+      }
+
+      if (doOptionalOverload && !store.propagationHasOccurred) {
+        optionalOverload(store, opt, true);
+        if (doUnaryEdgeFind && !store.propagationHasOccurred) {
+          optionalEdgeFind(store, opt);
+        }
       }
 
       if (doUnaryEdgeFind && !store.propagationHasOccurred) {

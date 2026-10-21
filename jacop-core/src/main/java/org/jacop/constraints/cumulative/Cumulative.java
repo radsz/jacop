@@ -32,9 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -73,8 +71,16 @@ public class Cumulative extends CumulativeBasic {
   protected final Comparator<TaskView> taskDecLctComparator =
       (o1, o2) -> o2.lct() == o1.lct() ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
   final TaskView[] taskReversed;
-  final boolean doEdgeFind;
+  boolean doEdgeFind;
   boolean doQuadraticEdgeFind;
+  boolean doOverload = true;
+  boolean doTimeTableEdgeFind = true;
+  boolean doTimeTableDisjunctive = true;
+  final EnergyReasoning energy = new EnergyReasoning();
+  private TaskView[] optionalTasks;
+  private boolean[] optionalPresent;
+  private IntVar[] optionalVars;
+  private int[] optionalIndex;
 
   /**
    * It creates a cumulative constraint.
@@ -145,6 +151,46 @@ public class Cumulative extends CumulativeBasic {
     doQuadraticEdgeFind = doQef;
   }
 
+  /**
+   * Sets whether to use edge finding. By default it is used for at most max_edge_find_size tasks (a
+   * system property, 100 if not set).
+   *
+   * @param doEf true to enable edge finding, false otherwise.
+   */
+  public void doEdgeFind(boolean doEf) {
+    doEdgeFind = doEf;
+  }
+
+  /**
+   * Sets whether to use the O(n log n) overload check when edge finding is not used (edge finding
+   * includes it). It is on by default.
+   *
+   * @param doOverloadCheck true to enable the overload check, false otherwise.
+   */
+  public void doOverload(boolean doOverloadCheck) {
+    doOverload = doOverloadCheck;
+  }
+
+  /**
+   * Sets whether to use time-table edge finding (Vilím, CPAIOR 2011; Schutt, Feydy and Stuckey,
+   * CPAIOR 2013). It is on by default.
+   *
+   * @param doTtef true to enable time-table edge finding, false otherwise.
+   */
+  public void doTimeTableEdgeFind(boolean doTtef) {
+    doTimeTableEdgeFind = doTtef;
+  }
+
+  /**
+   * Sets whether to use time-table disjunctive reasoning (Gay, Hartert and Schaus, CPAIOR 2015). It
+   * is on by default.
+   *
+   * @param doTtdr true to enable time-table disjunctive reasoning, false otherwise.
+   */
+  public void doTimeTableDisjunctive(boolean doTtdr) {
+    doTimeTableDisjunctive = doTtdr;
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -153,6 +199,10 @@ public class Cumulative extends CumulativeBasic {
       store.propagationHasOccurred = false;
 
       profileProp(store);
+
+      if (!store.propagationHasOccurred) {
+        energyProp(store);
+      }
 
       if (!store.propagationHasOccurred && doEdgeFind) {
         if (doQuadraticEdgeFind) {
@@ -163,6 +213,115 @@ public class Cumulative extends CumulativeBasic {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Runs the energy based rules that need neither edge finding trees nor optional tasks: the
+   * overload check (only without edge finding, which includes it), time-table disjunctive reasoning
+   * and time-table edge finding, in both directions. It stops after the first rule that changes a
+   * domain so that the cheaper rules run again first.
+   */
+  void energyProp(Store store) {
+
+    boolean overload = doOverload && !doEdgeFind;
+    if (!overload && !doTimeTableDisjunctive && !doTimeTableEdgeFind) {
+      return;
+    }
+    TaskView[] tn = filterZeroTasks(taskNormal);
+    if (tn == null) {
+      return;
+    }
+    TaskView[] tr = filterZeroTasks(taskReversed);
+    int n = tn.length;
+    long capacity = limit.max();
+
+    if (overload) {
+      energy.load(tn, n);
+      energy.overload(capacity, n);
+    }
+    if (doTimeTableDisjunctive) {
+      energy.load(tn, n);
+      energy.timeTableDisjunctive(tn, n, capacity, store);
+      energy.load(tr, n);
+      energy.timeTableDisjunctive(tr, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        return;
+      }
+    }
+    if (doTimeTableEdgeFind) {
+      energy.load(tn, n);
+      energy.timeTableEdgeFind(tn, n, capacity, store);
+      energy.load(tr, n);
+      energy.timeTableEdgeFind(tr, n, capacity, store);
+    }
+  }
+
+  /**
+   * Overload check with optional tasks: an optional task that cannot be added to the present tasks
+   * without overloading the resource is made absent (opt = 0).
+   *
+   * @param store the store.
+   * @param opt the presence variables of the tasks.
+   * @param unit true if the tasks pairwise cannot overlap, so each uses one unit of a unary
+   *     resource.
+   */
+  void optionalOverload(Store store, IntVar[] opt, boolean unit) {
+
+    int n = collectOptional(opt);
+    if (n == 0) {
+      return;
+    }
+    energy.load(optionalTasks, n, unit);
+    energy.overloadOptional(unit ? 1 : limit.max(), n, optionalPresent, optionalVars, store);
+  }
+
+  /**
+   * Edge finding with optional tasks on a unary resource: an optional task that would have to start
+   * after its latest start time is made absent. The tasks must pairwise not overlap.
+   *
+   * @param store the store.
+   * @param opt the presence variables of the tasks.
+   */
+  void optionalEdgeFind(Store store, IntVar[] opt) {
+
+    int n = collectOptional(opt);
+    if (n == 0) {
+      return;
+    }
+    energy.load(optionalTasks, n, true);
+    energy.unaryEdgeFindOptional(n, optionalPresent, optionalVars, store);
+    for (int i = 0; i < n; i++) {
+      optionalTasks[i] = taskReversed[optionalIndex[i]];
+    }
+    energy.load(optionalTasks, n, true);
+    energy.unaryEdgeFindOptional(n, optionalPresent, optionalVars, store);
+  }
+
+  /**
+   * Collects the tasks that use the resource and are not absent.
+   *
+   * @return the number of collected tasks, or 0 if none of them is optional.
+   */
+  private int collectOptional(IntVar[] opt) {
+    if (optionalTasks == null) {
+      optionalTasks = new TaskView[taskNormal.length];
+      optionalPresent = new boolean[taskNormal.length];
+      optionalVars = new IntVar[taskNormal.length];
+      optionalIndex = new int[taskNormal.length];
+    }
+    int k = 0;
+    boolean anyOptional = false;
+    for (int i = 0; i < taskNormal.length; i++) {
+      if (taskNormal[i].exists() && opt[i].max() > 0) {
+        optionalTasks[k] = taskNormal[i];
+        optionalPresent[k] = opt[i].min() > 0;
+        optionalVars[k] = opt[i];
+        optionalIndex[k] = i;
+        anyOptional |= !optionalPresent[k];
+        k++;
+      }
+    }
+    return anyOptional ? k : 0;
   }
 
   void edgeFind(Store store) {
@@ -243,37 +402,43 @@ public class Cumulative extends CumulativeBasic {
   private void adjustBounds(Store store, ThetaLambdaTree tree, TaskView[] t, int[] prec, long cap) {
 
     int n = t.length;
-    // The map is rebuilt on every call: task indexes change between calls (sweep pruning and
-    // filtering of zero and absent tasks renumber them), so a map built once is not valid.
-    Set<Integer> capacities = new LinkedHashSet<>();
-    for (TaskView aT1 : t) {
-      capacities.add(aT1.res.min());
+    if (capMap == null || capMap.length < n) {
+      capMap = new int[taskNormal.length];
+      capacities = new int[taskNormal.length];
+      orderKeys = new long[taskNormal.length];
     }
-    int[] capMap = buildCapMap(t, n, capacities);
-
-    int[][] update = fillUpdateMatrix(tree, t, capacities, cap, n);
-    applyPrecOrderUpdates(store, t, prec, update, capMap, n);
-  }
-
-  private static int[] buildCapMap(TaskView[] t, int n, Set<Integer> capacities) {
-    int[] capMap = new int[n];
-    int capIndex = 0;
-    for (int ci : capacities) {
-      for (TaskView aT : t) {
-        if (aT.res.min() == ci) {
-          capMap[aT.index] = capIndex;
-        }
+    // distinct minimal resource uses; the map is rebuilt on every call since task indexes change
+    // between calls (sweep pruning and filtering of zero and absent tasks renumber them)
+    for (int i = 0; i < n; i++) {
+      capacities[i] = t[i].res.min();
+    }
+    Arrays.sort(capacities, 0, n);
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      if (i == 0 || capacities[i] != capacities[i - 1]) {
+        capacities[k++] = capacities[i];
       }
-      capIndex++;
     }
-    return capMap;
+    for (TaskView aT : t) {
+      capMap[aT.index] = Arrays.binarySearch(capacities, 0, k, aT.res.min());
+    }
+    if (update == null || update.length < k * n) {
+      update = new int[k * n];
+    }
+
+    fillUpdateMatrix(tree, t, k, cap, n);
+    applyPrecOrderUpdates(store, t, prec, n);
   }
 
-  private int[][] fillUpdateMatrix(
-      ThetaLambdaTree tree, TaskView[] t, Set<Integer> capacities, long cap, int n) {
-    int[][] update = new int[capacities.size()][n];
-    int capi = 0;
-    for (int ci : capacities) {
+  // buffers of edge finding reused between calls
+  private int[] capMap;
+  private int[] capacities;
+  private int[] update;
+  private long[] orderKeys;
+
+  private void fillUpdateMatrix(ThetaLambdaTree tree, TaskView[] t, int k, long cap, int n) {
+    for (int capi = 0; capi < k; capi++) {
+      int ci = capacities[capi];
       tree.clearTree();
       int upd = Integer.MIN_VALUE;
       for (int l = n - 1; l >= 0; l--) {
@@ -285,25 +450,23 @@ public class Cumulative extends CumulativeBasic {
           diff = long2int(IntDomain.divRoundUp(tmp, ci));
         }
         upd = Math.max(upd, diff);
-        update[capi][l] = upd;
+        update[capi * n + l] = upd;
       }
-      capi++;
     }
-    return update;
   }
 
-  private void applyPrecOrderUpdates(
-      Store store, TaskView[] t, int[] prec, int[][] update, int[] capMap, int n) {
-    Integer[] precTaskOrder = new Integer[n];
+  private void applyPrecOrderUpdates(Store store, TaskView[] t, int[] prec, int n) {
+    // tasks by non-increasing prec, ties by position
     for (int i = 0; i < n; i++) {
-      precTaskOrder[i] = i;
+      orderKeys[i] = ((long) prec[i] << 32) | (Integer.MAX_VALUE - i);
     }
-    Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> Integer.compare(prec[o2], prec[o1]));
+    Arrays.sort(orderKeys, 0, n);
 
     int j = 0;
-    for (int i = 0; i < n; i++) {
-      TaskView taskI = t[precTaskOrder[i]];
-      int precI = prec[precTaskOrder[i]];
+    for (int o = n - 1; o >= 0; o--) {
+      int i = Integer.MAX_VALUE - (int) (orderKeys[o] & 0xFFFFFFFFL);
+      TaskView taskI = t[i];
+      int precI = prec[i];
       while (j < n && t[j].lct() > precI) {
         j++;
       }
@@ -313,7 +476,7 @@ public class Cumulative extends CumulativeBasic {
       int nj = j;
       while (nj < n && t[nj].lct() == precI) {
         if (t[nj].lct() < taskI.lct()) {
-          taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
+          taskI.updateEdgeFind(store.level, update[capMap[taskI.index] * n + nj]);
           break;
         }
         nj++;
@@ -336,93 +499,137 @@ public class Cumulative extends CumulativeBasic {
     }
 
     int n = ts.length;
-    // sorted by non-decreasing deadline (lct)
-    Arrays.sort(ts, Comparator.comparingInt(TaskView::lct));
+    QuadArrays q = quadArrays(n);
 
-    int[] lb = new int[n];
-    int[] Dupd = new int[n];
-    int[] SlUpd = new int[n];
+    // tasks sorted by non-decreasing deadline (lct), ties by position
     for (int i = 0; i < n; i++) {
-      lb[i] = ts[i].est();
+      q.keys[i] = ((long) ts[i].lct() << 32) | i;
     }
-    Arrays.fill(Dupd, Integer.MIN_VALUE);
-    Arrays.fill(SlUpd, Integer.MIN_VALUE);
-    final long[] E = new long[n];
-
-    Integer[] t1 = new Integer[n];
-    Integer[] t2 = new Integer[n];
-    for (int i = 0; i < n; i++) {
-      t1[i] = i;
+    Arrays.sort(q.keys, 0, n);
+    for (int k = 0; k < n; k++) {
+      TaskView t = ts[(int) q.keys[k]];
+      q.tasks[k] = t;
+      q.est[k] = t.est();
+      q.lct[k] = t.lct();
+      q.ect[k] = t.ect();
+      q.energy[k] = t.energy();
+      q.resMin[k] = t.res.min();
+      q.resMax[k] = t.res.max();
+      q.lb[k] = q.est[k];
     }
-    System.arraycopy(t1, 0, t2, 0, n);
+    Arrays.fill(q.dupd, 0, n, Integer.MIN_VALUE);
+    Arrays.fill(q.slUpd, 0, n, Integer.MIN_VALUE);
 
-    // tasks t1 sorted by non-incereasing relese dates (est)
-    Arrays.sort(t1, (Integer o1, Integer o2) -> Integer.compare(ts[o2].est(), ts[o1].est()));
-    // tasks t2 sorted by non-decreasing relese dates (est)
-    Arrays.sort(t2, Comparator.comparingInt((Integer o) -> ts[o].est()));
+    // t1 by non-increasing release date (est), t2 by non-decreasing est; ties by lct order
+    for (int k = 0; k < n; k++) {
+      q.keys[k] = ((long) -q.est[k] << 32) | k;
+    }
+    Arrays.sort(q.keys, 0, n);
+    for (int k = 0; k < n; k++) {
+      q.t1[k] = (int) q.keys[k];
+      q.keys[k] = ((long) q.est[k] << 32) | k;
+    }
+    Arrays.sort(q.keys, 0, n);
+    for (int k = 0; k < n; k++) {
+      q.t2[k] = (int) q.keys[k];
+    }
 
-    for (TaskView u : ts) {
-      edgeFindQuadProcessU(ts, u, t1, t2, capacity, lb, Dupd, SlUpd, E);
+    for (int u = 0; u < n; u++) {
+      edgeFindQuadProcessU(q, n, u, capacity);
     }
 
     // update LB's
-    for (int i = 0; i < n; i++) {
-      ts[i].updateEdgeFind(store.level, lb[i]);
+    for (int k = 0; k < n; k++) {
+      q.tasks[k].updateEdgeFind(store.level, q.lb[k]);
     }
   }
 
-  private static void edgeFindQuadProcessU(
-      TaskView[] ts,
-      TaskView u,
-      Integer[] t1,
-      Integer[] t2,
-      long capacityLimit,
-      int[] lb,
-      int[] dupdUpdates,
-      int[] slUpdUpdates,
-      long[] energyPrefix) {
+  /** Reusable arrays of the quadratic edge finding, indexed by the lct order of the tasks. */
+  private static final class QuadArrays {
+    final TaskView[] tasks;
+    final int[] est;
+    final int[] lct;
+    final int[] ect;
+    final long[] energy;
+    final int[] resMin;
+    final int[] resMax;
+    final int[] lb;
+    final int[] dupd;
+    final int[] slUpd;
+    final long[] energyPrefix;
+    final int[] t1;
+    final int[] t2;
+    final long[] keys;
+
+    QuadArrays(int n) {
+      tasks = new TaskView[n];
+      est = new int[n];
+      lct = new int[n];
+      ect = new int[n];
+      energy = new long[n];
+      resMin = new int[n];
+      resMax = new int[n];
+      lb = new int[n];
+      dupd = new int[n];
+      slUpd = new int[n];
+      energyPrefix = new long[n];
+      t1 = new int[n];
+      t2 = new int[n];
+      keys = new long[n];
+    }
+  }
+
+  private QuadArrays quadArrays;
+
+  private QuadArrays quadArrays(int n) {
+    if (quadArrays == null || quadArrays.est.length < n) {
+      quadArrays = new QuadArrays(taskNormal.length);
+    }
+    return quadArrays;
+  }
+
+  private static void edgeFindQuadProcessU(QuadArrays q, int n, int u, long capacityLimit) {
     long energy = 0;
     long maxEnergy = 0;
     int rr = Integer.MIN_VALUE;
+    final int lctU = q.lct[u];
 
-    for (int i : t1) {
-      TaskView t = ts[i];
-      if (t.lct() <= u.lct()) {
-        energy += t.energy();
+    for (int k = 0; k < n; k++) {
+      int i = q.t1[k];
+      if (q.lct[i] <= lctU) {
+        energy += q.energy[i];
         if (rr == Integer.MIN_VALUE
-            || (double) energy / (u.lct() - t.est()) > (double) maxEnergy / (u.lct() - rr)) {
+            || (double) energy / (lctU - q.est[i]) > (double) maxEnergy / (lctU - rr)) {
           maxEnergy = energy;
-          rr = t.est();
+          rr = q.est[i];
         }
       } else if (rr != Integer.MIN_VALUE) {
-        long rest = maxEnergy - (capacityLimit - t.res().min()) * (u.lct() - rr);
+        long rest = maxEnergy - (capacityLimit - q.resMin[i]) * (lctU - rr);
         if (rest > 0) {
-          dupdUpdates[i] =
-              (int) Math.max(dupdUpdates[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
+          q.dupd[i] = (int) Math.max(q.dupd[i], rr + IntDomain.divRoundUp(rest, q.resMax[i]));
         }
-        if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > capacityLimit * (u.lct() - rr)) {
-          lb[i] = Math.max(lb[i], dupdUpdates[i]);
+        if (maxEnergy + (long) q.resMin[i] * (q.ect[i] - rr) > capacityLimit * (lctU - rr)) {
+          q.lb[i] = Math.max(q.lb[i], q.dupd[i]);
         }
       }
-      energyPrefix[i] = energy;
+      q.energyPrefix[i] = energy;
     }
 
     long minSl = Integer.MAX_VALUE;
-    int rt = u.lct();
-    for (int i : t2) {
-      TaskView t = ts[i];
-      if (capacityLimit * (u.lct() - t.est()) - energyPrefix[i] < minSl) {
-        rt = t.est();
-        minSl = capacityLimit * (u.lct() - rt) - energyPrefix[i];
+    int rt = lctU;
+    for (int k = 0; k < n; k++) {
+      int i = q.t2[k];
+      if (capacityLimit * (lctU - q.est[i]) - q.energyPrefix[i] < minSl) {
+        rt = q.est[i];
+        minSl = capacityLimit * (lctU - rt) - q.energyPrefix[i];
       }
-      if (t.lct() > u.lct()) {
-        long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
-        if (rt <= u.lct() && rest > 0) {
-          slUpdUpdates[i] =
-              (int) Math.max(slUpdUpdates[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+      if (q.lct[i] > lctU) {
+        long rest = (long) q.resMin[i] * (lctU - rt) - minSl;
+        if (rt <= lctU && rest > 0) {
+          q.slUpd[i] = (int) Math.max(q.slUpd[i], rt + IntDomain.divRoundUp(rest, q.resMax[i]));
         }
-        if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
-          lb[i] = Math.max(Math.max(lb[i], dupdUpdates[i]), slUpdUpdates[i]);
+        if (q.ect[i] >= lctU || minSl - q.energy[i] < 0) {
+          q.lb[i] = Math.max(Math.max(q.lb[i], q.dupd[i]), q.slUpd[i]);
         }
       }
     }
@@ -489,6 +696,10 @@ public class Cumulative extends CumulativeBasic {
         .append(limit)
         .append(", quad=")
         .append(doQuadraticEdgeFind)
+        .append(", ttef=")
+        .append(doTimeTableEdgeFind)
+        .append(", ttdr=")
+        .append(doTimeTableDisjunctive)
         .append(" )");
 
     return result.toString();
