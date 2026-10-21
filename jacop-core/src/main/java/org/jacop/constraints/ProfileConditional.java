@@ -171,8 +171,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
       log.debug("Result = {}, {}, {}", new1, new2, new3);
     }
     remove(i);
-    i = addOverlapPart(i, new1, p, val);
-    i = addOverlapPart(i, new2, null, val);
+    i = addOverlapPart(i, new1, val);
+    i = addOverlapPart(i, new2, val);
     if (new3.min != -1 && new3.min != new3.max) {
       if (new3.max == b) {
         addToProfile(index, new3.min, new3.max, val, exList);
@@ -184,7 +184,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     return i;
   }
 
-  private int addOverlapPart(int i, ProfileItemCondition part, ProfileItemCondition p, int val) {
+  private int addOverlapPart(int i, ProfileItemCondition part, int val) {
     if (part.min == -1) {
       return i;
     }
@@ -197,9 +197,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     } else {
       if (TRACE_ENABLED) {
         log.debug("4b/5b. Adding {}", part);
-      }
-      if (p != null) {
-        part.rectangles = p.rectangles;
       }
       add(i, part);
       if (maxProfile < part.value) {

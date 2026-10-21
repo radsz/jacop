@@ -2444,6 +2444,67 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void disjointConditionalProfileCountsOverlappingPairOnce() {
+    // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
+    // of which rectangles a profile segment holds and counted both, removing y2 = 0
+    Store store = new Store();
+    IntVar[][] r = {
+      {new IntVar(store, "x1", 0, 2), new IntVar(store, 1, 1), one(store), one(store)},
+      {new IntVar(store, 1, 1), new IntVar(store, "y2", 0, 2), oneTwo(store), oneTwo(store)},
+      {new IntVar(store, 2, 2), new IntVar(store, 0, 0), one(store), oneTwo(store)},
+      {new IntVar(store, 2, 2), new IntVar(store, 0, 0), one(store), new IntVar(store, 2, 2)}
+    };
+    IntVar[] c = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    List<List<Integer>> pairs = List.of(List.of(1, 2), List.of(3, 4));
+    store.impose(new DisjointConditional(r, pairs, Arrays.asList(c)));
+
+    IntVar[] all =
+        Stream.concat(Arrays.stream(r).flatMap(Arrays::stream), Arrays.stream(c))
+            .toArray(IntVar[]::new);
+    int expected =
+        bruteForce(
+                all,
+                a -> {
+                  for (int i = 0; i < 4; i++) {
+                    for (int j = i + 1; j < 4; j++) {
+                      int p = pairs.indexOf(List.of(i + 1, j + 1));
+                      boolean apart =
+                          a[4 * i] + a[4 * i + 2] <= a[4 * j]
+                              || a[4 * j] + a[4 * j + 2] <= a[4 * i]
+                              || a[4 * i + 1] + a[4 * i + 3] <= a[4 * j + 1]
+                              || a[4 * j + 1] + a[4 * j + 3] <= a[4 * i + 1];
+                      if (!apart && (p < 0 || a[16 + p] == 1)) {
+                        return false;
+                      }
+                    }
+                  }
+                  return true;
+                })
+            .size();
+
+    // label the variables on the path to the lost solution first
+    IntVar[] labeled =
+        Stream.concat(Stream.of(r[1][3], c[0], r[2][3], c[1], r[0][0]), Arrays.stream(all))
+            .distinct()
+            .toArray(IntVar[]::new);
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(labeled, null, new IndomainMin<>()));
+
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(expected);
+  }
+
+  private static IntVar one(Store store) {
+    return new IntVar(store, 1, 1);
+  }
+
+  private static IntVar oneTwo(Store store) {
+    return new IntVar(store, 1, 2);
+  }
+
+  @Test
   void testValues() {
 
     Store store = new Store();
