@@ -178,6 +178,17 @@ def _(m):
     fin = sorted(set(R(m)(1, q) for _ in range(R(m)(1, q))))
     rows = "|".join(",".join(map(str, row)) for row in d)
     return f"regular({m.arr(R(m)(1, 4), 1, 2)}, {q}, {s}, [|{rows}|], 1, {{{','.join(map(str, fin))}}})"
+@case("cost_regular")
+def _(m):
+    q, s = R(m)(1, 3), R(m)(2, 3)
+    d = [[R(m)(0, q) for _ in range(s)] for _ in range(q)]
+    w = [[R(m)(-2, 4) for _ in range(s)] for _ in range(q)]
+    fin = sorted(set(R(m)(1, q) for _ in range(R(m)(1, q))))
+    rows = "|".join(",".join(map(str, row)) for row in d)
+    costs = "|".join(",".join(map(str, row)) for row in w)
+    k = R(m)(1, 4)
+    return (f"cost_regular({m.arr(k, 1, s)}, {q}, {s}, [|{rows}|], 1, {{{','.join(map(str, fin))}}}, "
+            f"[|{costs}|], {m.var(-3, 3 * k + 2)})")
 @case("table", True)
 def _(m):
     k, t = R(m)(1, 3), R(m)(0, 5)
