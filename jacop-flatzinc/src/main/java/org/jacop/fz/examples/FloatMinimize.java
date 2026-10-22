@@ -31,7 +31,6 @@
 package org.jacop.fz.examples;
 
 import java.util.Arrays;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -47,7 +46,6 @@ import org.jacop.search.DepthFirstSearch;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class FloatMinimize {
 
   FloatMinimize() {}
@@ -76,7 +74,7 @@ public class FloatMinimize {
 
     Store store = fl.getStore();
 
-    log.info(
+    IO.println(
         "\nVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -93,7 +91,7 @@ public class FloatMinimize {
 
     FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();
 
-    log.info("Decision variables: " + Arrays.asList(vars) + "\n");
+    IO.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
@@ -103,19 +101,19 @@ public class FloatMinimize {
     boolean result = min.minimize();
 
     if (result) {
-      log.info("Final cost = " + min.getFinalCost());
-      log.info("Variables: ");
+      IO.println("Final cost = " + min.getFinalCost());
+      IO.println("Variables: ");
       FloatInterval[] values = min.getFinalVarValues();
       for (int i = 0; i < vars.length; i++) {
-        log.info(vars[i].id() + " = " + values[i]);
+        IO.println(vars[i].id() + " = " + values[i]);
       }
-      log.info("Yes");
+      IO.println("Yes");
     } else {
-      log.info("*** No");
+      IO.println("*** No");
     }
 
     long t2 = System.currentTimeMillis();
     long t = t2 - t1;
-    log.info("\n\t*** Execution time = " + t + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 }

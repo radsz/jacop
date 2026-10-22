@@ -36,7 +36,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -68,7 +67,6 @@ import org.jacop.set.core.SetVar;
  *
  * @author Krzysztof Kuchcinski
  */
-@Slf4j
 public class Support implements ParserTreeConstants {
 
   // comparison operators
@@ -700,7 +698,7 @@ public class Support implements ParserTreeConstants {
       store.impose(c);
       if (options.debug()) {
         String s = "% " + c;
-        log.info(s.replace("\n", "\n% "));
+        IO.println(s.replace("\n", "\n% "));
       }
     }
     poseAlldistinctConstraints();
@@ -717,7 +715,7 @@ public class Support implements ParserTreeConstants {
       store.impose(ad);
       if (options.debug()) {
         String s = "% " + ad;
-        log.info(s.replace("\n", "\n% "));
+        IO.println(s.replace("\n", "\n% "));
       }
     }
   }
@@ -744,7 +742,7 @@ public class Support implements ParserTreeConstants {
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
       String s = "% " + c;
-      log.info(s.replace("\n", "\n% "));
+      IO.println(s.replace("\n", "\n% "));
     }
   }
 
@@ -758,7 +756,7 @@ public class Support implements ParserTreeConstants {
 
     if (options.debug()) {
       String s = "% " + c;
-      log.info(s.replace("\n", "\n% "));
+      IO.println(s.replace("\n", "\n% "));
     }
   }
 

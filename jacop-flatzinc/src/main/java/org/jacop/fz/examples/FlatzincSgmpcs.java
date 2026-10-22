@@ -30,7 +30,6 @@
 
 package org.jacop.fz.examples;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.FlatzincLoader;
@@ -42,7 +41,6 @@ import org.jacop.search.sgmpcs.SgmpcsSearch;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class FlatzincSgmpcs {
 
   FlatzincSgmpcs() {}
@@ -96,7 +94,7 @@ public class FlatzincSgmpcs {
 
   /** Prints store statistics. */
   private void printStoreStats(Store store) {
-    log.info(
+    IO.println(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -124,12 +122,12 @@ public class FlatzincSgmpcs {
     if (result) {
       int[] sol = label.lastSolution();
       if (sol != null) {
-        log.info("\n%%% Last found solution with cost " + label.lastCost());
+        IO.println("\n%%% Last found solution with cost " + label.lastCost());
         for (int j : sol) {
           IO.print(j + " ");
         }
       } else {
-        log.info("\n%%% No solution found with this method");
+        IO.println("\n%%% No solution found with this method");
       }
     }
   }
@@ -138,6 +136,6 @@ public class FlatzincSgmpcs {
   private void printExecutionTime(long startTime) {
     long t2 = System.currentTimeMillis();
     long t = t2 - startTime;
-    log.info("\n\t*** Execution time = " + t + " ms");
+    IO.println("\n\t*** Execution time = " + t + " ms");
   }
 }

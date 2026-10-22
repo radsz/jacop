@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -262,6 +263,48 @@ class FlatzincFrontEndTest {
             "b = true; i = 1;",
             "b = true; i = 2;"),
         solveAll(reified));
+  }
+
+  @Test
+  void debugOptionPrintsConstraints() throws IOException {
+    // -debug printed the constraints through a logger that has no appender, so only the search
+    // was printed.
+    String fzn =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn, "-debug")[0];
+    assertTrue(
+        stdout.lines().anyMatch(line -> line.startsWith("% XneqY")),
+        "constraints missing from -debug output:\n" + stdout);
+  }
+
+  /** Runs the model with the given options and returns its stdout and stderr. */
+  private String[] run(String model, String... options) throws IOException {
+    Path fzn = tmp.resolve("run.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = Arrays.copyOf(options, options.length + 1);
+    args[options.length] = fzn.toString();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    try (PrintStream captureOut = new PrintStream(out, true, StandardCharsets.UTF_8);
+        PrintStream captureErr = new PrintStream(err, true, StandardCharsets.UTF_8)) {
+      System.setOut(captureOut);
+      System.setErr(captureErr);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
+    return new String[] {
+      out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8)
+    };
   }
 
   private Set<String> solveAll(String model) throws IOException {

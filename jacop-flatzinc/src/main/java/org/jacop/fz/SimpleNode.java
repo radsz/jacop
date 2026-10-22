@@ -4,10 +4,7 @@
 
 package org.jacop.fz;
 
-import lombok.extern.slf4j.Slf4j;
-
 /** Simple AST node for flatzinc parser. */
-@Slf4j
 public class SimpleNode implements Node {
 
   protected final int id;
@@ -119,7 +116,7 @@ public class SimpleNode implements Node {
    * @param prefix the indentation prefix
    */
   public void dump(String prefix) {
-    log.info(toString(prefix));
+    IO.println(toString(prefix));
     if (children != null) {
       for (Node child : children) {
         SimpleNode n = (SimpleNode) child;

@@ -30,7 +30,6 @@
 
 package org.jacop.fz;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.constraints.ConstraintFncs;
@@ -43,7 +42,6 @@ import org.jacop.satwrapper.SatTranslation;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class Constraints implements ParserTreeConstants {
 
   static final int EQ = 0;
@@ -92,7 +90,7 @@ public class Constraints implements ParserTreeConstants {
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     if (support.options.debug()) {
-      log.info(
+      IO.println(
           "% bool constraints = "
               + boolClauses
               + " of "
@@ -160,9 +158,9 @@ public class Constraints implements ParserTreeConstants {
         throw new RuntimeException(
             "%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
       } catch (IllegalAccessException e) {
-        log.info("{}", e);
+        IO.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
-        log.info("%% problem detected for " + p);
+        IO.println("%% problem detected for " + p);
         throw e.getCause();
       }
     }
@@ -215,7 +213,7 @@ public class Constraints implements ParserTreeConstants {
       v2.domain.in(store.level, v2, v1.domain);
     }
     if (debug) {
-      log.info("% Alias: " + v1 + " == " + v2);
+      IO.println("% Alias: " + v1 + " == " + v2);
     }
   }
 
