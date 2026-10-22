@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.constraints.ConstraintFncs;
@@ -155,13 +156,19 @@ public class Constraints implements ParserTreeConstants {
         method.invoke(cf, node);
 
       } catch (NoSuchMethodException _) {
-        throw new RuntimeException(
-            "%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
+        throw new IllegalArgumentException(
+            "JaCoP flatzinc back-end: constraint " + p + " is not supported.");
       } catch (IllegalAccessException e) {
         IO.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
-        IO.println("%% problem detected for " + p);
-        throw e.getCause();
+        Throwable cause = e.getCause();
+        if (cause instanceof FailException) {
+          // the comment explains an unsatisfiable model; other errors go to stderr
+          IO.println("%% problem detected for " + p);
+        } else {
+          System.err.println("%% problem detected for " + p);
+        }
+        throw cause;
       }
     }
   }

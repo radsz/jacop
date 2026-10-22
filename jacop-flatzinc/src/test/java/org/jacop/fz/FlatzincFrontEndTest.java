@@ -318,6 +318,25 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void invalidModelReportsErrorOnStderrOnly() throws IOException {
+    // MiniZinc's *-bad tests expect no output and an error message; the message of the Java
+    // exception, with its class name, was printed to stdout.
+    String fzn =
+        """
+        array [1..3] of int: a = [1,2,3,4];
+        var 1..3: x :: output_var;
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertEquals("", out[0]);
+    assertEquals(
+        "%% Error: Different size declaration and initialization of int array;"
+            + " compilation aborted.",
+        out[1].strip());
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
