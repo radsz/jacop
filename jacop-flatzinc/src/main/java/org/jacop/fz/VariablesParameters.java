@@ -1567,7 +1567,7 @@ public class VariablesParameters implements ParserTreeConstants {
     store.imposeWithConsistency(c);
 
     if (options.debug()) {
-      IO.println("% " + c);
+      FzConsole.println("% " + c);
     }
   }
 }

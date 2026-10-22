@@ -116,7 +116,7 @@ public class SimpleNode implements Node {
    * @param prefix the indentation prefix
    */
   public void dump(String prefix) {
-    IO.println(toString(prefix));
+    FzConsole.println(toString(prefix));
     if (children != null) {
       for (Node child : children) {
         SimpleNode n = (SimpleNode) child;

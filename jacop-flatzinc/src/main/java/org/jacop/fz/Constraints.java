@@ -91,7 +91,7 @@ public class Constraints implements ParserTreeConstants {
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     if (support.options.debug()) {
-      IO.println(
+      FzConsole.println(
           "% bool constraints = "
               + boolClauses
               + " of "
@@ -159,14 +159,14 @@ public class Constraints implements ParserTreeConstants {
         throw new IllegalArgumentException(
             "JaCoP flatzinc back-end: constraint " + p + " is not supported.");
       } catch (IllegalAccessException e) {
-        IO.println(e);
+        FzConsole.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
         Throwable cause = e.getCause();
         if (cause instanceof FailException) {
           // the comment explains an unsatisfiable model; other errors go to stderr
-          IO.println("%% problem detected for " + p);
+          FzConsole.println("%% problem detected for " + p);
         } else {
-          System.err.println("%% problem detected for " + p);
+          FzConsole.printlnErr("%% problem detected for " + p);
         }
         throw cause;
       }
@@ -220,7 +220,7 @@ public class Constraints implements ParserTreeConstants {
       v2.domain.in(store.level, v2, v1.domain);
     }
     if (debug) {
-      IO.println("% Alias: " + v1 + " == " + v2);
+      FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
   }
 

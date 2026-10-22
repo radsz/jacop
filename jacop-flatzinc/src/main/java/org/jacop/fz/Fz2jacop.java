@@ -86,7 +86,7 @@ public class Fz2jacop {
     } catch (IllegalArgumentException e) {
       handleIllegalArgumentException(e);
     } catch (ParseException | TokenMgrError e) {
-      System.err.println("%% Parser error: " + e.getMessage());
+      FzConsole.printlnErr("%% Parser error: " + e.getMessage());
     } catch (ArrayIndexOutOfBoundsException e) {
       handleArrayIndexOutOfBoundsException(e);
     } catch (OutOfMemoryError _) {
@@ -125,17 +125,17 @@ public class Fz2jacop {
   // expects from a solver that rejects its input.
 
   private void handleArithmeticException(ArithmeticException e) {
-    System.err.println("%% Evaluation of model resulted in an overflow: " + e.getMessage());
+    FzConsole.printlnErr("%% Evaluation of model resulted in an overflow: " + e.getMessage());
   }
 
   private void handleIllegalArgumentException(IllegalArgumentException e) {
-    System.err.println("%% Error: " + e.getMessage());
+    FzConsole.printlnErr("%% Error: " + e.getMessage());
   }
 
   private void handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
-    System.err.println("%% JaCoP internal error. Array out of bound exception " + e);
+    FzConsole.printlnErr("%% JaCoP internal error. Array out of bound exception " + e);
     if (e.getStackTrace().length > 0) {
-      System.err.println("%%\t" + e.getStackTrace()[0]);
+      FzConsole.printlnErr("%%\t" + e.getStackTrace()[0]);
     }
   }
 

@@ -53,6 +53,7 @@ import org.jacop.fz.ASTAnnotation;
 import org.jacop.fz.ASTIntFlatExpr;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ASTSetLiteral;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.Options;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -698,7 +699,7 @@ public class Support implements ParserTreeConstants {
       store.impose(c);
       if (options.debug()) {
         String s = "% " + c;
-        IO.println(s.replace("\n", "\n% "));
+        FzConsole.println(s.replace("\n", "\n% "));
       }
     }
     poseAlldistinctConstraints();
@@ -715,7 +716,7 @@ public class Support implements ParserTreeConstants {
       store.impose(ad);
       if (options.debug()) {
         String s = "% " + ad;
-        IO.println(s.replace("\n", "\n% "));
+        FzConsole.println(s.replace("\n", "\n% "));
       }
     }
   }
@@ -742,7 +743,7 @@ public class Support implements ParserTreeConstants {
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
       String s = "% " + c;
-      IO.println(s.replace("\n", "\n% "));
+      FzConsole.println(s.replace("\n", "\n% "));
     }
   }
 
@@ -756,7 +757,7 @@ public class Support implements ParserTreeConstants {
 
     if (options.debug()) {
       String s = "% " + c;
-      IO.println(s.replace("\n", "\n% "));
+      FzConsole.println(s.replace("\n", "\n% "));
     }
   }
 

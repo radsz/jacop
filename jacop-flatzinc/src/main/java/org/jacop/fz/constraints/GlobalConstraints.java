@@ -127,6 +127,7 @@ import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.set.constraints.AdisjointB;
@@ -946,7 +947,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (m == ub.length && z == lb.length) {
       if (support.options.debug()) {
         String s = "% SKIPPED " + new CountValuesBounds(x, lb, ub, values);
-        IO.println(s.replace("\n", "\n% "));
+        FzConsole.println(s.replace("\n", "\n% "));
       }
       return;
     }
@@ -1373,7 +1374,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     var.domain.in(store.level, var, d);
     if (support.options.debug()) {
-      IO.println("% " + var + " in " + d);
+      FzConsole.println("% " + var + " in " + d);
     }
   }
 
