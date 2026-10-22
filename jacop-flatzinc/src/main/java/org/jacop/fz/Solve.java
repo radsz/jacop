@@ -461,13 +461,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "credit".equals(si.exploration())) {
       FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
-      if (options.getAll()) { // all solutions
-        if (restartCalculator != null) {
-          throw new IllegalArgumentException(
-              "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
-        }
-        searchForAll(label);
-      }
+      ensureAllSolutionsIfRequested(label, solveKind);
 
       this.si = si;
 
@@ -1264,7 +1258,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (si.exploration() == null || COMPLETE.equals(si.exploration())) {
       FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
-      ensureAllSolutionsIfRequested(masterLabel);
+      ensureAllSolutionsIfRequested(masterLabel, solveKind);
 
       String solveType = resolveSolveTypeForSequenceSearch(solveKind);
 
@@ -1287,13 +1281,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printStatisticsForSeqSearch(false, result);
   }
 
-  private void ensureAllSolutionsIfRequested(DepthFirstSearch<T> masterLabel) {
+  /**
+   * Handles option -a. For satisfaction problems it asks for all solutions, which restart search
+   * cannot enumerate. For optimization it only prints every improving solution, which restart
+   * search does as it finds them, so the search itself is left as it is.
+   */
+  private void ensureAllSolutionsIfRequested(DepthFirstSearch<T> masterLabel, int solveKind) {
     if (!options.getAll()) {
       return;
     }
     if (restartCalculator != null) {
-      throw new IllegalArgumentException(
-          "Flatzinc option for search for all solutions (-a) cannot be used in restart search.");
+      if (solveKind == 0) {
+        throw new IllegalArgumentException(
+            "Flatzinc option for search for all solutions (-a) cannot be used in restart search"
+                + " of a satisfaction problem.");
+      }
+      return;
     }
     searchForAll(masterLabel);
   }

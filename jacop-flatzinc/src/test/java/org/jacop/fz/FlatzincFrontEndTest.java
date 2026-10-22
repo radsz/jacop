@@ -337,6 +337,27 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void allSolutionsOptionPrintsImprovingSolutionsOfRestartSearch() throws IOException {
+    // For optimization -a asks for the intermediate solutions; it was rejected together with
+    // restart search, where it is only meaningless for satisfaction problems.
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve :: int_search([x,y],input_order,indomain_min,complete) :: restart_constant(10) %s;
+        """;
+
+    assertEquals(
+        List.of("x = 1; y = 2;", "x = 2; y = 1;", "x = 3; y = 1;"),
+        solveAllInOrder(model.formatted("maximize x")));
+
+    String[] out = run(model.formatted("satisfy"), "-a");
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("cannot be used in restart search of a satisfaction problem"));
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
