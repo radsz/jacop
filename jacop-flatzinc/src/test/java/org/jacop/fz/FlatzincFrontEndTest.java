@@ -266,6 +266,58 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void boolClauseWithConstantLiterals() throws IOException {
+    // MiniZinc conformance test fcts/builtins/bool/bool_clause.fzn: the clause with true on both
+    // sides was taken for a reified one and its missing third argument was read, which ended in an
+    // ArrayIndexOutOfBoundsException.
+    String fzn =
+        """
+        var bool: x1 :: output_var;
+        var bool: x2 :: output_var;
+        constraint bool_clause([true], []);
+        constraint bool_clause([], [false]);
+        constraint bool_clause([true], [true]);
+        constraint bool_clause([true], [false]);
+        constraint bool_clause([false], [false]);
+        constraint bool_clause([x1], [x2]);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("x1 = false; x2 = false;", "x1 = true; x2 = false;", "x1 = true; x2 = true;"),
+        solveAll(fzn));
+  }
+
+  @Test
+  void boolClauseReifiedAndImpliedConstantClauses() throws IOException {
+    // An empty clause is false, so its reification and implication variables are false; they
+    // were set to true. A clause that always holds leaves the implication variable free; it was
+    // set to true. A bool_clause after a bool_clause_imp was treated as an implication too.
+    String fzn =
+        """
+        var bool: r1 :: output_var;
+        var bool: r2 :: output_var;
+        var bool: r3 :: output_var;
+        var bool: r4 :: output_var;
+        var bool: x :: output_var;
+        constraint bool_clause_reif([], [], r1);
+        constraint bool_clause_imp([], [], r2);
+        constraint bool_clause_imp([true], [], r3);
+        constraint bool_clause_imp([x], [x], r4);
+        constraint bool_clause([x], []);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of(
+            "r1 = false; r2 = false; r3 = false; r4 = false; x = true;",
+            "r1 = false; r2 = false; r3 = false; r4 = true; x = true;",
+            "r1 = false; r2 = false; r3 = true; r4 = false; x = true;",
+            "r1 = false; r2 = false; r3 = true; r4 = true; x = true;"),
+        solveAll(fzn));
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.

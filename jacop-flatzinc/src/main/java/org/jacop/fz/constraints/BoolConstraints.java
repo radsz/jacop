@@ -265,15 +265,18 @@ class BoolConstraints implements ParserTreeConstants {
 
   void gen_bool_clause(SimpleNode node) {
     reified = false;
+    implied = false;
     clause_generation(node);
   }
 
   void gen_bool_clause_reif(SimpleNode node) {
     reified = true;
+    implied = false;
     clause_generation(node);
   }
 
   void gen_bool_clause_imp(SimpleNode node) {
+    reified = false;
     implied = true;
     clause_generation(node);
   }
@@ -288,13 +291,11 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar[] a2 = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(1)));
 
     if (clauseHasSameVarInBothSides(a1, a2)) {
-      setReifiedImpliedResult(node, 1);
+      clauseSatisfied(node);
       return;
     }
     if (a1.length == 0 && a2.length == 0) {
-      if (reified || implied) {
-        setReifiedImpliedResult(node, 1);
-      }
+      clauseFalse(node);
       return;
     }
 
@@ -315,6 +316,22 @@ class BoolConstraints implements ParserTreeConstants {
       }
     }
     return false;
+  }
+
+  /** A clause that always holds: its reification variable is true, an implication is free. */
+  private void clauseSatisfied(SimpleNode node) {
+    if (reified) {
+      setReifiedImpliedResult(node, 1);
+    }
+  }
+
+  /** A clause that never holds: its reification or implication variable is false. */
+  private void clauseFalse(SimpleNode node) {
+    if (reified || implied) {
+      setReifiedImpliedResult(node, 0);
+    } else {
+      throw Store.failException;
+    }
   }
 
   private void setReifiedImpliedResult(SimpleNode node, int value) {
@@ -343,11 +360,8 @@ class BoolConstraints implements ParserTreeConstants {
     }
 
     if (a1reduced.isEmpty() && a2reduced.isEmpty()) {
-      if (reified || implied) {
-        setReifiedImpliedResult(node, 0);
-        return;
-      }
-      throw Store.failException;
+      clauseFalse(node);
+      return;
     }
 
     PrimitiveConstraint c = buildClauseConstraint(a1reduced, a2reduced, node);
@@ -367,16 +381,14 @@ class BoolConstraints implements ParserTreeConstants {
   }
 
   /**
-   * Returns reduced list, or null if clause is satisfied (result set to 1 and caller should
+   * Returns reduced list, or null if the clause is satisfied (see clauseSatisfied; caller should
    * return).
    */
   private ArrayList<IntVar> reduceClausePositives(IntVar[] a1, SimpleNode node) {
     ArrayList<IntVar> a1reduced = new ArrayList<>();
     for (IntVar v : a1) {
       if (v.min() == 1) {
-        if (reified || implied) {
-          setReifiedImpliedResult(node, 1);
-        }
+        clauseSatisfied(node);
         return null;
       }
       if (v.max() != 0) {
@@ -387,16 +399,14 @@ class BoolConstraints implements ParserTreeConstants {
   }
 
   /**
-   * Returns reduced list, or null if clause is satisfied (result set to 1 and caller should
+   * Returns reduced list, or null if the clause is satisfied (see clauseSatisfied; caller should
    * return).
    */
   private ArrayList<IntVar> reduceClauseNegatives(IntVar[] a2, SimpleNode node) {
     ArrayList<IntVar> a2reduced = new ArrayList<>();
     for (IntVar intVar : a2) {
       if (intVar.max() == 0) {
-        if (reified || implied) {
-          setReifiedImpliedResult(node, 1);
-        }
+        clauseSatisfied(node);
         return null;
       }
       if (intVar.min() != 1) {
