@@ -2542,6 +2542,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(88);
   }
 
+  // Values switches between dense value arrays and a hash map when a variable keeps a far value;
+  // the singleton pruning must use the values of the current path after each switch
+  @Test
+  void testValuesWithFarValueMatchesBruteForce() {
+    int far = 1_000_000;
+    int[][] domains = {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}, {0, 1, 2, far}};
+    for (int countMin = 1; countMin <= 4; countMin++) {
+      for (int countMax = countMin; countMax <= 4; countMax++) {
+        int expected = 0;
+        for (int a : domains[0]) {
+          for (int b : domains[1]) {
+            for (int c : domains[2]) {
+              for (int d : domains[3]) {
+                long different = IntStream.of(a, b, c, d).distinct().count();
+                if (countMin <= different && different <= countMax) {
+                  expected++;
+                }
+              }
+            }
+          }
+        }
+
+        Store store = new Store();
+        IntVar[] x = new IntVar[domains.length];
+        for (int i = 0; i < x.length; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar count = new IntVar(store, "count", countMin, countMax);
+        store.impose(new Values(x, count));
+
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found = search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+
+        assertThat(found ? search.getSolutionListener().solutionsNo() : 0)
+            .as("count in %d..%d", countMin, countMax)
+            .isEqualTo(expected);
+      }
+    }
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/78
   @Test
   void testNoGoodViolatedOverSingletons() {
