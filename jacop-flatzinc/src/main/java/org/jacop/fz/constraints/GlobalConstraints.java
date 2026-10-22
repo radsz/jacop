@@ -146,6 +146,9 @@ import org.jacop.util.fsm.FsmTransition;
 @Slf4j
 class GlobalConstraints implements ParserTreeConstants {
 
+  // default value of the boolean system properties that switch off a filtering rule
+  private static final String FALSE = "false";
+
   final Store store;
   final Support support;
   final Comparator<ArrayList<Integer>> rowComparator =
@@ -330,7 +333,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseCumulativeBasicWithImplied(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
-    if (Boolean.parseBoolean(System.getProperty("fz_cumulative_variable_basic", "false"))) {
+    if (Boolean.parseBoolean(System.getProperty("fz_cumulative_variable_basic", FALSE))) {
       support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
     } else {
       // edge finding and the energy rules use minimal durations and resource use, so they are
@@ -348,7 +351,8 @@ class GlobalConstraints implements ParserTreeConstants {
    * Sets the filtering rules of a cumulative constraint from the system properties
    * fz_cumulative_ttef (time-table edge finding), fz_cumulative_ttdr (time-table disjunctive
    * reasoning), fz_cumulative_ef (edge finding, off by default), fz_cumulative_quad_ef (quadratic
-   * edge finding) and fz_cumulative_overload (overload check).
+   * edge finding), fz_cumulative_overload (overload check) and fz_cumulative_heef (horizontally
+   * elastic edge finding, off by default).
    */
   static <T extends Cumulative> T configureCumulative(T c) {
     String p = System.getProperty("fz_cumulative_ttef");
@@ -361,7 +365,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     // time-table edge finding with time-table disjunctive reasoning solved more cumulative
     // benchmarks than with edge finding added, which cost more time than its pruning gained
-    c.doEdgeFind(Boolean.parseBoolean(System.getProperty("fz_cumulative_ef", "false")));
+    c.doEdgeFind(Boolean.parseBoolean(System.getProperty("fz_cumulative_ef", FALSE)));
     p = System.getProperty("fz_cumulative_quad_ef");
     if (p != null) {
       c.doQuadraticEdgeFind(Boolean.parseBoolean(p));
@@ -370,6 +374,8 @@ class GlobalConstraints implements ParserTreeConstants {
     if (p != null) {
       c.doOverload(Boolean.parseBoolean(p));
     }
+    c.doHorizontallyElasticEdgeFind(
+        Boolean.parseBoolean(System.getProperty("fz_cumulative_heef", FALSE)));
     return c;
   }
 
@@ -2185,7 +2191,7 @@ class GlobalConstraints implements ParserTreeConstants {
     CumulativeUnaryOptional c = new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true);
     // off by default: on the flexible job shop benchmarks it cost time without removing nodes
     c.doOptionalOverload(
-        Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", "false")));
+        Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
   }
 

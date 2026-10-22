@@ -32,7 +32,6 @@ package org.jacop.constraints.cumulative;
 
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -75,11 +74,18 @@ class CumulativePrimary extends Constraint {
    */
   private final int[] dur;
   private final int[] res;
-  private final Comparator<Event> eventComparator =
-      (o1, o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
-      };
+  private static final int SEQUENCE_MASK = (1 << 30) - 1;
+
+  // events: (date, type, sequence number) in the key, task index and profile change by sequence
+  private final long[] eventKeys;
+  private final int[] eventIndex;
+  private final int[] eventValue;
+
+  // sweep state, reused between calls
+  private final BitSet tasksToPrune;
+  private final boolean[] inProfile;
+  private final int[] startExcluded;
+  private final boolean[] startConsidered;
   private final int[] activeMap;
   private final TimeStamp<Integer> activePnt;
 
@@ -123,6 +129,13 @@ class CumulativePrimary extends Constraint {
     dur = Arrays.copyOf(durations, durations.length);
     res = Arrays.copyOf(resources, resources.length);
     start = Arrays.copyOf(starts, starts.length);
+    eventKeys = new long[4 * start.length];
+    eventIndex = new int[4 * start.length];
+    eventValue = new int[4 * start.length];
+    tasksToPrune = new BitSet(start.length);
+    inProfile = new boolean[start.length];
+    startExcluded = new int[start.length];
+    startConsidered = new boolean[start.length];
     activeMap = new int[start.length];
     for (int i = 0; i < start.length; i++) {
       activeMap[i] = i;
@@ -205,59 +218,48 @@ class CumulativePrimary extends Constraint {
   // Sweep algorithm for PROFILE
   void sweepPruning(Store store) {
 
-    SweepEventArray sea = buildSweepEventArray();
-    if (sea.count() == 0) {
+    int count = buildSweepEventArray();
+    if (count == 0) {
       return;
     }
 
-    Event[] es = sea.events();
-    int N = sea.count();
     final int limitMax = limit.max();
 
-    Arrays.sort(es, 0, N, eventComparator);
+    // sorts by date and type; the sequence number in the low bits keeps the order stable
+    Arrays.sort(eventKeys, 0, count);
 
-    logDebugNarrIfEnabled(es, limitMax);
+    logDebugNarrIfEnabled(count, limitMax);
 
-    BitSet tasksToPrune = new BitSet(start.length);
-    boolean[] inProfile = new boolean[start.length];
+    tasksToPrune.clear();
+    Arrays.fill(inProfile, false);
+    Arrays.fill(startConsidered, false);
 
     // current value of the PROFILE for mandatory parts
     int curProfile = 0;
 
-    // used for start variable pruning
-    int[] startExcluded = new int[start.length];
-    boolean[] startConsidered = new boolean[start.length];
+    for (int i = 0; i < count; i++) {
 
-    for (int i = 0; i < N; i++) {
+      long key = eventKeys[i];
+      int date = date(key);
+      int type = type(key);
+      int seq = sequence(key);
+      int index = eventIndex[seq];
 
-      Event e = es[i];
-      Event ne = null; // next event
-      if (i < N - 1) {
-        ne = es[i + 1];
-      }
-
-      switch (e.type()) {
+      switch (type) {
         case PROFILE:
-          curProfile += e.value();
-          inProfile[e.index] = e.value() > 0;
-          if (ne == null || ne.type() != PROFILE || e.date < ne.date()) {
-            sweepPruningHandleProfileEnd(
-                store,
-                e,
-                curProfile,
-                limitMax,
-                tasksToPrune,
-                inProfile,
-                startExcluded,
-                startConsidered);
+          curProfile += eventValue[seq];
+          inProfile[index] = eventValue[seq] > 0;
+          if (i == count - 1
+              || type(eventKeys[i + 1]) != PROFILE
+              || date < date(eventKeys[i + 1])) {
+            sweepPruningHandleProfileEnd(store, date, curProfile, limitMax);
           }
           break;
         case PRUNE_START:
-          sweepPruningHandlePruneStart(
-              e, limitMax, curProfile, inProfile, startExcluded, startConsidered, tasksToPrune);
+          sweepPruningHandlePruneStart(index, date, limitMax, curProfile);
           break;
         case PRUNE_END:
-          sweepPruningHandlePruneEnd(store, e, startConsidered, startExcluded, tasksToPrune);
+          sweepPruningHandlePruneEnd(store, index);
           break;
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
@@ -269,27 +271,26 @@ class CumulativePrimary extends Constraint {
     }
   }
 
-  private record SweepEventArray(Event[] events, int count) {
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof SweepEventArray other
-          && count == other.count
-          && Arrays.equals(events, other.events);
-    }
-
-    @Override
-    public int hashCode() {
-      return 31 * Arrays.hashCode(events) + count;
-    }
-
-    @Override
-    public String toString() {
-      return "SweepEventArray[events=" + Arrays.toString(events) + ", count=" + count + "]";
-    }
+  private static int date(long key) {
+    return (int) (key >> 32);
   }
 
-  private SweepEventArray buildSweepEventArray() {
-    Event[] es = new Event[4 * start.length];
+  private static int type(long key) {
+    return (int) (key >>> 30) & 3;
+  }
+
+  private static int sequence(long key) {
+    return (int) key & SEQUENCE_MASK;
+  }
+
+  private void addEvent(int seq, int type, int index, int date, int value) {
+    eventKeys[seq] = ((long) date << 32) | ((long) type << 30) | seq;
+    eventIndex[seq] = index;
+    eventValue[seq] = value;
+  }
+
+  // fills the event arrays and returns the number of events
+  private int buildSweepEventArray() {
     int j = 0;
     int minProfile = Integer.MAX_VALUE;
     int maxProfile = Integer.MIN_VALUE;
@@ -300,8 +301,8 @@ class CumulativePrimary extends Constraint {
       int min = start[k].max();
       int max = start[k].min() + dur[k];
       if (min < max) {
-        es[j++] = new Event(PROFILE, k, min, res[k]);
-        es[j++] = new Event(PROFILE, k, max, -res[k]);
+        addEvent(j++, PROFILE, k, min, res[k]);
+        addEvent(j++, PROFILE, k, max, -res[k]);
         minProfile = Math.min(min, minProfile);
         maxProfile = Math.max(max, maxProfile);
       }
@@ -315,34 +316,34 @@ class CumulativePrimary extends Constraint {
         int min = start[k].min();
         int max = start[k].max() + dur[k];
         if (min <= maxProfile && max >= minProfile) {
-          es[j++] = new Event(PRUNE_START, k, min, 0);
-          es[j++] = new Event(PRUNE_END, k, max, 0);
+          addEvent(j++, PRUNE_START, k, min, 0);
+          addEvent(j++, PRUNE_END, k, max, 0);
         }
       }
     }
 
-    return new SweepEventArray(es, j);
+    return j;
   }
 
-  private static void logDebugNarrIfEnabled(Event[] es, int limitMax) {
+  private void logDebugNarrIfEnabled(int count, int limitMax) {
     if (DEBUG_NARR) {
-      log.debug("{}", Arrays.asList(es));
+      for (int i = 0; i < count; i++) {
+        int seq = sequence(eventKeys[i]);
+        log.debug(
+            "({}, {}, {}, {})",
+            type(eventKeys[i]),
+            eventIndex[seq],
+            date(eventKeys[i]),
+            eventValue[seq]);
+      }
       log.debug("limit.max() = {}", limitMax);
       log.debug("===========================");
     }
   }
 
-  private void sweepPruningHandleProfileEnd(
-      Store store,
-      Event e,
-      int curProfile,
-      int limitMax,
-      BitSet tasksToPrune,
-      boolean[] inProfile,
-      int[] startExcluded,
-      boolean[] startConsidered) {
+  private void sweepPruningHandleProfileEnd(Store store, int date, int curProfile, int limitMax) {
     if (DEBUG) {
-      log.debug("Profile at {}: {}", e.date(), curProfile);
+      log.debug("Profile at {}: {}", date, curProfile);
     }
     if (curProfile > limit.min()) {
       limit.domain.inMin(store.level, limit, curProfile);
@@ -350,7 +351,7 @@ class CumulativePrimary extends Constraint {
     for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
       if (!startConsidered[ti]) {
         if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
-          startExcluded[ti] = e.date() - dur[ti] + 1;
+          startExcluded[ti] = date - dur[ti] + 1;
           startConsidered[ti] = true;
         }
       } else if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
@@ -358,34 +359,24 @@ class CumulativePrimary extends Constraint {
           log.debug(
               ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
               start[ti],
-              new IntervalDomain(startExcluded[ti], e.date() - 1));
+              new IntervalDomain(startExcluded[ti], date - 1));
           log.debug(" => {}", start[ti]);
         }
-        start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], e.date() - 1);
+        start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], date - 1);
         startConsidered[ti] = false;
       }
     }
   }
 
-  private void sweepPruningHandlePruneStart(
-      Event e,
-      int limitMax,
-      int curProfile,
-      boolean[] inProfile,
-      int[] startExcluded,
-      boolean[] startConsidered,
-      BitSet tasksToPrune) {
-    int ti = e.index;
+  private void sweepPruningHandlePruneStart(int ti, int date, int limitMax, int curProfile) {
     if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
-      startExcluded[ti] = e.date();
+      startExcluded[ti] = date;
       startConsidered[ti] = true;
     }
     tasksToPrune.set(ti);
   }
 
-  private void sweepPruningHandlePruneEnd(
-      Store store, Event e, boolean[] startConsidered, int[] startExcluded, BitSet tasksToPrune) {
-    int ti = e.index;
+  private void sweepPruningHandlePruneEnd(Store store, int ti) {
     if (startConsidered[ti]) {
       if (DEBUG_NARR) {
         log.debug(
@@ -437,22 +428,6 @@ class CumulativePrimary extends Constraint {
       int tmp = activeMap[i];
       activeMap[i] = activeMap[j];
       activeMap[j] = tmp;
-    }
-  }
-
-  private record Event(int type, int index, int date, int value) {
-
-    int task() {
-      return index;
-    }
-
-    @Override
-    public String toString() {
-      String result = "(";
-      result +=
-          type == PROFILE ? "PROFILE, " : type == PRUNE_START ? "PRUNE_START, " : "PRUNE_END, ";
-      result += index + ", " + date + ", " + value + ")\n";
-      return result;
     }
   }
 }
