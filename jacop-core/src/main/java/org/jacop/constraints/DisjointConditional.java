@@ -665,7 +665,6 @@ public class DisjointConditional extends Diff {
     int j = i == 0 ? 1 : 0;
     int rSize = r.origin[j].max() - r.origin[j].min();
     int rLengthjMin = r.length[j].min();
-    int rLengthiMin = r.length[i].min();
 
     if (!profileCandidates.isEmpty() && doProfile) {
       profileNarrowingCondition(i, r, profileCandidates);
@@ -697,7 +696,7 @@ public class DisjointConditional extends Diff {
       List<IntRectangle> consideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
         narrowOriginForStart(
-            ir.origins[i], i, j, r, usedRectArray, consideredRect, rSize, rLengthiMin, rLengthjMin);
+            ir.origins[i], i, j, r, usedRectArray, consideredRect, rSize, rLengthjMin);
       }
 
       narrowLengthWithBarrier(i, j, r, usedRectArray, maxRect, rSize, rLengthjMin);
@@ -712,14 +711,15 @@ public class DisjointConditional extends Diff {
       IntRectangle[] usedRectArray,
       List<IntRectangle> consideredRect,
       int rsizeValue,
-      int rlengthiMin,
       int rlengthjMin) {
     consideredRect.clear();
     int minI = IntDomain.MAX_INT;
     long rectSize = 0;
     for (IntRectangle t : usedRectArray) {
       int tempMin = t.origins[i] + t.lengths[i];
-      if (t.origins[i] - s < rlengthiMin && s < tempMin) {
+      // the forbidden origins found below reach down to s - length(r) + 1, so only rectangles
+      // that start at or before s overlap r at all of them
+      if (t.origins[i] <= s && s < tempMin) {
         consideredRect.add(t);
         rectSize += t.lengths[j];
         if (tempMin < minI) {

@@ -772,8 +772,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
    *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
-   * @param checkAreaAlways if true, area-based failure checks are always performed; if false, they
-   *     are skipped.
+   * @param checkAreaAlways true when the rectangles must be pairwise non-overlapping, so that the
+   *     area checks may add up the rectangles around a rectangle; false when some pairs may
+   *     overlap, so that only one rectangle at a time is checked against it.
    */
   protected void narrowRectanglesEval(
       Diff2Var[] evalRects,
@@ -869,7 +870,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
    *     (Diff2).
-   * @param checkAreaAlways if true, area-based failure checks are always performed.
+   * @param checkAreaAlways true when the area checks may add up all rectangles around r, false when
+   *     only one rectangle at a time is checked against r.
    * @return true if the set of changed variables contains a variable from the overlapping
    *     rectangles.
    */
@@ -885,7 +887,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       boolean checkAreaAlways) {
 
     boolean contains = false;
-    boolean checkArea = false;
 
     long area = 0;
     long commonArea = 0;
@@ -977,7 +978,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               contains = contains || sChanged;
             }
 
-            checkArea = true;
             totalNumberOfRectangles++;
             for (int i = 0; i < dim; i++) {
               if (sOriginMin[i] < startMin[i]) {
@@ -1038,6 +1038,13 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             partialCommonArea = partialCommonArea * sLengthMin[i];
           }
           commonArea += partialCommonArea;
+          // when other rectangles may overlap each other only the area s itself must take within
+          // the placement region of r counts
+          if (!checkAreaAlways
+              && partialCommonArea + r.minArea()
+                  > (long) (rMax[0] - rMin[0]) * (rMax[1] - rMin[1])) {
+            throw Store.failException;
+          }
         }
         if (checkAreaAlways
             && commonArea + r.minArea() > (long) (rMax[0] - rMin[0]) * (rMax[1] - rMin[1])) {
@@ -1046,7 +1053,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       }
     }
 
-    if (checkArea || checkAreaAlways) { // check whether there is
+    if (checkAreaAlways) { // check whether there is
       // enough room for all rectangles
       area += r.minArea();
       long availArea = 1;

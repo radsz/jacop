@@ -84,7 +84,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       if (ASSERTS_ENABLED && rectangle[i] == null) {
         throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
       }
-      if (ASSERTS_ENABLED && rectangle[i].length == 4) {
+      if (ASSERTS_ENABLED && rectangle[i].length != 4) {
         throw new IllegalStateException(
             String.valueOf("The rectangle has to have exactly two dimensions"));
       }
@@ -219,10 +219,10 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     constraints.add(new Nooverlap(x, y, lx, ly));
 
     // add cumulative in x direction
-    addCumulativeConstraints(store, constraints, y, ly, x, lx, "by", 0);
+    addCumulativeConstraints(store, constraints, y, ly, x, lx);
 
     // add cumulative in y direction
-    addCumulativeConstraints(store, constraints, x, lx, y, ly, "bx", 1);
+    addCumulativeConstraints(store, constraints, x, lx, y, ly);
 
     return constraints;
   }
@@ -236,8 +236,6 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    * @param lengths the length variables for this direction
    * @param otherOrigins the origin variables for the other direction (used in CumulativeBasic)
    * @param otherLengths the length variables for the other direction (used in CumulativeBasic)
-   * @param suffix the suffix for variable names (e.g., "bx" or "by")
-   * @param dim the dimension index (0 for x direction, 1 for y direction)
    */
   private void addCumulativeConstraints(
       Store store,
@@ -245,9 +243,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       IntVar[] origins,
       IntVar[] lengths,
       IntVar[] otherOrigins,
-      IntVar[] otherLengths,
-      String suffix,
-      int dim) {
+      IntVar[] otherLengths) {
 
     IntVar[] ends = new IntVar[origins.length];
     int min = IntDomain.MAX_INT;
@@ -262,8 +258,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       auxVar.add(ends[i]);
     }
 
-    IntVar bMin = new IntVar(store, dim == 1 ? suffix + "Min" : null, min, max);
-    IntVar bMax = new IntVar(store, dim == 1 ? suffix + "Max" : null, min, max);
+    IntVar bMin = new IntVar(store, min, max);
+    IntVar bMax = new IntVar(store, min, max);
     IntVar b = new IntVar(store, 0, max - min);
     auxVar.add(bMin);
     auxVar.add(bMax);
