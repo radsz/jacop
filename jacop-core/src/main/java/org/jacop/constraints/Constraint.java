@@ -113,6 +113,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** The set {@link #scopeArray} was built from. */
+  private Set<Var> scopeArraySource;
+
+  /** The variables of {@link #scopeArraySource}, for iterating without an iterator. */
+  private Var[] scopeArray;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -443,11 +449,27 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It removes the constraint by removing this constraint from all variables. */
   public void removeConstraint() {
     // Stream version is not used due to large performance overhead.
-    for (Var v : arguments()) {
+    for (Var v : scopeArray()) {
       if (!v.singleton()) {
         v.removeConstraint(this);
       }
     }
+  }
+
+  /**
+   * Returns the variables of {@link #arguments()} as an array, in the set's iteration order. The
+   * array is rebuilt only when {@code arguments()} returns a different set, since iterating a small
+   * {@code HashSet} walks all its buckets and this runs every time a constraint is entailed.
+   *
+   * @return the variables in the scope of the constraint.
+   */
+  private Var[] scopeArray() {
+    Set<Var> current = arguments();
+    if (current != scopeArraySource) {
+      scopeArray = current.toArray(new Var[0]);
+      scopeArraySource = current;
+    }
+    return scopeArray;
   }
 
   /**
