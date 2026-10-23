@@ -30,7 +30,7 @@
 
 package org.jacop.fz;
 
-import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.constraints.ConstraintFncs;
@@ -43,7 +43,6 @@ import org.jacop.satwrapper.SatTranslation;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class Constraints implements ParserTreeConstants {
 
   static final int EQ = 0;
@@ -92,7 +91,7 @@ public class Constraints implements ParserTreeConstants {
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     if (support.options.debug()) {
-      log.info(
+      FzConsole.println(
           "% bool constraints = "
               + boolClauses
               + " of "
@@ -157,13 +156,19 @@ public class Constraints implements ParserTreeConstants {
         method.invoke(cf, node);
 
       } catch (NoSuchMethodException _) {
-        throw new RuntimeException(
-            "%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
+        throw new IllegalArgumentException(
+            "JaCoP flatzinc back-end: constraint " + p + " is not supported.");
       } catch (IllegalAccessException e) {
-        log.info("{}", e);
+        FzConsole.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
-        log.info("%% problem detected for " + p);
-        throw e.getCause();
+        Throwable cause = e.getCause();
+        if (cause instanceof FailException) {
+          // the comment explains an unsatisfiable model; other errors go to stderr
+          FzConsole.println("%% problem detected for " + p);
+        } else {
+          FzConsole.printlnErr("%% problem detected for " + p);
+        }
+        throw cause;
       }
     }
   }
@@ -215,7 +220,7 @@ public class Constraints implements ParserTreeConstants {
       v2.domain.in(store.level, v2, v1.domain);
     }
     if (debug) {
-      log.info("% Alias: " + v1 + " == " + v2);
+      FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
   }
 

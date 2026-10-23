@@ -86,7 +86,7 @@ public class Fz2jacop {
     } catch (IllegalArgumentException e) {
       handleIllegalArgumentException(e);
     } catch (ParseException | TokenMgrError e) {
-      IO.println("%% Parser exception " + e);
+      FzConsole.printlnErr("%% Parser error: " + e.getMessage());
     } catch (ArrayIndexOutOfBoundsException e) {
       handleArrayIndexOutOfBoundsException(e);
     } catch (OutOfMemoryError _) {
@@ -121,23 +121,21 @@ public class Fz2jacop {
     }
   }
 
+  // Errors go to stderr, so that stdout holds only solutions and status lines, as MiniZinc
+  // expects from a solver that rejects its input.
+
   private void handleArithmeticException(ArithmeticException e) {
-    System.err.println("%% Evaluation of model resulted in an overflow.");
-    if (e.getStackTrace().length > 0) {
-      IO.println("%%\t" + e);
-    }
+    FzConsole.printlnErr("%% Evaluation of model resulted in an overflow: " + e.getMessage());
   }
 
   private void handleIllegalArgumentException(IllegalArgumentException e) {
-    if (e.getStackTrace().length > 0) {
-      IO.println("%%\t" + e);
-    }
+    FzConsole.printlnErr("%% Error: " + e.getMessage());
   }
 
   private void handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
-    IO.println("%% JaCoP internal error. Array out of bound exception " + e);
+    FzConsole.printlnErr("%% JaCoP internal error. Array out of bound exception " + e);
     if (e.getStackTrace().length > 0) {
-      IO.println("%%\t" + e.getStackTrace()[0]);
+      FzConsole.printlnErr("%%\t" + e.getStackTrace()[0]);
     }
   }
 

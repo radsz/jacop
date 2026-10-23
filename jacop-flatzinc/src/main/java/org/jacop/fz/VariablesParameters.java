@@ -33,7 +33,6 @@ package org.jacop.fz;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.BooleanVar;
@@ -60,7 +59,6 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class VariablesParameters implements ParserTreeConstants {
 
   public static final double MIN_FLOAT = -1e150;
@@ -1569,7 +1567,7 @@ public class VariablesParameters implements ParserTreeConstants {
     store.imposeWithConsistency(c);
 
     if (options.debug()) {
-      log.info("% " + c);
+      FzConsole.println("% " + c);
     }
   }
 }

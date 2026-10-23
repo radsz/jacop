@@ -30,7 +30,6 @@
 
 package org.jacop.fz.constraints;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearInt;
@@ -62,6 +61,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
@@ -71,7 +71,6 @@ import org.jacop.satwrapper.SatTranslation;
  *
  * @author Krzysztof Kuchcinski
  */
-@Slf4j
 class LinearConstraints implements ParserTreeConstants {
 
   final Store store;
@@ -767,13 +766,13 @@ class LinearConstraints implements ParserTreeConstants {
       int rhsValue = (int) Math.round(Math.ceil((float) p3 / (float) w));
       x.domain.inMin(store.level, x, rhsValue);
       if (support.options.debug()) {
-        log.info("Pruned variable " + x + " to be >= " + rhsValue);
+        FzConsole.println("Pruned variable " + x + " to be >= " + rhsValue);
       }
     } else {
       int rhsValue = (int) Math.round(Math.floor((float) p3 / (float) w));
       x.domain.inMax(store.level, x, rhsValue);
       if (support.options.debug()) {
-        log.info("% Pruned variable " + x + " to be <= " + rhsValue);
+        FzConsole.println("% Pruned variable " + x + " to be <= " + rhsValue);
       }
     }
   }

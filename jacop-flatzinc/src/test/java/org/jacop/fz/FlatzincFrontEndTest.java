@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -262,6 +263,140 @@ class FlatzincFrontEndTest {
             "b = true; i = 1;",
             "b = true; i = 2;"),
         solveAll(reified));
+  }
+
+  @Test
+  void boolClauseWithConstantLiterals() throws IOException {
+    // MiniZinc conformance test fcts/builtins/bool/bool_clause.fzn: the clause with true on both
+    // sides was taken for a reified one and its missing third argument was read, which ended in an
+    // ArrayIndexOutOfBoundsException.
+    String fzn =
+        """
+        var bool: x1 :: output_var;
+        var bool: x2 :: output_var;
+        constraint bool_clause([true], []);
+        constraint bool_clause([], [false]);
+        constraint bool_clause([true], [true]);
+        constraint bool_clause([true], [false]);
+        constraint bool_clause([false], [false]);
+        constraint bool_clause([x1], [x2]);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("x1 = false; x2 = false;", "x1 = true; x2 = false;", "x1 = true; x2 = true;"),
+        solveAll(fzn));
+  }
+
+  @Test
+  void boolClauseReifiedAndImpliedConstantClauses() throws IOException {
+    // An empty clause is false, so its reification and implication variables are false; they
+    // were set to true. A clause that always holds leaves the implication variable free; it was
+    // set to true. A bool_clause after a bool_clause_imp was treated as an implication too.
+    String fzn =
+        """
+        var bool: r1 :: output_var;
+        var bool: r2 :: output_var;
+        var bool: r3 :: output_var;
+        var bool: r4 :: output_var;
+        var bool: x :: output_var;
+        constraint bool_clause_reif([], [], r1);
+        constraint bool_clause_imp([], [], r2);
+        constraint bool_clause_imp([true], [], r3);
+        constraint bool_clause_imp([x], [x], r4);
+        constraint bool_clause([x], []);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of(
+            "r1 = false; r2 = false; r3 = false; r4 = false; x = true;",
+            "r1 = false; r2 = false; r3 = false; r4 = true; x = true;",
+            "r1 = false; r2 = false; r3 = true; r4 = false; x = true;",
+            "r1 = false; r2 = false; r3 = true; r4 = true; x = true;"),
+        solveAll(fzn));
+  }
+
+  @Test
+  void invalidModelReportsErrorOnStderrOnly() throws IOException {
+    // MiniZinc's *-bad tests expect no output and an error message; the message of the Java
+    // exception, with its class name, was printed to stdout.
+    String fzn =
+        """
+        array [1..3] of int: a = [1,2,3,4];
+        var 1..3: x :: output_var;
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertEquals("", out[0]);
+    assertEquals(
+        "%% Error: Different size declaration and initialization of int array;"
+            + " compilation aborted.",
+        out[1].strip());
+  }
+
+  @Test
+  void allSolutionsOptionPrintsImprovingSolutionsOfRestartSearch() throws IOException {
+    // For optimization -a asks for the intermediate solutions; it was rejected together with
+    // restart search, where it is only meaningless for satisfaction problems.
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve :: int_search([x,y],input_order,indomain_min,complete) :: restart_constant(10) %s;
+        """;
+
+    assertEquals(
+        List.of("x = 1; y = 2;", "x = 2; y = 1;", "x = 3; y = 1;"),
+        solveAllInOrder(model.formatted("maximize x")));
+
+    String[] out = run(model.formatted("satisfy"), "-a");
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("cannot be used in restart search of a satisfaction problem"));
+  }
+
+  @Test
+  void debugOptionPrintsConstraints() throws IOException {
+    // -debug printed the constraints through a logger that has no appender, so only the search
+    // was printed.
+    String fzn =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn, "-debug")[0];
+    assertTrue(
+        stdout.lines().anyMatch(line -> line.startsWith("% XneqY")),
+        "constraints missing from -debug output:\n" + stdout);
+  }
+
+  /** Runs the model with the given options and returns its stdout and stderr. */
+  private String[] run(String model, String... options) throws IOException {
+    Path fzn = tmp.resolve("run.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = Arrays.copyOf(options, options.length + 1);
+    args[options.length] = fzn.toString();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    try (PrintStream captureOut = new PrintStream(out, true, StandardCharsets.UTF_8);
+        PrintStream captureErr = new PrintStream(err, true, StandardCharsets.UTF_8)) {
+      System.setOut(captureOut);
+      System.setErr(captureErr);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
+    return new String[] {
+      out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8)
+    };
   }
 
   private Set<String> solveAll(String model) throws IOException {

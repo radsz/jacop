@@ -27,7 +27,6 @@ package org.jacop.fz.constraints;
 
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Not;
@@ -37,6 +36,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.set.constraints.AdiffBeqC;
@@ -62,7 +62,6 @@ import org.jacop.set.core.SetVar;
  *
  * @author Krzysztof Kuchcinski
  */
-@Slf4j
 class SetConstraints implements ParserTreeConstants {
 
   final Support support;
@@ -81,7 +80,7 @@ class SetConstraints implements ParserTreeConstants {
       v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
       if (support.options.debug()) {
-        log.info("% Cardinality of set " + v1 + " = " + v2);
+        FzConsole.println("% Cardinality of set " + v1 + " = " + v2);
       }
 
     } else {
