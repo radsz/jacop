@@ -1635,6 +1635,53 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // An entailed constraint is only marked during search: it is not woken and not counted by
+  // sizeConstraints until the store backtracks below the level of the mark, when it propagates
+  // again. At the root it is still detached from its variables.
+  @Test
+  void testEntailedConstraintIsSkippedUntilBacktrack() {
+
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    XplusClteqZImplied c = new XplusClteqZImplied(b, x, 0, y);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    int attached = x.sizeConstraints();
+
+    store.setLevel(1);
+    b.domain.in(store.level, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.isEntailed()).isTrue();
+    assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
+    assertThat(x.dom().constraints()).doesNotContain(c);
+
+    store.setLevel(2);
+    x.domain.in(store.level, x, 6, 10);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isFalse();
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(1);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    assertThat(c.isEntailed()).isFalse();
+    assertThat(x.sizeConstraints()).isEqualTo(attached);
+    store.setLevel(1);
+    b.domain.in(store.level, b, 1, 1);
+    x.domain.in(store.level, x, 6, 10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(6);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    b.domain.in(store.level, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.isEntailed()).isFalse();
+    assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
+  }
+
   private static IntVar randomVar(Store store, String name, int lo, int hi, Random random) {
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {

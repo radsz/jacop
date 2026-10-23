@@ -274,15 +274,22 @@ public abstract class Domain {
   public abstract void putSearchConstraint(int storeLevel, Var v, Constraint constraint);
 
   /**
-   * It returns all constraints which are associated with variable, even the ones which are already
-   * satisfied.
+   * It returns the number of constraints which are associated with variable and are not yet
+   * satisfied, that is neither detached nor marked as entailed.
    *
    * @return the number of constraint attached to this domain.
    */
   public int sizeConstraints() {
-    return modelConstraintsToEvaluate[0]
-        + modelConstraintsToEvaluate[1]
-        + modelConstraintsToEvaluate[2];
+    int size = 0;
+    for (int i = 0; i < modelConstraintsToEvaluate.length; i++) {
+      for (int j = modelConstraintsToEvaluate[i] - 1; j >= 0; j--) {
+        // constraints entailed during search stay attached but no longer count
+        if (!modelConstraints[i][j].isEntailed()) {
+          size++;
+        }
+      }
+    }
+    return size;
   }
 
   /**
@@ -307,7 +314,9 @@ public abstract class Domain {
     if (modelConstraints != null) {
       for (int i = 0; i < modelConstraints.length; i++) {
         for (int j = modelConstraintsToEvaluate[i]; j >= 0; j--) {
-          if (modelConstraints[i] != null && j < modelConstraints[i].length) {
+          if (modelConstraints[i] != null
+              && j < modelConstraints[i].length
+              && (modelConstraints[i][j] == null || !modelConstraints[i][j].isEntailed())) {
             result.add(modelConstraints[i][j]);
           }
         }

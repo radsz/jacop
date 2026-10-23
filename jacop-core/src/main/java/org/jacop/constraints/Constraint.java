@@ -136,6 +136,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The variables of {@link #scopeArraySource}, for iterating without an iterator. */
   private Var[] scopeArray;
 
+  private static final int NOT_ENTAILED = Integer.MAX_VALUE;
+
+  /** The store level at which the constraint was marked as entailed, or NOT_ENTAILED. */
+  private int entailedAt = NOT_ENTAILED;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -397,6 +402,35 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Checks whether the constraint was marked as entailed by {@link #removeConstraint()} at the
+   * current level of the search or at an earlier one. The store does not wake such a constraint.
+   *
+   * @return true if the constraint is entailed.
+   */
+  public final boolean isEntailed() {
+    return entailedAt != NOT_ENTAILED;
+  }
+
+  /**
+   * Returns the store level at which the constraint was marked as entailed.
+   *
+   * @return the level, or Integer.MAX_VALUE if the constraint is not entailed.
+   */
+  public final int entailedAt() {
+    return entailedAt;
+  }
+
+  /**
+   * Sets the store level at which the constraint is entailed; only the store calls it, when marking
+   * the constraint and when backtracking below that level.
+   *
+   * @param level the level, or Integer.MAX_VALUE to clear the mark.
+   */
+  public final void setEntailedAt(int level) {
+    entailedAt = level;
+  }
+
+  /**
    * It imposes the constraint and adjusts the queue index.
    *
    * @param store the constraint store to which the constraint is imposed to.
@@ -473,10 +507,24 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return fixpoint;
   }
 
-  /** It removes the constraint by removing this constraint from all variables. */
+  /**
+   * It removes the constraint, as it is entailed. At the root level the constraint is removed from
+   * all its variables; during search it is marked as entailed at the current level instead.
+   */
   public void removeConstraint() {
+    Var[] scope = scopeArray();
+    if (scope.length == 0) {
+      return;
+    }
+    Store store = scope[0].getStore();
+    // During search the constraint is only marked, and the store skips it until it backtracks
+    // below this level. Detaching it from every variable would copy their domains at this level.
+    if (store.level > 0) {
+      store.markEntailed(this);
+      return;
+    }
     // Stream version is not used due to large performance overhead.
-    for (Var v : scopeArray()) {
+    for (Var v : scope) {
       if (!v.singleton()) {
         v.removeConstraint(this);
       }
