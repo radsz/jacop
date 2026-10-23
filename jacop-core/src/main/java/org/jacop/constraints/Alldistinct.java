@@ -256,7 +256,7 @@ public class Alldistinct extends Constraint
       propagateGroundedPending(store);
 
       if (queueIndex + 2 < store.queueNo) {
-        store.changed[queueIndex + 2].add(this);
+        store.addChanged(this, queueIndex + 2);
         return;
       }
     }

@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +99,7 @@ public class Store {
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
    * already scheduled for reevaluation.
    */
-  public final LinkedHashSet<Constraint>[] changed;
+  public final ConstraintQueue[] changed;
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -294,15 +293,14 @@ public class Store {
    *
    * @param size specifies the initial number of variables.
    */
-  @SuppressWarnings("unchecked")
   public Store(int size) {
 
     vars = new Var[size];
 
-    changed = new LinkedHashSet[queueNo];
+    changed = new ConstraintQueue[queueNo];
 
     for (int i = 0; i < queueNo; i++) {
-      changed[i] = new LinkedHashSet<>(100);
+      changed[i] = new ConstraintQueue(this, i);
     }
 
     trailManager =
@@ -440,6 +438,24 @@ public class Store {
     }
 
     changed[c.getQueueIndex()].add(c);
+  }
+
+  /**
+   * Schedules a constraint in a given queue instead of its own. It is meant for constraints that
+   * split their propagation over several queues, for example a cheap pass in their own queue and an
+   * expensive one in a later queue. Unlike {@link #addChanged(Constraint)} it does not set {@link
+   * #propagationHasOccurred}, as scheduling itself prunes nothing.
+   *
+   * @param c constraint which needs reevaluation.
+   * @param queueIndex the queue in which the constraint is scheduled.
+   */
+  public void addChanged(Constraint c, int queueIndex) {
+
+    if (queueIndex < currentQueue) {
+      currentQueue = queueIndex;
+    }
+
+    changed[queueIndex].add(c);
   }
 
   /**
@@ -669,10 +685,7 @@ public class Store {
    */
   public Constraint getFirstChanged() {
 
-    Iterator<Constraint> it = changed[currentQueue].iterator();
-    Constraint c = it.next();
-    it.remove();
-    return c;
+    return changed[currentQueue].poll();
   }
 
   /**

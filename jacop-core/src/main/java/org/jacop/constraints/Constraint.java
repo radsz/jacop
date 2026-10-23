@@ -113,6 +113,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** The store whose propagation queues {@link #queueMembership} refers to. */
+  private Store queueOwner;
+
+  /** Bit i is set while this constraint waits in propagation queue i of {@link #queueOwner}. */
+  private int queueMembership;
+
   /**
    * Constructs a constraint with the specified variable arrays as its scope.
    *
@@ -342,6 +348,29 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       constraintType = this.getClass().getName() + "#";
     }
     return constraintType + numberId;
+  }
+
+  /**
+   * Returns the propagation queues of a store in which this constraint is waiting, one bit per
+   * queue. It is maintained by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are asked about.
+   * @return bit i is set if the constraint is in queue i of the store.
+   */
+  public final int queueMembership(Store store) {
+    return store == queueOwner ? queueMembership : 0;
+  }
+
+  /**
+   * Records the propagation queues of a store in which this constraint is waiting. It is called
+   * only by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are recorded.
+   * @param membership bit i is set if the constraint is in queue i of the store.
+   */
+  public final void setQueueMembership(Store store, int membership) {
+    queueOwner = store;
+    queueMembership = membership;
   }
 
   /**

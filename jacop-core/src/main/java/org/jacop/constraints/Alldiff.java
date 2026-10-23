@@ -153,7 +153,7 @@ public class Alldiff extends Alldifferent {
       grounded.update(processGroundedQueue(store, grounded.value()));
 
       if (queueIndex + 1 < store.queueNo) {
-        store.changed[queueIndex + 1].add(this);
+        store.addChanged(this, queueIndex + 1);
         return;
       }
     }
