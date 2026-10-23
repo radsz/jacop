@@ -488,11 +488,37 @@ public class Store {
     }
   }
 
+  /** Constraints marked as entailed during search, in the order of their levels. */
+  private Constraint[] entailed = new Constraint[64];
+
+  private int entailedSize;
+
+  /**
+   * Marks a constraint as entailed at the current level. The constraint stays attached to its
+   * variables, but is not queued any more until the store backtracks below this level, when the
+   * mark is cleared.
+   *
+   * @param c the entailed constraint.
+   */
+  public void markEntailed(Constraint c) {
+    if (c.isEntailed()) {
+      return;
+    }
+    c.setEntailedAt(level);
+    if (entailedSize == entailed.length) {
+      entailed = Arrays.copyOf(entailed, entailedSize * 2);
+    }
+    entailed[entailedSize++] = c;
+  }
+
   private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
       for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
         Constraint c = addedConstraints[i];
+        if (c.isEntailed()) {
+          continue;
+        }
         if (c.overridesQueueVariable()) {
           c.queueVariable(level, v);
         }
@@ -507,6 +533,9 @@ public class Store {
     List<Constraint> constr = vdomain.searchConstraints;
     for (int i = vdomain.searchConstraintsToEvaluate - 1; i >= 0; i--) {
       Constraint c = constr.get(i);
+      if (c.isEntailed()) {
+        continue;
+      }
       if (c.overridesQueueVariable()) {
         c.queueVariable(level, v);
       }
@@ -522,6 +551,9 @@ public class Store {
       return;
     }
     for (Constraint con : list) {
+      if (con.isEntailed()) {
+        continue;
+      }
       if (con.overridesQueueVariable()) {
         con.queueVariable(level, v);
       }
@@ -1121,6 +1153,11 @@ public class Store {
     }
 
     trailManager.removeLevel(level);
+
+    while (entailedSize > 0 && entailed[entailedSize - 1].entailedAt() >= level) {
+      entailed[--entailedSize].setEntailedAt(Integer.MAX_VALUE);
+      entailed[entailedSize] = null;
+    }
 
     for (int i = mutableVariables.size() - 1; i >= 0; i--) {
       mutableVariables.get(i).removeLevel(level);
