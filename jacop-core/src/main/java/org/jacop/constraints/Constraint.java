@@ -113,6 +113,18 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** The set {@link #scopeArray} was built from. */
+  private Set<Var> scopeArraySource;
+
+  /** The variables of {@link #scopeArraySource}, for iterating without an iterator. */
+  private Var[] scopeArray;
+
+  /** The store whose propagation queues {@link #queueMembership} refers to. */
+  private Store queueOwner;
+
+  /** Bit i is set while this constraint waits in propagation queue i of {@link #queueOwner}. */
+  private int queueMembership;
+
   /**
    * Constructs a constraint with the specified variable arrays as its scope.
    *
@@ -345,6 +357,29 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Returns the propagation queues of a store in which this constraint is waiting, one bit per
+   * queue. It is maintained by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are asked about.
+   * @return bit i is set if the constraint is in queue i of the store.
+   */
+  public final int queueMembership(Store store) {
+    return store == queueOwner ? queueMembership : 0;
+  }
+
+  /**
+   * Records the propagation queues of a store in which this constraint is waiting. It is called
+   * only by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are recorded.
+   * @param membership bit i is set if the constraint is in queue i of the store.
+   */
+  public final void setQueueMembership(Store store, int membership) {
+    queueOwner = store;
+    queueMembership = membership;
+  }
+
+  /**
    * It imposes the constraint and adjusts the queue index.
    *
    * @param store the constraint store to which the constraint is imposed to.
@@ -414,11 +449,27 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It removes the constraint by removing this constraint from all variables. */
   public void removeConstraint() {
     // Stream version is not used due to large performance overhead.
-    for (Var v : arguments()) {
+    for (Var v : scopeArray()) {
       if (!v.singleton()) {
         v.removeConstraint(this);
       }
     }
+  }
+
+  /**
+   * Returns the variables of {@link #arguments()} as an array, in the set's iteration order. The
+   * array is rebuilt only when {@code arguments()} returns a different set, since iterating a small
+   * {@code HashSet} walks all its buckets and this runs every time a constraint is entailed.
+   *
+   * @return the variables in the scope of the constraint.
+   */
+  private Var[] scopeArray() {
+    Set<Var> current = arguments();
+    if (current != scopeArraySource) {
+      scopeArray = current.toArray(new Var[0]);
+      scopeArraySource = current;
+    }
+    return scopeArray;
   }
 
   /**
