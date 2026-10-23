@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import org.jacop.constraints.Constraint;
 
@@ -67,11 +68,11 @@ class BoundDomain extends IntDomain {
     ((IntVar) v).domain = result;
   }
 
-  private void notifyDomainChange(Var v, boolean singleton) {
+  private static void notifyDomainChange(Var v, boolean singleton, int boundEvent) {
     if (singleton) {
       v.domainHasChanged(GROUND);
     } else {
-      v.domainHasChanged(BOUND);
+      v.domainHasChanged(boundEvent);
     }
   }
 
@@ -340,16 +341,17 @@ class BoundDomain extends IntDomain {
       return;
     }
 
+    int boundEvent = boundEvent(min > this.minBound, max < this.maxBound);
     if (stamp == storeLevel) {
       applyInPlace(min, max);
-      notifyDomainChange(v, this.minBound == this.maxBound);
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
     } else {
       if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInResult(min, max);
       installResultDomain(result, storeLevel, v);
-      notifyDomainChange(v, result.singleton());
+      notifyDomainChange(v, result.singleton(), boundEvent);
     }
   }
 
@@ -414,6 +416,7 @@ class BoundDomain extends IntDomain {
       return;
     }
 
+    int boundEvent = complement == this.minBound ? MIN : MAX;
     if (stamp == storeLevel) {
       if (this.minBound == complement) {
         this.minBound++;
@@ -421,14 +424,14 @@ class BoundDomain extends IntDomain {
         // Assumes that check that complement must be equal to one of the bounds is done above.
         this.maxBound--;
       }
-      notifyDomainChange(v, this.minBound == this.maxBound);
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
     } else {
       if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInComplementResult(complement);
       installResultDomain(result, storeLevel, v);
-      notifyDomainChange(v, result.singleton());
+      notifyDomainChange(v, result.singleton(), boundEvent);
     }
   }
 
@@ -455,20 +458,21 @@ class BoundDomain extends IntDomain {
       return;
     }
 
+    int boundEvent = max < this.maxBound ? MIN : MAX;
     if (stamp == storeLevel) {
       if (max < this.maxBound) {
         this.minBound = max + 1;
       } else {
         this.maxBound = min - 1;
       }
-      notifyDomainChange(v, this.minBound == this.maxBound);
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
     } else {
       if (ASSERTS_ENABLED && stamp >= storeLevel) {
         throw new IllegalStateException("Assertion failed");
       }
       BoundDomain result = computeInComplementResult(min, max);
       installResultDomain(result, storeLevel, v);
-      notifyDomainChange(v, result.singleton());
+      notifyDomainChange(v, result.singleton(), boundEvent);
     }
   }
 
@@ -491,7 +495,7 @@ class BoundDomain extends IntDomain {
       if (this.minBound == this.maxBound) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(BOUND);
+        v.domainHasChanged(MAX);
       }
 
     } else {
@@ -507,7 +511,7 @@ class BoundDomain extends IntDomain {
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(BOUND);
+        v.domainHasChanged(MAX);
       }
     }
   }
@@ -530,7 +534,7 @@ class BoundDomain extends IntDomain {
       if (this.minBound == this.maxBound) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(BOUND);
+        v.domainHasChanged(MIN);
       }
 
     } else {
@@ -546,7 +550,7 @@ class BoundDomain extends IntDomain {
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(BOUND);
+        v.domainHasChanged(MIN);
       }
     }
   }
@@ -847,9 +851,7 @@ class BoundDomain extends IntDomain {
     }
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
-      return domain.modelConstraintsToEvaluate[0]
-          + domain.modelConstraintsToEvaluate[1]
-          + domain.modelConstraintsToEvaluate[2];
+      return Arrays.stream(domain.modelConstraintsToEvaluate).sum();
     } else {
       return domain.sizeConstraintsOriginal();
     }

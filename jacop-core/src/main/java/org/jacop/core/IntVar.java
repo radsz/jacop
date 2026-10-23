@@ -354,7 +354,8 @@ public class IntVar extends Var {
 
     if (ASSERTS_ENABLED
         && !((event == IntDomain.ANY && !singleton())
-            || (event == IntDomain.BOUND && !singleton())
+            || ((event == IntDomain.BOUND || event == IntDomain.MIN || event == IntDomain.MAX)
+                && !singleton())
             || (event == IntDomain.GROUND && singleton()))) {
       throw new IllegalStateException(String.valueOf("Wrong event generated"));
     }

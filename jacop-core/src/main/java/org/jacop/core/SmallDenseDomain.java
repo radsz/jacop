@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
+import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -306,7 +307,7 @@ public class SmallDenseDomain extends IntDomain {
       v.domainHasChanged(GROUND);
     } else {
       if (previousMin != result.minBound || previousMax != result.max) {
-        v.domainHasChanged(BOUND);
+        v.domainHasChanged(boundEvent(previousMin != result.minBound, previousMax != result.max));
       } else {
         v.domainHasChanged(ANY);
       }
@@ -317,15 +318,17 @@ public class SmallDenseDomain extends IntDomain {
    * Notifies the variable of a domain change using the appropriate event type.
    *
    * @param isSingleton true if the domain is now a singleton.
-   * @param boundEvent true if a bound (min or max) has changed.
+   * @param minChanged true if the minimum has changed.
+   * @param maxChanged true if the maximum has changed.
    * @param v the variable to notify.
    */
-  private static void notifyEvent(boolean isSingleton, boolean boundEvent, Var v) {
+  private static void notifyEvent(
+      boolean isSingleton, boolean minChanged, boolean maxChanged, Var v) {
     if (isSingleton) {
       v.domainHasChanged(GROUND);
     } else {
-      if (boundEvent) {
-        v.domainHasChanged(BOUND);
+      if (minChanged || maxChanged) {
+        v.domainHasChanged(boundEvent(minChanged, maxChanged));
       } else {
         v.domainHasChanged(ANY);
       }
@@ -381,14 +384,15 @@ public class SmallDenseDomain extends IntDomain {
       singleton = true;
     }
 
-    boolean boundEvent = false;
+    boolean minChanged = false;
     if (this.minBound == complementMin) {
-      boundEvent = true;
+      minChanged = true;
       adaptMin();
     }
+    boolean maxChanged = false;
     if (this.max == complementMax) {
       this.max = previousValue(complementMax);
-      boundEvent = true;
+      maxChanged = true;
     }
 
     if (ASSERTS_ENABLED && max > previousMax) {
@@ -401,7 +405,7 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
-    notifyEvent(singleton, boundEvent, v);
+    notifyEvent(singleton, minChanged, maxChanged, v);
   }
 
   /**
@@ -419,15 +423,16 @@ public class SmallDenseDomain extends IntDomain {
       long bitsResult, int newSize, int complementMin, int complementMax, int storeLevel, Var v) {
     SmallDenseDomain result = new SmallDenseDomain(minBound, bitsResult);
 
-    boolean boundEvent = false;
+    boolean minChanged = false;
     if (this.minBound == complementMin) {
       result.adaptMin();
-      boundEvent = true;
+      minChanged = true;
     }
 
+    boolean maxChanged = false;
     if (this.max == complementMax) {
       result.max = result.previousValue(max);
-      boundEvent = true;
+      maxChanged = true;
     }
 
     if (newSize == 1) {
@@ -450,7 +455,7 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
-    notifyEvent(result.singleton(), boundEvent, v);
+    notifyEvent(result.singleton(), minChanged, maxChanged, v);
   }
 
   /** It creates an empty domain. */
@@ -848,18 +853,20 @@ public class SmallDenseDomain extends IntDomain {
       if (newSize == 1) {
         singleton = true;
       }
-      if (this.minBound < min) {
+      boolean minChanged = this.minBound < min;
+      if (minChanged) {
         bits = bits << (min - this.minBound);
         this.minBound = min;
         adaptMin();
       }
-      if (this.max > max) {
+      boolean maxChanged = this.max > max;
+      if (maxChanged) {
         this.max = previousValue(max + 1);
       }
       if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
-      v.domainHasChanged(singleton ? GROUND : BOUND);
+      v.domainHasChanged(singleton ? GROUND : boundEvent(minChanged, maxChanged));
       return;
     }
 
@@ -885,7 +892,7 @@ public class SmallDenseDomain extends IntDomain {
     if (ASSERTS_ENABLED && result.minBound < min) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
-    installAndNotify(result, storeLevel, v);
+    installAndNotifyWithEvent(result, storeLevel, this.minBound, this.max, v);
   }
 
   /**
@@ -940,7 +947,7 @@ public class SmallDenseDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
-      notifyEvent(singleton, previousMin != minBound || previousMax != max, v);
+      notifyEvent(singleton, previousMin != minBound, previousMax != max, v);
 
     } else {
 
@@ -2197,9 +2204,7 @@ public class SmallDenseDomain extends IntDomain {
     }
 
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-      return domain.modelConstraintsToEvaluate[0]
-          + domain.modelConstraintsToEvaluate[1]
-          + domain.modelConstraintsToEvaluate[2];
+      return Arrays.stream(domain.modelConstraintsToEvaluate).sum();
     } else {
       return domain.sizeConstraintsOriginal();
     }

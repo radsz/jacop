@@ -112,11 +112,8 @@ public class BooleanVar extends IntVar {
     }
 
     dom.searchConstraints = new ArrayList<>();
-    dom.modelConstraints = new Constraint[3][];
-    dom.modelConstraintsToEvaluate = new int[3];
-    dom.modelConstraintsToEvaluate[0] = 0;
-    dom.modelConstraintsToEvaluate[1] = 0;
-    dom.modelConstraintsToEvaluate[2] = 0;
+    dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
+    dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
     id = name;
     domain = dom;
     domain.stamp = 0;

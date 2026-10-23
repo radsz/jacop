@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
@@ -114,6 +115,21 @@ public class IntervalDomain extends IntDomain {
     return ANY;
   }
 
+  /**
+   * Computes the event reported to the variable for a narrowed domain.
+   *
+   * @param narrowed the new (narrower) domain
+   * @return GROUND, BOUND, MIN, MAX or ANY
+   */
+  private int computeChangeEvent(IntDomain narrowed) {
+    if (narrowed.singleton()) {
+      return GROUND;
+    } else if (narrowed.min() > min() || narrowed.max() < max()) {
+      return boundEvent(narrowed.min() > min(), narrowed.max() < max());
+    }
+    return ANY;
+  }
+
   private IntDomain intersectFromSparse(IntDomain domain) {
     IntDomain temp = null;
     try {
@@ -177,12 +193,13 @@ public class IntervalDomain extends IntDomain {
    * Informs the variable that a bound of this domain, changed in place, has changed.
    *
    * @param v the variable of this domain
+   * @param boundEvent the event reported unless the domain has become a singleton
    */
-  private void notifyInPlaceBoundChange(Var v) {
+  private void notifyInPlaceBoundChange(Var v, int boundEvent) {
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
-    v.domainHasChanged(singleton() ? GROUND : BOUND);
+    v.domainHasChanged(singleton() ? GROUND : boundEvent);
   }
 
   /**
@@ -229,14 +246,15 @@ public class IntervalDomain extends IntDomain {
 
   /**
    * Installs a computed interval array as the new domain on a variable, handling both the in-place
-   * (stamp==storeLevel) and copy-on-write cases. Fires a GROUND or BOUND event as appropriate.
+   * (stamp==storeLevel) and copy-on-write cases. Fires a GROUND event or the given bound event.
    *
    * @param copy the new intervals array
    * @param out the number of valid intervals in copy
    * @param storeLevel the current store level
    * @param v the variable to update
+   * @param boundEvent the event reported unless the domain has become a singleton
    */
-  private void installArrayResult(Interval[] copy, int out, int storeLevel, Var v) {
+  private void installArrayResult(Interval[] copy, int out, int storeLevel, Var v, int boundEvent) {
     IntervalDomain result = null;
     if (stamp == storeLevel) {
       intervals = copy;
@@ -249,7 +267,7 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && effective.checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(effective.checkInvariants()));
     }
-    v.domainHasChanged(effective.singleton() ? GROUND : BOUND);
+    v.domainHasChanged(effective.singleton() ? GROUND : boundEvent);
   }
 
   /** Empty constructor, does not initialize anything. */
@@ -2172,7 +2190,7 @@ public class IntervalDomain extends IntDomain {
         intervals[0] = new Interval(min, first.max());
       }
       clearIntervalsFrom(remaining);
-      notifyInPlaceBoundChange(v);
+      notifyInPlaceBoundChange(v, MIN);
       return;
     }
 
@@ -2191,7 +2209,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = intervals[p++];
     }
 
-    installArrayResult(copy, out, storeLevel, v);
+    installArrayResult(copy, out, storeLevel, v, MIN);
   }
 
   @Override
@@ -2220,7 +2238,7 @@ public class IntervalDomain extends IntDomain {
         intervals[pointer] = new Interval(last.min(), max);
       }
       clearIntervalsFrom(pointer + 1);
-      notifyInPlaceBoundChange(v);
+      notifyInPlaceBoundChange(v, MAX);
       return;
     }
 
@@ -2237,7 +2255,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = iv;
     }
 
-    installArrayResult(copy, out, storeLevel, v);
+    installArrayResult(copy, out, storeLevel, v, MAX);
   }
 
   @Override
@@ -2297,7 +2315,8 @@ public class IntervalDomain extends IntDomain {
       out++;
     }
 
-    installArrayResult(copy, out, storeLevel, v);
+    installArrayResult(
+        copy, out, storeLevel, v, boundEvent(min > intervals[0].min(), max < currentMax));
   }
 
   /**
@@ -2527,7 +2546,7 @@ public class IntervalDomain extends IntDomain {
       if (out == 1 && copy[0].min() == copy[0].max()) {
         returnedEvent = GROUND;
       } else if (copy[0].min() > min() || copy[out - 1].max() < max()) {
-        returnedEvent = BOUND;
+        returnedEvent = boundEvent(copy[0].min() > min(), copy[out - 1].max() < max());
       }
 
       IntervalDomain result = null;
@@ -2584,7 +2603,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
-      final int returnedEvent = computeEvent(result);
+      final int returnedEvent = computeChangeEvent(result);
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -2756,7 +2775,7 @@ public class IntervalDomain extends IntDomain {
       throw failException;
     }
 
-    int returnedEvent = computeEvent(result);
+    int returnedEvent = computeChangeEvent(result);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -2892,6 +2911,9 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
+    // a removed bound leaves the other one unchanged, as the domain does not become empty
+    int boundEvent = complement == intervals[0].min() ? MIN : MAX;
+
     if (storeLevel == stamp) {
 
       if (intervals[counter].min() == complement) {
@@ -2910,7 +2932,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (counter == 0) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -2941,7 +2963,7 @@ public class IntervalDomain extends IntDomain {
           // being removed.
 
           if (counter == 0 || counter == size) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -2966,7 +2988,7 @@ public class IntervalDomain extends IntDomain {
         }
 
         if (counter == size - 1) {
-          v.domainHasChanged(BOUND);
+          v.domainHasChanged(boundEvent);
         } else {
           v.domainHasChanged(ANY);
         }
@@ -3034,7 +3056,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (counter == 0) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3056,7 +3078,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (counter == 0 || counter == size - 1) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3087,7 +3109,7 @@ public class IntervalDomain extends IntDomain {
           return;
         }
         if (counter == size - 1) {
-          v.domainHasChanged(BOUND);
+          v.domainHasChanged(boundEvent);
         } else {
           v.domainHasChanged(ANY);
         }
@@ -3143,6 +3165,9 @@ public class IntervalDomain extends IntDomain {
     if (min <= min() && max >= max()) {
       throw failException;
     }
+
+    // the removed values do not cover both bounds, so at most one bound changes
+    int boundEvent = min <= min() ? MIN : MAX;
 
     if (storeLevel == stamp) {
 
@@ -3216,7 +3241,7 @@ public class IntervalDomain extends IntDomain {
           if (singleton()) {
             v.domainHasChanged(GROUND);
           } else if (max() < min) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3257,7 +3282,7 @@ public class IntervalDomain extends IntDomain {
           return;
         }
         if (max() < min || max < min()) {
-          v.domainHasChanged(BOUND);
+          v.domainHasChanged(boundEvent);
         } else {
           v.domainHasChanged(ANY);
         }
@@ -3334,7 +3359,7 @@ public class IntervalDomain extends IntDomain {
           if (result.singleton()) {
             v.domainHasChanged(GROUND);
           } else if (result.max() < min) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3365,7 +3390,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (result.max() < min || max < result.min()) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3400,7 +3425,7 @@ public class IntervalDomain extends IntDomain {
           if (result.singleton()) {
             v.domainHasChanged(GROUND);
           } else if (result.max() < min || max < result.min()) {
-            v.domainHasChanged(BOUND);
+            v.domainHasChanged(boundEvent);
           } else {
             v.domainHasChanged(ANY);
           }
@@ -3593,7 +3618,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(result.checkInvariants()));
       }
 
-      final int returnedEvent = computeEvent(result);
+      final int returnedEvent = computeChangeEvent(result);
 
       if (stamp == storeLevel) {
         adoptIntervalsFrom(result);
@@ -3629,6 +3654,11 @@ public class IntervalDomain extends IntDomain {
         throw Store.failException;
       }
 
+      // the result is a subset of this domain, nothing is removed if it has as many values
+      if (result.getSize() == getSize()) {
+        return;
+      }
+
       if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
@@ -3648,7 +3678,7 @@ public class IntervalDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
-      final int returnedEvent = computeEvent(result);
+      final int returnedEvent = computeChangeEvent(result);
       v.domainHasChanged(returnedEvent);
       return;
     }
@@ -3807,7 +3837,12 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(result.checkInvariants()));
     }
 
-    int returnedEvent = computeEvent(result);
+    // the result is a subset of this domain, nothing is removed if it has as many values
+    if (result.getSize() == getSize()) {
+      return;
+    }
+
+    int returnedEvent = computeChangeEvent(result);
 
     if (stamp == storeLevel) {
       adoptIntervalsFrom(result);
@@ -3911,9 +3946,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-      return domain.modelConstraintsToEvaluate[0]
-          + domain.modelConstraintsToEvaluate[1]
-          + domain.modelConstraintsToEvaluate[2];
+      return Arrays.stream(domain.modelConstraintsToEvaluate).sum();
     } else {
       return domain.sizeConstraintsOriginal();
     }

@@ -367,7 +367,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (min == max) {
       v.domainHasChanged(GROUND);
     } else if (min != oldMin || max != oldMax) {
-      v.domainHasChanged(BOUND);
+      v.domainHasChanged(boundEvent(min != oldMin, max != oldMax));
     } else {
       v.domainHasChanged(ANY);
     }
@@ -387,7 +387,7 @@ public class LazyBitSetDomain extends IntDomain {
     saveLevel(storeLevel, v);
     size -= count(min, value - 1);
     min = value;
-    v.domainHasChanged(min == max ? GROUND : BOUND);
+    v.domainHasChanged(min == max ? GROUND : MIN);
   }
 
   @Override
@@ -402,7 +402,7 @@ public class LazyBitSetDomain extends IntDomain {
     saveLevel(storeLevel, v);
     size -= count(value + 1, max);
     max = value;
-    v.domainHasChanged(min == max ? GROUND : BOUND);
+    v.domainHasChanged(min == max ? GROUND : MAX);
   }
 
   @Override
@@ -420,9 +420,11 @@ public class LazyBitSetDomain extends IntDomain {
     int hi = previousPresent(newMax);
     saveLevel(storeLevel, v);
     size -= count(min, lo - 1) + count(hi + 1, max);
+    boolean minChanged = lo != min;
+    boolean maxChanged = hi != max;
     min = lo;
     max = hi;
-    v.domainHasChanged(min == max ? GROUND : BOUND);
+    v.domainHasChanged(lo == hi ? GROUND : boundEvent(minChanged, maxChanged));
   }
 
   @Override

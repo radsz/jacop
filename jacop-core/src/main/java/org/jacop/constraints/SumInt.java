@@ -38,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * SumInt constraint implements the summation over several variables.
@@ -101,6 +102,23 @@ public class SumInt extends AbstractSum {
    */
   public SumInt(List<? extends IntVar> variables, String rel, IntVar sum) {
     this(variables.toArray(IntVar[]::new), rel, sum);
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // sum(x) <= sum reads only the minima of x and the maximum of sum, >= the other bounds
+    boolean lessThan = relationType == LE || relationType == LT;
+    if (!lessThan && relationType != GE && relationType != GT) {
+      return IntDomain.BOUND;
+    }
+    boolean inList = false;
+    for (int i = 0; i < l; i++) {
+      inList |= x[i] == v;
+    }
+    if (v == sum) {
+      return inList ? IntDomain.BOUND : lessThan ? IntDomain.MAX : IntDomain.MIN;
+    }
+    return lessThan ? IntDomain.MIN : IntDomain.MAX;
   }
 
   @Override
