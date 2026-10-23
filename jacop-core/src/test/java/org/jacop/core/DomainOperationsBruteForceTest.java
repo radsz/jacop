@@ -406,7 +406,8 @@ class DomainOperationsBruteForceTest {
 
   /**
    * Checks that a pruning from domain a to domain expected reports exactly the change: one event,
-   * MIN or MAX only when the other bound is unchanged, and none when nothing is removed.
+   * MIN_EVENT or MAX_EVENT only when the other bound is unchanged, and none when nothing is
+   * removed.
    */
   private static void checkEvents(
       List<Integer> events, TreeSet<Integer> a, TreeSet<Integer> expected, String operation) {
@@ -419,9 +420,9 @@ class DomainOperationsBruteForceTest {
       if (minChanged && maxChanged) {
         wanted.add(IntDomain.BOUND);
       } else if (minChanged) {
-        wanted.add(IntDomain.MIN);
+        wanted.add(IntDomain.MIN_EVENT);
       } else if (maxChanged) {
-        wanted.add(IntDomain.MAX);
+        wanted.add(IntDomain.MAX_EVENT);
       } else {
         wanted.add(IntDomain.ANY);
       }

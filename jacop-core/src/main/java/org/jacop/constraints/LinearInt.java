@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -382,18 +383,18 @@ public class LinearInt extends PrimitiveConstraint {
     if (!readsSumMin && relationType != GE && relationType != GT) {
       return IntDomain.BOUND;
     }
-    int event = IntDomain.NONE;
+    int event = Domain.NONE;
     for (int i = 0; i < l; i++) {
       if (x[i] == v) {
         boolean positive = i < pos;
-        int side = readsSumMin == positive ? IntDomain.MIN : IntDomain.MAX;
-        if (event != IntDomain.NONE && event != side) {
+        int side = readsSumMin == positive ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
+        if (event != Domain.NONE && event != side) {
           return IntDomain.BOUND;
         }
         event = side;
       }
     }
-    return event == IntDomain.NONE ? IntDomain.BOUND : event;
+    return event == Domain.NONE ? IntDomain.BOUND : event;
   }
 
   @Override

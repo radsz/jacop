@@ -1686,7 +1686,8 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
   }
 
-  // A constraint that reads one bound of a variable is attached with the MIN or MAX event and is
+  // A constraint that reads one bound of a variable is attached with the MIN_EVENT or MAX_EVENT
+  // event and is
   // not woken when only the other bound changes.
   @Test
   void testBoundConstraintIsWokenOnlyByTheBoundItReads() {
@@ -1697,8 +1698,8 @@ class SingleConstraintTest extends TestHelper {
     XplusClteqZ c = new XplusClteqZ(x, 2, z);
     store.impose(c);
     assertThat(store.consistency()).isTrue();
-    assertThat(x.dom().modelConstraints[IntDomain.MIN]).contains(c);
-    assertThat(z.dom().modelConstraints[IntDomain.MAX]).contains(c);
+    assertThat(x.dom().modelConstraints[IntDomain.MIN_EVENT]).contains(c);
+    assertThat(z.dom().modelConstraints[IntDomain.MAX_EVENT]).contains(c);
 
     store.setLevel(1);
     x.domain.inMax(store.level, x, 7);
@@ -1721,7 +1722,8 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x.dom().modelConstraints[IntDomain.BOUND]).contains(set);
   }
 
-  // Constraints attached with MIN or MAX keep every solution and reach a fixpoint after any
+  // Constraints attached with MIN_EVENT or MAX_EVENT keep every solution and reach a fixpoint after
+  // any
   // decision, including decisions that change only one bound.
   @Test
   void testBoundSideConstraintsKeepSupportsAndReachFixpoint() {

@@ -119,7 +119,7 @@ public class IntervalDomain extends IntDomain {
    * Computes the event reported to the variable for a narrowed domain.
    *
    * @param narrowed the new (narrower) domain
-   * @return GROUND, BOUND, MIN, MAX or ANY
+   * @return GROUND, BOUND, MIN_EVENT, MAX_EVENT or ANY
    */
   private int computeChangeEvent(IntDomain narrowed) {
     if (narrowed.singleton()) {
@@ -2190,7 +2190,7 @@ public class IntervalDomain extends IntDomain {
         intervals[0] = new Interval(min, first.max());
       }
       clearIntervalsFrom(remaining);
-      notifyInPlaceBoundChange(v, MIN);
+      notifyInPlaceBoundChange(v, MIN_EVENT);
       return;
     }
 
@@ -2209,7 +2209,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = intervals[p++];
     }
 
-    installArrayResult(copy, out, storeLevel, v, MIN);
+    installArrayResult(copy, out, storeLevel, v, MIN_EVENT);
   }
 
   @Override
@@ -2238,7 +2238,7 @@ public class IntervalDomain extends IntDomain {
         intervals[pointer] = new Interval(last.min(), max);
       }
       clearIntervalsFrom(pointer + 1);
-      notifyInPlaceBoundChange(v, MAX);
+      notifyInPlaceBoundChange(v, MAX_EVENT);
       return;
     }
 
@@ -2255,7 +2255,7 @@ public class IntervalDomain extends IntDomain {
       copy[out++] = iv;
     }
 
-    installArrayResult(copy, out, storeLevel, v, MAX);
+    installArrayResult(copy, out, storeLevel, v, MAX_EVENT);
   }
 
   @Override
@@ -2912,7 +2912,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     // a removed bound leaves the other one unchanged, as the domain does not become empty
-    int boundEvent = complement == intervals[0].min() ? MIN : MAX;
+    int boundEvent = complement == intervals[0].min() ? MIN_EVENT : MAX_EVENT;
 
     if (storeLevel == stamp) {
 
@@ -3167,7 +3167,7 @@ public class IntervalDomain extends IntDomain {
     }
 
     // the removed values do not cover both bounds, so at most one bound changes
-    int boundEvent = min <= min() ? MIN : MAX;
+    int boundEvent = min <= min() ? MIN_EVENT : MAX_EVENT;
 
     if (storeLevel == stamp) {
 

@@ -70,7 +70,7 @@ public abstract class AbstractXcompY extends AbstractConstraintXandY {
     if (x == y) {
       return IntDomain.BOUND;
     }
-    return (v == x) == readsMinOfX() ? IntDomain.MIN : IntDomain.MAX;
+    return (v == x) == readsMinOfX() ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
   }
 
   @Override

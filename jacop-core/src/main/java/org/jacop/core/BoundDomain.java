@@ -416,7 +416,7 @@ class BoundDomain extends IntDomain {
       return;
     }
 
-    int boundEvent = complement == this.minBound ? MIN : MAX;
+    int boundEvent = complement == this.minBound ? MIN_EVENT : MAX_EVENT;
     if (stamp == storeLevel) {
       if (this.minBound == complement) {
         this.minBound++;
@@ -458,7 +458,7 @@ class BoundDomain extends IntDomain {
       return;
     }
 
-    int boundEvent = max < this.maxBound ? MIN : MAX;
+    int boundEvent = max < this.maxBound ? MIN_EVENT : MAX_EVENT;
     if (stamp == storeLevel) {
       if (max < this.maxBound) {
         this.minBound = max + 1;
@@ -495,7 +495,7 @@ class BoundDomain extends IntDomain {
       if (this.minBound == this.maxBound) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(MAX);
+        v.domainHasChanged(MAX_EVENT);
       }
 
     } else {
@@ -511,7 +511,7 @@ class BoundDomain extends IntDomain {
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(MAX);
+        v.domainHasChanged(MAX_EVENT);
       }
     }
   }
@@ -534,7 +534,7 @@ class BoundDomain extends IntDomain {
       if (this.minBound == this.maxBound) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(MIN);
+        v.domainHasChanged(MIN_EVENT);
       }
 
     } else {
@@ -550,7 +550,7 @@ class BoundDomain extends IntDomain {
       if (result.singleton()) {
         v.domainHasChanged(GROUND);
       } else {
-        v.domainHasChanged(MIN);
+        v.domainHasChanged(MIN_EVENT);
       }
     }
   }

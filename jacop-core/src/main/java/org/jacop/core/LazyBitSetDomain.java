@@ -387,7 +387,7 @@ public class LazyBitSetDomain extends IntDomain {
     saveLevel(storeLevel, v);
     size -= count(min, value - 1);
     min = value;
-    v.domainHasChanged(min == max ? GROUND : MIN);
+    v.domainHasChanged(min == max ? GROUND : MIN_EVENT);
   }
 
   @Override
@@ -402,7 +402,7 @@ public class LazyBitSetDomain extends IntDomain {
     saveLevel(storeLevel, v);
     size -= count(value + 1, max);
     max = value;
-    v.domainHasChanged(min == max ? GROUND : MAX);
+    v.domainHasChanged(min == max ? GROUND : MAX_EVENT);
   }
 
   @Override

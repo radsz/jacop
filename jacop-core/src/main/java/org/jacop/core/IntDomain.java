@@ -68,20 +68,20 @@ public abstract class IntDomain extends Domain {
   public static final int ANY = 2;
 
   /**
-   * It specifies the constant for MIN event: the minimum has increased and the maximum is
-   * unchanged. A constraint subscribed with MIN is woken by MIN, BOUND and GROUND events, so it may
-   * use it for a variable on which it reads only the minimum. A domain may report BOUND instead of
-   * MIN.
+   * It specifies the constant for the event of a change of the minimum only: the minimum has
+   * increased and the maximum is unchanged. A constraint subscribed with MIN_EVENT is woken by
+   * MIN_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * minimum. A domain may report BOUND instead of MIN_EVENT.
    */
-  public static final int MIN = 3;
+  public static final int MIN_EVENT = 3;
 
   /**
-   * It specifies the constant for MAX event: the maximum has decreased and the minimum is
-   * unchanged. A constraint subscribed with MAX is woken by MAX, BOUND and GROUND events, so it may
-   * use it for a variable on which it reads only the maximum. A domain may report BOUND instead of
-   * MAX.
+   * It specifies the constant for the event of a change of the maximum only: the maximum has
+   * decreased and the minimum is unchanged. A constraint subscribed with MAX_EVENT is woken by
+   * MAX_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * maximum. A domain may report BOUND instead of MAX_EVENT.
    */
-  public static final int MAX = 4;
+  public static final int MAX_EVENT = 4;
 
   /** Unique identifier for an interval domain type. */
   public static final int INTERVAL_DOMAIN_ID = 0;
@@ -100,11 +100,11 @@ public abstract class IntDomain extends Domain {
    * this by bit flags in int.
    */
   static final int[][] eventsInclusion = {
-    {GROUND, BOUND, ANY, MIN, MAX}, // GROUND event
-    {BOUND, ANY, MIN, MAX}, // BOUND event
+    {GROUND, BOUND, ANY, MIN_EVENT, MAX_EVENT}, // GROUND event
+    {BOUND, ANY, MIN_EVENT, MAX_EVENT}, // BOUND event
     {ANY}, // ANY event
-    {BOUND, ANY, MIN}, // MIN event
-    {BOUND, ANY, MAX} // MAX event
+    {BOUND, ANY, MIN_EVENT}, // MIN_EVENT
+    {BOUND, ANY, MAX_EVENT} // MAX_EVENT
   };
 
   /**
@@ -112,13 +112,13 @@ public abstract class IntDomain extends Domain {
    *
    * @param minChanged true if the minimum has changed.
    * @param maxChanged true if the maximum has changed.
-   * @return MIN or MAX if only one bound has changed, BOUND otherwise.
+   * @return MIN_EVENT or MAX_EVENT if only one bound has changed, BOUND otherwise.
    */
   protected static int boundEvent(boolean minChanged, boolean maxChanged) {
     if (minChanged) {
-      return maxChanged ? BOUND : MIN;
+      return maxChanged ? BOUND : MIN_EVENT;
     }
-    return maxChanged ? MAX : BOUND;
+    return maxChanged ? MAX_EVENT : BOUND;
   }
 
   /**
@@ -1269,8 +1269,8 @@ public abstract class IntDomain extends Domain {
         + modelConstraintsToEvaluate[GROUND]
         + modelConstraintsToEvaluate[BOUND]
         + modelConstraintsToEvaluate[ANY]
-        + modelConstraintsToEvaluate[MIN]
-        + modelConstraintsToEvaluate[MAX];
+        + modelConstraintsToEvaluate[MIN_EVENT]
+        + modelConstraintsToEvaluate[MAX_EVENT];
   }
 
   /**
@@ -1455,10 +1455,10 @@ public abstract class IntDomain extends Domain {
     if (removeConstraintFromPruningEvent(c, ANY)) {
       return;
     }
-    if (removeConstraintFromPruningEvent(c, MIN)) {
+    if (removeConstraintFromPruningEvent(c, MIN_EVENT)) {
       return;
     }
-    removeConstraintFromPruningEvent(c, MAX);
+    removeConstraintFromPruningEvent(c, MAX_EVENT);
   }
 
   @Override

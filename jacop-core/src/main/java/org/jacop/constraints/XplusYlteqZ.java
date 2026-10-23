@@ -97,7 +97,7 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ {
     if (x == z || y == z) {
       return IntDomain.BOUND;
     }
-    return v == z ? IntDomain.MAX : IntDomain.MIN;
+    return v == z ? IntDomain.MAX_EVENT : IntDomain.MIN_EVENT;
   }
 
   @Override

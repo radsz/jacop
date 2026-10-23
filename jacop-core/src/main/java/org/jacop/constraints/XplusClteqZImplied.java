@@ -113,7 +113,7 @@ public class XplusClteqZImplied extends PrimitiveConstraint {
     if (v == b || x == z) {
       return IntDomain.BOUND;
     }
-    return v == x ? IntDomain.MIN : IntDomain.MAX;
+    return v == x ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
   }
 
   @Override
