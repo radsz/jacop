@@ -370,7 +370,8 @@ public class LinearInt extends PrimitiveConstraint {
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // != prunes only when every variable but one is fixed, so only grounding can enable it.
+    return relationType == NE ? IntDomain.GROUND : IntDomain.BOUND;
   }
 
   @Override

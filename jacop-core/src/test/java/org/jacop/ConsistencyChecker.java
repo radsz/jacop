@@ -796,6 +796,11 @@ class ConsistencyChecker {
                     weights(r, 2 + r.nextInt(3), 3),
                     RELATIONS[r.nextInt(RELATIONS.length)],
                     false)),
+        // != is woken only when a variable is fixed, and must still prune every unsupported value
+        new Case(
+            "LinearInt !=",
+            Level.DOMAIN,
+            (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "!=", false)),
         new Case(
             "LinearIntDom",
             Level.DOMAIN,
