@@ -79,6 +79,7 @@ class EnergyReasoning {
   private int[] lctOrder = new int[0];
   private int[] lstOrder = new int[0];
   private int[] ectOrder = new int[0];
+  private int[] resOrder = new int[0];
   private int ordered = -1;
   private boolean profileValid;
 
@@ -88,6 +89,14 @@ class EnergyReasoning {
   // energy of the profile before profileTime[k]
   private long[] profileEnergy = new long[0];
   private int profileSize;
+  private int profileMaxHeight;
+
+  // duration of each task outside its compulsory part
+  private int[] freeDuration = new int[0];
+  // free energy of the tasks lctOrder[0..q]
+  private long[] freeEnergyByLct = new long[0];
+  // largest free energy of the tasks lctOrder[q + 1..n - 1]
+  private long[] maxFreeEnergyAfter = new long[0];
 
   // theta-lambda tree over tasks sorted by est
   private long[] treeEnergy = new long[0];
@@ -112,10 +121,14 @@ class EnergyReasoning {
     res = new int[n];
     update = new int[n];
     energyBeforeEst = new long[n];
+    freeDuration = new int[n];
+    freeEnergyByLct = new long[n];
+    maxFreeEnergyAfter = new long[n];
     estOrder = new int[n];
     lctOrder = new int[n];
     lstOrder = new int[n];
     ectOrder = new int[n];
+    resOrder = new int[n];
     ordered = -1;
     profileTime = new int[2 * n + 1];
     profileHeight = new int[2 * n + 1];
@@ -169,6 +182,7 @@ class EnergyReasoning {
         lctOrder[i] = i;
         lstOrder[i] = i;
         ectOrder[i] = i;
+        resOrder[i] = i;
       }
       ordered = n;
     }
@@ -203,6 +217,7 @@ class EnergyReasoning {
     sortBy(ect, ectOrder, n);
     int k = 0;
     int height = 0;
+    int maxHeight = 0;
     long energy = 0;
     int s = 0;
     int e = 0;
@@ -233,9 +248,11 @@ class EnergyReasoning {
       profileTime[k] = time;
       profileHeight[k] = height;
       profileEnergy[k] = energy;
+      maxHeight = Math.max(maxHeight, height);
       k++;
     }
     profileSize = k;
+    profileMaxHeight = maxHeight;
     profileValid = present == null;
   }
 
@@ -482,11 +499,27 @@ class EnergyReasoning {
     for (int p = 0; p < n; p++) {
       int i = estOrder[p];
       update[i] = est[i];
+      freeDuration[i] = dur[i] - Math.max(0, ect[i] - lst[i]);
       while (k + 1 < profileSize && profileTime[k + 1] <= est[i]) {
         k++;
       }
       energyBeforeEst[i] = energyBefore(k, est[i]);
     }
+    long sum = 0;
+    for (int q = 0; q < n; q++) {
+      int i = lctOrder[q];
+      sum += (long) res[i] * freeDuration[i];
+      freeEnergyByLct[q] = sum;
+    }
+    long maxFree = 0;
+    for (int q = n - 1; q >= 0; q--) {
+      maxFreeEnergyAfter[q] = maxFree;
+      int i = lctOrder[q];
+      maxFree = Math.max(maxFree, (long) res[i] * freeDuration[i]);
+    }
+    // with the profile within the capacity, moving a down by d adds at most capacity * d to the
+    // profile energy in [a, b) and exactly capacity * d to the capacity of the window
+    boolean canStopEarly = profileMaxHeight <= capacity;
 
     k = profileSize - 1;
     // tasks estOrder[0..last] have est < b; b decreases with q
@@ -508,11 +541,10 @@ class EnergyReasoning {
       long bestEnergy = 0;
       for (int p = last; p >= 0; p--) {
         int j = estOrder[p];
-        int freeDuration = dur[j] - Math.max(0, ect[j] - lst[j]);
         if (lct[j] <= b) {
-          freeEnergy += (long) res[j] * freeDuration;
+          freeEnergy += (long) res[j] * freeDuration[j];
         } else if (est[j] < b) {
-          long needed = (long) res[j] * Math.min(freeDuration, b - est[j]);
+          long needed = (long) res[j] * Math.min(freeDuration[j], b - est[j]);
           if (needed > bestEnergy) {
             bestEnergy = needed;
             best = j;
@@ -525,6 +557,14 @@ class EnergyReasoning {
         long available = capacity * (b - a) - freeEnergy - (energyBeforeB - energyBeforeEst[j]);
         if (available < 0) {
           throw Store.failException;
+        }
+        if (canStopEarly
+            && capacity * (b - a) - freeEnergyByLct[q] - (energyBeforeB - energyBeforeEst[j])
+                >= maxFreeEnergyAfter[q]) {
+          // neither this a nor a smaller one can fail or push a task: the free energy of the tasks
+          // in [a', b) is at most that of all tasks ending by b, and a task ending after b needs
+          // at most its own free energy
+          break;
         }
         if (best >= 0 && bestEnergy > available) {
           int coreInWindow = Math.max(0, Math.min(ect[best], b) - Math.max(lst[best], a));
@@ -556,35 +596,62 @@ class EnergyReasoning {
    */
   void timeTableDisjunctive(TaskView[] ts, int n, long capacity, Store store) {
     buildProfile(n, null);
+    // the two largest resource uses
     int maxRes = 0;
+    int secondRes = 0;
     for (int i = 0; i < n; i++) {
       update[i] = est[i];
-      maxRes = Math.max(maxRes, res[i]);
+      if (res[i] > maxRes) {
+        secondRes = maxRes;
+        maxRes = res[i];
+      } else if (res[i] > secondRes) {
+        secondRes = res[i];
+      }
     }
+    // a pusher i and a pushed j need res_i + res_j + load > capacity, with load at most the profile
+    if ((long) maxRes + secondRes + profileMaxHeight <= capacity) {
+      return;
+    }
+    sortBy(res, resOrder, n);
 
     for (int i = 0; i < n; i++) {
+      if (capacity - res[i] - profileMaxHeight >= maxRes) {
+        continue;
+      }
       // points that every placement of i overlaps: [from, to] or only {from, to}
       int from;
       int to;
-      long load;
       if (lst[i] < ect[i]) {
         if (est[i] == lst[i]) {
           continue;
         }
         from = lst[i] - 1;
         to = ect[i];
-        load = Math.min(height(from), height(to));
       } else {
         from = ect[i] - 1;
         to = lst[i];
-        load = lst[i] - ect[i] < dur[i] ? Math.min(height(from), height(to)) : minHeight(from, to);
+      }
+      // the load is at most the height at from, so check that first
+      long load = height(from);
+      if (capacity - res[i] - load >= maxRes) {
+        continue;
+      }
+      if (lst[i] < ect[i] || lst[i] - ect[i] < dur[i]) {
+        load = Math.min(load, height(to));
+      } else {
+        load = minHeight(from, to);
       }
       long gap = capacity - res[i] - load;
       if (gap >= maxRes) {
         continue;
       }
-      for (int j = 0; j < n; j++) {
-        if (j == i || res[j] <= gap || update[j] > from) {
+      // only tasks using more than the gap, so from the largest resource use down
+      for (int p = n - 1; p >= 0; p--) {
+        int j = resOrder[p];
+        if (res[j] <= gap) {
+          break;
+        }
+        if (j == i || update[j] > from) {
           continue;
         }
         int freeEnd = est[j] + dur[j] - Math.max(0, ect[j] - lst[j]);
