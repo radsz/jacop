@@ -128,6 +128,16 @@ https://github.com/MiniZinc/minizinc-benchmarks, rewritten with network_flow_cos
 way. Only instances that finish well within the time limit with JaCoP's internal checks enabled are kept,
 because the network simplex checks make each node much slower.
 
+Directories ttppv_cost_regular (in upTo5sec, upTo30sec and upTo5min) hold the MiniZinc Challenge model
+traveling-tppv rewritten with one cost_regular per team, so that they run JaCoP's CostRegular. The
+automaton state is the home/away run of the original regular constraint together with the team's
+current location, and a transition costs the distance to the next game. upTo5min holds the five
+8-team challenge instances; JaCoP proves them optimal (82, 80, 78, 80, 78), while the original model
+(traveling-tppv in upTo1hour and above10min) needs up to an hour or times out. Chuffed on the original
+model gives the same optima. upTo5sec and upTo30sec hold random 6-team and 8-team instances (rand6_*,
+rand8_*) whose optima were checked by enumerating all schedules of the original model with Chuffed
+(6 teams) or by Chuffed's optimum (8 teams); rand8_0_unsat has no schedule.
+
 ## Extensional constraint benchmarks
 
 The problem directories `table_*` and `mdd_random` hold generated instances for table, negative
