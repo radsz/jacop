@@ -113,6 +113,23 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** For each constraint class, whether it overrides {@link #queueVariable(int, Var)}. */
+  private static final ClassValue<Boolean> OVERRIDES_QUEUE_VARIABLE =
+      new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+          try {
+            return type.getMethod("queueVariable", int.class, Var.class).getDeclaringClass()
+                != Constraint.class;
+          } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+          }
+        }
+      };
+
+  /** Whether this constraint's class overrides {@link #queueVariable(int, Var)}. */
+  private final boolean overridesQueueVariable = OVERRIDES_QUEUE_VARIABLE.get(getClass());
+
   /** The set {@link #scopeArray} was built from. */
   private Set<Var> scopeArraySource;
 
@@ -435,6 +452,16 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @param v variable which has changed.
    */
   public void queueVariable(final int level, final Var v) {}
+
+  /**
+   * Tells whether {@link #queueVariable(int, Var)} does anything for this constraint, that is,
+   * whether its class overrides it. The store skips the call for constraints that do not.
+   *
+   * @return true if the constraint's class overrides queueVariable.
+   */
+  public final boolean overridesQueueVariable() {
+    return overridesQueueVariable;
+  }
 
   private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
     if (c instanceof RemoveLevelLate late) {

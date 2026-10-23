@@ -493,7 +493,9 @@ public class Store {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
       for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
         Constraint c = addedConstraints[i];
-        c.queueVariable(level, v);
+        if (c.overridesQueueVariable()) {
+          c.queueVariable(level, v);
+        }
         if (currentConstraint != c) {
           addChanged(c);
         }
@@ -505,7 +507,9 @@ public class Store {
     List<Constraint> constr = vdomain.searchConstraints;
     for (int i = vdomain.searchConstraintsToEvaluate - 1; i >= 0; i--) {
       Constraint c = constr.get(i);
-      c.queueVariable(level, v);
+      if (c.overridesQueueVariable()) {
+        c.queueVariable(level, v);
+      }
       if (currentConstraint != c) {
         addChanged(c);
       }
@@ -518,7 +522,9 @@ public class Store {
       return;
     }
     for (Constraint con : list) {
-      con.queueVariable(level, v);
+      if (con.overridesQueueVariable()) {
+        con.queueVariable(level, v);
+      }
       if (currentConstraint != con) {
         addChanged(con);
       }
