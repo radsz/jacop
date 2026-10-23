@@ -2720,3 +2720,7 @@ rcpsp_cumulatives/rcpsp_03
 cost_regular/cost_regular_opt_20_1
 cost_regular/cost_regular_opt_20_2
 cost_regular/cost_regular_opt_30_1
+ttppv_cost_regular/rand6_1
+ttppv_cost_regular/rand6_4
+ttppv_cost_regular/rand6_12
+ttppv_cost_regular/rand8_0_unsat

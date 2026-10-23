@@ -90,3 +90,8 @@ tpp/tpp_7_3_20_1
 tsptw/tsptw
 vrp/P-n16-k8.vrp
 zephyrus/14__8__6__3
+ttppv_cost_regular/circ8abal
+ttppv_cost_regular/circ8bbal
+ttppv_cost_regular/circ8cbal
+ttppv_cost_regular/circ8dbal
+ttppv_cost_regular/circ8ebal
