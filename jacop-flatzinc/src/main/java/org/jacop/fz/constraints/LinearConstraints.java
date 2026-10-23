@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Not;
@@ -53,6 +54,8 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -310,7 +313,7 @@ class LinearConstraints implements ParserTreeConstants {
       if (x.singleton()) {
         support.pose(new Implies(p4, new XgteqC(y, x.value() - p3)));
       } else {
-        support.pose(new Implies(p4, leqConstraint));
+        support.pose(new XplusClteqZImplied(p4, x, -p3, y));
       }
     }
   }
@@ -632,6 +635,8 @@ class LinearConstraints implements ParserTreeConstants {
       poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(p3));
     } else if (allWeightsMinusOne(p1)) {
       poseSumBoolOrInt(p2, "==", support.dictionary.getConstant(-p3));
+    } else if (poseLinearBool(p1, p2, "==", p3)) {
+      return;
     } else if (p2.length < 100) {
       support.pose(new LinearInt(p2, p1, "==", p3));
     } else {
@@ -659,6 +664,17 @@ class LinearConstraints implements ParserTreeConstants {
       if (p2[0].max() >= p2[1].min() && p2[0].min() <= p2[1].max()) {
         support.pose(new XneqY(p2[0], p2[1]));
       }
+      return;
+    }
+    if (p1.length == 2 && ((p1[0] == 1 && p1[1] == -1) || (p1[0] == -1 && p1[1] == 1))) {
+      // x - y != c is x != y + c, so the variable with weight -1 gets the offset.
+      IntVar x = p1[0] == 1 ? p2[0] : p2[1];
+      IntVar y = p1[0] == 1 ? p2[1] : p2[0];
+      if (x == y) {
+        // x - x != c holds, as c is not 0 here
+        return;
+      }
+      support.pose(new XplusCneqZ(y, p3, x));
       return;
     }
     int pos = sumPossible(p1, p3);
@@ -756,9 +772,52 @@ class LinearConstraints implements ParserTreeConstants {
     } else if (posGe > -1) {
       IntVar[] vect = createVectorExcluding(p2, posGe);
       poseSumBoolOrInt(vect, ">=", p2[posGe]);
-    } else {
+    } else if (!poseLinearBool(p1, p2, "<=", p3)) {
       support.pose(new LinearInt(p2, p1, "<=", p3));
     }
+  }
+
+  /**
+   * Poses a linear constraint over 0/1 variables when the sum has at least three 0/1 variables and
+   * at most one other variable, of weight 1 or -1 and with the constant 0.
+   *
+   * @return true if the constraint was posed.
+   */
+  private boolean poseLinearBool(int[] p1, IntVar[] p2, String rel, int p3) {
+    int other = -1;
+    for (int i = 0; i < p2.length; i++) {
+      if (p1[i] == Integer.MIN_VALUE) {
+        return false;
+      }
+      if (!binaryVar(p2[i])) {
+        if (other != -1 || (p1[i] != 1 && p1[i] != -1) || p3 != 0) {
+          return false;
+        }
+        other = i;
+      }
+    }
+    int bools = other == -1 ? p2.length : p2.length - 1;
+    if (bools < 3) {
+      return false;
+    }
+    if (other == -1) {
+      support.pose(new LinearBool(p2, p1, rel, p3));
+      return true;
+    }
+    // sum + s * y rel 0 is sum rel -s * y; for s = 1 it is (-sum) rel' y with rel' reversed.
+    boolean negate = p1[other] == 1;
+    IntVar[] vars = new IntVar[bools];
+    int[] weights = new int[bools];
+    int n = 0;
+    for (int i = 0; i < p2.length; i++) {
+      if (i != other) {
+        vars[n] = p2[i];
+        weights[n++] = negate ? -p1[i] : p1[i];
+      }
+    }
+    String relation = negate && "<=".equals(rel) ? ">=" : rel;
+    support.pose(new LinearBool(vars, weights, relation, p2[other]));
+    return true;
   }
 
   private void int_lin_relationLeSingleWeight(int w, IntVar x, int p3) {

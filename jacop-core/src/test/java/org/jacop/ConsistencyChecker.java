@@ -59,6 +59,7 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
@@ -69,10 +70,13 @@ import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -520,13 +524,44 @@ class ConsistencyChecker {
         linearOverReals(w, rel));
   }
 
+  /** sum(w[i] * b[i]) rel s over 0/1 variables b, with s a variable or a constant. */
+  private static Model linearBool(Store store, Random random, String rel, boolean constant) {
+    int n = 3 + random.nextInt(4);
+    int[] w = new int[n];
+    IntVar[] b = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      w[i] = (1 + random.nextInt(5)) * (random.nextBoolean() ? 1 : -1);
+      b[i] =
+          random.nextBoolean() ? new BooleanVar(store, "b" + i) : var(store, "b" + i, 0, 1, random);
+    }
+    if (constant) {
+      int c = random.nextInt(13) - 6;
+      return new Model(
+          new LinearBool(b, w, rel, c),
+          t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), c),
+          b,
+          linearOverReals(w, c, rel));
+    }
+    IntVar s = var(store, "s", -8, 12, random);
+    return new Model(
+        new LinearBool(b, w, rel, s),
+        t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), t[n]),
+        concat(b, new IntVar[] {s}),
+        linearOverReals(w, rel));
+  }
+
   /** Support of sum(w[i] * x[i]) rel s over the reals, with s the last variable. */
   private static RealSupport linearOverReals(int[] w, String rel) {
     int[] a = Arrays.copyOf(w, w.length + 1);
     a[w.length] = -1;
+    return linearOverReals(a, 0, rel);
+  }
+
+  /** Support of sum(a[i] * y[i]) rel c over the reals. */
+  private static RealSupport linearOverReals(int[] a, long c, String rel) {
     return (j, value, lo, hi) -> {
-      // range of sum(a[k] * y[k]) - 0 with y[j] = value and the others real in lo..hi
-      long min = (long) a[j] * value;
+      // range of sum(a[k] * y[k]) - c with y[j] = value and the others real in lo..hi
+      long min = (long) a[j] * value - c;
       long max = min;
       for (int k = 0; k < a.length; k++) {
         if (k != j) {
@@ -801,6 +836,37 @@ class ConsistencyChecker {
             "LinearInt !=",
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "!=", false)),
+        // bounds(Z) is NP-hard with non-unit weights, as for LinearInt
+        new Case(
+            "LinearBool",
+            Level.BOUNDS_R,
+            (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], false)),
+        new Case(
+            "LinearBool constant",
+            Level.BOUNDS_R,
+            (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true)),
+        new Case(
+            "XplusCneqZ",
+            Level.DOMAIN,
+            (s, r) -> {
+              int c = r.nextInt(7) - 3;
+              IntVar x = var(s, "x", -4, 4, r);
+              IntVar z = var(s, "z", -4, 4, r);
+              return new Model(new XplusCneqZ(x, c, z), t -> t[0] + c != t[1], new IntVar[] {x, z});
+            }),
+        new Case(
+            "XplusClteqZImplied",
+            Level.DOMAIN,
+            (s, r) -> {
+              int c = r.nextInt(7) - 3;
+              IntVar b = r.nextBoolean() ? new BooleanVar(s, "b") : var(s, "b", 0, 1, r);
+              IntVar x = var(s, "x", -4, 4, r);
+              IntVar z = var(s, "z", -4, 4, r);
+              return new Model(
+                  new XplusClteqZImplied(b, x, c, z),
+                  t -> t[0] == 0 || t[1] + c <= t[2],
+                  new IntVar[] {b, x, z});
+            }),
         new Case(
             "LinearIntDom",
             Level.DOMAIN,

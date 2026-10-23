@@ -39,6 +39,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -81,6 +82,7 @@ import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.MaxSimple;
@@ -106,6 +108,8 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -120,6 +124,7 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -1490,6 +1495,168 @@ class SingleConstraintTest extends TestHelper {
       }
       assertThat(values).as(domain.getClass().getSimpleName()).containsExactly(1, 5);
     }
+  }
+
+  // LinearBool keeps the bounds of the sum in time stamps updated when a 0/1 variable is fixed, so
+  // counting all solutions by search checks that the sums are restored on backtracking; repeated
+  // variables, variables fixed before imposing and both kinds of right hand side are covered.
+  @Test
+  void testLinearBoolCountsMatchBruteForce() {
+
+    Random random = new Random(41);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(5);
+      IntVar[] distinct = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        distinct[i] =
+            random.nextBoolean()
+                ? new BooleanVar(store, "b" + i)
+                : new IntVar(store, "b" + i, 0, 1);
+        if (random.nextInt(6) == 0) {
+          distinct[i].domain.in(store.level, distinct[i], random.nextInt(2), 1);
+        }
+      }
+      // a few positions repeat an earlier variable, so that the weights are merged
+      int m = n + random.nextInt(3);
+      IntVar[] b = new IntVar[m];
+      int[] w = new int[m];
+      for (int i = 0; i < m; i++) {
+        b[i] = i < n ? distinct[i] : distinct[random.nextInt(n)];
+        w[i] = (1 + random.nextInt(6)) * (random.nextBoolean() ? 1 : -1);
+      }
+      String rel = relations[random.nextInt(relations.length)];
+      boolean constant = random.nextBoolean();
+      int c = random.nextInt(15) - 7;
+      IntVar z = new IntVar(store, "z");
+      for (int v = -10; v <= 14; v++) {
+        if (random.nextInt(3) > 0) {
+          z.addDom(v, v);
+        }
+      }
+      if (z.getSize() == 0) {
+        z.addDom(0, 0);
+      }
+      IntVar[] all =
+          constant
+              ? distinct
+              : Stream.concat(Arrays.stream(distinct), Stream.of(z)).toArray(IntVar[]::new);
+      Predicate<int[]> holds =
+          a -> {
+            long sum = 0;
+            for (int i = 0; i < m; i++) {
+              sum += (long) w[i] * a[Arrays.asList(distinct).indexOf(b[i])];
+            }
+            long rhs = constant ? c : a[n];
+            return switch (rel) {
+              case "==" -> sum == rhs;
+              case "<=" -> sum <= rhs;
+              default -> sum >= rhs;
+            };
+          };
+      int expected = bruteForce(all, holds).size();
+
+      store.impose(constant ? new LinearBool(b, w, rel, c) : new LinearBool(b, w, rel, z));
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d: %s %s %s", trial, Arrays.toString(w), rel, constant ? c : z)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testLinearBoolRejectsInvalidArguments() {
+
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 2);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b, x}, new int[] {1, 1}, "==", 1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1}, "==", b))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1}, "!=", 0))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1, 2}, "==", 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testXplusCneqZCountsMatchBruteForce() {
+
+    Random random = new Random(43);
+    for (int trial = 0; trial < 1000; trial++) {
+      Store store = new Store();
+      IntVar x = randomVar(store, "x", -4, 4, random);
+      IntVar z = randomVar(store, "z", -4, 4, random);
+      int c = random.nextInt(9) - 4;
+      IntVar[] all = {x, z};
+      int expected = bruteForce(all, a -> a[0] + c != a[1]).size();
+
+      store.impose(new XplusCneqZ(x, c, z));
+      assertThat(countSolutions(store, random.nextBoolean() ? all : new IntVar[] {z, x}, random))
+          .as("trial %d: %s + %d != %s", trial, x, c, z)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testXplusCneqZOnTheSameVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    store.impose(new XplusCneqZ(x, 2, x));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.getSize()).isEqualTo(4);
+    assertThatThrownBy(() -> store.impose(new XplusCneqZ(x, 0, x)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testXplusClteqZImpliedCountsMatchBruteForce() {
+
+    Random random = new Random(47);
+    for (int trial = 0; trial < 1000; trial++) {
+      Store store = new Store();
+      IntVar b = random.nextBoolean() ? new BooleanVar(store, "b") : new IntVar(store, "b", 0, 1);
+      IntVar x = randomVar(store, "x", -4, 4, random);
+      IntVar z = randomVar(store, "z", -4, 4, random);
+      int c = random.nextInt(9) - 4;
+      IntVar[] all = {b, x, z};
+      int expected = bruteForce(all, a -> a[0] == 0 || a[1] + c <= a[2]).size();
+
+      store.impose(new XplusClteqZImplied(b, x, c, z));
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d: %s => %s + %d <= %s", trial, b, x, c, z)
+          .isEqualTo(expected);
+    }
+  }
+
+  private static IntVar randomVar(Store store, String name, int lo, int hi, Random random) {
+    IntVar v = new IntVar(store, name);
+    for (int k = lo; k <= hi; k++) {
+      if (random.nextInt(4) > 0) {
+        v.addDom(k, k);
+      }
+    }
+    if (v.getSize() == 0) {
+      v.addDom(lo, lo);
+    }
+    return v;
+  }
+
+  private static int countSolutions(Store store, IntVar[] vars, Random random) {
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    boolean found =
+        search.labeling(
+            store, new SimpleSelect<>(vars, null, new IndomainRandom<>(random.nextInt())));
+    return found ? search.getSolutionListener().solutionsNo() : 0;
   }
 
   private static List<int[]> bruteForce(IntVar[] vars, Predicate<int[]> constraint) {
