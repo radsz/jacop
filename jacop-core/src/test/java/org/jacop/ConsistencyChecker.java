@@ -836,10 +836,11 @@ class ConsistencyChecker {
                   t -> Arrays.stream(t, 0, n).filter(v -> a <= v && v <= b).count() == t[n],
                   concat(x, new IntVar[] {c}));
             }),
-        // no reasoning from the count back to the list
+        // bounds on the intervals for count.max() (hitting sets) and domain pruning from the
+        // matching for count.min(); a lower bound on the domains themselves is NP-hard
         new Case(
             "Values",
-            Level.NONE,
+            Level.BOUNDS_Z,
             (s, r) -> {
               int n = 2 + r.nextInt(3);
               IntVar[] x = vars(s, "x", n, 0, 3, r);

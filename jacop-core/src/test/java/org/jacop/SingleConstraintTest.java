@@ -2542,6 +2542,89 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(88);
   }
 
+  // with at most 2 values, x2 must share a value with x0 (1..2) or with x1 (4..5)
+  @Test
+  void testValuesPrunesValuesNeedingTooManyValues() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 2);
+    IntVar x1 = new IntVar(store, "x1", 4, 5);
+    IntVar x2 = new IntVar(store, "x2", 1, 5);
+    IntVar count = new IntVar(store, "count", 0, 2);
+    store.impose(new Values(new IntVar[] {x0, x1, x2}, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(count.dom().toString()).isEqualTo("2");
+    assertThat(x2.dom().toString()).isEqualTo("{1..2, 4..5}");
+  }
+
+  // with at least 3 values, x0 and x1 take 1 and 2, so x2 must take 3
+  @Test
+  void testValuesPrunesValuesGivingTooFewValues() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 2);
+    IntVar x1 = new IntVar(store, "x1", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 1, 3);
+    IntVar x3 = new IntVar(store, "x3", 1, 3);
+    IntVar count = new IntVar(store, "count", 3, 4);
+    store.impose(new Values(new IntVar[] {x0, x1, x2, x3}, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(count.dom().toString()).isEqualTo("3");
+    assertThat(x2.dom().toString()).isEqualTo("{1..3}");
+
+    x3.domain.in(store.level, x3, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x2.dom().toString()).isEqualTo("3");
+  }
+
+  // Values switches between dense value arrays and a hash map when a variable keeps a far value;
+  // the singleton pruning must use the values of the current path after each switch
+  @Test
+  void testValuesWithFarValueMatchesBruteForce() {
+    int far = 1_000_000;
+    int[][] domains = {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}, {0, 1, 2, far}};
+    for (int countMin = 1; countMin <= 4; countMin++) {
+      for (int countMax = countMin; countMax <= 4; countMax++) {
+        int expected = 0;
+        for (int a : domains[0]) {
+          for (int b : domains[1]) {
+            for (int c : domains[2]) {
+              for (int d : domains[3]) {
+                long different = IntStream.of(a, b, c, d).distinct().count();
+                if (countMin <= different && different <= countMax) {
+                  expected++;
+                }
+              }
+            }
+          }
+        }
+
+        Store store = new Store();
+        IntVar[] x = new IntVar[domains.length];
+        for (int i = 0; i < x.length; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar count = new IntVar(store, "count", countMin, countMax);
+        store.impose(new Values(x, count));
+
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found = search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+
+        assertThat(found ? search.getSolutionListener().solutionsNo() : 0)
+            .as("count in %d..%d", countMin, countMax)
+            .isEqualTo(expected);
+      }
+    }
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/78
   @Test
   void testNoGoodViolatedOverSingletons() {

@@ -31,8 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -74,8 +72,8 @@ public class LexOrder extends Constraint
   /** Size of the longest vector. */
   final int n;
 
-  final Map<IntVar, int[]> varxToIndex = Var.createEmptyPositioning();
-  final Map<IntVar, int[]> varyToIndex = Var.createEmptyPositioning();
+  /** For each variable, its positions in x followed by its positions in y. */
+  final Map<Var, int[]> varToIndex = Var.createEmptyPositioning();
 
   /** Lex enforcing "{@literal <}" relationship (true). */
   private boolean lexLt;
@@ -83,7 +81,18 @@ public class LexOrder extends Constraint
   boolean satisfied;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
-  LinkedHashSet<Integer> indexQueue = new LinkedHashSet<>();
+
+  /** Positions queued for the next round, in the order they were first queued. */
+  private int[] indexQueue;
+
+  private int indexQueueSize;
+
+  /** Whether a position is in indexQueue. */
+  private boolean[] queued;
+
+  /** Positions of the round being processed. */
+  private int[] round;
+
   private Store store;
   private TimeStamp<Integer> alpha;
   private TimeStamp<Integer> beta;
@@ -159,36 +168,31 @@ public class LexOrder extends Constraint
     beta = new TimeStamp<>(store, 0);
 
     for (int i = 0; i < n; i++) {
-      int[] varPositions = varxToIndex.get(x[i]);
-      if (varPositions == null) {
-        int[] p = new int[1];
-        p[0] = i;
-        varxToIndex.put(x[i], p);
-      } else {
-        int[] newPos = new int[varPositions.length + 1];
-        System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
-        newPos[varPositions.length] = i;
-        varxToIndex.put(x[i], varPositions);
-      }
+      addPosition(x[i], i);
+    }
+    for (int i = 0; i < n; i++) {
+      addPosition(y[i], i);
     }
 
-    for (int i = 0; i < n; i++) {
-      int[] varPositions = varyToIndex.get(y[i]);
-      if (varPositions == null) {
-        int[] p = new int[1];
-        p[0] = i;
-        varyToIndex.put(y[i], p);
-      } else {
-        int[] newPos = new int[varPositions.length + 1];
-        System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
-        newPos[varPositions.length] = i;
-        varyToIndex.put(y[i], varPositions);
-      }
-    }
+    indexQueue = new int[n];
+    round = new int[n];
+    queued = new boolean[n];
+    indexQueueSize = 0;
 
     store.registerRemoveLevelLateListener(this);
 
     super.impose(store);
+  }
+
+  private void addPosition(IntVar v, int i) {
+    int[] positions = varToIndex.get(v);
+    if (positions == null) {
+      varToIndex.put(v, new int[] {i});
+    } else {
+      int[] newPositions = Arrays.copyOf(positions, positions.length + 1);
+      newPositions[positions.length] = i;
+      varToIndex.put(v, newPositions);
+    }
   }
 
   @Override
@@ -216,14 +220,18 @@ public class LexOrder extends Constraint
 
       store.propagationHasOccurred = false;
 
-      LinkedHashSet<Integer> index = indexQueue;
-      indexQueue = new LinkedHashSet<>();
+      // positions queued while this round runs go to the next round, as with a fresh queue
+      int[] current = indexQueue;
+      int size = indexQueueSize;
+      indexQueue = round;
+      round = current;
+      indexQueueSize = 0;
+      for (int k = 0; k < size; k++) {
+        queued[current[k]] = false;
+      }
 
-      while (!index.isEmpty()) {
-        Iterator<Integer> it = index.iterator();
-        int i = it.next();
-        it.remove();
-
+      for (int k = 0; k < size; k++) {
+        int i = current[k];
         if (i < betaValue) {
           reestablishGac(i);
         }
@@ -260,17 +268,13 @@ public class LexOrder extends Constraint
   @Override
   public void queueVariable(int level, Var v) {
 
-    int[] iValX = varxToIndex.get(v);
-    int[] iValY = varyToIndex.get(v);
-
-    if (iValX != null) {
-      for (int i : iValX) {
-        indexQueue.add(i);
-      }
-    }
-    if (iValY != null) {
-      for (int i : iValY) {
-        indexQueue.add(i);
+    int[] positions = varToIndex.get(v);
+    if (positions != null) {
+      for (int i : positions) {
+        if (!queued[i]) {
+          queued[i] = true;
+          indexQueue[indexQueueSize++] = i;
+        }
       }
     }
   }
@@ -285,7 +289,10 @@ public class LexOrder extends Constraint
   @Override
   public void removeLevelLate(int level) {
 
-    indexQueue.clear();
+    for (int k = 0; k < indexQueueSize; k++) {
+      queued[indexQueue[k]] = false;
+    }
+    indexQueueSize = 0;
   }
 
   @Override
