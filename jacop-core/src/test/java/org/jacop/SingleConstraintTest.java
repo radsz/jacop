@@ -1788,60 +1788,24 @@ class SingleConstraintTest extends TestHelper {
         Constraint constraint = c.constraint().apply(vars);
         store.impose(constraint);
         String instance = c.name() + " run " + run + " " + domainsOf(vars);
-        checkSupportsAndFixpointAlongBoundWalk(
+        checkSupportsAndFixpoint(
             instance,
             store,
             vars,
             v -> bruteForce(v, c.test()),
             () -> rerunAtNewLevel(store, constraint, vars),
-            random);
+            random,
+            true);
       }
     }
   }
 
-  /**
-   * Like {@link #checkSupportsAndFixpointAlongRandomWalk}, but the decisions also move a single
-   * bound, so that a constraint that misses the event of the bound it reads leaves values it should
-   * prune.
-   */
-  private static void checkSupportsAndFixpointAlongBoundWalk(
-      String instance,
-      Store store,
-      IntVar[] vars,
-      Function<IntVar[], List<int[]>> solver,
-      Supplier<String> rerun,
-      Random random) {
-    List<int[]> solutions = solver.apply(vars);
-    for (int step = 0; step < 8; step++) {
-      boolean consistent = store.consistency();
-      if (solutions.isEmpty()) {
-        return;
-      }
-      String state = instance + " step " + step;
-      assertThat(consistent).as(state).isTrue();
-      for (int[] solution : solutions) {
-        for (int i = 0; i < vars.length; i++) {
-          assertThat(vars[i].domain.contains(solution[i]))
-              .as(state + " keeps solution " + Arrays.toString(solution))
-              .isTrue();
-        }
-      }
-      String propagated = domainsOf(vars);
-      assertThat(rerun.get()).as(state + " re-run").isEqualTo(propagated);
-
-      IntVar v = vars[random.nextInt(vars.length)];
-      if (v.singleton()) {
-        continue;
-      }
-      store.setLevel(store.level + 1);
-      int value = valuesOf(v)[random.nextInt(v.getSize())];
-      switch (random.nextInt(4)) {
-        case 0 -> v.domain.inMin(store.level, v, value);
-        case 1 -> v.domain.inMax(store.level, v, value);
-        case 2 -> v.domain.inComplement(store.level, v, value);
-        default -> v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
-      }
-      solutions = solver.apply(vars);
+  private static void decideOnBound(Store store, IntVar v, int value, Random random) {
+    switch (random.nextInt(4)) {
+      case 0 -> v.domain.inMin(store.level, v, value);
+      case 1 -> v.domain.inMax(store.level, v, value);
+      case 2 -> v.domain.inComplement(store.level, v, value);
+      default -> v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
     }
   }
 
@@ -1923,8 +1887,24 @@ class SingleConstraintTest extends TestHelper {
       Function<IntVar[], List<int[]>> solver,
       Supplier<String> rerun,
       Random random) {
+    checkSupportsAndFixpoint(instance, store, vars, solver, rerun, random, false);
+  }
+
+  /**
+   * Checks supports and fixpoint along a random walk. With bound decisions, the decisions also move
+   * a single bound, so that a constraint that misses the event of the bound it reads leaves values
+   * it should prune.
+   */
+  private static void checkSupportsAndFixpoint(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random,
+      boolean boundDecisions) {
     List<int[]> solutions = solver.apply(vars);
-    for (int step = 0; step < 6; step++) {
+    for (int step = 0; step < (boundDecisions ? 8 : 6); step++) {
       boolean consistent = store.consistency();
       if (solutions.isEmpty()) {
         // propagation does not have to detect every failure
@@ -1948,7 +1928,9 @@ class SingleConstraintTest extends TestHelper {
       }
       store.setLevel(store.level + 1);
       int value = valuesOf(v)[random.nextInt(v.getSize())];
-      if (random.nextBoolean()) {
+      if (boundDecisions) {
+        decideOnBound(store, v, value, random);
+      } else if (random.nextBoolean()) {
         v.domain.inValue(store.level, v, value);
       } else {
         v.domain.inComplement(store.level, v, value);

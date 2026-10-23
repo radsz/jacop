@@ -385,7 +385,8 @@ public class LinearInt extends PrimitiveConstraint {
     int event = IntDomain.NONE;
     for (int i = 0; i < l; i++) {
       if (x[i] == v) {
-        int side = readsSumMin == i < pos ? IntDomain.MIN : IntDomain.MAX;
+        boolean positive = i < pos;
+        int side = readsSumMin == positive ? IntDomain.MIN : IntDomain.MAX;
         if (event != IntDomain.NONE && event != side) {
           return IntDomain.BOUND;
         }

@@ -31,10 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Constraint X {@literal >} Y.
@@ -70,12 +68,8 @@ public class XgtY extends AbstractXcompY {
   }
 
   @Override
-  public int getBoundPruningEvent(Var v) {
-    // consistency() reads only the maximum of x and the minimum of y
-    if (x == y) {
-      return IntDomain.BOUND;
-    }
-    return v == x ? IntDomain.MAX : IntDomain.MIN;
+  protected boolean readsMinOfX() {
+    return false;
   }
 
   @Override

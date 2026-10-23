@@ -115,10 +115,13 @@ public class SumInt extends AbstractSum {
     for (int i = 0; i < l; i++) {
       inList |= x[i] == v;
     }
-    if (v == sum) {
-      return inList ? IntDomain.BOUND : lessThan ? IntDomain.MAX : IntDomain.MIN;
+    if (v != sum) {
+      return lessThan ? IntDomain.MIN : IntDomain.MAX;
     }
-    return lessThan ? IntDomain.MIN : IntDomain.MAX;
+    if (inList) {
+      return IntDomain.BOUND;
+    }
+    return lessThan ? IntDomain.MAX : IntDomain.MIN;
   }
 
   @Override
