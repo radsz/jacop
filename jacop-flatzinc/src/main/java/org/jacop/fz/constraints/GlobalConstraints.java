@@ -350,8 +350,9 @@ class GlobalConstraints implements ParserTreeConstants {
    * Sets the filtering rules of a cumulative constraint from the system properties
    * fz_cumulative_ttef (time-table edge finding), fz_cumulative_ttdr (time-table disjunctive
    * reasoning), fz_cumulative_ef (edge finding, off by default), fz_cumulative_quad_ef (quadratic
-   * edge finding), fz_cumulative_overload (overload check) and fz_cumulative_heef (horizontally
-   * elastic edge finding, off by default).
+   * edge finding), fz_cumulative_overload (overload check), fz_cumulative_heef (horizontally
+   * elastic edge finding, off by default) and fz_cumulative_adaptive (skipping the time-table
+   * energy rules while they prune nothing, on by default).
    */
   static <T extends Cumulative> T configureCumulative(T c) {
     String p = System.getProperty("fz_cumulative_ttef");
@@ -369,6 +370,10 @@ class GlobalConstraints implements ParserTreeConstants {
     if (p != null) {
       c.doQuadraticEdgeFind(Boolean.parseBoolean(p));
     }
+    // on the cumulative benchmarks, skipping the time-table energy rules while they prune nothing
+    // solved more instances and found better objectives, mainly on RCPSP where they rarely prune
+    c.doAdaptiveEnergyReasoning(
+        Boolean.parseBoolean(System.getProperty("fz_cumulative_adaptive", "true")));
     p = System.getProperty("fz_cumulative_overload");
     if (p != null) {
       c.doOverload(Boolean.parseBoolean(p));

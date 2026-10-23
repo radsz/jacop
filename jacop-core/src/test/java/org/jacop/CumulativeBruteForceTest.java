@@ -154,6 +154,15 @@ class CumulativeBruteForceTest {
                 "TT+TTDR", false, false, v -> cumulative(v, false, false, false, true, false)),
             new Config("all", false, false, v -> cumulative(v, true, true, true, true, false)),
             new Config(
+                "all+adaptive",
+                false,
+                false,
+                v -> {
+                  Cumulative c = (Cumulative) cumulative(v, false, true, true, true, false);
+                  c.doAdaptiveEnergyReasoning(true);
+                  return c;
+                }),
+            new Config(
                 "TT+HEEF",
                 false,
                 false,
