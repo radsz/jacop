@@ -32,6 +32,7 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
@@ -99,17 +100,27 @@ public class EinA extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    a.domain.inLubComplement(store.level, a, element);
+    if (!strict) {
+      a.domain.inLubComplement(store.level, a, element);
+    } else if (a.domain.glb().contains(element)) {
+      // the strict inclusion is violated only by a = {element}
+      a.domain.inLub(store.level, a, new IntervalDomain(element, element));
+    } else if (!a.domain.glb().isEmpty() || a.domain.card().min() > 1) {
+      // a cannot be {element}
+      a.domain.inLubComplement(store.level, a, element);
+    }
   }
 
   @Override
   public boolean notSatisfied() {
-    return !a.domain.lub().contains(element);
+    return !a.domain.lub().contains(element)
+        || strict && (a.domain.card().max() <= 1 || a.domain.lub().getSize() <= 1);
   }
 
   @Override
   public boolean satisfied() {
-    return a.domain.glb().contains(element);
+    return a.domain.glb().contains(element)
+        && (!strict || a.domain.glb().getSize() > 1 || a.domain.card().min() > 1);
   }
 
   @Override
