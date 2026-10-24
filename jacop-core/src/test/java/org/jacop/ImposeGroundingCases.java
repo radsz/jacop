@@ -31,6 +31,8 @@
 
 package org.jacop;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,6 +52,9 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.SoftAlldifferent;
+import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -62,8 +67,15 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
@@ -105,7 +117,22 @@ final class ImposeGroundingCases {
             Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
             Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
             Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
-            Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional"))),
+            Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")),
+            Arguments.of("SoftAlldifferentVariable", softAlldifferent(false, false)),
+            Arguments.of("SoftAlldifferentDecomposition", softAlldifferent(true, false)),
+            Arguments.of("SoftAlldifferentPrimitive", softAlldifferent(true, true)),
+            Arguments.of("SoftGCCHardCountersSoftBounds", softGcc(0, false)),
+            Arguments.of("SoftGCCHardBoundsSoftCounters", softGcc(1, false)),
+            Arguments.of("SoftGCCHardCountersSoftCounters", softGcc(2, false)),
+            Arguments.of("SoftGCCAllValuesHardCountersSoftBounds", softGcc(3, false)),
+            Arguments.of("SoftGCCAllValuesHardBoundsSoftCounters", softGcc(4, false)),
+            Arguments.of("SoftGCCAllValuesHardCountersSoftCounters", softGcc(5, false)),
+            Arguments.of("SoftGCCPrimitiveHardCounters", softGcc(0, true)),
+            Arguments.of("SoftGCCPrimitiveHardBounds", softGcc(1, true)),
+            Arguments.of("SoftGCCPrimitiveSoftCounters", softGcc(2, true)),
+            Arguments.of("NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
+            Arguments.of("Geost", geost(false)),
+            Arguments.of("GeostTime", geost(true))),
         Stream.concat(additive(), tables()));
   }
 
@@ -445,6 +472,344 @@ final class ImposeGroundingCases {
               + " labels="
               + labels.stream().map(Arrays::toString).toList()
               + (search ? " SUPPORT_SEARCH" : " INCREMENTAL"));
+    };
+  }
+
+  /**
+   * SoftAlldifferent on x0..x(n-1) with cost last: the number of variables minus the number of
+   * distinct values (variable-based) or the number of equal pairs (decomposition-based).
+   */
+  private static Function<Random, Case> softAlldifferent(boolean pairs, boolean primitive) {
+    return random -> {
+      int n = 2 + random.nextInt(3);
+      int[][] domains = domains(random, n + 1, 0, 3);
+      domains[n] = domain(random, 0, pairs ? n * (n - 1) / 2 : n - 1);
+      ViolationMeasure measure =
+          pairs ? ViolationMeasure.DECOMPOSITION_BASED : ViolationMeasure.VARIABLE_BASED;
+      return Case.of(
+          domains,
+          (store, x) -> {
+            SoftAlldifferent c = new SoftAlldifferent(Arrays.copyOf(x, n), x[n], measure);
+            if (primitive) {
+              c.primitiveDecomposition(store).forEach(store::impose);
+            } else {
+              store.imposeDecomposition(c);
+            }
+          },
+          t -> {
+            int cost = 0;
+            if (pairs) {
+              for (int i = 0; i < n; i++) {
+                for (int j = 0; j < i; j++) {
+                  cost += t[i] == t[j] ? 1 : 0;
+                }
+              }
+            } else {
+              cost = n - (int) Arrays.stream(t, 0, n).distinct().count();
+            }
+            return t[n] == cost;
+          },
+          measure.toString());
+    };
+  }
+
+  /**
+   * SoftGCC (value-based) with x0..x(n-1), then m hard counters and/or m soft counters, then the
+   * cost. The constructor variant: 0 hard counters and soft bounds, 1 hard bounds and soft
+   * counters, 2 hard and soft counters, 3-5 the same without counted values (all values of x are
+   * counted).
+   */
+  private static Function<Random, Case> softGcc(int variant, boolean primitive) {
+    return random -> {
+      // all values of x are counted in variants 3-5, so x gets fewer values there
+      int nx = variant >= 3 ? 2 : 2 + random.nextInt(2);
+      int[][] xs = domains(random, nx, 0, variant >= 3 ? 2 : 3);
+      int[] counted;
+      if (variant >= 3) {
+        counted = Arrays.stream(xs).flatMapToInt(Arrays::stream).distinct().sorted().toArray();
+      } else {
+        List<Integer> values = new ArrayList<>(List.of(0, 1, 2, 3));
+        Collections.shuffle(values, random);
+        // sorted, since the network swaps the counters of unsorted values (a separate fix)
+        counted =
+            values.subList(0, 1 + random.nextInt(2)).stream().mapToInt(i -> i).sorted().toArray();
+      }
+      int m = counted.length;
+      boolean hardCounters = variant % 3 != 1;
+      boolean softCounters = variant % 3 != 0;
+      int counters = (hardCounters ? m : 0) + (softCounters ? m : 0);
+      int[][] domains = new int[nx + counters + 1][];
+      System.arraycopy(xs, 0, domains, 0, nx);
+      for (int i = nx; i < nx + counters; i++) {
+        domains[i] = domain(random, 0, nx);
+      }
+      domains[nx + counters] = domain(random, 0, 2 * nx);
+      int[] lb = new int[m];
+      int[] ub = new int[m];
+      for (int i = 0; i < m; i++) {
+        lb[i] = random.nextInt(nx + 1);
+        ub[i] = lb[i] + random.nextInt(nx + 1 - lb[i]);
+      }
+      int hard0 = nx;
+      int soft0 = nx + (hardCounters ? m : 0);
+      int cost = nx + counters;
+      return Case.of(
+          domains,
+          (store, x) -> {
+            IntVar[] xv = Arrays.copyOf(x, nx);
+            IntVar[] hard = hardCounters ? Arrays.copyOfRange(x, hard0, hard0 + m) : null;
+            IntVar[] soft = softCounters ? Arrays.copyOfRange(x, soft0, soft0 + m) : null;
+            int kind = variant;
+            if (variant >= 3) {
+              // without counted values, SoftGCC counts the values left in the domains of x, so it
+              // must refuse counters that no longer match them and then needs the counted values
+              IntDomain left = new IntervalDomain();
+              Arrays.stream(xv).forEach(v -> left.unionAdapt(v.domain));
+              if (left.getSize() != m) {
+                assertThatThrownBy(() -> softGcc(variant, xv, hard, soft, null, lb, ub, x[cost]))
+                    .isInstanceOf(IllegalArgumentException.class);
+                kind = variant - 3;
+              }
+            }
+            SoftGCC c = softGcc(kind, xv, hard, soft, counted, lb, ub, x[cost]);
+            if (primitive) {
+              c.primitiveDecomposition(store).forEach(store::impose);
+            } else {
+              store.imposeDecomposition(c);
+            }
+          },
+          t -> {
+            int total = 0;
+            for (int i = 0; i < m; i++) {
+              int v = counted[i];
+              int count = (int) Arrays.stream(t, 0, nx).filter(e -> e == v).count();
+              if (hardCounters ? t[hard0 + i] != count : count < lb[i] || count > ub[i]) {
+                return false;
+              }
+              total +=
+                  softCounters
+                      ? Math.abs(count - t[soft0 + i])
+                      : Math.max(0, Math.max(lb[i] - count, count - ub[i]));
+            }
+            return t[cost] == total;
+          },
+          "counted="
+              + Arrays.toString(counted)
+              + " lb="
+              + Arrays.toString(lb)
+              + " ub="
+              + Arrays.toString(ub)
+              + " variant="
+              + variant);
+    };
+  }
+
+  private static SoftGCC softGcc(
+      int variant,
+      IntVar[] x,
+      IntVar[] hard,
+      IntVar[] soft,
+      int[] counted,
+      int[] lb,
+      int[] ub,
+      IntVar cost) {
+    ViolationMeasure vm = ViolationMeasure.VALUE_BASED;
+    return switch (variant) {
+      case 0 -> new SoftGCC(x, hard, counted, lb, ub, cost, vm);
+      case 1 -> new SoftGCC(x, lb, ub, counted, soft, cost, vm);
+      case 2 -> new SoftGCC(x, hard, counted, soft, cost, vm);
+      case 3 -> new SoftGCC(x, hard, lb, ub, cost, vm);
+      case 4 -> new SoftGCC(x, lb, ub, soft, cost, vm);
+      default -> new SoftGCC(x, hard, soft, cost, vm);
+    };
+  }
+
+  /**
+   * NetworkFlow of a 2x2 transportation problem: sources with supplies, sinks with demands, flow
+   * x(i,j) on arc i->j with weight w(i,j), and the cost last. Sometimes one weight is a variable
+   * (just before the cost) and sometimes two arcs share one flow variable.
+   */
+  private static Case networkFlow(Random random) {
+    int[] supply = {random.nextInt(3), random.nextInt(3)};
+    int[] demand = new int[2];
+    demand[0] = random.nextInt(supply[0] + supply[1] + 1);
+    demand[1] = supply[0] + supply[1] - demand[0];
+    int[] weight = {random.nextInt(3), random.nextInt(3), random.nextInt(3), random.nextInt(3)};
+    boolean shared = random.nextInt(4) == 0;
+    boolean varWeight = random.nextInt(3) == 0;
+    int flows = shared ? 3 : 4;
+    // arc k uses flow variable flowOf[k]
+    int[] flowOf = shared ? new int[] {0, 1, 2, 0} : new int[] {0, 1, 2, 3};
+    int[][] domains = new int[flows + (varWeight ? 1 : 0) + 1][];
+    for (int i = 0; i < flows; i++) {
+      domains[i] = domain(random, 0, 3);
+    }
+    if (varWeight) {
+      domains[flows] = domain(random, 0, 2);
+    }
+    int cost = domains.length - 1;
+    domains[cost] = domain(random, 0, 14);
+    return Case.of(
+        domains,
+        (store, x) -> {
+          NetworkBuilder net = new NetworkBuilder();
+          Node[] sources = {net.addNode("s0", supply[0]), net.addNode("s1", supply[1])};
+          Node[] sinks = {net.addNode("t0", -demand[0]), net.addNode("t1", -demand[1])};
+          for (int k = 0; k < 4; k++) {
+            Node from = sources[k / 2];
+            Node to = sinks[k % 2];
+            if (varWeight && k == 3) {
+              net.addArc(from, to, x[flows], x[flowOf[k]]);
+            } else {
+              net.addArc(from, to, weight[k], x[flowOf[k]]);
+            }
+          }
+          net.setCostVariable(x[cost]);
+          store.impose(net.build());
+        },
+        t -> {
+          int[] f = new int[4];
+          for (int k = 0; k < 4; k++) {
+            f[k] = t[flowOf[k]];
+          }
+          if (f[0] + f[1] != supply[0] || f[2] + f[3] != supply[1]) {
+            return false;
+          }
+          if (f[0] + f[2] != demand[0] || f[1] + f[3] != demand[1]) {
+            return false;
+          }
+          int total = 0;
+          for (int k = 0; k < 4; k++) {
+            total += (varWeight && k == 3 ? t[flows] : weight[k]) * f[k];
+          }
+          return t[cost] == total;
+        },
+        "supply="
+            + Arrays.toString(supply)
+            + " demand="
+            + Arrays.toString(demand)
+            + " weight="
+            + Arrays.toString(weight)
+            + " shared="
+            + shared
+            + " varWeight="
+            + varWeight);
+  }
+
+  /**
+   * Geost with 2 or 3 objects in one or two dimensions and NonOverlapping, at coordinates from 0
+   * (shapes with holes at negative coordinates lose solutions, a separate fix). Each object has its
+   * coordinates and its shape id as variables (in that order); shapes are 0..2, some made of two
+   * boxes. With time, each object also has start, duration and end variables and does not overlap
+   * the others only while their time intervals intersect; without time, start 0, duration 1 and end
+   * 1 are fixed.
+   */
+  private static Function<Random, Case> geost(boolean time) {
+    return random -> {
+      int objects = 2 + random.nextInt(time ? 1 : 2);
+      int dim = time ? 1 : 1 + random.nextInt(2);
+      int shapes = 2 + random.nextInt(2);
+      // boxes[s] = list of {origin..., length...}
+      List<List<int[]>> boxes = new ArrayList<>();
+      for (int s = 0; s < shapes; s++) {
+        List<int[]> list = new ArrayList<>();
+        int count = 1 + random.nextInt(2);
+        for (int b = 0; b < count; b++) {
+          int[] box = new int[2 * dim];
+          for (int d = 0; d < dim; d++) {
+            box[d] = b == 0 ? 0 : random.nextInt(2);
+            box[dim + d] = 1 + random.nextInt(2);
+          }
+          list.add(box);
+        }
+        boxes.add(list);
+      }
+      int per = dim + 1 + (time ? 3 : 0);
+      int[][] domains = new int[objects * per][];
+      for (int o = 0; o < objects; o++) {
+        for (int d = 0; d < dim; d++) {
+          domains[o * per + d] = domain(random, 0, 3);
+        }
+        domains[o * per + dim] = domain(random, 0, shapes - 1);
+        if (time) {
+          domains[o * per + dim + 1] = domain(random, 0, 2);
+          domains[o * per + dim + 2] = domain(random, 0, 2);
+          domains[o * per + dim + 3] = domain(random, 0, 3);
+        }
+      }
+      return Case.of(
+          domains,
+          (store, x) -> {
+            List<Shape> shapeList = new ArrayList<>();
+            for (int s = 0; s < shapes; s++) {
+              List<Dbox> dboxes = new ArrayList<>();
+              for (int[] box : boxes.get(s)) {
+                dboxes.add(
+                    new Dbox(
+                        Arrays.copyOfRange(box, 0, dim), Arrays.copyOfRange(box, dim, 2 * dim)));
+              }
+              shapeList.add(new Shape(s, dboxes));
+            }
+            List<GeostObject> objectList = new ArrayList<>();
+            for (int o = 0; o < objects; o++) {
+              IntVar[] coords = Arrays.copyOfRange(x, o * per, o * per + dim);
+              IntVar shape = x[o * per + dim];
+              IntVar start = time ? x[o * per + dim + 1] : new IntVar(store, 0, 0);
+              IntVar duration = time ? x[o * per + dim + 2] : new IntVar(store, 1, 1);
+              IntVar end = time ? x[o * per + dim + 3] : new IntVar(store, 1, 1);
+              objectList.add(new GeostObject(o, coords, shape, start, duration, end));
+            }
+            // NonOverlapping must select the time dimension (dim) as well; without it the objects
+            // are never pruned
+            int[] selected = new int[dim + 1];
+            for (int d = 0; d < selected.length; d++) {
+              selected[d] = d;
+            }
+            store.impose(
+                new Geost(
+                    objectList, List.of(new NonOverlapping(objectList, selected)), shapeList));
+          },
+          t -> {
+            if (time) {
+              for (int o = 0; o < objects; o++) {
+                int start = t[o * per + dim + 1];
+                int duration = t[o * per + dim + 2];
+                int end = t[o * per + dim + 3];
+                if (duration <= 0 || start + duration != end) {
+                  return false;
+                }
+              }
+            }
+            for (int a = 0; a < objects; a++) {
+              for (int b = a + 1; b < objects; b++) {
+                if (time
+                    && !(t[a * per + dim + 1] < t[b * per + dim + 3]
+                        && t[b * per + dim + 1] < t[a * per + dim + 3])) {
+                  continue;
+                }
+                for (int[] boxA : boxes.get(t[a * per + dim])) {
+                  for (int[] boxB : boxes.get(t[b * per + dim])) {
+                    boolean overlap = true;
+                    for (int d = 0; d < dim; d++) {
+                      int lowA = t[a * per + d] + boxA[d];
+                      int lowB = t[b * per + d] + boxB[d];
+                      if (lowA >= lowB + boxB[dim + d] || lowB >= lowA + boxA[dim + d]) {
+                        overlap = false;
+                      }
+                    }
+                    if (overlap) {
+                      return false;
+                    }
+                  }
+                }
+              }
+            }
+            return true;
+          },
+          "dim="
+              + dim
+              + " boxes="
+              + boxes.stream().map(l -> l.stream().map(Arrays::toString).toList()).toList());
     };
   }
 
