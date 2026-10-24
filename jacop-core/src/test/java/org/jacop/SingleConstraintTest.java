@@ -306,6 +306,140 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(42);
   }
 
+  // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
+  // and threw NegativeArraySizeException or IndexOutOfBoundsException.
+  @Test
+  void testBinpackingNegativeBinNumbers() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", -4, -2),
+      new IntVar(store, "i1", -4, -2),
+      new IntVar(store, "i2", -4, -2)
+    };
+    IntVar[] binLoad = getIntVars(store, "binLoad", 3, 7);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 1}, -4));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    assertThat(noOfSolutions).isEqualTo(27);
+  }
+
+  // Items of weight zero were dropped from the constraint, so their bin variables could take
+  // values outside the bins (MiniZinc bin_packing_capa and bin_packing_load require every item
+  // to be in one of the bins).
+  @Test
+  void testBinpackingZeroWeightItemInExistingBin() {
+
+    Store store = new Store();
+    IntVar[] items = {new IntVar(store, "i0", 0, 3), new IntVar(store, "i1", 0, 3)};
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 3);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 2}, 1));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // i0 in {1, 2}, i1 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  // The constructor without minBin computes the first bin from items of non-zero weight, but it
+  // started from the first item even when its weight was zero, shifting all bins.
+  @Test
+  void testBinpackingDefaultMinBinIgnoresZeroWeightItems() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", 0, 2), new IntVar(store, "i1", 1, 2), new IntVar(store, "i2", 2, 2)
+    };
+    IntVar[] binLoad = {new IntVar(store, "l1", 0, 0), new IntVar(store, "l2", 4, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 3, 1}));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // bins are 1 and 2: i1 = i2 = 2, i0 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  // The total weight of all items exceeded Integer.MAX_VALUE and overflowed, so the constraint
+  // failed on a satisfiable problem.
+  @Test
+  void testBinpackingTotalWeightAboveIntRange() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 5);
+    IntVar[] binLoad = new IntVar[5];
+    for (int i = 0; i < binLoad.length; i++) {
+      binLoad[i] = new IntVar(store, "binLoad" + i, 0, IntDomain.MAX_INT);
+    }
+    int[] w = new int[5];
+    Arrays.fill(w, 500_000_000);
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    // one item per bin
+    assertThat(noOfAllSolutions(store, items)).isEqualTo(120);
+  }
+
+  // Changes made by Binpacking itself are not queued again by the store, and bins affected by its
+  // own pruning were not processed again. Here the propagator fixed item 0 to bin 3 and removed
+  // bin 3 from item 2, but did not process bin 1 again, whose load can then be at most 10.
+  @Test
+  void testBinpackingReachesFixpoint() {
+
+    Store store = new Store();
+    int[][] binDomains = {{1, 3}, {0, 1, 2}, {0, 2, 3}, {0, 1, 2}, {0, 1, 2}, {3}, {1}};
+    IntVar[] items = new IntVar[binDomains.length];
+    for (int i = 0; i < items.length; i++) {
+      items[i] = new IntVar(store, "item" + i);
+      for (int v : binDomains[i]) {
+        items[i].addDom(v, v);
+      }
+    }
+    IntVar[] binLoad = {
+      new IntVar(store, "l0"),
+      new IntVar(store, "l1", 1, 11),
+      new IntVar(store, "l2", 0, 11),
+      new IntVar(store, "l3", 9, 11)
+    };
+    binLoad[0].addDom(0, 2);
+    binLoad[0].addDom(6, 11);
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 1, 3, 5, 8, 5, 1}, 0));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].value()).isEqualTo(3);
+    assertThat(binLoad[3].value()).isEqualTo(10);
+    assertThat(binLoad[1].max()).isEqualTo(10);
+  }
+
+  // Bins of capacity 9 hold 3, 2, 6 and 6, so their free space is 6, 7, 3 and 3: the items 5, 5
+  // and 4 cannot all be packed. The bin-count lower bound used capacity 9 and padded only bins
+  // with items (reduction R0), and was switched off once every bin was used; with the largest free
+  // space as capacity (reduction RMin) it detects the failure.
+  @Test
+  void testBinpackingLowerBoundWithAllBinsUsed() {
+
+    Store store = new Store();
+    IntVar[] items = new IntVar[9];
+    for (int i = 0; i < 4; i++) {
+      items[i] = new IntVar(store, "f" + i, i, i);
+    }
+    for (int i = 4; i < 9; i++) {
+      items[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar[] binLoad = getIntVars(store, "binLoad", 4, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 6, 6, 5, 1, 2, 4, 5}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 
