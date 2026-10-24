@@ -50,6 +50,7 @@ import org.jacop.floats.constraints.AbsPeqR;
 import org.jacop.floats.constraints.AcosPeqR;
 import org.jacop.floats.constraints.AsinPeqR;
 import org.jacop.floats.constraints.AtanPeqR;
+import org.jacop.floats.constraints.CosPeqR;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
@@ -67,8 +68,10 @@ import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
+import org.jacop.floats.constraints.SinPeqR;
 import org.jacop.floats.constraints.SqrtPeqR;
 import org.jacop.floats.constraints.SumFloat;
+import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
@@ -506,6 +509,42 @@ class SingleConstraintTest {
     // printed AtanPeqR(r, p), unlike AsinPeqR and AcosPeqR
     assertThat(new AtanPeqR(p, r).toString()).contains("AtanPeqR(p");
     assertThat(new AsinPeqR(p, r).toString()).contains("AsinPeqR(p");
+  }
+
+  @Test
+  void testTrigonometricFunctionsKeepTheirValueFarFromZero() {
+    double[] points = {10, 100, 1e5, -1e5, 1e10, -1e10, 1e15, 1e20, 1e100};
+    checkTrigonometric(SinPeqR::new, Math::sin, points);
+    checkTrigonometric(CosPeqR::new, Math::cos, points);
+    checkTrigonometric(TanPeqR::new, Math::tan, points);
+  }
+
+  /**
+   * Ground p, or give it a small interval around a point, and check that r keeps f of the samples.
+   * Reducing p by multiples of 2 * PI in doubles moved r off f(p): sin(100) was pruned to a value
+   * 3e-15 away from Math.sin(100), sin(1e10) 3e-7 away and sin(1e100) to an unrelated value.
+   */
+  private static void checkTrigonometric(
+      BiFunction<FloatVar, FloatVar, Constraint> build, DoubleUnaryOperator f, double[] points) {
+    for (double x : points) {
+      for (double width : new double[] {0, Math.ulp(x) * 8, 0.25}) {
+        Store store = new Store();
+        FloatVar p = new FloatVar(store, "p", x, x + width);
+        FloatVar r = new FloatVar(store, "r", -1e150, 1e150);
+        Constraint c = build.apply(p, r);
+        store.impose(c);
+
+        assertThat(store.consistency()).as("%s", c).isTrue();
+        for (int i = 0; i <= 4; i++) {
+          double value = f.applyAsDouble(width == 0 ? x : x + width * i / 4);
+          assertThat(r.min()).as("%s, sample %s", c, i).isLessThanOrEqualTo(value);
+          assertThat(r.max()).as("%s, sample %s", c, i).isGreaterThanOrEqualTo(value);
+        }
+        if (width == 0) {
+          assertThat(r.max() - r.min()).as("%s", c).isLessThan(1e-12 * (1 + Math.abs(r.min())));
+        }
+      }
+    }
   }
 
   /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */

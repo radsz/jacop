@@ -106,16 +106,6 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
   protected abstract void boundConsistency(Store store);
 
   /**
-   * Normalizes an angle variable to the range [-2*PI, 2*PI].
-   *
-   * @param v the variable to normalize
-   * @return the normalized interval
-   */
-  protected FloatInterval normalize(FloatVar v) {
-    return FloatDomain.normalizeAngle(v.min(), v.max());
-  }
-
-  /**
    * Checks if the constraint is satisfied when both variables are grounded, using the given
    * trigonometric function.
    *
@@ -186,10 +176,13 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
       pMax = nanMax;
     }
 
+    // 2 * k * PI is computed in doubles, so widen the shifted bounds by its error
     double k = Math.floor(p.min() / (2 * FloatDomain.PI));
-    double low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
+    double low = pMin + 2 * k * FloatDomain.PI;
+    low = FloatDomain.down(low - reductionError(low, 2 * FloatDomain.PI));
     k = Math.ceil(p.max() / (2 * FloatDomain.PI));
-    double high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
+    double high = pMax + 2 * k * FloatDomain.PI;
+    high = FloatDomain.up(high + reductionError(high, 2 * FloatDomain.PI));
     FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
     p.domain.in(store.level, p, pDom);
@@ -206,20 +199,38 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
   }
 
   /**
-   * Normalizes p bounds to [-2*PI, 2*PI] if needed and returns the normalized min and max.
+   * Checks whether an interval may contain a point offset + k * period for an integer k. The test
+   * is conservative: a point computed in doubles near a huge bound has a rounding error of a few
+   * ulps of that bound, and every point within that error of the interval counts as contained.
+   * Intervals so far from zero that the error reaches a quarter of the period always may contain
+   * the point.
    *
-   * @return array with [normalizedMin, normalizedMax]
+   * @param min the lower bound of the interval
+   * @param max the upper bound of the interval
+   * @param offset the point for k = 0
+   * @param period the distance between consecutive points
+   * @return false only if no point lies in min..max
    */
-  protected double[] getNormalizedBounds() {
-    double min = p.min();
-    double max = p.max();
-    if (p.min() < -2 * FloatDomain.PI || p.max() > 2 * FloatDomain.PI) {
-      // normalize to -2*PI..2*PI
-      FloatInterval normP = normalize(p);
-      min = normP.min();
-      max = normP.max();
+  static boolean mayContain(double min, double max, double offset, double period) {
+    double k = Math.ceil((min - offset) / period);
+    double point = offset + k * period;
+    double error = reductionError(point, period);
+    if (error >= period / 4) {
+      return true;
     }
-    return new double[] {min, max};
+    // point is the first one at or above min up to the error; the one before it may also be in
+    return point - error <= max || point - period + error >= min;
+  }
+
+  /**
+   * Bounds the error of a point offset + k * period, computed in doubles, near the given value.
+   *
+   * @param value the computed point
+   * @param period the period
+   * @return an upper bound of the distance between the computed and the exact point
+   */
+  static double reductionError(double value, double period) {
+    return 4 * Math.ulp(Math.abs(value) + period);
   }
 
   @Override
