@@ -345,6 +345,27 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(4);
   }
 
+  // The constructor without minBin computes the first bin from items of non-zero weight, but it
+  // started from the first item even when its weight was zero, shifting all bins.
+  @Test
+  void testBinpackingDefaultMinBinIgnoresZeroWeightItems() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", 0, 2), new IntVar(store, "i1", 1, 2), new IntVar(store, "i2", 2, 2)
+    };
+    IntVar[] binLoad = {new IntVar(store, "l1", 0, 0), new IntVar(store, "l2", 4, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 3, 1}));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // bins are 1 and 2: i1 = i2 = 2, i0 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

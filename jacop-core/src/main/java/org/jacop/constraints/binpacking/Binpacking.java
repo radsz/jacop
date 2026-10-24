@@ -199,13 +199,13 @@ public class Binpacking extends Constraint
   }
 
   private static int computeDefaultMinBin(IntVar[] bin, int[] w) {
-    int min = bin[0].min();
+    int min = Integer.MAX_VALUE;
     for (int i = 0; i < bin.length; i++) {
       if (w[i] != 0 && bin[i].min() < min) {
         min = bin[i].min();
       }
     }
-    return min;
+    return min == Integer.MAX_VALUE && bin.length > 0 ? bin[0].min() : min;
   }
 
   /**
