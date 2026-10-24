@@ -74,6 +74,20 @@ public class Stretch extends DecomposedConstraint<Constraint> {
         new Object[] {min},
         new Object[] {max},
         x);
+    if (min.length != values.length || max.length != values.length) {
+      throw new IllegalArgumentException(
+          "Constraint Stretch has "
+              + values.length
+              + " values, "
+              + min.length
+              + " minimal and "
+              + max.length
+              + " maximal lengths; they must be equal.");
+    }
+    if (Arrays.stream(values).distinct().count() != values.length) {
+      throw new IllegalArgumentException(
+          "Constraint Stretch has repeated values " + Arrays.toString(values) + ".");
+    }
 
     this.values = Arrays.copyOf(values, values.length);
     this.min = Arrays.copyOf(min, min.length);
