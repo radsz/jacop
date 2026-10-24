@@ -303,6 +303,28 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(42);
   }
 
+  // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
+  // and threw NegativeArraySizeException or IndexOutOfBoundsException.
+  @Test
+  void testBinpackingNegativeBinNumbers() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", -4, -2),
+      new IntVar(store, "i1", -4, -2),
+      new IntVar(store, "i2", -4, -2)
+    };
+    IntVar[] binLoad = getIntVars(store, "binLoad", 3, 7);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 1}, -4));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    assertThat(noOfSolutions).isEqualTo(27);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

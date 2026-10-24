@@ -236,10 +236,10 @@ public class Binpacking extends Constraint
     if (!pruneLb) {
       return false;
     }
-    BitSet binUsed = new BitSet(load.length + minBinNumber);
+    BitSet binUsed = new BitSet(load.length);
     for (BinItem itemEl : item) {
       if (itemEl.bin().singleton()) {
-        binUsed.set(itemEl.bin().value());
+        binUsed.set(itemEl.bin().value() - minBinNumber);
       }
     }
     if (binUsed.cardinality() == load.length) {
