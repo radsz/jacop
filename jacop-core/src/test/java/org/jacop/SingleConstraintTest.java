@@ -5492,6 +5492,30 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, new IntVar[] {a, b, c})).isZero();
   }
 
+  // MaxSimple and MinSimple reported satisfied() when both arguments were on the right side of the
+  // result, without checking that one of them is equal to it.
+  @Test
+  void testMaxSimpleMinSimpleSatisfied() {
+
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", -2, -1);
+    IntVar m = new IntVar(store, "m", -1, -1);
+    MaxSimple max = new MaxSimple(x1, x2, m);
+    assertThat(max.satisfied()).isFalse();
+    x2.domain.in(store.level, x2, -1, -1);
+    assertThat(max.satisfied()).isTrue();
+
+    store = new Store();
+    x1 = new IntVar(store, "x1", 2, 3);
+    x2 = new IntVar(store, "x2", 2, 3);
+    m = new IntVar(store, "m", 2, 2);
+    MinSimple min = new MinSimple(x1, x2, m);
+    assertThat(min.satisfied()).isFalse();
+    x1.domain.in(store.level, x1, 2, 2);
+    assertThat(min.satisfied()).isTrue();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
