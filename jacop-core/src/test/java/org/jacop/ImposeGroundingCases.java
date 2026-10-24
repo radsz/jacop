@@ -385,7 +385,22 @@ final class ImposeGroundingCases {
             "XplusYlteqZ(x,x,z)",
             r -> domains(r, 2, -3, 4),
             (x, c) -> new XplusYlteqZ(x[0], x[0], x[1]),
-            (t, c) -> t[0] + t[0] <= t[1]));
+            (t, c) -> t[0] + t[0] <= t[1]),
+        primitive(
+            "XplusYlteqZ(x,y,x)",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYlteqZ(x[0], x[1], x[0]),
+            (t, c) -> t[1] <= 0),
+        primitive(
+            "XplusYlteqZ(x,y,y)",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYlteqZ(x[0], x[1], x[1]),
+            (t, c) -> t[0] <= 0),
+        primitive(
+            "XplusYlteqZ(x,x,x)",
+            r -> domains(r, 1, -3, 4),
+            (x, c) -> new XplusYlteqZ(x[0], x[0], x[0]),
+            (t, c) -> t[0] <= 0));
   }
 
   /** A primitive constraint case with a random constant c in -3..3. */
