@@ -4687,6 +4687,23 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void tableWithReusedTuplesImposedDuringSearchRejectsGroundAssignmentOutsideTable() {
+    // Variables fixed at the root to a non-tuple, the table imposed at a search level: the tuples
+    // were not filtered by the constructor, and the empty word left in the bit-set kept the table
+    // from being empty, so all variables being singletons from an older level skipped the check.
+    for (boolean reuse : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -1, 3);
+      IntVar y = new IntVar(store, "y", -1, 3);
+      x.domain.in(store.level, x, 0, 0);
+      y.domain.in(store.level, y, 1, 1);
+      store.setLevel(store.level + 1);
+      store.impose(new Table(new IntVar[] {x, y}, new int[][] {{0, 2}, {1, 1}}, reuse));
+      assertThat(store.consistency()).as("reuse " + reuse).isFalse();
+    }
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
