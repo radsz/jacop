@@ -1750,7 +1750,8 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_increasing(SimpleNode node, boolean strict) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    if (x.length == 2) {
+    // a repeated variable goes to Increasing/Decreasing, which handle it (XltY rejects it)
+    if (x.length == 2 && x[0] != x[1]) {
       if (strict) {
         support.pose(new XltY(x[0], x[1]));
       } else {
@@ -1765,7 +1766,8 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_decreasing(SimpleNode node, boolean strict) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    if (x.length == 2) {
+    // a repeated variable goes to Increasing/Decreasing, which handle it (XltY rejects it)
+    if (x.length == 2 && x[0] != x[1]) {
       if (strict) {
         support.pose(new XltY(x[1], x[0]));
       } else {

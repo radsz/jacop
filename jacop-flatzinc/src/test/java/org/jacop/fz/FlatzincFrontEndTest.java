@@ -100,6 +100,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
+    // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
+    // reported as an error instead of unsatisfiable
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        constraint jacop_strictly_increasing([x,x]);
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+
+    String nonStrict =
+        """
+        var 1..3: x:: output_var;
+        constraint jacop_decreasing([x,x]);
+        solve satisfy;
+        """;
+    assertEquals(Set.of("x = 1;", "x = 2;", "x = 3;"), solveAll(nonStrict));
+  }
+
+  @Test
   void searchOnOutputVariablesAssignsTheOtherVariablesToo() throws IOException {
     // The annotated search labels only x and then the output variables, also only x. For x = 1
     // y, z and w must be pairwise different values in 1..2, which propagation of int_ne does not
