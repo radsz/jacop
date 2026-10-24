@@ -351,6 +351,12 @@ final class ImposeGroundingCases {
             (x, c) -> new XplusCneqZ(x[0], c, x[1]),
             (t, c) -> t[0] + c != t[1]),
         primitive(
+            "XplusCneqZ(x,c,x)",
+            r -> domains(r, 1, -3, 4),
+            // impose() rejects c = 0 here, the model being trivially inconsistent
+            (x, c) -> new XplusCneqZ(x[0], c == 0 ? 1 : c, x[0]),
+            (t, c) -> true),
+        primitive(
             "XplusYeqC",
             r -> domains(r, 2, -3, 4),
             (x, c) -> new XplusYeqC(x[0], x[1], c),
