@@ -37,7 +37,9 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 
@@ -47,16 +49,29 @@ import org.jacop.core.ValueEnumeration;
  * dynamic programming approach for consistency and propagation for knapsack constraints", Annals of
  * Operations Research 118 (2003).
  *
- * <p>For every used capacity it computes the maximal (and, when the maximal profit restricts, the
- * minimal) profit of the items before and after each item. A value of a quantity is kept only if
- * some assignment using it reaches a capacity in the capacity domain with a profit of at least the
- * minimal profit, and some assignment using it reaches a capacity in the capacity domain with a
- * profit of at most the maximal profit. This gives domain consistency for the quantities with
- * respect to the capacity domain and each profit bound, prunes values of the capacity, and gives
- * the bounds of the profit. It costs O(n * C * d) time for n items, a remaining capacity C and
- * quantities with at most d values, and O(n * C) memory, so it is skipped (no pruning) when n * C
- * is above a limit. It is meant to be used together with {@link Knapsack}, which is cheap and
- * propagates in all cases.
+ * <p>For every item it keeps the best profit of the items before it (forward tables) and of the
+ * items after it (backward tables) for every extra weight above the minimal quantities. A value of
+ * a quantity is kept only if some assignment using it reaches a capacity in the capacity domain
+ * with a profit of at least the minimal profit and, when the maximal profit restricts, some such
+ * assignment has a profit of at most the maximal profit. This gives domain consistency for the
+ * quantities with respect to the capacity domain and each profit bound, prunes values of the
+ * capacity, and bounds the profit.
+ *
+ * <p>The propagation is incremental. The tables do not depend on the capacity or the profit, so
+ * they are kept between calls and only the layers after (forward) or before (backward) a changed
+ * item are recomputed. Fixed items cost nothing, and every supported value remembers its support,
+ * so it is checked again in constant time.
+ *
+ * <p>A call costs at most O(n * C * d) time for n items, a remaining capacity C and quantities with
+ * at most d values, and the tables take O(n * C) memory, so the constraint does nothing when n * C
+ * is above a limit. {@link Knapsack} runs it by default next to its cheap relaxation (see {@link
+ * Knapsack#dynamicProgramming(boolean)}), so it rarely needs to be posted on its own. By default it
+ * is adaptive: every call earns a work budget proportional to the number of items (see {@link
+ * #workRatio(double)}), and the tables are updated only when the budget covers the cost of the
+ * previous update, so the constraint spends at most about as much work as the rest of the search
+ * and costs little on instances where {@link Knapsack} alone suffices. {@link #adaptive(boolean)}
+ * with false propagates at every call to a fixpoint. It always propagates when all quantities are
+ * fixed, so it never accepts a wrong solution.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -68,7 +83,23 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
   /** The default limit on the number of items times the remaining capacity. */
   public static final long DEFAULT_LIMIT = 2_000_000L;
 
-  private static final long UNREACHABLE = Long.MIN_VALUE / 4;
+  /** The default share of the search effort the adaptive mode may spend on the tables. */
+  public static final double DEFAULT_WORK_RATIO = 1.0;
+
+  /**
+   * The work, in table cells per item, one call of the constraint earns in adaptive mode. It is
+   * about the cost of propagating {@link Knapsack} and exploring one search node.
+   */
+  static final int WORK_PER_CALL_AND_ITEM = 32;
+
+  /** The largest profit span the tables can hold. */
+  static final long MAX_PROFIT_SPAN = 1L << 28;
+
+  /** The value of an unreachable cell. Sums with it stay below {@link #REACHABLE}. */
+  static final int UNREACHABLE = -(1 << 30);
+
+  /** Every reachable cell is above this value. */
+  static final int REACHABLE = -(1 << 29);
 
   private final IntVar[] quantity;
 
@@ -82,8 +113,22 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
 
   private final long limit;
 
-  /** Best profit for each layer and capacity, reused between calls. */
-  private long[][] forward;
+  private boolean adaptive = true;
+
+  private double workRatio = DEFAULT_WORK_RATIO;
+
+  /** The work, in table cells, the constraint may still spend in adaptive mode. */
+  private double budget;
+
+  /** The work, in table cells, spent so far. */
+  private long work;
+
+  /** The work of the last call which propagated, or -1 before the first one. */
+  private long lastWork = -1;
+
+  private Side maxSide;
+
+  private Side minSide;
 
   /**
    * It constructs the constraint with the default limit.
@@ -154,6 +199,55 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
     setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
   }
 
+  /**
+   * It decides whether the constraint skips calls after calls which prune nothing. It is on by
+   * default. Without it the constraint propagates at every call.
+   *
+   * @param adaptive true to skip calls after calls which prune nothing.
+   * @return this constraint.
+   */
+  public KnapsackDP adaptive(boolean adaptive) {
+    this.adaptive = adaptive;
+    return this;
+  }
+
+  /**
+   * It sets the share of the search effort the adaptive mode may spend on the tables. With 1 the
+   * tables take about as much work as the rest of the search; larger values propagate more often.
+   *
+   * @param workRatio the share, above 0.
+   * @return this constraint.
+   */
+  public KnapsackDP workRatio(double workRatio) {
+    if (!(workRatio > 0)) {
+      throw new IllegalArgumentException("Constraint KnapsackDP requires a work ratio above 0.");
+    }
+    this.workRatio = workRatio;
+    return this;
+  }
+
+  /**
+   * It tells whether posting this constraint next to {@link Knapsack} is safe: its tables for the
+   * current domains fit within the default limit. Posted in the default adaptive mode, it then
+   * spends at most about as much work as the rest of the search, and pays off when the linear
+   * relaxation used by {@link Knapsack} is weak, as for strongly correlated weights and profits.
+   *
+   * @param weights the weight of one unit of each item.
+   * @param quantity the quantity of each item.
+   * @param knapsackCapacity the used capacity.
+   * @return true if the tables fit within {@link #DEFAULT_LIMIT}.
+   */
+  public static boolean fits(int[] weights, IntVar[] quantity, IntVar knapsackCapacity) {
+    long base = 0;
+    long span = 0;
+    for (int i = 0; i < quantity.length; i++) {
+      base += (long) quantity[i].min() * weights[i];
+      span += (long) (quantity[i].max() - quantity[i].min()) * weights[i];
+    }
+    long capacity = Math.min(knapsackCapacity.max() - base, span);
+    return capacity >= 0 && (quantity.length + 1) * (capacity + 1) <= DEFAULT_LIMIT;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
@@ -161,10 +255,60 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
 
   @Override
   public void consistency(Store store) {
+    propagateIfWorthIt(store);
+  }
+
+  /**
+   * It propagates to a fixpoint unless the adaptive mode skips this call.
+   *
+   * @param store the constraint store.
+   * @return true if a domain was pruned.
+   */
+  boolean propagateIfWorthIt(Store store) {
+
+    boolean allFixed = true;
+    for (IntVar q : quantity) {
+      if (!q.singleton()) {
+        allFixed = false;
+        break;
+      }
+    }
+
+    if (adaptive && !allFixed) {
+      budget += workRatio * WORK_PER_CALL_AND_ITEM * quantity.length;
+      if (budget < (lastWork < 0 ? fullWork() : lastWork)) {
+        return false;
+      }
+    }
+
+    return propagate(store);
+  }
+
+  private boolean propagate(Store store) {
+    long before = work;
+    boolean pruned = false;
     do {
       store.propagationHasOccurred = false;
       singlePass(store);
+      pruned |= store.propagationHasOccurred;
     } while (store.propagationHasOccurred);
+    lastWork = work - before;
+    budget -= lastWork;
+    return pruned;
+  }
+
+  /** It estimates the work of computing all the tables, for the first call. */
+  private long fullWork() {
+    long base = 0;
+    long span = 0;
+    long values = 0;
+    for (int i = 0; i < quantity.length; i++) {
+      base += (long) quantity[i].min() * weights[i];
+      span += (long) (quantity[i].max() - quantity[i].min()) * weights[i];
+      values += quantity[i].getSize() + 2;
+    }
+    long capacity = Math.max(0, Math.min(knapsackCapacity.max() - base, span));
+    return 2 * values * (capacity + 1);
   }
 
   private void singlePass(Store store) {
@@ -186,7 +330,7 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
       throw Store.failException;
     }
     long capacity = Math.min(capacityMax, spanWeight);
-    if ((n + 1) * (capacity + 1) > limit) {
+    if ((n + 1) * (capacity + 1) > limit || spanProfit > MAX_PROFIT_SPAN) {
       return;
     }
     int c = (int) capacity;
@@ -194,40 +338,55 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
     long profitMin = knapsackProfit.min() - baseProfit;
     long profitMax = knapsackProfit.max() - baseProfit;
 
-    // The maximal profit side, used against the minimal profit.
-    IntervalDomain[] supportedMax = new IntervalDomain[n];
-    long[] totalsMax = new long[c + 1];
-    run(c, baseWeight, profitMin, false, supportedMax, totalsMax);
-
-    // The minimal profit side, used against the maximal profit, only when it can restrict.
-    IntervalDomain[] supportedMin = null;
-    long[] totalsMin = null;
-    if (profitMax < spanProfit) {
-      supportedMin = new IntervalDomain[n];
-      totalsMin = new long[c + 1];
-      run(c, baseWeight, -profitMax, true, supportedMin, totalsMin);
+    if (maxSide == null) {
+      maxSide = new Side(false);
     }
+    maxSide.updateForward(c);
 
-    long bestProfit = UNREACHABLE;
-    long worstProfit = Long.MAX_VALUE;
+    // The capacities reachable with enough profit, and the best profit.
+    int[] last = maxSide.forward[n];
     IntervalDomain capacities = new IntervalDomain();
+    long bestProfit = Long.MIN_VALUE;
     for (int x = 0; x <= c; x++) {
-      long best = totalsMax[x];
-      if (best == UNREACHABLE
-          || best < profitMin
-          || !knapsackCapacity.domain.contains((int) (baseWeight + x))) {
-        continue;
+      if (last[x] > REACHABLE
+          && last[x] >= profitMin
+          && knapsackCapacity.domain.contains((int) (baseWeight + x))) {
+        capacities.unionAdapt((int) (baseWeight + x), (int) (baseWeight + x));
+        bestProfit = Math.max(bestProfit, last[x]);
       }
-      long worst = totalsMin == null ? 0 : -totalsMin[x];
-      if (totalsMin != null && (totalsMin[x] == UNREACHABLE || worst > profitMax)) {
-        continue;
-      }
-      capacities.unionAdapt((int) (baseWeight + x), (int) (baseWeight + x));
-      bestProfit = Math.max(bestProfit, best);
-      worstProfit = Math.min(worstProfit, totalsMin == null ? 0 : worst);
     }
     if (capacities.isEmpty()) {
       throw Store.failException;
+    }
+
+    // The minimal profit side bounds the profit from below and, when the maximal profit restricts,
+    // prunes the capacity. It prunes the quantities only when some assignment can exceed the
+    // maximal profit.
+    boolean useMin = adaptive ? profitMax < bestProfit : profitMax < spanProfit;
+    long worstProfit = 0;
+    if (useMin) {
+      if (minSide == null) {
+        minSide = new Side(true);
+      }
+      minSide.updateForward(c);
+      int[] lowest = minSide.forward[n];
+      IntervalDomain both = new IntervalDomain();
+      bestProfit = Long.MIN_VALUE;
+      worstProfit = Long.MAX_VALUE;
+      for (int x = 0; x <= c; x++) {
+        if (capacities.contains((int) (baseWeight + x))
+            && lowest[x] > REACHABLE
+            && -lowest[x] <= profitMax) {
+          both.unionAdapt((int) (baseWeight + x), (int) (baseWeight + x));
+          bestProfit = Math.max(bestProfit, last[x]);
+          worstProfit = Math.min(worstProfit, -lowest[x]);
+        }
+      }
+      if (both.isEmpty()) {
+        throw Store.failException;
+      }
+      capacities = both;
+      useMin = profitMax < bestProfit;
     }
 
     knapsackCapacity.domain.in(store.level, knapsackCapacity, capacities);
@@ -237,103 +396,355 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
         Constraint.long2int(baseProfit + Math.max(0, worstProfit)),
         Constraint.long2int(baseProfit + bestProfit));
 
+    // The supports are checked against the pruned capacity domain.
+    maxSide.updateBackward(c);
+    if (useMin) {
+      minSide.updateBackward(c);
+    }
+    Window window = new Window(knapsackCapacity.dom(), baseWeight, c);
     for (int i = 0; i < n; i++) {
-      IntervalDomain supported = supportedMax[i];
-      if (supportedMin != null) {
-        supported = (IntervalDomain) supported.intersect(supportedMin[i]);
+      if (quantity[i].singleton()) {
+        continue;
+      }
+      IntervalDomain supported = maxSide.supported(i, profitMin, window, c);
+      if (useMin && !supported.isEmpty()) {
+        supported =
+            (IntervalDomain) supported.intersect(minSide.supported(i, -profitMax, window, c));
       }
       quantity[i].domain.in(store.level, quantity[i], supported);
     }
   }
 
-  /**
-   * It runs the dynamic program for the maximal profit (or, with negated profits, for the minimal
-   * profit).
-   *
-   * @param c the remaining capacity.
-   * @param baseWeight the weight of the minimal quantities.
-   * @param threshold the profit (relative to the minimal quantities) that must be reached.
-   * @param negate true to minimize the profit.
-   * @param supported the supported values of each quantity, filled by this method.
-   * @param totals the best profit for each used capacity over all items, filled by this method.
-   */
-  private void run(
-      int c,
-      long baseWeight,
-      long threshold,
-      boolean negate,
-      IntervalDomain[] supported,
-      long[] totals) {
+  /** The relative capacities allowed by the capacity domain, as intervals of extra weight. */
+  private static final class Window {
 
-    int n = quantity.length;
-    if (forward == null || forward.length < n + 1 || forward[0].length < c + 1) {
-      forward = new long[n + 1][c + 1];
+    final int[] low;
+
+    final int[] high;
+
+    final IntDomain domain;
+
+    final long base;
+
+    Window(IntDomain domain, long base, int c) {
+      this.domain = domain;
+      this.base = base;
+      int count = 0;
+      int[] lows = new int[domain.noIntervals()];
+      int[] highs = new int[lows.length];
+      for (IntervalEnumeration e = domain.intervalEnumeration(); e.hasMoreElements(); ) {
+        Interval interval = e.nextElement();
+        long from = Math.max(0, interval.min() - base);
+        long to = Math.min(c, interval.max() - base);
+        if (from <= to) {
+          lows[count] = (int) from;
+          highs[count] = (int) to;
+          count++;
+        }
+      }
+      low = Arrays.copyOf(lows, count);
+      high = Arrays.copyOf(highs, count);
     }
 
-    long[] first = forward[0];
-    Arrays.fill(first, 0, c + 1, UNREACHABLE);
-    first[0] = 0;
-    for (int i = 0; i < n; i++) {
-      long[] from = forward[i];
-      long[] to = forward[i + 1];
-      Arrays.fill(to, 0, c + 1, UNREACHABLE);
-      int min = quantity[i].min();
-      int profit = negate ? -profits[i] : profits[i];
-      for (ValueEnumeration e = quantity[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int units = e.nextElement() - min;
-        long dw = (long) units * weights[i];
-        if (dw > c) {
-          continue;
-        }
-        long dp = (long) units * profit;
-        for (int x = 0; x + dw <= c; x++) {
-          if (from[x] != UNREACHABLE && from[x] + dp > to[x + (int) dw]) {
-            to[x + (int) dw] = from[x] + dp;
+    boolean contains(long extra) {
+      return domain.contains((int) (base + extra));
+    }
+  }
+
+  /**
+   * The tables for the maximal profit, or with negated profits for the minimal profit. The forward
+   * table of layer k holds, for every extra weight of the items before item k, the best extra
+   * profit; the backward table of layer k does the same for item k and the items after it. Extra
+   * weights and profits are counted above the minimal quantities, so a layer stays valid as long as
+   * the quantities it covers do not change and it covers the remaining capacity.
+   */
+  private final class Side {
+
+    private final boolean negate;
+
+    /** The tables used by each layer; a fixed item shares the table of its neighbour. */
+    final int[][] forward;
+
+    final int[][] backward;
+
+    /** The tables owned by each layer. */
+    private final int[][] forwardOwn;
+
+    private final int[][] backwardOwn;
+
+    /** The capacity each layer covers, or -1 if the layer must be computed. */
+    private final int[] forwardCapacity;
+
+    private final int[] backwardCapacity;
+
+    /** The domain of the item each layer was computed with. */
+    private final IntDomain[] forwardDomain;
+
+    private final IntDomain[] backwardDomain;
+
+    /** The last support of each value: its value, extra weight before, and extra weight after. */
+    private final int[][] supportValue;
+
+    private final int[][] supportBefore;
+
+    private final int[][] supportAfter;
+
+    private int[] windowBest;
+
+    private int[] prefixMax;
+
+    private int[] blockPrefix;
+
+    private int[] blockSuffix;
+
+    Side(boolean negate) {
+      this.negate = negate;
+      int n = quantity.length;
+      forward = new int[n + 1][];
+      backward = new int[n + 1][];
+      forwardOwn = new int[n + 1][];
+      backwardOwn = new int[n + 1][];
+      forwardCapacity = new int[n + 1];
+      backwardCapacity = new int[n + 1];
+      Arrays.fill(forwardCapacity, -1);
+      Arrays.fill(backwardCapacity, -1);
+      forwardDomain = new IntDomain[n];
+      backwardDomain = new IntDomain[n];
+      supportValue = new int[n][];
+      supportBefore = new int[n][];
+      supportAfter = new int[n][];
+    }
+
+    /**
+     * It brings the forward tables up to date for the remaining capacity c, recomputing only the
+     * layers after the first changed item.
+     */
+    void updateForward(int c) {
+      int n = quantity.length;
+
+      int from = n + 1;
+      if (forwardCapacity[0] < c) {
+        from = 0;
+      } else {
+        for (int k = 1; k <= n; k++) {
+          if (forwardCapacity[k] < c || !forwardDomain[k - 1].eq(quantity[k - 1].dom())) {
+            from = k;
+            break;
           }
         }
       }
+      if (from == 0) {
+        int[] first = own(forwardOwn, 0, c);
+        Arrays.fill(first, 0, c + 1, UNREACHABLE);
+        first[0] = 0;
+        forward[0] = first;
+        forwardCapacity[0] = c;
+        from = 1;
+      }
+      for (int k = from; k <= n; k++) {
+        int item = k - 1;
+        forward[k] = layer(forwardOwn, k, forward[k - 1], item, c);
+        forwardCapacity[k] = c;
+        forwardDomain[item] = quantity[item].dom().cloneLight();
+      }
     }
-    System.arraycopy(forward[n], 0, totals, 0, c + 1);
 
-    long[] backward = new long[c + 1];
-    for (int x = 0; x <= c; x++) {
-      backward[x] = knapsackCapacity.domain.contains((int) (baseWeight + x)) ? 0 : UNREACHABLE;
+    /** It brings the backward tables up to date, as {@link #updateForward} does. */
+    void updateBackward(int c) {
+      int n = quantity.length;
+      int to = -1;
+      if (backwardCapacity[n] < c) {
+        to = n;
+      } else {
+        for (int k = n - 1; k >= 0; k--) {
+          if (backwardCapacity[k] < c || !backwardDomain[k].eq(quantity[k].dom())) {
+            to = k;
+            break;
+          }
+        }
+      }
+      if (to == n) {
+        int[] last = own(backwardOwn, n, c);
+        Arrays.fill(last, 0, c + 1, UNREACHABLE);
+        last[0] = 0;
+        backward[n] = last;
+        backwardCapacity[n] = c;
+        to = n - 1;
+      }
+      for (int k = to; k >= 0; k--) {
+        backward[k] = layer(backwardOwn, k, backward[k + 1], k, c);
+        backwardCapacity[k] = c;
+        backwardDomain[k] = quantity[k].dom().cloneLight();
+      }
     }
-    long[] next = new long[c + 1];
-    for (int i = n - 1; i >= 0; i--) {
-      long[] before = forward[i];
+
+    private int[] own(int[][] tables, int k, int c) {
+      if (tables[k] == null || tables[k].length < c + 1) {
+        tables[k] = new int[c + 1];
+      }
+      return tables[k];
+    }
+
+    /** It adds one item to the table of the previous layer. */
+    private int[] layer(int[][] tables, int k, int[] previous, int item, int c) {
+      IntVar q = quantity[item];
+      if (q.singleton()) {
+        return previous;
+      }
+      int[] next = own(tables, k, c);
+      work += (long) (c + 1) * q.getSize();
       Arrays.fill(next, 0, c + 1, UNREACHABLE);
-      IntervalDomain values = new IntervalDomain();
-      int min = quantity[i].min();
-      int profit = negate ? -profits[i] : profits[i];
-      for (ValueEnumeration e = quantity[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int min = q.min();
+      int profit = negate ? -profits[item] : profits[item];
+      for (ValueEnumeration e = q.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int units = e.nextElement() - min;
+        long weight = (long) units * weights[item];
+        if (weight > c) {
+          break;
+        }
+        int dw = (int) weight;
+        int dp = units * profit;
+        for (int x = 0, y = dw; y <= c; x++, y++) {
+          next[y] = Math.max(next[y], previous[x] + dp);
+        }
+      }
+      return next;
+    }
+
+    /**
+     * It returns the values of a quantity which have a support with an extra profit of at least the
+     * threshold and a capacity in the window. It first checks the last support of each value.
+     */
+    IntervalDomain supported(int item, long threshold, Window window, int c) {
+      IntVar q = quantity[item];
+      int[] before = forward[item];
+      int[] after = backward[item + 1];
+      int min = q.min();
+      int profit = negate ? -profits[item] : profits[item];
+
+      int size = q.getSize();
+      if (supportValue[item] == null || supportValue[item].length < size) {
+        supportValue[item] = new int[size];
+        supportBefore[item] = new int[size];
+        supportAfter[item] = new int[size];
+        Arrays.fill(supportBefore[item], -1);
+      }
+      int[] values = supportValue[item];
+      int[] xs = supportBefore[item];
+      int[] ts = supportAfter[item];
+
+      IntervalDomain result = new IntervalDomain();
+      boolean windowReady = false;
+      int slot = 0;
+      for (ValueEnumeration e = q.domain.valueEnumeration(); e.hasMoreElements(); slot++) {
         int value = e.nextElement();
-        long dw = (long) (value - min) * weights[i];
-        if (dw > c) {
+        long weight = (long) (value - min) * weights[item];
+        if (weight > c) {
+          xs[slot] = -1;
           continue;
         }
+        int dw = (int) weight;
         long dp = (long) (value - min) * profit;
-        boolean support = false;
-        for (int x = 0; x + dw <= c; x++) {
-          long after = backward[x + (int) dw];
-          if (after == UNREACHABLE) {
+
+        if (values[slot] == value && xs[slot] >= 0) {
+          int x = xs[slot];
+          int t = ts[slot];
+          if (x <= c
+              && t <= c
+              && (long) x + dw + t <= c
+              && before[x] > REACHABLE
+              && after[t] > REACHABLE
+              && before[x] + dp + after[t] >= threshold
+              && window.contains((long) x + dw + t)) {
+            result.unionAdapt(value, value);
             continue;
           }
-          if (after + dp > next[x]) {
-            next[x] = after + dp;
-          }
-          if (!support && before[x] != UNREACHABLE && before[x] + dp + after >= threshold) {
-            support = true;
-          }
         }
-        if (support) {
-          values.unionAdapt(value, value);
+
+        if (!windowReady) {
+          computeWindow(after, window, c);
+          windowReady = true;
+        }
+        values[slot] = value;
+        xs[slot] = -1;
+        for (int x = 0, y = dw; y <= c; x++, y++) {
+          int best = windowBest[y];
+          if (best > REACHABLE && before[x] > REACHABLE && before[x] + dp + best >= threshold) {
+            xs[slot] = x;
+            ts[slot] = findAfter(after, window, y);
+            result.unionAdapt(value, value);
+            break;
+          }
         }
       }
-      supported[i] = values;
-      long[] swap = backward;
-      backward = next;
-      next = swap;
+      return result;
+    }
+
+    /**
+     * For every extra weight y used by the items up to the checked one, it computes the best extra
+     * profit of the items after it such that the total extra weight is in the window. For an
+     * interval [a, b] of the window and y at least a, the allowed extra weights after the item are
+     * [0, b - y], a prefix maximum. For y below a they are [a - y, b - y], a sliding window of
+     * fixed length, computed with the block decomposition of van Herk and Gil-Werman.
+     */
+    private void computeWindow(int[] after, Window window, int c) {
+      if (windowBest == null || windowBest.length < c + 1) {
+        windowBest = new int[c + 1];
+        prefixMax = new int[c + 1];
+        blockPrefix = new int[c + 1];
+        blockSuffix = new int[c + 1];
+      }
+      Arrays.fill(windowBest, 0, c + 1, UNREACHABLE);
+      work += 4L * (c + 1);
+      int running = UNREACHABLE;
+      for (int t = 0; t <= c; t++) {
+        running = Math.max(running, after[t]);
+        prefixMax[t] = running;
+      }
+      for (int i = 0; i < window.low.length; i++) {
+        int a = window.low[i];
+        int b = window.high[i];
+        for (int y = a; y <= b; y++) {
+          windowBest[y] = Math.max(windowBest[y], prefixMax[b - y]);
+        }
+        if (a == 0) {
+          continue;
+        }
+        int length = b - a + 1;
+        for (int start = 0; start <= b; start += length) {
+          int end = Math.min(b, start + length - 1);
+          int value = UNREACHABLE;
+          for (int t = start; t <= end; t++) {
+            value = Math.max(value, after[t]);
+            blockPrefix[t] = value;
+          }
+          value = UNREACHABLE;
+          for (int t = end; t >= start; t--) {
+            value = Math.max(value, after[t]);
+            blockSuffix[t] = value;
+          }
+        }
+        for (int y = 0; y < a; y++) {
+          int best = Math.max(blockSuffix[a - y], blockPrefix[b - y]);
+          windowBest[y] = Math.max(windowBest[y], best);
+        }
+      }
+    }
+
+    /** It finds an extra weight after the checked item which gives the best profit for y. */
+    private int findAfter(int[] after, Window window, int y) {
+      for (int i = 0; i < window.low.length; i++) {
+        int b = window.high[i];
+        if (y > b) {
+          continue;
+        }
+        for (int t = Math.max(0, window.low[i] - y); t <= b - y; t++) {
+          if (after[t] == windowBest[y]) {
+            return t;
+          }
+        }
+      }
+      throw new IllegalStateException("No extra weight gives the best profit.");
     }
   }
 

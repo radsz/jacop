@@ -80,6 +80,49 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
+    // x1 and x3 have no common value, so b must be false before any search. Three variables
+    // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
+    // needed a failed decision b = true.
+    String fzn =
+        """
+        var 1..1: x1;
+        var 1..2: x2;
+        var 2..2: x3;
+        var bool: b:: output_var;
+        constraint jacop_all_equal_int_reif([x1,x2,x3],b);
+        solve :: bool_search([b],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("b = false;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
+  void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
+    // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
+    // reported as an error instead of unsatisfiable
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        constraint jacop_strictly_increasing([x,x]);
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+
+    String nonStrict =
+        """
+        var 1..3: x:: output_var;
+        constraint jacop_decreasing([x,x]);
+        solve satisfy;
+        """;
+    assertEquals(Set.of("x = 1;", "x = 2;", "x = 3;"), solveAll(nonStrict));
+  }
+
+  @Test
   void searchOnOutputVariablesAssignsTheOtherVariablesToo() throws IOException {
     // The annotated search labels only x and then the output variables, also only x. For x = 1
     // y, z and w must be pairwise different values in 1..2, which propagation of int_ne does not
@@ -355,6 +398,39 @@ class FlatzincFrontEndTest {
     String[] out = run(model.formatted("satisfy"), "-a");
     assertEquals("", out[0]);
     assertTrue(out[1].contains("cannot be used in restart search of a satisfaction problem"));
+  }
+
+  @Test
+  void allSolutionsSearchStoppedByTimeOutIsNotReportedComplete() throws IOException {
+    // An all-solutions satisfaction search that hit the time limit after finding solutions
+    // printed ========== as if all 13! circuits had been enumerated.
+    String model =
+        """
+        array [1..14] of var 1..14: x;
+        constraint jacop_circuit(x);
+        solve :: int_search(x,input_order,indomain_min,complete) satisfy;
+        """;
+    String out = run(model, "-a", "-t", "100")[0];
+    assertTrue(out.contains("----------"), out.lines().limit(5).toList().toString());
+    assertTrue(!out.contains("=========="), "search reported complete after a time-out");
+    assertTrue(out.contains("=====TIME-OUT====="), "no time-out reported");
+  }
+
+  @Test
+  void sequenceSearchStatisticsCountReportedSolutions() throws IOException {
+    // Each search of a seq_search counted the solutions of its own phase and the statistics
+    // summed them: 4 solutions were reported as solutions=22.
+    String model =
+        """
+        array [1..2] of var 1..2: x;
+        array [1..2] of var bool: b;
+        constraint int_ne(x[1],x[2]);
+        constraint bool_xor(b[1],b[2],true);
+        solve :: seq_search([int_search(x,input_order,indomain_min,complete),bool_search(b,input_order,indomain_min,complete)]) satisfy;
+        """;
+    String out = run(model, "-a", "-s")[0];
+    assertEquals(4, out.lines().filter(l -> l.equals("----------")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: solutions=4\n"), out);
   }
 
   @Test

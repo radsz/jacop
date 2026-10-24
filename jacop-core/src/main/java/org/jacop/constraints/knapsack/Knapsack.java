@@ -159,6 +159,12 @@ public class Knapsack extends Constraint
   /** It counts the number of time the consistency function has been executed. */
   private int countConsistency;
 
+  /** Whether the dynamic program is used next to the relaxation. */
+  private boolean useDynamicProgramming = true;
+
+  /** The dynamic program propagating with this constraint, or null when it is not used. */
+  private KnapsackDP dynamicProgram;
+
   /** It counts the number of times the queueVariable function has been executed. */
   private int countQueueVariable;
 
@@ -257,6 +263,22 @@ public class Knapsack extends Constraint
     this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));
 
     setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
+  }
+
+  /**
+   * It decides whether the constraint also propagates with the dynamic program of {@link
+   * KnapsackDP}, which is on by default. The dynamic program is domain consistent on the
+   * quantities, but costs time proportional to the number of items times the remaining capacity, so
+   * it runs only when its tables fit within {@link KnapsackDP#DEFAULT_LIMIT} and, during search,
+   * only as often as its work budget allows (see {@link KnapsackDP}). It must be set before the
+   * constraint is imposed.
+   *
+   * @param use true to also propagate with the dynamic program.
+   * @return this constraint.
+   */
+  public Knapsack dynamicProgramming(boolean use) {
+    this.useDynamicProgramming = use;
+    return this;
   }
 
   @Override
@@ -478,12 +500,16 @@ public class Knapsack extends Constraint
     // pruning, and the store does not re-queue this constraint for its own changes. Repeat a full
     // pass until a pass changes nothing.
     do {
-      store.propagationHasOccurred = false;
-      singlePass(store);
-      if (store.propagationHasOccurred) {
-        setFlagsForCapacityOrProfit();
-      }
-    } while (store.propagationHasOccurred);
+      do {
+        store.propagationHasOccurred = false;
+        singlePass(store);
+        if (store.propagationHasOccurred) {
+          setFlagsForCapacityOrProfit();
+        }
+      } while (store.propagationHasOccurred);
+      // The dynamic program reports its own pruning; the changes reach this constraint through
+      // queueVariable, so another pass of the relaxation runs only when it pruned.
+    } while (dynamicProgram != null && dynamicProgram.propagateIfWorthIt(store));
   }
 
   private void singlePass(Store store) {
@@ -802,6 +828,16 @@ public class Knapsack extends Constraint
 
     hashForUpdate = new HashMap<>();
 
+    if (useDynamicProgramming) {
+      dynamicProgram =
+          new KnapsackDP(
+              Arrays.stream(items).mapToInt(KnapsackItem::getProfit).toArray(),
+              Arrays.stream(items).mapToInt(KnapsackItem::getWeight).toArray(),
+              Arrays.stream(items).map(KnapsackItem::getQuantity).toArray(IntVar[]::new),
+              knapsackCapacity,
+              knapsackProfit);
+    }
+
     /* We sort it with a sorting method */
     Arrays.sort(items);
 
@@ -953,7 +989,8 @@ public class Knapsack extends Constraint
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // The dynamic program also prunes values inside the domains, so it is called on any change.
+    return useDynamicProgramming ? IntDomain.ANY : IntDomain.BOUND;
   }
 
   @Override

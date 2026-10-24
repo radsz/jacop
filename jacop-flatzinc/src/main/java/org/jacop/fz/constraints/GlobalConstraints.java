@@ -45,7 +45,6 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
-import org.jacop.constraints.And;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -1756,7 +1755,8 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_increasing(SimpleNode node, boolean strict) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    if (x.length == 2) {
+    // a repeated variable goes to Increasing/Decreasing, which handle it (XltY rejects it)
+    if (x.length == 2 && x[0] != x[1]) {
       if (strict) {
         support.pose(new XltY(x[0], x[1]));
       } else {
@@ -1771,7 +1771,8 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_decreasing(SimpleNode node, boolean strict) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-    if (x.length == 2) {
+    // a repeated variable goes to Increasing/Decreasing, which handle it (XltY rejects it)
+    if (x.length == 2 && x[0] != x[1]) {
       if (strict) {
         support.pose(new XltY(x[1], x[0]));
       } else {
@@ -2154,9 +2155,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
     if (x.length == 2) {
       support.pose(new Reified(new XeqY(x[0], x[1]), b));
-    } else if (x.length == 3) {
-      support.pose(
-          new Reified(new And(new XeqY[] {new XeqY(x[0], x[1]), new XeqY(x[1], x[2])}), b));
     } else {
       support.pose(new Reified(new AllEqual(x), b));
     }

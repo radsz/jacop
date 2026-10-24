@@ -57,6 +57,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
@@ -69,10 +70,13 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
@@ -82,6 +86,7 @@ import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -92,6 +97,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -1015,6 +1021,65 @@ class SingleConstraintTest extends TestHelper {
             .isEqualTo(result[1]);
       }
     }
+  }
+
+  @Test
+  void circuitFailsWhenGraphIsNotStronglyConnected() {
+    // No successor domain contains 1 (first graph), or nodes 3..6 never lead back to 1 or 2
+    // (second graph), so no Hamiltonian circuit exists. The SCC check only failed when the DFS
+    // from node 1 had not yet visited all nodes at the moment it closed a component; here the
+    // component without node 1 is closed after all nodes have been visited.
+    int[][][] graphs = {
+      {{2, 3}, {3, 4, 5}, {2, 4, 5}, {2, 3, 5}, {2, 3, 4}},
+      {{2}, {1, 3}, {4, 5, 6}, {3, 5, 6}, {3, 4, 6}, {3, 4, 5}}
+    };
+    for (int[][] graph : graphs) {
+      assertThat(circuitSolutions(graph, new int[graph.length], 0, false)).isZero();
+      Store store = new Store();
+      IntVar[] x = new IntVar[graph.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + (i + 1));
+        for (int v : graph[i]) {
+          x[i].addDom(v, v);
+        }
+      }
+      store.impose(new Circuit(x));
+      assertThat(store.consistency()).as(Arrays.deepToString(graph)).isFalse();
+    }
+  }
+
+  @Test
+  void circuitOnLargeGraphDoesNotOverflowTheStack() throws InterruptedException {
+    // The SCC check was a recursive DFS, one Java frame per node, and threw StackOverflowError
+    // for circuits of a few ten thousand nodes with the default thread stack. Every node i may go
+    // to i - 1 or i + 1 (cyclic). Run on a thread with a 512 KB stack, since tests use -Xss100m.
+    int n = 100_000;
+    boolean[] result = new boolean[1];
+    Throwable[] error = new Throwable[1];
+    Thread thread =
+        new Thread(
+            null,
+            () -> {
+              try {
+                Store store = new Store();
+                IntVar[] x = new IntVar[n];
+                for (int i = 0; i < n; i++) {
+                  x[i] = new IntVar(store, "x" + i);
+                  x[i].addDom((i + 1) % n + 1, (i + 1) % n + 1);
+                  x[i].addDom((i + n - 1) % n + 1, (i + n - 1) % n + 1);
+                }
+                store.impose(new Circuit(x));
+                result[0] = store.consistency();
+              } catch (Throwable t) {
+                error[0] = t;
+              }
+            },
+            "small-stack",
+            512 * 1024);
+    thread.start();
+    thread.join();
+    assertThat(error[0]).isNull();
+    assertThat(result[0]).isTrue();
   }
 
   @Test
@@ -2288,7 +2353,8 @@ class SingleConstraintTest extends TestHelper {
     }
     int n = profits.length;
     copyStore.impose(
-        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+            .dynamicProgramming(false));
     return copyStore.consistency() ? domainsOf(copies) : "FAIL";
   }
 
@@ -2329,7 +2395,8 @@ class SingleConstraintTest extends TestHelper {
     IntVar profit = vars[weights.length + 1];
     store.impose(
         new Knapsack(
-            profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit));
+                profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit)
+            .dynamicProgramming(false));
     assertThat(store.consistency()).isTrue();
 
     store.setLevel(store.level + 1);
@@ -2369,7 +2436,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       checkSupportsAndFixpointAlongRandomWalk(
           instance,
           store,
@@ -2608,7 +2677,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       if (!store.consistency()) {
         continue;
       }
@@ -2675,7 +2746,9 @@ class SingleConstraintTest extends TestHelper {
               + " "
               + domainsOf(vars);
       List<int[]> solutions = knapsackSolutions(profits, weights, vars);
-      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
       boolean consistent = store.consistency();
       assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
       if (!consistent) {
@@ -2724,7 +2797,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
       checkSupportsAndFixpointAlongRandomWalk(
           instance,
           store,
@@ -2738,11 +2813,70 @@ class SingleConstraintTest extends TestHelper {
               copies[i].addDom(vars[i].dom());
             }
             copyStore.impose(
-                new KnapsackDP(
-                    profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+                new KnapsackDP(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+                    .adaptive(false));
             return copyStore.consistency() ? domainsOf(copies) : "FAIL";
           },
           random);
+    }
+  }
+
+  @Test
+  void knapsackDpAdaptiveFindsAllSolutions() {
+    // The adaptive mode skips calls, so it is checked through search: alone and inside Knapsack it
+    // must find exactly the solutions of the brute force.
+    Random random = new Random(17);
+    for (int run = 0; run < 300; run++) {
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      int[] maxima = new int[n];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(8);
+        profits[i] = random.nextInt(9);
+        maxima[i] = 1 + random.nextInt(2);
+        weightSum += weights[i] * maxima[i];
+        profitSum += profits[i] * maxima[i];
+      }
+      int capacityMin = random.nextInt(weightSum / 2 + 1);
+      int profitMin = random.nextInt(profitSum / 2 + 1);
+      long expected = -1;
+      for (boolean withKnapsack : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] vars = new IntVar[n + 2];
+        for (int i = 0; i < n; i++) {
+          vars[i] = new IntVar(store, "q" + i, 0, maxima[i]);
+        }
+        vars[n] = new IntVar(store, "capacity", capacityMin, weightSum);
+        vars[n + 1] = new IntVar(store, "profit", profitMin, profitSum);
+        if (expected < 0) {
+          expected = knapsackSolutions(profits, weights, vars).size();
+        }
+        IntVar[] q = Arrays.copyOf(vars, n);
+        if (withKnapsack
+            && Arrays.stream(weights).allMatch(w -> w > 0)
+            && Arrays.stream(profits).allMatch(p -> p > 0)) {
+          store.impose(new Knapsack(profits, weights, q, vars[n], vars[n + 1]));
+        } else {
+          store.impose(new KnapsackDP(profits, weights, q, vars[n], vars[n + 1]));
+        }
+        long found = 0;
+        if (store.consistency()) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.setPrintInfo(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+          found = search.getSolutionListener().solutionsNo();
+        }
+        assertThat(found)
+            .as(
+                "run %d weights %s profits %s",
+                run, Arrays.toString(weights), Arrays.toString(profits))
+            .isEqualTo(expected);
+      }
     }
   }
 
@@ -3061,6 +3195,95 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementVariableRemovesEveryPositionOfRepeatedVariable() {
+    // A variable repeated on the list kept its first position when it became disjoint from the
+    // value, so the index could still select it.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new ElementVariable(index, new IntVar[] {y, y, z}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 0, 0);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.singleton(3)).isTrue();
+  }
+
+  @Test
+  void elementVariableStaysAttachedToIndexOnTheList() {
+    // The index is also on the list, at a position it cannot take. Removing that position
+    // detached the index from the constraint, which then ignored the index being fixed.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 1);
+    index.addDom(3, 3);
+    IntVar value = new IntVar(store, "value", 5, 6);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    IntVar b = new IntVar(store, "b", 5, 7);
+    store.impose(new ElementVariable(index, new IntVar[] {a, index, b}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 3, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isEqualTo(6);
+  }
+
+  @Test
+  void elementIntegerWithoutDuplicateCheck() {
+    // The constructor option checkDuplicates = false left the duplicate structures null, so the
+    // first consistency call threw a NullPointerException.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 4);
+    IntVar value = new IntVar(store, "value", 0, 9);
+    store.impose(new ElementInteger(index, new int[] {3, 1, 3, 7}, value, 0, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{1, 3, 7}");
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {index, value});
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  @Test
+  void elementVariableLooksForSupportsWithinIndex() {
+    // A value that lost its support was given a new support at a position the index can no
+    // longer take, so it stayed in the value domain.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 3);
+    IntVar a = new IntVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 1, 3);
+    IntVar c = new IntVar(store, "c", 1, 1);
+    c.addDom(3, 3);
+    store.impose(new ElementVariable(index, new IntVar[] {a, b, c}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 1);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(2)).isFalse();
+  }
+
+  @Test
+  void elementBoolRejectsNonBooleanList() {
+    // Positions holding a value other than 0 or 1 were never removed from the index, so with
+    // list [2, 0] and value in 0..1 the solution index = 1, value = 0 was accepted.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 2);
+    IntVar value = new IntVar(store, "value", 0, 1);
+    assertThatThrownBy(() -> new ElementBool(index, new int[] {2, 0}, value, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void testEqBool() {
 
     Store store = new Store();
@@ -3229,6 +3452,66 @@ class SingleConstraintTest extends TestHelper {
         noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
 
     assertThat(noOfSolutions).isEqualTo(141141);
+  }
+
+  @Test
+  void allEqualNegatedKeepsCallerArrayOrder() {
+    // not all_equal(x) moved fixed variables to the front of the array it was given, so the
+    // caller's array (in FlatZinc the output array) was reordered during search
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 3),
+      new IntVar(store, "x1", 1, 3),
+      new IntVar(store, "x2", 1, 3),
+      new IntVar(store, "x3", 1, 1)
+    };
+    IntVar[] original = x.clone();
+    store.impose(new Reified(new AllEqual(x), new IntVar(store, "b", 0, 0)));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(26);
+    assertThat(x).containsExactly(original);
+  }
+
+  @Test
+  void allEqualNegatedOnOneVariableFails() {
+    // a single variable is always all equal, so its negation has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new Not(new AllEqual(new IntVar[] {x})));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void allEqualReifiedFalseWithoutCommonValue() {
+    // the domains intersect pairwise but have no common value, so b must be 0
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 2, 3), new IntVar(store, "x2", 1, 2)
+    };
+    x[0].addDom(3, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AllEqual(x), b));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  @Test
+  void increasingWithRepeatedVariableReachesFixpoint() {
+    // [x, y, x] increasing means x = y; strictly decreasing [x, x] has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 2, 5);
+    store.impose(new Increasing(new IntVar[] {x, y, x}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2..3}");
+    assertThat(y.dom().toString()).isEqualTo("{2..3}");
+
+    Store store2 = new Store();
+    IntVar z = new IntVar(store2, "z", 0, 2);
+    store2.impose(new Decreasing(new IntVar[] {z, z}, true));
+    assertThat(store2.consistency()).isFalse();
   }
 
   @Test

@@ -52,6 +52,8 @@ public class Increasing extends Constraint {
   // List of decomposed constraints
   protected List<Constraint> constraints;
   byte strict = 0;
+  // true when a variable occurs more than once in x
+  private final boolean hasDuplicates;
 
   /**
    * It constructs an increasing constraint.
@@ -65,6 +67,7 @@ public class Increasing extends Constraint {
     this.numberId = idNumber.incrementAndGet();
     this.x = Arrays.copyOf(x, x.length);
     this.n = x.length;
+    this.hasDuplicates = Arrays.stream(x).distinct().count() < n;
 
     this.queueIndex = 1;
 
@@ -107,16 +110,24 @@ public class Increasing extends Constraint {
   @Override
   public void consistency(Store store) {
 
+    // lower bounds forward, then upper bounds backward; inMax never changes a minimum, so for
+    // distinct variables the two passes reach the fixpoint. A repeated variable can be changed
+    // behind a pass, so then the passes are repeated.
     do {
-
       store.propagationHasOccurred = false;
-
       for (int i = 1; i < n; i++) {
-        x[i - 1].domain.inMax(store.level, x[i - 1], x[i].max() - strict);
-        x[i].domain.inMin(store.level, x[i], x[i - 1].min() + strict);
+        int lb = x[i - 1].min() + strict;
+        if (x[i].min() < lb) {
+          x[i].domain.inMin(store.level, x[i], lb);
+        }
       }
-
-    } while (store.propagationHasOccurred);
+      for (int i = n - 1; i > 0; i--) {
+        int ub = x[i].max() - strict;
+        if (x[i - 1].max() > ub) {
+          x[i - 1].domain.inMax(store.level, x[i - 1], ub);
+        }
+      }
+    } while (hasDuplicates && store.propagationHasOccurred);
   }
 
   @Override
