@@ -260,6 +260,48 @@ class GlobalCardinalityTest {
     }
   }
 
+  /**
+   * Bit set domains whose bounds hold many counted values, so that CountValues walks the runs of
+   * the domains instead of looking up every counted value.
+   */
+  @Test
+  void countValuesOnWideDomainsHasTheSolutionCountOfTheDecomposition() {
+    Random random = new Random(10);
+    for (int trial = 0; trial < 200; trial++) {
+      int n = 1 + random.nextInt(3);
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = randomSubset(random, 0, 199, 93 + random.nextInt(6));
+      }
+      int[] values =
+          random.nextBoolean()
+              ? range(random.nextInt(40), 100 + random.nextInt(100))
+              : randomSubset(random, -10, 209, random.nextInt(60));
+      // counters that mostly allow every count, so that most models have solutions
+      int m = values.length;
+      int[][] all = Arrays.copyOf(domains, n + m);
+      int[] counters = new int[m];
+      for (int j = 0; j < m; j++) {
+        all[n + j] = random.nextInt(20) == 0 ? new int[] {random.nextInt(n + 1)} : range(0, n);
+        counters[j] = n + j;
+      }
+      Model model = new Model(all, range(0, n - 1), counters, values, side(random, n, 1));
+      long expected =
+          countSolutions(
+              model, 0, 0, (store, pool) -> imposeCountDecomposition(store, pool, model), true);
+      int seed = random.nextInt();
+      assertThat(
+              countSolutions(
+                  model,
+                  1 + random.nextInt(5),
+                  seed,
+                  (store, pool) -> imposeCountValues(store, pool, model),
+                  true))
+          .as("trial %d %s seed %d", trial, model, seed)
+          .isEqualTo(expected);
+    }
+  }
+
   @Test
   void countValuesBoundsHasTheSolutionCountOfTheDecomposition() {
     Random random = new Random(9);
@@ -454,8 +496,13 @@ class GlobalCardinalityTest {
 
   private static long countSolutions(
       Model model, int order, int seed, BiConsumer<Store, IntVar[]> imposer) {
+    return countSolutions(model, order, seed, imposer, false);
+  }
+
+  private static long countSolutions(
+      Model model, int order, int seed, BiConsumer<Store, IntVar[]> imposer, boolean bitSets) {
     Store store = new Store();
-    IntVar[] pool = pool(store, model);
+    IntVar[] pool = pool(store, model, bitSets);
     imposer.accept(store, pool);
     imposeSide(store, pool, model);
     if (!store.consistency()) {
@@ -469,13 +516,27 @@ class GlobalCardinalityTest {
   }
 
   private static IntVar[] pool(Store store, Model model) {
+    return pool(store, model, false);
+  }
+
+  /**
+   * The pool variables, with interval domains, or with bit set domains (from the bounds, as the
+   * FlatZinc front end creates them) when bitSets is true.
+   */
+  private static IntVar[] pool(Store store, Model model, boolean bitSets) {
     IntVar[] pool = new IntVar[model.domains().length];
     for (int i = 0; i < pool.length; i++) {
+      int[] values = model.domains()[i];
       IntervalDomain domain = new IntervalDomain();
-      for (int v : model.domains()[i]) {
+      for (int v : values) {
         domain.unionAdapt(v, v);
       }
-      pool[i] = new IntVar(store, "p" + i, domain);
+      if (bitSets) {
+        pool[i] = new IntVar(store, "p" + i, values[0], values[values.length - 1]);
+        pool[i].domain.in(store.level, pool[i], domain);
+      } else {
+        pool[i] = new IntVar(store, "p" + i, domain);
+      }
     }
     return pool;
   }
