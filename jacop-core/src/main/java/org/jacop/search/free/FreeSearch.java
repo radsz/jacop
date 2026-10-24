@@ -304,8 +304,12 @@ public final class FreeSearch {
       failures++;
       runFailures++;
       Var decision = failedFrame == null ? null : failedFrame.var;
-      for (SearchMonitor m : monitors) {
-        m.onFailure(store.recentlyFailedConstraint, decision);
+      // failures under the alternative branching would teach the heuristics of the main one
+      // about a search they do not make
+      if (select == mainSelect) {
+        for (SearchMonitor m : monitors) {
+          m.onFailure(store.recentlyFailedConstraint, decision);
+        }
       }
       store.recentlyFailedConstraint = null;
       if (outOfLimits()) {
@@ -685,7 +689,8 @@ public final class FreeSearch {
     /**
      * Interleaves another branching with the main one across restarts, for example the search
      * annotation of a model with free search. The alternative branching must fix all the variables
-     * that the main one fixes.
+     * that the main one fixes. Monitors see the failures of runs with the main branching only, so
+     * learning heuristics are not trained on the alternative one; they see all solutions.
      *
      * @param select the alternative branching.
      * @param when when the alternative branching is used.

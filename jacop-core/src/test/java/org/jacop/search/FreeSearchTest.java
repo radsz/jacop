@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -456,6 +457,39 @@ class FreeSearchTest {
         }
       }
     }
+  }
+
+  @Test
+  void failuresUnderTheAlternativeBranchingAreNotLearned() {
+    // three pairwise different variables with two values: no solution, found only after failures
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    int[] seen = new int[1];
+    SearchMonitor counter =
+        new SearchMonitor() {
+          @Override
+          public void onFailure(Constraint failed, Var decision) {
+            seen[0]++;
+          }
+        };
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+            .alternateWith(
+                new SimpleSelect<>(x, null, new IndomainMax<>()),
+                FreeSearch.Alternation.UNTIL_FIRST_SOLUTION)
+            .monitor(counter)
+            .build();
+    assertEquals(Status.UNSATISFIABLE, search.solve());
+    assertTrue(search.getFailures() > 0);
+    assertEquals(0, seen[0]);
   }
 
   @Test
