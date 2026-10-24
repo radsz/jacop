@@ -436,7 +436,7 @@ public class Knapsack extends Constraint
         currentLevel,
         knapsackProfit,
         toInt(tree.alreadyObtainedProfit),
-        toInt(tree.alreadyObtainedProfit + (long) Math.ceil(tree.optimalProfit)));
+        toInt(tree.alreadyObtainedProfit + Tree.floorSafe(tree.optimalProfit)));
 
     if (DEBUG_ALL) {
       log.debug("Profit after potential update : {}", knapsackProfit);
@@ -570,6 +570,14 @@ public class Knapsack extends Constraint
       computeForbidden();
     }
 
+    if (needMandatory || needForbidden) {
+      blockUpdate();
+      computeCritical();
+    }
+
+    blockUpdate();
+    restrictByMaxProfitAndMinCapacity();
+
     blockUpdate();
     if (ASSERTS_ENABLED && !checkInvariants()) {
       throw new IllegalStateException("Assertion failed");
@@ -649,6 +657,78 @@ public class Knapsack extends Constraint
       if (leaf.positionInTheTree <= criticalLeafPosition) {
         break;
       }
+    }
+  }
+
+  /**
+   * It prunes the quantities by the bounds reasoning of the two linear equalities in the directions
+   * which the relaxation does not cover: no item can bring more profit than the maximal profit
+   * allows, and an item must be taken if the other items can not reach the minimal capacity.
+   */
+  private void restrictByMaxProfitAndMinCapacity() {
+
+    long profitAllowance = (long) knapsackProfit.max() - tree.alreadyObtainedProfit;
+    long weightNeeded = (long) knapsackCapacity.min() - tree.alreadyUsedCapacity;
+    boolean profitPrunes = profitAllowance < tree.root.getPSum();
+    boolean weightPrunes = weightNeeded > tree.root.getWSum() - tree.root.getWMax();
+    if (!profitPrunes && !weightPrunes) {
+      return;
+    }
+
+    long weightSum = tree.root.getWSum();
+    for (TreeLeaf leaf : leaves) {
+      if (leaf.max() == 0) {
+        continue;
+      }
+      IntVar quantity = leaf.getQuantity();
+      int slice = leaf.slice;
+      if (profitPrunes && leaf.getPSum() > profitAllowance) {
+        quantity.domain.inMax(
+            currentLevel,
+            quantity,
+            toInt(slice + Math.floorDiv(profitAllowance, (long) leaf.profitOfOne)));
+        needUpdate = true;
+      }
+      long missingWeight = weightNeeded - (weightSum - leaf.getWSum());
+      if (weightPrunes && missingWeight > 0) {
+        quantity.domain.inMin(
+            currentLevel,
+            quantity,
+            toInt(slice + (missingWeight + leaf.weightOfOne - 1) / leaf.weightOfOne));
+        needUpdate = true;
+      }
+    }
+  }
+
+  /**
+   * It computes the mandatory and the forbidden part of the knapsack pruning for the critical item,
+   * the only item which can be both partially mandatory and partially forbidden.
+   */
+  private void computeCritical() {
+
+    TreeLeaf critical = tree.criticalLeaf;
+    if (critical.getWMax() == 0 || tree.root.getPSum() == 0) {
+      return;
+    }
+
+    double profitSlack = profitSlack();
+    long taken = tree.takenWeightOfCriticalItem;
+    long replacable = tree.computeCriticalReplacableWeight(profitSlack);
+    long intrusion = tree.computeCriticalIntrusionWeight(profitSlack);
+    IntVar quantity = critical.getQuantity();
+    int slice = critical.slice;
+
+    if (replacable < taken) {
+      long mandatoryQuantity =
+          (taken - replacable + critical.weightOfOne - 1) / critical.weightOfOne;
+      quantity.domain.inMin(currentLevel, quantity, toInt(slice + mandatoryQuantity));
+      needUpdate = true;
+    }
+
+    if (taken + intrusion < critical.getWMax()) {
+      long allowedQuantity = (taken + intrusion) / critical.weightOfOne;
+      quantity.domain.inMax(currentLevel, quantity, toInt(slice + allowedQuantity));
+      needUpdate = true;
     }
   }
 
