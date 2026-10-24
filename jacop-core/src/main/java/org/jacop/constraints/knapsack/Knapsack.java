@@ -296,6 +296,9 @@ public class Knapsack extends Constraint
 
       /* and then, we delete it */
       hashForUpdate.put(level, null);
+      // The position belonged to the removed level. Applying the whole list of the level search
+      // returns to is safe, since applying a leaf twice changes nothing.
+      positionOfAlreadyUpdated = 0;
     }
 
     tree.criticalLeaf.positionInTheTree = positionOfCriticalItem.value();
@@ -311,7 +314,7 @@ public class Knapsack extends Constraint
    *     root).
    * @param availableCapacity it specifies how much left there is a knapsack company.
    */
-  private void restrictItemQuantity(Store store, TreeNode parent, int availableCapacity) {
+  private void restrictItemQuantity(Store store, TreeNode parent, long availableCapacity) {
 
     if (parent.getWMax() > availableCapacity) {
 
@@ -337,9 +340,9 @@ public class Knapsack extends Constraint
           quantity.domain.inMax(
               store.level,
               quantity,
-              quantity.min()
-                  + (int)
-                      Math.floor(availableCapacity / (double) ((TreeLeaf) current).weightOfOne));
+              toInt(
+                  quantity.min()
+                      + Math.floorDiv(availableCapacity, ((TreeLeaf) current).weightOfOne)));
         }
       }
 
@@ -352,7 +355,7 @@ public class Knapsack extends Constraint
 
           TreeLeaf leaf = (TreeLeaf) current;
 
-          int maxNoOfAllowed = (int) Math.floor(availableCapacity / (double) leaf.getWeightOfOne());
+          long maxNoOfAllowed = Math.floorDiv(availableCapacity, leaf.getWeightOfOne());
 
           IntVar quantity = leaf.quantity;
 
@@ -360,7 +363,7 @@ public class Knapsack extends Constraint
             throw new IllegalStateException(String.valueOf("Quantity.min is not equal slice."));
           }
 
-          quantity.domain.inMax(currentLevel, quantity, quantity.min() + maxNoOfAllowed);
+          quantity.domain.inMax(currentLevel, quantity, toInt(quantity.min() + maxNoOfAllowed));
 
           needUpdate = true;
         }
@@ -406,8 +409,8 @@ public class Knapsack extends Constraint
     knapsackCapacity.domain.in(
         currentLevel,
         knapsackCapacity,
-        tree.alreadyUsedCapacity,
-        tree.alreadyUsedCapacity + tree.root.getWSum());
+        toInt(tree.alreadyUsedCapacity),
+        toInt(tree.alreadyUsedCapacity + tree.root.getWSum()));
 
     if (DEBUG_ALL) {
       log.debug("Capacity after potential update : {}", knapsackCapacity);
@@ -416,10 +419,10 @@ public class Knapsack extends Constraint
     // It computes based on the minimum required capacity the minimum possible profit obtained if
     // that capacity is being used.
     if (knapsackCapacity.min() > tree.alreadyUsedCapacity) {
-      int minProfit = tree.computeMinProfit(knapsackCapacity.min() - tree.alreadyUsedCapacity);
+      long minProfit = tree.computeMinProfit(knapsackCapacity.min() - tree.alreadyUsedCapacity);
 
       if (knapsackProfit.min() < minProfit) {
-        knapsackProfit.domain.inMin(currentLevel, knapsackProfit, minProfit);
+        knapsackProfit.domain.inMin(currentLevel, knapsackProfit, toInt(minProfit));
       }
     }
 
@@ -435,8 +438,8 @@ public class Knapsack extends Constraint
     knapsackProfit.domain.in(
         currentLevel,
         knapsackProfit,
-        tree.alreadyObtainedProfit,
-        tree.alreadyObtainedProfit + (int) Math.ceil(tree.optimalProfit));
+        toInt(tree.alreadyObtainedProfit),
+        toInt(tree.alreadyObtainedProfit + (long) Math.ceil(tree.optimalProfit)));
 
     if (DEBUG_ALL) {
       log.debug("Profit after potential update : {}", knapsackProfit);
@@ -445,12 +448,27 @@ public class Knapsack extends Constraint
 
   private void applyMinWeightFromProfit() {
     if (knapsackProfit.min() > tree.alreadyObtainedProfit) {
-      int minWeight = tree.computeMinWeight(knapsackProfit.min() - tree.alreadyObtainedProfit);
+      long minWeight = tree.computeMinWeight(knapsackProfit.min() - tree.alreadyObtainedProfit);
 
       if (knapsackCapacity.min() < minWeight) {
-        knapsackCapacity.domain.inMin(currentLevel, knapsackCapacity, minWeight);
+        knapsackCapacity.domain.inMin(currentLevel, knapsackCapacity, toInt(minWeight));
       }
     }
+  }
+
+  /**
+   * It computes the profit which can be given up from the optimal profit of the relaxation before
+   * reaching the minimal profit. It is slightly enlarged so that rounding errors of the floating
+   * point computations can only weaken the pruning.
+   */
+  private double profitSlack() {
+    double optimal = tree.optimalProfit + tree.alreadyObtainedProfit;
+    return optimal - knapsackProfit.min() + 1e-9 * Math.max(1.0, Math.abs(optimal));
+  }
+
+  /** Clamps a value computed in long arithmetic into the int range used by the domains. */
+  private static int toInt(long value) {
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, value));
   }
 
   @Override
@@ -599,23 +617,23 @@ public class Knapsack extends Constraint
     }
 
     // rounding errors may suggest that there is too little slack for an item.
-    double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
+    double profitSlack = profitSlack();
 
     while (true) {
 
-      int intrusionWeight =
+      long intrusionWeight =
           tree.computeIntrusionWeight(
               leaf.weightOfOne, leaf.max(), leaf.profitOfOne, leaf.efficiency, profitSlack);
 
-      int itemMaxWeight = leaf.max() * leaf.weightOfOne;
+      long itemMaxWeight = (long) leaf.max() * leaf.weightOfOne;
 
       if (intrusionWeight < itemMaxWeight) {
 
-        int forbiddenQuantity =
-            (int) Math.ceil((itemMaxWeight - intrusionWeight) / (double) leaf.weightOfOne);
+        long forbiddenQuantity =
+            (long) Math.ceil((itemMaxWeight - intrusionWeight) / (double) leaf.weightOfOne);
 
         IntVar quantity = leaf.getQuantity();
-        quantity.domain.inMax(currentLevel, quantity, quantity.max() - forbiddenQuantity);
+        quantity.domain.inMax(currentLevel, quantity, toInt(quantity.max() - forbiddenQuantity));
 
         needUpdate = true;
       }
@@ -659,23 +677,23 @@ public class Knapsack extends Constraint
       return;
     }
 
-    double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
+    double profitSlack = profitSlack();
 
     while (true) {
 
-      int replacableWeight =
+      long replacableWeight =
           tree.computeReplacableWeight(
               leaf.weightOfOne, leaf.max(), leaf.profitOfOne, leaf.efficiency, profitSlack);
 
-      int itemMaxWeight = leaf.max() * leaf.weightOfOne;
+      long itemMaxWeight = (long) leaf.max() * leaf.weightOfOne;
 
       if (replacableWeight < itemMaxWeight) {
 
-        int mandatoryWeight = itemMaxWeight - replacableWeight;
-        int mandatoryQuantity = (int) Math.ceil(mandatoryWeight / (double) leaf.weightOfOne);
+        long mandatoryWeight = itemMaxWeight - replacableWeight;
+        long mandatoryQuantity = (long) Math.ceil(mandatoryWeight / (double) leaf.weightOfOne);
 
         IntVar quantity = leaf.getQuantity();
-        quantity.domain.inMin(currentLevel, quantity, quantity.min() + mandatoryQuantity);
+        quantity.domain.inMin(currentLevel, quantity, toInt(quantity.min() + mandatoryQuantity));
 
         needUpdate = true;
       }
@@ -907,13 +925,13 @@ public class Knapsack extends Constraint
    */
   private boolean sliceInvariant() {
 
-    int alreadyObtainedProfit = 0;
-    int alreadyUsedCapacity = 0;
+    long alreadyObtainedProfit = 0;
+    long alreadyUsedCapacity = 0;
 
     for (TreeLeaf leave : leaves) {
       if (leave.slice > 0) {
-        alreadyObtainedProfit += leave.slice * leave.getProfitOfOne();
-        alreadyUsedCapacity += leave.slice * leave.getWeightOfOne();
+        alreadyObtainedProfit += (long) leave.slice * leave.getProfitOfOne();
+        alreadyUsedCapacity += (long) leave.slice * leave.getWeightOfOne();
       }
     }
 
@@ -957,9 +975,9 @@ public class Knapsack extends Constraint
       }
     }
 
-    int overallProfit = 0;
-    int overallCapacity = 0;
-    int maxLeafCapacity = 0;
+    long overallProfit = 0;
+    long overallCapacity = 0;
+    long maxLeafCapacity = 0;
 
     for (TreeLeaf leaf : leaves) {
       overallProfit += leaf.getPSum();

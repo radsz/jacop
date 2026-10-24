@@ -66,13 +66,13 @@ public class TreeNode {
    * algorithm will know that it can skip the entire subtree if the weight is not sufficiently
    * large.
    */
-  @Getter private int wMax;
+  @Getter private long wMax;
 
   /** It specifies the sum of the weight of all items in the subtree rooted at this node. */
-  @Getter private int wSum;
+  @Getter private long wSum;
 
   /** It specifies the sum of the profit of all items in the subtree rooted at this node. */
-  @Getter private int pSum;
+  @Getter private long pSum;
 
   /**
    * It constructs a node of the item tree.

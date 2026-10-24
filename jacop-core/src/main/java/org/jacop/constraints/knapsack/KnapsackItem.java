@@ -85,7 +85,8 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    * Method used in the sorting of the items, we use profit and weight to know the less efficient
    * item without using division. This function returns 1 if this item is less efficient than that
    * item. This function returns -1 if this item is more efficient than that item. If both items are
-   * equally efficient then this function returns 1 if this item has smaller weight than that item.
+   * equally efficient then this function returns 1 if this item has smaller weight than that item,
+   * -1 if it has larger weight, and 0 if both items have the same weight (and so the same profit).
    *
    * <p>In connection with Arrays.sort() it will produce items from most efficient to least
    * efficient breaking ties in the favor of the larger weight.
@@ -95,21 +96,10 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
     long comparison = (long) weight * that.profit - (long) profit * that.weight;
 
     if (comparison == 0) {
-
-      if (that.weight >= weight) {
-        return 1;
-      } else {
-        return -1;
-      }
-
-    } else {
-
-      if (comparison > 0) {
-        return 1;
-      } else {
-        return -1;
-      }
+      return Integer.compare(that.weight, weight);
     }
+
+    return comparison > 0 ? 1 : -1;
   }
 
   @Override

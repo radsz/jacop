@@ -2309,6 +2309,167 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * Imposes Knapsack on quantities in lo..hi, capacity in capacityMin..capacityMax and profit in
+   * profitMin..profitMax, and checks that propagation keeps every solution.
+   */
+  private static void assertKnapsackKeepsAllSolutions(
+      int[] weights,
+      int[] profits,
+      int[] lo,
+      int[] hi,
+      int capacityMin,
+      int capacityMax,
+      int profitMin,
+      int profitMax) {
+    int n = weights.length;
+    Store store = new Store();
+    IntVar[] vars = new IntVar[n + 2];
+    for (int i = 0; i < n; i++) {
+      vars[i] = new IntVar(store, "q" + i, lo[i], hi[i]);
+    }
+    vars[n] = new IntVar(store, "capacity", capacityMin, capacityMax);
+    vars[n + 1] = new IntVar(store, "profit", profitMin, profitMax);
+    List<int[]> solutions = knapsackSolutions(profits, weights, vars);
+    assertThat(solutions).isNotEmpty();
+    store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+    assertThat(store.consistency()).as(domainsOf(vars)).isTrue();
+    for (int[] solution : solutions) {
+      for (int i = 0; i < vars.length; i++) {
+        assertThat(vars[i].domain.contains(solution[i]))
+            .as(domainsOf(vars) + " keeps solution " + Arrays.toString(solution))
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
+  void knapsackKeepsSolutionsWithEquallyEfficientItems() {
+    // The search for the weight replaceable by less efficient items stopped at a leaf reached by
+    // descending the tree without checking its neighbor, and divided by a zero efficiency loss when
+    // the next item was as efficient. Item 0 was wrongly made mandatory.
+    int[] ones = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 2, 1, 3, 1, 3, 3, 2, 1},
+        new int[] {6, 2, 4, 2, 6, 2, 6, 3, 2, 2},
+        new int[10],
+        ones,
+        11,
+        11,
+        22,
+        36);
+    // An already fixed item between two equally efficient items hid the second one.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 5, 5, 1, 1, 1},
+        new int[] {6, 2, 5, 10, 2, 2, 2},
+        new int[] {0, 1, 0, 0, 0, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 0, 1},
+        0,
+        7,
+        12,
+        26);
+    // The constraint failed although x8 = x9 = x10 = 1 plus any other item is a solution.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1},
+        new int[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        2,
+        5,
+        6,
+        7);
+  }
+
+  @Test
+  void knapsackHandlesLargeQuantitiesWithoutOverflow() {
+    // Sums of weights and profits were kept in int and overflowed, so the constraint failed.
+    Store store = new Store();
+    IntVar[] q = {
+      new IntVar(store, "q0", 0, IntDomain.MAX_INT), new IntVar(store, "q1", 0, IntDomain.MAX_INT)
+    };
+    IntVar capacity = new IntVar(store, "capacity", 0, 100);
+    IntVar profit = new IntVar(store, "profit", 0, IntDomain.MAX_INT);
+    store.impose(new Knapsack(new int[] {3, 4}, new int[] {5, 7}, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isEqualTo(20);
+    assertThat(q[1].max()).isEqualTo(14);
+
+    store = new Store();
+    q = new IntVar[3];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 100, 100);
+    }
+    capacity = new IntVar(store, "capacity", 0, 500_000_000);
+    profit = new IntVar(store, "profit", 0, 500_000_000);
+    int[] large = {1_000_000, 1_000_000, 1_000_000};
+    store.impose(new Knapsack(large, large, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.value()).isEqualTo(300_000_000);
+    assertThat(profit.value()).isEqualTo(300_000_000);
+  }
+
+  @Test
+  void knapsackUpdatesItemsChangedAfterBacktrack() {
+    // The position up to which the changed items of a level were applied to the tree was shared
+    // by all levels. After backtracking from a level with more changes, items changed again at the
+    // lower level were skipped, so the tree kept their old minimal quantities.
+    // Sixteen items, so that a few changes are applied incrementally instead of by recomputing.
+    Store store = new Store();
+    IntVar[] q = new IntVar[16];
+    int[] weights = new int[q.length];
+    int[] profits = new int[q.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 2);
+      weights[i] = i + 1;
+      profits[i] = q.length - i;
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 1000);
+    IntVar profit = new IntVar(store, "profit", 0, 1000);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    q[0].domain.in(store.level, q[0], 1, 2);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(2);
+    for (int i = 1; i < 4; i++) {
+      q[i].domain.in(store.level, q[i], 1, 2);
+    }
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(1);
+
+    q[1].domain.in(store.level, q[1], 2, 2);
+    q[2].domain.in(store.level, q[2], 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.min()).isEqualTo(1 + 2 * 2 + 2 * 3);
+    assertThat(profit.min()).isEqualTo(16 + 2 * 15 + 2 * 14);
+  }
+
+  @Test
+  void knapsackSortsManyEquallyEfficientItems() {
+    // The item comparator returned 1 for two items with the same weight and profit in both
+    // directions, so sorting 32 or more items threw "Comparison method violates its general
+    // contract".
+    int[] profits = {
+      3, 2, 1, 1, 3, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1
+    };
+    int[] weights = new int[profits.length];
+    Arrays.fill(weights, 1);
+    Store store = new Store();
+    IntVar[] q = new IntVar[profits.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 1);
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 22);
+    IntVar profit = new IntVar(store, "profit", 0, 43);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    // The 22 most profitable items give 2 * 3 + 7 * 2 + 13 * 1 = 33.
+    assertThat(profit.max()).isEqualTo(33);
+  }
+
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
     IntVar v = new IntVar(store, name);
     for (int i = min; i <= max; i++) {
