@@ -50,6 +50,8 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
   TimeStamp<Integer> position;
 
   AbstractChannel(int numberId, IntVar x, IntVar[] bs, int[] value, String constraintName) {
+    checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
+    checkInputForNullness("value", value);
     if (value.length != bs.length) {
       throw new IllegalArgumentException(
           constraintName
@@ -59,12 +61,10 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
               + value.length);
     }
 
-    checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
-    for (IntVar b : bs) {
-      if (b.min() > 1 || b.max() < 0) {
-        throw new IllegalArgumentException(
-            constraintName + ": Variable b in reified constraint must have domain at most 0..1");
-      }
+    checkBooleans(bs, constraintName);
+    if (Arrays.stream(value).distinct().count() != value.length) {
+      throw new IllegalArgumentException(
+          constraintName + ": values " + Arrays.toString(value) + " contain repeated values");
     }
 
     this.numberId = numberId;
@@ -85,6 +85,9 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
   }
 
   AbstractChannel(int numberId, IntVar x, Map<Integer, ? extends IntVar> bs) {
+    checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x, bs});
+    checkInputForNullness("bs", bs.values().toArray());
+    checkBooleans(bs.values().toArray(IntVar[]::new), getClass().getSimpleName());
     this.numberId = numberId;
     this.x = x;
     this.n = bs.size();
@@ -104,6 +107,15 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
 
     setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
     this.queueIndex = 0;
+  }
+
+  private static void checkBooleans(IntVar[] bs, String constraintName) {
+    for (IntVar b : bs) {
+      if (b.min() < 0 || b.max() > 1) {
+        throw new IllegalArgumentException(
+            constraintName + ": variable " + b + " must have a domain within 0..1");
+      }
+    }
   }
 
   static int[] toArray(IntDomain d) {

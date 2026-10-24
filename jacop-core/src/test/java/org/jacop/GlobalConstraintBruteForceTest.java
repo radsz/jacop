@@ -204,6 +204,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "SeqPrecedeChain",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChain),
+        Arguments.of(
+            "SeqPrecedeChainValues",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChainValues),
         Arguments.of("Member", (Function<Random, Instance>) GlobalConstraintBruteForceTest::member),
         Arguments.of(
             "Distance", (Function<Random, Instance>) GlobalConstraintBruteForceTest::distance),
@@ -897,6 +900,29 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "s=" + s + " t=" + t);
+  }
+
+  private static Instance seqPrecedeChainValues(Random random) {
+    // value_precede_chain(c, x) for a chain of distinct values, some outside the domains
+    int[] c = random.ints(-1, 5).distinct().limit(1 + random.nextInt(4)).toArray();
+    return new Instance(
+        domains(random, 1 + random.nextInt(5), -1, 3),
+        (store, x) -> store.impose(new SeqPrecedeChain(x, c)),
+        x -> {
+          for (int i = 1; i < c.length; i++) {
+            boolean seen = false;
+            for (int v : x) {
+              if (v == c[i] && !seen) {
+                return false;
+              }
+              if (v == c[i - 1]) {
+                seen = true;
+              }
+            }
+          }
+          return true;
+        },
+        "c=" + Arrays.toString(c));
   }
 
   private static Instance seqPrecedeChain(Random random) {

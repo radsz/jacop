@@ -134,12 +134,7 @@ public class DisjointConditional extends AbstractDiff {
       throw new IllegalArgumentException(s);
     }
 
-    for (i = 0; i < exceptionIndices.size(); i++) {
-      int item1 = exceptionIndices.get(i).getFirst();
-      int item2 = exceptionIndices.get(i).get(1);
-      IntVar condition = exceptionCondition.get(i);
-      exclusionList.add(new ExclusiveItem(item1, item2, condition));
-    }
+    addExceptions(exceptionIndices, exceptionCondition);
 
     numberId = idNumber.incrementAndGet();
     setScope(Stream.concat(Rectangle.getStream(this.rectangles), exceptionCondition.stream()));
@@ -263,12 +258,7 @@ public class DisjointConditional extends AbstractDiff {
           "DisjointConditional does not have equal sizes of length and origin vectors.");
     }
 
-    for (int i = 0; i < exceptionIndices.size(); i++) {
-      int item1 = exceptionIndices.get(i).getFirst();
-      int item2 = exceptionIndices.get(i).get(1);
-      IntVar condition = exceptionCondition.get(i);
-      exclusionList.add(new ExclusiveItem(item1, item2, condition));
-    }
+    addExceptions(exceptionIndices, exceptionCondition);
 
     this.numberId = idNumber.incrementAndGet();
 
@@ -338,12 +328,7 @@ public class DisjointConditional extends AbstractDiff {
       throw new IllegalArgumentException(s);
     }
 
-    for (int i = 0; i < exceptionIndices.size(); i++) {
-      int item1 = exceptionIndices.get(i).getFirst();
-      int item2 = exceptionIndices.get(i).get(1);
-      IntVar condition = exceptionCondition.get(i);
-      exclusionList.add(new ExclusiveItem(item1, item2, condition));
-    }
+    addExceptions(exceptionIndices, exceptionCondition);
 
     numberId = idNumber.incrementAndGet();
 
@@ -617,9 +602,51 @@ public class DisjointConditional extends AbstractDiff {
     }
   }
 
+  private void addExceptions(
+      List<List<Integer>> exceptionIndices, List<? extends IntVar> exceptionCondition) {
+    if (exceptionIndices == null || exceptionCondition == null) {
+      throw new IllegalArgumentException(
+          "DisjointConditional: exceptionIndices and exceptionCondition must not be null");
+    }
+    if (exceptionIndices.size() != exceptionCondition.size()) {
+      throw new IllegalArgumentException(
+          "DisjointConditional has "
+              + exceptionIndices.size()
+              + " exception pairs and "
+              + exceptionCondition.size()
+              + " exception conditions");
+    }
+    for (int i = 0; i < exceptionIndices.size(); i++) {
+      List<Integer> pair = exceptionIndices.get(i);
+      if (pair == null || pair.size() != 2 || pair.get(0) == null || pair.get(1) == null) {
+        throw new IllegalArgumentException(
+            "DisjointConditional: exception " + i + " is not a pair of rectangle indices");
+      }
+      exclusionList.add(new ExclusiveItem(pair.get(0), pair.get(1), exceptionCondition.get(i)));
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public void impose(Store store) {
+
+    for (ExclusiveItem ei : exclusionList) {
+      if (ei.i1() < 1
+          || ei.i1() > rectangles.length
+          || ei.i2() < 1
+          || ei.i2() > rectangles.length
+          || ei.i1() == ei.i2()) {
+        throw new IllegalArgumentException(
+            "DisjointConditional: exception "
+                + ei
+                + " must name two different rectangles numbered from 1 to "
+                + rectangles.length);
+      }
+      if (ei.cond() == null || ei.cond().min() < 0 || ei.cond().max() > 1) {
+        throw new IllegalArgumentException(
+            "DisjointConditional: condition of exception " + ei + " must be a 0/1 variable");
+      }
+    }
 
     super.impose(store);
 

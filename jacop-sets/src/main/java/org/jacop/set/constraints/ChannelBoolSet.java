@@ -72,7 +72,10 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
    */
   public ChannelBoolSet(IntVar[] b, SetVar s, int offset) {
 
-    checkInputForNullness(new String[] {"b"}, new Object[] {b});
+    checkInputForNullness(new String[] {"b", "s"}, new Object[] {b, s});
+    checkInputForNullness("b", b);
+    // a repeated variable stands for several elements of s, which the propagation does not tie
+    checkInputForDuplicationSkipSingletons("b", b);
 
     numberId = idNumber.incrementAndGet();
 
@@ -80,8 +83,8 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
     n = b.length;
     for (int i = 0; i < n; i++) {
       if (b[i].min() < 0 || b[i].max() > 1) {
-        throw new RuntimeException(
-            "Error; prameters in array of ChannelBoolSet must be in interval 0..1");
+        throw new IllegalArgumentException(
+            "Variables in array b of ChannelBoolSet must have domains within 0..1, not " + b[i]);
       }
     }
     this.s = s;

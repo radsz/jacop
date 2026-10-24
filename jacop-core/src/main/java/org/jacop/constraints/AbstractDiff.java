@@ -88,6 +88,35 @@ abstract class AbstractDiff extends Constraint
   /** It constructs the shared part of a rectangle constraint. */
   protected AbstractDiff() {}
 
+  /**
+   * It checks that the rectangles have no null variables and no negative lengths, which the
+   * propagation does not handle, and imposes the constraint.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
+  @Override
+  public void impose(Store store) {
+    for (int i = 0; i < rectangles.length; i++) {
+      Rectangle r = rectangles[i];
+      for (int d = 0; d < r.dim; d++) {
+        if (r.origin[d] == null || r.length[d] == null) {
+          throw new IllegalArgumentException(
+              getClass().getSimpleName() + ": rectangle " + i + " has a null variable");
+        }
+        if (r.length[d].min() < 0) {
+          throw new IllegalArgumentException(
+              getClass().getSimpleName()
+                  + ": rectangle "
+                  + i
+                  + " has length "
+                  + r.length[d]
+                  + " that can be negative");
+        }
+      }
+    }
+    super.impose(store);
+  }
+
   @Override
   public void removeLevel(int level) {
     variableQueue.clear();

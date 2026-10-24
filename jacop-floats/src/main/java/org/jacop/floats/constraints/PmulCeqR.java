@@ -71,6 +71,7 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   public PmulCeqR(FloatVar p, double c, FloatVar r) {
 
     checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
+    checkFinite(getClass().getSimpleName(), c);
 
     numberId = idNumber.incrementAndGet();
 
@@ -79,6 +80,20 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     this.r = r;
 
     setScope(p, r);
+  }
+
+  /**
+   * Checks that a constant of a float constraint is finite.
+   *
+   * @param constraint the name of the constraint.
+   * @param c the constant.
+   * @throws IllegalArgumentException if c is NaN or infinite.
+   */
+  static void checkFinite(String constraint, double c) {
+    if (!Double.isFinite(c)) {
+      throw new IllegalArgumentException(
+          "Constraint " + constraint + " has constant c " + c + " that is not finite.");
+    }
   }
 
   @Override

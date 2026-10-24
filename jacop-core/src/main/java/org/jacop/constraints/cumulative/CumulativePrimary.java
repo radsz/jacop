@@ -105,8 +105,8 @@ class CumulativePrimary extends Constraint {
         new Object[] {durations},
         new Object[] {resources},
         new Object[] {limit});
-    checkInput(durations, i -> i >= 0, "durations must be greater than 0");
-    checkInput(resources, i -> i >= 0, "resources must be greater than 0");
+    checkInput(durations, i -> i >= 0, "durations must not be negative");
+    checkInput(resources, i -> i >= 0, "resources must not be negative");
 
     if (starts.length != durations.length) {
       throw new IllegalArgumentException(
@@ -143,7 +143,7 @@ class CumulativePrimary extends Constraint {
 
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
-    activePnt = new TimeStamp<>(starts[0].getStore(), 0);
+    activePnt = new TimeStamp<>(limit.getStore(), 0);
   }
 
   /*

@@ -31,6 +31,7 @@
 package org.jacop.constraints.cumulative;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
@@ -62,6 +63,35 @@ public class ProfileOptional {
   private final TimetableSweep sweep = new TimetableSweep();
   List<Event> utilizationProfile;
   boolean existsOpt = true;
+
+  /**
+   * Checks the variables that tell whether the optional tasks are present: one 0/1 variable per
+   * task.
+   *
+   * @param opt the variables telling whether the tasks are present.
+   * @param tasks the number of tasks.
+   * @param constraintName the name of the constraint, used in error messages.
+   * @return a copy of opt.
+   */
+  static IntVar[] checkOptional(IntVar[] opt, int tasks, String constraintName) {
+    if (opt == null) {
+      throw new IllegalArgumentException(constraintName + ": opt is null");
+    }
+    if (opt.length != tasks) {
+      throw new IllegalArgumentException(
+          constraintName + ": opt has " + opt.length + " variables for " + tasks + " tasks");
+    }
+    for (IntVar o : opt) {
+      if (o == null) {
+        throw new IllegalArgumentException(constraintName + ": opt contains null");
+      }
+      if (o.min() < 0 || o.max() > 1) {
+        throw new IllegalArgumentException(
+            constraintName + ": variable " + o + " of opt must have a domain within 0..1");
+      }
+    }
+    return Arrays.copyOf(opt, opt.length);
+  }
 
   /**
    * It creates a PROFILE for optional tasks.

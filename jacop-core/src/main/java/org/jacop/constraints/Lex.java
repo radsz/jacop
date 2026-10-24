@@ -123,6 +123,22 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
+    if (x.length < 2) {
+      // a single vector, or none, is always ordered
+      constraints = new ArrayList<>();
+      return constraints;
+    }
+
+    if (Arrays.stream(x).mapToInt(v -> v.length).distinct().count() > 1) {
+      // the decompositions below compare only the common prefix of the vectors, which is wrong
+      // when a vector is a prefix of the next one; LexOrder treats a prefix as the smaller vector
+      constraints = new ArrayList<>();
+      for (int i = 0; i < x.length - 1; i++) {
+        constraints.add(new LexOrder(x[i], x[i + 1], lexLt));
+      }
+      return constraints;
+    }
+
     if (x.length == 2) {
       if (lexLt) {
         return decomposeLt(store);

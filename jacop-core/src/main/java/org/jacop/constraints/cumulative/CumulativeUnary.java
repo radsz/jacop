@@ -81,6 +81,7 @@ public class CumulativeUnary extends Cumulative {
     super(starts, durations, resources, limit);
     checkInput(durations, i -> i.min() >= 0, "duration does not allow negative values");
     checkInput(resources, i -> i.min() >= 0, "resource does not allow negative values");
+    checkUnary(resources, limit);
     queueIndex = 2;
 
     tvn = new TaskNormalView[starts.length];
@@ -185,6 +186,42 @@ public class CumulativeUnary extends Cumulative {
         resources.toArray(IntVar[]::new),
         limit,
         doProfile);
+  }
+
+  /**
+   * Checks that the resource is unary: any two tasks that use the resource cannot run at the same
+   * time, since the propagation of this constraint never lets them overlap.
+   *
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources.
+   */
+  private static void checkUnary(IntVar[] resources, IntVar limit) {
+    // the two smallest positive resource usages of different tasks
+    long smallest = Long.MAX_VALUE;
+    long nextSmallest = Long.MAX_VALUE;
+    for (IntVar r : resources) {
+      if (r.max() <= 0) {
+        continue;
+      }
+      long positive = r.min() > 0 ? r.min() : r.dom().nextValue(0);
+      if (positive < smallest) {
+        nextSmallest = smallest;
+        smallest = positive;
+      } else if (positive < nextSmallest) {
+        nextSmallest = positive;
+      }
+    }
+    if (nextSmallest != Long.MAX_VALUE && smallest + nextSmallest <= limit.max()) {
+      throw new IllegalArgumentException(
+          "CumulativeUnary requires that no two tasks fit within the limit together, but two tasks"
+              + " using "
+              + smallest
+              + " and "
+              + nextSmallest
+              + " fit within limit "
+              + limit
+              + "; use Cumulative instead.");
+    }
   }
 
   @Override

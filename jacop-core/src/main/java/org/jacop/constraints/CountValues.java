@@ -65,10 +65,23 @@ public class CountValues extends AbstractCountValues {
 
     super(idNumber, list, values);
 
-    checkInputForNullness(new String[] {"list", "counter"}, list, new Object[] {counter});
+    checkInputForNullness("counter", counter);
+    if (counter.length != values.length) {
+      throw new IllegalArgumentException(
+          "Constraint CountValues has "
+              + counter.length
+              + " counters for "
+              + values.length
+              + " values.");
+    }
+    if (counter.length == 0 && list.length == 0) {
+      throw new IllegalArgumentException(
+          "Constraint CountValues needs at least one variable or one counter.");
+    }
 
-    this.counter = counter;
-    this.counterRest = new IntVar(counter[0].getStore(), 0, n);
+    this.counter = Arrays.copyOf(counter, counter.length);
+    Store store = counter.length > 0 ? counter[0].getStore() : list[0].getStore();
+    this.counterRest = new IntVar(store, 0, n);
 
     extendedCounter = new IntVar[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
