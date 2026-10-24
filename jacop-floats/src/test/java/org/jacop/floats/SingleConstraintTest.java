@@ -35,8 +35,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
 
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.XeqC;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.AbsPeqR;
@@ -391,4 +395,60 @@ class SingleConstraintTest {
     assertThat(new SqrtPeqR(one, one).satisfied()).isTrue();
   }
 
+  @Test
+  void testLinearFloatUnderImplies() {
+    // Implies does not forward variable changes, so the tree of LinearFloat stayed at its initial
+    // bounds and -x != 0.5 counted as satisfied with x = -0.5
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    LinearFloat linear = new LinearFloat(new FloatVar[] {x}, new double[] {-1}, "!=", 0.5);
+    store.impose(new Implies(b, linear));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x.domain.in(store.level, x, -0.5, -0.5);
+    assertThat(linear.satisfied()).isFalse();
+    assertThat(linear.notSatisfied()).isTrue();
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+  }
+
+  @Test
+  void testLinearFloatUnderIfThenAfterBacktracking() {
+    // IfThen imposes its consequence at a search level, so LinearFloat must go back to its nested
+    // mode, and resynchronise its tree, once that level is removed
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1, 0.75);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new IfThen(
+            new XeqC(b, 1), new LinearFloat(new FloatVar[] {x}, new double[] {1}, ">=", 0.25)));
+    assertThat(store.consistency()).isTrue();
+
+    int accepted = 0;
+    for (double v : new double[] {-1, -0.75, -0.5, -0.25, 0, 0.5, 0.75}) {
+      for (int bv = 0; bv <= 1; bv++) {
+        store.setLevel(1);
+        try {
+          x.domain.in(store.level, x, v, v);
+          if (store.consistency()) {
+            store.setLevel(2);
+            b.domain.in(store.level, b, bv, bv);
+            if (store.consistency()) {
+              accepted++;
+            }
+            store.removeLevel(2);
+          }
+        } catch (FailException e) {
+          // not accepted
+        }
+        store.removeLevel(2);
+        store.removeLevel(1);
+        store.setLevel(0);
+      }
+    }
+    // b = 0 for every x, and b = 1 for x = 0.5 and x = 0.75
+    assertThat(accepted).isEqualTo(9);
+  }
 }
