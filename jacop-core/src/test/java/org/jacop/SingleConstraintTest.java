@@ -959,6 +959,65 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void assignmentPropagatesVariablesSharedByBothArraysInBothRoles() {
+    // A variable occurring in both xs and ds was only propagated as an x when its domain changed,
+    // so it pruned less than the same model with a separate copy joined by XeqY.
+    Random random = new Random(3);
+    for (int trial = 0; trial < 400; trial++) {
+      int n = 2 + random.nextInt(4);
+      int[][] domains = new int[2 * n][];
+      for (int i = 0; i < 2 * n; i++) {
+        domains[i] =
+            random.ints(0, n).limit(1 + random.nextInt(n + 1)).distinct().sorted().toArray();
+      }
+      int[] shared = new int[n]; // ds[j] is xs[shared[j]] when shared[j] >= 0
+      for (int j = 0; j < n; j++) {
+        shared[j] = random.nextInt(3) == 0 ? random.nextInt(n) : -1;
+      }
+      String[] result = new String[2];
+      for (int copy = 0; copy < 2; copy++) {
+        Store store = new Store();
+        IntVar[] v = new IntVar[2 * n];
+        for (int i = 0; i < 2 * n; i++) {
+          v[i] = new IntVar(store, "v" + i);
+          for (int value : domains[i]) {
+            v[i].addDom(value, value);
+          }
+        }
+        IntVar[] xs = Arrays.copyOfRange(v, 0, n);
+        IntVar[] ds = Arrays.copyOfRange(v, n, 2 * n);
+        for (int j = 0; j < n; j++) {
+          if (shared[j] >= 0) {
+            if (copy == 0) {
+              ds[j] = xs[shared[j]];
+            } else {
+              ds[j] = new IntVar(store, "copy" + j, 0, n - 1);
+              store.impose(new XeqY(ds[j], xs[shared[j]]));
+            }
+          }
+        }
+        store.impose(new Assignment(xs, ds));
+        boolean consistent = store.consistency();
+        // compare the variables that both models have: xs and the ds that are not shared
+        StringBuilder domainsAfter = new StringBuilder();
+        for (int i = 0; i < 2 * n; i++) {
+          if (i < n || shared[i - n] < 0) {
+            domainsAfter.append(v[i].dom()).append(' ');
+          }
+        }
+        result[copy] = consistent ? domainsAfter.toString() : "fail";
+      }
+      if (!result[1].equals("fail")) {
+        assertThat(result[0])
+            .as(
+                "trial %d, shared %s, domains %s",
+                trial, Arrays.toString(shared), Arrays.deepToString(domains))
+            .isEqualTo(result[1]);
+      }
+    }
+  }
+
+  @Test
   void minSimpleReachesFixpoint() {
     // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
     // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.

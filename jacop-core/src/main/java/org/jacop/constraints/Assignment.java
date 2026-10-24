@@ -240,16 +240,20 @@ public class Assignment extends Constraint
     if (vPrunedDomain.isEmpty()) {
       return;
     }
-    Integer position = xs.get(v);
-    if (position == null) {
-      propagateFromPrunedD(store, v, vPrunedDomain);
-    } else {
-      propagateFromPrunedX(store, v, vPrunedDomain, position);
+    // a variable may occur in both xs and ds (e.g. inverse(x, x)); it is then propagated in both
+    // roles
+    Integer positionX = xs.get(v);
+    if (positionX != null) {
+      propagateFromPrunedX(store, v, vPrunedDomain, positionX);
+    }
+    Integer positionD = ds.get(v);
+    if (positionD != null) {
+      propagateFromPrunedD(store, v, vPrunedDomain, positionD);
     }
   }
 
-  private void propagateFromPrunedD(Store store, IntVar v, IntDomain vprunedDomain) {
-    Integer position = ds.get(v);
+  private void propagateFromPrunedD(
+      Store store, IntVar v, IntDomain vprunedDomain, Integer position) {
     vprunedDomain = vprunedDomain.intersect(rangeX);
     if (vprunedDomain.isEmpty()) {
       return;
