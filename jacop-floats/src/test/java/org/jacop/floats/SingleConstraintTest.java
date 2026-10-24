@@ -50,6 +50,7 @@ import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.constraints.RoundPeqX;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,29 @@ class SingleConstraintTest {
     q.domain.in(store.level, q, 0, 0);
     assertThat(store.consistency()).isTrue();
     assertThat(p.singleton(1)).isTrue();
+  }
+
+  @Test
+  void testRoundOfAHalfIsAwayFromZero() {
+    for (double half : new double[] {-1.5, -0.5, 0.5, 1.5}) {
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", half, half);
+      IntVar x = new IntVar(store, "x", -3, 3);
+      RoundPeqX round = new RoundPeqX(p, x);
+      store.impose(round);
+
+      // p = 0.5 has round(p) = 1 but p was restricted to (x - 0.5, x + 0.5), which fails
+      assertThat(store.consistency()).as("round(%s)", half).isTrue();
+      assertThat(x.value()).isEqualTo((int) Math.round(Math.abs(half)) * (int) Math.signum(half));
+      assertThat(round.satisfied()).isTrue();
+    }
+
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 0, 1);
+    IntVar x = new IntVar(store, "x", 1, 1);
+    store.impose(new RoundPeqX(p, x));
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.min()).isEqualTo(0.5);
   }
 
   private static FloatIntervalDomain points(double... values) {
