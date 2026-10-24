@@ -320,6 +320,24 @@ class SingleConstraintTest extends TestHelper {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  // AmongVar gave wrong solutions and removed supported values when x, y and n shared variables,
+  // e.g. x = [a], y = [n, b, c] removed a supported value of a. Such models are now rejected.
+  @Test
+  void testAmongVarRejectsSharedVariables() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    IntVar n = new IntVar(store, "n", 0, 3);
+
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a}, new IntVar[] {n, b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, b}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, n}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 
