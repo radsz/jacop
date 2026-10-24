@@ -302,7 +302,7 @@ public class ElementVariable extends AbstractElement
       if (i == list.length) {
         i = 0;
       }
-      if (list[i].domain.contains(lostSupport)) {
+      if (list[i].domain.contains(lostSupport) && index.domain.contains(i + 1 + indexOffset)) {
         return i;
       }
       if (i == endingPosition) {

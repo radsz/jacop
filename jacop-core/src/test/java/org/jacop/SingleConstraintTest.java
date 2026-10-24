@@ -2828,6 +2828,30 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementVariableLooksForSupportsWithinIndex() {
+    // A value that lost its support was given a new support at a position the index can no
+    // longer take, so it stayed in the value domain.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 3);
+    IntVar a = new IntVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 1, 3);
+    IntVar c = new IntVar(store, "c", 1, 1);
+    c.addDom(3, 3);
+    store.impose(new ElementVariable(index, new IntVar[] {a, b, c}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 1);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(2)).isFalse();
+  }
+
+  @Test
   void testEqBool() {
 
     Store store = new Store();
