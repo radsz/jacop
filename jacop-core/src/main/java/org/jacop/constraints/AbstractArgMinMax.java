@@ -78,6 +78,32 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
     setScope(Stream.concat(Arrays.stream(list), Stream.of(extremeIndex)));
   }
 
+  /**
+   * Checks entailment: the index is fixed to a position that holds the first extremum, so every
+   * earlier element is strictly worse and every later one is worse or equal, whatever their values.
+   *
+   * @param max true for the maximum (ArgMax), false for the minimum (ArgMin).
+   * @return true if the constraint is entailed.
+   */
+  protected boolean firstExtremumEntailed(boolean max) {
+    if (!extremeIndex.singleton()) {
+      return false;
+    }
+    int idx = extremeIndex.value() - 1 - indexOffset;
+    if (idx < 0 || idx >= list.length || !list[idx].singleton()) {
+      return false;
+    }
+    int extreme = list[idx].value();
+    int strict = max ? -1 : 1;
+    for (int i = 0; i < list.length; i++) {
+      int bound = i < idx ? extreme + strict : extreme;
+      if (max ? list[i].max() > bound : list[i].min() < bound) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;

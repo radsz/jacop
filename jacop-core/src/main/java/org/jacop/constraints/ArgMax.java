@@ -219,21 +219,7 @@ public class ArgMax extends AbstractArgMinMax {
 
   @Override
   public boolean satisfied() {
-
-    boolean sat = extremeIndex.singleton();
-
-    int maxVal = list[extremeIndex.value() - 1 - indexOffset].value();
-    int i = 0;
-    int eq = 0;
-    while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() <= maxVal) {
-        eq++;
-      }
-      sat = list[i].max() <= maxVal;
-      i++;
-    }
-
-    return sat && eq == list.length;
+    return firstExtremumEntailed(true);
   }
 
   @Override

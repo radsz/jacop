@@ -3040,6 +3040,24 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void argMinMaxSatisfiedRespectsFirstIndexTieBreak() {
+    // satisfied() accepted an index whose value ties with an earlier element, and ArgMax read the
+    // value of a non-singleton index.
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 3, 3), new IntVar(store, "x2", 3, 3)};
+    IntVar second = new IntVar(store, "second", 2, 2);
+    IntVar first = new IntVar(store, "first", 1, 1);
+    IntVar any = new IntVar(store, "any", 1, 2);
+
+    assertThat(new ArgMax(x, second).satisfied()).isFalse();
+    assertThat(new ArgMin(x, second).satisfied()).isFalse();
+    assertThat(new ArgMax(x, first).satisfied()).isTrue();
+    assertThat(new ArgMin(x, first).satisfied()).isTrue();
+    assertThat(new ArgMax(x, any).satisfied()).isFalse();
+    assertThat(new ArgMin(x, any).satisfied()).isFalse();
+  }
+
+  @Test
   void testSum() {
 
     Store store = new Store();
