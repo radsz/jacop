@@ -136,7 +136,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
 
   @Override
   public boolean satisfied() {
-    return grounded() && Math.exp(p.min()) - q.max() <= FloatDomain.precision();
+    return AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(p, q, Math::exp);
   }
 
   @Override

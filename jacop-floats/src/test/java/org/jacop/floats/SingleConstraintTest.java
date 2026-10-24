@@ -47,6 +47,7 @@ import org.jacop.floats.constraints.AbsPeqR;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
+import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PdivCeqR;
 import org.jacop.floats.constraints.PdivQeqR;
@@ -450,5 +451,19 @@ class SingleConstraintTest {
     }
     // b = 0 for every x, and b = 1 for x = 0.5 and x = 0.75
     assertThat(accepted).isEqualTo(9);
+  }
+
+  @Test
+  void testExpSatisfiedChecksBothSides() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 0, 0);
+    FloatVar q = new FloatVar(store, "q", 5, 5);
+    FloatVar r = new FloatVar(store, "r", 0.5, 0.5);
+    FloatVar one = new FloatVar(store, "one", 1, 1);
+
+    // exp(0) = 1, but satisfied() only checked exp(p) - q <= precision and accepted any q >= 1
+    assertThat(new ExpPeqR(p, q).satisfied()).isFalse();
+    assertThat(new ExpPeqR(p, r).satisfied()).isFalse();
+    assertThat(new ExpPeqR(p, one).satisfied()).isTrue();
   }
 }
