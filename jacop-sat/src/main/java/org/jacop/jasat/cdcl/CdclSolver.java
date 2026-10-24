@@ -227,12 +227,14 @@ public final class CdclSolver {
       watchSize = Arrays.copyOf(watchSize, 2 * c);
     }
     order.grow(n, activity);
+    Arrays.fill(reason, numVars, n, NO_REASON);
+    Arrays.fill(savedSign, numVars, n, (byte) 1);
+    Arrays.fill(targetSign, numVars, n, (byte) -1);
+    // the arrays hold at least n variables here (SonarCloud does not see it)
+    for (int l = 2 * numVars; l < 2 * n; l++) {
+      watches[l] = new int[4]; // NOSONAR
+    }
     for (int v = numVars; v < n; v++) {
-      reason[v] = NO_REASON;
-      savedSign[v] = 1;
-      targetSign[v] = -1;
-      watches[2 * v] = new int[4];
-      watches[2 * v + 1] = new int[4];
       order.insert(v);
     }
     numVars = n;
