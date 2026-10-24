@@ -49,16 +49,22 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.Eq;
@@ -91,6 +97,7 @@ import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
@@ -199,7 +206,137 @@ final class ImposeGroundingCases {
                     Stream.concat(additive(), tables()),
                     Stream.concat(
                         comparisons(), Stream.concat(logical(), nonlinearArithmetic()))))),
-        miscInt());
+        Stream.concat(miscInt(), countingPrimitives()));
+  }
+
+  /** The counting globals and SumInt as primitive constraints, so the wrappers check them too. */
+  private static Stream<Arguments> countingPrimitives() {
+    return Stream.of(
+        Arguments.of("CountPrimitive", counting("Count")),
+        Arguments.of("CountBoundsPrimitive", counting("CountBounds")),
+        Arguments.of("CountVarPrimitive", counting("CountVar")),
+        Arguments.of("AtLeastPrimitive", counting("AtLeast")),
+        Arguments.of("AtMostPrimitive", counting("AtMost")),
+        Arguments.of("AllEqualPrimitive", counting("AllEqual")),
+        Arguments.of("SumIntPrimitive", linear("SumInt")));
+  }
+
+  /**
+   * The counting globals as primitive constraints on 1-4 list variables from 0..3, followed by the
+   * counter (Count, CountVar) and the counted value (CountVar).
+   */
+  private static Function<Random, Case> counting(String kind) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int value = random.nextInt(4);
+      int lb = random.nextInt(n + 1);
+      int ub = lb + random.nextInt(n + 2 - lb);
+      int extra =
+          switch (kind) {
+            case "Count" -> 1;
+            case "CountVar" -> 2;
+            default -> 0;
+          };
+      int[][] domains = new int[n + extra][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, 0, 3);
+      }
+      if (extra > 0) {
+        domains[n] = domain(random, -1, n + 1);
+      }
+      if (extra > 1) {
+        domains[n + 1] = domain(random, 0, 3);
+      }
+      Function<IntVar[], PrimitiveConstraint> constraint =
+          x -> {
+            IntVar[] list = Arrays.copyOf(x, n);
+            return switch (kind) {
+              case "Count" -> new Count(list, x[n], value);
+              case "CountBounds" -> new CountBounds(list, value, lb, ub);
+              case "CountVar" -> new CountVar(list, x[n], x[n + 1]);
+              case "AtLeast" -> new AtLeast(list, lb, value);
+              case "AtMost" -> new AtMost(list, lb, value);
+              case "AllEqual" -> new AllEqual(list);
+              default -> throw new IllegalArgumentException(kind);
+            };
+          };
+      return Case.primitive(
+          domains,
+          constraint,
+          t -> {
+            int counted = kind.equals("CountVar") ? t[n + 1] : value;
+            int count = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[i] == counted) {
+                count++;
+              }
+            }
+            return switch (kind) {
+              case "Count", "CountVar" -> count == t[n];
+              case "CountBounds" -> lb <= count && count <= ub;
+              case "AtLeast" -> count >= lb;
+              case "AtMost" -> count <= lb;
+              default -> Arrays.stream(t).allMatch(v -> v == t[0]);
+            };
+          },
+          kind + " value=" + value + " lb=" + lb + " ub=" + ub);
+    };
+  }
+
+  /** SumInt as a primitive constraint; the sum variable is the last one. */
+  private static Function<Random, Case> linear(String kind) {
+    String[] relations = {"==", "!=", "<", "<=", ">", ">="};
+    return random -> {
+      int n = 1 + random.nextInt(3);
+      boolean sumVariable = kind.equals("SumInt") || random.nextBoolean();
+      int[] weights = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = kind.equals("SumInt") ? 1 : random.nextInt(7) - 3;
+      }
+      String rel = relations[random.nextInt(relations.length)];
+      int sum = random.nextInt(9) - 4;
+      int[][] domains = domains(random, n + (sumVariable ? 1 : 0), -2, 2);
+      Function<IntVar[], PrimitiveConstraint> constraint =
+          x -> {
+            IntVar[] list = Arrays.copyOf(x, n);
+            return switch (kind) {
+              case "SumInt" -> new SumInt(list, rel, x[n]);
+              case "LinearIntDom" ->
+                  sumVariable
+                      ? new LinearIntDom(list, weights, rel, x[n])
+                      : new LinearIntDom(list, weights, rel, sum);
+              default ->
+                  sumVariable
+                      ? new LinearInt(list, weights, rel, x[n])
+                      : new LinearInt(list, weights, rel, sum);
+            };
+          };
+      return Case.primitive(
+          domains,
+          constraint,
+          t -> {
+            long lhs = 0;
+            for (int i = 0; i < n; i++) {
+              lhs += (long) weights[i] * t[i];
+            }
+            long rhs = sumVariable ? t[n] : sum;
+            return switch (rel) {
+              case "==" -> lhs == rhs;
+              case "!=" -> lhs != rhs;
+              case "<" -> lhs < rhs;
+              case "<=" -> lhs <= rhs;
+              case ">" -> lhs > rhs;
+              default -> lhs >= rhs;
+            };
+          },
+          kind
+              + " weights="
+              + Arrays.toString(weights)
+              + " "
+              + rel
+              + " "
+              + (sumVariable ? "x" + n : String.valueOf(sum)));
+    };
   }
 
   /** The table constraints. */
