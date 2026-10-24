@@ -90,6 +90,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
@@ -5339,6 +5340,29 @@ class SingleConstraintTest extends TestHelper {
       boolean holds = (xv == 0 || yv == 1) == (zv == 1);
       assertThat(c.satisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(holds);
       assertThat(c.notSatisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(!holds);
+    }
+  }
+
+  @Test
+  void testIfThenElseBoolSatisfied() {
+    // satisfied() of an imposed IfThenElseBool used to remove the constraint, impose a
+    // replacement and answer false whenever the condition was ground
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int cv = t >> 2;
+      int tv = (t >> 1) & 1;
+      int ev = t & 1;
+      BooleanVar cond = new BooleanVar(store, "c", cv, cv);
+      BooleanVar thenVar = new BooleanVar(store, "t", tv, tv);
+      BooleanVar elseVar = new BooleanVar(store, "e", ev, ev);
+      IfThenElseBool c = new IfThenElseBool(cond, thenVar, elseVar);
+      boolean holds = cv == 1 ? tv == 1 : ev == 1;
+      store.impose(c);
+      int constraints = store.numberConstraints();
+      assertThat(c.satisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(!holds);
+      assertThat(store.numberConstraints()).isEqualTo(constraints);
+      assertThat(store.consistency()).isEqualTo(holds);
     }
   }
 
