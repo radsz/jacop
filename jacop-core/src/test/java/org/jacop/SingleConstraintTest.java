@@ -5055,6 +5055,17 @@ class SingleConstraintTest extends TestHelper {
         .isFalse();
   }
 
+  @Test
+  void negatedIfThenReachesFixpoint() {
+    // not(x0 = 0 and x1 = 0 => x0 = x1): the condition fixes x0 = x1 = 0 after the negated
+    // consequence has run, so the negated consequence must run again and fail
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new Not(new IfThen(new And(new XeqC(x0, 0), new XeqC(x1, 0)), new XeqY(x0, x1))));
+    assertThat(store.consistency()).isFalse();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {

@@ -57,6 +57,9 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   boolean imposed;
   Store store;
 
+  /** Set when a variable changes, so notConsistency() repeats until neither part prunes more. */
+  private boolean propagation;
+
   /**
    * It constructs ifthen constraint.
    *
@@ -107,8 +110,11 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void notConsistency(Store store) {
 
-    thenC.notConsistency(store);
-    condC.consistency(store);
+    do {
+      propagation = false;
+      thenC.notConsistency(store);
+      condC.consistency(store);
+    } while (propagation);
   }
 
   @Override
@@ -169,6 +175,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void queueVariable(int level, Var variable) {
 
+    propagation = true;
     queueForward.queueForward(level, variable);
   }
 }
