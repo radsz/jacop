@@ -39,6 +39,7 @@ import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PdivCeqR;
@@ -223,6 +224,25 @@ class SingleConstraintTest {
     store.impose(new RoundPeqX(p, x));
     assertThat(store.consistency()).isTrue();
     assertThat(p.min()).isEqualTo(0.5);
+  }
+
+  @Test
+  void testElementSatisfiedWithIndexOutsideTheList() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 3, 3);
+    FloatVar value = new FloatVar(store, "value", 0.5, 0.5);
+    FloatVar a = new FloatVar(store, "a", 0.5, 0.5);
+    FloatVar b = new FloatVar(store, "b", 0.5, 0.5);
+    ElementFloat element = new ElementFloat(index, new double[] {0.5, 0.5}, value);
+    ElementFloatVariable elementVariable =
+        new ElementFloatVariable(index, new FloatVar[] {a, b}, value);
+    store.impose(element);
+    store.impose(elementVariable);
+
+    // satisfied() before the first consistency read list[2]
+    assertThat(element.satisfied()).isFalse();
+    assertThat(elementVariable.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
   }
 
   private static FloatIntervalDomain points(double... values) {
