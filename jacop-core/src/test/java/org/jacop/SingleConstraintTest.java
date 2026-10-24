@@ -4945,6 +4945,29 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void distanceNegatedWithGroundVariables() {
+    // with x and y ground the negation removed y - x from x instead of z, and removed the
+    // negative x - y from z
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, -3);
+    IntVar y = new IntVar(store, "y", -2, -2);
+    IntVar z = new IntVar(store, "z", -4, 6);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().contains(1)).isFalse();
+    assertThat(z.getSize()).isEqualTo(10);
+
+    // |x - y| != z holds for every x and y when z is negative
+    store = new Store();
+    x = new IntVar(store, "x", 3, 3);
+    y = new IntVar(store, "y", 0, 6);
+    z = new IntVar(store, "z", -2, -2);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.getSize()).isEqualTo(7);
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
