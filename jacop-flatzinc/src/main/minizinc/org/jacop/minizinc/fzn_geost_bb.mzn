@@ -22,10 +22,24 @@ predicate fzn_geost_bb(
     array[int    ] of int    : l               ,
     array[int    ] of int    : u
 ) =
+    if jacop_geost_positive_sizes(rect_size) then
         forall(o in index_set(kind))(kind[o] in index_set(shape))
         /\ jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset),
                           jacop_geost_shapes(rect_size, shape), array1d(x),
                           jacop_geost_kinds(shape, kind), l, u)
+    else
+        fzn_geost(k, rect_size, rect_offset, shape, x, kind)
+        /\ forall(o in index_set(kind))(
+            forall(s in dom(kind[o]) intersect index_set(shape))(
+                (kind[o] = s ->
+                    forall(r in shape[s], j in 1..k)(
+                        x[o,j] + rect_offset[r,j] >= l[j]
+                    /\  x[o,j] + rect_offset[r,j] + rect_size[r,j] <= u[j]
+                    )
+                )
+            )
+        )
+    endif
     ;
 
 
