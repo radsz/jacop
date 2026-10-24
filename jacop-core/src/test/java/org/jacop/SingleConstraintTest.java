@@ -128,6 +128,8 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -4345,6 +4347,44 @@ class SingleConstraintTest extends TestHelper {
         .isEqualTo(cumulativeBruteForce(2, 2, 1, new int[] {1, 1}, 1, true));
     assertThat(cumulativeSolutions(true, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, true))
         .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, true));
+  }
+
+  @Test
+  void testCumulativeUnaryTaskAboveLimit() {
+
+    // Without the profile only unary edge finding ran, which assumes every task fits in the limit,
+    // so a task using more than the limit was accepted.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    s = new IntVar[] {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    d = new IntVar[] {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    r = new IntVar[] {new IntVar(store, 2, 2), new IntVar(store, 0, 3)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d[0].max()).isZero();
+    assertThat(r[1].max()).isEqualTo(1);
+  }
+
+  @Test
+  void testCumulativeUnaryOptionalTaskAboveLimit() {
+
+    // The same as testCumulativeUnaryTaskAboveLimit for optional tasks: a task using more than the
+    // limit is absent or has zero duration.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2), new IntVar(store, 2, 2)};
+    IntVar[] o = {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    store.impose(new CumulativeUnaryOptional(s, d, r, new IntVar(store, 1, 1), o, false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o[0].max()).isZero();
+    assertThat(d[1].max()).isZero();
   }
 
   /**
