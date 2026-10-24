@@ -255,6 +255,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
+                                <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
@@ -310,6 +311,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
+                                <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>

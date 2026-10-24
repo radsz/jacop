@@ -100,6 +100,7 @@ import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -4932,5 +4933,99 @@ class SingleConstraintTest extends TestHelper {
     public void beforeEach(ExtensionContext context) {
       log.info("Starting test: " + context.getDisplayName());
     }
+  }
+
+  @Test
+  void testSequenceWithBoundsOutsideWindowHasNoSolution() {
+
+    // a window of 2 holds at most 2 values of the set, so min = 3 or max = -1 cannot be met
+    for (int[] minMax : new int[][] {{3, 3}, {-1, -1}}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+
+      store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, minMax[0], minMax[1]));
+
+      assertThat(noOfAllSolutions(store, x)).isZero();
+    }
+  }
+
+  @Test
+  void testSequenceWithWindowLongerThanListHoldsTrivially() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+
+    // no window of 4 fits in 3 variables, so every assignment is a solution
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 4, 1, 1));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(8);
+  }
+
+  @Test
+  void testSequenceRejectsNonPositiveWindow() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 2);
+
+    assertThatThrownBy(() -> new Sequence(x, new IntervalDomain(1, 1), 0, 0, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchForbidsValueWithZeroMaximalLength() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+
+    // value 2 may form stretches of length 0 only, so x must be [1, 1, 1]
+    store.imposeDecomposition(new Stretch(new int[] {1, 2}, new int[] {1, 0}, new int[] {3, 0}, x));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
+  }
+
+  @Test
+  void testStretchRejectsRepeatedValues() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    // with value 1 listed twice, [1, 1] was accepted as two stretches of length 1
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 1}, new int[] {1, 1}, new int[] {1, 1}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchRejectsArraysOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 2}, new int[] {1}, new int[] {2, 2}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testBoundDomainInEmptyDomainFails() {
+
+    Store store = new Store();
+    // Boolean variables have a BoundDomain
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+
+    // the automaton has no accepting word, so Regular restricts x to empty domains
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
+
+    assertThat(store.consistency()).isFalse();
   }
 }

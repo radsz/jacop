@@ -132,9 +132,13 @@ public class Stretch extends DecomposedConstraint<Constraint> {
     for (int k = 0; k < this.values.length; k++) {
       IntDomain d = new IntervalDomain(this.values[k], this.values[k]);
       FsmState current = new FsmState();
-      fsm.initState.addTransition(new FsmTransition(d, current));
       fsm.allStates.add(current);
       oneStep[k] = current;
+      if (max[k] < 1) {
+        // the value can not occur at all; its state stays unreachable
+        continue;
+      }
+      fsm.initState.addTransition(new FsmTransition(d, current));
       if (min[k] <= 1) {
         fsm.finalStates.add(current);
       }
@@ -145,7 +149,7 @@ public class Stretch extends DecomposedConstraint<Constraint> {
     for (int vk = 0; vk < this.values.length; vk++) {
       if (min[vk] <= 1) {
         for (int other = 0; other < this.values.length; other++) {
-          if (other != vk) {
+          if (other != vk && max[other] >= 1) {
             oneStep[vk].addTransition(
                 new FsmTransition(
                     new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
@@ -174,7 +178,7 @@ public class Stretch extends DecomposedConstraint<Constraint> {
 
   private void addTransitionsToOtherOneSteps(FsmState from, FsmState[] oneStep, int excludeVk) {
     for (int other = 0; other < this.values.length; other++) {
-      if (other != excludeVk) {
+      if (other != excludeVk && max[other] >= 1) {
         from.addTransition(
             new FsmTransition(
                 new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
