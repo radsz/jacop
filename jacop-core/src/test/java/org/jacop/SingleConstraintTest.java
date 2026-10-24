@@ -4130,6 +4130,30 @@ class SingleConstraintTest extends TestHelper {
     assertThat(counts[1]).isEqualTo(counts[0]);
   }
 
+  // Without counted values SoftGCC counts the values in the domains of x when it is created. A
+  // ground x can remove one of them, and the counters were then silently paired with other values.
+  @Test
+  void testSoftGccWithoutCountedValuesRejectsCountersOfRemovedValues() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 2, 2)};
+    IntVar[] hard = {
+      new IntVar(store, "h0", 1, 1), new IntVar(store, "h1", 0, 0), new IntVar(store, "h2", 1, 1)
+    };
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    int[] lower = {0, 0, 0};
+    int[] upper = {2, 2, 2};
+
+    assertThatThrownBy(() -> new SoftGCC(x, hard, lower, upper, cost, ViolationMeasure.VALUE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    store.imposeDecomposition(
+        new SoftGCC(
+            x, hard, new int[] {0, 1, 2}, lower, upper, cost, ViolationMeasure.VALUE_BASED));
+    assertThat(noOfAllSolutions(store, x, hard, new IntVar[] {cost})).isEqualTo(1);
+    assertThat(cost.value()).isZero();
+  }
+
   // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
   // lower bound for flows that are not negative.
   @Test

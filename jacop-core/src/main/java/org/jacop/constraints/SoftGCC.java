@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.netflow.DomainStructure;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -162,6 +163,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
   }
 
   /**
@@ -191,6 +193,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
   }
 
   /**
@@ -217,6 +220,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     this.countedValue = copyIntArray(countedValue);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
   }
 
   /**
@@ -244,6 +248,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     this.softUpperBound = copyIntArray(softUpperBound);
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
   }
 
   /**
@@ -272,6 +277,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
   }
 
   /**
@@ -297,6 +303,38 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     this.costVar = costVar;
     this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * Checks that every counter and bound array has one entry per counted value. The constructors
+   * without countedValue count the values in the domains of xvars when the constraint is created,
+   * so a variable that is already ground can remove a value and shift the counters.
+   */
+  private void checkCounterLengths() {
+    int[][] bounds = {softLowerBound, softUpperBound, hardLowerBound, hardUpperBound};
+    String[] boundNames = {"softLowerBound", "softUpperBound", "hardLowerBound", "hardUpperBound"};
+    for (int i = 0; i < bounds.length; i++) {
+      checkCounterLength(boundNames[i], bounds[i] == null ? -1 : bounds[i].length);
+    }
+    checkCounterLength("hardCounters", hardCounters == null ? -1 : hardCounters.length);
+    checkCounterLength("softCounters", softCounters == null ? -1 : softCounters.length);
+  }
+
+  private void checkCounterLength(String name, int length) {
+    if (length >= 0 && length != countedValue.length) {
+      throw new IllegalArgumentException(
+          "SoftGCC: "
+              + name
+              + " has "
+              + length
+              + " entries but "
+              + countedValue.length
+              + " values are counted "
+              + Arrays.toString(countedValue)
+              + "; without countedValue the counted values are the values left in the domains of"
+              + " xvars, so pass countedValue when some of them may be ground");
+    }
   }
 
   /**
