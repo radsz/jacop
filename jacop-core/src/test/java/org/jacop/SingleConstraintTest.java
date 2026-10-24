@@ -63,6 +63,7 @@ import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.Assignment;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -945,6 +946,16 @@ class SingleConstraintTest extends TestHelper {
     x[0].domain.inComplement(store.level, x[0], 3);
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void assignmentRejectsArraysOfDifferentLength() {
+    // a shorter ds threw ArrayIndexOutOfBoundsException, a longer one NullPointerException later
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Assignment(x, d)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Assignment(d, x)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

@@ -414,6 +414,24 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void inverseWithIndexSetsOfDifferentSizeIsUnsatisfiable() throws IOException {
+    // jacop_assignment with arrays of different length threw ArrayIndexOutOfBoundsException when
+    // posting (invf shorter) or NullPointerException during propagation (invf longer).
+    String model =
+        """
+        array [1..%d] of var 1..%d: f :: output_array([1..%1$d]);
+        array [1..%2$d] of var 1..%1$d: g :: output_array([1..%2$d]);
+        constraint jacop_assignment(f,g,1,1);
+        solve satisfy;
+        """;
+    for (int[] size : new int[][] {{2, 3}, {3, 2}}) {
+      String[] out = run(model.formatted(size[0], size[1]), "-a");
+      List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
+      assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
+    }
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.

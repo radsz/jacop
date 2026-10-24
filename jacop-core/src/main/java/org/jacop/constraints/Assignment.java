@@ -90,6 +90,10 @@ public class Assignment extends Constraint
   public Assignment(IntVar[] xs, IntVar[] ds, int shiftX, int shiftD) {
 
     checkInputForNullness(new String[] {"xs", "ds"}, xs, ds);
+    if (xs.length != ds.length) {
+      throw new IllegalArgumentException(
+          "Assignment requires xs and ds of equal length, got " + xs.length + " and " + ds.length);
+    }
 
     numberId = idNumber.incrementAndGet();
 
