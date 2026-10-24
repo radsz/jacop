@@ -299,8 +299,10 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
 
     imposeInit(store);
 
+    duplicates = new ArrayList<>();
+    duplicatesIndexes = new IntervalDomain();
+
     if (checkDuplicates) {
-      duplicates = new ArrayList<>();
 
       TreeMap<Integer, IntervalDomain> map = new TreeMap<>();
 
@@ -317,7 +319,6 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
         }
       }
 
-      duplicatesIndexes = new IntervalDomain();
       for (IntDomain duplicate : map.values()) {
         if (duplicate.getSize() > minDuplicatesSize) {
           duplicates.add(duplicate);

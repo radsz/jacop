@@ -72,6 +72,7 @@ import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
@@ -2809,6 +2810,21 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(store.consistency()).isTrue();
     assertThat(b.max()).isEqualTo(6);
+  }
+
+  @Test
+  void elementIntegerWithoutDuplicateCheck() {
+    // The constructor option checkDuplicates = false left the duplicate structures null, so the
+    // first consistency call threw a NullPointerException.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 4);
+    IntVar value = new IntVar(store, "value", 0, 9);
+    store.impose(new ElementInteger(index, new int[] {3, 1, 3, 7}, value, 0, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{1, 3, 7}");
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {index, value});
+    assertThat(noOfSolutions).isEqualTo(4);
   }
 
   @Test
