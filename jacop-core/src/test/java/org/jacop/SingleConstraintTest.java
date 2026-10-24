@@ -5126,6 +5126,22 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countSolutions(store, new IntVar[] {x, y, z}, new Random(1))).isEqualTo(7);
   }
 
+  @Test
+  void channelsAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 2);
+    IntVar[] b = {new IntVar(store, "b0", 0, 0), new IntVar(store, "b1", 1, 1)};
+    assertThat(new ChannelReif(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelReif(x, b, new int[] {2, 1}).satisfied()).isFalse();
+    assertThat(new ChannelImply(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(x, b, new int[] {2, 1}).satisfied()).isFalse();
+
+    IntVar three = new IntVar(store, "three", 3, 3);
+    IntVar[] zeros = {new IntVar(store, "z0", 0, 0), new IntVar(store, "z1", 0, 0)};
+    assertThat(new ChannelReif(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
