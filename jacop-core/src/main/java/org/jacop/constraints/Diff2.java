@@ -74,6 +74,7 @@ public class Diff2 extends AbstractDiff {
     checkInputForNullness("rectangles", rectangles);
     checkInputForNullness("exlusiveList", exclusiveList);
     checkInput(rectangles, i -> i.dim == 2, "rectangle should have exactly two dimensions");
+    checkExclusiveList(exclusiveList, rectangles.length);
 
     this.queueIndex = 2;
     this.numberId = idNumber.incrementAndGet();
@@ -239,6 +240,10 @@ public class Diff2 extends AbstractDiff {
     List<Integer> list = new ArrayList<>(exclusiveList.size() * 2);
 
     for (List<Integer> pair : exclusiveList) {
+      if (pair.size() != 2) {
+        throw new IllegalArgumentException(
+            "Diff2: exclusive list element " + pair + " is not a pair");
+      }
       list.addAll(pair);
     }
 
@@ -246,6 +251,7 @@ public class Diff2 extends AbstractDiff {
     for (int i = 0; i < list.size(); i++) {
       this.exclusiveList[i] = list.get(i);
     }
+    checkExclusiveList(this.exclusiveList, this.rectangles.length);
 
     setScope(rectangles.stream().flatMap(Collection::stream));
   }
@@ -270,6 +276,10 @@ public class Diff2 extends AbstractDiff {
     List<Integer> list = new ArrayList<>(exclusive.size() * 2);
 
     for (List<Integer> pair : exclusive) {
+      if (pair.size() != 2) {
+        throw new IllegalArgumentException(
+            "Diff2: exclusive list element " + pair + " is not a pair");
+      }
       list.addAll(pair);
     }
 
@@ -277,6 +287,7 @@ public class Diff2 extends AbstractDiff {
     for (int i = 0; i < list.size(); i++) {
       this.exclusiveList[i] = list.get(i);
     }
+    checkExclusiveList(this.exclusiveList, this.rectangles.length);
 
     setScope(Rectangle.getStream(this.rectangles));
   }
@@ -292,6 +303,23 @@ public class Diff2 extends AbstractDiff {
     }
 
     return list.toArray(Rectangle[]::new);
+  }
+
+  private static void checkExclusiveList(int[] exclusiveList, int rectangles) {
+    if (exclusiveList.length % 2 != 0) {
+      throw new IllegalArgumentException(
+          "Diff2: exclusive list must contain pairs of rectangles, but has odd length "
+              + exclusiveList.length);
+    }
+    for (int e : exclusiveList) {
+      if (e < 1 || e > rectangles) {
+        throw new IllegalArgumentException(
+            "Diff2: exclusive list names rectangle "
+                + e
+                + ", but rectangles are numbered from 1 to "
+                + rectangles);
+      }
+    }
   }
 
   boolean notOverlapping(int i, int j, int[] exclusiveList) {

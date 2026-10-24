@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,7 +42,6 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public abstract class AbstractSum extends PrimitiveConstraint {
 
   /** Defines relation constants. */
@@ -110,10 +108,8 @@ public abstract class AbstractSum extends PrimitiveConstraint {
       case "!=" -> NE;
       case ">" -> GT;
       case ">=", "=>" -> GE;
-      default -> {
-        log.error("Wrong relation symbol in Sum constraint {}; assumed ==", r);
-        yield EQ;
-      }
+      case null, default ->
+          throw new IllegalArgumentException("Wrong relation symbol in Sum constraint " + r + ".");
     };
   }
 

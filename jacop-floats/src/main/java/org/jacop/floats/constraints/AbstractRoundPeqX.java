@@ -64,7 +64,7 @@ public abstract class AbstractRoundPeqX extends Constraint implements SatisfiedP
 
     double q = Double.max(p.min(), p.max());
     if (q > Integer.MAX_VALUE || q < Integer.MIN_VALUE) {
-      throw new RuntimeException("Error: JaCoP cannor handle " + p + " in rounding to integer.");
+      throw new IllegalArgumentException("JaCoP cannot handle " + p + " in rounding to integer.");
     }
     numberId = idNum.incrementAndGet();
 

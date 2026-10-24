@@ -63,7 +63,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
    */
   public LinearFloat(FloatVar[] list, double[] weights, String rel, double sum) {
 
-    super(list[0].getStore(), list, weights, rel, sum);
+    super(storeOf(list), list, weights, rel, sum);
   }
 
   /**
@@ -92,7 +92,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
   public LinearFloat(
       List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
-    super(variables.getFirst().getStore(), variables, weights, rel, sum);
+    super(storeOf(variables.toArray(new FloatVar[0])), variables, weights, rel, sum);
   }
 
   /**
@@ -131,5 +131,13 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
     Derivative.poseDerivativeConstraint(c);
 
     return v;
+  }
+
+  private static Store storeOf(FloatVar[] list) {
+    if (list == null || list.length == 0 || list[0] == null) {
+      throw new IllegalArgumentException(
+          "Constraint LinearFloat with a constant sum needs a non-empty list of variables.");
+    }
+    return list[0].getStore();
   }
 }

@@ -148,7 +148,7 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
   public LinearInt(IntVar[] list, int[] weights, String rel, int sum) {
     checkInputForNullness("list", list);
     checkInputForNullness(WEIGHTS, weights);
-    commonInitialization(list[0].getStore(), list, weights, rel, sum);
+    commonInitialization(storeOf(list), list, weights, rel, sum);
     numberId = idNumber.incrementAndGet();
   }
 
@@ -164,7 +164,7 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
   public LinearInt(List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
     checkInputForNullness(new String[] {"list", WEIGHTS}, new Object[] {list, weights});
     commonInitialization(
-        list.getFirst().getStore(),
+        storeOf(list.toArray(new IntVar[0])),
         list.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
@@ -184,6 +184,7 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
   public LinearInt(IntVar[] list, int[] weights, String rel, IntVar sum) {
     checkInputForNullness("list", list);
     checkInputForNullness(WEIGHTS, weights);
+    checkInputForNullness("sum", new Object[] {sum});
     commonInitialization(
         sum.getStore(),
         Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
@@ -191,6 +192,27 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
         rel,
         0);
     numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * Returns the store of the variables of a linear constraint with a constant sum.
+   *
+   * @param list the variables of the constraint.
+   * @return the store of the first variable.
+   */
+  static Store storeOf(IntVar[] list) {
+    checkNotEmpty(list);
+    return list[0].getStore();
+  }
+
+  private static void checkNotEmpty(IntVar[] list) {
+    if (list.length == 0) {
+      throw new IllegalArgumentException(
+          "A linear constraint with a constant sum needs at least one variable.");
+    }
+    if (list[0] == null) {
+      throw new IllegalArgumentException("A linear constraint has a null variable.");
+    }
   }
 
   /**
@@ -844,10 +866,9 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
       case ">=", "=>" -> {
         return GE;
       }
-      case null, default -> {
-        log.error("Wrong relation symbol in LinearInt constraint {}; assumed ==", r);
-        return EQ;
-      }
+      case null, default ->
+          throw new IllegalArgumentException(
+              "Wrong relation symbol in LinearInt constraint " + r + ".");
     }
   }
 

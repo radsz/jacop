@@ -75,7 +75,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
    */
   public ChannelIntSet(IntVar[] x, SetVar[] s, int offsetInt, int offsetSet) {
 
-    checkInputForNullness(new String[] {"x", "x"}, new Object[] {x, s});
+    checkInputForNullness(new String[] {"x", "s"}, new Object[] {x, s});
+    checkInputForNullness("x", x);
+    checkInputForNullness("s", s);
 
     numberId = idNumber.incrementAndGet();
 

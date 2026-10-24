@@ -63,9 +63,9 @@ public abstract class AbstractReifiedConstraint extends PrimitiveConstraint
   protected AbstractReifiedConstraint(IntVar b, PrimitiveConstraint c) {
 
     checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
-    if (b.min() > 1 || b.max() < 0) {
+    if (b.min() < 0 || b.max() > 1) {
       throw new IllegalArgumentException(
-          "Variable b in reified constraint must have domain at most 0..1");
+          "Variable b in reified constraint must have a domain within 0..1, not " + b);
     }
 
     this.b = b;

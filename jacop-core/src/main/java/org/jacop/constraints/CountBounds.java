@@ -91,6 +91,11 @@ public class CountBounds extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
+    if (lb > ub) {
+      // no number of occurrences lies in an empty range
+      throw Store.failException;
+    }
+
     CountResult cr = countOccurrences(value);
     int numberEq = cr.numberEq();
     int numberMayBe = cr.numberMayBe();

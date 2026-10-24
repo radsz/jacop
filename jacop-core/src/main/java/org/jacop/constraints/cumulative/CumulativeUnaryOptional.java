@@ -65,7 +65,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
 
     super(starts, durations, resources, limit);
 
-    this.opt = opt;
+    this.opt = ProfileOptional.checkOptional(opt, starts.length, "CumulativeUnaryOptional");
 
     up = new ProfileOptional(limit);
 
@@ -74,7 +74,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
             Stream.concat(
                 Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
                 Stream.concat(Arrays.stream(resources), Stream.of(limit))),
-            Arrays.stream(opt)));
+            Arrays.stream(this.opt)));
   }
 
   /**

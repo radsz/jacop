@@ -44,6 +44,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.PartitionSet;
@@ -339,6 +340,39 @@ class SingleConstraintTest {
       s.domain.inCardinality(store.level, s, min, min + random.nextInt(2));
     }
     return s;
+  }
+
+  @Test
+  void testChannelBoolSetRejectsBadArguments() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar wide = new IntVar(store, "wide", -1, 2);
+
+    // a repeated variable gave the solution s = {0} although b[0] = b[1]
+    assertThatThrownBy(() -> new ChannelBoolSet(new IntVar[] {b, b}, s))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChannelBoolSet(new IntVar[] {wide, b}, s))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChannelBoolSet(new IntVar[] {b}, null))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testSetConstraintsRejectNullArguments() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", 1, 2);
+    SetVar b = new SetVar(store, "b", 1, 2);
+    IntVar x = new IntVar(store, "x", 0, 1);
+
+    assertThatThrownBy(() -> new PartitionSet(new SetVar[] {a, b}, null))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new PartitionSet(new SetVar[] {a, null}, new IntervalDomain(1, 2)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChannelIntSet(new IntVar[] {x, null}, new SetVar[] {a}))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChannelIntSet(new IntVar[] {x}, new SetVar[] {null}))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {

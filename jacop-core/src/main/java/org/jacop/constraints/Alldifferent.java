@@ -225,7 +225,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     Set<Integer> values = new HashSet<>();
 
     for (IntVar aList : list) {
-      if (!values.add(aList.value())) {
+      int value = aList.value();
+      if (!isExceptionValue(value) && !values.add(value)) {
         return false;
       }
     }
@@ -262,20 +263,23 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   }
 
   /**
-   * Check whether the constraint is not satisfied based on bipartite graph matching.
+   * Check whether the constraint is not satisfied based on bipartite graph matching. Variables that
+   * can take an exception value are left out, as any number of them can take one.
    *
    * @return true if constraint is not satisfied
    */
   public boolean notSatisfied() {
 
+    IntVar[] vars = Arrays.stream(list).filter(v -> !hasExceptionValues(v)).toArray(IntVar[]::new);
+
     Map<Integer, Integer> valueMap = new HashMap<>();
     int valueIndex = 0;
 
-    int[][] adj = new int[list.length + 1][];
+    int[][] adj = new int[vars.length + 1][];
     adj[0] = new int[0];
 
-    for (int i = 0; i < list.length; i++) {
-      IntVar v = list[i];
+    for (int i = 0; i < vars.length; i++) {
+      IntVar v = vars[i];
 
       adj[i + 1] = new int[v.dom().getSize()];
       int j = 0;
@@ -296,10 +300,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       log.debug("{}: {}", i, Arrays.toString(adj[i]));
     }
     // compute maximal value for count
-    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
+    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vars.length, valueMap.size());
     int maxNumberDifferent = matcher.hopcroftKarp();
 
-    return maxNumberDifferent < list.length;
+    return maxNumberDifferent < vars.length;
   }
 
   @Override

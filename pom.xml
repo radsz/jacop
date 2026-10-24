@@ -199,6 +199,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                             </includes>
@@ -243,6 +244,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -294,6 +296,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -345,6 +348,7 @@ setup to run configuration. -->
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>

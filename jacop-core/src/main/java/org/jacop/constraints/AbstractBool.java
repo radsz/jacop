@@ -54,6 +54,12 @@ public abstract class AbstractBool extends DecomposedConstraint<PrimitiveConstra
    */
   protected AbstractBool(IntVar[] a, IntVar result) {
 
+    checkInputForNullness(new String[] {"a", "result"}, a, new Object[] {result});
+    String error = PrimitiveConstraint.checkBooleanDomains(a);
+    if (error != null) {
+      throw new IllegalArgumentException(error);
+    }
+
     int[] shortCircuit = {-1};
     IntVar[] r = filter(a, shortCircuit);
 

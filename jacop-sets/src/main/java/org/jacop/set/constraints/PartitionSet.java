@@ -77,7 +77,8 @@ public class PartitionSet extends Constraint {
    */
   public PartitionSet(SetVar[] s, IntDomain universe) {
 
-    checkInputForNullness(new String[] {"s"}, new Object[] {s});
+    checkInputForNullness(new String[] {"s", "universe"}, new Object[] {s, universe});
+    checkInputForNullness("s", s);
 
     numberId = idNumber.incrementAndGet();
 
