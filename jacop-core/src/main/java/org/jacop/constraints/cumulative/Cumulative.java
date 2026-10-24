@@ -78,6 +78,17 @@ public class Cumulative extends CumulativeBasic {
   boolean doTimeTableDisjunctive = true;
   boolean doHorizontallyElasticEdgeFind;
   private HorizontallyElasticEdgeFinder horizontallyElastic;
+  boolean adaptiveEnergy;
+  // calls in a row without pruning after which an adaptive rule starts to be skipped
+  private static final int IDLE_LIMIT = 64;
+  // the longest run of skipped calls of an adaptive rule
+  private static final int MAX_SKIP = 64;
+  private static final int TTDR = 0;
+  private static final int TTEF = 1;
+  // per rule: calls in a row that pruned nothing, calls left to skip and the current skip period
+  private final int[] idleCalls = new int[2];
+  private final int[] skipCalls = new int[2];
+  private final int[] skipPeriod = new int[2];
   // one per view, so that each keeps its task orders between calls
   final EnergyReasoning energy = new EnergyReasoning();
   final EnergyReasoning energyReversed = new EnergyReasoning();
@@ -233,6 +244,64 @@ public class Cumulative extends CumulativeBasic {
   }
 
   /**
+   * Sets whether time-table edge finding and time-table disjunctive reasoning adapt to how often
+   * they prune. A rule that prunes nothing (and finds no failure) in 64 calls in a row is then
+   * skipped for 1, 2, 4, ... up to 64 calls after each further call without pruning, and runs at
+   * every call again as soon as it prunes. The constraint stays correct, since time-table
+   * propagation still checks every complete assignment, but it may prune less. It is off by
+   * default.
+   *
+   * @param adaptive true to let the rules adapt, false to run them at every call.
+   */
+  public void doAdaptiveEnergyReasoning(boolean adaptive) {
+    adaptiveEnergy = adaptive;
+  }
+
+  // runs a time-table energy rule in both directions unless it is being skipped; true if it pruned
+  private boolean energyRule(int rule, TaskView[] tn, TaskView[] tr, long capacity, Store store) {
+    if (skipCalls[rule] > 0) {
+      skipCalls[rule]--;
+      return false;
+    }
+    int n = tn.length;
+    // a failure counts as pruning
+    boolean pruned = true;
+    try {
+      runEnergyRule(rule, energy, tn, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        energyReversed.load(tr, n);
+      }
+      runEnergyRule(rule, energyReversed, tr, n, capacity, store);
+      pruned = store.propagationHasOccurred;
+    } finally {
+      ruleRan(rule, pruned);
+    }
+    return pruned;
+  }
+
+  private static void runEnergyRule(
+      int rule, EnergyReasoning e, TaskView[] ts, int n, long capacity, Store store) {
+    if (rule == TTDR) {
+      e.timeTableDisjunctive(ts, n, capacity, store);
+    } else {
+      e.timeTableEdgeFind(ts, n, capacity, store);
+    }
+  }
+
+  private void ruleRan(int rule, boolean pruned) {
+    if (!adaptiveEnergy) {
+      return;
+    }
+    if (pruned) {
+      idleCalls[rule] = 0;
+      skipPeriod[rule] = 0;
+    } else if (++idleCalls[rule] >= IDLE_LIMIT) {
+      skipPeriod[rule] = Math.min(Math.max(1, 2 * skipPeriod[rule]), MAX_SKIP);
+      skipCalls[rule] = skipPeriod[rule];
+    }
+  }
+
+  /**
    * Runs the energy based rules that need neither edge finding trees nor optional tasks: the
    * overload check (only without edge finding, which includes it), time-table disjunctive reasoning
    * and time-table edge finding, in both directions. It stops after the first rule that changes a
@@ -261,25 +330,11 @@ public class Cumulative extends CumulativeBasic {
     if (overload) {
       energy.overload(capacity, n);
     }
-    if (doTimeTableDisjunctive) {
-      energy.timeTableDisjunctive(tn, n, capacity, store);
-      if (store.propagationHasOccurred) {
-        energyReversed.load(tr, n);
-      }
-      energyReversed.timeTableDisjunctive(tr, n, capacity, store);
-      if (store.propagationHasOccurred) {
-        return;
-      }
+    if (doTimeTableDisjunctive && energyRule(TTDR, tn, tr, capacity, store)) {
+      return;
     }
-    if (doTimeTableEdgeFind) {
-      energy.timeTableEdgeFind(tn, n, capacity, store);
-      if (store.propagationHasOccurred) {
-        energyReversed.load(tr, n);
-      }
-      energyReversed.timeTableEdgeFind(tr, n, capacity, store);
-      if (store.propagationHasOccurred) {
-        return;
-      }
+    if (doTimeTableEdgeFind && energyRule(TTEF, tn, tr, capacity, store)) {
+      return;
     }
     if (doHorizontallyElasticEdgeFind) {
       horizontallyElastic.filter(tn, n, capacity, store);

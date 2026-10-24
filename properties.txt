@@ -42,6 +42,11 @@ flatzinc compiler specific:
 - fz_cumulative_ttdr: use time-table disjunctive reasoning in
   cumulative constraints; default=true
 
+- fz_cumulative_adaptive: skip time-table edge finding and time-table
+  disjunctive reasoning in cumulative constraints while they prune
+  nothing, running them less often the longer they stay idle;
+  default=true
+
 - fz_cumulative_overload: use the overload check in cumulative
   constraints when edge finding is off; default=true
 
