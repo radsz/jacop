@@ -62,6 +62,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
+import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
@@ -74,7 +75,11 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
+import org.jacop.search.free.IndomainLastSolution;
+import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -114,6 +119,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   ArrayList<Search<T>> listSeqSearches;
   boolean heuristicSeqSearch;
   Var costVariable;
+  // the variable of the solve item; for maximisation costVariable is its negation
+  Var objectiveVariable;
   // restart search
   Calculator restartCalculator;
   RestartSearch<T> rs;
@@ -709,36 +716,86 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Runs free search with the FreeSearch engine: it branches on the set, integer, Boolean and float
-   * variables of the model in that order, as the chained depth-first searches of free search do.
+   * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
+   * the integer and Boolean variables, then on the objective and on the float variables. The
+   * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
+   * solution-based phase saving, and Luby restarts.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
+    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
+    boolean phase = "1".equals(options.freeConfig("phase", "1"));
+    boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
+    boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
+    Calculator restarts = restartCalculator;
+    if (!options.restartGiven() && "luby".equals(options.freeConfig("restarts", "luby"))) {
+      restarts = new LubyCalculator(options.getRestartScale());
+    }
+
+    List<SearchMonitor> monitors = new ArrayList<>();
     List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
     if (searchVars.getSetVars().length > 0) {
       selects.add(
           new SimpleSelect<>(
               searchVars.getSetVars(), new AfcMaxDeg<>(store), new IndomainSetMin<>()));
     }
-    if (searchVars.getIntVars().length > 0) {
-      selects.add(
-          new SimpleSelect<>(searchVars.getIntVars(), new AfcMaxDeg<>(store), new IndomainMin<>()));
+    LinkedHashSet<IntVar> intAndBool = new LinkedHashSet<>(Arrays.asList(searchVars.getIntVars()));
+    intAndBool.addAll(Arrays.asList(searchVars.getBoolVars()));
+    IntVar objective = costVar instanceof IntVar c && objectiveLast ? c : null;
+    if (objective != null) {
+      intAndBool.remove(objective);
+      // for maximisation the cost variable is the negation of the objective of the model
+      if (objectiveVariable instanceof IntVar o) {
+        intAndBool.remove(o);
+      }
     }
-    if (searchVars.getBoolVars().length > 0) {
-      selects.add(
-          new SimpleSelect<>(searchVars.getBoolVars(), new AfcMax<>(store), new IndomainMin<>()));
+    IntVar[] vars = intAndBool.toArray(new IntVar[0]);
+    Indomain<IntVar> values = new IndomainMin<>();
+    if (phase) {
+      IndomainLastSolution saving = new IndomainLastSolution(vars, values);
+      monitors.add(saving);
+      values = saving;
+    }
+    if ("afc".equals(heuristic)) {
+      if (searchVars.getIntVars().length > 0) {
+        selects.add(new SimpleSelect<>(searchVars.getIntVars(), new AfcMaxDeg<>(store), values));
+      }
+      if (searchVars.getBoolVars().length > 0) {
+        selects.add(new SimpleSelect<>(searchVars.getBoolVars(), new AfcMax<>(store), values));
+      }
+    } else if (vars.length > 0) {
+      DomWdeg domWdeg = new DomWdeg(vars, values);
+      monitors.add(domWdeg);
+      SelectChoicePoint<IntVar> select = domWdeg;
+      if (lastConflict > 0) {
+        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        monitors.add(lc);
+        select = lc;
+      }
+      selects.add(select);
+    }
+    if (objective != null) {
+      selects.add(new SimpleSelect<>(new IntVar[] {objective}, null, new IndomainMin<>()));
     }
     if (searchVars.getFloatVars().length > 0) {
       selects.add(
           new SplitSelectFloat<>(store, searchVars.getFloatVars(), new LargestDomainFloat<>()));
     }
+    if (selects.isEmpty()) {
+      selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
+    }
+
     FreeSearch.Builder builder =
         FreeSearch.builder(store, new SequenceSelect(selects))
-            .restarts(restartCalculator)
-            .restartOnSolution(restartCalculator != null)
+            .restarts(restarts)
+            .restartOnSolution(restartOnSolution)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
+    for (SearchMonitor m : monitors) {
+      builder.monitor(m);
+    }
     if (options.getTimeOut() > 0) {
       builder.timeLimit(Duration.ofMillis(options.getTimeOut()));
     }
@@ -747,7 +804,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     freeSearch = builder.build();
     if (options.debug()) {
-      IO.println("% FreeSearch(" + restartCalculator + ") " + selects);
+      IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
     freeSearchStatus = freeSearch.solve();
     return freeSearch.getSolutions() > 0;
@@ -825,6 +882,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private Var setupCostVariable(SimpleNode kind, int solveKind) {
     Var cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
     Var max_cost = null;
+    objectiveVariable = cost;
 
     if (cost != null) {
       if (solveKind == 1) { // minimize

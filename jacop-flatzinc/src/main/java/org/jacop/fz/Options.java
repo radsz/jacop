@@ -32,6 +32,8 @@ package org.jacop.fz;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
@@ -52,6 +54,8 @@ public class Options {
   boolean statistics;
   boolean freeSearch;
   boolean newFreeSearchEngine;
+  final Map<String, String> freeConfig = new HashMap<>();
+  boolean restartGiven;
   int timeOut;
   int numberSolutions = -1;
   boolean interval;
@@ -112,6 +116,9 @@ public class Options {
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "legacy" (default), "new"
+            --free-config <key=value,...> settings of the new free search engine, for experiments:
+                heuristic=domwdeg|afc, lc=<k>, phase=0|1, restarts=luby|none,
+                restart-on-solution=0|1, objective-last=0|1
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -152,6 +159,7 @@ public class Options {
       case "-s", "--statistics" -> i = handleStatistics(i);
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
+      case "--free-config" -> i = handleFreeConfig(args, i);
       case "-sat" -> i = handleSat(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
@@ -209,6 +217,18 @@ public class Options {
       case "legacy" -> newFreeSearchEngine = false;
       case "new" -> newFreeSearchEngine = true;
       default -> System.err.println("%% Free search engine " + engine + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handleFreeConfig(String[] args, int i) {
+    for (String setting : args[++i].split(",")) {
+      String[] kv = setting.split("=", 2);
+      if (kv.length == 2) {
+        freeConfig.put(kv[0].strip(), kv[1].strip());
+      } else {
+        System.err.println("%% Free search setting " + setting + " not understood; ignored");
+      }
     }
     return i + 1;
   }
@@ -311,6 +331,7 @@ public class Options {
 
   private int handleRestart(String[] args, int i) {
     restartType = parseRestartType(args[++i]);
+    restartGiven = true;
     return i + 1;
   }
 
@@ -501,6 +522,26 @@ public class Options {
    */
   public boolean newFreeSearchEngine() {
     return newFreeSearchEngine;
+  }
+
+  /**
+   * Returns a setting of the new free search engine given with --free-config.
+   *
+   * @param key the setting.
+   * @param defaultValue the value when the setting is not given.
+   * @return the value of the setting.
+   */
+  public String freeConfig(String key, String defaultValue) {
+    return freeConfig.getOrDefault(key, defaultValue);
+  }
+
+  /**
+   * Returns whether a restart strategy was given with --restart.
+   *
+   * @return true if --restart was given.
+   */
+  public boolean restartGiven() {
+    return restartGiven;
   }
 
   public String getOutputFilename() {
