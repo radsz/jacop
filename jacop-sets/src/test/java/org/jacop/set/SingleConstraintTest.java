@@ -416,6 +416,19 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void testChannelBoolSetNotSatisfiedByElementOutsideRange() {
+    // s = {0} has an element without a Boolean (the only index is -1 + 1 = 0, element -1)
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 0);
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(0), dom(0)));
+    ChannelBoolSet channel = new ChannelBoolSet(new IntVar[] {b}, s, -1);
+    store.impose(channel);
+
+    assertThat(channel.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
     IntervalDomain d = new IntervalDomain();
     for (int v = min; v <= max; v++) {
