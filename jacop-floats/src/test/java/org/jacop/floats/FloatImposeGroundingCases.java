@@ -35,20 +35,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.BiFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.FloatImposeGroundingHarness.Case;
 import org.jacop.floats.FloatImposeGroundingHarness.Spec;
 import org.jacop.floats.constraints.AbsPeqR;
+import org.jacop.floats.constraints.AcosPeqR;
+import org.jacop.floats.constraints.AsinPeqR;
+import org.jacop.floats.constraints.AtanPeqR;
 import org.jacop.floats.constraints.CeilPeqX;
+import org.jacop.floats.constraints.CosPeqR;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
+import org.jacop.floats.constraints.EquationSystem;
+import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.FloorPeqX;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.Max;
 import org.jacop.floats.constraints.Min;
 import org.jacop.floats.constraints.PdivCeqR;
@@ -72,8 +81,10 @@ import org.jacop.floats.constraints.PneqQ;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
+import org.jacop.floats.constraints.SinPeqR;
 import org.jacop.floats.constraints.SqrtPeqR;
 import org.jacop.floats.constraints.SumFloat;
+import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.constraints.XeqP;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.params.provider.Arguments;
@@ -263,6 +274,47 @@ final class FloatImposeGroundingCases {
     cases.add(
         Arguments.of("LinearFloat", (Function<Random, Case>) random -> linear(random, false)));
     cases.add(Arguments.of("SumFloat", (Function<Random, Case>) random -> linear(random, true)));
+    // transcendental functions: on dyadic grids f(x) is transcendental except at the trivial
+    // points (sin 0 = 0, exp 0 = 1, ...), so f(x) == y is exact there and everything else must fail
+    cases.add(function("SinPeqR", SinPeqR::new, Math::sin, -2, 2, -1.5, 1.5));
+    cases.add(function("CosPeqR", CosPeqR::new, Math::cos, -2, 2, -1.5, 1.5));
+    cases.add(function("TanPeqR", TanPeqR::new, Math::tan, -2, 2, -1.5, 1.5));
+    cases.add(function("AsinPeqR", AsinPeqR::new, Math::asin, -1.5, 1.5, -2, 2));
+    cases.add(function("AcosPeqR", AcosPeqR::new, Math::acos, -1.5, 1.5, -1, 2));
+    cases.add(function("AtanPeqR", AtanPeqR::new, Math::atan, -2, 2, -2, 2));
+    cases.add(function("ExpPeqR", ExpPeqR::new, Math::exp, -1, 2, -0.5, 3));
+    cases.add(function("LnPeqR", LnPeqR::new, Math::log, -0.5, 3, -1, 2));
+    cases.add(
+        Arguments.of(
+            "EquationSystem",
+            (Function<Random, Case>)
+                random ->
+                    new Case(
+                        new Spec[] {
+                          floatVar(random, 0.5, -1, 1),
+                          floatVar(random, 0.5, -1, 1),
+                          floatVar(random, 0.5, -1, 1),
+                          floatVar(random, 0.5, -1, 1)
+                        },
+                        x -> {
+                          // f0 = x0 - x1 and f1 = x0 * x1 are defined in the store, and the
+                          // system is solved for f0 = f1 = 0
+                          FloatVar[] v = Arrays.copyOf(x, 4, FloatVar[].class);
+                          Store store = x[0].getStore();
+                          store.impose(
+                              new LinearFloat(
+                                  new FloatVar[] {v[0], v[1], v[2]},
+                                  new double[] {1, -1, -1},
+                                  "==",
+                                  0));
+                          store.impose(new PmulQeqR(v[0], v[1], v[3]));
+                          store.impose(new PeqC(v[2], 0));
+                          store.impose(new PeqC(v[3], 0));
+                          return new EquationSystem(
+                              store, new FloatVar[] {v[2], v[3]}, new FloatVar[] {v[0], v[1]});
+                        },
+                        t -> t[2] == t[0] - t[1] && t[3] == t[0] * t[1] && t[2] == 0 && t[3] == 0,
+                        "x0 - x1 = x2, x0 * x1 = x3, EquationSystem([x2, x3], [x0, x1])")));
     return cases.stream();
   }
 
@@ -508,5 +560,24 @@ final class FloatImposeGroundingCases {
       values.add(lo + random.nextInt(hi - lo + 1));
     }
     return Spec.integer(values.stream().mapToInt(Integer::intValue).toArray());
+  }
+
+  private static Arguments function(
+      String name,
+      BiFunction<FloatVar, FloatVar, Constraint> build,
+      DoubleUnaryOperator f,
+      double pLo,
+      double pHi,
+      double qLo,
+      double qHi) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random ->
+                new Case(
+                    new Spec[] {floatVar(random, 0.25, pLo, pHi), floatVar(random, 0.25, qLo, qHi)},
+                    x -> build.apply((FloatVar) x[0], (FloatVar) x[1]),
+                    t -> f.applyAsDouble(t[0]) == t[1],
+                    name + "(x0, x1)"));
   }
 }
