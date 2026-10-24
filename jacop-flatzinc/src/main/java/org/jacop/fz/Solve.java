@@ -873,7 +873,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
 
-    printResultStatus(interrupted, result, label.timeOutOccured, COMPLETE.equals(si.exploration()));
+    printResultStatus(
+        interrupted,
+        result,
+        label.timeOutOccured,
+        COMPLETE.equals(si.exploration()) && (rs == null || !rs.restartsLimitReached()));
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
@@ -1361,7 +1365,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     boolean timeoutOccurred = anyTimeOutOccured(listSeqSearches);
-    printResultStatus(interrupted, result, timeoutOccurred, !heuristicSeqSearch);
+    printResultStatus(
+        interrupted,
+        result,
+        timeoutOccurred,
+        !heuristicSeqSearch && (rs == null || !rs.restartsLimitReached()));
 
     if (options.getStatistics()) {
       int[] stats = gatherSequenceSearchStats();

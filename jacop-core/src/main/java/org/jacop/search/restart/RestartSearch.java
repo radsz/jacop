@@ -68,6 +68,9 @@ public class RestartSearch<T extends Var> {
   Search<T> lastNotNullSearch;
   int intCostValue = Integer.MAX_VALUE;
   double floatCostValue = Double.MAX_VALUE;
+  // the cost bound imposed last, so that it is imposed only when it improves
+  int boundedIntCost = Integer.MAX_VALUE;
+  double boundedFloatCost = Double.MAX_VALUE;
   int numberRestarts;
   boolean atLeastOneSolution;
   boolean timeOutCheck;
@@ -76,6 +79,7 @@ public class RestartSearch<T extends Var> {
   int probability;
   int[] values;
   int restartsLimit; // no limit
+  boolean restartsLimitReached;
 
   /**
    * Constructs a restart search with the given parameters.
@@ -154,11 +158,12 @@ public class RestartSearch<T extends Var> {
 
       cleanupAfterIterationIfRar();
 
+      atLeastOneSolution |= result;
+
       if (restartsLimit > 0 && numberRestarts > restartsLimit) {
+        restartsLimitReached = true;
         break;
       }
-
-      atLeastOneSolution |= result;
 
       Optional<Boolean> exit = checkRestartExitConditions();
       if (exit.isPresent()) {
@@ -177,7 +182,7 @@ public class RestartSearch<T extends Var> {
 
     store.removeLevel(store.level);
     store.setLevel(store.level - 1);
-    return true;
+    return atLeastOneSolution;
   }
 
   private void cleanupAfterIterationIfRar() {
@@ -227,14 +232,16 @@ public class RestartSearch<T extends Var> {
       boundCost();
       return true;
     }
-    // no result from search: continue with result = true, then maybe override
+    // no result from search
     if (calculator.pointsExhausted()) {
+      // the run stopped at its fail limit, so the search space is not exhausted
       if (cost != null) {
         boundCost();
-      } else {
-        return !atLeastOneSolution;
+        return true;
       }
+      return !atLeastOneSolution;
     }
+    // the run failed before its limit: the search space is exhausted
     if (rarVars == null) {
       return false;
     }
@@ -246,13 +253,18 @@ public class RestartSearch<T extends Var> {
 
   void boundCost() {
 
+    // a restart that found no better solution must not impose the same bound again
     if (cost instanceof IntVar v) {
-      store.impose(new XltC(v, intCostValue));
-    } else {
+      if (intCostValue < boundedIntCost) {
+        store.impose(new XltC(v, intCostValue));
+        boundedIntCost = intCostValue;
+      }
+    } else if (floatCostValue < boundedFloatCost) {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
         Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
         store.impose(costConstraint);
+        boundedFloatCost = floatCostValue;
       }
     }
   }
@@ -368,6 +380,16 @@ public class RestartSearch<T extends Var> {
 
   public void setRestartsLimit(int l) {
     restartsLimit = l;
+  }
+
+  /**
+   * Returns whether the search stopped because it reached the limit on the number of restarts, in
+   * which case it is not complete.
+   *
+   * @return true if the restart limit stopped the search.
+   */
+  public boolean restartsLimitReached() {
+    return restartsLimitReached;
   }
 
   /**
