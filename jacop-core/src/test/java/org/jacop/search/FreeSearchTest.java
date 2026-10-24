@@ -57,6 +57,7 @@ import org.jacop.core.Var;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.FreeSearch.Status;
+import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.RestartNoGoods;
@@ -708,5 +709,60 @@ class FreeSearchTest {
     // the nogoods are removed with the search; the store has its domains back
     assertEquals(6, p[0].getSize());
     assertEquals(0, store.countWatches());
+  }
+
+  @Test
+  void boundImpactPicksTheValueWithTheBestBoundAndLeavesTheStore() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    // cost = y - 4x: x = 3 leaves the smallest bound
+    store.impose(new LinearInt(new IntVar[] {y, x, cost}, new int[] {1, -4, -1}, "==", 0));
+    assertTrue(store.consistency());
+    IndomainBoundImpact impact =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMin<>());
+    assertEquals(3, impact.indomain(x));
+    assertEquals(3, impact.getProbes());
+    assertEquals(3, x.getSize());
+    assertEquals(-12, cost.min());
+    assertEquals(
+        1, new IndomainBoundImpact(store, cost, true, 10, new IndomainMin<>()).indomain(x));
+    // larger domains than the limit use the wrapped heuristic
+    assertEquals(
+        0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));
+  }
+
+  @Test
+  void boundImpactKeepsTheOptimum() {
+    Random rnd = new Random(7);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean maximize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        IndomainBoundImpact impact =
+            new IndomainBoundImpact(model.store, model.cost, maximize, 5, new IndomainMin<>());
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), impact);
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+        FreeSearch.Builder builder =
+            FreeSearch.builder(model.store, domWdeg)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .restarts(new LubyCalculator(2))
+                .restartOnSolution(true)
+                .nogoodsFromRestarts(true)
+                .onSolution(s -> model.checkSolution());
+        FreeSearch search =
+            (maximize ? builder.maximize(model.cost) : builder.minimize(model.cost)).build();
+        Status status = search.solve();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status);
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(maximize ? reference[2] : reference[1], search.getCostValue());
+        }
+      }
+    }
   }
 }

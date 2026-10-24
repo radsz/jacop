@@ -81,6 +81,7 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
+import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
@@ -872,6 +873,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     IntVar[] vars = intAndBool.toArray(new IntVar[0]);
     Indomain<IntVar> values = new IndomainMin<>();
+    int impact = Integer.parseInt(options.freeConfig("impact", "0"));
+    if (impact > 0 && costVariable instanceof IntVar cost) {
+      // costVariable is minimised; for maximisation it is the negated objective
+      values = new IndomainBoundImpact(store, cost, false, impact, values);
+    }
     if (phase) {
       IndomainLastSolution saving = new IndomainLastSolution(vars, values);
       monitors.add(saving);
