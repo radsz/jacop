@@ -80,6 +80,25 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void valuePrecedeChainIsDomainConsistentForTheWholeChain() throws IOException {
+    // Walsh's example with values 5, 3, 8, 9: each pair of consecutive values is consistent but
+    // the chain forbids x2 = 5. Pairwise ValuePrecede needed a failed decision to find it.
+    String fzn =
+        """
+        var 5..5: x1;
+        var {3,5}: x2:: output_var;
+        var {5,8}: x3;
+        var {8,9}: x4;
+        constraint jacop_value_precede_chain_int([5,3,8,9],[x1,x2,x3,x4,x2]);
+        solve :: int_search([x2],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("x2 = 3;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
     // x1 and x3 have no common value, so b must be false before any search. Three variables
     // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
@@ -486,6 +505,24 @@ class FlatzincFrontEndTest {
     for (String kind : List.of("minimize c", "satisfy")) {
       String stdout = run(model.formatted(kind))[0];
       assertEquals(List.of("=====UNSATISFIABLE====="), stdout.lines().toList(), kind);
+    }
+  }
+
+  @Test
+  void inverseWithIndexSetsOfDifferentSizeIsUnsatisfiable() throws IOException {
+    // jacop_assignment with arrays of different length threw ArrayIndexOutOfBoundsException when
+    // posting (invf shorter) or NullPointerException during propagation (invf longer).
+    String model =
+        """
+        array [1..%d] of var 1..%d: f :: output_array([1..%1$d]);
+        array [1..%2$d] of var 1..%1$d: g :: output_array([1..%2$d]);
+        constraint jacop_assignment(f,g,1,1);
+        solve satisfy;
+        """;
+    for (int[] size : new int[][] {{2, 3}, {3, 2}}) {
+      String[] out = run(model.formatted(size[0], size[1]), "-a");
+      List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
+      assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
     }
   }
 
