@@ -113,6 +113,7 @@ import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -5474,6 +5475,21 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new ElementBool(index, new int[] {1, 1, 0}, value, 0));
 
     assertThat(noOfAllSolutions(store, new IntVar[] {index, value})).isEqualTo(2);
+  }
+
+  // Sum stopped propagating after changing the sum, so when the sum variable was also summed and
+  // became ground by that change the wrong value was accepted.
+  @Test
+  void testSumWithSumVariableInList() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", -2, -2);
+    IntVar b = new IntVar(store, "b", 0, 0);
+    IntVar c = new IntVar(store, "c", -2, 3);
+    // a + b + c = c needs a + b = 0
+    store.impose(new Sum(new IntVar[] {a, b, c}, c));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {a, b, c})).isZero();
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
