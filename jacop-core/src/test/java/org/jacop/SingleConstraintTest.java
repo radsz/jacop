@@ -59,6 +59,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
@@ -4581,6 +4583,28 @@ class SingleConstraintTest extends TestHelper {
       assertThat(x.max()).as(c.toString()).isEqualTo(0);
       assertThat(z.singleton()).as(c.toString()).isTrue();
     }
+  }
+
+  @Test
+  void alldifferentExceptAcceptsRepeatedExceptionValues() {
+    // [0, 0, 1] and [4, 4, 1] satisfy the constraints: exception values may repeat
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 0, 0), new IntVar(store, "x2", 1, 1)
+    };
+    IntVar[] y = {
+      new IntVar(store, "y0", 4, 4), new IntVar(store, "y1", 4, 4), new IntVar(store, "y2", 1, 1)
+    };
+    AlldifferentExceptZero zero = new AlldifferentExceptZero(x);
+    AlldifferentExcept except = new AlldifferentExcept(y, new IntervalDomain(4, 4));
+    store.impose(zero);
+    store.impose(except);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(zero.satisfied()).isTrue();
+    assertThat(zero.notSatisfied()).isFalse();
+    assertThat(except.satisfied()).isTrue();
+    assertThat(except.notSatisfied()).isFalse();
   }
 
   @Test

@@ -33,10 +33,8 @@ package org.jacop.constraints;
 import java.util.List;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.core.IntervalDomain;
 
 /**
  * AlldifferentExceptZero constraint assures that all FDVs except those with zero value have
@@ -45,7 +43,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AlldifferentExceptZero extends Alldifferent
+public class AlldifferentExceptZero extends AlldifferentExcept
     implements UsesQueueVariable, SatisfiedPresent {
 
   /** Protected constructor for subclassing purposes. */
@@ -58,7 +56,7 @@ public class AlldifferentExceptZero extends Alldifferent
    */
   public AlldifferentExceptZero(IntVar[] list) {
 
-    super(list);
+    super(list, new IntervalDomain(0, 0));
   }
 
   /**
@@ -68,35 +66,6 @@ public class AlldifferentExceptZero extends Alldifferent
    */
   public AlldifferentExceptZero(List<? extends IntVar> variables) {
     this(variables.toArray(new IntVar[0]));
-  }
-
-  /**
-   * Set when a variable without 0 in its domain has changed, as only those variables take part in
-   * the matching check.
-   */
-  private boolean matchingVariableChanged = true;
-
-  // The matching check fails as soon as the variables without 0 cannot all take different values,
-  // and a variable leaves the 0 exceptions by any change of its domain, not only by being fixed.
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public void queueVariable(int level, Var v) {
-    super.queueVariable(level, v);
-    if (!hasExceptionValues((IntVar) v)) {
-      matchingVariableChanged = true;
-    }
-  }
-
-  @Override
-  protected void checkMatchingExcept(Store store, int groundPos) {
-    if (matchingVariableChanged) {
-      matchingVariableChanged = false;
-      super.checkMatchingExcept(store, groundPos);
-    }
   }
 
   @Override

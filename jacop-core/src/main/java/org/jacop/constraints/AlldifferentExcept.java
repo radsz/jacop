@@ -35,6 +35,8 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * AlldifferentExcept constraint assures that all FDVs except those given as a set of values
@@ -70,6 +72,35 @@ public class AlldifferentExcept extends Alldifferent
    */
   public AlldifferentExcept(List<? extends IntVar> variables, IntDomain s) {
     this(variables.toArray(new IntVar[0]), s);
+  }
+
+  /**
+   * Set when a variable without exception values has changed, as only those variables take part in
+   * the matching check.
+   */
+  private boolean matchingVariableChanged = true;
+
+  // The matching check fails as soon as the variables without exception values cannot all take
+  // different values. That can follow from any change of a domain, not only from fixing a variable.
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    super.queueVariable(level, v);
+    if (!hasExceptionValues((IntVar) v)) {
+      matchingVariableChanged = true;
+    }
+  }
+
+  @Override
+  protected void checkMatchingExcept(Store store, int groundPos) {
+    if (matchingVariableChanged) {
+      matchingVariableChanged = false;
+      super.checkMatchingExcept(store, groundPos);
+    }
   }
 
   @Override
