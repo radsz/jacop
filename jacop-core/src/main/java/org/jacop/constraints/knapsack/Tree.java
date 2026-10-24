@@ -133,6 +133,9 @@ public class Tree {
   /** It specifies the profit obtained from the remaining part of the critical item. */
   double profitFromCriticalTaken;
 
+  /** The replaceable or intrusion weight returned when it can not be bounded: no pruning. */
+  static final long NO_PRUNING = Long.MAX_VALUE / 4;
+
   /**
    * Create a single node tree.
    *
@@ -462,10 +465,6 @@ public class Tree {
       finalReplacementLoopRight(efficiencyOfItemChecked, profitSlack);
     }
 
-    if (!exhaustedRightItems && currentNode.rightNeighbor.getPSum() == 0) {
-      currentNode = currentNode.rightNeighbor;
-    }
-
     // Found the last leaf before exceeding slack.
 
     long weightNoPruning = (long) weightOfItemChecked * maxNoOfItems;
@@ -487,13 +486,14 @@ public class Tree {
 
     if (!exhaustedRightItems) {
 
-      if (currentNode.rightNeighbor == null) {
-        log.debug("Problem {}", this);
-      }
-
       double efficiencyLoss =
           profitOfItemChecked / (double) weightOfItemChecked
               - currentNode.rightNeighbor.getPSum() / (double) currentNode.rightNeighbor.getWSum();
+      if (!(efficiencyLoss > 0)) {
+        // The next item is as efficient as the checked one (only possible through rounding errors,
+        // as such an item is consumed above), so the replacement can not be bounded here.
+        return NO_PRUNING;
+      }
       lastWeight /= efficiencyLoss;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
@@ -522,7 +522,9 @@ public class Tree {
       double profitSlack) {
     if (currentNode != criticalLeaf
         || efficiencyOfItemChecked * availableWeightOfCriticalItem - profitFromCriticalLeft
-            <= profitSlack) {
+            <= profitSlack
+        || (long) criticalLeaf.weightOfOne * profitOfItemChecked
+            <= (long) weightOfItemChecked * criticalLeaf.profitOfOne) {
       return null;
     }
     return (long)
@@ -574,22 +576,25 @@ public class Tree {
   }
 
   private void finalReplacementLoopRight(double efficiencyOfItemChecked, double profitSlack) {
+    // It descends towards the leaves, at each level taking the right neighbor while the profit
+    // slack allows it. The neighbor of a leaf reached by descending must still be checked, as must
+    // the neighbors of a taken leaf (e.g. items which are already fixed have no weight left).
     while (true) {
-      if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
-              - (currentProfit + currentNode.rightNeighbor.getPSum())
-              - profitFromCriticalLeft
-          < profitSlack) {
-        currentNode = currentNode.rightNeighbor;
+      TreeNode next = currentNode.rightNeighbor;
+      if (next != null
+          && efficiencyOfItemChecked * (currentWeight + next.getWSum())
+                  - (currentProfit + next.getPSum())
+                  - profitFromCriticalLeft
+              <= profitSlack) {
+        currentNode = next;
         currentWeight += currentNode.getWSum();
         currentProfit += currentNode.getPSum();
+      } else if (!currentNode.isLeaf()) {
+        currentNode = currentNode.right;
       } else {
-        if (!currentNode.isLeaf()) {
-          currentNode = currentNode.right;
-        } else {
-          break;
+        if (next == null) {
+          exhaustedRightItems = true;
         }
-      }
-      if (currentNode.isLeaf()) {
         break;
       }
     }
@@ -694,10 +699,6 @@ public class Tree {
       finalIntrusionLoopLeft(efficiencyOfItemChecked, profitSlack);
     }
 
-    if (!exhaustedLeftItems && currentNode.leftNeighbor.getPSum() == 0) {
-      currentNode = currentNode.leftNeighbor;
-    }
-
     // Found the last leaf before exceeding slack.
 
     long weightNoPruning = (long) weightOfItemChecked * maxNoOfItems;
@@ -723,6 +724,11 @@ public class Tree {
       efficiencyLoss =
           -profitOfItemChecked / (double) weightOfItemChecked
               + currentNode.leftNeighbor.getPSum() / (double) currentNode.leftNeighbor.getWSum();
+      if (!(efficiencyLoss > 0)) {
+        // The previous item is as efficient as the checked one (only possible through rounding
+        // errors, as such an item is consumed above), so the intrusion can not be bounded here.
+        return NO_PRUNING;
+      }
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
 
@@ -744,7 +750,9 @@ public class Tree {
       double profitSlack) {
     if (currentNode != criticalLeaf
         || profitFromCriticalTaken - efficiencyOfItemChecked * takenWeightOfCriticalItem
-            <= profitSlack) {
+            <= profitSlack
+        || (long) criticalLeaf.profitOfOne * weightOfItemChecked
+            <= (long) profitOfItemChecked * criticalLeaf.weightOfOne) {
       return null;
     }
     return (long)
@@ -799,23 +807,26 @@ public class Tree {
   }
 
   private void finalIntrusionLoopLeft(double efficiencyOfItemChecked, double profitSlack) {
+    // It descends towards the leaves, at each level taking the left neighbor while the profit
+    // slack allows it. The neighbor of a leaf reached by descending must still be checked, as must
+    // the neighbors of a taken leaf (e.g. items which are already fixed have no weight left).
     while (true) {
-      if (profitSlack
-              + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
-              - (currentProfit + currentNode.leftNeighbor.getPSum())
-              - profitFromCriticalTaken
-          < 0) {
-        if (!currentNode.isLeaf()) {
-          currentNode = currentNode.left;
-        } else {
-          break;
-        }
-      } else {
-        currentNode = currentNode.leftNeighbor;
+      TreeNode next = currentNode.leftNeighbor;
+      if (next != null
+          && profitSlack
+                  + efficiencyOfItemChecked * (currentWeight + next.getWSum())
+                  - (currentProfit + next.getPSum())
+                  - profitFromCriticalTaken
+              >= 0) {
+        currentNode = next;
         currentWeight += currentNode.getWSum();
         currentProfit += currentNode.getPSum();
-      }
-      if (currentNode.isLeaf()) {
+      } else if (!currentNode.isLeaf()) {
+        currentNode = currentNode.left;
+      } else {
+        if (next == null) {
+          exhaustedLeftItems = true;
+        }
         break;
       }
     }

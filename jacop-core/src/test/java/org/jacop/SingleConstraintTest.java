@@ -2306,6 +2306,77 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * Imposes Knapsack on quantities in lo..hi, capacity in capacityMin..capacityMax and profit in
+   * profitMin..profitMax, and checks that propagation keeps every solution.
+   */
+  private static void assertKnapsackKeepsAllSolutions(
+      int[] weights,
+      int[] profits,
+      int[] lo,
+      int[] hi,
+      int capacityMin,
+      int capacityMax,
+      int profitMin,
+      int profitMax) {
+    int n = weights.length;
+    Store store = new Store();
+    IntVar[] vars = new IntVar[n + 2];
+    for (int i = 0; i < n; i++) {
+      vars[i] = new IntVar(store, "q" + i, lo[i], hi[i]);
+    }
+    vars[n] = new IntVar(store, "capacity", capacityMin, capacityMax);
+    vars[n + 1] = new IntVar(store, "profit", profitMin, profitMax);
+    List<int[]> solutions = knapsackSolutions(profits, weights, vars);
+    assertThat(solutions).isNotEmpty();
+    store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+    assertThat(store.consistency()).as(domainsOf(vars)).isTrue();
+    for (int[] solution : solutions) {
+      for (int i = 0; i < vars.length; i++) {
+        assertThat(vars[i].domain.contains(solution[i]))
+            .as(domainsOf(vars) + " keeps solution " + Arrays.toString(solution))
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
+  void knapsackKeepsSolutionsWithEquallyEfficientItems() {
+    // The search for the weight replaceable by less efficient items stopped at a leaf reached by
+    // descending the tree without checking its neighbor, and divided by a zero efficiency loss when
+    // the next item was as efficient. Item 0 was wrongly made mandatory.
+    int[] ones = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 2, 1, 3, 1, 3, 3, 2, 1},
+        new int[] {6, 2, 4, 2, 6, 2, 6, 3, 2, 2},
+        new int[10],
+        ones,
+        11,
+        11,
+        22,
+        36);
+    // An already fixed item between two equally efficient items hid the second one.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 5, 5, 1, 1, 1},
+        new int[] {6, 2, 5, 10, 2, 2, 2},
+        new int[] {0, 1, 0, 0, 0, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 0, 1},
+        0,
+        7,
+        12,
+        26);
+    // The constraint failed although x8 = x9 = x10 = 1 plus any other item is a solution.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1},
+        new int[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        2,
+        5,
+        6,
+        7);
+  }
+
   @Test
   void knapsackHandlesLargeQuantitiesWithoutOverflow() {
     // Sums of weights and profits were kept in int and overflowed, so the constraint failed.

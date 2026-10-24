@@ -453,6 +453,16 @@ public class Knapsack extends Constraint
     }
   }
 
+  /**
+   * It computes the profit which can be given up from the optimal profit of the relaxation before
+   * reaching the minimal profit. It is slightly enlarged so that rounding errors of the floating
+   * point computations can only weaken the pruning.
+   */
+  private double profitSlack() {
+    double optimal = tree.optimalProfit + tree.alreadyObtainedProfit;
+    return optimal - knapsackProfit.min() + 1e-9 * Math.max(1.0, Math.abs(optimal));
+  }
+
   /** Clamps a value computed in long arithmetic into the int range used by the domains. */
   private static int toInt(long value) {
     return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, value));
@@ -604,7 +614,7 @@ public class Knapsack extends Constraint
     }
 
     // rounding errors may suggest that there is too little slack for an item.
-    double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
+    double profitSlack = profitSlack();
 
     while (true) {
 
@@ -664,7 +674,7 @@ public class Knapsack extends Constraint
       return;
     }
 
-    double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
+    double profitSlack = profitSlack();
 
     while (true) {
 
