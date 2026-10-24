@@ -1421,6 +1421,11 @@ class GlobalConstraints implements ParserTreeConstants {
     int indexF = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     int indexInvf = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
+    // inverse functions are bijections, so index sets of different sizes cannot be satisfied
+    if (f.length != invf.length) {
+      throw Store.failException;
+    }
+
     // we do not not pose Assignment directly because of possible inconsistency with its
     // initialization; we collect all constraints and pose them at the end when all other
     // constraints are posed
