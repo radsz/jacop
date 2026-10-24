@@ -4750,6 +4750,20 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isZero();
   }
 
+  // Knapsack found the ground instance inconsistent at impose but still registered for
+  // removeLevelLate, which then threw NullPointerException on backtracking.
+  @Test
+  void testKnapsackInconsistentAtImposeBacktracks() {
+
+    Store store = new Store();
+    IntVar[] quantity = {new IntVar(store, "q0", 1, 1), new IntVar(store, "q1", 0, 2)};
+    IntVar capacity = new IntVar(store, "capacity", 1, 1);
+    IntVar profit = new IntVar(store, "profit", 2, 2);
+    store.impose(new Knapsack(new int[] {2, 1}, new int[] {2, 2}, quantity, capacity, profit));
+
+    assertThat(noOfAllSolutions(store, quantity, new IntVar[] {capacity, profit})).isZero();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {

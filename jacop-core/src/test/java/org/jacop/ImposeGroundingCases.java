@@ -40,6 +40,9 @@ import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.core.IntVar;
 import org.junit.jupiter.params.provider.Arguments;
 
 /**
@@ -61,7 +64,86 @@ final class ImposeGroundingCases {
                         x -> new XplusYeqZ(x[0], x[1], x[2]),
                         t -> t[0] + t[1] == t[2],
                         "")),
-        Arguments.of("GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc));
+        Arguments.of("GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
+        Arguments.of("Knapsack without DP", knapsack("Knapsack")),
+        Arguments.of("KnapsackDP", knapsack("KnapsackDP")));
+  }
+
+  /** Quantities, then capacity, then profit; weights and profits from 0 (KnapsackDP) or 1. */
+  private static Function<Random, Case> knapsack(String kind) {
+    return random -> {
+      int n = 1 + random.nextInt(3);
+      int lowest = kind.equals("KnapsackDP") ? 0 : 1;
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = lowest + random.nextInt(4 - lowest);
+        profits[i] = lowest + random.nextInt(4 - lowest);
+      }
+      int[][] domains = new int[n + 2][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, 0, 2);
+      }
+      domains[n] = domain(random, 0, 10);
+      domains[n + 1] = domain(random, 0, 10);
+      return Case.of(
+          domains,
+          (store, x) -> {
+            IntVar[] quantities = Arrays.copyOfRange(x, 0, n);
+            if (kind.equals("KnapsackDP")) {
+              store.impose(
+                  new KnapsackDP(profits.clone(), weights.clone(), quantities, x[n], x[n + 1]));
+            } else {
+              store.impose(
+                  new Knapsack(profits.clone(), weights.clone(), quantities, x[n], x[n + 1])
+                      .dynamicProgramming(false));
+            }
+          },
+          t -> {
+            int weight = 0;
+            int profit = 0;
+            for (int i = 0; i < n; i++) {
+              weight += weights[i] * t[i];
+              profit += profits[i] * t[i];
+            }
+            return weight == t[n] && profit == t[n + 1];
+          },
+          "weights=" + Arrays.toString(weights) + " profits=" + Arrays.toString(profits));
+    };
+  }
+
+  /** GCC whose counters count 0..m-1 whatever the domains of x are. */
+  private static Case gcc(Random random) {
+    int n = 1 + random.nextInt(4);
+    int m = 1 + random.nextInt(3);
+    int[][] domains = new int[n + m][];
+    for (int i = 0; i < n; i++) {
+      // values up to m, which is not counted, so x must avoid it
+      domains[i] = domain(random, 0, m);
+    }
+    for (int j = 0; j < m; j++) {
+      domains[n + j] = domain(random, 0, n);
+    }
+    return Case.of(
+        domains,
+        (store, x) ->
+            store.impose(new GCC(Arrays.copyOfRange(x, 0, n), Arrays.copyOfRange(x, n, n + m), 0)),
+        t -> {
+          int[] count = new int[m];
+          for (int i = 0; i < n; i++) {
+            if (t[i] >= m) {
+              return false;
+            }
+            count[t[i]]++;
+          }
+          for (int j = 0; j < m; j++) {
+            if (count[j] != t[n + j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "counted values 0.." + (m - 1));
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
