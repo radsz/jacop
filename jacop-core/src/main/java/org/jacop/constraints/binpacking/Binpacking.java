@@ -359,21 +359,27 @@ public class Binpacking extends Constraint
       long possible,
       BinItem[] candidates,
       int candidatesLength) {
+    int loadMin = load[i].min();
+    int loadMax = load[i].max();
     for (int l = 0; l < candidatesLength; l++) {
       BinItem bi = candidates[l];
-      if (required + bi.weight() > load[i].max()) {
+      if (required + bi.weight() > loadMax) {
         removeBin(store, bi.bin(), binIdx);
-      } else if (possible - bi.weight() < load[i].min()) {
+      } else if (possible - bi.weight() < loadMin) {
         assignBin(store, bi.bin(), binIdx);
       }
     }
   }
 
   private void applyTighteningBounds(Store store, int i, long required, int[] candidateWeights) {
-    if (noSum(candidateWeights, load[i].min() - required, load[i].min() - required)) {
+    long sumCandidates = sum(candidateWeights);
+    int len = candidateWeights.length;
+    if (noSum(
+        candidateWeights, len, sumCandidates, load[i].min() - required, load[i].min() - required)) {
       load[i].domain.inMin(store.level, load[i], clamp(required + betaP));
     }
-    if (noSum(candidateWeights, load[i].max() - required, load[i].max() - required)) {
+    if (noSum(
+        candidateWeights, len, sumCandidates, load[i].max() - required, load[i].max() - required)) {
       load[i].domain.inMax(store.level, load[i], clamp(required + alphaP));
     }
   }
@@ -386,22 +392,29 @@ public class Binpacking extends Constraint
       BinItem[] candidates,
       int[] candidateWeights,
       int candidatesLength) {
+    if (candidatesLength == 0) {
+      return;
+    }
+    long loadMin = load[i].min();
+    long loadMax = load[i].max();
+    long sumCandidates = sum(candidateWeights);
+    // candidate weights without candidate j, kept in descending order; moving from j to j + 1 only
+    // puts weight j back at position j
+    int[] others = Arrays.copyOfRange(candidateWeights, 1, candidatesLength);
     for (int j = 0; j < candidatesLength; j++) {
-      int[] candidateWeightsMinusCurrent = new int[candidatesLength - 1];
-      System.arraycopy(candidateWeights, 0, candidateWeightsMinusCurrent, 0, j);
-      System.arraycopy(
-          candidateWeights,
-          j + 1,
-          candidateWeightsMinusCurrent,
-          j,
-          candidateWeights.length - j - 1);
+      if (j > 0) {
+        others[j - 1] = candidateWeights[j - 1];
+      }
+      long sumOthers = sumCandidates - candidateWeights[j];
       if (noSum(
-          candidateWeightsMinusCurrent,
-          load[i].min() - required - candidateWeights[j],
-          load[i].max() - required - candidateWeights[j])) {
+          others,
+          candidatesLength - 1,
+          sumOthers,
+          loadMin - required - candidateWeights[j],
+          loadMax - required - candidateWeights[j])) {
         removeBin(store, candidates[j].bin(), binIdx);
       }
-      if (noSum(candidateWeightsMinusCurrent, load[i].min() - required, load[i].max() - required)) {
+      if (noSum(others, candidatesLength - 1, sumOthers, loadMin - required, loadMax - required)) {
         assignBin(store, candidates[j].bin(), binIdx);
       }
     }
@@ -587,9 +600,13 @@ public class Binpacking extends Constraint
     return (int) Math.max(IntDomain.MIN_INT - 1L, Math.min(IntDomain.MAX_INT + 1L, v));
   }
 
-  private boolean noSum(int[] x, long alpha, long beta) {
+  /**
+   * NoSum of Shaw (2004) on the first len weights of x, sorted in descending order, summing to
+   * sumX.
+   */
+  private boolean noSum(int[] x, int len, long sumX, long alpha, long beta) {
 
-    if (alpha <= 0 || beta >= sum(x)) {
+    if (alpha <= 0 || beta >= sumX) {
       return false;
     }
 
@@ -598,7 +615,7 @@ public class Binpacking extends Constraint
     long sumC = 0;
     int k = 0;
     int kPrime = 0;
-    int n = x.length - 1; // |x|
+    int n = len - 1; // |x|
 
     while (sumC + x[n - kPrime] < alpha) {
       sumC += x[n - kPrime];
