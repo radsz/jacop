@@ -95,6 +95,8 @@ public final class CdclSolver {
   private int[] level = new int[0];
   private int[] reason = new int[0];
   private byte[] savedSign = new byte[0];
+  private byte[] targetSign = new byte[0];
+  private int targetAssigned;
   private double[] activity = new double[0];
   private byte[] seen = new byte[0];
   private final VarHeap order = new VarHeap();
@@ -202,6 +204,7 @@ public final class CdclSolver {
       level = Arrays.copyOf(level, c);
       reason = Arrays.copyOf(reason, c);
       savedSign = Arrays.copyOf(savedSign, c);
+      targetSign = Arrays.copyOf(targetSign, c);
       activity = Arrays.copyOf(activity, c);
       seen = Arrays.copyOf(seen, c);
       trail = Arrays.copyOf(trail, c);
@@ -212,6 +215,7 @@ public final class CdclSolver {
     for (int v = numVars; v < n; v++) {
       reason[v] = NO_REASON;
       savedSign[v] = 1;
+      targetSign[v] = -1;
       watches[2 * v] = new int[4];
       watches[2 * v + 1] = new int[4];
       order.insert(v);
@@ -892,6 +896,9 @@ public final class CdclSolver {
           return UNSAT;
         }
         trailQueuePush(trailSize);
+        if (stable) {
+          updateTarget();
+        }
         int btLevel = analyze();
         backtrack(btLevel);
         learnClause();
@@ -947,10 +954,24 @@ public final class CdclSolver {
     while (!order.isEmpty()) {
       int v = order.removeMax();
       if (vals[2 * v] == 0) {
-        return 2 * v + savedSign[v];
+        return 2 * v + (stable && targetSign[v] >= 0 ? targetSign[v] : savedSign[v]);
       }
     }
     return -1;
+  }
+
+  /**
+   * Target phases (CaDiCaL): in stable mode, remember the signs of the longest conflict-free
+   * assignment seen since the last restart, and prefer them in decisions.
+   */
+  private void updateTarget() {
+    int assigned = trailLim[decisionLevel - 1];
+    if (assigned > targetAssigned) {
+      targetAssigned = assigned;
+      for (int i = 0; i < assigned; i++) {
+        targetSign[trail[i] >> 1] = (byte) (trail[i] & 1);
+      }
+    }
   }
 
   private void learnClause() {
@@ -1026,6 +1047,7 @@ public final class CdclSolver {
     restarts++;
     backtrack(0);
     conflictsAtRestart = conflicts;
+    targetAssigned = 0;
     lbdQueueSize = 0;
     lbdQueueSum = 0;
     if (conflicts >= modeSwitchAt) {
