@@ -729,7 +729,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and Luby restarts.
+   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5).
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
@@ -740,8 +740,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
     Calculator restarts = restartCalculator;
-    if (!options.restartGiven() && "luby".equals(options.freeConfig("restarts", "luby"))) {
-      restarts = new LubyCalculator(options.getRestartScale());
+    if (!options.restartGiven()) {
+      int scale = Integer.parseInt(options.freeConfig("scale", "100"));
+      restarts =
+          switch (options.freeConfig("restarts", "geometric")) {
+            case "luby" -> new LubyCalculator(scale);
+            case "geometric" ->
+                new GeometricCalculator(
+                    Double.parseDouble(options.freeConfig("base", "1.5")), scale);
+            default -> null;
+          };
     }
 
     List<SearchMonitor> monitors = new ArrayList<>();

@@ -520,7 +520,10 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals("x = 3;\ny = 2;", solutionLines(run(fzn)[0]));
-    assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f")[0]));
+    assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-engine", "legacy")[0]));
+    // the new engine follows the annotations only on the runs it interleaves them on
+    assertEquals(
+        "x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-config", "interleave=none")[0]));
   }
 
   @Test
@@ -605,7 +608,8 @@ class FlatzincFrontEndTest {
     };
     for (String model : models) {
       boolean optimisation = model.contains("minimize") || model.contains("maximize");
-      String legacy = normalised(run(model, "-f", "-a")[0], optimisation);
+      String legacy =
+          normalised(run(model, "-f", "--free-engine", "legacy", "-a")[0], optimisation);
       for (String[] engine : engines) {
         String[] options = Arrays.copyOf(new String[] {"-f", "-a"}, 2 + engine.length);
         System.arraycopy(engine, 0, options, 2, engine.length);

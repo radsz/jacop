@@ -53,7 +53,7 @@ public class Options {
   boolean verbose;
   boolean statistics;
   boolean freeSearch;
-  boolean newFreeSearchEngine;
+  boolean newFreeSearchEngine = true;
   final Map<String, String> freeConfig = new HashMap<>();
   boolean restartGiven;
   int timeOut;
@@ -115,9 +115,10 @@ public class Options {
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
-            --free-engine <value> engine for free search; one of "legacy" (default), "new"
+            --free-engine <value> engine for free search; one of "new" (default), "legacy"
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|afc, lc=<k>, phase=0|1, restarts=luby|none,
+                heuristic=domwdeg|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                scale=<failures>, base=<growth of geometric restarts>,
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;

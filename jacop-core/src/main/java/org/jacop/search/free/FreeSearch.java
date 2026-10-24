@@ -45,7 +45,7 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.SearchHandlerRegistry;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.restart.Calculator;
-import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.GeometricCalculator;
 
 /**
  * A search engine for free search: depth-first search with binary branching, restarts,
@@ -114,8 +114,11 @@ public final class FreeSearch {
     boolean right;
   }
 
-  /** The scale, in failures, of the Luby restarts of {@link #withDefaults(Store, IntVar[])}. */
-  public static final int DEFAULT_RESTART_SCALE = 250;
+  /** The fail limit of the first run of {@link #withDefaults(Store, IntVar[])}. */
+  public static final int DEFAULT_RESTART_SCALE = 100;
+
+  /** The growth of the fail limit from one run to the next in {@link #withDefaults}. */
+  public static final double DEFAULT_RESTART_BASE = 1.5;
 
   private final Store store;
   private final SelectChoicePoint<? extends Var> mainSelect;
@@ -187,9 +190,9 @@ public final class FreeSearch {
 
   /**
    * Starts building a search with the default free search heuristics: dom/wdeg over the given
-   * variables with last conflict, the value of the last solution or else the minimum, Luby restarts
-   * counted in failures, and a restart after each solution for optimisation. For optimisation,
-   * leave the objective out of the variables when it is defined by them.
+   * variables with last conflict, the value of the last solution or else the minimum, geometric
+   * restarts counted in failures, and a restart after each solution for optimisation. For
+   * optimisation, leave the objective out of the variables when it is defined by them.
    *
    * @param store the store with the model.
    * @param vars the variables to branch on.
@@ -203,7 +206,7 @@ public final class FreeSearch {
         .monitor(values)
         .monitor(domWdeg)
         .monitor(lastConflict)
-        .restarts(new LubyCalculator(DEFAULT_RESTART_SCALE))
+        .restarts(new GeometricCalculator(DEFAULT_RESTART_BASE, DEFAULT_RESTART_SCALE))
         .restartOnSolution(true);
   }
 
