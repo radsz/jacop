@@ -1186,7 +1186,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + getInitTime_ms() / 1000.0
         + "\n%%%mzn-stat: solveTime=0"
         + "\n%%%mzn-stat: nodes=0"
-        + "\n%%man-stat: propagations="
+        + "\n%%%mzn-stat: propagations="
         + store.numberConsistencyCalls
         + "\n%%%mzn-stat: restarts=0"
         + "\n%%%mzn-stat: failures=0"
@@ -1373,7 +1373,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getStatistics()) {
       int[] stats = gatherSequenceSearchStats();
-      printStatisticsOutput(stats[0], stats[1], stats[2], stats[3]);
+      // each search of the sequence counts the solutions of its own phase, so count the
+      // solutions that were reported instead
+      printStatisticsOutput(stats[0], stats[1], stats[2], numberSolutions);
     }
   }
 
