@@ -339,9 +339,10 @@ public class ObstacleObjectFrame extends InternalConstraint {
           Dbox.dispatchBox(piece);
           iterator.remove();
         } else {
-          int originMod = piece.origin[i] % 4;
+          // floorMod: the scaled coordinates can be negative, where % 4 gives -1 instead of 3
+          int originMod = Math.floorMod(piece.origin[i], 4);
           int end = piece.origin[i] + piece.length[i];
-          int endMod = end % 4;
+          int endMod = Math.floorMod(end, 4);
           piece.origin[i] =
               originMod == 3
                   ? (int) Math.ceil(piece.origin[i] / 4.0)

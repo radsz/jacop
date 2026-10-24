@@ -126,6 +126,7 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -3719,6 +3720,37 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Geost(objects, constraints, shapes));
 
     return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
+  }
+
+  @Test
+  void geostKeepsInterleavedShapesApartAtNegativeCoordinates() {
+    // Shape = cells x and x + 2. With object 0 at x0 the cells x0 + 1 and x0 + 3 are free, so
+    // object 1 fits at x0 + 1. The frame of the fixed object was rounded with % 4, which is
+    // negative for negative coordinates, and covered the hole whenever x0 <= -1.
+    for (int x0 = -6; x0 <= 3; x0++) {
+      Store store = new Store();
+      List<Dbox> cells =
+          List.of(new Dbox(new int[] {0}, new int[] {1}), new Dbox(new int[] {2}, new int[] {1}));
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {1}), new Shape(1, cells));
+      IntVar[] x = {new IntVar(store, "x0", x0, x0), new IntVar(store, "x1", x0 - 3, x0 + 3)};
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                new IntVar[] {x[i]},
+                new IntVar(store, 1, 1),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(
+          new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+
+      assertThat(store.consistency()).as("x0 = %d", x0).isTrue();
+      // x1 = x0 - 3, x0 - 1, x0 + 1, x0 + 3 interleave or touch; x0 +- 2 and x0 overlap
+      assertThat(noOfAllSolutions(store, x)).as("x0 = %d", x0).isEqualTo(4);
+    }
   }
 
   // Regression test for https://github.com/radsz/jacop/issues/46
