@@ -1,0 +1,2557 @@
+# Reference answers of the upTo5sec models for MinizincFreeSearchTest: model, kind and value.
+# Kinds: UNSAT; SAT (a solution exists); ALL n (n solutions, with -n from options.opt);
+# MIN v and MAX v (optimum v). Taken from the model's own search (no -f). Models on which free
+# search needed more than 2 s, and models with a float objective, are left out.
+17_b/17_b SAT
+18_hole_golf/18_hole_golf SAT
+1d_rubiks_cube/1d_rubiks_cube MIN 12
+2DBinPacking/Class1_20_1 MIN 8
+2DBinPacking/Class1_20_10 MIN 8
+2DBinPacking/Class1_20_2 MIN 5
+2DBinPacking/Class1_20_3 MIN 9
+2DBinPacking/Class1_20_4 MIN 6
+2DBinPacking/Class1_20_6 MIN 9
+2DBinPacking/Class1_20_7 MIN 6
+3_coins/3_coins SAT
+3_jugs2/3_jugs2 MIN 7
+3_jugs2_all/3_jugs2_all SAT
+3sum/3sum SAT
+50_puzzle/50_puzzle MIN 3
+5x5_puzzle/5x5_puzzle MIN 15
+K4P2GracefulGraph/K4P2GracefulGraph SAT
+K4P2GracefulGraph2/K4P2GracefulGraph2 SAT
+QCP/qcp-10-67-0 SAT
+QCP/qcp-10-67-0_ext SAT
+QCP/qcp-10-67-1_ext SAT
+QCP/qcp-10-67-2_ext SAT
+QCP/qcp-10-67-3_ext SAT
+a_league_of_their_own_enigma_1217/a_league_of_their_own_enigma_1217 SAT
+a_puzzle/a_puzzle SAT
+a_round_of_golf/a_round_of_golf SAT
+abbots_puzzle/abbots_puzzle SAT
+abc_endview/abc_endview SAT
+abpuzzle/abpuzzle SAT
+added_corner/added_corner SAT
+adjacency_matrix_from_degrees/adjacency_matrix_from_degrees SAT
+ages2/ages2 SAT
+all_interval/all_interval SAT
+all_interval1/all_interval1 SAT
+all_interval2/all_interval2 SAT
+all_interval3/all_interval3 SAT
+all_interval4/all_interval4 SAT
+all_interval5/all_interval5 SAT
+all_interval6/all_interval6 SAT
+all_min_dist/all_min_dist SAT
+all_paths_graph/all_paths_graph MIN 4
+alldifferent_consecutive_values/alldifferent_consecutive_values SAT
+alldifferent_except_0_me/alldifferent_except_0_me SAT
+alldifferent_explain/alldifferent_explain SAT
+alldifferent_interval/alldifferent_interval SAT
+alldifferent_modulo/alldifferent_modulo SAT
+alldifferent_on_intersection/alldifferent_on_intersection SAT
+alldifferent_pairs/alldifferent_pairs SAT
+alldifferent_partition/alldifferent_partition SAT
+alldifferent_soft/alldifferent_soft SAT
+allocating_developments/allocating_developments SAT
+allperm/allperm SAT
+alpha/alpha SAT
+amaze/2012-03-07 MIN 12
+amaze/2012-03-09 MIN 379
+amaze/2012-03-14 MIN 438
+amaze/2012-03-29 MIN 421
+amaze/2012-04-05 MIN 443
+amaze/2012-04-12 MIN 658
+amaze/2012-04-13 MIN 385
+amaze/2012-04-16 MIN 528
+amaze/2012-04-19 MIN 350
+amaze/2012-04-23 MIN 457
+among_diff_0/among_diff_0 SAT
+among_modulo/among_modulo SAT
+among_seq/among_seq SAT
+and/and SAT
+anniversaries/anniversaries SAT
+another_kind_of_magic_square/another_kind_of_magic_square SAT
+antisymmetric/antisymmetric SAT
+appointment_scheduling_set/appointment_scheduling_set SAT
+arch_friends/arch_friends SAT
+archery_puzzle/archery_puzzle MIN 0
+areas/2_2_1 SAT
+areas/3_3_3 SAT
+areas/3_3_5 UNSAT
+areas/5_5_9 SAT
+argmax/argmax SAT
+assign/assign MAX 25
+assignment/assignment MIN 11
+assignment2/assignment2 MIN 181
+assignment2_2/assignment2_2 MIN 181
+assignment3/assignment3 MAX 30
+assignment5/assignment5 MIN 8
+assignment6/assignment6 MIN 76
+atleast_nvalue/atleast_nvalue SAT
+atmost1_me/atmost1_me SAT
+atmost_nvalue/atmost_nvalue SAT
+atom_smasher/atom_smasher SAT
+aust_colord/aust_colord SAT
+autoref/autoref SAT
+average_avoiding/average_avoiding SAT
+averbach_1.2/averbach_1.2 SAT
+averbach_1.3/averbach_1.3 SAT
+averbach_1.4/averbach_1.4 SAT
+averbach_1.5/averbach_1.5 SAT
+babysitting/babysitting SAT
+bacp/bacp-16 MIN 25
+balance_interval/balance_interval SAT
+balance_modulo/balance_modulo SAT
+balance_partition/balance_partition SAT
+balanced_brackets/balanced_brackets SAT
+balanced_matrix/balanced_matrix SAT
+bales_of_hay/bales_of_hay SAT
+bananas/bananas MIN 16
+bank_card/bank_card SAT
+barrels/barrels SAT
+before_and_after/before_and_after SAT
+bertrand_russell_puzzle/bertrand_russell_puzzle SAT
+best_host/best_host SAT
+best_shuffle/best_shuffle SAT
+between_min_max/between_min_max SAT
+bibd/03_03_01 SAT
+bibd/04_02_01 SAT
+bibd/06_03_02 SAT
+bibd/07_03_01 SAT
+bibd/07_03_02 SAT
+bibd/08_04_03 SAT
+bibd/09_03_01 SAT
+bibd/11_05_02 SAT
+bibd/13_03_01 SAT
+bibd/15_03_01 SAT
+bibd/15_07_03 SAT
+bibd/16_04_01 SAT
+bin_packing2/bin_packing2 SAT
+binary_puzzle/binary_puzzle SAT
+binary_sudoku/binary_sudoku SAT
+binero/binero SAT
+bipartite/bipartite SAT
+birthdays_2010/birthdays_2010 SAT
+bit_vector1/bit_vector1 SAT
+black-hole/1 SAT
+black-hole/3 SAT
+black-hole/6 UNSAT
+black-hole/7 SAT
+black-hole/8 UNSAT
+blending_problem/blending_problem MIN 180
+blueberry_muffins/blueberry_muffins SAT
+book_buy/book_buy SAT
+bool_or_imp_test/bool_or_imp_test SAT
+bpp/bpp MIN 3
+bratko_scheduling/bratko_scheduling MIN 9
+bratko_scheduling2/bratko_scheduling2 MIN 22
+bridges_to_somewhere/bridges_to_somewhere MIN 58
+broken_weights/broken_weights MIN 27
+buckets/buckets MIN 6
+building_a_house/building_a_house MIN 91
+building_a_house2/building_a_house2 MIN 20
+bus_scheduling/t1 MIN 7
+calculs_d_enfer/calculs_d_enfer MIN 16
+calvin_puzzle/calvin_puzzle SAT
+capital_budget2/capital_budget2 MAX 42
+car/car MIN 82
+car_painting/car_painting MIN 5
+car_talk_odometer/car_talk_odometer MIN 11
+cardinality_atmost_partition/cardinality_atmost_partition SAT
+carpet_cutting/carpet_cutting MIN 8
+carpet_cutting_geost/carpet_cutting_geost MIN 8
+carpool_fairness/carpool_fairness MIN 3
+carpool_fairness/carpool_fairness1 MIN 3
+carpool_fairness/carpool_fairness2 MIN 4
+carpool_fairness/carpool_fairness3 MIN 4
+carpool_fairness/carpool_fairness4 MIN 9
+carpool_fairness/carpool_fairness5 MIN 16
+cars/cars1 SAT
+cashier_change/cashier_change SAT
+catalan_numbers/catalan_numbers SAT
+celsius_fahrenheit/celsius_fahrenheit SAT
+chain_of_primes/chain_of_primes SAT
+chandelier_balancing/chandelier_balancing SAT
+change_partition/change_partition SAT
+checker_puzzle/checker_puzzle SAT
+chessset/chessset MAX 1330
+chinese_remainder_problem/chinese_remainder_problem MIN 1808
+choose_your_crew/choose_your_crew MIN 268
+choosing_teams/choosing_teams SAT
+choosing_teams2/choosing_teams2 SAT
+circle_intersection/circle_intersection SAT
+circling_squares/circling_squares SAT
+circuit_path/circuit_path SAT
+circuit_test/circuit_test SAT
+circular_change/circular_change SAT
+circular_except_0/circular_except_0 SAT
+clique/clique MAX 6
+clock_triplets/clock_triplets SAT
+coins3/coins3 MIN 8
+coins_41_58/coins_41_58 MIN 72
+coins_test/coins3 MIN 8
+col_sum_puzzle/col_sum_puzzle SAT
+collatz/collatz SAT
+color_simple/color_simple MIN 4
+coloring_ip/coloring_ip MIN 4
+combination_locks/combination_locks SAT
+combinatorial_auction/combinatorial_auction MAX 11
+common/common SAT
+common_interval/common_interval SAT
+common_modulo/common_modulo SAT
+common_partition/common_partition SAT
+compatible_assignment/compatible_assignment MAX 19
+compatible_assignment/compatible_assignment_opt MAX 26
+cond_lex_less/cond_lex_less SAT
+conference/conference MIN 4
+config/config MIN 550
+congress/congress SAT
+contiguity_regular/contiguity_regular SAT
+contractor_costs/contractor_costs MIN 8400
+cookie_bake_off/cookie_bake_off MIN 168
+cookie_monster_problem/cookie_monster_problem MIN 4
+costas-array/10 SAT
+costas-array/14 SAT
+costas-array/15 SAT
+costas-array/4 SAT
+costas-array/6 SAT
+costas_array/costas_array SAT
+count_ctr/count_ctr SAT
+countdown/countdown SAT
+counts/counts SAT
+crazy_sets/crazy_sets SAT
+crazy_sets/crazy_sets_global SAT
+critical_path1/critical_path1 MIN 38
+crossbar/crossbar SAT
+crossfigure/crossfigure SAT
+crossword/crossword SAT
+crossword2/crossword2 SAT
+crossword_bratko/crossword_bratko SAT
+crypta/crypta SAT
+cryptanalysis/kb128_n3_obj5 SAT
+crypto/crypto SAT
+cube_sum/cube_sum MIN 3
+cumulative_test/cumulative_test MIN 7
+cumulative_test_mats_carlsson/cumulative_test_mats_carlsson SAT
+curriculum/curriculum_10 MIN 14
+curriculum/curriculum_12 MIN 17
+curriculum/curriculum_8 MIN 17
+curve_fitting3/curve_fitting3 SAT
+cutstock/small_test0 MIN 4
+cutting_stock_winston/cutting_stock_winston MIN 19
+cycle_test2/cycle_test2 SAT
+cycle_test3/cycle_test3 SAT
+cyclohexane/cyclohexane SAT
+dakota_furniture/dakota_furniture MAX 280
+data_square/rpp03_false SAT
+data_square/rpp03_true SAT
+data_square/rpp04_false SAT
+data_square/rpp04_true SAT
+data_square/rpp05_false SAT
+data_square/rpp05_true SAT
+data_square/rpp06_false SAT
+data_square/rpp06_true SAT
+data_square/rpp07_false SAT
+data_square/rpp07_true SAT
+data_square/rpp08_false SAT
+data_square/rpp08_true SAT
+data_square/rpp09_false SAT
+data_square/rpp09_true SAT
+data_square/rpp10_false SAT
+data_square/rpp10_true SAT
+data_square/rpp11_false SAT
+data_square/rpp11_true SAT
+data_square/rpp12_false SAT
+data_square/rpp12_true SAT
+data_square/rpp13_false SAT
+data_square/rpp13_true SAT
+data_square/rpp14_false SAT
+data_square/rpp14_true SAT
+data_square/rpp15_false SAT
+data_square/rpp15_true SAT
+data_square/rpp16_false SAT
+data_square/rpp16_true SAT
+data_square/rpp17_false SAT
+data_square/rpp17_true SAT
+debruijn2d/debruijn2d SAT
+debruijn_binary/02_03 SAT
+debruijn_binary/02_07 SAT
+debruijn_binary/02_08 SAT
+debruijn_binary/02_09 SAT
+debruijn_binary/debruijn_binary SAT
+defending_castle/defending_castle MAX 10
+dennys_menu/dennys_menu SAT
+depot-placement/a280_4 MIN 103
+depot-placement/a280_5 MIN 116
+depot-placement/st70_4 MIN 145
+devils_word/devils_word SAT
+dice_with_a_difference_enigma_290/dice_with_a_difference_enigma_290 SAT
+diffn_me/diffn_me SAT
+dimes/dimes SAT
+dinner/dinner SAT
+discrepancy/discrepancy SAT
+discrete_tomography/discrete_tomography SAT
+disjunctive/disjunctive SAT
+dividing_the_spoils/dividing_the_spoils SAT
+divisible_by_7/divisible_by_7 SAT
+divisors_ending_in_0_to_9/divisors_ending_in_0_to_9 SAT
+domino/domino1 SAT
+domino/domino3 SAT
+domino/domino4 SAT
+donald/donald SAT
+donald2/donald2 SAT
+drinking_game/drinking_game SAT
+drive_ya_nuts/drive_ya_nuts SAT
+dudeney_numbers/dudeney_numbers SAT
+earthlin/earthlin SAT
+egg_basket/egg_basket MIN 301
+ein_ein_ein_ein_vier/ein_ein_ein_ein_vier SAT
+einstein_hurlimann/einstein_hurlimann SAT
+einstein_opl/einstein_opl SAT
+element_sparse/element_sparse SAT
+elevator_6_3/elevator_6_3 MIN 6
+elitserien/handball12 SAT
+elitserien/handball14 SAT
+elitserien/handball19 SAT
+elitserien/handball20 SAT
+elitserien/handball7 SAT
+eliza_pseudonym7/eliza_pseudonym7 SAT
+enclosed_tiles/enclosed_tiles SAT
+enigma/enigma SAT
+enigma2/enigma2 SAT
+enigma_1000/enigma_1000 SAT
+enigma_1001/enigma_1001 SAT
+enigma_1266_unhelpful_square/enigma_1266_unhelpful_square SAT
+enigma_1293/enigma_1293 SAT
+enigma_1530/enigma_1530 SAT
+enigma_1535/enigma_1535 SAT
+enigma_1553/enigma_1553 SAT
+enigma_1555/enigma_1555 SAT
+enigma_1568/enigma_1568 SAT
+enigma_1573/enigma_1573 SAT
+enigma_1576/enigma_1576 SAT
+enigma_1577/enigma_1577 SAT
+enigma_1615/enigma_1615 SAT
+enigma_248_add_or_multiply/enigma_248_add_or_multiply SAT
+enigma_843/enigma_843 SAT
+enigma_birthday_magic/enigma_birthday_magic SAT
+enigma_counting_pennies/enigma_counting_pennies SAT
+enigma_eight_times/enigma_eight_times SAT
+enigma_eight_times2/enigma_eight_times2 SAT
+enigma_five_fives/enigma_five_fives SAT
+enigma_planets/enigma_planets SAT
+eq/eq20 SAT
+eq10/eq10 SAT
+equation/equation SAT
+equivalent/equivalent SAT
+ett_ett_ett_ett_ett__fem/ett_ett_ett_ett_ett__fem SAT
+euler31/euler31 SAT
+euler_18/euler_18 MAX 1074
+euler_9/euler_9 SAT
+evens/evens SAT
+evens2/evens2 SAT
+evilshop/js-brs2-5 MIN 77406
+evilshop/js-setf1-5 MIN 40643
+evilshop/js-setf3-7 MIN 44232
+evilshop/js-setg2-5 MIN 40837
+evision/evision MIN 10
+exact_cover_dlx/exact_cover_dlx SAT
+exact_cover_dlx_matrix/exact_cover_dlx_matrix SAT
+exodus/exodus SAT
+eyedrop_optimize2/eyedrop_optimize2 MAX 36
+factorial/factorial SAT
+fair_xmas_duty_2014/fair_xmas_duty_2014 MIN 3
+fairies/fairies SAT
+family_riddle/family_riddle SAT
+fancy/fancy MIN 0
+farm_puzzle/farm_puzzle SAT
+farm_puzzle0/farm_puzzle0 SAT
+fast-food/ff32 MIN 5708
+fast-food/ff35 MIN 1013
+fast-food/ff36 MIN 805
+fastfood/ff13 MIN 4
+fastfood/ff14 MIN 2
+fastfood/ff15 MIN 1
+fastfood/ff28 MIN 63
+fastfood/ff29 MIN 45
+fastfood/ff30 MIN 29
+fastfood/ff31 MIN 18
+fastfood/ff32 MIN 5708
+fastfood/ff33 MIN 9
+fastfood/ff34 MIN 2
+fastfood/ff35 MIN 1013
+fastfood/ff4 MIN 6
+fastfood/ff42 MIN 9
+fastfood/ff43 MIN 5
+fastfood/ff44 MIN 3
+fastfood/ff45 MIN 2
+fastfood/ff46 MIN 1
+fastfood/ff5 MIN 4
+fastfood/ff51 MIN 3
+fastfood/ff52 MIN 2
+fastfood/ff53 MIN 1
+fastfood/ff6 MIN 2
+fastfood/ff69 MIN 6119
+fastfood/ff7 MIN 1
+fastfood/ff71 MIN 16
+fastfood/ff80 MIN 38
+fastfood/ff81 MIN 22
+fastfood/ff82 MIN 7
+fastfood/ff83 MIN 1024
+fastfood/ff84 MIN 770
+fastfood/ff85 MIN 566
+fill_a_pix/fill_a_pix1 SAT
+fill_a_pix/fill_a_pix2 SAT
+fill_a_pix/fill_a_pix3 SAT
+fill_in_the_squares/fill_in_the_squares SAT
+fillomino/01 SAT
+fillomino/11 SAT
+fillomino/16 SAT
+fillomino/20 SAT
+filters/ar_1_1 MIN 34
+filters/ar_1_2 MIN 18
+filters/ar_2_3 MIN 15
+filters/dct_1_1 MIN 34
+filters/dct_1_2 MIN 32
+filters/dct_1_3 MIN 32
+filters/dct_2_2 MIN 18
+filters/dct_2_3 MIN 16
+filters/dct_3_3 MIN 14
+filters/dfq_1_1 MIN 4
+filters/ewf_1_1 MIN 28
+filters/ewf_1_2 MIN 28
+filters/ewf_2_1 MIN 21
+filters/ewf_2_2 MIN 18
+filters/ewf_4_3 MIN 17
+filters/fir16_1_1 MIN 35
+filters/fir16_1_2 MIN 19
+filters/fir16_1_3 MIN 18
+filters/fir_1_1 MIN 18
+filters/fir_1_2 MIN 15
+filters/fir_1_3 MIN 15
+filters/fir_1_4 MIN 15
+filters/fir_2_2 MIN 11
+filters/fir_2_3 MIN 10
+finding_celebrities/finding_celebrities SAT
+finding_celebrities2/finding_celebrities2 SAT
+five/five MIN 15
+five_brigades/five_brigades SAT
+five_elements/five_elements MIN 11
+five_floors/five_floors SAT
+five_statements/five_statements SAT
+five_translators/five_translators SAT
+five_translators2/five_translators2 SAT
+fix_points/fix_points SAT
+fixed_charge/fixed_charge MAX 75
+fizz_buzz/fizz_buzz SAT
+flattening/flattening10 SAT
+flattening/flattening11 SAT
+flattening/flattening14 SAT
+flattening/flattening2 SAT
+flattening/flattening3 SAT
+flattening/flattening4 SAT
+flattening/flattening5 MAX 21
+flattening/flattening6 SAT
+flattening/flattening7 SAT
+flattening/flattening8 SAT
+flattening/flattening9 SAT
+flexible-jobshop/easy01 MIN 253
+flexible-jobshop/easy02 MIN 11
+flexible-jobshop/hard19 MIN 11
+four_islands/four_islands SAT
+four_numbers/four_numbers SAT
+four_same_friends/four_same_friends MIN 2
+four_trees/four_trees SAT
+fractions/fractions SAT
+franklin_8x8_magic_square/franklin_8x8_magic_square SAT
+freight_transfer/freight_transfer MIN 530
+full_adder/full_adder SAT
+furniture_moving/furniture_moving MIN 3
+futoshiki/futoshiki SAT
+gardner_prime_puzzle/gardner_prime_puzzle SAT
+gardner_sum_square/gardner_sum_square MIN 34
+gardner_two_plus_two/gardner_two_plus_two SAT
+gather_homage_martin/gather_homage_martin SAT
+gbac/toy-gbac MIN 191
+general_store/general_store SAT
+generalized_knapsack_problem/generalized_knapsack_problem MAX 160
+geost_simple/geost_example SAT
+geost_simple2/geost_simple SAT
+geost_test/geost_test MIN 9
+gfd-schedule/n10f2d10m10k3 MIN 3
+ghoulomb/3-3-3 MIN 3
+ghoulomb/3-4-5 MIN 6
+ghoulomb/3-4-6 MIN 6
+ghoulomb/3-7-16 MIN 25
+ghoulomb/4-7-16 MIN 25
+giapetto/giapetto MAX 180
+global_cardinality_no_loop/global_cardinality_no_loop SAT
+global_cardinality_table/global_cardinality_table SAT
+global_cardinality_with_costs/global_cardinality_with_costs SAT
+global_contiguity/global_contiguity SAT
+global_contiguity2/global_contiguity2 SAT
+golden_spiral/golden_spiral SAT
+golfers/golfers_2_2_3 SAT
+golfers/golfers_4_4_5 SAT
+golfers/golfers_5_2_8 SAT
+golfers/golfers_5_5_6 SAT
+golomb/03 MIN 3
+golomb/04 MIN 6
+golomb/05 MIN 11
+golomb/06 MIN 17
+golomb/07 MIN 25
+good_burger_puzzlor/good_burger_puzzlor MAX 280
+graceful_labeling/graceful_labeling SAT
+graph_partition/graph_partition MIN 5
+gray_code/gray_code SAT
+greatest_combination/greatest_combination MAX 33
+grid-colouring/5_6 MIN 3
+grid_puzzle/grid_puzzle SAT
+grime_puzzle/grime_puzzle SAT
+guards_and_apples2/guards_and_apples2 SAT
+gunport_problem2/gunport_problem2 SAT
+hamming_distance/hamming_distance SAT
+handshaking/handshaking SAT
+hanging_weights/hanging_weights SAT
+harry_potter_seven_potions/harry_potter_seven_potions SAT
+heterosquare/heterosquare SAT
+hidato_exists/hidato_exists SAT
+hidato_table2/hidato_table2 SAT
+high_iq_problem/high_iq_problem SAT
+honey_division/honey_division SAT
+houses/houses SAT
+how_old_am_i/how_old_am_i SAT
+hrc/exp1-0-10 MIN 8
+huey_dewey_louie/huey_dewey_louie SAT
+hundred_doors_optimized/hundred_doors_optimized SAT
+hundred_doors_optimized_array/hundred_doors_optimized_array SAT
+hundred_doors_unoptimized/hundred_doors_unoptimized SAT
+hundred_doors_unoptimized2/hundred_doors_unoptimized2 SAT
+hundred_fowls/hundred_fowls SAT
+imply/imply SAT
+in_same_partition/in_same_partition SAT
+in_set/in_set SAT
+increasing_except_0/increasing_except_0 SAT
+int_value_precede/int_value_precede SAT
+integer_programming1/integer_programming1 MAX 170
+inverse_within_range/inverse_within_range SAT
+investment_problem/investment_problem SAT
+investment_problem_mip/investment_problem_mip MAX 223
+is_prime/is_prime SAT
+isbn/isbn SAT
+itemset_mining/itemset_mining MAX 5
+ith_pos_different_from_0/ith_pos_different_from_0 SAT
+its_a_tie/its_a_tie SAT
+jellybeans/jellybeans SAT
+jive_turkeys/jive_turkeys MIN 511
+jobs_puzzle/jobs_puzzle SAT
+jobshop/jobshop MIN 17
+jobshop/jobshop2 MIN 17
+jobshop/jobshop3 MIN 17
+jobshop/jobshop_mt06 MIN 55
+jobshop/jobshop_newspaper MIN 138
+jobshop2/jobshop2_mt06 MIN 55
+jobshop2/jobshop2_newspaper MIN 138
+jobshop2/la05 MIN 593
+jobshop2/mt06 MIN 55
+joshua/joshua MIN 92
+just_forgotten/just_forgotten SAT
+k_alldifferent/k_alldifferent SAT
+k_consecutive_integers/k_consecutive_integers SAT
+k_same/k_same SAT
+k_same_modulo/k_same_modulo SAT
+kakuro/kakuro SAT
+kakuro/kakuro_6_6_easy SAT
+kakuro/kakuro_6_6_hard SAT
+kakuro/kakuro_8_8_easy SAT
+kakuro/kakuro_8_8_hard SAT
+kakuro/kakuro_8_8_super SAT
+kakuro2/kakuro2 SAT
+kakuro3/kakuro3 SAT
+kaprekars_constant2/kaprekars_constant2 SAT
+kenken2/kenken2 SAT
+killer_sudoku/killer_sudoku SAT
+killer_sudoku2/killer_sudoku2 SAT
+kiselman_semigroup_problem/kiselman_semigroup_problem SAT
+knapsack/knapsack MAX 39
+knapsack1/knapsack1 MAX 39
+knapsack2/knapsack2 MAX 15
+knapsack_investments/knapsack_investments MAX 2370
+knapsack_rosetta_code_01/knapsack_rosetta_code_01 MAX 1030
+knapsack_rosetta_code_bounded/knapsack_rosetta_code_bounded MAX 1010
+knights/08_04 SAT
+knights/08_10 SAT
+knights/08_12 SAT
+knights/08_14 SAT
+krypto/krypto SAT
+labeled_dice/labeled_dice SAT
+lager/lager MIN 938
+langford/l_2_03 SAT
+langford/l_2_04 SAT
+langford/l_2_07 SAT
+langford/l_2_08 SAT
+langford/l_3_09 SAT
+langford2/langford2 SAT
+langford_generalized/langford_generalized SAT
+language_round_table/language_round_table SAT
+latin-squares-fd/03 SAT
+latin-squares-fd/07 SAT
+latin-squares-fd/10 SAT
+latin-squares-fd/12 SAT
+latin-squares-fd/15 SAT
+latin-squares-fd2/03 SAT
+latin-squares-fd2/07 SAT
+latin-squares-fd2/10 SAT
+latin-squares-fd2/12 SAT
+latin-squares-fd2/15 SAT
+latin-squares-fd2/20 SAT
+latin-squares-lp/03 SAT
+latin-squares-lp/07 SAT
+latin-squares-lp/10 SAT
+latin-squares-lp/12 SAT
+latin-squares-lp/15 SAT
+latin-squares/03 SAT
+latin-squares/07 SAT
+latin-squares/10 SAT
+latin-squares/12 SAT
+latin-squares/15 SAT
+latin_square/latin_square SAT
+latin_square_card_puzzle/latin_square_card_puzzle SAT
+lccoin/lccoin SAT
+league/model10-3-4 MIN 39992
+league/model15-4-3 MIN 39992
+leap_year/leap_year SAT
+least_diff/least_diff MIN 247
+least_diff1/least_diff1 MIN 247
+lecture_series/lecture_series SAT
+lectures/lectures MIN 3
+letter_square/letter_square1 SAT
+letter_square/letter_square59 SAT
+letter_square/letter_square60 SAT
+letter_square/letter_square89 SAT
+library_books/library_books SAT
+lichtenstein_coloring/lichtenstein_coloring MIN 5
+lightmeal/lightmeal SAT
+lightmeal2/lightmeal2 SAT
+lights/lights MIN 12
+lights_out/lights_out MIN 27
+limerick_primes/limerick_primes SAT
+limerick_primes2/limerick_primes2 SAT
+local_art_theft/local_art_theft SAT
+local_art_theft1/local_art_theft1 SAT
+locker/locker SAT
+logic_puzzle_aop/logic_puzzle_aop SAT
+logical_design/logical_design MIN 5
+longest_change/longest_change SAT
+lost_at_sea/lost_at_sea MAX 32
+ltsp/ltsp MIN 45
+lucky_number/lucky_number SAT
+m_queens_on_n_board/m_queens_on_n_board SAT
+magic/magic SAT
+magic3/magic3 SAT
+magic4/magic4 SAT
+magic_hexagon/magic_hexagon SAT
+magic_modulo_number/magic_modulo_number SAT
+magic_sequence/magic_sequence SAT
+magic_sequence2/magic_sequence2 SAT
+magic_sequence3/magic_sequence3 SAT
+magic_series/magic_series SAT
+magic_square/magic_square SAT
+magic_square_frenicle_form/magic_square_frenicle_form SAT
+magic_square_function/magic_square_function SAT
+magic_squares_and_cards/magic_squares_and_cards MAX 36
+magicseq/005 SAT
+magicseq/010 SAT
+magicseq/020 SAT
+magicseq/030 SAT
+magicseq/040 SAT
+make_a_good_burger/make_a_good_burger MAX 280
+mamas_age/mamas_age SAT
+manasa_and_stones/manasa_and_stones SAT
+mango_puzzle/mango_puzzle MIN 79
+map/map SAT
+map2/map2 SAT
+map_coloring_with_costs/map_coloring_with_costs MIN 3100
+map_stuckey/map_stuckey SAT
+mapping/full2x2 MIN 793
+mapping/mesh2x2_1 MIN 1000
+mapping/ring_1 MIN 1685
+marathon/marathon SAT
+marathon2/marathon2 SAT
+mario/mario_easy_2 MAX 628
+mario/mario_easy_3 MAX 691
+mario/mario_easy_4 MAX 545
+mario/mario_easy_5 MAX 445
+market_split/s3-01 SAT
+market_split/s3-02 SAT
+market_split/s3-03 SAT
+market_split/s3-04 SAT
+market_split/s3-05 SAT
+market_split/s3-06 SAT
+market_split/s3-07 SAT
+market_split/s3-08 SAT
+market_split/s3-09 SAT
+market_split/s3-10 SAT
+market_split/s4-05 SAT
+market_split/s4-09 SAT
+market_split/u3-01 UNSAT
+market_split/u3-02 UNSAT
+market_split/u3-03 UNSAT
+market_split/u3-04 UNSAT
+market_split/u3-05 UNSAT
+market_split/u3-06 UNSAT
+market_split/u3-07 UNSAT
+market_split/u3-08 UNSAT
+market_split/u3-09 UNSAT
+market_split/u3-10 UNSAT
+markov_chains_taha/markov_chains_taha SAT
+matching_sums/matching_sums SAT
+matchmaker/matchmaker SAT
+matrix2num/matrix2num SAT
+mats_fotboll/mats_fotboll SAT
+max_activity/max_activity MAX 18
+max_activity2/max_activity2 MAX 7
+max_cut/max_cut MAX 20
+max_flow_taha/max_flow_taha MAX 60
+max_flow_winston1/max_flow_winston1 MAX 3
+max_index/max_index SAT
+max_m_in_row/max_m_in_row SAT
+max_n/max_n SAT
+max_nvalue/max_nvalue SAT
+max_size_of_consecutive_var/max_size_of_consecutive_var SAT
+max_size_set_of_consecutive_var/max_size_set_of_consecutive_var SAT
+maxflow/maxflow MAX 29
+maximum-dag/15_05 MAX 46
+maximum_modulo/maximum_modulo SAT
+maximum_subarray/maximum_subarray MAX 15
+mdd_random/mdd_a10 SAT
+mdd_random/mdd_a8 SAT
+message_sending/message_sending SAT
+mfasp/mfasp MIN 3
+mfvsp/mfvsp MIN 3
+min_index/min_index SAT
+min_max_sets/min_max_sets SAT
+min_n/min_n SAT
+min_nvalue/min_nvalue SAT
+minesweeper/minesweeper SAT
+minesweeper_0/minesweeper_0 SAT
+minesweeper_1/minesweeper_1 SAT
+minesweeper_2/minesweeper_2 SAT
+minesweeper_3/minesweeper_3 SAT
+minesweeper_4/minesweeper_4 SAT
+minesweeper_5/minesweeper_5 SAT
+minesweeper_6/minesweeper_6 SAT
+minesweeper_7/minesweeper_7 SAT
+minesweeper_8/minesweeper_8 SAT
+minesweeper_9/minesweeper_9 SAT
+minesweeper_basic3/minesweeper_basic3 SAT
+minesweeper_basic4/minesweeper_basic4 SAT
+minesweeper_basic4x4/minesweeper_basic4x4 SAT
+minesweeper_config_page2/minesweeper_config_page2 SAT
+minesweeper_config_page3/minesweeper_config_page3 SAT
+minesweeper_german_Lakshtanov/minesweeper_german_Lakshtanov SAT
+minesweeper_splitter/minesweeper_splitter SAT
+minesweeper_wire/minesweeper_wire SAT
+minimal_subset_of_columns/minimal_subset_of_columns MIN 2
+minimum_except_0/minimum_except_0 SAT
+minimum_weight_alldifferent/minimum_weight_alldifferent SAT
+minsum/minsum MIN -532
+mip/mip4 MAX 33
+mip/mip5 MAX 40
+mislabeled_boxes/mislabeled_boxes SAT
+misp/misp MAX 7
+monkey_coconuts/monkey_coconuts SAT
+monks_and_doors/monks_and_doors SAT
+monorail/monorail1 SAT
+monorail/monorail2 SAT
+monorail/monorail6 SAT
+movement_puzzle/movement_puzzle SAT
+movie_scheduling/movie_scheduling MAX 4
+movie_stars/movie_stars MIN 9
+mr_smith/mr_smith SAT
+mspsp/easy_04 MIN 98
+mspsp/easy_05 MIN 28
+mspsp/hard_02 MIN 33
+mspsp/medium_06 MIN 43
+muddle_management/muddle_management SAT
+multi-knapsack/mknap2-10 MAX 624319
+multi-knapsack/mknap2-20 MAX 6339
+multi-knapsack/mknap2-31 MAX 9074
+multi-knapsack/mknap2-32 MAX 8947
+multipl/multipl SAT
+multiplicative_sequence/multiplicative_sequence SAT
+murder/murder SAT
+music_men/music_men SAT
+mvcp/mvcp MIN 6
+my_nvalue/my_nvalue SAT
+my_precedence/my_precedence SAT
+myabs/myabs SAT
+mydiv/mydiv SAT
+n_change/n_change SAT
+n_partitioning/n_partitioning SAT
+n_puzzle/n_puzzle MIN 7
+nadel/nadel SAT
+narcissistic_numbers/narcissistic_numbers SAT
+nchange/nchange SAT
+nclass/nclass SAT
+nequivalence/nequivalence SAT
+newspaper/newspaper MIN 180
+newspaper0/newspaper0 MIN 180
+nfc/12_2_10 MIN 848
+nfc/12_2_5 MIN 1074
+nfc/18_3_10 MIN 1452
+nfc/18_3_5 MIN 1338
+nfc/bockmayr_12hr MIN 438
+nim/nim MIN 1
+nine_digit_arrangement/nine_digit_arrangement SAT
+nine_to_one_equals_100/nine_to_one_equals_100 SAT
+nmseq/020 SAT
+nmseq/040 SAT
+no_three_in_line/no_three_in_line SAT
+non_dominating_queens/non_dominating_queens MIN 22
+nonogram/non_fast_11 SAT
+nonogram_gchq/nonogram_gchq SAT
+npair/npair SAT
+number_generation/number_generation SAT
+number_of_days/number_of_days MIN 8300
+number_of_regions/number_of_regions SAT
+numberlink/numberlink1 SAT
+numberlink/numberlink3 SAT
+numberlink/numberlink7 SAT
+numbrix/numbrix SAT
+numeric_keypad/numeric_keypad SAT
+numerica_p20/numerica_p20 SAT
+numerica_p21/numerica_p21 SAT
+numerica_p24/numerica_p24 SAT
+nurse_rostering_with_availability/nurse_rostering_with_availability SAT
+nurses/nurses SAT
+nurses/nurses_let SAT
+nvalue_on_intersection/nvalue_on_intersection SAT
+nvalues/nvalues SAT
+nvalues_except_0/nvalues_except_0 SAT
+office_blocked/office_blocked SAT
+office_blocked2/office_blocked2 SAT
+olympic/olympic SAT
+on-call-rostering/4s-10d MIN 1
+one_off_digit/one_off_digit SAT
+onroad/onroad MIN 10
+open_alldifferent/open_alldifferent SAT
+open_among/open_among SAT
+open_atleast/open_atleast SAT
+open_atmost/open_atmost SAT
+open_global_cardinality/open_global_cardinality SAT
+open_global_cardinality_low_up/open_global_cardinality_low_up SAT
+open_stacks/problem_10_10_1 MIN 5
+open_stacks/tiny MIN 3
+open_stacks/wbo_10_10_1 MIN 3
+open_stacks/wbop_10_10_1 MIN 3
+open_stacks/wbp_10_10_1 MIN 3
+or_matching/or_matching MAX 519
+ordering_a_list_of_lists/ordering_a_list_of_lists SAT
+organize_day/organize_day SAT
+ormat_game_generate/ormat_game_generate SAT
+p1f/2 MIN 4
+p1f/4 MIN 28
+p1f/6 MIN 80
+p1f/8 MIN 168
+pairwise_sum_of_n_numbers/pairwise_sum_of_n_numbers SAT
+parallel_resistors/parallel_resistors SAT
+partial_latin_square/partial_latin_square SAT
+partition_into_subset_of_equal_values/partition_into_subset_of_equal_values SAT
+partition_into_subset_of_equal_values2/partition_into_subset_of_equal_values2 SAT
+partition_into_subset_of_equal_values3/partition_into_subset_of_equal_values3 SAT
+partitions/partitions SAT
+path_from_to/path_from_to SAT
+patient_no_21/patient_no_21 MIN 0
+pattern-set-mining/audiology MAX 51
+pattern-set-mining/hepatitis MAX 91
+pattern_set_mining_k1/audiology MAX 51
+pattern_set_mining_k1/hepatitis MAX 91
+pchange/pchange SAT
+peacableArmyOfQueens/peacableArmyOfQueens MAX 4
+penguin/penguin SAT
+pentominoes-zayenz/size_5_tiles_20_seed_17_strategy_close SAT
+pentominoes/02 SAT
+pentominoes/03 SAT
+pentominoes/06 SAT
+permutation_number/permutation_number SAT
+pert/pert MIN 22
+philosophical_railway/philosophical_railway SAT
+photo/photo MAX 24
+photo/photo1 MAX 10
+photo_hkj/photo_hkj MAX 6
+photo_hkj2_data1/photo_hkj2_data1 SAT
+photo_hkj2_data2/photo_hkj2_data2 SAT
+pigeon_hole/pigeon_hole SAT
+pigeon_hole2/pigeon_hole2 SAT
+pilgrim/pilgrim SAT
+planet_colonization_puzzlor/planet_colonization_puzzlor MIN 5
+pool_ball_triangles/pool_ball_triangles SAT
+post_office_problem/post_office_problem MIN 23
+post_office_problem2/post_office_problem2 MIN 15800
+power/power SAT
+power_set/power_set SAT
+power_set2/power_set2 SAT
+power_set3/power_set3 SAT
+prime/prime SAT
+prime_looking/prime_looking SAT
+prime_multiplication/prime_multiplication SAT
+primes/primes SAT
+primes_in_a_circle/primes_in_a_circle SAT
+primes_param/primes_param SAT
+prize-collecting/15-3-5-0 MAX 20
+prize-collecting/15-3-5-1 MAX 24
+prize-collecting/15-3-5-4 MAX 46
+prize-collecting/15-3-5-6 MAX 38
+prize-collecting/15-3-5-8 MAX 61
+product_ctr/product_ctr SAT
+product_test/product_test SAT
+project_scheduling/project_scheduling MIN 15
+project_scheduling/project_scheduling_nonoverlap MIN 18
+prop_stress/0100 UNSAT
+puzzle1/puzzle1 SAT
+pyramid_of_numbers/pyramid_of_numbers SAT
+quasiGroup3Idempotent/quasiGroup3Idempotent SAT
+quasiGroup3NonIdempotent/quasiGroup3NonIdempotent SAT
+quasiGroup4Idempotent/quasiGroup4Idempotent SAT
+quasiGroup4NonIdempotent/quasiGroup4NonIdempotent SAT
+quasiGroup5Idempotent/quasiGroup5Idempotent SAT
+quasiGroup5NonIdempotent/quasiGroup5NonIdempotent SAT
+quasiGroup6/quasiGroup6 UNSAT
+quasiGroup7/05 SAT
+quasiGroup7/09 SAT
+quasiGroup7/quasiGroup7 SAT
+quasigroup_completion/quasigroup_completion SAT
+quasigroup_completion_gcc/quasigroup_completion_gcc SAT
+quasigroup_completion_gomes_demo1/quasigroup_completion_gomes_demo1 SAT
+quasigroup_completion_gomes_demo2/quasigroup_completion_gomes_demo2 SAT
+quasigroup_completion_gomes_demo3/quasigroup_completion_gomes_demo3 SAT
+quasigroup_completion_gomes_shmoys_p3/quasigroup_completion_gomes_shmoys_p3 SAT
+quasigroup_completion_gomes_shmoys_p7/quasigroup_completion_gomes_shmoys_p7 SAT
+quasigroup_completion_martin_lynce/quasigroup_completion_martin_lynce SAT
+queens/004 SAT
+queens/008 SAT
+queens/020 SAT
+queens3/queens3 SAT
+queens4/queens4 SAT
+queens_ip/queens_ip MAX 8
+radiation/01 MIN 370
+radiation/04 MIN 636
+radiation/05 MIN 598
+ramsey_partition/ramsey_partition SAT
+random_function_test/random_function_test SAT
+random_generator/random_generator SAT
+random_generator2/random_generator2 SAT
+random_set/random_set SAT
+range_ctr/range_ctr SAT
+raven_puzzle/raven_puzzle MAX 5
+rcpsp-data_at/st103_17 MIN 208
+rcpsp-data_at/st103_25 MIN 176
+rcpsp-data_at/st103_26 MIN 182
+rcpsp-data_at/st103_33 MIN 219
+rcpsp-data_at/st103_41 MIN 190
+rcpsp-data_at/st103_42 MIN 186
+rcpsp-data_at/st103_9 MIN 138
+rcpsp-data_at/st27_1 MIN 40
+rcpsp-data_at/st27_10 MIN 44
+rcpsp-data_at/st27_11 MIN 56
+rcpsp-data_at/st27_13 MIN 37
+rcpsp-data_at/st27_14 MIN 54
+rcpsp-data_at/st27_15 MIN 45
+rcpsp-data_at/st27_17 MIN 54
+rcpsp-data_at/st27_18 MIN 54
+rcpsp-data_at/st27_25 MIN 50
+rcpsp-data_at/st27_26 MIN 52
+rcpsp-data_at/st27_29 MIN 50
+rcpsp-data_at/st27_33 MIN 65
+rcpsp-data_at/st27_34 MIN 60
+rcpsp-data_at/st27_41 MIN 59
+rcpsp-data_at/st27_45 MIN 48
+rcpsp-data_at/st27_9 MIN 37
+rcpsp-data_at/st51_1 MIN 97
+rcpsp-data_at/st51_10 MIN 72
+rcpsp-data_at/st51_13 MIN 83
+rcpsp-data_at/st51_17 MIN 83
+rcpsp-data_at/st51_25 MIN 94
+rcpsp-data_at/st51_26 MIN 88
+rcpsp-data_at/st51_29 MIN 97
+rcpsp-data_at/st51_41 MIN 101
+rcpsp-data_at/st51_42 MIN 107
+rcpsp-data_at/st51_9 MIN 73
+rcpsp-data_bl/Bl2001 MIN 16
+rcpsp-data_bl/Bl2002 MIN 16
+rcpsp-data_bl/Bl2003 MIN 15
+rcpsp-data_bl/Bl2004 MIN 18
+rcpsp-data_bl/Bl2006 MIN 16
+rcpsp-data_bl/Bl2007 MIN 19
+rcpsp-data_bl/Bl2008 MIN 20
+rcpsp-data_bl/Bl2009 MIN 14
+rcpsp-data_bl/Bl2010 MIN 16
+rcpsp-data_bl/Bl2011 MIN 17
+rcpsp-data_bl/Bl2012 MIN 18
+rcpsp-data_bl/Bl2013 MIN 17
+rcpsp-data_bl/Bl2014 MIN 18
+rcpsp-data_bl/Bl2015 MIN 13
+rcpsp-data_bl/Bl2016 MIN 19
+rcpsp-data_bl/Bl2017 MIN 15
+rcpsp-data_bl/Bl2018 MIN 18
+rcpsp-data_bl/Bl2019 MIN 14
+rcpsp-data_bl/Bl2020 MIN 15
+rcpsp-data_bl/Bl2504 MIN 23
+rcpsp-data_bl/Bl2505 MIN 28
+rcpsp-data_bl/Bl2513 MIN 17
+rcpsp-data_bl/Bl2516 MIN 20
+rcpsp-data_bl/Bl2517 MIN 26
+rcpsp-data_bl/Bl2519 MIN 23
+rcpsp-data_ksd15_d/j3010_1 MIN 408
+rcpsp-data_ksd15_d/j3010_10 MIN 426
+rcpsp-data_ksd15_d/j3010_2 MIN 480
+rcpsp-data_ksd15_d/j3010_3 MIN 509
+rcpsp-data_ksd15_d/j3010_4 MIN 461
+rcpsp-data_ksd15_d/j3010_5 MIN 308
+rcpsp-data_ksd15_d/j3010_6 MIN 462
+rcpsp-data_ksd15_d/j3010_7 MIN 562
+rcpsp-data_ksd15_d/j3010_8 MIN 330
+rcpsp-data_ksd15_d/j3010_9 MIN 335
+rcpsp-data_ksd15_d/j3011_1 MIN 631
+rcpsp-data_ksd15_d/j3011_10 MIN 438
+rcpsp-data_ksd15_d/j3011_2 MIN 380
+rcpsp-data_ksd15_d/j3011_3 MIN 588
+rcpsp-data_ksd15_d/j3011_4 MIN 613
+rcpsp-data_ksd15_d/j3011_5 MIN 461
+rcpsp-data_ksd15_d/j3011_6 MIN 382
+rcpsp-data_ksd15_d/j3011_7 MIN 427
+rcpsp-data_ksd15_d/j3011_9 MIN 508
+rcpsp-data_ksd15_d/j3012_1 MIN 416
+rcpsp-data_ksd15_d/j3012_10 MIN 334
+rcpsp-data_ksd15_d/j3012_2 MIN 340
+rcpsp-data_ksd15_d/j3012_3 MIN 305
+rcpsp-data_ksd15_d/j3012_4 MIN 505
+rcpsp-data_ksd15_d/j3012_5 MIN 276
+rcpsp-data_ksd15_d/j3012_6 MIN 270
+rcpsp-data_ksd15_d/j3012_7 MIN 266
+rcpsp-data_ksd15_d/j3012_8 MIN 258
+rcpsp-data_ksd15_d/j3012_9 MIN 305
+rcpsp-data_ksd15_d/j3013_2 MIN 346
+rcpsp-data_ksd15_d/j3013_3 MIN 695
+rcpsp-data_ksd15_d/j3013_5 MIN 606
+rcpsp-data_ksd15_d/j3013_7 MIN 711
+rcpsp-data_ksd15_d/j3013_9 MIN 484
+rcpsp-data_ksd15_d/j3014_1 MIN 252
+rcpsp-data_ksd15_d/j3014_10 MIN 265
+rcpsp-data_ksd15_d/j3014_3 MIN 392
+rcpsp-data_ksd15_d/j3014_4 MIN 313
+rcpsp-data_ksd15_d/j3014_5 MIN 410
+rcpsp-data_ksd15_d/j3014_6 MIN 284
+rcpsp-data_ksd15_d/j3014_7 MIN 386
+rcpsp-data_ksd15_d/j3014_8 MIN 532
+rcpsp-data_ksd15_d/j3014_9 MIN 433
+rcpsp-data_ksd15_d/j3015_1 MIN 338
+rcpsp-data_ksd15_d/j3015_10 MIN 523
+rcpsp-data_ksd15_d/j3015_2 MIN 481
+rcpsp-data_ksd15_d/j3015_3 MIN 260
+rcpsp-data_ksd15_d/j3015_4 MIN 253
+rcpsp-data_ksd15_d/j3015_5 MIN 588
+rcpsp-data_ksd15_d/j3015_6 MIN 679
+rcpsp-data_ksd15_d/j3015_7 MIN 302
+rcpsp-data_ksd15_d/j3015_8 MIN 576
+rcpsp-data_ksd15_d/j3015_9 MIN 333
+rcpsp-data_ksd15_d/j3016_1 MIN 318
+rcpsp-data_ksd15_d/j3016_10 MIN 381
+rcpsp-data_ksd15_d/j3016_2 MIN 510
+rcpsp-data_ksd15_d/j3016_3 MIN 255
+rcpsp-data_ksd15_d/j3016_4 MIN 304
+rcpsp-data_ksd15_d/j3016_5 MIN 287
+rcpsp-data_ksd15_d/j3016_6 MIN 382
+rcpsp-data_ksd15_d/j3016_7 MIN 428
+rcpsp-data_ksd15_d/j3016_8 MIN 326
+rcpsp-data_ksd15_d/j3016_9 MIN 484
+rcpsp-data_ksd15_d/j3017_1 MIN 680
+rcpsp-data_ksd15_d/j3017_10 MIN 409
+rcpsp-data_ksd15_d/j3017_2 MIN 589
+rcpsp-data_ksd15_d/j3017_3 MIN 492
+rcpsp-data_ksd15_d/j3017_4 MIN 481
+rcpsp-data_ksd15_d/j3017_5 MIN 409
+rcpsp-data_ksd15_d/j3017_6 MIN 489
+rcpsp-data_ksd15_d/j3017_7 MIN 486
+rcpsp-data_ksd15_d/j3017_8 MIN 390
+rcpsp-data_ksd15_d/j3017_9 MIN 347
+rcpsp-data_ksd15_d/j3018_1 MIN 233
+rcpsp-data_ksd15_d/j3018_10 MIN 434
+rcpsp-data_ksd15_d/j3018_2 MIN 407
+rcpsp-data_ksd15_d/j3018_3 MIN 432
+rcpsp-data_ksd15_d/j3018_4 MIN 561
+rcpsp-data_ksd15_d/j3018_5 MIN 504
+rcpsp-data_ksd15_d/j3018_6 MIN 427
+rcpsp-data_ksd15_d/j3018_7 MIN 333
+rcpsp-data_ksd15_d/j3018_8 MIN 310
+rcpsp-data_ksd15_d/j3018_9 MIN 385
+rcpsp-data_ksd15_d/j3019_1 MIN 281
+rcpsp-data_ksd15_d/j3019_10 MIN 532
+rcpsp-data_ksd15_d/j3019_2 MIN 606
+rcpsp-data_ksd15_d/j3019_3 MIN 688
+rcpsp-data_ksd15_d/j3019_4 MIN 479
+rcpsp-data_ksd15_d/j3019_5 MIN 310
+rcpsp-data_ksd15_d/j3019_6 MIN 313
+rcpsp-data_ksd15_d/j3019_7 MIN 368
+rcpsp-data_ksd15_d/j3019_8 MIN 630
+rcpsp-data_ksd15_d/j3019_9 MIN 340
+rcpsp-data_ksd15_d/j3020_1 MIN 382
+rcpsp-data_ksd15_d/j3020_10 MIN 403
+rcpsp-data_ksd15_d/j3020_2 MIN 475
+rcpsp-data_ksd15_d/j3020_3 MIN 503
+rcpsp-data_ksd15_d/j3020_4 MIN 409
+rcpsp-data_ksd15_d/j3020_5 MIN 252
+rcpsp-data_ksd15_d/j3020_6 MIN 311
+rcpsp-data_ksd15_d/j3020_7 MIN 453
+rcpsp-data_ksd15_d/j3020_8 MIN 559
+rcpsp-data_ksd15_d/j3020_9 MIN 286
+rcpsp-data_ksd15_d/j3021_10 MIN 781
+rcpsp-data_ksd15_d/j3021_2 MIN 284
+rcpsp-data_ksd15_d/j3021_3 MIN 762
+rcpsp-data_ksd15_d/j3021_4 MIN 385
+rcpsp-data_ksd15_d/j3021_5 MIN 636
+rcpsp-data_ksd15_d/j3021_6 MIN 370
+rcpsp-data_ksd15_d/j3021_7 MIN 586
+rcpsp-data_ksd15_d/j3021_8 MIN 394
+rcpsp-data_ksd15_d/j3022_1 MIN 352
+rcpsp-data_ksd15_d/j3022_10 MIN 409
+rcpsp-data_ksd15_d/j3022_2 MIN 309
+rcpsp-data_ksd15_d/j3022_3 MIN 635
+rcpsp-data_ksd15_d/j3022_4 MIN 328
+rcpsp-data_ksd15_d/j3022_5 MIN 320
+rcpsp-data_ksd15_d/j3022_6 MIN 507
+rcpsp-data_ksd15_d/j3022_7 MIN 334
+rcpsp-data_ksd15_d/j3022_8 MIN 460
+rcpsp-data_ksd15_d/j3022_9 MIN 495
+rcpsp-data_ksd15_d/j3023_1 MIN 544
+rcpsp-data_ksd15_d/j3023_10 MIN 518
+rcpsp-data_ksd15_d/j3023_2 MIN 503
+rcpsp-data_ksd15_d/j3023_3 MIN 385
+rcpsp-data_ksd15_d/j3023_4 MIN 461
+rcpsp-data_ksd15_d/j3023_5 MIN 363
+rcpsp-data_ksd15_d/j3023_6 MIN 302
+rcpsp-data_ksd15_d/j3023_7 MIN 535
+rcpsp-data_ksd15_d/j3023_8 MIN 384
+rcpsp-data_ksd15_d/j3023_9 MIN 477
+rcpsp-data_ksd15_d/j3024_1 MIN 432
+rcpsp-data_ksd15_d/j3024_10 MIN 405
+rcpsp-data_ksd15_d/j3024_2 MIN 278
+rcpsp-data_ksd15_d/j3024_3 MIN 458
+rcpsp-data_ksd15_d/j3024_4 MIN 411
+rcpsp-data_ksd15_d/j3024_5 MIN 613
+rcpsp-data_ksd15_d/j3024_6 MIN 465
+rcpsp-data_ksd15_d/j3024_7 MIN 511
+rcpsp-data_ksd15_d/j3024_8 MIN 309
+rcpsp-data_ksd15_d/j3024_9 MIN 508
+rcpsp-data_ksd15_d/j3025_10 MIN 407
+rcpsp-data_ksd15_d/j3025_7 MIN 762
+rcpsp-data_ksd15_d/j3025_9 MIN 585
+rcpsp-data_ksd15_d/j3026_1 MIN 413
+rcpsp-data_ksd15_d/j3026_2 MIN 353
+rcpsp-data_ksd15_d/j3026_3 MIN 738
+rcpsp-data_ksd15_d/j3026_4 MIN 421
+rcpsp-data_ksd15_d/j3026_5 MIN 436
+rcpsp-data_ksd15_d/j3026_6 MIN 436
+rcpsp-data_ksd15_d/j3026_7 MIN 464
+rcpsp-data_ksd15_d/j3026_8 MIN 216
+rcpsp-data_ksd15_d/j3026_9 MIN 387
+rcpsp-data_ksd15_d/j3027_1 MIN 354
+rcpsp-data_ksd15_d/j3027_10 MIN 361
+rcpsp-data_ksd15_d/j3027_2 MIN 615
+rcpsp-data_ksd15_d/j3027_3 MIN 276
+rcpsp-data_ksd15_d/j3027_5 MIN 459
+rcpsp-data_ksd15_d/j3027_6 MIN 505
+rcpsp-data_ksd15_d/j3027_7 MIN 360
+rcpsp-data_ksd15_d/j3027_8 MIN 412
+rcpsp-data_ksd15_d/j3027_9 MIN 417
+rcpsp-data_ksd15_d/j3028_1 MIN 347
+rcpsp-data_ksd15_d/j3028_10 MIN 533
+rcpsp-data_ksd15_d/j3028_2 MIN 371
+rcpsp-data_ksd15_d/j3028_3 MIN 402
+rcpsp-data_ksd15_d/j3028_4 MIN 314
+rcpsp-data_ksd15_d/j3028_5 MIN 439
+rcpsp-data_ksd15_d/j3028_6 MIN 446
+rcpsp-data_ksd15_d/j3028_7 MIN 311
+rcpsp-data_ksd15_d/j3028_8 MIN 727
+rcpsp-data_ksd15_d/j3028_9 MIN 532
+rcpsp-data_ksd15_d/j3029_10 MIN 376
+rcpsp-data_ksd15_d/j3029_2 MIN 620
+rcpsp-data_ksd15_d/j3029_6 MIN 466
+rcpsp-data_ksd15_d/j3029_7 MIN 487
+rcpsp-data_ksd15_d/j3030_1 MIN 260
+rcpsp-data_ksd15_d/j3030_10 MIN 708
+rcpsp-data_ksd15_d/j3030_2 MIN 535
+rcpsp-data_ksd15_d/j3030_3 MIN 431
+rcpsp-data_ksd15_d/j3030_4 MIN 331
+rcpsp-data_ksd15_d/j3030_5 MIN 384
+rcpsp-data_ksd15_d/j3030_6 MIN 376
+rcpsp-data_ksd15_d/j3030_7 MIN 615
+rcpsp-data_ksd15_d/j3030_8 MIN 301
+rcpsp-data_ksd15_d/j3030_9 MIN 377
+rcpsp-data_ksd15_d/j3031_1 MIN 357
+rcpsp-data_ksd15_d/j3031_10 MIN 427
+rcpsp-data_ksd15_d/j3031_2 MIN 301
+rcpsp-data_ksd15_d/j3031_3 MIN 460
+rcpsp-data_ksd15_d/j3031_4 MIN 242
+rcpsp-data_ksd15_d/j3031_5 MIN 334
+rcpsp-data_ksd15_d/j3031_6 MIN 428
+rcpsp-data_ksd15_d/j3031_7 MIN 785
+rcpsp-data_ksd15_d/j3031_8 MIN 546
+rcpsp-data_ksd15_d/j3031_9 MIN 415
+rcpsp-data_ksd15_d/j3032_1 MIN 434
+rcpsp-data_ksd15_d/j3032_10 MIN 465
+rcpsp-data_ksd15_d/j3032_2 MIN 710
+rcpsp-data_ksd15_d/j3032_3 MIN 260
+rcpsp-data_ksd15_d/j3032_4 MIN 670
+rcpsp-data_ksd15_d/j3032_5 MIN 486
+rcpsp-data_ksd15_d/j3032_6 MIN 216
+rcpsp-data_ksd15_d/j3032_7 MIN 278
+rcpsp-data_ksd15_d/j3032_8 MIN 360
+rcpsp-data_ksd15_d/j3032_9 MIN 541
+rcpsp-data_ksd15_d/j3033_1 MIN 514
+rcpsp-data_ksd15_d/j3033_10 MIN 357
+rcpsp-data_ksd15_d/j3033_2 MIN 493
+rcpsp-data_ksd15_d/j3033_3 MIN 505
+rcpsp-data_ksd15_d/j3033_5 MIN 329
+rcpsp-data_ksd15_d/j3033_7 MIN 497
+rcpsp-data_ksd15_d/j3033_8 MIN 386
+rcpsp-data_ksd15_d/j3033_9 MIN 370
+rcpsp-data_ksd15_d/j3034_1 MIN 467
+rcpsp-data_ksd15_d/j3034_10 MIN 416
+rcpsp-data_ksd15_d/j3034_2 MIN 278
+rcpsp-data_ksd15_d/j3034_3 MIN 493
+rcpsp-data_ksd15_d/j3034_4 MIN 463
+rcpsp-data_ksd15_d/j3034_5 MIN 513
+rcpsp-data_ksd15_d/j3034_6 MIN 493
+rcpsp-data_ksd15_d/j3034_7 MIN 344
+rcpsp-data_ksd15_d/j3034_8 MIN 403
+rcpsp-data_ksd15_d/j3034_9 MIN 261
+rcpsp-data_ksd15_d/j3035_1 MIN 264
+rcpsp-data_ksd15_d/j3035_10 MIN 430
+rcpsp-data_ksd15_d/j3035_2 MIN 504
+rcpsp-data_ksd15_d/j3035_3 MIN 589
+rcpsp-data_ksd15_d/j3035_4 MIN 255
+rcpsp-data_ksd15_d/j3035_5 MIN 556
+rcpsp-data_ksd15_d/j3035_6 MIN 284
+rcpsp-data_ksd15_d/j3035_7 MIN 438
+rcpsp-data_ksd15_d/j3035_8 MIN 683
+rcpsp-data_ksd15_d/j3035_9 MIN 502
+rcpsp-data_ksd15_d/j3036_1 MIN 509
+rcpsp-data_ksd15_d/j3036_10 MIN 410
+rcpsp-data_ksd15_d/j3036_2 MIN 403
+rcpsp-data_ksd15_d/j3036_3 MIN 710
+rcpsp-data_ksd15_d/j3036_4 MIN 438
+rcpsp-data_ksd15_d/j3036_5 MIN 436
+rcpsp-data_ksd15_d/j3036_6 MIN 458
+rcpsp-data_ksd15_d/j3036_7 MIN 290
+rcpsp-data_ksd15_d/j3036_8 MIN 435
+rcpsp-data_ksd15_d/j3036_9 MIN 560
+rcpsp-data_ksd15_d/j3037_1 MIN 421
+rcpsp-data_ksd15_d/j3037_2 MIN 243
+rcpsp-data_ksd15_d/j3037_4 MIN 507
+rcpsp-data_ksd15_d/j3037_5 MIN 702
+rcpsp-data_ksd15_d/j3038_10 MIN 582
+rcpsp-data_ksd15_d/j3038_6 MIN 354
+rcpsp-data_ksd15_d/j3038_7 MIN 411
+rcpsp-data_ksd15_d/j3038_8 MIN 388
+rcpsp-data_ksd15_d/j3038_9 MIN 432
+rcpsp-data_ksd15_d/j3039_1 MIN 386
+rcpsp-data_ksd15_d/j3039_10 MIN 520
+rcpsp-data_ksd15_d/j3039_2 MIN 607
+rcpsp-data_ksd15_d/j3039_3 MIN 465
+rcpsp-data_ksd15_d/j3039_4 MIN 405
+rcpsp-data_ksd15_d/j3039_5 MIN 293
+rcpsp-data_ksd15_d/j3039_6 MIN 460
+rcpsp-data_ksd15_d/j3039_7 MIN 409
+rcpsp-data_ksd15_d/j3039_8 MIN 445
+rcpsp-data_ksd15_d/j3039_9 MIN 330
+rcpsp-data_ksd15_d/j3040_1 MIN 482
+rcpsp-data_ksd15_d/j3040_10 MIN 409
+rcpsp-data_ksd15_d/j3040_2 MIN 607
+rcpsp-data_ksd15_d/j3040_3 MIN 442
+rcpsp-data_ksd15_d/j3040_4 MIN 531
+rcpsp-data_ksd15_d/j3040_5 MIN 488
+rcpsp-data_ksd15_d/j3040_6 MIN 374
+rcpsp-data_ksd15_d/j3040_7 MIN 408
+rcpsp-data_ksd15_d/j3040_8 MIN 410
+rcpsp-data_ksd15_d/j3040_9 MIN 353
+rcpsp-data_ksd15_d/j3041_1 MIN 492
+rcpsp-data_ksd15_d/j3041_7 MIN 623
+rcpsp-data_ksd15_d/j3041_9 MIN 517
+rcpsp-data_ksd15_d/j3042_1 MIN 488
+rcpsp-data_ksd15_d/j3042_10 MIN 459
+rcpsp-data_ksd15_d/j3042_2 MIN 417
+rcpsp-data_ksd15_d/j3042_3 MIN 270
+rcpsp-data_ksd15_d/j3042_4 MIN 453
+rcpsp-data_ksd15_d/j3042_5 MIN 479
+rcpsp-data_ksd15_d/j3042_6 MIN 623
+rcpsp-data_ksd15_d/j3042_7 MIN 603
+rcpsp-data_ksd15_d/j3042_8 MIN 782
+rcpsp-data_ksd15_d/j3042_9 MIN 411
+rcpsp-data_ksd15_d/j3043_1 MIN 679
+rcpsp-data_ksd15_d/j3043_10 MIN 456
+rcpsp-data_ksd15_d/j3043_2 MIN 401
+rcpsp-data_ksd15_d/j3043_3 MIN 438
+rcpsp-data_ksd15_d/j3043_4 MIN 289
+rcpsp-data_ksd15_d/j3043_5 MIN 236
+rcpsp-data_ksd15_d/j3043_6 MIN 377
+rcpsp-data_ksd15_d/j3043_7 MIN 526
+rcpsp-data_ksd15_d/j3043_8 MIN 690
+rcpsp-data_ksd15_d/j3043_9 MIN 455
+rcpsp-data_ksd15_d/j3044_1 MIN 221
+rcpsp-data_ksd15_d/j3044_10 MIN 535
+rcpsp-data_ksd15_d/j3044_2 MIN 518
+rcpsp-data_ksd15_d/j3044_3 MIN 511
+rcpsp-data_ksd15_d/j3044_4 MIN 435
+rcpsp-data_ksd15_d/j3044_5 MIN 684
+rcpsp-data_ksd15_d/j3044_6 MIN 507
+rcpsp-data_ksd15_d/j3044_7 MIN 383
+rcpsp-data_ksd15_d/j3044_8 MIN 463
+rcpsp-data_ksd15_d/j3044_9 MIN 510
+rcpsp-data_ksd15_d/j3046_1 MIN 531
+rcpsp-data_ksd15_d/j3046_10 MIN 417
+rcpsp-data_ksd15_d/j3046_2 MIN 564
+rcpsp-data_ksd15_d/j3046_3 MIN 512
+rcpsp-data_ksd15_d/j3046_4 MIN 490
+rcpsp-data_ksd15_d/j3046_5 MIN 332
+rcpsp-data_ksd15_d/j3046_7 MIN 392
+rcpsp-data_ksd15_d/j3046_8 MIN 551
+rcpsp-data_ksd15_d/j3046_9 MIN 402
+rcpsp-data_ksd15_d/j3047_1 MIN 608
+rcpsp-data_ksd15_d/j3047_10 MIN 368
+rcpsp-data_ksd15_d/j3047_2 MIN 242
+rcpsp-data_ksd15_d/j3047_3 MIN 334
+rcpsp-data_ksd15_d/j3047_4 MIN 242
+rcpsp-data_ksd15_d/j3047_5 MIN 311
+rcpsp-data_ksd15_d/j3047_6 MIN 329
+rcpsp-data_ksd15_d/j3047_7 MIN 205
+rcpsp-data_ksd15_d/j3047_8 MIN 329
+rcpsp-data_ksd15_d/j3047_9 MIN 335
+rcpsp-data_ksd15_d/j3048_1 MIN 480
+rcpsp-data_ksd15_d/j3048_10 MIN 414
+rcpsp-data_ksd15_d/j3048_2 MIN 380
+rcpsp-data_ksd15_d/j3048_3 MIN 187
+rcpsp-data_ksd15_d/j3048_4 MIN 342
+rcpsp-data_ksd15_d/j3048_5 MIN 489
+rcpsp-data_ksd15_d/j3048_6 MIN 541
+rcpsp-data_ksd15_d/j3048_7 MIN 468
+rcpsp-data_ksd15_d/j3048_8 MIN 317
+rcpsp-data_ksd15_d/j3048_9 MIN 415
+rcpsp-data_pack/pack031 MIN 70
+rcpsp-data_pack_d/pack032 MIN 2943
+rcpsp-data_pack_d/pack033 MIN 3390
+rcpsp-data_pack_d/pack035 MIN 2305
+rcpsp-data_pack_d/pack045 MIN 2712
+rcpsp-data_pack_d/pack053 MIN 2521
+rcpsp-data_psplib-J30/J30_10_1 MIN 42
+rcpsp-data_psplib-J30/J30_10_5 MIN 41
+rcpsp-data_psplib-J30/J30_10_7 MIN 49
+rcpsp-data_psplib-J30/J30_10_9 MIN 49
+rcpsp-data_psplib-J30/J30_11_1 MIN 54
+rcpsp-data_psplib-J30/J30_11_3 MIN 81
+rcpsp-data_psplib-J30/J30_11_4 MIN 63
+rcpsp-data_psplib-J30/J30_11_6 MIN 44
+rcpsp-data_psplib-J30/J30_11_7 MIN 36
+rcpsp-data_psplib-J30/J30_11_8 MIN 62
+rcpsp-data_psplib-J30/J30_11_9 MIN 67
+rcpsp-data_psplib-J30/J30_12_1 MIN 47
+rcpsp-data_psplib-J30/J30_12_10 MIN 57
+rcpsp-data_psplib-J30/J30_12_2 MIN 46
+rcpsp-data_psplib-J30/J30_12_3 MIN 37
+rcpsp-data_psplib-J30/J30_12_4 MIN 63
+rcpsp-data_psplib-J30/J30_12_5 MIN 47
+rcpsp-data_psplib-J30/J30_12_6 MIN 53
+rcpsp-data_psplib-J30/J30_12_7 MIN 55
+rcpsp-data_psplib-J30/J30_12_8 MIN 35
+rcpsp-data_psplib-J30/J30_12_9 MIN 52
+rcpsp-data_psplib-J30/J30_14_5 MIN 52
+rcpsp-data_psplib-J30/J30_14_6 MIN 35
+rcpsp-data_psplib-J30/J30_14_8 MIN 54
+rcpsp-data_psplib-J30/J30_15_1 MIN 46
+rcpsp-data_psplib-J30/J30_15_10 MIN 65
+rcpsp-data_psplib-J30/J30_15_2 MIN 47
+rcpsp-data_psplib-J30/J30_15_3 MIN 48
+rcpsp-data_psplib-J30/J30_15_4 MIN 48
+rcpsp-data_psplib-J30/J30_15_6 MIN 67
+rcpsp-data_psplib-J30/J30_15_7 MIN 47
+rcpsp-data_psplib-J30/J30_15_8 MIN 50
+rcpsp-data_psplib-J30/J30_15_9 MIN 54
+rcpsp-data_psplib-J30/J30_16_1 MIN 51
+rcpsp-data_psplib-J30/J30_16_10 MIN 51
+rcpsp-data_psplib-J30/J30_16_2 MIN 48
+rcpsp-data_psplib-J30/J30_16_3 MIN 36
+rcpsp-data_psplib-J30/J30_16_4 MIN 47
+rcpsp-data_psplib-J30/J30_16_5 MIN 51
+rcpsp-data_psplib-J30/J30_16_6 MIN 51
+rcpsp-data_psplib-J30/J30_16_7 MIN 34
+rcpsp-data_psplib-J30/J30_16_8 MIN 44
+rcpsp-data_psplib-J30/J30_16_9 MIN 44
+rcpsp-data_psplib-J30/J30_17_10 MIN 66
+rcpsp-data_psplib-J30/J30_17_2 MIN 68
+rcpsp-data_psplib-J30/J30_17_3 MIN 60
+rcpsp-data_psplib-J30/J30_17_4 MIN 49
+rcpsp-data_psplib-J30/J30_17_6 MIN 63
+rcpsp-data_psplib-J30/J30_17_7 MIN 57
+rcpsp-data_psplib-J30/J30_17_8 MIN 61
+rcpsp-data_psplib-J30/J30_17_9 MIN 48
+rcpsp-data_psplib-J30/J30_18_1 MIN 53
+rcpsp-data_psplib-J30/J30_18_10 MIN 49
+rcpsp-data_psplib-J30/J30_18_2 MIN 55
+rcpsp-data_psplib-J30/J30_18_3 MIN 56
+rcpsp-data_psplib-J30/J30_18_4 MIN 70
+rcpsp-data_psplib-J30/J30_18_5 MIN 52
+rcpsp-data_psplib-J30/J30_18_6 MIN 62
+rcpsp-data_psplib-J30/J30_18_7 MIN 48
+rcpsp-data_psplib-J30/J30_18_8 MIN 52
+rcpsp-data_psplib-J30/J30_18_9 MIN 47
+rcpsp-data_psplib-J30/J30_19_1 MIN 40
+rcpsp-data_psplib-J30/J30_19_10 MIN 47
+rcpsp-data_psplib-J30/J30_19_2 MIN 58
+rcpsp-data_psplib-J30/J30_19_3 MIN 83
+rcpsp-data_psplib-J30/J30_19_4 MIN 39
+rcpsp-data_psplib-J30/J30_19_5 MIN 48
+rcpsp-data_psplib-J30/J30_19_6 MIN 49
+rcpsp-data_psplib-J30/J30_19_7 MIN 57
+rcpsp-data_psplib-J30/J30_19_8 MIN 55
+rcpsp-data_psplib-J30/J30_19_9 MIN 38
+rcpsp-data_psplib-J30/J30_1_1 MIN 43
+rcpsp-data_psplib-J30/J30_1_10 MIN 45
+rcpsp-data_psplib-J30/J30_1_2 MIN 47
+rcpsp-data_psplib-J30/J30_1_3 MIN 47
+rcpsp-data_psplib-J30/J30_1_4 MIN 62
+rcpsp-data_psplib-J30/J30_1_6 MIN 48
+rcpsp-data_psplib-J30/J30_1_7 MIN 60
+rcpsp-data_psplib-J30/J30_1_8 MIN 53
+rcpsp-data_psplib-J30/J30_20_1 MIN 57
+rcpsp-data_psplib-J30/J30_20_10 MIN 37
+rcpsp-data_psplib-J30/J30_20_2 MIN 70
+rcpsp-data_psplib-J30/J30_20_3 MIN 49
+rcpsp-data_psplib-J30/J30_20_4 MIN 43
+rcpsp-data_psplib-J30/J30_20_5 MIN 61
+rcpsp-data_psplib-J30/J30_20_6 MIN 51
+rcpsp-data_psplib-J30/J30_20_7 MIN 42
+rcpsp-data_psplib-J30/J30_20_8 MIN 51
+rcpsp-data_psplib-J30/J30_20_9 MIN 41
+rcpsp-data_psplib-J30/J30_22_1 MIN 42
+rcpsp-data_psplib-J30/J30_22_10 MIN 55
+rcpsp-data_psplib-J30/J30_22_2 MIN 45
+rcpsp-data_psplib-J30/J30_22_3 MIN 63
+rcpsp-data_psplib-J30/J30_22_4 MIN 42
+rcpsp-data_psplib-J30/J30_22_5 MIN 52
+rcpsp-data_psplib-J30/J30_22_9 MIN 76
+rcpsp-data_psplib-J30/J30_23_1 MIN 63
+rcpsp-data_psplib-J30/J30_23_10 MIN 61
+rcpsp-data_psplib-J30/J30_23_2 MIN 53
+rcpsp-data_psplib-J30/J30_23_4 MIN 65
+rcpsp-data_psplib-J30/J30_23_5 MIN 52
+rcpsp-data_psplib-J30/J30_23_6 MIN 48
+rcpsp-data_psplib-J30/J30_23_7 MIN 60
+rcpsp-data_psplib-J30/J30_23_8 MIN 48
+rcpsp-data_psplib-J30/J30_23_9 MIN 63
+rcpsp-data_psplib-J30/J30_24_1 MIN 53
+rcpsp-data_psplib-J30/J30_24_10 MIN 53
+rcpsp-data_psplib-J30/J30_24_2 MIN 58
+rcpsp-data_psplib-J30/J30_24_3 MIN 69
+rcpsp-data_psplib-J30/J30_24_4 MIN 53
+rcpsp-data_psplib-J30/J30_24_5 MIN 51
+rcpsp-data_psplib-J30/J30_24_6 MIN 56
+rcpsp-data_psplib-J30/J30_24_7 MIN 44
+rcpsp-data_psplib-J30/J30_24_8 MIN 38
+rcpsp-data_psplib-J30/J30_24_9 MIN 43
+rcpsp-data_psplib-J30/J30_26_1 MIN 59
+rcpsp-data_psplib-J30/J30_26_10 MIN 49
+rcpsp-data_psplib-J30/J30_26_2 MIN 40
+rcpsp-data_psplib-J30/J30_26_3 MIN 58
+rcpsp-data_psplib-J30/J30_26_4 MIN 62
+rcpsp-data_psplib-J30/J30_26_7 MIN 56
+rcpsp-data_psplib-J30/J30_26_8 MIN 66
+rcpsp-data_psplib-J30/J30_26_9 MIN 43
+rcpsp-data_psplib-J30/J30_27_1 MIN 43
+rcpsp-data_psplib-J30/J30_27_2 MIN 58
+rcpsp-data_psplib-J30/J30_27_3 MIN 60
+rcpsp-data_psplib-J30/J30_27_4 MIN 64
+rcpsp-data_psplib-J30/J30_27_5 MIN 49
+rcpsp-data_psplib-J30/J30_27_6 MIN 59
+rcpsp-data_psplib-J30/J30_28_10 MIN 59
+rcpsp-data_psplib-J30/J30_28_6 MIN 55
+rcpsp-data_psplib-J30/J30_28_7 MIN 48
+rcpsp-data_psplib-J30/J30_28_8 MIN 53
+rcpsp-data_psplib-J30/J30_28_9 MIN 62
+rcpsp-data_psplib-J30/J30_2_1 MIN 38
+rcpsp-data_psplib-J30/J30_2_10 MIN 43
+rcpsp-data_psplib-J30/J30_2_2 MIN 51
+rcpsp-data_psplib-J30/J30_2_3 MIN 43
+rcpsp-data_psplib-J30/J30_2_4 MIN 43
+rcpsp-data_psplib-J30/J30_2_5 MIN 51
+rcpsp-data_psplib-J30/J30_2_6 MIN 47
+rcpsp-data_psplib-J30/J30_2_7 MIN 47
+rcpsp-data_psplib-J30/J30_2_8 MIN 54
+rcpsp-data_psplib-J30/J30_2_9 MIN 54
+rcpsp-data_psplib-J30/J30_30_5 MIN 54
+rcpsp-data_psplib-J30/J30_31_1 MIN 43
+rcpsp-data_psplib-J30/J30_31_2 MIN 63
+rcpsp-data_psplib-J30/J30_31_3 MIN 58
+rcpsp-data_psplib-J30/J30_31_4 MIN 50
+rcpsp-data_psplib-J30/J30_31_6 MIN 53
+rcpsp-data_psplib-J30/J30_31_7 MIN 61
+rcpsp-data_psplib-J30/J30_31_8 MIN 58
+rcpsp-data_psplib-J30/J30_32_1 MIN 61
+rcpsp-data_psplib-J30/J30_32_10 MIN 51
+rcpsp-data_psplib-J30/J30_32_2 MIN 60
+rcpsp-data_psplib-J30/J30_32_3 MIN 57
+rcpsp-data_psplib-J30/J30_32_4 MIN 68
+rcpsp-data_psplib-J30/J30_32_5 MIN 54
+rcpsp-data_psplib-J30/J30_32_6 MIN 44
+rcpsp-data_psplib-J30/J30_32_7 MIN 35
+rcpsp-data_psplib-J30/J30_32_8 MIN 54
+rcpsp-data_psplib-J30/J30_32_9 MIN 65
+rcpsp-data_psplib-J30/J30_33_1 MIN 65
+rcpsp-data_psplib-J30/J30_33_10 MIN 53
+rcpsp-data_psplib-J30/J30_33_2 MIN 60
+rcpsp-data_psplib-J30/J30_33_3 MIN 55
+rcpsp-data_psplib-J30/J30_33_4 MIN 77
+rcpsp-data_psplib-J30/J30_33_5 MIN 53
+rcpsp-data_psplib-J30/J30_33_6 MIN 59
+rcpsp-data_psplib-J30/J30_33_7 MIN 58
+rcpsp-data_psplib-J30/J30_33_9 MIN 65
+rcpsp-data_psplib-J30/J30_34_1 MIN 68
+rcpsp-data_psplib-J30/J30_34_10 MIN 47
+rcpsp-data_psplib-J30/J30_34_2 MIN 44
+rcpsp-data_psplib-J30/J30_34_3 MIN 69
+rcpsp-data_psplib-J30/J30_34_4 MIN 67
+rcpsp-data_psplib-J30/J30_34_5 MIN 63
+rcpsp-data_psplib-J30/J30_34_6 MIN 52
+rcpsp-data_psplib-J30/J30_34_7 MIN 58
+rcpsp-data_psplib-J30/J30_34_8 MIN 58
+rcpsp-data_psplib-J30/J30_34_9 MIN 60
+rcpsp-data_psplib-J30/J30_35_1 MIN 57
+rcpsp-data_psplib-J30/J30_35_10 MIN 59
+rcpsp-data_psplib-J30/J30_35_2 MIN 53
+rcpsp-data_psplib-J30/J30_35_3 MIN 60
+rcpsp-data_psplib-J30/J30_35_4 MIN 50
+rcpsp-data_psplib-J30/J30_35_5 MIN 60
+rcpsp-data_psplib-J30/J30_35_6 MIN 58
+rcpsp-data_psplib-J30/J30_35_7 MIN 61
+rcpsp-data_psplib-J30/J30_35_8 MIN 63
+rcpsp-data_psplib-J30/J30_35_9 MIN 59
+rcpsp-data_psplib-J30/J30_36_1 MIN 66
+rcpsp-data_psplib-J30/J30_36_10 MIN 59
+rcpsp-data_psplib-J30/J30_36_2 MIN 44
+rcpsp-data_psplib-J30/J30_36_3 MIN 61
+rcpsp-data_psplib-J30/J30_36_4 MIN 59
+rcpsp-data_psplib-J30/J30_36_5 MIN 64
+rcpsp-data_psplib-J30/J30_36_6 MIN 46
+rcpsp-data_psplib-J30/J30_36_7 MIN 56
+rcpsp-data_psplib-J30/J30_36_8 MIN 63
+rcpsp-data_psplib-J30/J30_36_9 MIN 59
+rcpsp-data_psplib-J30/J30_38_1 MIN 48
+rcpsp-data_psplib-J30/J30_38_10 MIN 60
+rcpsp-data_psplib-J30/J30_38_2 MIN 54
+rcpsp-data_psplib-J30/J30_38_3 MIN 59
+rcpsp-data_psplib-J30/J30_38_4 MIN 59
+rcpsp-data_psplib-J30/J30_38_5 MIN 71
+rcpsp-data_psplib-J30/J30_38_6 MIN 63
+rcpsp-data_psplib-J30/J30_38_7 MIN 65
+rcpsp-data_psplib-J30/J30_38_8 MIN 61
+rcpsp-data_psplib-J30/J30_38_9 MIN 63
+rcpsp-data_psplib-J30/J30_39_1 MIN 55
+rcpsp-data_psplib-J30/J30_39_10 MIN 60
+rcpsp-data_psplib-J30/J30_39_2 MIN 54
+rcpsp-data_psplib-J30/J30_39_3 MIN 54
+rcpsp-data_psplib-J30/J30_39_4 MIN 53
+rcpsp-data_psplib-J30/J30_39_5 MIN 55
+rcpsp-data_psplib-J30/J30_39_6 MIN 69
+rcpsp-data_psplib-J30/J30_39_7 MIN 56
+rcpsp-data_psplib-J30/J30_39_8 MIN 67
+rcpsp-data_psplib-J30/J30_39_9 MIN 64
+rcpsp-data_psplib-J30/J30_3_1 MIN 72
+rcpsp-data_psplib-J30/J30_3_10 MIN 59
+rcpsp-data_psplib-J30/J30_3_2 MIN 40
+rcpsp-data_psplib-J30/J30_3_3 MIN 57
+rcpsp-data_psplib-J30/J30_3_4 MIN 98
+rcpsp-data_psplib-J30/J30_3_5 MIN 53
+rcpsp-data_psplib-J30/J30_3_6 MIN 54
+rcpsp-data_psplib-J30/J30_3_7 MIN 48
+rcpsp-data_psplib-J30/J30_3_8 MIN 54
+rcpsp-data_psplib-J30/J30_3_9 MIN 65
+rcpsp-data_psplib-J30/J30_40_1 MIN 51
+rcpsp-data_psplib-J30/J30_40_10 MIN 51
+rcpsp-data_psplib-J30/J30_40_2 MIN 56
+rcpsp-data_psplib-J30/J30_40_3 MIN 57
+rcpsp-data_psplib-J30/J30_40_4 MIN 57
+rcpsp-data_psplib-J30/J30_40_5 MIN 65
+rcpsp-data_psplib-J30/J30_40_6 MIN 60
+rcpsp-data_psplib-J30/J30_40_7 MIN 46
+rcpsp-data_psplib-J30/J30_40_8 MIN 57
+rcpsp-data_psplib-J30/J30_40_9 MIN 64
+rcpsp-data_psplib-J30/J30_42_1 MIN 58
+rcpsp-data_psplib-J30/J30_42_10 MIN 75
+rcpsp-data_psplib-J30/J30_42_2 MIN 50
+rcpsp-data_psplib-J30/J30_42_4 MIN 49
+rcpsp-data_psplib-J30/J30_42_5 MIN 52
+rcpsp-data_psplib-J30/J30_42_6 MIN 66
+rcpsp-data_psplib-J30/J30_42_7 MIN 66
+rcpsp-data_psplib-J30/J30_42_9 MIN 60
+rcpsp-data_psplib-J30/J30_43_10 MIN 60
+rcpsp-data_psplib-J30/J30_43_2 MIN 43
+rcpsp-data_psplib-J30/J30_43_3 MIN 57
+rcpsp-data_psplib-J30/J30_43_4 MIN 67
+rcpsp-data_psplib-J30/J30_43_5 MIN 64
+rcpsp-data_psplib-J30/J30_43_6 MIN 58
+rcpsp-data_psplib-J30/J30_43_7 MIN 52
+rcpsp-data_psplib-J30/J30_43_8 MIN 62
+rcpsp-data_psplib-J30/J30_44_1 MIN 50
+rcpsp-data_psplib-J30/J30_44_10 MIN 63
+rcpsp-data_psplib-J30/J30_44_2 MIN 54
+rcpsp-data_psplib-J30/J30_44_3 MIN 51
+rcpsp-data_psplib-J30/J30_44_4 MIN 57
+rcpsp-data_psplib-J30/J30_44_5 MIN 55
+rcpsp-data_psplib-J30/J30_44_6 MIN 56
+rcpsp-data_psplib-J30/J30_44_7 MIN 42
+rcpsp-data_psplib-J30/J30_44_8 MIN 49
+rcpsp-data_psplib-J30/J30_44_9 MIN 64
+rcpsp-data_psplib-J30/J30_46_1 MIN 59
+rcpsp-data_psplib-J30/J30_46_4 MIN 64
+rcpsp-data_psplib-J30/J30_46_5 MIN 57
+rcpsp-data_psplib-J30/J30_46_9 MIN 49
+rcpsp-data_psplib-J30/J30_47_1 MIN 58
+rcpsp-data_psplib-J30/J30_47_2 MIN 59
+rcpsp-data_psplib-J30/J30_47_3 MIN 55
+rcpsp-data_psplib-J30/J30_47_4 MIN 49
+rcpsp-data_psplib-J30/J30_47_5 MIN 47
+rcpsp-data_psplib-J30/J30_47_6 MIN 53
+rcpsp-data_psplib-J30/J30_47_8 MIN 48
+rcpsp-data_psplib-J30/J30_47_9 MIN 65
+rcpsp-data_psplib-J30/J30_48_1 MIN 63
+rcpsp-data_psplib-J30/J30_48_10 MIN 54
+rcpsp-data_psplib-J30/J30_48_2 MIN 54
+rcpsp-data_psplib-J30/J30_48_3 MIN 50
+rcpsp-data_psplib-J30/J30_48_4 MIN 57
+rcpsp-data_psplib-J30/J30_48_5 MIN 58
+rcpsp-data_psplib-J30/J30_48_6 MIN 58
+rcpsp-data_psplib-J30/J30_48_7 MIN 55
+rcpsp-data_psplib-J30/J30_48_8 MIN 44
+rcpsp-data_psplib-J30/J30_48_9 MIN 59
+rcpsp-data_psplib-J30/J30_4_1 MIN 49
+rcpsp-data_psplib-J30/J30_4_10 MIN 48
+rcpsp-data_psplib-J30/J30_4_2 MIN 60
+rcpsp-data_psplib-J30/J30_4_3 MIN 47
+rcpsp-data_psplib-J30/J30_4_4 MIN 57
+rcpsp-data_psplib-J30/J30_4_5 MIN 59
+rcpsp-data_psplib-J30/J30_4_6 MIN 45
+rcpsp-data_psplib-J30/J30_4_7 MIN 56
+rcpsp-data_psplib-J30/J30_4_8 MIN 55
+rcpsp-data_psplib-J30/J30_4_9 MIN 38
+rcpsp-data_psplib-J30/J30_6_10 MIN 61
+rcpsp-data_psplib-J30/J30_6_2 MIN 51
+rcpsp-data_psplib-J30/J30_6_3 MIN 48
+rcpsp-data_psplib-J30/J30_6_6 MIN 37
+rcpsp-data_psplib-J30/J30_6_7 MIN 46
+rcpsp-data_psplib-J30/J30_6_8 MIN 39
+rcpsp-data_psplib-J30/J30_6_9 MIN 51
+rcpsp-data_psplib-J30/J30_7_1 MIN 55
+rcpsp-data_psplib-J30/J30_7_10 MIN 49
+rcpsp-data_psplib-J30/J30_7_2 MIN 42
+rcpsp-data_psplib-J30/J30_7_3 MIN 42
+rcpsp-data_psplib-J30/J30_7_4 MIN 44
+rcpsp-data_psplib-J30/J30_7_5 MIN 44
+rcpsp-data_psplib-J30/J30_7_6 MIN 35
+rcpsp-data_psplib-J30/J30_7_7 MIN 50
+rcpsp-data_psplib-J30/J30_7_8 MIN 44
+rcpsp-data_psplib-J30/J30_7_9 MIN 60
+rcpsp-data_psplib-J30/J30_8_1 MIN 44
+rcpsp-data_psplib-J30/J30_8_10 MIN 67
+rcpsp-data_psplib-J30/J30_8_2 MIN 51
+rcpsp-data_psplib-J30/J30_8_3 MIN 53
+rcpsp-data_psplib-J30/J30_8_4 MIN 48
+rcpsp-data_psplib-J30/J30_8_5 MIN 58
+rcpsp-data_psplib-J30/J30_8_6 MIN 47
+rcpsp-data_psplib-J30/J30_8_7 MIN 41
+rcpsp-data_psplib-J30/J30_8_8 MIN 51
+rcpsp-data_psplib-J30/J30_8_9 MIN 39
+rcpsp-data_psplib-J60/J60_10_1 MIN 85
+rcpsp-data_psplib-J60/J60_10_10 MIN 73
+rcpsp-data_psplib-J60/J60_10_2 MIN 62
+rcpsp-data_psplib-J60/J60_10_3 MIN 72
+rcpsp-data_psplib-J60/J60_10_4 MIN 80
+rcpsp-data_psplib-J60/J60_10_5 MIN 79
+rcpsp-data_psplib-J60/J60_10_6 MIN 67
+rcpsp-data_psplib-J60/J60_10_8 MIN 65
+rcpsp-data_psplib-J60/J60_11_1 MIN 71
+rcpsp-data_psplib-J60/J60_11_10 MIN 58
+rcpsp-data_psplib-J60/J60_11_2 MIN 61
+rcpsp-data_psplib-J60/J60_11_3 MIN 76
+rcpsp-data_psplib-J60/J60_11_4 MIN 69
+rcpsp-data_psplib-J60/J60_11_5 MIN 65
+rcpsp-data_psplib-J60/J60_11_6 MIN 70
+rcpsp-data_psplib-J60/J60_11_7 MIN 70
+rcpsp-data_psplib-J60/J60_11_8 MIN 69
+rcpsp-data_psplib-J60/J60_11_9 MIN 62
+rcpsp-data_psplib-J60/J60_12_1 MIN 59
+rcpsp-data_psplib-J60/J60_12_10 MIN 79
+rcpsp-data_psplib-J60/J60_12_2 MIN 58
+rcpsp-data_psplib-J60/J60_12_3 MIN 75
+rcpsp-data_psplib-J60/J60_12_4 MIN 69
+rcpsp-data_psplib-J60/J60_12_5 MIN 63
+rcpsp-data_psplib-J60/J60_12_6 MIN 54
+rcpsp-data_psplib-J60/J60_12_7 MIN 71
+rcpsp-data_psplib-J60/J60_12_8 MIN 60
+rcpsp-data_psplib-J60/J60_12_9 MIN 59
+rcpsp-data_psplib-J60/J60_14_2 MIN 65
+rcpsp-data_psplib-J60/J60_14_6 MIN 65
+rcpsp-data_psplib-J60/J60_14_7 MIN 69
+rcpsp-data_psplib-J60/J60_14_8 MIN 88
+rcpsp-data_psplib-J60/J60_14_9 MIN 61
+rcpsp-data_psplib-J60/J60_15_1 MIN 84
+rcpsp-data_psplib-J60/J60_15_10 MIN 61
+rcpsp-data_psplib-J60/J60_15_2 MIN 89
+rcpsp-data_psplib-J60/J60_15_3 MIN 72
+rcpsp-data_psplib-J60/J60_15_4 MIN 75
+rcpsp-data_psplib-J60/J60_15_5 MIN 70
+rcpsp-data_psplib-J60/J60_15_6 MIN 76
+rcpsp-data_psplib-J60/J60_15_7 MIN 64
+rcpsp-data_psplib-J60/J60_15_8 MIN 79
+rcpsp-data_psplib-J60/J60_15_9 MIN 72
+rcpsp-data_psplib-J60/J60_16_1 MIN 64
+rcpsp-data_psplib-J60/J60_16_10 MIN 68
+rcpsp-data_psplib-J60/J60_16_2 MIN 64
+rcpsp-data_psplib-J60/J60_16_3 MIN 53
+rcpsp-data_psplib-J60/J60_16_4 MIN 60
+rcpsp-data_psplib-J60/J60_16_5 MIN 66
+rcpsp-data_psplib-J60/J60_16_6 MIN 66
+rcpsp-data_psplib-J60/J60_16_7 MIN 82
+rcpsp-data_psplib-J60/J60_16_8 MIN 68
+rcpsp-data_psplib-J60/J60_16_9 MIN 54
+rcpsp-data_psplib-J60/J60_17_10 MIN 72
+rcpsp-data_psplib-J60/J60_17_3 MIN 89
+rcpsp-data_psplib-J60/J60_17_4 MIN 71
+rcpsp-data_psplib-J60/J60_17_7 MIN 83
+rcpsp-data_psplib-J60/J60_17_9 MIN 76
+rcpsp-data_psplib-J60/J60_18_1 MIN 81
+rcpsp-data_psplib-J60/J60_18_10 MIN 97
+rcpsp-data_psplib-J60/J60_18_2 MIN 69
+rcpsp-data_psplib-J60/J60_18_3 MIN 77
+rcpsp-data_psplib-J60/J60_18_4 MIN 71
+rcpsp-data_psplib-J60/J60_18_5 MIN 80
+rcpsp-data_psplib-J60/J60_18_6 MIN 61
+rcpsp-data_psplib-J60/J60_18_7 MIN 93
+rcpsp-data_psplib-J60/J60_18_8 MIN 78
+rcpsp-data_psplib-J60/J60_18_9 MIN 69
+rcpsp-data_psplib-J60/J60_19_1 MIN 62
+rcpsp-data_psplib-J60/J60_19_10 MIN 78
+rcpsp-data_psplib-J60/J60_19_2 MIN 83
+rcpsp-data_psplib-J60/J60_19_3 MIN 83
+rcpsp-data_psplib-J60/J60_19_4 MIN 67
+rcpsp-data_psplib-J60/J60_19_5 MIN 73
+rcpsp-data_psplib-J60/J60_19_6 MIN 69
+rcpsp-data_psplib-J60/J60_19_7 MIN 60
+rcpsp-data_psplib-J60/J60_19_8 MIN 87
+rcpsp-data_psplib-J60/J60_19_9 MIN 69
+rcpsp-data_psplib-J60/J60_20_1 MIN 60
+rcpsp-data_psplib-J60/J60_20_10 MIN 70
+rcpsp-data_psplib-J60/J60_20_2 MIN 78
+rcpsp-data_psplib-J60/J60_20_3 MIN 69
+rcpsp-data_psplib-J60/J60_20_4 MIN 86
+rcpsp-data_psplib-J60/J60_20_5 MIN 71
+rcpsp-data_psplib-J60/J60_20_6 MIN 97
+rcpsp-data_psplib-J60/J60_20_7 MIN 74
+rcpsp-data_psplib-J60/J60_20_8 MIN 65
+rcpsp-data_psplib-J60/J60_20_9 MIN 74
+rcpsp-data_psplib-J60/J60_22_1 MIN 64
+rcpsp-data_psplib-J60/J60_22_2 MIN 83
+rcpsp-data_psplib-J60/J60_22_3 MIN 70
+rcpsp-data_psplib-J60/J60_22_5 MIN 76
+rcpsp-data_psplib-J60/J60_22_7 MIN 69
+rcpsp-data_psplib-J60/J60_22_8 MIN 59
+rcpsp-data_psplib-J60/J60_22_9 MIN 65
+rcpsp-data_psplib-J60/J60_23_1 MIN 75
+rcpsp-data_psplib-J60/J60_23_10 MIN 68
+rcpsp-data_psplib-J60/J60_23_2 MIN 69
+rcpsp-data_psplib-J60/J60_23_3 MIN 78
+rcpsp-data_psplib-J60/J60_23_4 MIN 83
+rcpsp-data_psplib-J60/J60_23_5 MIN 72
+rcpsp-data_psplib-J60/J60_23_6 MIN 81
+rcpsp-data_psplib-J60/J60_23_7 MIN 60
+rcpsp-data_psplib-J60/J60_23_8 MIN 72
+rcpsp-data_psplib-J60/J60_23_9 MIN 64
+rcpsp-data_psplib-J60/J60_24_1 MIN 65
+rcpsp-data_psplib-J60/J60_24_10 MIN 66
+rcpsp-data_psplib-J60/J60_24_2 MIN 55
+rcpsp-data_psplib-J60/J60_24_3 MIN 67
+rcpsp-data_psplib-J60/J60_24_4 MIN 78
+rcpsp-data_psplib-J60/J60_24_5 MIN 76
+rcpsp-data_psplib-J60/J60_24_6 MIN 75
+rcpsp-data_psplib-J60/J60_24_7 MIN 68
+rcpsp-data_psplib-J60/J60_24_8 MIN 81
+rcpsp-data_psplib-J60/J60_24_9 MIN 80
+rcpsp-data_psplib-J60/J60_26_1 MIN 80
+rcpsp-data_psplib-J60/J60_26_10 MIN 85
+rcpsp-data_psplib-J60/J60_26_5 MIN 61
+rcpsp-data_psplib-J60/J60_26_7 MIN 72
+rcpsp-data_psplib-J60/J60_26_8 MIN 89
+rcpsp-data_psplib-J60/J60_27_1 MIN 96
+rcpsp-data_psplib-J60/J60_27_10 MIN 57
+rcpsp-data_psplib-J60/J60_27_2 MIN 74
+rcpsp-data_psplib-J60/J60_27_3 MIN 76
+rcpsp-data_psplib-J60/J60_27_4 MIN 60
+rcpsp-data_psplib-J60/J60_27_5 MIN 78
+rcpsp-data_psplib-J60/J60_27_6 MIN 64
+rcpsp-data_psplib-J60/J60_27_7 MIN 83
+rcpsp-data_psplib-J60/J60_27_8 MIN 88
+rcpsp-data_psplib-J60/J60_27_9 MIN 76
+rcpsp-data_psplib-J60/J60_28_1 MIN 92
+rcpsp-data_psplib-J60/J60_28_10 MIN 74
+rcpsp-data_psplib-J60/J60_28_2 MIN 64
+rcpsp-data_psplib-J60/J60_28_3 MIN 72
+rcpsp-data_psplib-J60/J60_28_4 MIN 84
+rcpsp-data_psplib-J60/J60_28_5 MIN 71
+rcpsp-data_psplib-J60/J60_28_6 MIN 89
+rcpsp-data_psplib-J60/J60_28_7 MIN 75
+rcpsp-data_psplib-J60/J60_28_8 MIN 62
+rcpsp-data_psplib-J60/J60_28_9 MIN 74
+rcpsp-data_psplib-J60/J60_30_4 MIN 76
+rcpsp-data_psplib-J60/J60_30_6 MIN 68
+rcpsp-data_psplib-J60/J60_30_8 MIN 63
+rcpsp-data_psplib-J60/J60_30_9 MIN 98
+rcpsp-data_psplib-J60/J60_31_1 MIN 65
+rcpsp-data_psplib-J60/J60_32_1 MIN 69
+rcpsp-data_psplib-J60/J60_32_10 MIN 77
+rcpsp-data_psplib-J60/J60_32_2 MIN 114
+rcpsp-data_psplib-J60/J60_32_3 MIN 85
+rcpsp-data_psplib-J60/J60_32_4 MIN 56
+rcpsp-data_psplib-J60/J60_32_5 MIN 77
+rcpsp-data_psplib-J60/J60_32_6 MIN 93
+rcpsp-data_psplib-J60/J60_32_7 MIN 76
+rcpsp-data_psplib-J60/J60_32_8 MIN 76
+rcpsp-data_psplib-J60/J60_32_9 MIN 74
+rcpsp-data_psplib-J60/J60_33_2 MIN 100
+rcpsp-data_psplib-J60/J60_33_3 MIN 79
+rcpsp-data_psplib-J60/J60_33_4 MIN 81
+rcpsp-data_psplib-J60/J60_33_8 MIN 79
+rcpsp-data_psplib-J60/J60_33_9 MIN 108
+rcpsp-data_psplib-J60/J60_34_10 MIN 92
+rcpsp-data_psplib-J60/J60_34_2 MIN 68
+rcpsp-data_psplib-J60/J60_34_3 MIN 61
+rcpsp-data_psplib-J60/J60_34_4 MIN 83
+rcpsp-data_psplib-J60/J60_34_5 MIN 80
+rcpsp-data_psplib-J60/J60_34_6 MIN 81
+rcpsp-data_psplib-J60/J60_34_7 MIN 85
+rcpsp-data_psplib-J60/J60_34_8 MIN 63
+rcpsp-data_psplib-J60/J60_34_9 MIN 77
+rcpsp-max/psp_c_362 MIN 529
+rcpsp-max/psp_c_51 MIN 302
+rcpsp-max/psp_j10_33 MIN 70
+rcpsp-max/psp_ubo200_80 UNSAT
+rcpsp/02 MIN 53
+rcpsp/03 MIN 54
+rcpsp/06 MIN 85
+rcpsp/07 MIN 82
+rcpsp/09 MIN 133
+rectangle_from_line_segments/rectangle_from_line_segments MAX 48
+relative_sizes/relative_sizes SAT
+relief_mission/relief_mission MIN 178
+remainder_puzzle/remainder_puzzle MIN 58
+remainder_puzzle2/remainder_puzzle2 SAT
+restarta/restarta SAT
+reveal_the_mapping/reveal_the_mapping SAT
+reverse_multiples/reverse_multiples SAT
+road-cons/road_8 MIN 3066
+rock_star_dressing_problem/rock_star_dressing_problem SAT
+rook_path/rook_path SAT
+rookwise_chain/rookwise_chain SAT
+roots_test/roots_test SAT
+roster/chicroster_dataset_11 MIN 17
+roster/chicroster_dataset_5 MIN 6
+rostering/rostering SAT
+rotating-workforce-scheduling/rws-instance-e-90-s-2 SAT
+rotating_discs/rotating_discs SAT
+rotation2/rotation2 MIN 10
+rubik/4-cube SAT
+runs/runs SAT
+safe_cracking/safe_cracking SAT
+same/same SAT
+same_and_global_cardinality/same_and_global_cardinality SAT
+same_and_global_cardinality_low_up/same_and_global_cardinality_low_up SAT
+same_modulo/same_modulo SAT
+samurai_puzzle/samurai_puzzle SAT
+sangraal/sangraal MAX 6
+sangraal_cp/sangraal_cp MAX 6
+sat/sat MIN 1
+satisfy/satisfy SAT
+scalar_product/scalar_product SAT
+scanner_problem/scanner_problem SAT
+schedule1/schedule1 MIN 23
+schedule2/schedule2 MIN 49
+scheduling_bratko/scheduling_bratko MIN 9
+scheduling_bratko2/scheduling_bratko2 MIN 22
+scheduling_chip/scheduling_chip MIN 23
+scheduling_speakers/scheduling_speakers SAT
+scheduling_speakers_optimize/scheduling_speakers_optimize MIN 5
+scheduling_with_assignments/scheduling_with_assignments1 MIN 60
+scheduling_with_assignments/scheduling_with_assignments11 MIN 14
+scheduling_with_assignments/scheduling_with_assignments12 MIN 230
+scheduling_with_assignments/scheduling_with_assignments13 MIN 55
+scheduling_with_assignments/scheduling_with_assignments15 MIN 12
+scheduling_with_assignments/scheduling_with_assignments16e2 MIN 2
+scheduling_with_assignments/scheduling_with_assignments16g MIN 2
+scheduling_with_assignments/scheduling_with_assignments17 MIN 19
+scheduling_with_assignments/scheduling_with_assignments19 MIN 12
+scheduling_with_assignments/scheduling_with_assignments2 MIN 22
+scheduling_with_assignments/scheduling_with_assignments20 MIN 15
+scheduling_with_assignments/scheduling_with_assignments21 MIN 8
+scheduling_with_assignments/scheduling_with_assignments3 MIN 10
+scheduling_with_assignments/scheduling_with_assignments4 MIN 22
+scheduling_with_assignments/scheduling_with_assignments6 MIN 90
+schur_numbers/10-3 SAT
+schur_numbers/5-3 SAT
+schur_numbers/7-3 SAT
+seating_plan/seating_plan SAT
+seating_row/seating_row SAT
+seating_row1/seating_row1 SAT
+seating_table/seating_table SAT
+secret_santa/secret_santa SAT
+secret_santa2/secret_santa2 MAX 90
+self_referential_quiz/self_referential_quiz SAT
+self_referential_sentence/self_referential_sentence SAT
+send_more_money/send_more_money SAT
+send_more_money2/send_more_money2 SAT
+send_more_money_any_base/send_more_money_any_base SAT
+send_more_money_ip/send_more_money_ip SAT
+send_most_money/send_most_money MAX 10876
+separate_zeros/separate_zeros SAT
+sequence_2_3/sequence_2_3 SAT
+seseman/seseman SAT
+seseman2/seseman2 SAT
+set_covering/set_covering MIN 2
+set_covering2/set_covering2 SAT
+set_covering3/set_covering3 SAT
+set_covering4/set_covering4 MIN 45
+set_covering4b/set_covering4b MIN 49
+set_covering5/set_covering5 SAT
+set_covering6/set_covering6 MIN 30
+set_covering_deployment/set_covering_deployment MIN 4
+set_covering_skiena/set_covering_skiena MIN 3
+set_partition/set_partition SAT
+set_partition_stackoverflow/set_partition_stackoverflow SAT
+set_puzzle/set_puzzle SAT
+shift/shift SAT
+ship-schedule.cp/3Ships MAX 265650
+ship-schedule.cp/3ShipsMixedUnconst MAX 172500
+ship-schedule.cp/3ShipsUnconst MAX 252900
+ship-schedule.cp/5ShipsMixedUnconst MAX 276900
+ship-schedule/3Ships MAX 265650
+ship-schedule/3ShipsMixed MAX 179750
+ship-schedule/3ShipsMixedUnconst MAX 172500
+ship-schedule/3ShipsUnconst MAX 252900
+ship-schedule/4Ships MAX 371850
+shopping/shopping SAT
+shopping_basket2/shopping_basket2 SAT
+shortest_path/00 MIN 88
+shortest_path/01 MIN 42
+shortest_path/02 MIN 59
+shortest_path/06 MIN 57
+shortest_path1/shortest_path1 MIN 31
+shortest_path2/shortest_path2 MIN 8
+sicherman_dice/sicherman_dice SAT
+sieve/sieve SAT
+simple-prod-planning/simple-prod-planning MAX 1700
+ski_assignment/ski_assignment MIN 7
+ski_assignment_problem/ski_assignment_problem MIN 7
+skyscraper/skyscraper SAT
+sliding_time_window/sliding_time_window SAT
+sliding_time_window_from_start/sliding_time_window_from_start SAT
+slow_convergence/0200 SAT
+smelt/smelt_2 MIN 69
+smuggler_knapsack/smuggler_knapsack MAX 32
+smullyan_knights_knaves/smullyan_knights_knaves SAT
+smullyan_knights_knaves_normals/smullyan_knights_knaves_normals SAT
+smullyan_knights_knaves_normals_bahava/smullyan_knights_knaves_normals_bahava SAT
+smullyan_lion_and_unicorn/smullyan_lion_and_unicorn SAT
+smullyan_portia/smullyan_portia SAT
+soccer_puzzle/soccer_puzzle SAT
+social_golfers1/social_golfers1 SAT
+social_golfers2/social_golfers2 SAT
+soft_all_equal_ctr/soft_all_equal_ctr SAT
+soft_same_var/soft_same_var SAT
+sokoban/sokoban SAT
+solitaire_battleship/solitaire_battleship SAT
+sonet_problem/sonet_problem MIN 7
+sort_permutation/sort_permutation SAT
+sortedness/sortedness SAT
+spinning_disks/spinning_disks SAT
+sportsScheduling/sportsScheduling SAT
+spp/spp MIN 20
+spreadsheet/spreadsheet SAT
+spy_girls/spy_girls SAT
+squeens/squeens MAX 8
+stable_marriage/stable_marriage SAT
+stable_roommates/sm6 SAT
+stable_roommates/sri6 SAT
+stable_roommates_func/sm6_func SAT
+stamp_licking/stamp_licking MAX 50
+steiner-triples/03 SAT
+steiner-triples/07 SAT
+steiner/steiner SAT
+still_life/2x3 MAX 4
+still_life/2x4 MAX 6
+still_life/3x3 MAX 6
+still_life/3x8 MAX 12
+still_life/4x4 MAX 8
+still_life/5x5 MAX 16
+still_life2/still_life_5 MAX 16
+still_life2/still_life_6 MAX 18
+still_life_free/2x3 MAX 4
+still_life_free/2x4 MAX 6
+still_life_free/3x3 MAX 6
+still_life_free/3x8 MAX 16
+still_life_free/4x4 MAX 12
+still_life_free/5x5 MAX 16
+still_life_full_border/sl_fb3x3 UNSAT
+still_life_full_border/sl_fb4x4 MAX 12
+still_life_full_border/sl_fb5x5 UNSAT
+still_life_full_border/sl_fb6x6 MAX 24
+still_life_full_border/sl_fb7x7 MAX 30
+still_life_full_border/sl_fb8x8 MAX 40
+still_life_full_border/sl_fb9x9 MAX 48
+still_life_no_border/slnb2x3 MAX 4
+still_life_no_border/slnb2x4 MAX 6
+still_life_no_border/slnb3x3 MAX 6
+still_life_no_border/slnb3x8 MAX 16
+still_life_no_border/slnb4x4 MAX 12
+still_life_no_border/slnb5x5 MAX 16
+still_life_no_border/slnb6x6 MAX 24
+stretch_path/stretch_path SAT
+strimko/strimko_002 SAT
+strimko/strimko_067 SAT
+strimko/strimko_068 SAT
+strimko/strimko_070 SAT
+strimko2/strimko2_002 SAT
+strimko2/strimko2_067 SAT
+strimko2/strimko2_068 SAT
+strimko2/strimko2_070 SAT
+stuckey_assignment/stuckey_assignment MAX 21
+stuckey_seesaw/stuckey_seesaw SAT
+students_and_languages/students_and_languages SAT
+submultisetsum/submultisetsum SAT
+subsequence/subsequence SAT
+subsequence_sum/subsequence_sum MIN 8
+subset_plus_2/subset_plus_2 SAT
+successive_number_problem/successive_number_problem SAT
+sudoku_25x25_250/sudoku_25x25_250 SAT
+sudoku_gcc/sudoku_gcc SAT
+sudoku_ip/sudoku_ip SAT
+sudoku_multi/sudoku_multi SAT
+sudoku_multi2/sudoku_multi2 SAT
+sudoku_pi/sudoku_pi SAT
+sudoku_pi_2008/sudoku_pi_2008 SAT
+sudoku_pi_2010/sudoku_pi_2010 SAT
+sudoku_pi_2011/sudoku_pi_2011 SAT
+sudoku_pi_day_2015/sudoku_pi_day_2015 SAT
+sudoku_pi_with_comments/sudoku_pi_with_comments SAT
+sultans_children/sultans_children SAT
+sum_ctr/sum_ctr SAT
+sum_first_and_last/sum_first_and_last SAT
+sum_free/sum_free SAT
+sum_of_next_natural_numbers/sum_of_next_natural_numbers SAT
+sum_of_weights_of_distinct_values/sum_of_weights_of_distinct_values SAT
+sum_set/sum_set SAT
+sum_sets/sum_sets SAT
+sum_to_100/sum_to_100 SAT
+sumbrero/sumbrero SAT
+superset_course_plan/superset_course_plan SAT
+superset_feature_model/superset_feature_model MAX 50
+superset_package_deps/superset_package_deps MIN 37
+superset_party/superset_party MAX 25
+superset_recipes/superset_recipes MAX 34
+superset_set_cover/superset_set_cover MIN 28
+superset_team_skills/superset_team_skills MIN 24
+superset_test_suite/superset_test_suite MIN 1
+superset_toolbox/superset_toolbox MAX 51
+survivor/survivor MAX 75
+survo_puzzle/survo_puzzle SAT
+symmetric/symmetric SAT
+symmetric_alldifferent/symmetric_alldifferent SAT
+symmetry_breaking/symmetry_breaking SAT
+table_bool/bt_10 SAT
+table_bool/bt_12 SAT
+table_bool/bt_8 SAT
+table_crossword/cw_11x11 SAT
+table_crossword/cw_7x7 SAT
+table_crossword/cw_8x8 SAT
+table_crossword/cw_9x9 SAT
+table_dubois/dubois_14 UNSAT
+table_example/table_example SAT
+table_functional/ft_10 SAT
+table_functional/ft_12 UNSAT
+table_functional/ft_15 UNSAT
+table_kakuro/kk_10 SAT
+table_kakuro/kk_12 SAT
+table_kakuro/kk_14 SAT
+table_kakuro/kk_16 SAT
+table_negative/rn2_s1 SAT
+table_negative/rn3_s1 SAT
+table_negative/rn4_s1 SAT
+table_negative_all/rn3_all ALL 1697
+table_of_numbers/table_of_numbers SAT
+table_random/rt10_s1 SAT
+table_random/rt2_d30_unsat UNSAT
+table_random/rt2_d40_t500 SAT
+table_random/rt2_d40_t700 SAT
+table_random/rt3_s3 SAT
+table_random/rt8_s1 SAT
+table_random/rt8_s2 SAT
+table_random_all/rt3_all ALL 342
+table_random_all/rt5_all ALL 7
+table_short/st_a10 SAT
+table_short/st_a6 SAT
+table_short/st_a8 SAT
+table_tsp/tsp_10 MIN 298
+table_tsp/tsp_12 MIN 307
+takuzu/takuzu SAT
+talent/talent MIN 17
+talent_scheduling/small MIN 48
+talent_scheduling/tiny MIN 22
+talisman_square/talisman_square SAT
+tank/tank SAT
+teambuilding/teambuilding SAT
+template_design/catfood_2 MIN 418
+temporal_reasoning/temporal_reasoning MIN 7
+ten_statements/ten_statements SAT
+tennis_problem/tennis_problem SAT
+tennis_tournament/tennis_tournament MIN 13
+tents/tents_1 SAT
+tents/tents_2 SAT
+tents/tents_3 SAT
+testSimple/float_lin_eq_reif SAT
+the_family_puzzle/the_family_puzzle SAT
+the_interns/the_interns SAT
+thick_as_thieves/thick_as_thieves SAT
+thirteen_link_chain_puzzle/thirteen_link_chain_puzzle MIN 4
+thirteen_link_chain_puzzle2/thirteen_link_chain_puzzle2 MIN 4
+thirteen_link_chain_puzzle3/thirteen_link_chain_puzzle3 MIN 4
+three_digit/three_digit SAT
+tickTackToe/tickTackToe SAT
+tictactoe_avoidance/tictactoe_avoidance SAT
+timeslots_for_songs/timeslots_for_songs SAT
+timetable/timetable SAT
+timpkin/timpkin SAT
+tomography/tomography SAT
+tomography_n_colors/tomography_n_colors SAT
+toomany/toomany MAX 41
+torn_number/torn_number SAT
+tourist_site_competition/tourist_site_competition SAT
+traffic_lights/traffic_lights SAT
+traffic_lights_table/traffic_lights_table SAT
+transpose/transpose SAT
+trial1/trial1 SAT
+trial12/trial12 SAT
+trial2/trial2 SAT
+trial3/trial3 SAT
+trial4/trial4 SAT
+trial6/trial6 SAT
+triangles/triangles SAT
+tripuzzle1/tripuzzle1 SAT
+tripuzzle2/tripuzzle2 SAT
+trucking/01 MIN 220
+trucking/02 MIN 210
+trucking/03 MIN 224
+trucking/04 MIN 324
+trucking/05 MIN 287
+trucking_hl/trucking_hl_1 MIN 220
+trucking_hl/trucking_hl_2 MIN 210
+trucking_hl/trucking_hl_3 MIN 224
+tunapalooza/tunapalooza SAT
+twelve/twelve SAT
+twelve_statements/twelve_statements MAX 6
+twin/twin SAT
+twin_letters/twin_letters SAT
+two_cube_calendar/two_cube_calendar SAT
+two_dimensional_channels/two_dimensional_channels SAT
+uniform_dice/uniform_dice SAT
+unique_set_puzzle/unique_set_puzzle MIN 3
+uzbekian_puzzle/uzbekian_puzzle SAT
+vingt_cinq_cinq_trente/vingt_cinq_cinq_trente SAT
+virtual_chess_tournament/virtual_chess_tournament SAT
+voltage_divider/voltage_divider SAT
+war_or_peace/war_or_peace MIN 12
+water_buckets1/water_buckets1 MIN 8
+weighted_sum/weighted_sum SAT
+were2/were2 SAT
+were4/were4 SAT
+who_killed_agatha/who_killed_agatha SAT
+wijuko/wijuko SAT
+wine_cask_puzzle/wine_cask_puzzle SAT
+wiseman_problem_20131129/wiseman_problem_20131129 SAT
+wolf_goat_cabbage_lp/wolf_goat_cabbage_lp SAT
+word_golf/word_golf SAT
+word_square/word_square SAT
+work_shift_problem/work_shift_problem SAT
+wwr/wwr SAT
+wwtpp-random/ex24000_2600_100 SAT
+wwtpp-random/ex24100_2600_100 SAT
+wwtpp-random/ex24200_2600_100 SAT
+wwtpp-random/ex24300_2600_100 SAT
+wwtpp-random/ex24400_2600_100 SAT
+wwtpp-random/ex24500_2600_100 SAT
+wwtpp-random/ex24600_2600_100 SAT
+wwtpp-random/ex24700_2600_100 SAT
+wwtpp-random/ex24800_2600_100 SAT
+wwtpp-random/ex24900_2600_100 SAT
+wwtpp-random/ex25000_2600_100 SAT
+wwtpp-random/ex25100_2600_100 SAT
+wwtpp-random/ex25200_2600_100 SAT
+wwtpp-random/ex25300_2600_100 SAT
+wwtpp-random/ex25400_2600_100 SAT
+wwtpp-random/ex25500_2600_100 SAT
+wwtpp-random/ex25600_2600_100 SAT
+wwtpp-random/ex25700_2600_100 SAT
+wwtpp-random/ex25800_2600_100 SAT
+wwtpp-random/ex25900_2600_100 SAT
+wwtpp-random/ex26000_2600_100 SAT
+wwtpp-random/ex26100_2600_100 SAT
+wwtpp-random/ex26200_2600_100 SAT
+wwtpp-random/ex26300_2600_100 SAT
+wwtpp-random/ex26400_2600_100 SAT
+wwtpp-random/ex26500_2600_100 SAT
+wwtpp-random/ex26600_2600_100 SAT
+wwtpp-random/ex26700_2600_100 SAT
+wwtpp-random/ex26800_2600_100 SAT
+wwtpp-random/ex26900_2600_100 SAT
+wwtpp-random/ex27000_2600_100 SAT
+wwtpp-random/ex27100_2600_100 SAT
+wwtpp-random/ex27200_2600_100 SAT
+wwtpp-random/ex27300_2600_100 SAT
+wwtpp-random/ex27400_2600_100 SAT
+wwtpp-random/ex27500_2600_100 SAT
+wwtpp-random/ex27600_2600_100 SAT
+wwtpp-random/ex27700_2600_100 SAT
+wwtpp-random/ex27800_2600_100 SAT
+wwtpp-random/ex27900_2600_100 SAT
+wwtpp-random/ex28000_2600_100 SAT
+wwtpp-random/ex28100_2600_100 SAT
+wwtpp-random/ex28200_2600_100 SAT
+wwtpp-random/ex28300_2600_100 SAT
+wwtpp-random/ex28400_2600_100 SAT
+wwtpp-random/ex28500_2600_100 SAT
+wwtpp-random/ex28600_2600_100 SAT
+wwtpp-random/ex28700_2600_100 SAT
+wwtpp-random/ex28800_2600_100 SAT
+wwtpp-random/ex28900_2600_100 SAT
+wwtpp-random/ex29000_2600_100 SAT
+wwtpp-random/ex29100_2600_100 SAT
+wwtpp-random/ex29200_2600_100 SAT
+wwtpp-random/ex29300_2600_100 SAT
+wwtpp-random/ex29400_2600_100 SAT
+wwtpp-random/ex29500_2600_100 SAT
+wwtpp-random/ex29600_2600_100 SAT
+wwtpp-random/ex29700_2600_100 SAT
+wwtpp-random/ex29800_2600_100 SAT
+wwtpp-random/ex29900_2600_100 SAT
+wwtpp-random/ex30000_2600_100 SAT
+wwtpp-real/ex06900_2400_100 SAT
+wwtpp-real/ex06920_2400_100 SAT
+wwtpp-real/ex06940_2400_100 SAT
+wwtpp-real/ex06960_2400_100 SAT
+wwtpp-real/ex06980_2400_100 SAT
+wwtpp-real/ex07000_2400_100 SAT
+wwtpp-real/ex07020_2400_100 SAT
+wwtpp-real/ex07060_2400_100 SAT
+wwtpp-real/ex07080_2400_100 SAT
+wwtpp-real/ex07100_2400_100 SAT
+wwtpp-real/ex07120_2400_100 SAT
+wwtpp-real/ex07140_2400_100 SAT
+wwtpp-real/ex07160_2400_100 SAT
+wwtpp-real/ex07180_2400_100 SAT
+wwtpp-real/ex07200_2400_100 SAT
+wwtpp-real/ex07220_2400_100 SAT
+wwtpp-real/ex07240_2400_100 SAT
+wwtpp-real/ex07260_2400_100 SAT
+wwtpp-real/ex07280_2400_100 SAT
+wwtpp-real/ex07300_2400_100 SAT
+wwtpp-real/ex07320_2400_100 SAT
+wwtpp-real/ex07340_2400_100 SAT
+wwtpp-real/ex07360_2400_100 SAT
+wwtpp-real/ex07380_2400_100 SAT
+wwtpp-real/ex07400_2400_100 SAT
+wwtpp-real/ex07420_2400_100 SAT
+wwtpp-real/ex07440_2400_100 SAT
+wwtpp-real/ex07460_2400_100 SAT
+wwtpp-real/ex07480_2400_100 SAT
+wwtpp-real/ex07500_2400_100 SAT
+wwtpp-real/ex07520_2400_100 SAT
+wwtpp-real/ex07540_2400_100 SAT
+wwtpp-real/ex07560_2400_100 SAT
+wwtpp-real/ex07580_2400_100 SAT
+wwtpp-real/ex07600_2400_100 SAT
+wwtpp-real/ex07620_2400_100 SAT
+wwtpp-real/ex07640_2400_100 SAT
+wwtpp-real/ex07660_2400_100 SAT
+wwtpp-real/ex07680_2400_100 SAT
+wwtpp-real/ex07700_2400_100 SAT
+wwtpp-real/ex07720_2400_100 SAT
+wwtpp-real/ex07740_2400_100 SAT
+wwtpp-real/ex07760_2400_100 SAT
+wwtpp-real/ex07780_2400_100 SAT
+wwtpp-real/ex07820_2400_100 SAT
+wwtpp-real/ex07840_2400_100 SAT
+wwtpp-real/ex07860_2400_100 SAT
+wwtpp-real/ex07880_2400_100 SAT
+wwtpp-real/ex07900_2400_100 SAT
+wwtpp-real/ex07920_2400_100 SAT
+wwtpp-real/ex07940_2400_100 SAT
+wwtpp-real/ex07960_2400_100 SAT
+wwtpp-real/ex07980_2400_100 SAT
+wwtpp-real/ex08000_2400_100 SAT
+wwtpp-real/ex08020_2400_100 SAT
+wwtpp-real/ex08040_2400_100 SAT
+wwtpp-real/ex08060_2400_100 SAT
+wwtpp-real/ex08080_2400_100 SAT
+wwtpp-real/ex08100_2400_100 SAT
+wwtpp-real/ex08120_2400_100 SAT
+wwtpp-real/ex08140_2400_100 SAT
+wwtpp-real/ex08160_2400_100 SAT
+wwtpp-real/ex08180_2400_100 SAT
+wwtpp-real/ex08200_2400_100 SAT
+wwtpp-real/ex08220_2400_100 SAT
+wwtpp-real/ex08240_2400_100 SAT
+wwtpp-real/ex08260_2400_100 SAT
+wwtpp-real/ex08280_2400_100 SAT
+wwtpp-real/ex08300_2400_100 SAT
+wwtpp-real/ex08320_2400_100 SAT
+wwtpp-real/ex08340_2400_100 SAT
+wwtpp-real/ex08360_2400_100 SAT
+wwtpp-real/ex08380_2400_100 SAT
+wwtpp-real/ex08400_2400_100 SAT
+wwtpp-real/ex08420_2400_100 SAT
+wwtpp-real/ex08440_2400_100 SAT
+wwtpp-real/ex08460_2400_100 SAT
+wwtpp-real/ex08480_2400_100 SAT
+wwtpp-real/ex08500_2400_100 SAT
+wwtpp-real/ex08520_2400_100 SAT
+wwtpp-real/ex08540_2400_100 SAT
+wwtpp-real/ex08560_2400_100 SAT
+wwtpp-real/ex08580_2400_100 SAT
+wwtpp-real/ex08600_2400_100 SAT
+wwtpp-real/ex08620_2400_100 SAT
+wwtpp-real/ex08640_2400_100 SAT
+wwtpp-real/ex08660_2400_100 SAT
+wwtpp-real/ex08680_2400_100 SAT
+wwtpp-real/ex08700_2400_100 SAT
+wwtpp-real/ex08720_2400_100 SAT
+wwtpp-real/ex08740_2400_100 SAT
+wwtpp-real/ex08760_2400_100 SAT
+wwtpp-real/ex08800_2400_100 SAT
+wwtpp-real/ex08820_2400_100 SAT
+wwtpp-real/ex08840_2400_100 SAT
+wwtpp-real/ex08860_2400_100 SAT
+wwtpp-real/ex08880_2400_100 SAT
+wwtpp-real/ex08900_2400_100 SAT
+wwtpp-real/ex08920_2400_100 SAT
+wwtpp-real/ex08940_2400_100 SAT
+wwtpp-real/ex08960_2400_100 SAT
+wwtpp-real/ex08980_2400_100 SAT
+wwtpp-real/ex09000_2400_100 SAT
+wwtpp-real/ex09020_2400_100 SAT
+wwtpp-real/ex09040_2400_100 SAT
+wwtpp-real/ex09060_2400_100 SAT
+wwtpp-real/ex09080_2400_100 SAT
+wwtpp-real/ex09100_2400_100 SAT
+wwtpp-real/ex09120_2400_100 SAT
+wwtpp-real/ex09140_2400_100 SAT
+wwtpp-real/ex09160_2400_100 SAT
+wwtpp-real/ex09180_2400_100 SAT
+wwtpp-real/ex09200_2400_100 SAT
+wwtpp-real/ex09220_2400_100 SAT
+wwtpp-real/ex09240_2400_100 SAT
+wwtpp-real/ex09260_2400_100 SAT
+wwtpp-real/ex09280_2400_100 SAT
+wwtpp-real/ex09300_2400_100 SAT
+wwtpp-real/ex09320_2400_100 SAT
+wwtpp-real/ex09340_2400_100 SAT
+wwtpp-real/ex09360_2400_100 SAT
+wwtpp-real/ex09380_2400_100 SAT
+wwtpp-real/ex09400_2400_100 SAT
+wwtpp-real/ex09420_2400_100 SAT
+wwtpp-real/ex09440_2400_100 SAT
+wwtpp-real/ex09460_2400_100 SAT
+wwtpp-real/ex09500_2400_100 SAT
+wwtpp-real/ex09520_2400_100 SAT
+wwtpp-real/ex09540_2400_100 SAT
+wwtpp-real/ex09560_2400_100 SAT
+wwtpp-real/ex09580_2400_100 SAT
+wwtpp-real/ex09600_2400_100 SAT
+wwtpp-real/ex09620_2400_100 SAT
+wwtpp-real/ex09640_2400_100 SAT
+wwtpp-real/ex09660_2400_100 SAT
+wwtpp-real/ex09680_2400_100 SAT
+wwtpp-real/ex09700_2400_100 SAT
+wwtpp-real/ex09720_2400_100 SAT
+wwtpp-real/ex09740_2400_100 SAT
+wwtpp-real/ex09760_2400_100 SAT
+wwtpp-real/ex09780_2400_100 SAT
+wwtpp-real/ex09800_2400_100 SAT
+wwtpp-real/ex09820_2400_100 SAT
+wwtpp-real/ex09840_2400_100 SAT
+wwtpp-real/ex09860_2400_100 SAT
+wwtpp-real/ex09880_2400_100 SAT
+wwtpp-real/ex09900_2400_100 SAT
+wwtpp-real/ex09920_2400_100 SAT
+wwtpp-real/ex09940_2400_100 SAT
+wwtpp-real/ex09960_2400_100 SAT
+wwtpp-real/ex09980_2400_100 SAT
+wwtpp-real/ex10000_2400_100 SAT
+xkcd/xkcd SAT
+xkcd_among_diff_0/xkcd_among_diff_0 MAX 3
+young_tableaux/young_tableaux SAT
+young_tableaux_stack_overflow/young_tableaux_stack_overflow SAT
+zebra_inverse/zebra_inverse SAT
+zebra_ip/zebra_ip SAT
+zephyrus/12__6__6__3 MIN 780
+hakank_30_bottles/hakank_30_bottles ALL 5
+hakank_3_coins_table/hakank_3_coins_table ALL 7
+hakank_a_league_of_their_own_enigma_1217/hakank_a_league_of_their_own_enigma_1217 ALL 1
+hakank_all_equal_global/hakank_all_equal_global ALL 189
+hakank_alldifferent_domain_global/hakank_alldifferent_domain_global ALL 450
+hakank_alldifferent_except_0_global/hakank_alldifferent_except_0_global ALL 800
+hakank_alldifferent_pairs/hakank_alldifferent_pairs ALL 377
+hakank_alldifferent_partition/hakank_alldifferent_partition ALL 24
+hakank_allocating_developments/hakank_allocating_developments ALL 48
+hakank_allperm/hakank_allperm ALL 1
+hakank_among_global/hakank_among_global ALL 136
+hakank_among_modulo/hakank_among_modulo ALL 1
+hakank_argmax_global/hakank_argmax_global ALL 192
+hakank_assign_and_nvalues/hakank_assign_and_nvalues ALL 1
+hakank_averbach_1.5/hakank_averbach_1.5 SAT
+hakank_bales_of_hay/hakank_bales_of_hay ALL 1
+hakank_bin_packing_global/hakank_bin_packing_global ALL 42
+hakank_binary_tree/hakank_binary_tree SAT
+hakank_bipartite/hakank_bipartite ALL 355
+hakank_bobsledders_puzzle/hakank_bobsledders_puzzle ALL 1
+hakank_bridges_to_somewhere/hakank_bridges_to_somewhere MIN 58
+hakank_buckets/hakank_buckets MIN 6
+hakank_cardinality_atmost_partition/hakank_cardinality_atmost_partition ALL 1
+hakank_change_partition/hakank_change_partition ALL 12
+hakank_choosing_teams/hakank_choosing_teams SAT
+hakank_choosing_teams2/hakank_choosing_teams2 SAT
+hakank_circular/hakank_circular ALL 5
+hakank_clique/hakank_clique MAX 6
+hakank_conference/hakank_conference MIN 4
+hakank_consecutive_digits/hakank_consecutive_digits ALL 1
+hakank_consecutive_values/hakank_consecutive_values ALL 592
+hakank_count_ctr_global/hakank_count_ctr_global ALL 72
+hakank_cube_sum/hakank_cube_sum MIN 3
+hakank_cumulative_test_global/hakank_cumulative_test_global ALL 13
+hakank_curious_set_of_integers/hakank_curious_set_of_integers ALL 1
+hakank_diffn_global/hakank_diffn_global ALL 48
+hakank_dimes/hakank_dimes ALL 2
+hakank_disjunctive_global/hakank_disjunctive_global ALL 168
+hakank_enigma_1553/hakank_enigma_1553 ALL 1
+hakank_enigma_1577/hakank_enigma_1577 ALL 1
+hakank_enigma_counting_pennies/hakank_enigma_counting_pennies ALL 1
+hakank_enigma_five_fives/hakank_enigma_five_fives ALL 1
+hakank_family_riddle/hakank_family_riddle ALL 1
+hakank_family_riddle2/hakank_family_riddle2 ALL 266
+hakank_farm_puzzle/hakank_farm_puzzle ALL 1
+hakank_four_numbers/hakank_four_numbers ALL 2
+hakank_four_same_friends/hakank_four_same_friends MIN 2
+hakank_gardner_sum_square/hakank_gardner_sum_square MIN 34
+hakank_geost_test/hakank_geost_test MIN 9
+hakank_global_contiguity2/hakank_global_contiguity2 ALL 56
+hakank_graph_partition/hakank_graph_partition MIN 5
+hakank_in_same_partition/hakank_in_same_partition ALL 4
+hakank_inter_distance/hakank_inter_distance MAX 4
+hakank_kaprekars_constant2/hakank_kaprekars_constant2 ALL 1
+hakank_kidney_exchange/hakank_kidney_exchange MAX 6
+hakank_lex2_global/hakank_lex2_global ALL 21
+hakank_magic_series/hakank_magic_series SAT
+hakank_magic_squares_and_cards/hakank_magic_squares_and_cards ALL 364
+hakank_manasa_and_stones/hakank_manasa_and_stones ALL 8
+hakank_map_precede_global/hakank_map_precede_global ALL 60
+hakank_max_activity/hakank_max_activity MAX 18
+hakank_max_activity2/hakank_max_activity2 MAX 7
+hakank_max_number_of_occurrences/hakank_max_number_of_occurrences ALL 1
+hakank_minimum_except_0/hakank_minimum_except_0 SAT
+hakank_modulo_partition/hakank_modulo_partition ALL 1
+hakank_move_one_coin/hakank_move_one_coin ALL 1
+hakank_n_partitioning/hakank_n_partitioning SAT
+hakank_nclass/hakank_nclass ALL 1
+hakank_not_all_equal/hakank_not_all_equal ALL 1
+hakank_number_of_regions/hakank_number_of_regions ALL 4
+hakank_odd_even_sequences/hakank_odd_even_sequences ALL 21
+hakank_office_blocked/hakank_office_blocked ALL 1
+hakank_online_dating_service/hakank_online_dating_service SAT
+hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists ALL 4
+hakank_pairwise_sum_of_n_numbers/hakank_pairwise_sum_of_n_numbers ALL 1
+hakank_peaceableArmyOfQueens/hakank_peaceableArmyOfQueens MAX 5
+hakank_persistent_numbers/hakank_persistent_numbers MIN 679
+hakank_power_set/hakank_power_set ALL 1
+hakank_ramsey_partition/hakank_ramsey_partition ALL 18
+hakank_seating_row/hakank_seating_row ALL 60
+hakank_set_partition_stackoverflow/hakank_set_partition_stackoverflow ALL 1
+hakank_set_puzzle/hakank_set_puzzle ALL 1
+hakank_sicherman_dice/hakank_sicherman_dice ALL 2
+hakank_smullyan_knights_knaves_normals/hakank_smullyan_knights_knaves_normals ALL 1
+hakank_smullyan_knights_knaves_normals_bahava/hakank_smullyan_knights_knaves_normals_bahava ALL 1
+hakank_sort_permutation/hakank_sort_permutation ALL 2
+hakank_sportsScheduling/hakank_sportsScheduling ALL 36
+hakank_steiner/hakank_steiner ALL 30
+hakank_strictly_decreasing_global/hakank_strictly_decreasing_global ALL 960
+hakank_subsets_100/hakank_subsets_100 SAT
+hakank_sum_of_next_natural_numbers/hakank_sum_of_next_natural_numbers ALL 1
+hakank_sum_to_100/hakank_sum_to_100 SAT
+hakank_the_athletics_committee/hakank_the_athletics_committee ALL 32
+hakank_thirteen_link_chain_puzzle2/hakank_thirteen_link_chain_puzzle2 MIN 4
+hakank_thirteen_link_chain_puzzle3/hakank_thirteen_link_chain_puzzle3 MIN 4
+hakank_uniform_dice2/hakank_uniform_dice2 ALL 1
+hakank_work_shift_problem/hakank_work_shift_problem ALL 34
+hakank_zebra_icecream/hakank_zebra_icecream ALL 1
+shortest_path_flow_00/shortest_path_flow_00 MIN 88
+shortest_path_flow_01/shortest_path_flow_01 MIN 42
+shortest_path_flow_05/shortest_path_flow_05 MIN 224
+hakank_max_flow_taha_network_flow/hakank_max_flow_taha_network_flow MIN -60
+hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow MAX 3
+hakank_transportation2_network_flow/hakank_transportation2_network_flow MIN 66
+gcc_balanced_assignment/gcc_balanced_assignment MIN 0
+gcc_car_sequencing/gcc_car_sequencing ALL 6
+gcc_de_bruijn/gcc_de_bruijn SAT
+gcc_jacop_gcc_all/gcc_jacop_gcc_all ALL 128
+gcc_jacop_gcc_magic/gcc_jacop_gcc_magic SAT
+gcc_latin_square_all/gcc_latin_square_all ALL 144
+gcc_magic_sequence/gcc_magic_sequence ALL 1
+gcc_magic_sequence_all/gcc_magic_sequence_all ALL 1
+gcc_unsorted_cover_all/gcc_unsorted_cover_all ALL 110
+fjsp_cumulative_optional/opt_easy01 MIN 253
+fjsp_cumulative_optional/opt_easy02 MIN 11
+fjsp_cumulative_optional/opt_fjsp_r00 MIN 148
+fjsp_cumulative_optional/opt_fjsp_r02 MIN 164
+fjsp_disjunctive_optional/opt_easy01 MIN 253
+fjsp_disjunctive_optional/opt_easy02 MIN 11
+fjsp_disjunctive_optional/opt_fjsp_r00 MIN 148
+fjsp_disjunctive_optional/opt_fjsp_r02 MIN 164
+mrcpsp_optional/mm_c15_c15_16_10 MIN 21
+mrcpsp_optional/mm_c21_c21_50_9 MIN 25
+mrcpsp_optional/mm_j10_j10_26_3 MIN 16
+mrcpsp_optional/mm_j10_j10_61_2 MIN 24
+mrcpsp_optional/mm_j12_j12_47_10 MIN 23
+mrcpsp_optional/mm_j14_j14_18_2 MIN 22
+mrcpsp_optional/mm_j14_j14_27_4 MIN 18
+mrcpsp_optional/mm_j16_j16_32_2 MIN 16
+mrcpsp_optional/mm_j16_j16_43_4 MIN 30
+mrcpsp_optional/mm_j18_j18_60_7 MIN 20
+mrcpsp_optional/mm_j20_j20_64_1 MIN 21
+mrcpsp_optional/mm_m1_m1_41_4 MIN 41
+mrcpsp_optional/mm_m1_m1_50_6 MIN 44
+mrcpsp_optional/mm_m2_m2_27_9 MIN 29
+mrcpsp_optional/mm_m4_m4_59_4 MIN 18
+mrcpsp_optional/mm_m5_m5_16_6 MIN 11
+mrcpsp_optional/mm_m5_m5_60_4 MIN 12
+mrcpsp_optional/mm_n0_n0_9_1 MIN 13
+mrcpsp_optional/mm_n1_n1_3_9 MIN 26
+mrcpsp_optional/mm_r3_r3_35_2 MIN 29
+rcpsp_cumulatives/rcpsp_03 MIN 54
+cost_regular/cost_regular_opt_20_1 MIN 54
+ttppv_cost_regular/rand6_1 MIN 38
+ttppv_cost_regular/rand6_4 MIN 38
+ttppv_cost_regular/rand6_12 MIN 36
+ttppv_cost_regular/rand8_0_unsat UNSAT
