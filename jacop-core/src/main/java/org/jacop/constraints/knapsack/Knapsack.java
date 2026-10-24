@@ -296,6 +296,9 @@ public class Knapsack extends Constraint
 
       /* and then, we delete it */
       hashForUpdate.put(level, null);
+      // The position belonged to the removed level. Applying the whole list of the level search
+      // returns to is safe, since applying a leaf twice changes nothing.
+      positionOfAlreadyUpdated = 0;
     }
 
     tree.criticalLeaf.positionInTheTree = positionOfCriticalItem.value();

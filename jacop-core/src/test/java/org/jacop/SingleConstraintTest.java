@@ -2406,6 +2406,45 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void knapsackUpdatesItemsChangedAfterBacktrack() {
+    // The position up to which the changed items of a level were applied to the tree was shared
+    // by all levels. After backtracking from a level with more changes, items changed again at the
+    // lower level were skipped, so the tree kept their old minimal quantities.
+    // Sixteen items, so that a few changes are applied incrementally instead of by recomputing.
+    Store store = new Store();
+    IntVar[] q = new IntVar[16];
+    int[] weights = new int[q.length];
+    int[] profits = new int[q.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 2);
+      weights[i] = i + 1;
+      profits[i] = q.length - i;
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 1000);
+    IntVar profit = new IntVar(store, "profit", 0, 1000);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    q[0].domain.in(store.level, q[0], 1, 2);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(2);
+    for (int i = 1; i < 4; i++) {
+      q[i].domain.in(store.level, q[i], 1, 2);
+    }
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(1);
+
+    q[1].domain.in(store.level, q[1], 2, 2);
+    q[2].domain.in(store.level, q[2], 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.min()).isEqualTo(1 + 2 * 2 + 2 * 3);
+    assertThat(profit.min()).isEqualTo(16 + 2 * 15 + 2 * 14);
+  }
+
+  @Test
   void knapsackSortsManyEquallyEfficientItems() {
     // The item comparator returned 1 for two items with the same weight and profit in both
     // directions, so sorting 32 or more items threw "Comparison method violates its general
