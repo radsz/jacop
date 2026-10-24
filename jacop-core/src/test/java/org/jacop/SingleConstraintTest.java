@@ -4986,6 +4986,32 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void xexpYeqZWithInfiniteOrHugePowers() {
+    // satisfied() threw for 0 ^ -1 and consistency() threw when x ^ y does not fit in a long
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    IntVar y = new IntVar(store, "y", -1, -1);
+    IntVar z = new IntVar(store, "z", 0, 0);
+    assertThat(new XexpYeqZ(x, y, z).satisfied()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 10, 10);
+    y = new IntVar(store, "y", 100, 101);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 10);
+    y = new IntVar(store, "y", 2, 100);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    IntVar[] vars = {x, y, z};
+    List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
