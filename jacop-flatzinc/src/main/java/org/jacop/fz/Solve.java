@@ -829,7 +829,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (interrupted) {
       return;
     }
-    if (isComplete && isSearchComplete() && relaxVars == null) {
+    if (isComplete && !timeoutOccurred && isSearchComplete() && relaxVars == null) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);

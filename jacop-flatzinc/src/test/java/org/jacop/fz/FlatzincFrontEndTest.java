@@ -358,6 +358,22 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void allSolutionsSearchStoppedByTimeOutIsNotReportedComplete() throws IOException {
+    // An all-solutions satisfaction search that hit the time limit after finding solutions
+    // printed ========== as if all 13! circuits had been enumerated.
+    String model =
+        """
+        array [1..14] of var 1..14: x;
+        constraint jacop_circuit(x);
+        solve :: int_search(x,input_order,indomain_min,complete) satisfy;
+        """;
+    String out = run(model, "-a", "-t", "100")[0];
+    assertTrue(out.contains("----------"), out.lines().limit(5).toList().toString());
+    assertTrue(!out.contains("=========="), "search reported complete after a time-out");
+    assertTrue(out.contains("=====TIME-OUT====="), "no time-out reported");
+  }
+
+  @Test
   void restartSearchFindsTheOptimumAfterRestartsWithoutABetterSolution() throws IOException {
     // Restart search stopped after the first restart that found no better solution and printed
     // ========== for the last solution (c = 1 here) as if it were optimal.
