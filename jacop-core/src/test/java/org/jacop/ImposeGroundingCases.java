@@ -50,25 +50,37 @@ import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.And;
+import org.jacop.constraints.AndBool;
+import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.AndBoolVector;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.Eq;
+import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
+import org.jacop.constraints.OrBool;
+import org.jacop.constraints.OrBoolSimple;
+import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
@@ -89,6 +101,7 @@ import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -116,6 +129,7 @@ import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.constraints.table.TableReified;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -131,45 +145,48 @@ final class ImposeGroundingCases {
 
   static Stream<Arguments> cases() {
     return Stream.concat(
-        Stream.of(
-            Arguments.of(
-                "XplusYeqZ",
-                (Function<Random, Case>)
-                    random ->
-                        Case.primitive(
-                            domains(random, 3, -2, 4),
-                            x -> new XplusYeqZ(x[0], x[1], x[2]),
-                            t -> t[0] + t[1] == t[2],
-                            "")),
-            Arguments.of(
-                "GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
-            Arguments.of("Knapsack without DP", knapsack("Knapsack")),
-            Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
-            Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
-            Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
-            Arguments.of("CumulativeEF", cumulative("Cumulative")),
-            Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
-            Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
-            Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
-            Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")),
-            Arguments.of("SoftAlldifferentVariable", softAlldifferent(false, false)),
-            Arguments.of("SoftAlldifferentDecomposition", softAlldifferent(true, false)),
-            Arguments.of("SoftAlldifferentPrimitive", softAlldifferent(true, true)),
-            Arguments.of("SoftGCCHardCountersSoftBounds", softGcc(0, false)),
-            Arguments.of("SoftGCCHardBoundsSoftCounters", softGcc(1, false)),
-            Arguments.of("SoftGCCHardCountersSoftCounters", softGcc(2, false)),
-            Arguments.of("SoftGCCAllValuesHardCountersSoftBounds", softGcc(3, false)),
-            Arguments.of("SoftGCCAllValuesHardBoundsSoftCounters", softGcc(4, false)),
-            Arguments.of("SoftGCCAllValuesHardCountersSoftCounters", softGcc(5, false)),
-            Arguments.of("SoftGCCPrimitiveHardCounters", softGcc(0, true)),
-            Arguments.of("SoftGCCPrimitiveHardBounds", softGcc(1, true)),
-            Arguments.of("SoftGCCPrimitiveSoftCounters", softGcc(2, true)),
-            Arguments.of("NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
-            Arguments.of("Geost", geost(false)),
-            Arguments.of("GeostTime", geost(true))),
+        booleanCases(),
         Stream.concat(
-            Stream.concat(additive(), tables()),
-            Stream.concat(comparisons(), Stream.concat(logical(), nonlinearArithmetic()))));
+            Stream.of(
+                Arguments.of(
+                    "XplusYeqZ",
+                    (Function<Random, Case>)
+                        random ->
+                            Case.primitive(
+                                domains(random, 3, -2, 4),
+                                x -> new XplusYeqZ(x[0], x[1], x[2]),
+                                t -> t[0] + t[1] == t[2],
+                                "")),
+                Arguments.of(
+                    "GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
+                Arguments.of("Knapsack without DP", knapsack("Knapsack")),
+                Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
+                Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
+                Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
+                Arguments.of("CumulativeEF", cumulative("Cumulative")),
+                Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
+                Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
+                Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
+                Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")),
+                Arguments.of("SoftAlldifferentVariable", softAlldifferent(false, false)),
+                Arguments.of("SoftAlldifferentDecomposition", softAlldifferent(true, false)),
+                Arguments.of("SoftAlldifferentPrimitive", softAlldifferent(true, true)),
+                Arguments.of("SoftGCCHardCountersSoftBounds", softGcc(0, false)),
+                Arguments.of("SoftGCCHardBoundsSoftCounters", softGcc(1, false)),
+                Arguments.of("SoftGCCHardCountersSoftCounters", softGcc(2, false)),
+                Arguments.of("SoftGCCAllValuesHardCountersSoftBounds", softGcc(3, false)),
+                Arguments.of("SoftGCCAllValuesHardBoundsSoftCounters", softGcc(4, false)),
+                Arguments.of("SoftGCCAllValuesHardCountersSoftCounters", softGcc(5, false)),
+                Arguments.of("SoftGCCPrimitiveHardCounters", softGcc(0, true)),
+                Arguments.of("SoftGCCPrimitiveHardBounds", softGcc(1, true)),
+                Arguments.of("SoftGCCPrimitiveSoftCounters", softGcc(2, true)),
+                Arguments.of(
+                    "NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
+                Arguments.of("Geost", geost(false)),
+                Arguments.of("GeostTime", geost(true))),
+            Stream.concat(
+                Stream.concat(additive(), tables()),
+                Stream.concat(comparisons(), Stream.concat(logical(), nonlinearArithmetic())))));
   }
 
   /** The table constraints. */
@@ -1292,6 +1309,389 @@ final class ImposeGroundingCases {
 
   private static Arguments nonlinear(String name, Function<Random, Case> generator) {
     return Arguments.of(name, generator);
+  }
+
+  /**
+   * Boolean constraints. Lists may repeat a variable (the description gives the index map), and 0/1
+   * domains may already be singletons.
+   */
+  static Stream<Arguments> booleanCases() {
+    return Stream.of(
+        Arguments.of(
+            "AndBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.of(
+                      bools(random, n + 1),
+                      (store, x) -> store.imposeDecomposition(new AndBool(pick(x, map), x[n])),
+                      t -> t[n] == (and(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "AndBoolSimple",
+            gen(
+                random ->
+                    Case.primitive(
+                        bools(random, 3),
+                        x -> new AndBoolSimple(x[0], x[1], x[2]),
+                        t -> t[2] == (t[0] == 1 && t[1] == 1 ? 1 : 0),
+                        ""))),
+        Arguments.of(
+            "AndBoolVector",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 2 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.primitive(
+                      bools(random, n + 1),
+                      x -> new AndBoolVector(pick(x, map), x[n]),
+                      t -> t[n] == (and(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "OrBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.of(
+                      bools(random, n + 1),
+                      (store, x) -> store.imposeDecomposition(new OrBool(pick(x, map), x[n])),
+                      t -> t[n] == (or(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "OrBoolSimple",
+            gen(
+                random ->
+                    Case.primitive(
+                        bools(random, 3),
+                        x -> new OrBoolSimple(x[0], x[1], x[2]),
+                        t -> t[2] == (t[0] == 1 || t[1] == 1 ? 1 : 0),
+                        ""))),
+        Arguments.of(
+            "OrBoolVector",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 2 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.primitive(
+                      bools(random, n + 1),
+                      x -> new OrBoolVector(pick(x, map), x[n]),
+                      t -> t[n] == (or(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "XorBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.primitive(
+                      bools(random, n + 1),
+                      x -> new XorBool(pick(x, map), x[n]),
+                      t -> t[n] == parity(t, map),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "EqBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.primitive(
+                      bools(random, n + 1),
+                      x -> new EqBool(pick(x, map), x[n]),
+                      t -> {
+                        boolean eq = true;
+                        for (int i : map) {
+                          eq &= t[i] == t[map[0]];
+                        }
+                        return t[n] == (eq ? 1 : 0);
+                      },
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "BoolClause",
+            gen(
+                random -> {
+                  // positive and negative literals over shared variables, possibly the same one
+                  int n = 1 + random.nextInt(4);
+                  int[] pos = new int[random.nextInt(4)];
+                  int[] neg = new int[(pos.length == 0 ? 1 : 0) + random.nextInt(4)];
+                  for (int i = 0; i < pos.length; i++) {
+                    pos[i] = random.nextInt(n);
+                  }
+                  for (int i = 0; i < neg.length; i++) {
+                    neg[i] = random.nextInt(n);
+                  }
+                  return Case.primitive(
+                      bools(random, n),
+                      x -> new BoolClause(pick(x, pos), pick(x, neg)),
+                      t -> {
+                        for (int i : pos) {
+                          if (t[i] == 1) {
+                            return true;
+                          }
+                        }
+                        for (int i : neg) {
+                          if (t[i] == 0) {
+                            return true;
+                          }
+                        }
+                        return false;
+                      },
+                      "x=" + Arrays.toString(pos) + " y=" + Arrays.toString(neg));
+                })),
+        Arguments.of(
+            "IfThenBool",
+            gen(
+                random ->
+                    Case.primitive(
+                        bools(random, 3),
+                        x -> new IfThenBool(x[0], x[1], x[2]),
+                        t -> t[2] == (t[0] == 0 || t[1] == 1 ? 1 : 0),
+                        ""))),
+        Arguments.of(
+            "IfThenElseBool",
+            gen(
+                random -> {
+                  // the constraint takes BooleanVars: each is created with the current bounds of
+                  // its IntVar (so it is ground at impose when the IntVar is) and channelled to it
+                  int[] map = random.nextInt(4) == 0 ? new int[] {0, 1, 0} : new int[] {0, 1, 2};
+                  return Case.primitive(
+                      bools(random, 3),
+                      x -> {
+                        BooleanVar[] b = booleanVars(x);
+                        return new IfThenElseBool(b[map[0]], b[map[1]], b[map[2]]);
+                      },
+                      t -> t[map[0]] == 1 ? t[map[1]] == 1 : t[map[2]] == 1,
+                      "args=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "LinearBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  int[] w = new int[map.length];
+                  for (int i = 0; i < w.length; i++) {
+                    w[i] = random.nextInt(9) - 4;
+                  }
+                  String rel = new String[] {"==", "<=", ">="}[random.nextInt(3)];
+                  boolean constant = random.nextBoolean();
+                  int c = random.nextInt(9) - 4;
+                  int[][] domains = bools(random, n + 1);
+                  domains[n] = constant ? new int[] {0} : domain(random, -6, 6);
+                  Predicate<int[]> holds =
+                      t -> {
+                        int sum = 0;
+                        for (int i = 0; i < map.length; i++) {
+                          sum += w[i] * t[map[i]];
+                        }
+                        int rhs = constant ? c : t[n];
+                        return rel.equals("==")
+                            ? sum == rhs
+                            : rel.equals("<=") ? sum <= rhs : sum >= rhs;
+                      };
+                  return Case.of(
+                      domains,
+                      (store, x) ->
+                          store.impose(
+                              constant
+                                  ? new LinearBool(pick(x, map), w, rel, c)
+                                  : new LinearBool(pick(x, map), w, rel, x[n])),
+                      holds,
+                      "x="
+                          + Arrays.toString(map)
+                          + " w="
+                          + Arrays.toString(w)
+                          + " "
+                          + rel
+                          + (constant ? " c=" + c : " z (last variable)"));
+                })),
+        Arguments.of(
+            "SumBool",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  String rel = new String[] {"==", "<", ">", "<=", ">=", "!="}[random.nextInt(6)];
+                  int[][] domains = bools(random, n + 1);
+                  domains[n] = domain(random, -1, map.length + 1);
+                  return Case.primitive(
+                      domains,
+                      x -> new SumBool(pick(x, map), rel, x[n]),
+                      t -> {
+                        int sum = 0;
+                        for (int i : map) {
+                          sum += t[i];
+                        }
+                        return switch (rel) {
+                          case "==" -> sum == t[n];
+                          case "<" -> sum < t[n];
+                          case ">" -> sum > t[n];
+                          case "<=" -> sum <= t[n];
+                          case ">=" -> sum >= t[n];
+                          default -> sum != t[n];
+                        };
+                      },
+                      "list=" + Arrays.toString(map) + " " + rel);
+                })),
+        Arguments.of(
+            "EqBoolDecomposition",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 1 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.of(
+                      bools(random, n + 1),
+                      (store, x) -> store.imposeDecomposition(new EqBool(pick(x, map), x[n])),
+                      t -> {
+                        boolean eq = true;
+                        for (int i : map) {
+                          eq &= t[i] == t[map[0]];
+                        }
+                        return t[n] == (eq ? 1 : 0);
+                      },
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "AndBoolVectorDecomposition",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 2 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.of(
+                      bools(random, n + 1),
+                      (store, x) ->
+                          store.imposeDecomposition(new AndBoolVector(pick(x, map), x[n])),
+                      t -> t[n] == (and(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "OrBoolVectorDecomposition",
+            gen(
+                random -> {
+                  int[] map = indexMap(random, 2 + random.nextInt(4), true);
+                  int n = width(map);
+                  return Case.of(
+                      bools(random, n + 1),
+                      (store, x) -> store.imposeDecomposition(new OrBoolVector(pick(x, map), x[n])),
+                      t -> t[n] == (or(t, map) ? 1 : 0),
+                      "list=" + Arrays.toString(map));
+                })),
+        Arguments.of(
+            "BoolVectorsOnBooleanVars",
+            gen(
+                random -> {
+                  // AndBoolVector, OrBoolVector, XorBool and SumBool on BooleanVar (BoundDomain)
+                  int[] map = indexMap(random, 2 + random.nextInt(4), true);
+                  int n = width(map);
+                  int kind = random.nextInt(4);
+                  return Case.primitive(
+                      bools(random, n + 1),
+                      x -> {
+                        BooleanVar[] b = booleanVars(x);
+                        IntVar[] list = pick(b, map);
+                        return switch (kind) {
+                          case 0 -> new AndBoolVector(list, b[n]);
+                          case 1 -> new OrBoolVector(list, b[n]);
+                          case 2 -> new XorBool(list, b[n]);
+                          default -> new SumBool(list, "==", b[n]);
+                        };
+                      },
+                      t ->
+                          switch (kind) {
+                            case 0 -> t[n] == (and(t, map) ? 1 : 0);
+                            case 1 -> t[n] == (or(t, map) ? 1 : 0);
+                            case 2 -> t[n] == parity(t, map);
+                            default -> Arrays.stream(map).map(i -> t[i]).sum() == t[n];
+                          },
+                      "kind=" + kind + " list=" + Arrays.toString(map));
+                })));
+  }
+
+  private static Function<Random, Case> gen(Function<Random, Case> generator) {
+    return generator;
+  }
+
+  /** 0/1 domains; about one in four is a singleton. */
+  static int[][] bools(Random random, int n) {
+    int[][] domains = new int[n][];
+    for (int i = 0; i < n; i++) {
+      int k = random.nextInt(8);
+      domains[i] = k == 0 ? new int[] {0} : k == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    return domains;
+  }
+
+  /**
+   * Indices of the variables in a list of the given length; with {@code repeat} one list in three
+   * repeats a variable. The indices cover 0..width-1.
+   */
+  static int[] indexMap(Random random, int length, boolean repeat) {
+    int[] map = new int[length];
+    for (int i = 0; i < length; i++) {
+      map[i] = i;
+    }
+    if (repeat && length > 1 && random.nextInt(3) == 0) {
+      int distinct = 1 + random.nextInt(length - 1);
+      for (int i = 0; i < length; i++) {
+        map[i] = i < distinct ? i : random.nextInt(distinct);
+      }
+    }
+    return map;
+  }
+
+  static int width(int[] map) {
+    return Arrays.stream(map).max().orElse(-1) + 1;
+  }
+
+  static IntVar[] pick(IntVar[] x, int[] map) {
+    IntVar[] picked = new IntVar[map.length];
+    for (int i = 0; i < map.length; i++) {
+      picked[i] = x[map[i]];
+    }
+    return picked;
+  }
+
+  private static boolean and(int[] t, int[] map) {
+    for (int i : map) {
+      if (t[i] == 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean or(int[] t, int[] map) {
+    for (int i : map) {
+      if (t[i] == 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static int parity(int[] t, int[] map) {
+    int p = 0;
+    for (int i : map) {
+      p ^= t[i];
+    }
+    return p;
+  }
+
+  /** BooleanVars with the current bounds of the given 0/1 IntVars, channelled to them. */
+  static BooleanVar[] booleanVars(IntVar[] x) {
+    BooleanVar[] b = new BooleanVar[x.length];
+    for (int i = 0; i < x.length; i++) {
+      b[i] = new BooleanVar(x[i].getStore(), "b" + i, x[i].min(), x[i].max());
+      x[i].getStore().impose(new XeqY(x[i], b[i]));
+    }
+    return b;
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
