@@ -35,6 +35,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
@@ -427,6 +429,60 @@ class SingleConstraintTest {
 
     assertThat(channel.satisfied()).isFalse();
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testChannelIntSetWithDifferentOffsets() {
+    // x[k] stands for index k + offsetInt and s[l] for index l + offsetSet; the propagation mixed
+    // up the two offsets and threw IllegalStateException or ArrayIndexOutOfBoundsException
+    int ni = 2;
+    int ns = 3;
+    int offsetInt = 1;
+    int offsetSet = 3;
+    SetImposeGroundingHarness.check(
+        "ChannelIntSet offsets",
+        random -> {
+          Spec[] vars = new Spec[ni + ns];
+          for (int i = 0; i < ni; i++) {
+            vars[i] = Spec.intVar(2, 3, 4, 5, 6);
+          }
+          for (int j = 0; j < ns; j++) {
+            vars[ni + j] = Spec.setVar(new int[0], new int[] {0, 1, 2, 3});
+          }
+          return new Case(
+              vars,
+              (store, x) -> {
+                ChannelIntSet c =
+                    new ChannelIntSet(
+                        Arrays.copyOf(x, ni, IntVar[].class),
+                        Arrays.copyOfRange(x, ni, ni + ns, SetVar[].class),
+                        offsetInt,
+                        offsetSet);
+                store.impose(c);
+                return c;
+              },
+              t -> {
+                for (int i = 0; i < ni; i++) {
+                  if (t.i(i) < offsetSet || t.i(i) >= offsetSet + ns) {
+                    return false;
+                  }
+                }
+                for (int j = 0; j < ns; j++) {
+                  Set<Integer> expected = new TreeSet<>();
+                  for (int i = 0; i < ni; i++) {
+                    if (t.i(i) == j + offsetSet) {
+                      expected.add(i + offsetInt);
+                    }
+                  }
+                  if (!expected.equals(t.s(ni + j))) {
+                    return false;
+                  }
+                }
+                return true;
+              },
+              "");
+        },
+        1);
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
