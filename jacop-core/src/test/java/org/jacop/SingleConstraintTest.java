@@ -57,6 +57,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
@@ -68,6 +69,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -83,6 +85,7 @@ import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -93,6 +96,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -3378,6 +3382,66 @@ class SingleConstraintTest extends TestHelper {
         noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
 
     assertThat(noOfSolutions).isEqualTo(141141);
+  }
+
+  @Test
+  void allEqualNegatedKeepsCallerArrayOrder() {
+    // not all_equal(x) moved fixed variables to the front of the array it was given, so the
+    // caller's array (in FlatZinc the output array) was reordered during search
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 3),
+      new IntVar(store, "x1", 1, 3),
+      new IntVar(store, "x2", 1, 3),
+      new IntVar(store, "x3", 1, 1)
+    };
+    IntVar[] original = x.clone();
+    store.impose(new Reified(new AllEqual(x), new IntVar(store, "b", 0, 0)));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(26);
+    assertThat(x).containsExactly(original);
+  }
+
+  @Test
+  void allEqualNegatedOnOneVariableFails() {
+    // a single variable is always all equal, so its negation has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new Not(new AllEqual(new IntVar[] {x})));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void allEqualReifiedFalseWithoutCommonValue() {
+    // the domains intersect pairwise but have no common value, so b must be 0
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 2, 3), new IntVar(store, "x2", 1, 2)
+    };
+    x[0].addDom(3, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AllEqual(x), b));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  @Test
+  void increasingWithRepeatedVariableReachesFixpoint() {
+    // [x, y, x] increasing means x = y; strictly decreasing [x, x] has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 2, 5);
+    store.impose(new Increasing(new IntVar[] {x, y, x}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2..3}");
+    assertThat(y.dom().toString()).isEqualTo("{2..3}");
+
+    Store store2 = new Store();
+    IntVar z = new IntVar(store2, "z", 0, 2);
+    store2.impose(new Decreasing(new IntVar[] {z, z}, true));
+    assertThat(store2.consistency()).isFalse();
   }
 
   @Test
