@@ -68,7 +68,6 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -2692,31 +2691,6 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  void testDiff() {
-
-    Store store = new Store();
-
-    int noOfRectangles = 4;
-    int xSize = 2;
-    int ySize = 2;
-    int durationSize = 3;
-
-    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-    Diff diff = new Diff(origin1, origin2, length1, length2);
-
-    store.impose(diff);
-
-    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
-
-    assertThat(noOfSolutions).isEqualTo(741642);
-  }
-
-  @Test
   void testDisjoint() {
 
     Store store = new Store();
@@ -3767,17 +3741,16 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
-   * Fingerprints the search of the rectangle constraints built on the shared Diff engine: for each
-   * kind, the solutions found, in order, and the search statistics on seeded random instances.
-   * Refactoring that engine must leave every fingerprint unchanged, which means the same search
-   * tree and not only the same solutions.
+   * Fingerprints the search of the rectangle constraints built on AbstractDiff: for each kind, the
+   * solutions found, in order, and the search statistics on seeded random instances. Refactoring
+   * that engine must leave every fingerprint unchanged, which means the same search tree and not
+   * only the same solutions.
    */
   @Test
   void rectangleConstraintsKeepTheirSearchTrees() {
     Map<String, String> actual = new LinkedHashMap<>();
     for (String kind :
         List.of(
-            "Diff",
             "Diff2",
             "Diff2NoProfile",
             "Diff2Exclusive",
@@ -3791,8 +3764,6 @@ class SingleConstraintTest extends TestHelper {
     assertThat(actual)
         .isEqualTo(
             Map.of(
-                "Diff",
-                "solutions=255356 nodes=260060 decisions=257688 wrong=2372 hash=ab367b7392e2d248",
                 "Diff2",
                 "solutions=261426 nodes=271150 decisions=266268 wrong=4882 hash=67a9b6d05bb56939",
                 "Diff2NoProfile",
@@ -3844,7 +3815,6 @@ class SingleConstraintTest extends TestHelper {
         conditions.add(new IntVar(store, "c" + p, 0, 1));
       }
       switch (kind) {
-        case "Diff" -> store.impose(new Diff(rectangles));
         case "Diff2" -> store.impose(new Diff2(rectangles));
         case "Diff2NoProfile" -> store.impose(new Diff2(rectangles, false));
         case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));

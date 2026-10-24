@@ -125,12 +125,12 @@ public class DisjointConditional extends AbstractDiff {
         this.rectangles[i] = rect;
         i++;
       } else {
-        String s = "\nNot equal sizes of rectangle vectors in Diff";
+        String s = "\nNot equal sizes of rectangle vectors in DisjointConditional";
         throw new IllegalArgumentException(s);
       }
     }
     if (size / 2 != 2) {
-      String s = "\nRectangles of size > 2 not currently supported by Diff";
+      String s = "\nRectangles of size > 2 not currently supported by DisjointConditional";
       throw new IllegalArgumentException(s);
     }
 
@@ -329,12 +329,12 @@ public class DisjointConditional extends AbstractDiff {
         Rectangle rect = new Rectangle(rectVars);
         this.rectangles[i] = rect;
       } else {
-        String s = "\nNot equal sizes of rectangle vectors in Diff";
+        String s = "\nNot equal sizes of rectangle vectors in DisjointConditional";
         throw new IllegalArgumentException(s);
       }
     }
     if (size / 2 != 2) {
-      String s = "\nRectangles of size > 2 not currently supported by Diff";
+      String s = "\nRectangles of size > 2 not currently supported by DisjointConditional";
       throw new IllegalArgumentException(s);
     }
 
