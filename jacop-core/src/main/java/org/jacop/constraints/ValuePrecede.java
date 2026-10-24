@@ -245,7 +245,7 @@ public class ValuePrecede extends Constraint
 
   private void checkGamma(int i) {
     int g = gammaValue;
-    if (betaValue < g && i < g && x[i].singleton(t)) {
+    if (betaValue <= g && i < g && x[i].singleton(t)) {
       gammaValue = i;
       if (betaValue > i) {
         int a = alphaValue;
