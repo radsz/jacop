@@ -63,6 +63,10 @@ class ImposeGroundingTest {
   static Stream<Arguments> cases() {
     Stream<Arguments> globals =
         GlobalConstraintBruteForceTest.cases()
+            // GCC(x, counters) takes its counted values from the union of the domains of x when it
+            // is created, so grounding x first changes the constraint; "GCC with first value" in
+            // ImposeGroundingCases checks GCC(x, counters, firstValue) instead
+            .filter(a -> !a.get()[0].equals("GCC"))
             .map(
                 a -> {
                   @SuppressWarnings("unchecked")

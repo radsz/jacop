@@ -4691,6 +4691,46 @@ class SingleConstraintTest extends TestHelper {
     return v;
   }
 
+  // GCC(x, counters) reads its counted values from the domains of x, so once x was ground it could
+  // not be created; GCC(x, counters, firstValue) names the counted values instead.
+  @Test
+  void testGccWithFirstValueAndGroundedVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 2)
+    };
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 3), new IntVar(store, "c1", 0, 3), new IntVar(store, "c2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new GCC(x, counters)).isInstanceOf(IllegalArgumentException.class);
+    store.impose(new GCC(x, counters, 0));
+
+    // c0 = 0, and x2 = 1 (c1 = 3, c2 = 0) or x2 = 2 (c1 = 2, c2 = 1)
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
+  }
+
+  // GCC computed its counted values again at impose, so a variable ground between creating the
+  // constraint and imposing it made impose throw IllegalArgumentException.
+  @Test
+  void testGccWithVariablesGroundBeforeImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2), new IntVar(store, "c2", 0, 2)
+    };
+    GCC gcc = new GCC(x, counters);
+    for (IntVar v : x) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    store.impose(gcc);
+
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(1);
+    assertThat(counters[1].value()).isEqualTo(2);
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {

@@ -32,11 +32,13 @@
 package org.jacop;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.XplusYeqZ;
 import org.junit.jupiter.params.provider.Arguments;
 
@@ -58,7 +60,8 @@ final class ImposeGroundingCases {
                         domains(random, 3, -2, 4),
                         x -> new XplusYeqZ(x[0], x[1], x[2]),
                         t -> t[0] + t[1] == t[2],
-                        "")));
+                        "")),
+        Arguments.of("GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc));
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
