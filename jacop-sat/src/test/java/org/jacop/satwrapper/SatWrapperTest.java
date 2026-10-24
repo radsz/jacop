@@ -60,10 +60,10 @@ class SatWrapperTest {
   private static final int INT_MAX = 3;
 
   /** A clause literal: variable index, kind (0 is x=1 for booleans, 1 is y=v, 2 is y<=v), sign. */
-  private record Lit(int var, int kind, int value, boolean positive) {
+  private record Lit(int variable, int kind, int value, boolean positive) {
 
     boolean holds(int[] assignment) {
-      int x = assignment[var];
+      int x = assignment[variable];
       boolean atom =
           switch (kind) {
             case 0 -> x == 1;
@@ -126,7 +126,8 @@ class SatWrapperTest {
       for (int k = 0; k < clause.length; k++) {
         Lit l = clause[k];
         int boolVar =
-            wrapper.cpVarToBoolVar(vars[l.var()], l.kind() == 0 ? 1 : l.value(), l.kind() != 2);
+            wrapper.cpVarToBoolVar(
+                vars[l.variable()], l.kind() == 0 ? 1 : l.value(), l.kind() != 2);
         c[k] = l.positive() ? boolVar : -boolVar;
       }
       wrapper.addModelClause(c);

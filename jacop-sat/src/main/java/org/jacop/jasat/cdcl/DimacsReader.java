@@ -63,11 +63,9 @@ public final class DimacsReader {
    * @throws IOException if the file cannot be read or is not valid DIMACS
    */
   public static void read(String path, CdclSolver solver) throws IOException {
-    InputStream raw = new FileInputStream(path);
-    if (path.endsWith(".gz")) {
-      raw = new GZIPInputStream(raw, 1 << 16);
-    }
-    try (InputStream in = new BufferedInputStream(raw, 1 << 16)) {
+    try (InputStream file = new FileInputStream(path);
+        InputStream raw = path.endsWith(".gz") ? new GZIPInputStream(file, 1 << 16) : file;
+        InputStream in = new BufferedInputStream(raw, 1 << 16)) {
       new DimacsReader(in).readInto(solver);
     }
   }

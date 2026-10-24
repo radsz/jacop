@@ -77,7 +77,7 @@ public final class CdclSolver {
   private static final int HEADER = 4;
 
   // META bits; LBD in the bits from LBD_SHIFT
-  private static final int LEARNT = 1;
+  private static final int LEARNT_FLAG = 1;
   private static final int DELETED = 2;
   private static final int USED = 4;
   private static final int TIER_SHIFT = 3;
@@ -154,7 +154,7 @@ public final class CdclSolver {
   private int trailQueueHead;
   private long trailQueueSum;
   private long nextReduce = 2000;
-  private int reduceInc = 300;
+  private static final int REDUCE_INC = 300;
   private int simplifyAssigns = -1;
 
   // --- driven by an external search (the CP solver): see "External search" below
@@ -212,7 +212,7 @@ public final class CdclSolver {
     if (n <= numVars) {
       return;
     }
-    int cap = vals.length / 2;
+    int cap = reason.length;
     if (n > cap) {
       int c = Math.max(n, 2 * cap);
       vals = Arrays.copyOf(vals, 2 * c);
@@ -368,11 +368,11 @@ public final class CdclSolver {
   /**
    * Returns the value of a variable in the last model.
    *
-   * @param var a DIMACS variable
+   * @param variable a DIMACS variable
    * @return true when the variable is true in the model found by the last SAT answer
    */
-  public boolean modelValue(int var) {
-    return model[var - 1];
+  public boolean modelValue(int variable) {
+    return model[variable - 1];
   }
 
   /**
@@ -456,7 +456,7 @@ public final class CdclSolver {
     mem[ref + SIZE] = size;
     int tier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
-        (isLearnt ? LEARNT : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
+        (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
     mem[ref + POS] = 2;
     System.arraycopy(lits, 0, mem, ref + HEADER, size);
@@ -647,7 +647,7 @@ public final class CdclSolver {
 
   private void addLearnt(int lit) {
     if (learntSize == learnt.length) {
-      learnt = Arrays.copyOf(learnt, 2 * learnt.length);
+      learnt = Arrays.copyOf(learnt, 2 * learnt.length + 16);
     }
     learnt[learntSize++] = lit;
   }
@@ -732,7 +732,7 @@ public final class CdclSolver {
       } else if (ref < NO_REASON) {
         pathCount += analyzeLit(-2 - ref);
       } else {
-        if ((mem[ref + META] & LEARNT) != 0) {
+        if ((mem[ref + META] & LEARNT_FLAG) != 0) {
           touchLearnt(ref);
         }
         int lits = ref + HEADER;
@@ -1112,7 +1112,7 @@ public final class CdclSolver {
       assertIfUnit(c, ref);
     }
     if (conflicts >= nextReduce) {
-      nextReduce = conflicts + 2000 + (long) reduceInc * ++reductions;
+      nextReduce = conflicts + 2000 + (long) REDUCE_INC * ++reductions;
       reduceDb();
     }
     return propagateUnits();
@@ -1419,7 +1419,7 @@ public final class CdclSolver {
         continue;
       }
       if (conflicts >= nextReduce) {
-        nextReduce = conflicts + 2000 + (long) reduceInc * ++reductions;
+        nextReduce = conflicts + 2000 + (long) REDUCE_INC * ++reductions;
         reduceDb();
       }
       if (decisionLevel == 0 && trailSize != simplifyAssigns) {

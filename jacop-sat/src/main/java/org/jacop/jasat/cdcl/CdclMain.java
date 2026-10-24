@@ -77,16 +77,17 @@ public final class CdclMain {
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
-    DratWriter proof = proofFile == null ? null : new DratWriter(new FileOutputStream(proofFile));
-    solver.setProof(proof);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
-    DimacsReader.read(file, solver);
-    long parsed = System.nanoTime();
-    int result = solver.solve();
-    if (proof != null) {
-      proof.close();
+    long parsed;
+    int result;
+    try (DratWriter proof =
+        proofFile == null ? null : new DratWriter(new FileOutputStream(proofFile))) {
+      solver.setProof(proof);
+      DimacsReader.read(file, solver);
+      parsed = System.nanoTime();
+      result = solver.solve();
     }
     PrintStream out = new PrintStream(new java.io.BufferedOutputStream(System.out, 1 << 16), false);
     if (!quiet) {
