@@ -67,11 +67,14 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -726,6 +729,30 @@ class ConsistencyChecker {
             "XplusYeqZ",
             Level.BOUNDS_Z,
             (s, r) -> xyz(s, r, small, XplusYeqZ::new, t -> t[0] + t[1] == t[2])),
+        new Case(
+            "XeqY",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = var(s, "x", -6, 6, r);
+              IntVar y = var(s, "y", -6, 6, r);
+              return new Model(new XeqY(x, y), t -> t[0] == t[1], new IntVar[] {x, y});
+            }),
+        new Case(
+            "XplusCeqZ",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = var(s, "x", -6, 6, r);
+              IntVar z = var(s, "z", -4, 8, r);
+              return new Model(new XplusCeqZ(x, 2, z), t -> t[0] + 2 == t[1], new IntVar[] {x, z});
+            }),
+        new Case(
+            "XplusYeqC",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = var(s, "x", -6, 6, r);
+              IntVar y = var(s, "y", -4, 8, r);
+              return new Model(new XplusYeqC(x, y, 2), t -> t[0] + t[1] == 2, new IntVar[] {x, y});
+            }),
         new Case(
             "XplusYlteqZ",
             Level.DOMAIN,

@@ -83,27 +83,24 @@ public class XplusYeqC extends AbstractConstraintXandY {
   @Override
   public void consistency(final Store store) {
 
-    do {
+    // after the two mirrors x and y are mirror images, a fixpoint unless y only keeps its bounds
+    inMirror(store, y, x);
+    inMirror(store, x, y);
+    if (y.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
+      inMirror(store, y, x);
+    }
+  }
 
-      store.propagationHasOccurred = false;
+  /** Keeps in target only the values c - v for v in source. */
+  private void inMirror(Store store, IntVar target, IntVar source) {
+    IntDomain sourceDom = source.dom();
+    IntervalDomain targetDomIn = new IntervalDomain(sourceDom.noIntervals() + 1);
+    for (int i = sourceDom.noIntervals() - 1; i >= 0; i--) {
+      targetDomIn.unionAdapt(
+          new Interval(c - sourceDom.rightElement(i), c - sourceDom.leftElement(i)));
+    }
 
-      IntDomain xDom = x.dom();
-      IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
-      for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
-        yDomIn.unionAdapt(new Interval(c - xDom.rightElement(i), c - xDom.leftElement(i)));
-      }
-
-      y.domain.in(store.level, y, yDomIn);
-
-      IntDomain yDom = y.domain;
-      IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
-      for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
-        xDomIn.unionAdapt(new Interval(c - yDom.rightElement(i), c - yDom.leftElement(i)));
-      }
-
-      x.domain.in(store.level, x, xDomIn);
-
-    } while (store.propagationHasOccurred);
+    target.domain.in(store.level, target, targetDomIn);
   }
 
   @Override

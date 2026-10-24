@@ -72,16 +72,13 @@ public class XeqY extends AbstractConstraintXandY {
   @Override
   public void consistency(final Store store) {
 
-    do {
-
-      // domain consistency
+    // domain consistency; after the two intersections x and y are equal, a fixpoint unless x only
+    // keeps its bounds
+    x.domain.in(store.level, x, y.domain);
+    y.domain.in(store.level, y, x.domain);
+    if (x.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
       x.domain.in(store.level, x, y.domain);
-
-      store.propagationHasOccurred = false;
-
-      y.domain.in(store.level, y, x.domain);
-
-    } while (store.propagationHasOccurred);
+    }
   }
 
   @Override

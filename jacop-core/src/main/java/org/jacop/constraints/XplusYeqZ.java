@@ -68,15 +68,23 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
 
       store.propagationHasOccurred = false;
 
+      // with x (or y) fixed the two shifts make y and z equal up to the shift, which is a fixpoint
+      // unless the first variable shifted only keeps its bounds
       if (x.singleton()) {
 
         y.domain.inShift(store.level, y, z.domain, -x.value());
         z.domain.inShift(store.level, z, y.domain, x.value());
+        if (y.domain.domainId() != IntDomain.BOUND_DOMAIN_ID) {
+          return;
+        }
 
       } else if (y.singleton()) {
 
         x.domain.inShift(store.level, x, z.domain, -y.value());
         z.domain.inShift(store.level, z, x.dom(), y.value());
+        if (x.domain.domainId() != IntDomain.BOUND_DOMAIN_ID) {
+          return;
+        }
 
       } else {
 

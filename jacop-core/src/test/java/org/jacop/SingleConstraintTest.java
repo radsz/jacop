@@ -110,9 +110,12 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -3872,6 +3875,32 @@ class SingleConstraintTest extends TestHelper {
         + wrongDecisions
         + " hash="
         + Long.toHexString(hash[0]);
+  }
+
+  @Test
+  void equalityShiftsReachFixpointWhenTheFirstVariableOnlyKeepsBounds() {
+    // A boolean x keeps only bounds, so pruning x from z leaves it at 0..1 and then z gets fixed;
+    // one more pass is needed to fix x to 0.
+    List<Function<IntVar[], Constraint>> constraints =
+        List.of(
+            v -> new XeqY(v[0], v[1]),
+            v -> new XplusCeqZ(v[0], 0, v[1]),
+            v -> new Not(new XplusCneqZ(v[0], 0, v[1])),
+            v -> new XplusYeqZ(v[0], v[2], v[1]),
+            v -> new XplusYeqZ(v[2], v[0], v[1]),
+            v -> new XplusYeqC(v[1], v[0], 5));
+    for (Function<IntVar[], Constraint> constraint : constraints) {
+      Store store = new Store();
+      IntVar x = new BooleanVar(store, "x");
+      IntVar z = new IntVar(store, "z", 0, 0);
+      z.addDom(5, 5);
+      IntVar zero = new IntVar(store, "zero", 0, 0);
+      Constraint c = constraint.apply(new IntVar[] {x, z, zero});
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.max()).as(c.toString()).isEqualTo(0);
+      assertThat(z.singleton()).as(c.toString()).isTrue();
+    }
   }
 
   private static IntVar rectangleVar(Store store, Random random, int min, int max) {
