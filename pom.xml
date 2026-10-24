@@ -249,6 +249,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
+                                <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -303,6 +304,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
+                                <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -357,6 +359,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
+                                <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
