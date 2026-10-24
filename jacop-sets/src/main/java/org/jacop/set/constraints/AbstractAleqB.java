@@ -33,8 +33,8 @@ package org.jacop.set.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -131,63 +131,50 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
   }
 
   /**
-   * Shared consistency logic for the common prefix comparison between a's lub and b's glb.
+   * Fails when no set in the domain of a is ordered before a set in the domain of b: when the
+   * lexicographically smallest set that a can take is not before the largest that b can take.
+   * Cardinality bounds are ignored except that a non-empty a stays non-empty.
    *
-   * @param store the constraint store
+   * @param store the constraint store.
    */
-  protected void consistencyCommonPrefix(Store store) {
-    if (b.domain.glb().getSize() <= 0) {
-      return;
+  protected void checkOrderPossible(Store store) {
+    if (!setLexCompare(smallest(a), largest(b))) {
+      throw Store.failException;
     }
-    ValueEnumeration lubEnum = a.domain.lub().valueEnumeration();
-    ValueEnumeration glbEnum = b.domain.glb().valueEnumeration();
-    int be = glbEnum.nextElement();
-    compareCommonPrefixLoop(store, lubEnum, glbEnum, be);
   }
 
   /**
-   * Compares elements in the common prefix of a's lub and b's glb. Returns when comparison
-   * determines ordering; throws Store.failException if incompatible.
+   * Returns the lexicographically smallest set between the glb and the lub of s: the glb with every
+   * element of the lub below its largest element, since a smaller element first makes a set
+   * smaller.
    */
-  private void compareCommonPrefixLoop(
-      Store store, ValueEnumeration lubEnum, ValueEnumeration glbEnum, int be) {
-    int ae;
-    do {
-      if (!lubEnum.hasMoreElements()) {
-        return; // b has more elements and up to now all equal
+  static IntDomain smallest(SetVar s) {
+    IntDomain glb = s.domain.glb();
+    IntDomain lub = s.domain.lub();
+    if (glb.isEmpty()) {
+      if (s.domain.card().min() > 0 && !lub.isEmpty()) {
+        return new IntervalDomain(lub.min(), lub.min());
       }
-      ae = lubEnum.nextElement();
-
-      if (ae == be) {
-        if (glbEnum.hasMoreElements()) {
-          be = glbEnum.nextElement();
-          if (!lubEnum.hasMoreElements()) {
-            return; // b has more elements than a
-          }
-        } else {
-          afterCommonPrefix(store, a, b, lubEnum, ae);
-          return;
-        }
-      } else if (ae < be) {
-        return; // b already greater
-      } else {
-        throw Store.failException;
-      }
-    } while (true);
+      return new IntervalDomain();
+    }
+    return lub.intersect(IntDomain.MIN_INT, glb.max());
   }
 
   /**
-   * Hook called after the common prefix loop when bGlbEnum is exhausted. Subclasses may override to
-   * add strict-less-than checks.
-   *
-   * @param store the constraint store
-   * @param a the first set variable
-   * @param b the second set variable
-   * @param lubEnum the enumeration of a's lub values (positioned after the common prefix)
-   * @param lastAe the last element value read from aLubEnum
+   * Returns the lexicographically largest set between the glb and the lub of s: the glb followed by
+   * the largest element of the lub when it is larger than the glb, since any other element would
+   * come before a larger one of the glb.
    */
-  protected void afterCommonPrefix(
-      Store store, SetVar a, SetVar b, ValueEnumeration lubEnum, int lastAe) {
-    // Default: no additional check (used by AleB)
+  static IntDomain largest(SetVar s) {
+    IntDomain glb = s.domain.glb();
+    IntDomain lub = s.domain.lub();
+    if (lub.isEmpty() || s.domain.card().max() == 0) {
+      return new IntervalDomain();
+    }
+    IntDomain result = glb.cloneLight();
+    if (glb.isEmpty() || lub.max() > glb.max()) {
+      result.unionAdapt(lub.max(), lub.max());
+    }
+    return result;
   }
 }

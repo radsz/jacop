@@ -94,7 +94,7 @@ public class AleB extends AbstractAleqB {
       throw Store.failException;
     }
 
-    consistencyCommonPrefix(store);
+    checkOrderPossible(store);
   }
 
   @Override
