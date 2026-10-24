@@ -151,6 +151,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void include(Store store) {
     this.store = store;
+    super.include(store);
   }
 
   @Override

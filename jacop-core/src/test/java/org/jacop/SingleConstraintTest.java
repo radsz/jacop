@@ -69,6 +69,8 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
@@ -76,7 +78,9 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
@@ -171,6 +175,7 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.Search;
@@ -5548,6 +5553,82 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x[0].value()).isEqualTo(2);
     assertThat(among.satisfied()).isTrue();
+  }
+
+  // IfThen, IfThenElse and Implies did not pass include() on to their constraints, so a counting
+  // constraint nested in them under another wrapper never created its TimeStamps and threw
+  // NullPointerException from consistency() or notConsistency().
+  @Test
+  void testCountingConstraintsNestedInWrappers() {
+
+    Map<String, Function<IntVar[], PrimitiveConstraint>> constraints = new LinkedHashMap<>();
+    constraints.put("Count", x -> new Count(new IntVar[] {x[0], x[1]}, x[2], 1));
+    constraints.put("CountBounds", x -> new CountBounds(new IntVar[] {x[0], x[1], x[2]}, 1, 1, 2));
+    constraints.put("CountVar", x -> new CountVar(new IntVar[] {x[0], x[1]}, x[2], x[1]));
+    constraints.put("AtLeast", x -> new AtLeast(new IntVar[] {x[0], x[1], x[2]}, 2, 1));
+    constraints.put("AtMost", x -> new AtMost(new IntVar[] {x[0], x[1], x[2]}, 1, 1));
+    constraints.put("AllEqual", x -> new AllEqual(new IntVar[] {x[0], x[1], x[2]}));
+
+    // variables: r, b, x0, x1, x2
+    List<BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint>> models =
+        List.of(
+            (v, c) -> new Reified(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new And(new IfThen(c, new XeqC(v[1], 1)), new XeqC(v[0], 1)),
+            (v, c) -> new Or(new IfThen(new XeqC(v[1], 1), c), new XeqC(v[0], 1)),
+            (v, c) -> new Not(new IfThen(c, new XeqC(v[1], 1))),
+            (v, c) -> new Reified(new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0)), v[0]),
+            (v, c) -> new Xor(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new Reified(new Implies(v[1], c), v[0]),
+            (v, c) ->
+                new IfThen(
+                    new XeqC(v[0], 1), new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0))),
+            (v, c) ->
+                new IfThenElse(new XeqC(v[0], 1), new IfThen(new XeqC(v[1], 1), c), new Not(c)));
+
+    for (Map.Entry<String, Function<IntVar[], PrimitiveConstraint>> e : constraints.entrySet()) {
+      for (int m = 0; m < models.size(); m++) {
+        BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint> model = models.get(m);
+
+        // reference: the model posted on ground variables, one store per assignment
+        int expected = 0;
+        for (int t = 0; t < 4 * 27; t++) {
+          Store ground = new Store();
+          int[] values = {t / 54, t / 27 % 2, t / 9 % 3, t / 3 % 3, t % 3};
+          IntVar[] g = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            g[i] = new IntVar(ground, "v" + i, values[i], values[i]);
+          }
+          ground.impose(model.apply(g, e.getValue().apply(Arrays.copyOfRange(g, 2, 5))));
+          if (ground.consistency()) {
+            expected++;
+          }
+        }
+
+        for (int order = 0; order < 5; order++) {
+          Store store = new Store();
+          IntVar[] v = {
+            new IntVar(store, "r", 0, 1),
+            new IntVar(store, "b", 0, 1),
+            new IntVar(store, "x0", 0, 2),
+            new IntVar(store, "x1", 0, 2),
+            new IntVar(store, "x2", 0, 2)
+          };
+          store.impose(model.apply(v, e.getValue().apply(Arrays.copyOfRange(v, 2, 5))));
+          IntVar[] vars = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            vars[i] = v[(i + order) % 5];
+          }
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMax<>()));
+          assertThat(search.getSolutionListener().solutionsNo())
+              .as(e.getKey() + " in model " + m + " order " + order)
+              .isEqualTo(expected);
+        }
+      }
+    }
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

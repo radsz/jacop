@@ -114,6 +114,7 @@ public class Implies extends AbstractReifiedConstraint {
   @Override
   public void include(Store store) {
     this.store = store;
+    super.include(store);
   }
 
   @Override
