@@ -37,6 +37,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AinS;
 import org.jacop.set.constraints.SinA;
 import org.jacop.set.constraints.XeqA;
@@ -109,6 +110,27 @@ class SetRelationsTest {
     store.impose(new Not(new SinA(dom(3), a, true)));
     assertThat(store.consistency()).isTrue();
     assertThat(a.domain.singleton(dom(3))).isTrue();
+  }
+
+  @Test
+  void testNotAinBStrictAcceptsEqualSets() {
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 2, 4);
+    SetVar b = groundSetVar(store, "b", 2, 4);
+    AinB strict = new AinB(a, b, true);
+    assertThat(strict.satisfied()).isFalse();
+    assertThat(strict.notSatisfied()).isTrue();
+    store.impose(new Not(new AinB(a, b, true)));
+    assertThat(store.consistency()).isTrue();
+
+    // a subset of b with a.lub = b.glb: the negation forces a = b
+    Store store2 = new Store();
+    SetVar c = new SetVar(store2, "c", new BoundSetDomain(dom(), dom(1, 2)));
+    SetVar d = new SetVar(store2, "d", new BoundSetDomain(dom(1, 2), dom(1, 2, 3)));
+    store2.impose(new Not(new AinB(c, d, true)));
+    assertThat(store2.consistency()).isTrue();
+    assertThat(c.domain.singleton(dom(1, 2))).isTrue();
+    assertThat(d.domain.singleton(dom(1, 2))).isTrue();
   }
 
   private static IntDomain dom(int... values) {
