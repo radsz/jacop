@@ -39,7 +39,6 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
 
 /**
  * Abstract base for CountValues and CountValuesBounds constraints. Provides shared fields (list,
@@ -85,6 +84,9 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    * take them; a run of counted values inside one interval of a domain costs two updates.
    */
   private final int[] mayBeDifference;
+
+  /** Up to this many counted values within the bounds of a domain are checked one by one. */
+  private static final int SMALL_RANGE = 64;
 
   /** Tracks the first position of undecided variables. */
   protected TimeStamp<Integer> position;
@@ -379,20 +381,29 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     if (domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
       return mayBeRange(from, to);
     }
+    if (from >= to) {
+      return 0;
+    }
     int matched = 0;
-    if (to - from <= domain.getSize()) {
+    if (to - from <= SMALL_RANGE) {
       for (int k = from; k < to; k++) {
         if (domain.contains(sortedValues[k])) {
           matched += mayBeRange(k, k + 1);
         }
       }
-    } else {
-      for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int k = Arrays.binarySearch(sortedValues, from, to, e.nextElement());
-        if (k >= 0) {
-          matched += mayBeRange(k, k + 1);
-        }
+      return matched;
+    }
+    // walk the runs of consecutive domain values that meet the counted values within the bounds
+    int last = Math.min(domain.max(), sortedValues[to - 1]);
+    int value =
+        domain.min() < sortedValues[from] ? domain.nextValue(sortedValues[from] - 1) : domain.min();
+    while (value <= last) {
+      int end = domain.runEnd(value);
+      matched += mayBeRange(lowerBound(value), upperBound(end));
+      if (end >= last) {
+        break;
       }
+      value = domain.nextValue(end);
     }
     return matched;
   }
