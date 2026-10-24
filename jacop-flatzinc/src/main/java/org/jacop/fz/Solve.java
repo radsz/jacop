@@ -733,14 +733,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5).
+   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5) with nogoods
+   * learned at each restart.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
-    boolean nogoods = "1".equals(options.freeConfig("nogoods", "0"));
+    boolean nogoods = "1".equals(options.freeConfig("nogoods", "1"));
     Calculator restarts = restartCalculator;
     if (!options.restartGiven()) {
       int scale = Integer.parseInt(options.freeConfig("scale", "100"));

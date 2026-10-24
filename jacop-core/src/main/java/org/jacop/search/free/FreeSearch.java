@@ -212,8 +212,9 @@ public final class FreeSearch {
   /**
    * Starts building a search with the default free search heuristics: dom/wdeg over the given
    * variables with last conflict, the value of the last solution or else the minimum, geometric
-   * restarts counted in failures, and a restart after each solution for optimisation. For
-   * optimisation, leave the objective out of the variables when it is defined by them.
+   * restarts counted in failures with nogoods learned at each restart, and a restart after each
+   * solution for optimisation. For optimisation, leave the objective out of the variables when it
+   * is defined by them.
    *
    * @param store the store with the model.
    * @param vars the variables to branch on.
@@ -228,7 +229,8 @@ public final class FreeSearch {
         .monitor(domWdeg)
         .monitor(lastConflict)
         .restarts(new GeometricCalculator(DEFAULT_RESTART_BASE, DEFAULT_RESTART_SCALE))
-        .restartOnSolution(true);
+        .restartOnSolution(true)
+        .nogoodsFromRestarts(true);
   }
 
   /**
