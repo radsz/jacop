@@ -565,6 +565,19 @@ class SingleConstraintTest {
     assertThat(groundInverse(LnPeqR::new, 0, 0.25)).isFalse();
   }
 
+  @Test
+  void testEquationSystemRejectsNonSquareSystem() {
+    Store store = new Store();
+    FloatVar x0 = new FloatVar(store, "x0", -1, 1);
+    FloatVar x1 = new FloatVar(store, "x1", -1, 1);
+    FloatVar f = new FloatVar(store, "f", 0, 0);
+    store.impose(new PmulQeqR(x0, x1, f));
+
+    // one equation in two variables threw ArrayIndexOutOfBoundsException in impose
+    assertThatThrownBy(() -> new EquationSystem(store, new FloatVar[] {f}, new FloatVar[] {x0, x1}))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */
   private static void checkInverse(
       BiFunction<FloatVar, FloatVar, Constraint> build, DoubleUnaryOperator f, double[] points) {
