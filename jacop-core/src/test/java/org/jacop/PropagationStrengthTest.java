@@ -38,6 +38,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XmulYeqZ;
@@ -188,6 +189,25 @@ class PropagationStrengthTest {
     x[1].domain.in(store.level, x[1], 2, 2);
     assertThat(store.consistency()).isTrue();
     assertThat(x[0].dom().toString()).isEqualTo("0");
+  }
+
+  @Test
+  void testSeqPrecedeChainFixesWholeChain() {
+
+    // x3 = 3 needs 1 and 2 before it, and 2 can only be at x1, so 1 can only be at x0. The
+    // backward pass overwrote the latest positions of values with domain minima.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", -1, 1),
+      new IntVar(store, "x1", -1, 2),
+      new IntVar(store, "x2", -1, 1),
+      variable(store, "x3", 3)
+    };
+    store.impose(new SeqPrecedeChain(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[0].dom().toString()).isEqualTo("1");
+    assertThat(x[1].dom().toString()).isEqualTo("2");
   }
 
   private static IntVar variable(Store store, String name, int... values) {

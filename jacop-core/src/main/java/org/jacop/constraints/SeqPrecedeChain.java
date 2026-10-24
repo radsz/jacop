@@ -126,12 +126,10 @@ public class SeqPrecedeChain extends Constraint {
     for (int i = n; i >= 1; i--) {
       IntVar xi = x[i - 1];
 
-      last[i] = xi.min();
       if (first[low] == i) {
         xi.domain.inMin(store.level, xi, low);
       }
       if (i <= last[low] && xi.domain.contains(low)) {
-        last[i] = low;
         last[low] = i;
         low--;
         if (low < 0) {
