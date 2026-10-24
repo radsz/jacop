@@ -4740,4 +4740,19 @@ class SingleConstraintTest extends TestHelper {
     assertThatThrownBy(() -> new Sequence(x, new IntervalDomain(1, 1), 0, 0, 0))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  void testStretchForbidsValueWithZeroMaximalLength() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+
+    // value 2 may form stretches of length 0 only, so x must be [1, 1, 1]
+    store.imposeDecomposition(new Stretch(new int[] {1, 2}, new int[] {1, 0}, new int[] {3, 0}, x));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
+  }
 }
