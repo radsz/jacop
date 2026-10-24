@@ -385,6 +385,37 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, items)).isEqualTo(120);
   }
 
+  // Changes made by Binpacking itself are not queued again by the store, and bins affected by its
+  // own pruning were not processed again. Here the propagator fixed item 0 to bin 3 and removed
+  // bin 3 from item 2, but did not process bin 1 again, whose load can then be at most 10.
+  @Test
+  void testBinpackingReachesFixpoint() {
+
+    Store store = new Store();
+    int[][] binDomains = {{1, 3}, {0, 1, 2}, {0, 2, 3}, {0, 1, 2}, {0, 1, 2}, {3}, {1}};
+    IntVar[] items = new IntVar[binDomains.length];
+    for (int i = 0; i < items.length; i++) {
+      items[i] = new IntVar(store, "item" + i);
+      for (int v : binDomains[i]) {
+        items[i].addDom(v, v);
+      }
+    }
+    IntVar[] binLoad = {
+      new IntVar(store, "l0"),
+      new IntVar(store, "l1", 1, 11),
+      new IntVar(store, "l2", 0, 11),
+      new IntVar(store, "l3", 9, 11)
+    };
+    binLoad[0].addDom(0, 2);
+    binLoad[0].addDom(6, 11);
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 1, 3, 5, 8, 5, 1}, 0));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].value()).isEqualTo(3);
+    assertThat(binLoad[3].value()).isEqualTo(10);
+    assertThat(binLoad[1].max()).isEqualTo(10);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

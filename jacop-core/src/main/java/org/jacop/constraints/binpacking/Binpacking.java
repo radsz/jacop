@@ -285,11 +285,43 @@ public class Binpacking extends Constraint
     return d;
   }
 
+  /** Bins to be (re)processed in the current consistency call, indexed from 0. */
+  private BitSet todo = new BitSet();
+
+  /** Removes bin binIdx from an item and schedules the bins whose item sets changed. */
+  private void removeBin(Store store, IntVar b, int binIdx) {
+    if (b.domain.contains(binIdx)) {
+      b.domain.inComplement(store.level, b, binIdx);
+      todo.set(binIdx - minBinNumber);
+      if (b.singleton()) { // the item is now required in its last bin
+        int k = b.value() - minBinNumber;
+        if (k >= 0 && k < load.length) {
+          todo.set(k);
+        }
+      }
+    }
+  }
+
+  /** Puts an item into bin binIdx and schedules every bin it could be in before. */
+  private void assignBin(Store store, IntVar b, int binIdx) {
+    if (!b.singleton()) {
+      for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int k = e.nextElement() - minBinNumber;
+        if (k >= 0 && k < load.length) {
+          todo.set(k);
+        }
+      }
+    }
+    b.domain.inValue(store.level, b, binIdx);
+  }
+
   /** Processes one bin index: load maintenance, tightening, elimination/commitment. */
   private void processBin(Store store, int i) {
     if (i < 0 || i >= load.length) {
       return;
     }
+    int loadMin = load[i].min();
+    int loadMax = load[i].max();
     BinItem[] candidates = new BinItem[item.length];
     int candidatesLength = 0;
     long required = 0;
@@ -314,6 +346,9 @@ public class Binpacking extends Constraint
     }
     applyTighteningBounds(store, i, required, Cj);
     applyEliminationAndCommitment(store, i, binIdx, required, candidates, Cj, candidatesLength);
+    if (load[i].min() != loadMin || load[i].max() != loadMax) {
+      todo.set(i);
+    }
   }
 
   private void applyLoadMaintenanceToCandidates(
@@ -327,9 +362,9 @@ public class Binpacking extends Constraint
     for (int l = 0; l < candidatesLength; l++) {
       BinItem bi = candidates[l];
       if (required + bi.weight() > load[i].max()) {
-        bi.bin().domain.inComplement(store.level, bi.bin(), binIdx);
+        removeBin(store, bi.bin(), binIdx);
       } else if (possible - bi.weight() < load[i].min()) {
-        bi.bin().domain.inValue(store.level, bi.bin(), binIdx);
+        assignBin(store, bi.bin(), binIdx);
       }
     }
   }
@@ -364,10 +399,10 @@ public class Binpacking extends Constraint
           candidateWeightsMinusCurrent,
           load[i].min() - required - candidateWeights[j],
           load[i].max() - required - candidateWeights[j])) {
-        candidates[j].bin().domain.inComplement(store.level, candidates[j].bin(), binIdx);
+        removeBin(store, candidates[j].bin(), binIdx);
       }
       if (noSum(candidateWeightsMinusCurrent, load[i].min() - required, load[i].max() - required)) {
-        candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), binIdx);
+        assignBin(store, candidates[j].bin(), binIdx);
       }
     }
   }
@@ -382,8 +417,14 @@ public class Binpacking extends Constraint
     }
     long s1 = sizeAllItems - allCapacityMax;
     long s2 = sizeAllItems - allCapacityMin;
-    for (IntVar aLoad : load) {
-      aLoad.domain.in(store.level, aLoad, clamp(s1 + aLoad.max()), clamp(s2 + aLoad.min()));
+    for (int i = 0; i < load.length; i++) {
+      IntVar aLoad = load[i];
+      int min = aLoad.min();
+      int max = aLoad.max();
+      aLoad.domain.in(store.level, aLoad, clamp(s1 + max), clamp(s2 + min));
+      if (aLoad.min() != min || aLoad.max() != max) {
+        todo.set(i);
+      }
     }
   }
 
@@ -392,16 +433,23 @@ public class Binpacking extends Constraint
     applyPackAllRule(store);
     boolean pruneLb = lbPruning && lbPruningStamp.value();
     pruneLb = updatePruneLbFlag(pruneLb);
-    store.propagationHasOccurred = false;
+    todo.clear();
     IntervalDomain d = collectChangedDomains();
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
-      processBin(store, i);
+      if (i >= 0 && i < load.length) {
+        todo.set(i);
+      }
     }
-    applyLoadAndSizeCoherence(store);
-    if (store.propagationHasOccurred) {
-      store.addChanged(this);
-    } else if (lbPruning && pruneLb) {
+    // Apply the rules until no bin changes (the changes made here are not queued by the store).
+    do {
+      for (int i = todo.nextSetBit(0); i >= 0; i = todo.nextSetBit(0)) {
+        todo.clear(i);
+        processBin(store, i);
+      }
+      applyLoadAndSizeCoherence(store);
+    } while (!todo.isEmpty());
+    if (lbPruning && pruneLb) {
       lbNumberBins();
     }
   }
