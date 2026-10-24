@@ -4093,6 +4093,43 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cost.value()).isEqualTo(5);
   }
 
+  // A search that assigns its last solution runs consistency again at the level where it started,
+  // after its deeper levels marked arcs as modified. The network did not record arcs modified
+  // again at that level, so it did not restore them when the level was removed and lost solutions.
+  @Test
+  void testNetworkFlowRestoresArcsModifiedAgainAtAnEarlierLevel() {
+
+    int[] counts = new int[2];
+    for (int run = 0; run < 2; run++) {
+      Store store = new Store();
+      IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+      IntVar hard = new IntVar(store, "hard", 0, 2);
+      IntVar soft = new IntVar(store, "soft", 0, 2);
+      IntVar cost = new IntVar(store, "cost", 0, 1);
+      cost.addDom(3, 4);
+      store.imposeDecomposition(
+          new SoftGCC(
+              x,
+              new IntVar[] {hard},
+              new int[] {2},
+              new IntVar[] {soft},
+              cost,
+              ViolationMeasure.VALUE_BASED));
+      IntVar[] vars = {x[0], x[1], hard, soft, cost};
+      if (run == 1) {
+        assertThat(store.consistency()).isTrue();
+        store.setLevel(store.level + 1);
+        x[1].domain.in(store.level, x[1], 3, 3);
+        assertThat(noOfAllSolutions(store, vars)).isEqualTo(9);
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      counts[run] = noOfAllSolutions(store, vars);
+    }
+    assertThat(counts[0]).isEqualTo(38);
+    assertThat(counts[1]).isEqualTo(counts[0]);
+  }
+
   // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
   // lower bound for flows that are not negative.
   @Test
