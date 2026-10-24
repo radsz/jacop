@@ -103,15 +103,14 @@ public class Member extends PrimitiveConstraint {
 
     int start = position.value();
 
+    if (e.singleton()) {
+      consistencyGround(store, start, e.value());
+      return;
+    }
+
     IntDomain d = new IntervalDomain();
-    boolean eGround = e.singleton();
     int numberGround = 0;
     for (int i = start; i < l; i++) {
-
-      if (eGround && x[i].singleton() && x[i].value() == e.value()) {
-        removeConstraint();
-        return;
-      }
 
       if (!x[i].domain.isIntersecting(e.domain)) {
         swap(start, i);
@@ -133,6 +132,27 @@ public class Member extends PrimitiveConstraint {
     if (l - start == numberGround && !e.singleton()) {
       removeConstraint();
       return;
+    }
+
+    handleSingleRemainingVariable(store, start);
+
+    position.update(start);
+  }
+
+  /** Consistency for a fixed e: the same rules as the general case without building the union. */
+  private void consistencyGround(Store store, int start, int value) {
+    for (int i = start; i < l; i++) {
+      if (!x[i].domain.contains(value)) {
+        swap(start, i);
+        start++;
+      } else if (x[i].singleton()) {
+        removeConstraint();
+        return;
+      }
+    }
+
+    if (start == l) {
+      throw Store.failException;
     }
 
     handleSingleRemainingVariable(store, start);
