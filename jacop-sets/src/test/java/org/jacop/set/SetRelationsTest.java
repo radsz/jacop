@@ -40,6 +40,8 @@ import org.jacop.core.Store;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AinS;
+import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.SinA;
 import org.jacop.set.constraints.XeqA;
@@ -168,6 +170,32 @@ class SetRelationsTest {
     assertThat(store.consistency()).isTrue();
     assertThat(a.domain.glb().eq(dom(1, 4))).isTrue();
     assertThat(a.domain.lub().eq(dom(1, 4, 5))).isTrue();
+  }
+
+  @Test
+  void testLexOrderAcceptsAPrefixWhenALaterLubElementIsLarger() {
+    // a = {1} is a prefix of b, while the lub element 3 of a is larger than the element 2 of b
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1, 3)));
+    SetVar b = groundSetVar(store, "b", 1, 2, 3, 4);
+    store.impose(new AleB(a, b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    a.domain.inLubComplement(1, a, 3);
+    assertThat(store.consistency()).isTrue();
+
+    Store store2 = new Store();
+    SetVar c = new SetVar(store2, "c", new BoundSetDomain(dom(1), dom(1, 3)));
+    SetVar d = groundSetVar(store2, "d", 1, 2, 3, 5);
+    store2.impose(new AltB(c, d));
+    assertThat(store2.consistency()).isTrue();
+
+    // b = {2} is before a = {2, 4}, so not (a <= b) holds
+    Store store3 = new Store();
+    SetVar e = groundSetVar(store3, "e", 2, 4);
+    SetVar f = groundSetVar(store3, "f", 2);
+    store3.impose(new Not(new AleB(e, f)));
+    assertThat(store3.consistency()).isTrue();
   }
 
   private static IntDomain dom(int... values) {
