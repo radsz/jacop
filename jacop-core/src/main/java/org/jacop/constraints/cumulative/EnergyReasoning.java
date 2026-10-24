@@ -481,20 +481,9 @@ class EnergyReasoning {
     }
   }
 
-  /**
-   * Time-table edge finding. For every window [a, b) with a an est and b an lct, the energy of the
-   * compulsory parts in the window plus the free energy of the tasks inside the window must fit
-   * into the capacity (otherwise it fails), and the task outside the window that needs most energy
-   * in it when started at its est is pushed so that it fits.
-   *
-   * @param ts the tasks of the view, as loaded.
-   * @param n the number of loaded tasks.
-   * @param capacity the maximal capacity.
-   * @param store the store.
-   */
-  void timeTableEdgeFind(TaskView[] ts, int n, long capacity, Store store) {
-    buildProfile(n, null);
-    // profile energy before each est, sweeping the profile in est order
+  // the profile energy before each est and, over the tasks in lct order, the free energy up to each
+  // task and the largest free energy after it, which bounds what a task pushed by a window needs
+  private void prepareEdgeFind(int n, long capacity) {
     int k = -1;
     for (int p = 0; p < n; p++) {
       int i = estOrder[p];
@@ -511,17 +500,33 @@ class EnergyReasoning {
       sum += (long) res[i] * freeDuration[i];
       freeEnergyByLct[q] = sum;
     }
-    long maxFree = 0;
+    // with the profile within the capacity, moving a window start down by d adds at most
+    // capacity * d to the profile energy in the window and exactly capacity * d to its capacity;
+    // otherwise the scan of window starts must not stop early
+    long maxFree = profileMaxHeight <= capacity ? 0 : Long.MAX_VALUE;
     for (int q = n - 1; q >= 0; q--) {
       maxFreeEnergyAfter[q] = maxFree;
       int i = lctOrder[q];
       maxFree = Math.max(maxFree, (long) res[i] * freeDuration[i]);
     }
-    // with the profile within the capacity, moving a down by d adds at most capacity * d to the
-    // profile energy in [a, b) and exactly capacity * d to the capacity of the window
-    boolean canStopEarly = profileMaxHeight <= capacity;
+  }
 
-    k = profileSize - 1;
+  /**
+   * Time-table edge finding. For every window [a, b) with a an est and b an lct, the energy of the
+   * compulsory parts in the window plus the free energy of the tasks inside the window must fit
+   * into the capacity (otherwise it fails), and the task outside the window that needs most energy
+   * in it when started at its est is pushed so that it fits.
+   *
+   * @param ts the tasks of the view, as loaded.
+   * @param n the number of loaded tasks.
+   * @param capacity the maximal capacity.
+   * @param store the store.
+   */
+  void timeTableEdgeFind(TaskView[] ts, int n, long capacity, Store store) {
+    buildProfile(n, null);
+    prepareEdgeFind(n, capacity);
+
+    int k = profileSize - 1;
     // tasks estOrder[0..last] have est < b; b decreases with q
     int last = n - 1;
     for (int q = n - 1; q >= 0; q--) {
@@ -558,9 +563,8 @@ class EnergyReasoning {
         if (available < 0) {
           throw Store.failException;
         }
-        if (canStopEarly
-            && capacity * (b - a) - freeEnergyByLct[q] - (energyBeforeB - energyBeforeEst[j])
-                >= maxFreeEnergyAfter[q]) {
+        if (capacity * (b - a) - freeEnergyByLct[q] - (energyBeforeB - energyBeforeEst[j])
+            >= maxFreeEnergyAfter[q]) {
           // neither this a nor a smaller one can fail or push a task: the free energy of the tasks
           // in [a', b) is at most that of all tasks ending by b, and a task ending after b needs
           // at most its own free energy
@@ -594,19 +598,26 @@ class EnergyReasoning {
    * @param capacity the maximal capacity.
    * @param store the store.
    */
+  // pushes after from the tasks other than i that use more than gap and cover [from, to] when they
+  // start at any time up to from, scanning from the largest resource use down
+  private void pushAfter(int i, int from, int to, long gap, int n) {
+    for (int p = n - 1; p >= 0 && res[resOrder[p]] > gap; p--) {
+      int j = resOrder[p];
+      int freeEnd = est[j] + dur[j] - Math.max(0, ect[j] - lst[j]);
+      if (j != i && update[j] <= from && est[j] <= from && to < freeEnd) {
+        update[j] = from + 1;
+      }
+    }
+  }
+
   void timeTableDisjunctive(TaskView[] ts, int n, long capacity, Store store) {
     buildProfile(n, null);
-    // the two largest resource uses
     int maxRes = 0;
     int secondRes = 0;
     for (int i = 0; i < n; i++) {
       update[i] = est[i];
-      if (res[i] > maxRes) {
-        secondRes = maxRes;
-        maxRes = res[i];
-      } else if (res[i] > secondRes) {
-        secondRes = res[i];
-      }
+      secondRes = Math.max(secondRes, Math.min(maxRes, res[i]));
+      maxRes = Math.max(maxRes, res[i]);
     }
     // a pusher i and a pushed j need res_i + res_j + load > capacity, with load at most the profile
     if ((long) maxRes + secondRes + profileMaxHeight <= capacity) {
@@ -632,32 +643,13 @@ class EnergyReasoning {
         to = lst[i];
       }
       // the load is at most the height at from, so check that first
-      long load = height(from);
-      if (capacity - res[i] - load >= maxRes) {
-        continue;
-      }
-      if (lst[i] < ect[i] || lst[i] - ect[i] < dur[i]) {
-        load = Math.min(load, height(to));
-      } else {
-        load = minHeight(from, to);
-      }
-      long gap = capacity - res[i] - load;
-      if (gap >= maxRes) {
-        continue;
-      }
-      // only tasks using more than the gap, so from the largest resource use down
-      for (int p = n - 1; p >= 0; p--) {
-        int j = resOrder[p];
-        if (res[j] <= gap) {
-          break;
-        }
-        if (j == i || update[j] > from) {
-          continue;
-        }
-        int freeEnd = est[j] + dur[j] - Math.max(0, ect[j] - lst[j]);
-        if (est[j] <= from && to < freeEnd) {
-          update[j] = from + 1;
-        }
+      long gap = capacity - res[i] - height(from);
+      if (gap < maxRes) {
+        long load =
+            lst[i] < ect[i] || lst[i] - ect[i] < dur[i]
+                ? Math.min(height(from), height(to))
+                : minHeight(from, to);
+        pushAfter(i, from, to, capacity - res[i] - load, n);
       }
     }
 

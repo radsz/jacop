@@ -257,12 +257,35 @@ public class Cumulative extends CumulativeBasic {
     adaptiveEnergy = adaptive;
   }
 
-  private boolean runRule(int rule) {
+  // runs a time-table energy rule in both directions unless it is being skipped; true if it pruned
+  private boolean energyRule(int rule, TaskView[] tn, TaskView[] tr, long capacity, Store store) {
     if (skipCalls[rule] > 0) {
       skipCalls[rule]--;
       return false;
     }
-    return true;
+    int n = tn.length;
+    // a failure counts as pruning
+    boolean pruned = true;
+    try {
+      runEnergyRule(rule, energy, tn, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        energyReversed.load(tr, n);
+      }
+      runEnergyRule(rule, energyReversed, tr, n, capacity, store);
+      pruned = store.propagationHasOccurred;
+    } finally {
+      ruleRan(rule, pruned);
+    }
+    return pruned;
+  }
+
+  private static void runEnergyRule(
+      int rule, EnergyReasoning e, TaskView[] ts, int n, long capacity, Store store) {
+    if (rule == TTDR) {
+      e.timeTableDisjunctive(ts, n, capacity, store);
+    } else {
+      e.timeTableEdgeFind(ts, n, capacity, store);
+    }
   }
 
   private void ruleRan(int rule, boolean pruned) {
@@ -307,37 +330,11 @@ public class Cumulative extends CumulativeBasic {
     if (overload) {
       energy.overload(capacity, n);
     }
-    if (doTimeTableDisjunctive && runRule(TTDR)) {
-      boolean pruned = true;
-      try {
-        energy.timeTableDisjunctive(tn, n, capacity, store);
-        if (store.propagationHasOccurred) {
-          energyReversed.load(tr, n);
-        }
-        energyReversed.timeTableDisjunctive(tr, n, capacity, store);
-        pruned = store.propagationHasOccurred;
-      } finally {
-        ruleRan(TTDR, pruned);
-      }
-      if (pruned) {
-        return;
-      }
+    if (doTimeTableDisjunctive && energyRule(TTDR, tn, tr, capacity, store)) {
+      return;
     }
-    if (doTimeTableEdgeFind && runRule(TTEF)) {
-      boolean pruned = true;
-      try {
-        energy.timeTableEdgeFind(tn, n, capacity, store);
-        if (store.propagationHasOccurred) {
-          energyReversed.load(tr, n);
-        }
-        energyReversed.timeTableEdgeFind(tr, n, capacity, store);
-        pruned = store.propagationHasOccurred;
-      } finally {
-        ruleRan(TTEF, pruned);
-      }
-      if (pruned) {
-        return;
-      }
+    if (doTimeTableEdgeFind && energyRule(TTEF, tn, tr, capacity, store)) {
+      return;
     }
     if (doHorizontallyElasticEdgeFind) {
       horizontallyElastic.filter(tn, n, capacity, store);
