@@ -1962,10 +1962,6 @@ final class ImposeGroundingCases {
     return Arrays.stream(p).max().orElse(-1) + 1;
   }
 
-  static IntVar[] pick(IntVar[] x, int[] p) {
-    return Arrays.stream(p).mapToObj(i -> x[i]).toArray(IntVar[]::new);
-  }
-
   static int[][] domains(Random random, int n, int lo, int hi) {
     int[][] domains = new int[n][];
     for (int i = 0; i < n; i++) {
