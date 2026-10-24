@@ -61,6 +61,10 @@ public abstract class AbstractPcompC extends PrimitiveConstraint {
   protected AbstractPcompC(AtomicInteger idNum, FloatVar p, double c) {
 
     checkInputForNullness("p", new Object[] {p});
+    if (Double.isNaN(c)) {
+      throw new IllegalArgumentException(
+          "Constraint " + getClass().getSimpleName() + " has constant c that is NaN.");
+    }
 
     numberId = idNum.incrementAndGet();
 

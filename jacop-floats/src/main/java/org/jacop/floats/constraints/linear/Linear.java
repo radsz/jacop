@@ -178,9 +178,23 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     this.store = store;
     queueIndex = 1;
 
+    checkInputForNullness("list", list);
+    if (weights == null) {
+      throw new IllegalArgumentException("Constraint Linear has parameter weights that is null.");
+    }
     if (list.length != weights.length) {
       throw new IllegalArgumentException(
           "Constraint Linear has parameters list and weights of different length.");
+    }
+    for (double w : weights) {
+      if (!Double.isFinite(w)) {
+        throw new IllegalArgumentException(
+            "Constraint Linear has weight " + w + " that is not finite.");
+      }
+    }
+    if (!Double.isFinite(sum)) {
+      throw new IllegalArgumentException(
+          "Constraint Linear has sum " + sum + " that is not finite.");
     }
 
     numberId = idNumber.incrementAndGet();
@@ -570,10 +584,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       case ">=", "=>" -> {
         return GE;
       }
-      default -> {
-        System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
-        return EQ;
-      }
+      case null, default ->
+          throw new IllegalArgumentException(
+              "Wrong relation symbol in Linear constraint " + r + ".");
     }
   }
 

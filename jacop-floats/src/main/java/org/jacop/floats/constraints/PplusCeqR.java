@@ -70,6 +70,14 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
   public PplusCeqR(FloatVar p, double c, FloatVar r) {
 
     checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
+    if (!Double.isFinite(c)) {
+      throw new IllegalArgumentException(
+          "Constraint "
+              + getClass().getSimpleName()
+              + " has constant c "
+              + c
+              + " that is not finite.");
+    }
 
     numberId = idNumber.incrementAndGet();
 

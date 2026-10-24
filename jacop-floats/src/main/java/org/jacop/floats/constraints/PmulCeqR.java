@@ -71,6 +71,14 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   public PmulCeqR(FloatVar p, double c, FloatVar r) {
 
     checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
+    if (!Double.isFinite(c)) {
+      throw new IllegalArgumentException(
+          "Constraint "
+              + getClass().getSimpleName()
+              + " has constant c "
+              + c
+              + " that is not finite.");
+    }
 
     numberId = idNumber.incrementAndGet();
 
