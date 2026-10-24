@@ -95,7 +95,11 @@ public final class CdclMain {
           solver.numVars(), (parsed - start) / 1e9, (System.nanoTime() - parsed) / 1e9);
       out.printf(
           "c conflicts %d, decisions %d, propagations %d, restarts %d, reductions %d%n",
-          solver.conflicts, solver.decisions, solver.propagations, solver.restarts, solver.reductions);
+          solver.conflicts,
+          solver.decisions,
+          solver.propagations,
+          solver.restarts,
+          solver.reductions);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

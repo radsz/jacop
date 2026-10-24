@@ -48,7 +48,9 @@ final class VarHeap {
   private int[] index = new int[0];
   private double[] activity;
 
-  /** Makes room for variables 0..n-1 and points the heap at the (possibly reallocated) activities. */
+  /**
+   * Makes room for variables 0..n-1 and points the heap at the (possibly reallocated) activities.
+   */
   void grow(int n, double[] activity) {
     this.activity = activity;
     if (index.length < n) {

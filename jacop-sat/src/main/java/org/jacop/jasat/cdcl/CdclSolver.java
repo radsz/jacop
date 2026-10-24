@@ -39,9 +39,9 @@ import java.util.Arrays;
  * <p>Literals are internal integers {@code 2*var + sign} (sign 1 for a negative literal); the
  * public API takes DIMACS literals (variables from 1, negative for negation). Clauses of three or
  * more literals live in one {@code int[]} arena: a header (size, flags with LBD, activity, saved
- * search position) followed by the literals. Binary clauses are kept only in the watch lists.
- * Every watch entry is a pair (blocker literal, clause reference), with {@link #BINARY} as the
- * reference of a binary clause.
+ * search position) followed by the literals. Binary clauses are kept only in the watch lists. Every
+ * watch entry is a pair (blocker literal, clause reference), with {@link #BINARY} as the reference
+ * of a binary clause.
  *
  * <p>Search: first-UIP learning with recursive minimisation, LBD, EVSIDS with phase saving,
  * alternating focused mode (Glucose-style LBD restarts) and stable mode (Luby restarts), a
@@ -384,7 +384,9 @@ public final class CdclSolver {
     return failed.clone();
   }
 
-  /** Asks a running {@link #solve} to stop and return {@link #UNKNOWN}; safe from another thread. */
+  /**
+   * Asks a running {@link #solve} to stop and return {@link #UNKNOWN}; safe from another thread.
+   */
   public void interrupt() {
     interrupted = true;
   }
@@ -1009,7 +1011,7 @@ public final class CdclSolver {
         pendingRef = BINARY;
       } else {
         rewatch(conflictRef);
-        setPending(mem, conflictRef + HEADER, mem[conflictRef + SIZE]);
+        setPendingCopy(mem, conflictRef + HEADER, mem[conflictRef + SIZE]);
         pendingRef = conflictRef;
       }
       return false;
@@ -1202,7 +1204,12 @@ public final class CdclSolver {
     for (int i = 0; i < trailSize && level[trail[i] >> 1] == 0; i++) {
       fixed++;
     }
-    out.write("p cnf " + numVars + " " + (fixed + numUnits + numOriginalBinaries / 2 + numOriginals) + "\n");
+    out.write(
+        "p cnf "
+            + numVars
+            + " "
+            + (fixed + numUnits + numOriginalBinaries / 2 + numOriginals)
+            + "\n");
     for (int i = 0; i < fixed; i++) {
       out.write(toDimacs(trail[i]) + " 0\n");
     }
@@ -1240,7 +1247,7 @@ public final class CdclSolver {
   }
 
   /** Copies an arena clause into the pending clause (attached). */
-  private void setPending(int[] from, int offset, int size) {
+  private void setPendingCopy(int[] from, int offset, int size) {
     setPending(Arrays.copyOfRange(from, offset, offset + size), size, true);
   }
 
@@ -1315,7 +1322,10 @@ public final class CdclSolver {
     }
   }
 
-  /** Moves the two best literals to the front: true, then unassigned, then false at the highest level. */
+  /**
+   * Moves the two best literals to the front: true, then unassigned, then false at the highest
+   * level.
+   */
   private void orderForWatches(int[] c) {
     for (int pos = 0; pos < 2 && pos < c.length; pos++) {
       int best = pos;
@@ -1628,7 +1638,9 @@ public final class CdclSolver {
     simplifyAssigns = trailSize;
   }
 
-  /** Drops deleted clauses from the clause lists and watches, compacting the arena if worthwhile. */
+  /**
+   * Drops deleted clauses from the clause lists and watches, compacting the arena if worthwhile.
+   */
   private void purge() {
     numOriginals = filterDeleted(originals, numOriginals);
     numLearnts = filterDeleted(learnts, numLearnts);
