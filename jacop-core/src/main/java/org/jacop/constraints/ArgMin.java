@@ -215,25 +215,22 @@ public class ArgMin extends AbstractArgMinMax {
 
   @Override
   public boolean satisfied() {
-
-    boolean sat = extremeIndex.singleton();
-
-    if (!sat) {
+    // entailed when the index is fixed to a position that holds the first minimum: every earlier
+    // element is strictly larger and every later one is larger or equal, whatever their values
+    if (!extremeIndex.singleton()) {
       return false;
     }
-
-    int minVal = list[extremeIndex.value() - 1 - indexOffset].value();
-    int i = 0;
-    int eq = 0;
-    while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() >= minVal) {
-        eq++;
-      }
-      sat = list[i].min() >= minVal;
-      i++;
+    int idx = extremeIndex.value() - 1 - indexOffset;
+    if (idx < 0 || idx >= list.length || !list[idx].singleton()) {
+      return false;
     }
-
-    return sat && eq == list.length;
+    int extreme = list[idx].value();
+    for (int i = 0; i < list.length; i++) {
+      if (list[i].min() < (i < idx ? extreme + 1 : extreme)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
