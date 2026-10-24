@@ -91,6 +91,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
@@ -4563,6 +4564,42 @@ class SingleConstraintTest extends TestHelper {
       assertThat(x.max()).as(c.toString()).isEqualTo(0);
       assertThat(z.singleton()).as(c.toString()).isTrue();
     }
+  }
+
+  @Test
+  void memberIncludedAgainDuringSearchSurvivesBacktracking() {
+    // A wrapper includes its nested constraints each time it is imposed, also at a search level,
+    // and calls their consistency without imposing them. include() created a new position stamp
+    // each time, so after backtracking below that level the stamp had no value and consistency
+    // threw ArrayIndexOutOfBoundsException.
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 3);
+    IntVar e = new IntVar(store, "e", 3, 3);
+    x[1].addDom(3, 3);
+    Member member = new Member(x, e);
+    member.include(store);
+    store.setLevel(1);
+    member.include(store);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    member.consistency(store);
+    assertThat(x[1].singleton(3)).isTrue();
+
+    // included first at a search level, its stamp is gone after backtracking and is replaced
+    Store other = new Store();
+    IntVar[] y = getIntVars(other, "y", 3, 3);
+    IntVar f = new IntVar(other, "f", 3, 3);
+    y[1].addDom(3, 3);
+    Member late = new Member(y, f);
+    other.setLevel(1);
+    late.include(other);
+    other.removeLevel(1);
+    other.setLevel(0);
+    late.include(other);
+
+    late.consistency(other);
+    assertThat(y[1].singleton(3)).isTrue();
   }
 
   @Test

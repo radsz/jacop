@@ -238,7 +238,12 @@ public class Member extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+    // Wrappers include their nested constraints again whenever they are imposed, also during
+    // search. Keep a stamp that still has a value, as one created at a search level loses it on
+    // backtracking while the constraint may still be used below that level.
+    if (position == null || position.pointer4Last < 0) {
+      position = new TimeStamp<>(store, 0);
+    }
   }
 
   @Override
