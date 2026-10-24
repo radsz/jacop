@@ -137,7 +137,12 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+    // IfThen and IfThenElse re-impose a nested constraint at a search level; a new time stamp
+    // created there would be emptied on backtracking while the constraint is still nested. A
+    // stamp emptied by backtracking (first included at a search level) is made again.
+    if (position == null || position.pointer4Last < 0) {
+      position = new TimeStamp<>(store, 0);
+    }
   }
 
   /**

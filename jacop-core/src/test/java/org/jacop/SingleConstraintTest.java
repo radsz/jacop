@@ -66,8 +66,10 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
+import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
@@ -104,6 +106,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
+import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
@@ -5363,6 +5366,79 @@ class SingleConstraintTest extends TestHelper {
       assertThat(c.notSatisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(!holds);
       assertThat(store.numberConstraints()).isEqualTo(constraints);
       assertThat(store.consistency()).isEqualTo(holds);
+    }
+  }
+
+  @Test
+  void testBoolVectorsUnderIfThenAfterBacktracking() {
+    // IfThen imposes its consequence at a search level; that used to re-create the backtrackable
+    // position of AndBoolVector, OrBoolVector and BoolClause, which was emptied on backtracking
+    // while the consequence was still nested in IfThen (ArrayIndexOutOfBoundsException)
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.impose(new IfThen(new XeqC(b, 1), consequence));
+      // b = 0: all 16 assignments; b = 1: 8 for AndBoolVector and OrBoolVector, 15 for the clause
+      int expected = 16 + (kind == 2 ? 15 : 8);
+      assertThat(countInOrder(store, b, x[0], x[1], x[2], r))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+      // and again with b = 1 tried first, so the nested constraint is used after backtracking
+      store = new Store();
+      IntVar nb = new IntVar(store, "nb", 0, 1);
+      IntVar[] y = new IntVar[3];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, 0, 1);
+      }
+      IntVar s = new IntVar(store, "s", 0, 1);
+      consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(y, s);
+            case 1 -> new OrBoolVector(y, s);
+            default -> new BoolClause(y, new IntVar[] {s});
+          };
+      store.impose(new IfThen(new XeqC(nb, 0), consequence));
+      assertThat(countInOrder(store, nb, y[0], y[1], y[2], s))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testBoolVectorsReimposedAfterBacktrackingFromTheirFirstImpose() {
+    // the other order: first imposed at a search level, backtracked, imposed again
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint c =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.setLevel(1);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      store.removeLevel(1);
+      store.setLevel(1);
+      store.impose(c);
+      int expected = kind == 2 ? 15 : 8;
+      assertThat(countInOrder(store, x[0], x[1], x[2], r)).as("kind " + kind).isEqualTo(expected);
     }
   }
 
