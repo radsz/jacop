@@ -5088,6 +5088,23 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void imposedIfThenAndIfThenElseAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 1, 1);
+    IfThen ifThen = new IfThen(new XeqC(x, 1), new XeqC(y, 1));
+    IfThenElse ifThenElse = new IfThenElse(new XeqC(x, 1), new XeqC(y, 1), new XeqC(y, 0));
+    store.impose(ifThen);
+    store.impose(ifThenElse);
+    int constraints = store.numberConstraints();
+    assertThat(ifThen.satisfied()).isTrue();
+    assertThat(ifThenElse.satisfied()).isTrue();
+    // satisfied() only answers; it does not impose the branch
+    assertThat(ifThenElse.satisfied()).isTrue();
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+  }
+
+  @Test
   void ifThenPropagatesWithoutImposingItsParts() {
     // x = 1 => (y = 1 or z = 1), decided at a search level: the consequence is propagated in
     // place, and after backtracking all solutions are found again

@@ -155,12 +155,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public boolean satisfied() {
-
-    if (imposed) {
-      return condC.notSatisfied();
-    } else {
-      return condC.satisfied() && thenC.satisfied() || condC.notSatisfied();
-    }
+    return condC.notSatisfied() || condC.satisfied() && thenC.satisfied();
   }
 
   @Override

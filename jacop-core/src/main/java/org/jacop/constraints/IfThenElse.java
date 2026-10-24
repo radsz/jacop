@@ -207,22 +207,6 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
   @Override
   public boolean satisfied() {
-
-    if (imposed) {
-
-      if (condC.satisfied()) {
-        this.removeConstraint();
-        store.impose(thenC);
-        return false;
-      }
-
-      if (condC.notSatisfied()) {
-        this.removeConstraint();
-        store.impose(elseC);
-        return false;
-      }
-    }
-
     return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied() && elseC.satisfied());
   }
 
