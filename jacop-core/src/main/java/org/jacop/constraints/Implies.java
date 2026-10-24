@@ -36,6 +36,7 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.QueueForward;
 
 /**
  * Constraint b {@literal =>} c (implication or half-reification).
@@ -50,6 +51,8 @@ public class Implies extends AbstractReifiedConstraint {
   boolean imposed;
   Store store;
 
+  private final QueueForward<PrimitiveConstraint> queueForward;
+
   /**
    * It constructs ifthen constraint.
    *
@@ -62,6 +65,7 @@ public class Implies extends AbstractReifiedConstraint {
     numberId = idNumber.incrementAndGet();
     setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
     setConstraintScope(c);
+    queueForward = new QueueForward<>(c, arguments());
     this.queueIndex = c.queueIndex;
   }
 
@@ -121,5 +125,10 @@ public class Implies extends AbstractReifiedConstraint {
   public String toString() {
 
     return id() + " : Implies(" + b + ", " + c + " )";
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+    queueForward.queueForward(level, variable);
   }
 }

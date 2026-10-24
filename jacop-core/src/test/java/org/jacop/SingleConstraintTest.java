@@ -65,10 +65,13 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.And;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
@@ -87,6 +90,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
@@ -98,6 +102,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
@@ -5002,6 +5007,28 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Knapsack(new int[] {2, 1}, new int[] {2, 2}, quantity, capacity, profit));
 
     assertThat(noOfAllSolutions(store, quantity, new IntVar[] {capacity, profit})).isZero();
+  }
+
+  /**
+   * Imposes a wrapper around And(x0 {@literal <} x1, x0 = x1) with x0 in 0..1 and x1 in 0..2 and
+   * the constants 0 and 1, and runs the root consistency. One pass of the And fixes x0 = x1 = 1, so
+   * only a second pass, started by the variable events the wrapper forwards, finds the conflict.
+   */
+  private static boolean consistentWithNestedAnd(
+      BiFunction<PrimitiveConstraint, IntVar[], Constraint> wrapper) {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 2);
+    IntVar[] zeroOne = {new IntVar(store, "zero", 0, 0), new IntVar(store, "one", 1, 1)};
+    store.impose(wrapper.apply(new And(new XltY(x0, x1), new XeqY(x0, x1)), zeroOne));
+    return store.consistency();
+  }
+
+  @Test
+  void impliesForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new And(new PrimitiveConstraint[] {and})))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
