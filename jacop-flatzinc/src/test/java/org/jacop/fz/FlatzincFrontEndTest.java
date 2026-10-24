@@ -563,6 +563,26 @@ class FlatzincFrontEndTest {
       constraint int_ne(x, z);
       solve satisfy;
       """,
+      // annotated searches, interleaved with free search
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve :: int_search([y, x], input_order, indomain_max, complete) maximize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      solve :: seq_search([bool_search([b], input_order, indomain_max, complete),
+                           int_search([y], input_order, indomain_max, complete)]) satisfy;
+      """,
       // sets
       """
       var set of 1..3: s :: output_var;
@@ -574,7 +594,14 @@ class FlatzincFrontEndTest {
     };
     String[][] engines = {
       {"--free-engine", "new"},
-      {"--free-engine", "new", "--restart", "luby", "--restart-scale", "1"}
+      {"--free-engine", "new", "--restart", "luby", "--restart-scale", "1"},
+      {"--free-engine", "new", "--restart-scale", "1", "--free-config", "interleave=solution"},
+      {
+        "--free-engine",
+        "new",
+        "--free-config",
+        "heuristic=afc,lc=0,phase=0,restarts=none,interleave=none"
+      }
     };
     for (String model : models) {
       boolean optimisation = model.contains("minimize") || model.contains("maximize");

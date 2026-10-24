@@ -87,6 +87,14 @@ public final class FreeSearch {
     UNKNOWN
   }
 
+  /** When a search with two branchings uses the alternative one. */
+  public enum Alternation {
+    /** Runs alternate between the two branchings, starting with the alternative one. */
+    EVERY_RESTART,
+    /** The alternative branching is used until the first solution, the main one afterwards. */
+    UNTIL_FIRST_SOLUTION
+  }
+
   /** The reason a run ended. */
   private enum RunEnd {
     EXHAUSTED,
@@ -105,7 +113,10 @@ public final class FreeSearch {
   }
 
   private final Store store;
-  private final SelectChoicePoint<? extends Var> select;
+  private final SelectChoicePoint<? extends Var> mainSelect;
+  private final SelectChoicePoint<? extends Var> alternative;
+  private final Alternation alternation;
+  private SelectChoicePoint<? extends Var> select;
   private final IntVar cost;
   private final boolean maximize;
   private final Calculator restarts;
@@ -140,7 +151,10 @@ public final class FreeSearch {
 
   private FreeSearch(Builder builder) {
     store = builder.store;
-    select = builder.select;
+    mainSelect = builder.select;
+    alternative = builder.alternative;
+    alternation = builder.alternation;
+    select = mainSelect;
     cost = builder.cost;
     maximize = builder.maximize;
     allSolutions = builder.allSolutions && cost == null;
@@ -203,6 +217,7 @@ public final class FreeSearch {
   private boolean runs() {
     while (true) {
       runFailures = 0;
+      select = branchingOfRun();
       RunEnd end = run();
       if (end == RunEnd.EXHAUSTED) {
         return true;
@@ -219,6 +234,15 @@ public final class FreeSearch {
         restarts.newLimit();
       }
     }
+  }
+
+  private SelectChoicePoint<? extends Var> branchingOfRun() {
+    if (alternative == null) {
+      return mainSelect;
+    }
+    boolean useAlternative =
+        alternation == Alternation.EVERY_RESTART ? restartCount % 2 == 0 : solutions == 0;
+    return useAlternative ? alternative : mainSelect;
   }
 
   private RunEnd run() {
@@ -588,6 +612,8 @@ public final class FreeSearch {
 
     private final Store store;
     private final SelectChoicePoint<? extends Var> select;
+    private SelectChoicePoint<? extends Var> alternative;
+    private Alternation alternation;
     private IntVar cost;
     private boolean maximize;
     private Calculator restarts;
@@ -626,6 +652,21 @@ public final class FreeSearch {
     public Builder maximize(IntVar cost) {
       this.cost = cost;
       this.maximize = true;
+      return this;
+    }
+
+    /**
+     * Interleaves another branching with the main one across restarts, for example the search
+     * annotation of a model with free search. The alternative branching must fix all the variables
+     * that the main one fixes.
+     *
+     * @param select the alternative branching.
+     * @param when when the alternative branching is used.
+     * @return this builder.
+     */
+    public Builder alternateWith(SelectChoicePoint<? extends Var> select, Alternation when) {
+      this.alternative = select;
+      this.alternation = when;
       return this;
     }
 

@@ -410,6 +410,41 @@ class FreeSearchTest {
   }
 
   @Test
+  void alternatingBranchingsKeepTheOptimum() {
+    Random rnd = new Random(5);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (FreeSearch.Alternation when : FreeSearch.Alternation.values()) {
+        Model model = new Model(instance);
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+        // the alternative labels x only; the main branching completes it
+        SelectChoicePoint<? extends Var> alternative =
+            new SequenceSelect(
+                List.of(new SimpleSelect<>(model.x, null, new IndomainMax<>()), domWdeg));
+        FreeSearch search =
+            FreeSearch.builder(model.store, domWdeg)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .alternateWith(alternative, when)
+                .restarts(new LubyCalculator(1))
+                .restartOnSolution(true)
+                .minimize(model.cost)
+                .onSolution(s -> model.checkSolution())
+                .build();
+        Status status = search.solve();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status);
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(reference[1], search.getCostValue(), instance.toString());
+        }
+      }
+    }
+  }
+
+  @Test
   void limitsStopTheSearchWithoutAProof() {
     Random rnd = new Random(4);
     for (int k = 0; k < INSTANCES; k++) {

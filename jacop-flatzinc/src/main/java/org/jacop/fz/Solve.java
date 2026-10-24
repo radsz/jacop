@@ -127,6 +127,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // free search with the FreeSearch engine
   FreeSearch freeSearch;
   FreeSearch.Status freeSearchStatus;
+  // the search annotation of the model, interleaved with free search
+  SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
   boolean singleSearch;
   boolean result;
@@ -298,6 +300,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     si.searchParameters(node, 0);
     ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(1);
     solveKind = getKind(kind.getKind());
+    annotatedSearch = si;
     runSearchForSingleAnnotation(opt, kind, solveKind, si, node);
   }
 
@@ -308,6 +311,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
 
     if (options.freeSearch()) {
+      if (!nsi.isEmpty()) {
+        annotatedSearch = new SearchItem<>(store, dictionary);
+        annotatedSearch.setSearchType(SEQ_SEARCH);
+        for (SearchItem<T> se : nsi) {
+          annotatedSearch.addSearch(se);
+        }
+      }
       ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
       solveKind = getKind(kind.getKind());
       run_single_search(solveKind, kind, null);
@@ -787,14 +797,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
     }
 
+    SequenceSelect free = new SequenceSelect(selects);
     FreeSearch.Builder builder =
-        FreeSearch.builder(store, new SequenceSelect(selects))
+        FreeSearch.builder(store, free)
             .restarts(restarts)
             .restartOnSolution(restartOnSolution)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
     for (SearchMonitor m : monitors) {
       builder.monitor(m);
+    }
+    String interleave = options.freeConfig("interleave", "restart");
+    SelectChoicePoint<? extends Var> annotated =
+        "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
+    if (annotated != null) {
+      // free search completes what the annotation leaves unfixed
+      builder.alternateWith(
+          new SequenceSelect(List.of(annotated, free)),
+          "solution".equals(interleave)
+              ? FreeSearch.Alternation.UNTIL_FIRST_SOLUTION
+              : FreeSearch.Alternation.EVERY_RESTART);
     }
     if (options.getTimeOut() > 0) {
       builder.timeLimit(Duration.ofMillis(options.getTimeOut()));
@@ -808,6 +830,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     freeSearchStatus = freeSearch.solve();
     return freeSearch.getSolutions() > 0;
+  }
+
+  /**
+   * The branching of a search annotation, or null when there is none or it cannot be expressed as a
+   * selection (priority search).
+   */
+  private SelectChoicePoint<? extends Var> annotationSelect(SearchItem<T> item) {
+    if (item == null || item.type() == null) {
+      return null;
+    }
+    return switch (item.type()) {
+      case INT_SEARCH, BOOL_SEARCH -> item.getIntSelect();
+      case SET_SEARCH -> item.getSetSelect();
+      case FLOAT_SEARCH -> item.getFloatSelect();
+      case WARM_START -> item.getWarmStartSelect();
+      case SEQ_SEARCH -> {
+        List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+        for (SearchItem<T> sub : item.getSearchItems()) {
+          SelectChoicePoint<? extends Var> s = annotationSelect(sub);
+          if (s == null) {
+            yield null;
+          }
+          selects.add(s);
+        }
+        yield selects.isEmpty() ? null : new SequenceSelect(selects);
+      }
+      default -> null;
+    };
   }
 
   /**
