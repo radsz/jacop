@@ -2467,6 +2467,108 @@ class SingleConstraintTest extends TestHelper {
     assertThat(profit.max()).isEqualTo(33);
   }
 
+  /**
+   * The maximal profit of the linear relaxation (Dantzig bound) when item skip is left out, the
+   * other quantities lie in their bounds and the weight is at most capacity; minus infinity if the
+   * minimal quantities exceed the capacity.
+   */
+  private static double knapsackRelaxation(
+      int[] weights, int[] profits, IntVar[] vars, int skip, double capacity) {
+    double profit = 0;
+    List<Integer> order = new ArrayList<>();
+    for (int i = 0; i < weights.length; i++) {
+      if (i != skip) {
+        capacity -= (double) vars[i].min() * weights[i];
+        profit += (double) vars[i].min() * profits[i];
+        order.add(i);
+      }
+    }
+    if (capacity < -1e-9) {
+      return Double.NEGATIVE_INFINITY;
+    }
+    order.sort(
+        (a, b) -> Long.compare((long) profits[b] * weights[a], (long) profits[a] * weights[b]));
+    for (int i : order) {
+      double take = Math.min(vars[i].max() - vars[i].min(), capacity / weights[i]);
+      profit += take * profits[i];
+      capacity -= take * weights[i];
+    }
+    return profit;
+  }
+
+  @Test
+  void knapsackReachesRelaxationConsistencyAndDominatesLinearDecomposition() {
+    // Every bound of a quantity must have a support in the linear relaxation (capacity at most its
+    // maximum, profit at least its minimum), as in Fahle and Sellmann or Katriel et al., including
+    // the critical item. The pruning must also include what the two linear equalities give.
+    Random random = new Random(7);
+    for (int run = 0; run < 3000; run++) {
+      int n = 1 + random.nextInt(8);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(10);
+        profits[i] = random.nextBoolean() ? weights[i] : 1 + random.nextInt(10);
+        int min = random.nextInt(4) == 0 ? 1 : 0;
+        int max = min + random.nextInt(3);
+        vars[i] = new IntVar(store, "q" + i, min, max);
+        weightSum += weights[i] * max;
+        profitSum += profits[i] * max;
+      }
+      int capacityMin = random.nextInt(weightSum / 3 + 1);
+      int capacityMax = Math.max(capacityMin, random.nextInt(weightSum + 1));
+      int profitMin = random.nextInt(profitSum + 1);
+      vars[n] = new IntVar(store, "capacity", capacityMin, capacityMax);
+      vars[n + 1] =
+          new IntVar(store, "profit", profitMin, profitMin + random.nextInt(profitSum + 2));
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      if (!store.consistency()) {
+        continue;
+      }
+      String state = instance + " -> " + domainsOf(vars);
+      for (int i = 0; i < n; i++) {
+        for (int bound : new int[] {vars[i].min(), vars[i].max()}) {
+          double best =
+              (double) bound * profits[i]
+                  + knapsackRelaxation(
+                      weights, profits, vars, i, vars[n].max() - (double) bound * weights[i]);
+          assertThat(best)
+              .as(state + " q" + i + " = " + bound)
+              .isGreaterThan(vars[n + 1].min() - 1e-6);
+        }
+      }
+      Store linearStore = new Store();
+      IntVar[] copies = new IntVar[n + 2];
+      for (int i = 0; i < copies.length; i++) {
+        copies[i] = new IntVar(linearStore, vars[i].id(), vars[i].dom().cloneLight());
+      }
+      IntVar[] weighted = Arrays.copyOf(copies, n + 1);
+      int[] coefficients = Arrays.copyOf(weights, n + 1);
+      coefficients[n] = -1;
+      linearStore.impose(new LinearInt(weighted, coefficients, "==", 0));
+      weighted = weighted.clone();
+      weighted[n] = copies[n + 1];
+      coefficients = Arrays.copyOf(profits, n + 1);
+      coefficients[n] = -1;
+      linearStore.impose(new LinearInt(weighted, coefficients, "==", 0));
+      assertThat(linearStore.consistency()).as(state).isTrue();
+      assertThat(domainsOf(copies)).as(state).isEqualTo(domainsOf(vars));
+    }
+  }
+
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
     IntVar v = new IntVar(store, name);
     for (int i = min; i <= max; i++) {
