@@ -36,8 +36,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -46,12 +48,23 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
+import org.jacop.constraints.And;
+import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Conditional;
+import org.jacop.constraints.Eq;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.ViolationMeasure;
@@ -67,6 +80,7 @@ import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -145,7 +159,8 @@ final class ImposeGroundingCases {
             Arguments.of("NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
             Arguments.of("Geost", geost(false)),
             Arguments.of("GeostTime", geost(true))),
-        Stream.concat(Stream.concat(additive(), tables()), comparisons()));
+        Stream.concat(
+            Stream.concat(additive(), tables()), Stream.concat(comparisons(), logical())));
   }
 
   /** The table constraints. */
@@ -1234,5 +1249,248 @@ final class ImposeGroundingCases {
                   t -> semantics.test(t, c),
                   "c = " + c);
             });
+  }
+
+  /** B6: the logical wrappers over random formulas of small primitive constraints. */
+  static Stream<Arguments> logical() {
+    return Stream.of(
+        logical("And"),
+        logical("Or"),
+        logical("Not"),
+        logical("Xor"),
+        logical("Reified"),
+        logical("Implies"),
+        logical("IfThen"),
+        logical("IfThenElse"),
+        logical("Eq"),
+        Arguments.of("Conditional", (Function<Random, Case>) ImposeGroundingCases::conditional),
+        Arguments.of("ChannelReif", (Function<Random, Case>) r -> channel(r, true)),
+        Arguments.of("ChannelImply", (Function<Random, Case>) r -> channel(r, false)));
+  }
+
+  /** Number of integer variables (-1..2) in the logical formulas; then {@link #BOOLS} 0/1 ones. */
+  private static final int INTS = 3;
+
+  private static final int BOOLS = 2;
+
+  /** A random formula: builds a primitive constraint and evaluates it on complete assignments. */
+  private record Formula(
+      Function<IntVar[], PrimitiveConstraint> build, Predicate<int[]> eval, String text) {}
+
+  /** The given wrapper at the root of a random formula over shared variables. */
+  private static Arguments logical(String root) {
+    Function<Random, Case> generator =
+        random -> {
+          int[][] domains = new int[INTS + BOOLS][];
+          for (int i = 0; i < INTS; i++) {
+            domains[i] = domain(random, -1, 2);
+          }
+          for (int i = INTS; i < INTS + BOOLS; i++) {
+            domains[i] = domain(random, 0, 1);
+          }
+          Formula f = node(random, root, 1 + random.nextInt(2));
+          return Case.primitive(domains, f.build(), f.eval(), f.text());
+        };
+    return Arguments.of(root, generator);
+  }
+
+  private static Formula formula(Random random, int depth) {
+    if (depth == 0 || random.nextInt(3) == 0) {
+      return leaf(random);
+    }
+    String[] kinds = {
+      "And", "Or", "Not", "Xor", "Reified", "Implies", "IfThen", "IfThenElse", "Eq"
+    };
+    return node(random, kinds[random.nextInt(kinds.length)], depth);
+  }
+
+  private static Formula node(Random random, String kind, int depth) {
+    int b = INTS + random.nextInt(BOOLS);
+    switch (kind) {
+      case "And", "Or" -> {
+        boolean and = kind.equals("And");
+        List<Formula> fs = new ArrayList<>();
+        int m = 1 + random.nextInt(3);
+        for (int i = 0; i < m; i++) {
+          fs.add(formula(random, depth - 1));
+        }
+        return new Formula(
+            x -> {
+              PrimitiveConstraint[] cs =
+                  fs.stream().map(f -> f.build().apply(x)).toArray(PrimitiveConstraint[]::new);
+              return and ? new And(cs) : new Or(cs);
+            },
+            t ->
+                and
+                    ? fs.stream().allMatch(f -> f.eval().test(t))
+                    : fs.stream().anyMatch(f -> f.eval().test(t)),
+            kind + fs.stream().map(Formula::text).toList());
+      }
+      case "Not" -> {
+        Formula f = formula(random, depth - 1);
+        return new Formula(
+            x -> new Not(f.build().apply(x)), t -> !f.eval().test(t), "Not(" + f.text() + ")");
+      }
+      case "Xor", "Reified", "Implies" -> {
+        Formula f = formula(random, depth - 1);
+        return new Formula(
+            x ->
+                switch (kind) {
+                  case "Xor" -> new Xor(f.build().apply(x), x[b]);
+                  case "Reified" -> new Reified(f.build().apply(x), x[b]);
+                  default -> new Implies(x[b], f.build().apply(x));
+                },
+            t ->
+                switch (kind) {
+                  case "Xor" -> f.eval().test(t) != (t[b] == 1);
+                  case "Reified" -> f.eval().test(t) == (t[b] == 1);
+                  default -> t[b] == 0 || f.eval().test(t);
+                },
+            kind + "(" + f.text() + ", x" + b + ")");
+      }
+      case "IfThen", "Eq" -> {
+        Formula f = formula(random, depth - 1);
+        Formula g = formula(random, depth - 1);
+        boolean eq = kind.equals("Eq");
+        return new Formula(
+            x ->
+                eq
+                    ? new Eq(f.build().apply(x), g.build().apply(x))
+                    : new IfThen(f.build().apply(x), g.build().apply(x)),
+            t -> eq ? f.eval().test(t) == g.eval().test(t) : !f.eval().test(t) || g.eval().test(t),
+            kind + "(" + f.text() + ", " + g.text() + ")");
+      }
+      default -> {
+        Formula f = formula(random, depth - 1);
+        Formula g = formula(random, depth - 1);
+        Formula h = formula(random, depth - 1);
+        return new Formula(
+            x -> new IfThenElse(f.build().apply(x), g.build().apply(x), h.build().apply(x)),
+            t -> f.eval().test(t) ? g.eval().test(t) : h.eval().test(t),
+            "IfThenElse(" + f.text() + ", " + g.text() + ", " + h.text() + ")");
+      }
+    }
+  }
+
+  /** A small primitive constraint on random variables (any of them, including the 0/1 ones). */
+  private static Formula leaf(Random random) {
+    int n = INTS + BOOLS;
+    int a = random.nextInt(n);
+    int b = random.nextInt(n);
+    while (b == a) {
+      b = random.nextInt(n);
+    }
+    int c = random.nextInt(n);
+    while (c == a || c == b) {
+      c = random.nextInt(n);
+    }
+    int k = random.nextInt(4) - 1;
+    int fa = a;
+    int fb = b;
+    int fc = c;
+    return switch (random.nextInt(6)) {
+      case 0 -> new Formula(x -> new XeqY(x[fa], x[fb]), t -> t[fa] == t[fb], "x" + a + "=x" + b);
+      case 1 -> new Formula(x -> new XltY(x[fa], x[fb]), t -> t[fa] < t[fb], "x" + a + "<x" + b);
+      case 2 -> new Formula(x -> new XeqC(x[fa], k), t -> t[fa] == k, "x" + a + "=" + k);
+      case 3 -> new Formula(x -> new XneqC(x[fa], k), t -> t[fa] != k, "x" + a + "!=" + k);
+      case 4 -> new Formula(x -> new XlteqC(x[fa], k), t -> t[fa] <= k, "x" + a + "<=" + k);
+      default ->
+          new Formula(
+              x -> new XplusYeqZ(x[fa], x[fb], x[fc]),
+              t -> t[fa] + t[fb] == t[fc],
+              "x" + a + "+x" + b + "=x" + c);
+    };
+  }
+
+  /** Conditional(b, c): c[k] holds for the first k with b[k] = 1; the last b is fixed to 1. */
+  private static Case conditional(Random random) {
+    int m = 2 + random.nextInt(2);
+    int[][] domains = new int[INTS + BOOLS + m][];
+    for (int i = 0; i < INTS; i++) {
+      domains[i] = domain(random, -1, 2);
+    }
+    for (int i = INTS; i < domains.length - 1; i++) {
+      domains[i] = domain(random, 0, 1);
+    }
+    domains[domains.length - 1] = new int[] {1};
+    int first = INTS + BOOLS;
+    List<Formula> fs = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      fs.add(formula(random, random.nextInt(2)));
+    }
+    return Case.of(
+        domains,
+        (store, x) ->
+            store.impose(
+                new Conditional(
+                    Arrays.copyOfRange(x, first, first + m),
+                    fs.stream().map(f -> f.build().apply(x)).toArray(PrimitiveConstraint[]::new))),
+        t -> {
+          for (int i = 0; i < m; i++) {
+            if (t[first + i] == 1) {
+              return fs.get(i).eval().test(t);
+            }
+          }
+          return false;
+        },
+        "Conditional(b = x" + first + ".., " + fs.stream().map(Formula::text).toList() + ")");
+  }
+
+  /**
+   * ChannelReif / ChannelImply(x0, b, values): b[i] = 1 iff (only if) x0 = values[i]. Values may be
+   * outside the domain of x0 and a 0/1 variable may be repeated in b.
+   */
+  private static Case channel(Random random, boolean reif) {
+    int m = 1 + random.nextInt(4);
+    int bools = 1 + random.nextInt(m);
+    int[][] domains = new int[1 + bools][];
+    domains[0] = domain(random, -1, 3);
+    for (int i = 1; i <= bools; i++) {
+      domains[i] = domain(random, 0, 1);
+    }
+    List<Integer> pool = new ArrayList<>(List.of(-2, -1, 0, 1, 2, 3, 4));
+    Collections.shuffle(pool, random);
+    int[] values = new int[m];
+    int[] bi = new int[m];
+    for (int i = 0; i < m; i++) {
+      values[i] = pool.get(i);
+      bi[i] = i < bools ? 1 + i : 1 + random.nextInt(bools);
+    }
+    boolean useMap = random.nextInt(3) == 0 && bools == m;
+    return Case.of(
+        domains,
+        (store, x) -> {
+          IntVar[] bs = new IntVar[m];
+          for (int i = 0; i < m; i++) {
+            bs[i] = x[bi[i]];
+          }
+          if (useMap) {
+            Map<Integer, IntVar> map = new HashMap<>();
+            for (int i = 0; i < m; i++) {
+              map.put(values[i], bs[i]);
+            }
+            store.impose(reif ? new ChannelReif(x[0], map) : new ChannelImply(x[0], map));
+          } else {
+            store.impose(
+                reif ? new ChannelReif(x[0], bs, values) : new ChannelImply(x[0], bs, values));
+          }
+        },
+        t -> {
+          for (int i = 0; i < m; i++) {
+            boolean on = t[bi[i]] == 1;
+            boolean is = t[0] == values[i];
+            if (reif ? on != is : on && !is) {
+              return false;
+            }
+          }
+          return true;
+        },
+        (reif ? "ChannelReif" : "ChannelImply")
+            + "(x0, b = "
+            + Arrays.toString(bi)
+            + ", values = "
+            + Arrays.toString(values)
+            + (useMap ? ", map" : "")
+            + ")");
   }
 }
