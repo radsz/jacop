@@ -4926,6 +4926,25 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
   }
 
+  @Test
+  void absXeqYWithNegativeY() {
+    // |x| = y never holds for a negative y, but satisfied() accepted x = y = -5 and the negation
+    // removed -5 and 5 from x
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -5, -5);
+    IntVar y = new IntVar(store, "y", -5, -5);
+    assertThat(new AbsXeqY(x, y).satisfied()).isFalse();
+
+    for (boolean domainConsistency : new boolean[] {false, true}) {
+      store = new Store();
+      x = new IntVar(store, "x", -5, 5);
+      y = new IntVar(store, "y", -5, -5);
+      store.impose(new Not(new AbsXeqY(x, y, domainConsistency)));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.getSize()).isEqualTo(11);
+    }
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
