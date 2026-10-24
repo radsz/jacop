@@ -120,15 +120,6 @@ abstract class AbstractDiff extends Constraint
     return contains;
   }
 
-  /**
-   * Returns the array of rectangles constrained by this diff constraint.
-   *
-   * @return the array of rectangles.
-   */
-  Rectangle[] getRectangles() {
-    return rectangles;
-  }
-
   boolean intervalOverlap(int min1, int max1, int min2, int max2) {
     return min1 < max2 && max1 > min2;
   }
@@ -566,8 +557,7 @@ abstract class AbstractDiff extends Constraint
   }
 
   /**
-   * Checks satisfaction using evalRects (backtrackable rectangle sets). Shared by Diff2 and
-   * Disjoint.
+   * Checks satisfaction using evalRects (backtrackable rectangle sets), for Diff2 and Disjoint.
    *
    * @param evalRects the backtrackable rectangle variables.
    * @return true if no evaluated rectangle pairs overlap.
@@ -591,7 +581,7 @@ abstract class AbstractDiff extends Constraint
   /**
    * Shared narrowRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
    *
-   * @param evalRects the backtrackable rectangle variables (null for base Diff class).
+   * @param evalRects the backtrackable rectangle variables.
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
    *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
@@ -610,7 +600,7 @@ abstract class AbstractDiff extends Constraint
     for (int l = 0; l < rectangles.length; l++) {
       Rectangle r = rectangles[l];
       RectState state = computeRectangleState(r, allowZeroLength);
-      if (!shouldProcessRectangle(state, evalRects)) {
+      if (!shouldProcessRectangle(state)) {
         continue;
       }
 
@@ -618,9 +608,8 @@ abstract class AbstractDiff extends Constraint
 
       List<IntRectangle> usedRect = new ArrayList<>();
       List<Rectangle> profileCandidates = new ArrayList<>();
-      List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
-      Rectangle[] rectsToCheck =
-          evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
+      List<Rectangle> overlappingRects = new ArrayList<>();
+      Rectangle[] rectsToCheck = ((Diff2VarValue) evalRects[l].value()).rects;
       boolean ntN =
           findRectanglesEval(
               rectsToCheck,
@@ -664,17 +653,12 @@ abstract class AbstractDiff extends Constraint
     return new RectState(settled, minLengthEq0, maxLevel);
   }
 
-  private boolean shouldProcessRectangle(RectState state, Diff2Var[] evalRects) {
-    if (evalRects != null) {
-      return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
-    }
-    return !state.settled() || state.maxLevel() >= currentStore.level;
+  private boolean shouldProcessRectangle(RectState state) {
+    return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
   }
 
   private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {
-    if (evalRects == null
-        || overlappingRects == null
-        || overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
+    if (overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
       return;
     }
     Diff2VarValue newRects = new Diff2VarValue();
@@ -689,7 +673,7 @@ abstract class AbstractDiff extends Constraint
    * @param r the rectangle being narrowed.
    * @param usedRect output list of used rectangles.
    * @param profileCandidates output list of profile candidate rectangles.
-   * @param overlappingRects output list of overlapping rectangles (may be null if not needed).
+   * @param overlappingRects output list of overlapping rectangles.
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
    *     (Diff2).
@@ -786,9 +770,7 @@ abstract class AbstractDiff extends Constraint
 
         if (overlap) {
 
-          if (overlappingRects != null) {
-            overlappingRects.add(s);
-          }
+          overlappingRects.add(s);
 
           if (use) { // rectangles taking space
             usedRect.add(useRect);
