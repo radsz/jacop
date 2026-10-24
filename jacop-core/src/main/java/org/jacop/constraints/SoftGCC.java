@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.netflow.DomainStructure;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -389,6 +390,14 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
   @Override
   public List<Constraint> decompose(Store store) {
+
+    if (Arrays.stream(countedValue).distinct().count() < countedValue.length) {
+      // a value counted twice needs a flow of its count to two counters, which the network cannot
+      // express; the primitive decomposition counts every entry on its own
+      decomposition = new ArrayList<>();
+      buildValueBasedDecomposition(store, decomposition);
+      return decomposition;
+    }
 
     if (decomposition == null || decomposition.size() > 1) {
       decomposition = new ArrayList<>();

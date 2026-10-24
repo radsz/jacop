@@ -4145,6 +4145,30 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cost.dom().toString()).isEqualTo("0");
   }
 
+  // A value counted twice had one value node in the network but two counters, so solutions were
+  // lost.
+  @Test
+  void testSoftGccWithAValueCountedTwice() {
+
+    Store store = new Store();
+    // x = [1, 0, 1]: value 0 occurs once
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 0), new IntVar(store, "x2", 1, 1)
+    };
+    int[] values = {0, 0};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 5);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    // both counters count the single 0; the costs are |1 - 2| + |1 - 0|
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("1");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("1");
+    assertThat(cost.dom().toString()).isEqualTo("2");
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 
