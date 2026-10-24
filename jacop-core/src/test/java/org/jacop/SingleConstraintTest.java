@@ -2306,6 +2306,29 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void knapsackSortsManyEquallyEfficientItems() {
+    // The item comparator returned 1 for two items with the same weight and profit in both
+    // directions, so sorting 32 or more items threw "Comparison method violates its general
+    // contract".
+    int[] profits = {
+      3, 2, 1, 1, 3, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1
+    };
+    int[] weights = new int[profits.length];
+    Arrays.fill(weights, 1);
+    Store store = new Store();
+    IntVar[] q = new IntVar[profits.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 1);
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 22);
+    IntVar profit = new IntVar(store, "profit", 0, 43);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    // The 22 most profitable items give 2 * 3 + 7 * 2 + 13 * 1 = 33.
+    assertThat(profit.max()).isEqualTo(33);
+  }
+
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
     IntVar v = new IntVar(store, name);
     for (int i = min; i <= max; i++) {
