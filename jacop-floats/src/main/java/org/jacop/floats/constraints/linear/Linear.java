@@ -359,13 +359,13 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   /**
    * Checks a strict relation exactly once all variables are fixed. The bounds of the tree are
    * rounded outward, so a weighted sum equal to sum keeps a bound on the right side of sum and a
-   * strict relation would accept it.
+   * strict relation (or disequality) would accept it.
    *
    * @param rel the relation that must hold.
    */
   private void checkStrictRelationWhenGround(byte rel) {
 
-    if (rel != LT && rel != GT) {
+    if (rel != LT && rel != GT && rel != NE) {
       return;
     }
 
@@ -379,7 +379,13 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     int comparison = total.compareTo(exactValue(sum));
-    if (rel == LT ? comparison >= 0 : comparison <= 0) {
+    boolean holds =
+        switch (rel) {
+          case LT -> comparison < 0;
+          case GT -> comparison > 0;
+          default -> comparison != 0;
+        };
+    if (!holds) {
       throw Store.failException;
     }
   }

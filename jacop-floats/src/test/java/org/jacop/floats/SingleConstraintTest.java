@@ -56,6 +56,7 @@ import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
 import org.jacop.floats.constraints.SqrtPeqR;
+import org.jacop.floats.constraints.SumFloat;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.api.Test;
@@ -355,5 +356,24 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isTrue();
     assertThat(q.max()).isLessThan(0.0);
     assertThat(r.singleton(0.0)).isTrue();
+  }
+
+  @Test
+  void testLinearFloatDisequalityWhenGroundAfterImpose() {
+    // variables ground after impose stay in the tree, whose outward rounded bounds never let
+    // != fail on an exactly equal sum
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1.75, -0.5);
+    FloatVar y = new FloatVar(store, "y", -1.5, -0.5);
+    store.impose(new SumFloat(new FloatVar[] {x}, "!=", y));
+    x.domain.in(store.level, x, -0.75, -0.75);
+    y.domain.in(store.level, y, -0.75, -0.75);
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    FloatVar z = new FloatVar(store, "z", -1, 0.25);
+    store.impose(new Not(new LinearFloat(new FloatVar[] {z}, new double[] {2}, "==", -0.5)));
+    z.domain.in(store.level, z, -0.25, -0.25);
+    assertThat(store.consistency()).isFalse();
   }
 }
