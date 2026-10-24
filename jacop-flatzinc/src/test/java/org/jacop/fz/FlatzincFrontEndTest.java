@@ -507,6 +507,30 @@ class FlatzincFrontEndTest {
         "constraints missing from -debug output:\n" + stdout);
   }
 
+  @Test
+  void freeSearchIgnoresSeveralSearchAnnotations() throws IOException {
+    // With two or more search annotations -f followed them instead of using free search.
+    String fzn =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve :: int_search([x], input_order, indomain_max, complete)
+              :: int_search([y], input_order, indomain_max, complete) satisfy;
+        """;
+
+    assertEquals("x = 3;\ny = 2;", solutionLines(run(fzn)[0]));
+    assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f")[0]));
+  }
+
+  /** The solution lines of an output, without comments. */
+  private static String solutionLines(String stdout) {
+    return stdout
+        .lines()
+        .filter(line -> !line.startsWith("%") && !line.startsWith("-") && !line.startsWith("="))
+        .collect(Collectors.joining("\n"));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");

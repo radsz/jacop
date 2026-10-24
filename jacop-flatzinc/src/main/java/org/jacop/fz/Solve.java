@@ -293,6 +293,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
 
+    if (options.freeSearch()) {
+      ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
+      solveKind = getKind(kind.getKind());
+      run_single_search(solveKind, kind, null);
+      return;
+    }
+
     if (nsi.size() == 1) {
       runSingleOrSequenceSearch(node, si, nsi.getFirst());
     } else {
