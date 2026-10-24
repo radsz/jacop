@@ -56,7 +56,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class DisjointConditional extends Diff {
+public class DisjointConditional extends AbstractDiff {
 
   static final boolean TRACE = false;
   static final boolean TRACE_NARR = false;

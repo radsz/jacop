@@ -2788,7 +2788,7 @@ class SingleConstraintTest extends TestHelper {
 
     IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
-    Diff disjointConditional =
+    DisjointConditional disjointConditional =
         new DisjointConditional(
             origin1,
             origin2,
