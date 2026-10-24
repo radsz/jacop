@@ -52,8 +52,12 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.FreeSearch.Status;
+import org.jacop.search.free.IndomainLastSolution;
+import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LubyCalculator;
@@ -240,21 +244,47 @@ class FreeSearchTest {
     }
   }
 
-  /** The branchings tested: plain variables, weighted heuristics, and constraint choices. */
-  private static List<Function<Model, SelectChoicePoint<? extends Var>>> branchings() {
+  /** A branching and the monitors it needs. */
+  private record Branching(SelectChoicePoint<? extends Var> select, SearchMonitor... monitors) {
+
+    FreeSearch.Builder builder(Store store) {
+      FreeSearch.Builder builder = FreeSearch.builder(store, select);
+      for (SearchMonitor m : monitors) {
+        builder.monitor(m);
+      }
+      return builder;
+    }
+  }
+
+  /**
+   * The branchings tested: plain variables, weighted heuristics, constraint choices, and dom/wdeg
+   * with last conflict and phase saving.
+   */
+  private static List<Function<Model, Branching>> branchings() {
     return List.of(
-        m -> new SimpleSelect<>(concat(m), null, new IndomainMin<>()),
-        m -> new SimpleSelect<>(concat(m), new AfcMaxDeg<>(m.store), new IndomainMax<>()),
+        m -> new Branching(new SimpleSelect<>(concat(m), null, new IndomainMin<>())),
         m ->
-            new SequenceSelect(
-                List.of(
-                    new SplitSelect<>(m.x, new MostConstrainedDynamic<>(), new IndomainMiddle<>()),
-                    new SimpleSelect<>(m.b, null, new IndomainMin<>()))),
+            new Branching(
+                new SimpleSelect<>(concat(m), new AfcMaxDeg<>(m.store), new IndomainMax<>())),
         m ->
-            new SequenceSelect(
-                List.of(
-                    new SimpleSelect<>(m.b, new WeightedDegree<>(), new IndomainMax<>()),
-                    new SimpleSelect<>(m.x, new SmallestDomain<>(), new IndomainRandom<>(7)))));
+            new Branching(
+                new SequenceSelect(
+                    List.of(
+                        new SplitSelect<>(
+                            m.x, new MostConstrainedDynamic<>(), new IndomainMiddle<>()),
+                        new SimpleSelect<>(m.b, null, new IndomainMin<>())))),
+        m ->
+            new Branching(
+                new SequenceSelect(
+                    List.of(
+                        new SimpleSelect<>(m.b, new WeightedDegree<>(), new IndomainMax<>()),
+                        new SimpleSelect<>(m.x, new SmallestDomain<>(), new IndomainRandom<>(7))))),
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMax<>());
+          DomWdeg domWdeg = new DomWdeg(concat(m), phase);
+          LastConflict lc = new LastConflict(domWdeg, phase, 2);
+          return new Branching(lc, phase, domWdeg, lc);
+        });
   }
 
   private static IntVar[] concat(Model m) {
@@ -284,7 +314,9 @@ class FreeSearchTest {
           Model model = new Model(instance);
           int[] found = {0};
           FreeSearch search =
-              FreeSearch.builder(model.store, branching.apply(model))
+              branching
+                  .apply(model)
+                  .builder(model.store)
                   .restarts(restarts.get())
                   .onSolution(
                       s -> {
@@ -310,7 +342,9 @@ class FreeSearchTest {
         Model model = new Model(instance);
         Set<List<Integer>> solutions = new HashSet<>();
         FreeSearch search =
-            FreeSearch.builder(model.store, branching.apply(model))
+            branching
+                .apply(model)
+                .builder(model.store)
                 .allSolutions(true)
                 // ignored: restarts would find the same solutions again
                 .restarts(new LubyCalculator(1))
@@ -337,7 +371,9 @@ class FreeSearchTest {
               Model model = new Model(instance);
               List<Integer> costs = new ArrayList<>();
               FreeSearch.Builder builder =
-                  FreeSearch.builder(model.store, branching.apply(model))
+                  branching
+                      .apply(model)
+                      .builder(model.store)
                       .restarts(restarts.get())
                       .restartOnSolution(restartOnSolution)
                       .record(model.x)
