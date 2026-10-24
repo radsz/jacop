@@ -112,6 +112,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
@@ -4966,6 +4967,23 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Not(new Distance(x, y, z)));
     assertThat(store.consistency()).isTrue();
     assertThat(y.getSize()).isEqualTo(7);
+  }
+
+  @Test
+  void xdivAndXmodYeqZSatisfiedRoundTowardsZero() {
+    // consistency() uses Java division and remainder; satisfied() rounded the quotient down
+    for (int a = -6; a <= 6; a++) {
+      for (int b = -3; b <= 3; b++) {
+        for (int c = -7; c <= 7; c++) {
+          Store store = new Store();
+          IntVar x = new IntVar(store, a, a);
+          IntVar y = new IntVar(store, b, b);
+          IntVar z = new IntVar(store, c, c);
+          assertThat(new XdivYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a / b == c);
+          assertThat(new XmodYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a % b == c);
+        }
+      }
+    }
   }
 
   private static int countLinearSolutions(
