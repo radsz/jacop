@@ -4776,4 +4776,20 @@ class SingleConstraintTest extends TestHelper {
     assertThatThrownBy(() -> new Stretch(new int[] {1, 2}, new int[] {1}, new int[] {2, 2}, x))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  void testBoundDomainInEmptyDomainFails() {
+
+    Store store = new Store();
+    // Boolean variables have a BoundDomain
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+
+    // the automaton has no accepting word, so Regular restricts x to empty domains
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
+
+    assertThat(store.consistency()).isFalse();
+  }
 }
