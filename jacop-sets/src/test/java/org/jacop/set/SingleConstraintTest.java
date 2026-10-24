@@ -43,7 +43,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.set.SetImposeGroundingHarness.Case;
+import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AunionBeqC;
+import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
@@ -388,6 +391,29 @@ class SingleConstraintTest {
 
     assertThat(store.consistency()).isTrue();
     assertThat(union.satisfied()).isTrue();
+  }
+
+  @Test
+  void testCardARespectsHolesInCardinality() {
+    // only the bounds 0..2 of the cardinality {0, 2} were used, so a set of size 1 was accepted
+    SetImposeGroundingHarness.check(
+        "CardA {0, 2}",
+        random ->
+            new Case(
+                new Spec[] {Spec.setVar(new int[0], new int[] {1, 2, 3})},
+                (store, x) -> {
+                  CardA c = new CardA((SetVar) x[0], dom(0, 2));
+                  store.impose(c);
+                  return c;
+                },
+                t -> t.s(0).size() == 0 || t.s(0).size() == 2,
+                ""),
+        1);
+
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1)));
+    store.impose(new CardA(a, dom(0, 2)));
+    assertThat(store.consistency()).isFalse();
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
