@@ -5532,6 +5532,24 @@ class SingleConstraintTest extends TestHelper {
     assertThat(count.satisfied()).isTrue();
   }
 
+  // AmongVar.satisfied() threw IllegalStateException (with asserts enabled) when the constraint
+  // grounded variables itself, since its counters do not see those changes.
+  @Test
+  void testAmongVarSatisfiedAfterGroundingItsVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 2, 2)};
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar n = new IntVar(store, "n", 2, 2);
+    y.domain.in(store.level, y, new IntervalDomain(0, 0).union(2));
+    AmongVar among = new AmongVar(x, new IntVar[] {y}, n);
+    store.impose(among);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].value()).isEqualTo(2);
+    assertThat(among.satisfied()).isTrue();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
