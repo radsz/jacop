@@ -3903,6 +3903,77 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void linearIntWithManyVariablesHasTheSolutionCountOfBruteForce() {
+    // a LinearInt with more than three variables stops reading the variables that get fixed and
+    // reads them again after backtracking, which an all-solution search exercises
+    String[] relations = {"==", "<=", "<", "!=", ">", ">="};
+    Random random = new Random(7);
+    for (int run = 0; run < 600; run++) {
+      int n = 4 + random.nextInt(4);
+      int[] weights = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = (1 + random.nextInt(3)) * (random.nextBoolean() ? 1 : -1);
+      }
+      String rel = relations[run % relations.length];
+      int b = random.nextInt(9) - 4;
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        vars[i] = randomVar(store, "v" + i, -2, 3, random);
+      }
+      if (run % 5 == 0) {
+        vars[n - 1] = vars[0];
+      }
+      String instance =
+          "run "
+              + run
+              + " "
+              + Arrays.toString(weights)
+              + " "
+              + rel
+              + " "
+              + b
+              + " "
+              + domainsOf(vars);
+      int expected = countLinearSolutions(vars, weights, rel, b, new int[n], 0);
+      store.impose(new LinearInt(vars, weights, rel, b));
+      assertThat(noOfAllSolutionsNoRecord(store, vars)).as(instance).isEqualTo(expected);
+    }
+  }
+
+  /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
+  private static int countLinearSolutions(
+      IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
+    if (i == vars.length) {
+      int sum = 0;
+      for (int j = 0; j < vars.length; j++) {
+        sum += weights[j] * values[j];
+      }
+      return switch (rel) {
+        case "==" -> sum == b ? 1 : 0;
+        case "<=" -> sum <= b ? 1 : 0;
+        case "<" -> sum < b ? 1 : 0;
+        case "!=" -> sum != b ? 1 : 0;
+        case ">" -> sum > b ? 1 : 0;
+        default -> sum >= b ? 1 : 0;
+      };
+    }
+    for (int j = 0; j < i; j++) {
+      if (vars[j] == vars[i]) {
+        // a repeated variable takes the value it already has
+        values[i] = values[j];
+        return countLinearSolutions(vars, weights, rel, b, values, i + 1);
+      }
+    }
+    int count = 0;
+    for (ValueEnumeration e = vars[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+      values[i] = e.nextElement();
+      count += countLinearSolutions(vars, weights, rel, b, values, i + 1);
+    }
+    return count;
+  }
+
   private static IntVar rectangleVar(Store store, Random random, int min, int max) {
     IntVar v = new IntVar(store);
     for (int value = min; value <= max; value++) {
