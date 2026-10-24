@@ -57,6 +57,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
@@ -91,6 +92,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -2941,6 +2943,24 @@ class SingleConstraintTest extends TestHelper {
         noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
 
     assertThat(noOfSolutions).isEqualTo(141141);
+  }
+
+  @Test
+  void allEqualNegatedKeepsCallerArrayOrder() {
+    // not all_equal(x) moved fixed variables to the front of the array it was given, so the
+    // caller's array (in FlatZinc the output array) was reordered during search
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 3),
+      new IntVar(store, "x1", 1, 3),
+      new IntVar(store, "x2", 1, 3),
+      new IntVar(store, "x3", 1, 1)
+    };
+    IntVar[] original = x.clone();
+    store.impose(new Reified(new AllEqual(x), new IntVar(store, "b", 0, 0)));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(26);
+    assertThat(x).containsExactly(original);
   }
 
   @Test

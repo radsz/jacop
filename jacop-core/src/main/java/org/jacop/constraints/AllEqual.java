@@ -67,7 +67,7 @@ public class AllEqual extends PrimitiveConstraint {
 
     numberId = idNumber.incrementAndGet();
 
-    this.x = x;
+    this.x = Arrays.copyOf(x, x.length);
     this.n = x.length;
 
     setScope(x);
