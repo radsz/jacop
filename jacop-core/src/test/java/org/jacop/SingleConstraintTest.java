@@ -5323,6 +5323,25 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void testIfThenBoolSatisfied() {
+    // satisfied() and notSatisfied() of (x => y) <=> z on every ground assignment
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int xv = t >> 2;
+      int yv = (t >> 1) & 1;
+      int zv = t & 1;
+      IfThenBool c =
+          new IfThenBool(
+              new IntVar(store, "x", xv, xv),
+              new IntVar(store, "y", yv, yv),
+              new IntVar(store, "z", zv, zv));
+      boolean holds = (xv == 0 || yv == 1) == (zv == 1);
+      assertThat(c.satisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(!holds);
+    }
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
