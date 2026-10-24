@@ -1115,6 +1115,11 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
+    if (x.length == 0) {
+      // nothing is a member of an empty array
+      throw Store.failException;
+    }
+
     int ground = 0;
     IntDomain d = new IntervalDomain();
     for (IntVar intVar : x) {

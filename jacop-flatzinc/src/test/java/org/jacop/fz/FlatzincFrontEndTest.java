@@ -490,6 +490,23 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void memberOfEmptyBoolArrayIsUnsatisfiable() throws IOException {
+    // member on an empty array restricted y to an empty domain. For a 0/1 variable that threw a
+    // NullPointerException in BoundDomain.in instead of failing.
+    String fzn =
+        """
+        var bool: y :: output_var;
+        var 0..1: yi;
+        constraint jacop_member_bool([],yi);
+        constraint bool2int(y,yi);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn)[0];
+    assertTrue(stdout.contains("=====UNSATISFIABLE====="), stdout);
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
