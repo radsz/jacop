@@ -2307,6 +2307,34 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void knapsackHandlesLargeQuantitiesWithoutOverflow() {
+    // Sums of weights and profits were kept in int and overflowed, so the constraint failed.
+    Store store = new Store();
+    IntVar[] q = {
+      new IntVar(store, "q0", 0, IntDomain.MAX_INT), new IntVar(store, "q1", 0, IntDomain.MAX_INT)
+    };
+    IntVar capacity = new IntVar(store, "capacity", 0, 100);
+    IntVar profit = new IntVar(store, "profit", 0, IntDomain.MAX_INT);
+    store.impose(new Knapsack(new int[] {3, 4}, new int[] {5, 7}, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isEqualTo(20);
+    assertThat(q[1].max()).isEqualTo(14);
+
+    store = new Store();
+    q = new IntVar[3];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 100, 100);
+    }
+    capacity = new IntVar(store, "capacity", 0, 500_000_000);
+    profit = new IntVar(store, "profit", 0, 500_000_000);
+    int[] large = {1_000_000, 1_000_000, 1_000_000};
+    store.impose(new Knapsack(large, large, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.value()).isEqualTo(300_000_000);
+    assertThat(profit.value()).isEqualTo(300_000_000);
+  }
+
+  @Test
   void knapsackSortsManyEquallyEfficientItems() {
     // The item comparator returned 1 for two items with the same weight and profit in both
     // directions, so sorting 32 or more items threw "Comparison method violates its general

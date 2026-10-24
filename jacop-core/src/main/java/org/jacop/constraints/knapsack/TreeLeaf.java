@@ -129,24 +129,24 @@ public final class TreeLeaf extends TreeNode {
   }
 
   @Override
-  public int getWMax() {
+  public long getWMax() {
 
     // max() function reflects the value of the slice.
-    return max() * weightOfOne;
+    return (long) max() * weightOfOne;
   }
 
   @Override
-  public int getWSum() {
+  public long getWSum() {
 
     // max() function reflects the value of the slice.
-    return max() * weightOfOne;
+    return (long) max() * weightOfOne;
   }
 
   @Override
-  public int getPSum() {
+  public long getPSum() {
 
     // max() function reflects the value of the slice.
-    return max() * profitOfOne;
+    return (long) max() * profitOfOne;
   }
 
   @Override
@@ -187,8 +187,8 @@ public final class TreeLeaf extends TreeNode {
 
     int delta = quantity.min() - slice;
 
-    tree.alreadyObtainedProfit += delta * profitOfOne;
-    tree.alreadyUsedCapacity += delta * weightOfOne;
+    tree.alreadyObtainedProfit += (long) delta * profitOfOne;
+    tree.alreadyUsedCapacity += (long) delta * weightOfOne;
 
     slice = quantity.min();
     previousMinQ = min();
