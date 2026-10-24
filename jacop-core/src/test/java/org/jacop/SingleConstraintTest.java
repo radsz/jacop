@@ -4934,6 +4934,44 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void booleanDomainOperationsKeepTheHolesOfTheOtherDomain() {
+    // The domain of a BooleanVar treated {-1, 2} as its bounds -1..2: subtract gave {} and
+    // isIntersecting true, so a hybrid table with b not in {-1, 2} failed although b = 0 and b = 1
+    // are allowed, and intersecting with an empty domain threw a NullPointerException. Subtracting
+    // a disjoint interval enlarged the domain, which sent the revision of a tuple into an endless
+    // loop.
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntDomain bd = b.dom();
+    IntervalDomain holes = new IntervalDomain(-1, -1);
+    holes.unionAdapt(2, 2);
+    assertThat(bd.subtract(holes)).hasToString("{0..1}");
+    assertThat(bd.isIntersecting(holes)).isFalse();
+    assertThat(bd.intersect(holes).isEmpty()).isTrue();
+    assertThat(bd.intersect(new IntervalDomain()).isEmpty()).isTrue();
+    IntervalDomain oneAndThree = new IntervalDomain(1, 1);
+    oneAndThree.unionAdapt(3, 3);
+    assertThat(bd.subtract(oneAndThree)).hasToString("0");
+    assertThat(bd.intersect(oneAndThree)).hasToString("1");
+    // A disjoint interval made the domain grow: {0..1} minus -5..-3 gave {-2..1}.
+    assertThat(bd.subtract(new IntervalDomain(-5, -3))).hasToString("{0..1}");
+    assertThat(bd.subtract(-5, -3)).hasToString("{0..1}");
+    assertThat(bd.subtract(new IntervalDomain(4, 6))).hasToString("{0..1}");
+    assertThat(bd.subtract(4, 6)).hasToString("{0..1}");
+
+    IntervalDomain far = new IntervalDomain(0, 1);
+    far.unionAdapt(100_000, 100_000);
+    IntVar y = new IntVar(store, "y", far);
+    Restriction[][] tuples = {
+      {Restriction.notIn(-1, 2), Restriction.column(Restriction.Relation.GE, 0)},
+      {Restriction.column(Restriction.Relation.EQ, 1, 600_000_000), Restriction.any()}
+    };
+    store.impose(new HybridTable(new IntVar[] {b, y}, tuples, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b, y})).isEqualTo(5);
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
   @Test
   void xmulYeqCNegatedWithZeroFactor() {
