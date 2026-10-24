@@ -4935,6 +4935,26 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
+    // The first consistency at level 1 filtered every column and was undone by the backtrack. The
+    // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
+    // the constraint was removed with x0 = 1, x1 = 0 still possible.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new HybridTable(new IntVar[] {x0, x1}, new int[][] {{0, 0}, {2, 0}}));
+    store.setLevel(1);
+    x1.domain.inComplement(1, x1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.dom()).hasToString("0");
+  }
+
+  @Test
   void booleanDomainOperationsKeepTheHolesOfTheOtherDomain() {
     // The domain of a BooleanVar treated {-1, 2} as its bounds -1..2: subtract gave {} and
     // isIntersecting true, so a hybrid table with b not in {-1, 2} failed although b = 0 and b = 1

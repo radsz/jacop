@@ -175,6 +175,9 @@ public class HybridTable extends Constraint
   private boolean pruning;
   private boolean firstConsistency = true;
 
+  /** The level of the first consistency; backtracking above it undoes that full filtering. */
+  private int firstConsistencyLevel;
+
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
   private IntDomain[] binarySupport;
@@ -713,6 +716,10 @@ public class HybridTable extends Constraint
   @Override
   public void removeLevel(int level) {
     valid.removeLevel(level);
+    if (level <= firstConsistencyLevel) {
+      // The full filtering of the first consistency is undone, the next call repeats it.
+      firstConsistency = true;
+    }
     for (int p = 0; p < queueSize; p++) {
       queued[queue[p]] = false;
     }
@@ -834,6 +841,7 @@ public class HybridTable extends Constraint
 
     if (firstConsistency) {
       firstConsistency = false;
+      firstConsistencyLevel = store.level;
       onlyChanged = -1;
       changed = arity;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
