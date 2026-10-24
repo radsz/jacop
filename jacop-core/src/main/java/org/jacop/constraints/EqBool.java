@@ -304,16 +304,23 @@ public class EqBool extends PrimitiveConstraint {
 
     constraints = new ArrayList<>();
 
-    PrimitiveConstraint[] eqConstraints = new PrimitiveConstraint[list.length];
-
     IntervalDomain booleanDom = new IntervalDomain(0, 1);
 
-    for (int i = 0; i < eqConstraints.length - 1; i++) {
-      eqConstraints[0] = new XeqY(list[i], list[i + 1]);
-      constraints.add(new In(list[i], booleanDom));
+    for (IntVar v : list) {
+      constraints.add(new In(v, booleanDom));
     }
 
     constraints.add(new In(result, booleanDom));
+
+    if (list.length < 2) {
+      constraints.add(new XeqC(result, 1));
+      return constraints;
+    }
+
+    PrimitiveConstraint[] eqConstraints = new PrimitiveConstraint[list.length - 1];
+    for (int i = 0; i < eqConstraints.length; i++) {
+      eqConstraints[i] = new XeqY(list[i], list[i + 1]);
+    }
 
     constraints.add(new Eq(new And(eqConstraints), new XeqC(result, 1)));
 

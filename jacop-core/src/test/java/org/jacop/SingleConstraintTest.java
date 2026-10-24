@@ -5296,6 +5296,33 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countInOrder(store2, b, y[1], y[2])).isEqualTo(4);
   }
 
+  @Test
+  void testEqBoolDecomposition() {
+    // the decomposition put every pair at index 0 and left a null in And
+    for (int n = 1; n <= 4; n++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      store.imposeDecomposition(new EqBool(x, r));
+      IntVar[] all = Arrays.copyOf(x, n + 1);
+      all[n] = r;
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      for (IntVar v : x) {
+        v.domain.in(store.level, v, 0, 0);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.singleton(1)).as("n = " + n).isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+      // one solution per assignment of x, with r = 1 exactly when all x are equal
+      assertThat(countInOrder(store, all)).as("n = " + n).isEqualTo(1 << n);
+    }
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
