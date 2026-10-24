@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
 
+import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
@@ -43,10 +44,13 @@ import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PdivCeqR;
 import org.jacop.floats.constraints.PdivQeqR;
 import org.jacop.floats.constraints.PeqC;
+import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.api.Test;
 
@@ -160,5 +164,48 @@ class SingleConstraintTest {
 
     assertThatThrownBy(() -> new EquationSystem(store, new FloatVar[] {null}, new FloatVar[] {p}))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testRemovingTheLastPointOfADomainWakesBoundConstraints() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", points(0, 1, 2));
+    FloatVar q = new FloatVar(store, "q", 0, 2);
+    store.impose(new PlteqQ(q, p));
+    assertThat(store.consistency()).isTrue();
+
+    // removing 2 lowered max(p) but was announced as ANY, so q <= p was not woken
+    store.setLevel(1);
+    p.domain.inComplement(store.level, p, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(q.max()).isEqualTo(1.0);
+
+    // the same at the level where p's domain was already copied
+    p.domain.inComplement(store.level, p, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(q.max()).isEqualTo(0.0);
+  }
+
+  @Test
+  void testRemovingAPointThatLeavesASingletonIsAGroundEvent() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", points(0, 1));
+    FloatVar q = new FloatVar(store, "q", points(0, 1));
+    store.impose(new Not(new PeqQ(p, q)));
+    assertThat(store.consistency()).isTrue();
+
+    // q = 0 removed 0 from p, which left p = 1 and threw "Wrong event generated"
+    store.setLevel(1);
+    q.domain.in(store.level, q, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.singleton(1)).isTrue();
+  }
+
+  private static FloatIntervalDomain points(double... values) {
+    FloatIntervalDomain domain = new FloatIntervalDomain();
+    for (double v : values) {
+      domain.unionAdapt(v, v);
+    }
+    return domain;
   }
 }
