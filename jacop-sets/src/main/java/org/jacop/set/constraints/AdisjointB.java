@@ -1,0 +1,188 @@
+/*
+ * AdisjointB.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.set.constraints;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
+
+/**
+ * The disjoint set constraint makes sure that two set variables do not contain any common element.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies set variable a. */
+  private final SetVar a;
+
+  /** It specifies set variable b. */
+  private final SetVar b;
+
+  /**
+   * It specifies if the constrain attempts to perform expensive and yet unlikely propagation due to
+   * cardinality information.
+   */
+  private final boolean performCardinalityReasoning = false;
+
+  private boolean aHasChanged = true;
+  private boolean bHasChanged = true;
+
+  /**
+   * It constructs a disjont set constraint to restrict the domains of the variables A and B.
+   *
+   * @param a variable that is restricted to not have any element in common with b.
+   * @param b variable that is restricted to not have any element in common with a.
+   */
+  public AdisjointB(SetVar a, SetVar b) {
+
+    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.b = b;
+
+    setScope(a, b);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    // A.lub = 1+2+4+5, A.glb = 4+5
+    if (bHasChanged) {
+      a.domain.inLub(store.level, a, a.domain.lub().subtract(b.domain.glb()));
+    }
+
+    // B.lub = 2+3+7+8, B.glb = 7+8
+    if (aHasChanged) {
+      b.domain.inLub(store.level, b, b.domain.lub().subtract(a.domain.glb()));
+    }
+
+    if (performCardinalityReasoning) {
+      performCardinalityPropagation(store);
+    }
+
+    aHasChanged = false;
+    bHasChanged = false;
+  }
+
+  private void performCardinalityPropagation(Store store) {
+    int maxSizeOfIntersection = propagateCardinalityForB(store);
+
+    int elementsReservedForA = a.domain.card().min();
+    if (elementsReservedForA <= 0) {
+      return;
+    }
+    elementsReservedForA -= a.domain.glb().getSize();
+    if (elementsReservedForA <= 0) {
+      return;
+    }
+
+    if (maxSizeOfIntersection == -1) {
+      maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
+      if (ASSERTS_ENABLED
+          && maxSizeOfIntersection != b.domain.lub().intersect(a.domain.lub()).getSize()) {
+        throw new IllegalStateException(
+            String.valueOf("sizeOfIntersection not properly implemented"));
+      }
+    }
+
+    elementsReservedForA -=
+        a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection;
+
+    b.domain.inCardinality(store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
+  }
+
+  private int propagateCardinalityForB(Store store) {
+    int maxSizeOfIntersection = -1;
+    int elementsReservedForB = b.domain.card().min();
+    if (elementsReservedForB <= 0) {
+      return maxSizeOfIntersection;
+    }
+    elementsReservedForB -= b.domain.glb().getSize();
+    if (elementsReservedForB <= 0) {
+      return maxSizeOfIntersection;
+    }
+
+    maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
+    if (ASSERTS_ENABLED
+        && maxSizeOfIntersection != a.domain.lub().intersect(b.domain.lub()).getSize()) {
+      throw new IllegalStateException(
+          String.valueOf("sizeOfIntersection not properly implemented"));
+    }
+
+    elementsReservedForB -=
+        b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection;
+
+    a.domain.inCardinality(store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
+    return maxSizeOfIntersection;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    return !a.domain.lub().isIntersecting(b.domain.lub());
+  }
+
+  @Override
+  public String toString() {
+    return id() + " : AdisjointB(" + a + ", " + b + " )";
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+
+    if (variable == a) {
+      aHasChanged = true;
+      return;
+    }
+
+    if (variable == b) {
+      bHasChanged = true;
+    }
+  }
+}

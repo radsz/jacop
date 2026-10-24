@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "int_abs", "int_lin_eq", "int_lin_le", "jacop_assignment"],
+  "constraintFamilies": ["arithmetic", "assignment", "element", "linear"],
+  "domains": []
+}

@@ -17,9 +17,19 @@ log4j.xml
 
 # maven artifacts
 target
+.flattened-pom.xml
 
 # Intelij IDEA
 *.iml
 .idea
 
+# Eclipse
+.project
+.classpath
+.factorypath
+.settings/
+bin/
+
+.DS_Store
+.claude
 

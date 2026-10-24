@@ -1,0 +1,181 @@
+/*
+ * Max.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.floats.constraints;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+/**
+ * Max constraint implements the Maximum/2 constraint. It provides the maximum variable from all
+ * variables on the list.
+ *
+ * <p>max(list) = max.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class Max extends Constraint implements SatisfiedPresent {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies a list of variables among which a maximum value is being searched for. */
+  public final FloatVar[] list;
+
+  /** It specifies variable max which stores the maximum value present in the list. */
+  public final FloatVar max;
+
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param list the array of variables for which the maximum value is imposed.
+   */
+  public Max(FloatVar[] list, FloatVar max) {
+
+    checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
+
+    this.queueIndex = 1;
+    this.numberId = idNumber.incrementAndGet();
+    this.max = max;
+    this.list = Arrays.copyOf(list, list.length);
+
+    setScope(Stream.concat(Stream.of(list), Stream.of(max)));
+  }
+
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param variables the array of variables for which the maximum value is imposed.
+   */
+  public Max(List<? extends FloatVar> variables, FloatVar max) {
+
+    this(variables.toArray(new FloatVar[0]), max);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    FloatVar v;
+    FloatDomain vDom;
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      double minValue = FloatDomain.MIN_FLOAT;
+      double maxValue = FloatDomain.MIN_FLOAT;
+
+      double maxMax = max.max();
+      for (FloatVar floatVar : list) {
+
+        v = floatVar;
+
+        v.domain.inMax(store.level, v, maxMax);
+
+        vDom = v.dom();
+        double VdomMin = vDom.min();
+        double VdomMax = vDom.max();
+
+        minValue = Math.max(minValue, VdomMin);
+        maxValue = Math.max(maxValue, VdomMax);
+      }
+
+      max.domain.in(store.level, max, minValue, maxValue);
+
+      int n = 0;
+      int pos = -1;
+      for (int i = 0; i < list.length; i++) {
+        v = list[i];
+        if (minValue > v.max()) {
+          n++;
+        } else {
+          pos = i;
+        }
+      }
+      if (n
+          == list.length
+              - 1) { // one variable on the list is maximal; its is min > max of all other variables
+        list[pos].domain.in(store.level, list[pos], max.dom());
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    boolean sat = max.singleton();
+    double maxVal = max.min();
+    int i = 0;
+    int eq = 0;
+    while (sat && i < list.length) {
+      if (list[i].singleton() && list[i].value() == maxVal) {
+        eq++;
+      }
+      sat = list[i].max() <= maxVal;
+      i++;
+    }
+    return sat && eq > 0;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : max(  [ ");
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
+    }
+
+    result.append("], ").append(this.max);
+    result.append(")");
+
+    return result.toString();
+  }
+}

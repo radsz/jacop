@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "bool2int", "int_lin_eq", "int_ne_reif", "jacop_subcircuit"],
+  "constraintFamilies": ["boolean", "circuit", "comparison", "element", "linear"],
+  "domains": []
+}

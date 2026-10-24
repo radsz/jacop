@@ -1,0 +1,197 @@
+/*
+ * CpvizNetworkFlow.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.cpviz;
+
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.NetworkFlow;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.TraceGenerator;
+
+/**
+ * The class Run is used to run test programs for JaCoP package. It is used for test purpose only.
+ *
+ * @author Krzysztof Kuchcinski
+ * @version 5.0
+ */
+@Slf4j
+public class CpvizNetworkFlow {
+  Store store;
+  IntVar[] vars;
+  IntVar costVar;
+
+  CpvizNetworkFlow() {}
+
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    CpvizNetworkFlow run = new CpvizNetworkFlow();
+
+    run.transportationProblem();
+  }
+
+  /** Creates and solves a transportation problem using network flow constraints. */
+  void transportationProblem() {
+    final long t1 = System.currentTimeMillis();
+
+    store = new Store();
+
+    NetworkBuilder net = new NetworkBuilder();
+    final Node nodeA = net.addNode("A", 0);
+    final Node nodeB = net.addNode("B", 0);
+    final Node nodeC = net.addNode("C", 0);
+    final Node nodeD = net.addNode("D", 0);
+    final Node nodeE = net.addNode("E", 0);
+    final Node nodeF = net.addNode("F", 0);
+
+    final Node source = net.addNode("source", 9); // should ne 5+3+3=11 but it does not work...
+
+    final Node sinkD = net.addNode("sinkD", -3);
+    final Node sinkE = net.addNode("sinkE", -3);
+    final Node sinkF = net.addNode("sinkF", -3);
+
+    IntVar[] x = new IntVar[13];
+
+    x[0] = new IntVar(store, "x_0", 0, 5);
+    x[1] = new IntVar(store, "x_1", 0, 3);
+    x[2] = new IntVar(store, "x_2", 0, 3);
+    net.addArc(source, nodeA, 0, x[0]);
+    net.addArc(source, nodeB, 0, x[1]);
+    net.addArc(source, nodeC, 0, x[2]);
+
+    x[3] = new IntVar(store, "a->d", 0, 5);
+    x[4] = new IntVar(store, "a->e", 0, 5);
+    net.addArc(nodeA, nodeD, 3, x[3]);
+    net.addArc(nodeA, nodeE, 1, x[4]);
+
+    x[5] = new IntVar(store, "b->d", 0, 3);
+    x[6] = new IntVar(store, "b->e", 0, 3);
+    x[7] = new IntVar(store, "b->f", 0, 3);
+    net.addArc(nodeB, nodeD, 4, x[5]);
+    net.addArc(nodeB, nodeE, 2, x[6]);
+    net.addArc(nodeB, nodeF, 4, x[7]);
+
+    x[8] = new IntVar(store, "c->e", 0, 3);
+    x[9] = new IntVar(store, "c->f", 0, 3);
+    net.addArc(nodeC, nodeE, 3, x[8]);
+    net.addArc(nodeC, nodeF, 3, x[9]);
+
+    x[10] = new IntVar(store, "x_10", 3, 3);
+    x[11] = new IntVar(store, "x_11", 3, 3);
+    x[12] = new IntVar(store, "x_12", 3, 3);
+    net.addArc(nodeD, sinkD, 0, x[10]);
+    net.addArc(nodeE, sinkE, 0, x[11]);
+    net.addArc(nodeF, sinkF, 0, x[12]);
+
+    IntVar cost = new IntVar(store, "cost", 0, 1000);
+    net.setCostVariable(cost);
+
+    vars = x;
+    costVar = cost;
+
+    store.impose(new NetworkFlow(net));
+
+    log.info(
+        "\nIntVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+
+    final Search<IntVar> label = new DepthFirstSearch<>();
+    final SelectChoicePoint<IntVar> varSelect = new SimpleSelect<>(x, null, new IndomainMin<>());
+    // Trace --->
+    final SelectChoicePoint<IntVar> select = new TraceGenerator<>(label, varSelect);
+
+    // <---
+
+    DepthFirstSearch<IntVar> costSearch = new DepthFirstSearch<>();
+    SelectChoicePoint<IntVar> costSelect =
+        new SimpleSelect<>(new IntVar[] {cost}, null, new IndomainMin<>());
+    costSearch.setSelectChoicePoint(costSelect);
+    costSearch.setPrintInfo(false);
+    costSearch.setSolutionListener(new NetListener<>());
+    label.addChildSearch(costSearch);
+
+    label.setAssignSolution(true);
+    label.setPrintInfo(true);
+
+    boolean result = label.labeling(store, select, cost);
+
+    if (result) {
+      log.info("*** Yes");
+      log.info("{}", cost);
+    } else {
+      log.info("*** No");
+    }
+
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+    log.info("\n\t*** Execution time = " + t + " ms");
+  }
+
+  /** Listener for network flow solutions. */
+  public class NetListener<T extends Var> extends SimpleSolutionListener<T> {
+
+    /**
+     * Executes actions after a solution is found.
+     *
+     * @param search the search object
+     * @param select the choice point selector
+     * @return true if search should continue, false otherwise
+     */
+    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      log.info("Solution cost cost = " + costVar.value());
+
+      IO.print("[");
+
+      for (Var v : vars) {
+        IO.print(v + " ");
+      }
+
+      log.info("]");
+
+      return returnCode;
+    }
+  }
+}

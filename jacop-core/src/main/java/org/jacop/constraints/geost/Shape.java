@@ -1,0 +1,332 @@
+/*
+ * Shape.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.geost;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+/**
+ * A shape is composed of a set of shifted boxes.
+ *
+ * @author Marc-Olivier Fleury and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class Shape {
+
+  /** It specifies the smallest bounding box which encapsulates all boxes constituting the shape. */
+  final Dbox boundingBox;
+
+  /** The collection of DBoxes that constitute the shape. */
+  public final Collection<Dbox> boxes;
+
+  /** It defines unique shape id which is used by geost objects to define their shapes. */
+  final int no;
+
+  /** It defines the area (2D) or volume (3D) of the shape. */
+  private int area;
+
+  private ArrayList<Dbox> holes;
+
+  /**
+   * It constructs a shape with a given id based on a specified collection of Dboxes.
+   *
+   * @param no the unique identifier of the created shape.
+   * @param boxes the collection of boxes constituting the shape.
+   */
+  public Shape(int no, Collection<Dbox> boxes) {
+
+    this.no = no;
+    this.boxes = boxes;
+    area = -1; // lazily initialized
+
+    boundingBox = computeBoundingBox();
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+  }
+
+  /**
+   * It constructs a shape from only one Dbox.
+   *
+   * @param id shape unique identifier.
+   * @param box the single dbox specifying the shape.
+   */
+  public Shape(int id, Dbox box) {
+    this.no = id;
+
+    this.boxes = new ArrayList<>(1);
+    boxes.add(box);
+
+    this.boundingBox = box;
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+  }
+
+  /**
+   * It constructs a shape with a given id based on a single dbox specified by the origin and length
+   * arrays.
+   *
+   * @param id the unique identifier of the constructed shape.
+   * @param origin it specifies the origin of the dbox specifying the shape.
+   * @param length it specifies the length of the dbox specifying the shape.
+   */
+  public Shape(int id, int[] origin, int[] length) {
+
+    this.no = id;
+
+    boundingBox = new Dbox(origin, length);
+    boxes = new ArrayList<>(1);
+    boxes.add(boundingBox);
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+  }
+
+  /**
+   * It checks whether the shape object is consistent.
+   *
+   * @return It returns the string description of the problem, or null if no problem with data
+   *     structure consistency encountered.
+   */
+  public String checkInvariants() {
+
+    if (boxes == null) {
+      return "uninitialized shifted box set";
+    }
+
+    for (Dbox b : boxes) {
+      if (b == null) {
+        return "shape contains a null box";
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * It returns the dboxes defining the shape.
+   *
+   * @return the collection of dboxes defining the shape.
+   */
+  public Collection<Dbox> components() {
+    return boxes;
+  }
+
+  /**
+   * It computes the bounding box of the given shape.
+   *
+   * @return the bounding box covering all boxes constituting the shape.
+   */
+  private Dbox computeBoundingBox() {
+
+    int[] mins = null;
+    int[] maxes = null;
+    int dim = 0;
+
+    for (Dbox b : boxes) {
+
+      if (mins == null) {
+        dim = b.origin.length;
+        mins = new int[dim];
+        maxes = new int[dim];
+        Arrays.fill(mins, Integer.MAX_VALUE);
+        Arrays.fill(maxes, Integer.MIN_VALUE);
+      }
+
+      for (int i = 0; i < dim; i++) {
+        mins[i] = Math.min(mins[i], b.origin[i]);
+        maxes[i] = Math.max(maxes[i], b.origin[i] + b.length[i]);
+      }
+    }
+
+    // replace the maxes by the actual sizes
+    for (int i = 0; i < dim; i++) {
+      maxes[i] = maxes[i] - mins[i];
+    }
+
+    return new Dbox(mins, maxes);
+  }
+
+  /**
+   * It returns previously computed bounding box of the shape.
+   *
+   * @return the bounding box of the shape.
+   */
+  public final Dbox boundingBox() {
+    return boundingBox;
+  }
+
+  /**
+   * It checks whether a given point lies within any of the shapes boxes.
+   *
+   * @param point the point which containment within a shape is being checked.
+   * @return true if the point lies within a shape, false otherwise.
+   */
+  public boolean containsPoint(int[] point) {
+
+    Iterator<Dbox> i = boxes.iterator();
+
+    boolean inside = false;
+
+    while (!inside && i.hasNext()) {
+      inside = i.next().containsPoint(point);
+    }
+
+    return inside;
+  }
+
+  /** It (re)initializes the holes. */
+  private void initHoles() {
+    /*
+     * the holes are the result of the subtraction to the bounding
+     * box of all components
+     */
+    if (holes == null) {
+      holes = new ArrayList<>();
+    } else {
+      if (!holes.isEmpty()) {
+        for (Dbox hole : holes) {
+          Dbox.dispatchBox(hole);
+        }
+        holes.clear();
+      }
+    }
+
+    /*in order to be able to get a correct frame in the limit cases,
+     * where the portion of the frame is flat, we need quarter units.
+     * A simple way to get them is to change the scale to four times the original size,
+     * and add an extra unit to the boxes, which thus corresponds to a quarter unit
+     */
+    final int dimension = boundingBox.origin.length;
+    Collection<Dbox> rescaledBoxes = new ArrayList<>(boxes.size());
+    for (Dbox b : boxes) {
+      Dbox scaled = Dbox.newBox(dimension);
+      for (int i = 0; i < dimension; i++) {
+        scaled.origin[i] = b.origin[i] * 4 - 1; // 1 extra quarter unit
+        scaled.length[i] =
+            b.length[i] * 4 + 2; // 1 extra quarter unit, + the one removed from the origin
+      }
+      rescaledBoxes.add(scaled);
+    }
+
+    Dbox scaledBoundingBox = Dbox.newBox(dimension);
+
+    for (int i = 0; i < dimension; i++) {
+      scaledBoundingBox.origin[i] = boundingBox.origin[i] * 4;
+      scaledBoundingBox.length[i] = boundingBox.length[i] * 4;
+    }
+
+    scaledBoundingBox.subtractAll(rescaledBoxes, holes);
+
+    // release boxes
+    for (Dbox b : rescaledBoxes) {
+      Dbox.dispatchBox(b);
+    }
+    Dbox.dispatchBox(scaledBoundingBox);
+  }
+
+  /**
+   * It returns the set of holes of this shape. The set of holes is a set of boxes with the
+   * following properties, once scaled by a factor 1/4: - none of its components overlaps with the
+   * shape's components - its union with the set of components covers the bounding box of the shape,
+   * except for an empty area at the component boundary that has size 1/4
+   *
+   * @return the set of holes of this shape.
+   */
+  public Collection<Dbox> holes() {
+    if (holes == null) {
+      initHoles();
+    }
+    return holes;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Shape(").append(no).append(",");
+    for (Dbox b : boxes) {
+      builder.append(b).append(", ");
+    }
+    builder.deleteCharAt(builder.length() - 1);
+    builder.deleteCharAt(builder.length() - 1);
+
+    builder.append(")");
+    return builder.toString();
+  }
+
+  /**
+   * It computes the area (2D), volumen (3D) of the shape.
+   *
+   * @return the area/volume of the shape.
+   */
+  public int area() {
+
+    if (area < 0) {
+      int holeArea = 0;
+      Collection<Dbox> actualHoles = new LinkedList<>();
+      actualHoles = boundingBox.subtractAll(boxes, actualHoles);
+      for (Dbox hole : actualHoles) {
+        holeArea += hole.area();
+        Dbox.dispatchBox(hole);
+      }
+
+      if (ASSERTS_ENABLED && boundingBox.area() - holeArea <= 0) {
+        throw new IllegalStateException(String.valueOf("negative area"));
+      }
+
+      area = boundingBox.area() - holeArea;
+    }
+    return area;
+  }
+
+  /**
+   * It computes a collection of DBoxes that form the same shape, but that are certain to not
+   * overlap.
+   *
+   * <p>This implementation is probably not the most efficient possible representation.
+   *
+   * @return non overlapping representation of the shape.
+   */
+  public Collection<Dbox> noOverlapRepresentation() {
+    Collection<Dbox> actualHoles = new ArrayList<>();
+    actualHoles = boundingBox.subtractAll(boxes, actualHoles);
+    return boundingBox.subtractAll(actualHoles, new ArrayList<>());
+  }
+}

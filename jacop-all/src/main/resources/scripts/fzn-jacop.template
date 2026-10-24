@@ -1,0 +1,17 @@
+#!/bin/bash
+cd "$(dirname "$0")"
+JACOP_JAR="jacop-all-${project.version}.jar"
+
+# Build classpath from lib/*.jar dynamically
+CLASSPATH="$JACOP_JAR"
+for jar in lib/*.jar; do
+  [ -f "$jar" ] && CLASSPATH="$CLASSPATH${CLASSPATH:+:}$jar"
+done
+
+# Platform-specific separator (Windows uses ;)
+sep=':'; [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || -n "${WINDIR:-}" ]] && sep=';'
+if [[ "$sep" == ';' ]]; then
+  CLASSPATH=$(echo "$CLASSPATH" | tr ':' ';')
+fi
+
+exec java -XX:+UseSerialGC -server -Xmx12G -Xss100M -cp "$CLASSPATH" org.jacop.fz.Fz2jacop "$@"

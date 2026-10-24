@@ -1,0 +1,237 @@
+/*
+ * IfThenBool.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * Constraint ( X {@literal =>} Y ) {@literal <=>} Z.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class IfThenBool extends AbstractConstraintXandYandZ {
+
+  /*
+   * X | Y | Z
+   * 0   0   1
+   * 0   1   1
+   * 1   0   0
+   * 1   1   1
+   */
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  public IfThenBool(IntVar x, IntVar y, IntVar z) {
+
+    super(idNumber, x, y, z);
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+  }
+
+  /**
+   * It checks invariants required by the constraint. Namely that boolean variables have boolean
+   * domain.
+   *
+   * @return the string describing the violation of the invariant, null otherwise.
+   */
+  public String checkInvariants() {
+    return checkBooleanDomains(x, y, z);
+  }
+
+  @Override
+  public void consistency(Store store) {
+    propagateIfThenBool(store, false);
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  /**
+   * Unified propagation logic for both consistency and notConsistency.
+   *
+   * @param store the store.
+   * @param negated if true, propagates the negation of the constraint.
+   */
+  private void propagateIfThenBool(Store store, boolean negated) {
+
+    if (negated) {
+      propagateIfThenBoolNegated(store);
+    } else {
+      propagateIfThenBoolNonNegated(store);
+    }
+  }
+
+  private void propagateIfThenBoolNegated(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+      propagateNegatedFromX(store);
+      propagateNegatedFromY(store);
+      propagateNegatedFromZ(store);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagateNegatedFromX(Store store) {
+    if (!x.singleton()) {
+      return;
+    }
+    if (x.max() == 0) {
+      z.domain.inValue(store.level, z, 0);
+    }
+    if (x.min() == 1) {
+      if (y.singleton()) {
+        z.domain.inComplement(store.level, z, y.value());
+      }
+      if (z.singleton()) {
+        y.domain.inComplement(store.level, y, z.value());
+      }
+    }
+  }
+
+  private void propagateNegatedFromY(Store store) {
+    if (!y.singleton()) {
+      return;
+    }
+    if (y.max() == 0) {
+      z.domain.in(store.level, z, x.domain);
+      x.domain.in(store.level, x, z.domain);
+    }
+    if (y.min() == 1) {
+      z.domain.inValue(store.level, z, 0);
+    }
+  }
+
+  private void propagateNegatedFromZ(Store store) {
+    if (z.min() == 1) {
+      x.domain.inValue(store.level, x, 1);
+      y.domain.inValue(store.level, y, 0);
+    }
+  }
+
+  private void propagateIfThenBoolNonNegated(Store store) {
+    if (z.max() == 0) {
+      x.domain.inValue(store.level, x, 1);
+      y.domain.inValue(store.level, y, 0);
+    }
+    if (x.max() == 0) {
+      z.domain.inValue(store.level, z, 1);
+    } else if (x.min() == 1) {
+      z.domain.in(store.level, z, y.domain);
+      y.domain.in(store.level, y, z.domain);
+    }
+    if (y.max() == 0) {
+      if (x.singleton()) {
+        z.domain.inComplement(store.level, z, x.value());
+      }
+      if (z.singleton()) {
+        x.domain.inComplement(store.level, x, z.value());
+      }
+    } else if (y.min() == 1) {
+      z.domain.inValue(store.level, z, 1);
+    }
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+    propagateIfThenBool(store, true);
+  }
+
+  /**
+   * Unified satisfaction check for both satisfied and notSatisfied.
+   *
+   * @param negated if true, checks the negation of the constraint.
+   * @return true if the constraint (or its negation) is satisfied.
+   */
+  private boolean checkIfThenBoolSatisfaction(boolean negated) {
+
+    if (!x.singleton() || !z.singleton()) {
+      return false;
+    }
+
+    if (negated && x.singleton(0) && z.singleton(0)) {
+      return true;
+    }
+    if (!negated && x.singleton(0) && z.singleton(1)) {
+      return true;
+    }
+
+    if (!y.singleton()) {
+      return false;
+    }
+
+    return negated
+        ? (x.singleton(1) && y.singleton(1) && z.singleton(0))
+        : (x.singleton(1) && y.singleton(1) && z.singleton(1));
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    return checkIfThenBoolSatisfaction(true);
+  }
+
+  @Override
+  public boolean satisfied() {
+    return checkIfThenBoolSatisfaction(false);
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : IfThenBool( (" + x + "=> " + y + ") <=> " + z + " )";
+  }
+}

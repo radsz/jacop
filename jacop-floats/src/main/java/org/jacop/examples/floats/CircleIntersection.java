@@ -1,0 +1,124 @@
+/*
+ * CircleIntersection.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.examples.floats;
+
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.PrintOutListener;
+
+/** Example for circle intersection using float constraints. */
+@Slf4j
+public class CircleIntersection {
+
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    CircleIntersection example = new CircleIntersection();
+
+    example.circleIntersection();
+  }
+
+  void circleIntersection() {
+
+    long startTime;
+    startTime = System.currentTimeMillis();
+
+    log.info("========= circleIntersection =========");
+
+    Store store = new Store();
+
+    FloatDomain.setPrecision(1e-13);
+    FloatDomain.intervalPrint(false);
+
+    // x*x + y*y = 4.0 /\ (x-1.0)*(x-1.0) + (y-1.0)(y-1.0) = 4.0
+    FloatVar x = new FloatVar(store, "x", minFloat, maxFloat);
+    FloatVar y = new FloatVar(store, "y", minFloat, maxFloat);
+
+    FloatVar t1 = new FloatVar(store, "t1", minFloat, maxFloat);
+    store.impose(new PmulQeqR(x, x, t1));
+    FloatVar t2 = new FloatVar(store, "t2", minFloat, maxFloat);
+    store.impose(new PmulQeqR(y, y, t2));
+    store.impose(new PplusQeqR(t1, t2, new FloatVar(store, 4.0, 4.0)));
+
+    FloatVar s1 = new FloatVar(store, "s1", minFloat, maxFloat);
+    store.impose(new PplusCeqR(x, -1.0, s1));
+    FloatVar s2 = new FloatVar(store, "s2", minFloat, maxFloat);
+    store.impose(new PplusCeqR(y, -1.0, s2));
+    FloatVar r1 = new FloatVar(store, "r1", minFloat, maxFloat);
+    store.impose(new PmulQeqR(s1, s1, r1));
+    FloatVar r2 = new FloatVar(store, "r2", minFloat, maxFloat);
+    store.impose(new PmulQeqR(s2, s2, r2));
+    store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
+
+    log.info(
+        "\bVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<>(store, new FloatVar[] {x, y}, new SmallestDomainFloat<>());
+    label.setSolutionListener(new PrintOutListener<>());
+    label.getSolutionListener().recordSolutions(true);
+    label.getSolutionListener().searchAll(true);
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
+
+    label.labeling(store, s);
+
+    label.printAllSolutions();
+
+    log.info("\nPrecision = " + FloatDomain.precision());
+
+    long endTime = System.currentTimeMillis();
+    long elapsed = endTime - startTime;
+
+    log.info("\n\t*** Execution time = " + elapsed + " ms");
+  }
+}

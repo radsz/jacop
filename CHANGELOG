@@ -1,7 +1,33 @@
+Version 5.0 (unreleased)
+========================
+
+1. Constraint Diff is removed. Its zero-length rectangles followed neither
+   the strict nor the non-strict semantics of diffn. Use
+   new Diffn(rectangles, true) (strict, minizinc diffn) or
+   new Diff2(rectangles) (non-strict, minizinc diffn_nonstrict) instead;
+   Diff.builder() becomes Diffn.builder()...strict(true).build() or
+   Diff2.diff2Builder(). With positive lengths all of them accept the
+   same solutions, but they may search differently. Diff2, Disjoint and
+   DisjointConditional, which extended Diff, now extend the package-private
+   AbstractDiff and keep their behaviour. The Scala diff2 wrappers now post
+   Diff2, as documented, instead of Diff.
+
 Version 4.11
 =============
 
-1. Bug corrections, code cleaning and performance improvements.
+1. Changes in XexpYeqZ to be compatible with minizinc definition for
+   negative exponents. Domain consistency implemented.
+
+2. Falzinc definitions for asinh, acosh and atanh.
+
+3. New constraints AlldifferentExceptZero and AlldifferentExcept
+   available also from minizinc.
+
+4. New constraints ElementBool available also from minizinc.
+
+5. Definition of impact variable selection method for minizinc.
+
+6. Bug corrections, code cleaning and performance improvements.
 
 Version 4.10
 =============

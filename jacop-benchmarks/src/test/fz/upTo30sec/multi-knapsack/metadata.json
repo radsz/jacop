@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_knapsack"],
+  "constraintFamilies": ["knapsack", "linear"],
+  "domains": []
+}

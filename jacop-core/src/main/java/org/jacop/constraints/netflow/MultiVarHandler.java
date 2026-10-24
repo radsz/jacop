@@ -1,0 +1,106 @@
+/*
+ * MultiVarHandler.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.netflow;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Var;
+
+/**
+ * Handler that helps to handle multiple variables.
+ *
+ * @author Robin Steiger and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class MultiVarHandler implements VarHandler {
+
+  private final IntVar variable;
+  private final List<VarHandler> handlers;
+
+  /**
+   * Constructs a handler that delegates to multiple variable handlers for the given variable.
+   *
+   * @param variable the variable managed by this handler.
+   * @param handlers the individual handlers to delegate to.
+   */
+  public MultiVarHandler(IntVar variable, VarHandler... handlers) {
+    this.variable = variable;
+    this.handlers = new ArrayList<>(Arrays.asList(handlers));
+  }
+
+  /**
+   * Adds an additional variable handler to this multi-handler.
+   *
+   * @param handler the handler to add; must list the same variable as this handler.
+   */
+  public void add(VarHandler handler) {
+    if (ASSERTS_ENABLED && !handler.listVariables().contains(variable)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    handlers.add(handler);
+  }
+
+  /** {@inheritDoc} */
+  public int getPruningEvent(Var variable) {
+    if (ASSERTS_ENABLED && this.variable != variable) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    int max = IntDomain.GROUND;
+    for (VarHandler handler : handlers) {
+      int event = handler.getPruningEvent(variable);
+      if (max < event) {
+        max = event;
+      }
+    }
+    return max;
+  }
+
+  /** {@inheritDoc} */
+  public List<IntVar> listVariables() {
+    return Collections.singletonList(variable);
+  }
+
+  /** {@inheritDoc} */
+  public void processEvent(IntVar variable, MutableNetwork network) {
+    if (ASSERTS_ENABLED && this.variable != variable) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    for (VarHandler handler : handlers) {
+      handler.processEvent(variable, network);
+    }
+  }
+}

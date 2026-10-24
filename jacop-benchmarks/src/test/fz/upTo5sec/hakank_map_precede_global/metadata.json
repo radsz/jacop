@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_ne", "jacop_member_int", "jacop_member_int_reif", "jacop_seq_precede_chain_int", "jacop_value_precede_int"],
+  "constraintFamilies": ["linear", "member", "sequence"],
+  "domains": []
+}
