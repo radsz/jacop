@@ -51,7 +51,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
@@ -77,6 +76,9 @@ public class Binpacking extends Constraint
   /** It keeps together a list of variables which define bin for item i and their weigts. */
   private final BinItem[] item;
 
+  /** Bin variables of items with weight zero; they are only restricted to the existing bins. */
+  private final IntVar[] zeroWeightBins;
+
   /** It specifies a list of variables which define bin load. */
   private final IntVar[] load;
 
@@ -87,10 +89,9 @@ public class Binpacking extends Constraint
   boolean lbPruning = true;
   private boolean firstConsistencyCheck = true;
   private int minBinNumber;
-  private int sizeAllItems;
-  private int alphaP;
-  private int betaP;
-  private TimeStamp<Boolean> lbPruningStamp;
+  private long sizeAllItems;
+  private long alphaP;
+  private long betaP;
 
   /**
    * It constructs the binpacking constraint for the supplied variable.
@@ -134,18 +135,24 @@ public class Binpacking extends Constraint
     }
 
     LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<>();
+    LinkedHashSet<IntVar> zeroWeight = new LinkedHashSet<>();
     for (int i = 0; i < bin.length; i++) {
 
-      if (w[i] != 0) {
+      if (w[i] == 0) {
+        zeroWeight.add(bin[i]);
+      } else {
         if (itemPar.get(bin[i]) != null) {
-          Integer s = itemPar.get(bin[i]);
-          Integer ns = s + w[i];
-          itemPar.put(bin[i], ns);
+          // a weight above IntDomain.MAX_INT fits in no bin; capping it avoids int overflow
+          int s = itemPar.get(bin[i]);
+          itemPar.put(bin[i], (int) Math.min((long) s + w[i], IntDomain.MAX_INT + 1L));
         } else {
           itemPar.put(bin[i], w[i]);
         }
       }
     }
+
+    zeroWeight.removeAll(itemPar.keySet());
+    this.zeroWeightBins = zeroWeight.toArray(new IntVar[0]);
 
     this.numberId = idNumber.incrementAndGet();
     this.item = new BinItem[itemPar.size()];
@@ -190,13 +197,13 @@ public class Binpacking extends Constraint
   }
 
   private static int computeDefaultMinBin(IntVar[] bin, int[] w) {
-    int min = bin[0].min();
+    int min = Integer.MAX_VALUE;
     for (int i = 0; i < bin.length; i++) {
       if (w[i] != 0 && bin[i].min() < min) {
         min = bin[i].min();
       }
     }
-    return min;
+    return min == Integer.MAX_VALUE && bin.length > 0 ? bin[0].min() : min;
   }
 
   /**
@@ -214,12 +221,6 @@ public class Binpacking extends Constraint
     this.lbPruning = lbPruning;
   }
 
-  @Override
-  public void impose(Store store) {
-    super.impose(store);
-    lbPruningStamp = new TimeStamp<>(store, true);
-  }
-
   /** Rule "Pack All" -- applied only on first consistency check. */
   private void applyPackAllRule(Store store) {
     if (!firstConsistencyCheck) {
@@ -228,25 +229,10 @@ public class Binpacking extends Constraint
     Arrays.stream(item)
         .map(BinItem::bin)
         .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
+    for (IntVar b : zeroWeightBins) {
+      b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
+    }
     firstConsistencyCheck = false;
-  }
-
-  /** Returns true if LB pruning should be skipped this round (all bins used). */
-  private boolean updatePruneLbFlag(boolean pruneLb) {
-    if (!pruneLb) {
-      return false;
-    }
-    BitSet binUsed = new BitSet(load.length + minBinNumber);
-    for (BinItem itemEl : item) {
-      if (itemEl.bin().singleton()) {
-        binUsed.set(itemEl.bin().value());
-      }
-    }
-    if (binUsed.cardinality() == load.length) {
-      lbPruningStamp.update(false);
-      return false;
-    }
-    return true;
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
@@ -273,15 +259,47 @@ public class Binpacking extends Constraint
     return d;
   }
 
+  /** Bins to be (re)processed in the current consistency call, indexed from 0. */
+  private BitSet todo = new BitSet();
+
+  /** Removes bin binIdx from an item and schedules the bins whose item sets changed. */
+  private void removeBin(Store store, IntVar b, int binIdx) {
+    if (b.domain.contains(binIdx)) {
+      b.domain.inComplement(store.level, b, binIdx);
+      todo.set(binIdx - minBinNumber);
+      if (b.singleton()) { // the item is now required in its last bin
+        int k = b.value() - minBinNumber;
+        if (k >= 0 && k < load.length) {
+          todo.set(k);
+        }
+      }
+    }
+  }
+
+  /** Puts an item into bin binIdx and schedules every bin it could be in before. */
+  private void assignBin(Store store, IntVar b, int binIdx) {
+    if (!b.singleton()) {
+      for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int k = e.nextElement() - minBinNumber;
+        if (k >= 0 && k < load.length) {
+          todo.set(k);
+        }
+      }
+    }
+    b.domain.inValue(store.level, b, binIdx);
+  }
+
   /** Processes one bin index: load maintenance, tightening, elimination/commitment. */
   private void processBin(Store store, int i) {
     if (i < 0 || i >= load.length) {
       return;
     }
+    int loadMin = load[i].min();
+    int loadMax = load[i].max();
     BinItem[] candidates = new BinItem[item.length];
     int candidatesLength = 0;
-    int required = 0;
-    int possible = 0;
+    long required = 0;
+    long possible = 0;
     int binIdx = i + minBinNumber;
     for (BinItem itemEl : item) {
       if (itemEl.bin().dom().contains(binIdx)) {
@@ -293,7 +311,7 @@ public class Binpacking extends Constraint
         }
       }
     }
-    load[i].domain.in(store.level, load[i], required, possible);
+    load[i].domain.in(store.level, load[i], clamp(required), clamp(possible));
     applyLoadMaintenanceToCandidates(
         store, i, binIdx, required, possible, candidates, candidatesLength);
     int[] Cj = new int[candidatesLength];
@@ -302,32 +320,41 @@ public class Binpacking extends Constraint
     }
     applyTighteningBounds(store, i, required, Cj);
     applyEliminationAndCommitment(store, i, binIdx, required, candidates, Cj, candidatesLength);
+    if (load[i].min() != loadMin || load[i].max() != loadMax) {
+      todo.set(i);
+    }
   }
 
   private void applyLoadMaintenanceToCandidates(
       Store store,
       int i,
       int binIdx,
-      int required,
-      int possible,
+      long required,
+      long possible,
       BinItem[] candidates,
       int candidatesLength) {
+    int loadMin = load[i].min();
+    int loadMax = load[i].max();
     for (int l = 0; l < candidatesLength; l++) {
       BinItem bi = candidates[l];
-      if (required + bi.weight() > load[i].max()) {
-        bi.bin().domain.inComplement(store.level, bi.bin(), binIdx);
-      } else if (possible - bi.weight() < load[i].min()) {
-        bi.bin().domain.inValue(store.level, bi.bin(), binIdx);
+      if (required + bi.weight() > loadMax) {
+        removeBin(store, bi.bin(), binIdx);
+      } else if (possible - bi.weight() < loadMin) {
+        assignBin(store, bi.bin(), binIdx);
       }
     }
   }
 
-  private void applyTighteningBounds(Store store, int i, int required, int[] candidateWeights) {
-    if (noSum(candidateWeights, load[i].min() - required, load[i].min() - required)) {
-      load[i].domain.inMin(store.level, load[i], required + betaP);
+  private void applyTighteningBounds(Store store, int i, long required, int[] candidateWeights) {
+    long sumCandidates = sum(candidateWeights);
+    int len = candidateWeights.length;
+    if (noSum(
+        candidateWeights, len, sumCandidates, load[i].min() - required, load[i].min() - required)) {
+      load[i].domain.inMin(store.level, load[i], clamp(required + betaP));
     }
-    if (noSum(candidateWeights, load[i].max() - required, load[i].max() - required)) {
-      load[i].domain.inMax(store.level, load[i], required + alphaP);
+    if (noSum(
+        candidateWeights, len, sumCandidates, load[i].max() - required, load[i].max() - required)) {
+      load[i].domain.inMax(store.level, load[i], clamp(required + alphaP));
     }
   }
 
@@ -335,61 +362,79 @@ public class Binpacking extends Constraint
       Store store,
       int i,
       int binIdx,
-      int required,
+      long required,
       BinItem[] candidates,
       int[] candidateWeights,
       int candidatesLength) {
+    if (candidatesLength == 0) {
+      return;
+    }
+    long loadMin = load[i].min();
+    long loadMax = load[i].max();
+    long sumCandidates = sum(candidateWeights);
+    // candidate weights without candidate j, kept in descending order; moving from j to j + 1 only
+    // puts weight j back at position j
+    int[] others = Arrays.copyOfRange(candidateWeights, 1, candidatesLength);
     for (int j = 0; j < candidatesLength; j++) {
-      int[] candidateWeightsMinusCurrent = new int[candidatesLength - 1];
-      System.arraycopy(candidateWeights, 0, candidateWeightsMinusCurrent, 0, j);
-      System.arraycopy(
-          candidateWeights,
-          j + 1,
-          candidateWeightsMinusCurrent,
-          j,
-          candidateWeights.length - j - 1);
-      if (noSum(
-          candidateWeightsMinusCurrent,
-          load[i].min() - required - candidateWeights[j],
-          load[i].max() - required - candidateWeights[j])) {
-        candidates[j].bin().domain.inComplement(store.level, candidates[j].bin(), binIdx);
+      if (j > 0) {
+        others[j - 1] = candidateWeights[j - 1];
       }
-      if (noSum(candidateWeightsMinusCurrent, load[i].min() - required, load[i].max() - required)) {
-        candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), binIdx);
+      long sumOthers = sumCandidates - candidateWeights[j];
+      if (noSum(
+          others,
+          candidatesLength - 1,
+          sumOthers,
+          loadMin - required - candidateWeights[j],
+          loadMax - required - candidateWeights[j])) {
+        removeBin(store, candidates[j].bin(), binIdx);
+      }
+      if (noSum(others, candidatesLength - 1, sumOthers, loadMin - required, loadMax - required)) {
+        assignBin(store, candidates[j].bin(), binIdx);
       }
     }
   }
 
   /** Rule "Load and Size Coherence": updates load domains from global capacity. */
   private void applyLoadAndSizeCoherence(Store store) {
-    int allCapacityMin = 0;
-    int allCapacityMax = 0;
+    long allCapacityMin = 0;
+    long allCapacityMax = 0;
     for (IntVar aLoad : load) {
       allCapacityMin += aLoad.min();
       allCapacityMax += aLoad.max();
     }
-    int s1 = sizeAllItems - allCapacityMax;
-    int s2 = sizeAllItems - allCapacityMin;
-    for (IntVar aLoad : load) {
-      aLoad.domain.in(store.level, aLoad, s1 + aLoad.max(), s2 + aLoad.min());
+    long s1 = sizeAllItems - allCapacityMax;
+    long s2 = sizeAllItems - allCapacityMin;
+    for (int i = 0; i < load.length; i++) {
+      IntVar aLoad = load[i];
+      int min = aLoad.min();
+      int max = aLoad.max();
+      aLoad.domain.in(store.level, aLoad, clamp(s1 + max), clamp(s2 + min));
+      if (aLoad.min() != min || aLoad.max() != max) {
+        todo.set(i);
+      }
     }
   }
 
   @Override
   public void consistency(Store store) {
     applyPackAllRule(store);
-    boolean pruneLb = lbPruning && lbPruningStamp.value();
-    pruneLb = updatePruneLbFlag(pruneLb);
-    store.propagationHasOccurred = false;
+    todo.clear();
     IntervalDomain d = collectChangedDomains();
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
-      processBin(store, i);
+      if (i >= 0 && i < load.length) {
+        todo.set(i);
+      }
     }
-    applyLoadAndSizeCoherence(store);
-    if (store.propagationHasOccurred) {
-      store.addChanged(this);
-    } else if (lbPruning && pruneLb) {
+    // Apply the rules until no bin changes (the changes made here are not queued by the store).
+    do {
+      for (int i = todo.nextSetBit(0); i >= 0; i = todo.nextSetBit(0)) {
+        todo.clear(i);
+        processBin(store, i);
+      }
+      applyLoadAndSizeCoherence(store);
+    } while (!todo.isEmpty());
+    if (lbPruning) {
       lbNumberBins();
     }
   }
@@ -413,40 +458,48 @@ public class Binpacking extends Constraint
       return;
     }
 
+    int firstBin = IntDomain.MAX_INT;
+    int lastBin = IntDomain.MIN_INT;
+    for (BinItem anItem : item) {
+      firstBin = Math.min(firstBin, anItem.bin().min());
+      lastBin = Math.max(lastBin, anItem.bin().max());
+    }
+    int first = Math.max(0, firstBin - minBinNumber);
+    int last = Math.min(load.length - 1, lastBin - minBinNumber);
+    int nb = last - first + 1;
+
+    // Free space of every bin that items can still use; the items already packed and the
+    // capacity a bin lacks compared to the largest one become one virtual item per bin.
+    int[] free = new int[nb];
     int maxCapacity = 0;
-    for (IntVar c : load) {
-      int maxC = c.max();
-      if (maxCapacity < maxC) {
-        maxCapacity = maxC;
-      }
+    int maxFree = 0;
+    for (int i = first; i <= last; i++) {
+      free[i - first] = load[i].max() - a[i];
+      maxCapacity = Math.max(maxCapacity, load[i].max());
+      maxFree = Math.max(maxFree, free[i - first]);
     }
 
-    for (int i = 0; i < load.length; i++) {
-      if (a[i] != 0) { // consider only already loaded bins to add additional "load"
-        a[i] += maxCapacity - load[i].max();
-      }
+    if (maxCapacity <= 0) {
+      throw Store.failException; // unpacked items of positive weight and no capacity
     }
 
-    Arrays.sort(a); // sort array a in ascending order
-
-    int[] z = merge(unpacked, unpackedLength, a);
-
-    // check if there is enough binns to pack all items by computing LB.
-    // If the number of possible bins is lower than lower bound then fail
-    lbBins(z, maxCapacity, getNumberBins(item));
+    // Reduction R0 (Shaw 2004): capacity is the largest bin capacity.
+    lbBins(withVirtualItems(unpacked, unpackedLength, free, maxCapacity), maxCapacity, nb);
+    // Reduction RMin (Dupuis, Schaus and Deville 2010): capacity and virtual items lowered by
+    // the smallest virtual item, i.e. capacity is the largest free space. Neither dominates.
+    if (maxFree > 0 && maxFree < maxCapacity) {
+      lbBins(withVirtualItems(unpacked, unpackedLength, free, maxFree), maxFree, nb);
+    }
   }
 
-  private int getNumberBins(BinItem[] item) {
-    int min = IntDomain.MAX_INT;
-    int max = 0;
-    for (BinItem anItem : item) {
-      IntVar bin = anItem.bin();
-      int bmin = bin.min();
-      int bmax = bin.max();
-      max = Math.max(max, bmax);
-      min = Math.min(min, bmin);
+  /** Unpacked items and one virtual item per bin (capacity - free space), in descending order. */
+  private int[] withVirtualItems(int[] unpacked, int unpackedLength, int[] free, int capacity) {
+    int[] v = new int[free.length];
+    for (int i = 0; i < free.length; i++) {
+      v[i] = capacity - free[i];
     }
-    return max - min + 1;
+    Arrays.sort(v); // ascending, merge reads it backwards
+    return merge(unpacked, unpackedLength, v);
   }
 
   private int[] merge(int[] a, int arrLength, int[] b) {
@@ -522,18 +575,27 @@ public class Binpacking extends Constraint
     return result.toString();
   }
 
-  private boolean noSum(int[] x, int alpha, int beta) {
+  /** Converts a long bound to an int; values outside the domain range still prune or fail. */
+  private static int clamp(long v) {
+    return (int) Math.max(IntDomain.MIN_INT - 1L, Math.min(IntDomain.MAX_INT + 1L, v));
+  }
 
-    if (alpha <= 0 || beta >= sum(x)) {
+  /**
+   * NoSum of Shaw (2004) on the first len weights of x, sorted in descending order, summing to
+   * sumX.
+   */
+  private boolean noSum(int[] x, int len, long sumX, long alpha, long beta) {
+
+    if (alpha <= 0 || beta >= sumX) {
       return false;
     }
 
-    int sumA = 0;
-    int sumB;
-    int sumC = 0;
+    long sumA = 0;
+    long sumB;
+    long sumC = 0;
     int k = 0;
     int kPrime = 0;
-    int n = x.length - 1; // |x|
+    int n = len - 1; // |x|
 
     while (sumC + x[n - kPrime] < alpha) {
       sumC += x[n - kPrime];
@@ -561,8 +623,8 @@ public class Binpacking extends Constraint
     return sumA < alpha;
   }
 
-  private int sum(int[] x) {
-    int summa = 0;
+  private long sum(int[] x) {
+    long summa = 0;
     for (int v : x) {
       summa += v;
     }
@@ -571,15 +633,27 @@ public class Binpacking extends Constraint
 
   private void lbBins(int[] x, int capacity, int nb) {
     int nn = x.length;
-    int sum = sum(x);
-    int lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
+    long sum = sum(x);
+    long lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
 
     if (nb < lb) {
       throw Store.failException;
     }
 
-    for (int k = 0; k <= capacity / 2; k++) {
-      int currentLb = computeLbForK(x, nn, capacity, k);
+    // Martello and Toth's L2 is the maximum of L(k) over 0 <= k <= capacity / 2, but L(k) only
+    // needs to be evaluated for k = 0 and for the distinct item sizes up to capacity / 2
+    // (x is sorted in descending order).
+    int previous = -1;
+    for (int j = nn; j >= 0; j--) {
+      int k = j == nn ? 0 : x[j];
+      if (k > capacity / 2) {
+        break;
+      }
+      if (k == previous) {
+        continue;
+      }
+      previous = k;
+      long currentLb = computeLbForK(x, nn, capacity, k);
       if (currentLb > lb) {
         lb = currentLb;
       }
@@ -589,7 +663,7 @@ public class Binpacking extends Constraint
     }
   }
 
-  private int computeLbForK(int[] x, int nn, int capacity, int k) {
+  private long computeLbForK(int[] x, int nn, int capacity, int k) {
     int N1 = 0;
     int N2 = 0;
     int i = 0;
@@ -597,19 +671,19 @@ public class Binpacking extends Constraint
       N1++;
       i++;
     }
-    int freeSpaceN2 = 0;
+    long freeSpaceN2 = 0;
     while (i < nn && x[i] > capacity / 2) {
       N2++;
       freeSpaceN2 += capacity - x[i];
       i++;
     }
-    int sizeInN3 = 0;
+    long sizeInN3 = 0;
     while (i < nn && x[i] >= k) {
       sizeInN3 += x[i];
       i++;
     }
-    int toPack = sizeInN3 - freeSpaceN2;
-    int noBinsN3 = 0;
+    long toPack = sizeInN3 - freeSpaceN2;
+    long noBinsN3 = 0;
     if (toPack > 0) {
       noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
     }

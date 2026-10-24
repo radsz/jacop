@@ -230,6 +230,24 @@ class PropagationStrengthTest {
     assertThat(x[1].dom().toString()).isEqualTo("2");
   }
 
+  @Test
+  void testSeqPrecedeChainOfValuesIsStrongerThanPairs() {
+
+    // Walsh's example with values 5, 3, 8, 9 in the roles of 1..4: every pair of consecutive
+    // values is consistent, but the chain forbids x1 = 5 (then 3 would come after 8 in x2).
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 5),
+      variable(store, "x1", 3, 5),
+      variable(store, "x2", 5, 8),
+      variable(store, "x3", 8, 9)
+    };
+    store.impose(new SeqPrecedeChain(x, new int[] {5, 3, 8, 9}));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[1].dom().toString()).isEqualTo("3");
+  }
+
   private static IntVar variable(Store store, String name, int... values) {
     IntVar v = new IntVar(store, name);
     for (int value : values) {
