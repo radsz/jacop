@@ -41,7 +41,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
@@ -55,12 +54,14 @@ public class Circuit extends Alldiff implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final int[] val;
+  private final int[] low;
+  private final int[] dfsNode;
+  private final int[] dfsValue;
   final Map<Var, Integer> valueIndex = new HashMap<>();
   int chainLength;
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
   int idd;
-  int sccLength;
   int firstConsistencyLevel;
 
   /**
@@ -83,6 +84,9 @@ public class Circuit extends Alldiff implements Stateful {
     }
 
     val = new int[list.length];
+    low = new int[list.length];
+    dfsNode = new int[list.length];
+    dfsValue = new int[list.length];
 
     setScope(list);
   }
@@ -227,19 +231,56 @@ public class Circuit extends Alldiff implements Stateful {
 
   // --- Strongly Connected Conmponents
 
-  // Uses Trajan's algorithm to find strongly connected components
-  // if found strongly connected component is shorter than the
-  // Hamiltonian circuit length fail is enforced (one is unable to
-  // to build a circuit. Based on the algorithm from the book
-  // Robert Sedgewick, Algorithms, 1988, p. 482.
+  // Uses Tarjan's algorithm to check that the graph of the domains is one strongly connected
+  // component; otherwise no Hamiltonian circuit exists and failure is enforced. Based on the
+  // algorithm from the book Robert Sedgewick, Algorithms, 1988, p. 482.
 
   void sccs() {
 
     Arrays.fill(val, 0);
     idd = 0;
 
-    sccLength = 0;
-    visit(0);
+    // iterative depth-first search from node 0 (recursion overflows the stack for large circuits)
+    int n = list.length;
+    int sp = 0;
+    push(0, sp++);
+    while (sp > 0) {
+      int k = dfsNode[sp - 1];
+      IntDomain dom = list[k].dom();
+      int last = dfsValue[sp - 1];
+      if (last < dom.max()) {
+        int value = last < dom.min() ? dom.min() : dom.nextValue(last);
+        dfsValue[sp - 1] = value;
+        int t = value - 1;
+        if (val[t] == 0) {
+          push(t, sp++);
+        } else if (val[t] < low[k]) {
+          low[k] = val[t];
+        }
+        continue;
+      }
+      if (low[k] == val[k]) {
+        // k is the root of a strongly connected component. It is the first component completed
+        // (the search stops at the first one), so all visited nodes are still in the Tarjan stack
+        // and low is the exact lowlink. The graph is strongly connected only if this component
+        // is rooted at node 0 and contains all nodes.
+        if (k != 0 || idd != n) {
+          throw Store.failException;
+        }
+      }
+      sp--;
+      if (sp > 0 && low[k] < low[dfsNode[sp - 1]]) {
+        low[dfsNode[sp - 1]] = low[k];
+      }
+    }
+  }
+
+  private void push(int k, int sp) {
+    idd++;
+    val[k] = idd;
+    low[k] = idd;
+    dfsNode[sp] = k;
+    dfsValue[sp] = Integer.MIN_VALUE;
   }
 
   @Override
@@ -270,34 +311,5 @@ public class Circuit extends Alldiff implements Stateful {
     graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
     graph[vMin - 1].update(
         new CircuitVarValue(((CircuitVarValue) graph[vMin - 1].value()).next, i + 1));
-  }
-
-  int visit(int k) {
-
-    idd++;
-    val[k] = idd;
-    int min = idd;
-    sccLength++;
-    for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
-      int t = e.nextElement() - 1;
-      int m;
-      if (val[t] == 0) {
-        m = visit(t);
-      } else {
-        m = val[t];
-      }
-      if (m < min) {
-        min = m;
-      }
-    }
-    if (min == val[k]) {
-      if (sccLength != list.length && sccLength != 0) {
-        // the scc is shorter than all nodes in the circuit constraints
-        sccLength = 0;
-        throw Store.failException;
-      }
-      sccLength = 0;
-    }
-    return min;
   }
 }

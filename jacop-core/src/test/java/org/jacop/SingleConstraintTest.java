@@ -950,6 +950,65 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void circuitFailsWhenGraphIsNotStronglyConnected() {
+    // No successor domain contains 1 (first graph), or nodes 3..6 never lead back to 1 or 2
+    // (second graph), so no Hamiltonian circuit exists. The SCC check only failed when the DFS
+    // from node 1 had not yet visited all nodes at the moment it closed a component; here the
+    // component without node 1 is closed after all nodes have been visited.
+    int[][][] graphs = {
+      {{2, 3}, {3, 4, 5}, {2, 4, 5}, {2, 3, 5}, {2, 3, 4}},
+      {{2}, {1, 3}, {4, 5, 6}, {3, 5, 6}, {3, 4, 6}, {3, 4, 5}}
+    };
+    for (int[][] graph : graphs) {
+      assertThat(circuitSolutions(graph, new int[graph.length], 0, false)).isZero();
+      Store store = new Store();
+      IntVar[] x = new IntVar[graph.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + (i + 1));
+        for (int v : graph[i]) {
+          x[i].addDom(v, v);
+        }
+      }
+      store.impose(new Circuit(x));
+      assertThat(store.consistency()).as(Arrays.deepToString(graph)).isFalse();
+    }
+  }
+
+  @Test
+  void circuitOnLargeGraphDoesNotOverflowTheStack() throws InterruptedException {
+    // The SCC check was a recursive DFS, one Java frame per node, and threw StackOverflowError
+    // for circuits of a few ten thousand nodes with the default thread stack. Every node i may go
+    // to i - 1 or i + 1 (cyclic). Run on a thread with a 512 KB stack, since tests use -Xss100m.
+    int n = 100_000;
+    boolean[] result = new boolean[1];
+    Throwable[] error = new Throwable[1];
+    Thread thread =
+        new Thread(
+            null,
+            () -> {
+              try {
+                Store store = new Store();
+                IntVar[] x = new IntVar[n];
+                for (int i = 0; i < n; i++) {
+                  x[i] = new IntVar(store, "x" + i);
+                  x[i].addDom((i + 1) % n + 1, (i + 1) % n + 1);
+                  x[i].addDom((i + n - 1) % n + 1, (i + n - 1) % n + 1);
+                }
+                store.impose(new Circuit(x));
+                result[0] = store.consistency();
+              } catch (Throwable t) {
+                error[0] = t;
+              }
+            },
+            "small-stack",
+            512 * 1024);
+    thread.start();
+    thread.join();
+    assertThat(error[0]).isNull();
+    assertThat(result[0]).isTrue();
+  }
+
+  @Test
   void minSimpleReachesFixpoint() {
     // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
     // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
