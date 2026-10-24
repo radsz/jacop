@@ -325,6 +325,26 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(27);
   }
 
+  // Items of weight zero were dropped from the constraint, so their bin variables could take
+  // values outside the bins (MiniZinc bin_packing_capa and bin_packing_load require every item
+  // to be in one of the bins).
+  @Test
+  void testBinpackingZeroWeightItemInExistingBin() {
+
+    Store store = new Store();
+    IntVar[] items = {new IntVar(store, "i0", 0, 3), new IntVar(store, "i1", 0, 3)};
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 3);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 2}, 1));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // i0 in {1, 2}, i1 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

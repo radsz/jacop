@@ -77,6 +77,9 @@ public class Binpacking extends Constraint
   /** It keeps together a list of variables which define bin for item i and their weigts. */
   private final BinItem[] item;
 
+  /** Bin variables of items with weight zero; they are only restricted to the existing bins. */
+  private final IntVar[] zeroWeightBins;
+
   /** It specifies a list of variables which define bin load. */
   private final IntVar[] load;
 
@@ -134,9 +137,12 @@ public class Binpacking extends Constraint
     }
 
     LinkedHashMap<IntVar, Integer> itemPar = new LinkedHashMap<>();
+    LinkedHashSet<IntVar> zeroWeight = new LinkedHashSet<>();
     for (int i = 0; i < bin.length; i++) {
 
-      if (w[i] != 0) {
+      if (w[i] == 0) {
+        zeroWeight.add(bin[i]);
+      } else {
         if (itemPar.get(bin[i]) != null) {
           Integer s = itemPar.get(bin[i]);
           Integer ns = s + w[i];
@@ -146,6 +152,9 @@ public class Binpacking extends Constraint
         }
       }
     }
+
+    zeroWeight.removeAll(itemPar.keySet());
+    this.zeroWeightBins = zeroWeight.toArray(new IntVar[0]);
 
     this.numberId = idNumber.incrementAndGet();
     this.item = new BinItem[itemPar.size()];
@@ -228,6 +237,9 @@ public class Binpacking extends Constraint
     Arrays.stream(item)
         .map(BinItem::bin)
         .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
+    for (IntVar b : zeroWeightBins) {
+      b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
+    }
     firstConsistencyCheck = false;
   }
 
