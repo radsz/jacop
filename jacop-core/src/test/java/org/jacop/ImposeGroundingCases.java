@@ -49,6 +49,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
@@ -57,7 +58,9 @@ import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
@@ -70,7 +73,13 @@ import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.In;
 import org.jacop.constraints.LinearBool;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBool;
@@ -80,6 +89,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
@@ -145,48 +155,51 @@ final class ImposeGroundingCases {
 
   static Stream<Arguments> cases() {
     return Stream.concat(
-        booleanCases(),
         Stream.concat(
-            Stream.of(
-                Arguments.of(
-                    "XplusYeqZ",
-                    (Function<Random, Case>)
-                        random ->
-                            Case.primitive(
-                                domains(random, 3, -2, 4),
-                                x -> new XplusYeqZ(x[0], x[1], x[2]),
-                                t -> t[0] + t[1] == t[2],
-                                "")),
-                Arguments.of(
-                    "GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
-                Arguments.of("Knapsack without DP", knapsack("Knapsack")),
-                Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
-                Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
-                Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
-                Arguments.of("CumulativeEF", cumulative("Cumulative")),
-                Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
-                Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
-                Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
-                Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")),
-                Arguments.of("SoftAlldifferentVariable", softAlldifferent(false, false)),
-                Arguments.of("SoftAlldifferentDecomposition", softAlldifferent(true, false)),
-                Arguments.of("SoftAlldifferentPrimitive", softAlldifferent(true, true)),
-                Arguments.of("SoftGCCHardCountersSoftBounds", softGcc(0, false)),
-                Arguments.of("SoftGCCHardBoundsSoftCounters", softGcc(1, false)),
-                Arguments.of("SoftGCCHardCountersSoftCounters", softGcc(2, false)),
-                Arguments.of("SoftGCCAllValuesHardCountersSoftBounds", softGcc(3, false)),
-                Arguments.of("SoftGCCAllValuesHardBoundsSoftCounters", softGcc(4, false)),
-                Arguments.of("SoftGCCAllValuesHardCountersSoftCounters", softGcc(5, false)),
-                Arguments.of("SoftGCCPrimitiveHardCounters", softGcc(0, true)),
-                Arguments.of("SoftGCCPrimitiveHardBounds", softGcc(1, true)),
-                Arguments.of("SoftGCCPrimitiveSoftCounters", softGcc(2, true)),
-                Arguments.of(
-                    "NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
-                Arguments.of("Geost", geost(false)),
-                Arguments.of("GeostTime", geost(true))),
+            booleanCases(),
             Stream.concat(
-                Stream.concat(additive(), tables()),
-                Stream.concat(comparisons(), Stream.concat(logical(), nonlinearArithmetic())))));
+                Stream.of(
+                    Arguments.of(
+                        "XplusYeqZ",
+                        (Function<Random, Case>)
+                            random ->
+                                Case.primitive(
+                                    domains(random, 3, -2, 4),
+                                    x -> new XplusYeqZ(x[0], x[1], x[2]),
+                                    t -> t[0] + t[1] == t[2],
+                                    "")),
+                    Arguments.of(
+                        "GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
+                    Arguments.of("Knapsack without DP", knapsack("Knapsack")),
+                    Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
+                    Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
+                    Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
+                    Arguments.of("CumulativeEF", cumulative("Cumulative")),
+                    Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
+                    Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
+                    Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
+                    Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")),
+                    Arguments.of("SoftAlldifferentVariable", softAlldifferent(false, false)),
+                    Arguments.of("SoftAlldifferentDecomposition", softAlldifferent(true, false)),
+                    Arguments.of("SoftAlldifferentPrimitive", softAlldifferent(true, true)),
+                    Arguments.of("SoftGCCHardCountersSoftBounds", softGcc(0, false)),
+                    Arguments.of("SoftGCCHardBoundsSoftCounters", softGcc(1, false)),
+                    Arguments.of("SoftGCCHardCountersSoftCounters", softGcc(2, false)),
+                    Arguments.of("SoftGCCAllValuesHardCountersSoftBounds", softGcc(3, false)),
+                    Arguments.of("SoftGCCAllValuesHardBoundsSoftCounters", softGcc(4, false)),
+                    Arguments.of("SoftGCCAllValuesHardCountersSoftCounters", softGcc(5, false)),
+                    Arguments.of("SoftGCCPrimitiveHardCounters", softGcc(0, true)),
+                    Arguments.of("SoftGCCPrimitiveHardBounds", softGcc(1, true)),
+                    Arguments.of("SoftGCCPrimitiveSoftCounters", softGcc(2, true)),
+                    Arguments.of(
+                        "NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
+                    Arguments.of("Geost", geost(false)),
+                    Arguments.of("GeostTime", geost(true))),
+                Stream.concat(
+                    Stream.concat(additive(), tables()),
+                    Stream.concat(
+                        comparisons(), Stream.concat(logical(), nonlinearArithmetic()))))),
+        miscInt());
   }
 
   /** The table constraints. */
@@ -1692,6 +1705,265 @@ final class ImposeGroundingCases {
       x[i].getStore().impose(new XeqY(x[i], b[i]));
     }
     return b;
+  }
+
+  /** Batch B7: miscellaneous int constraints. */
+  static Stream<Arguments> miscInt() {
+    return Stream.of(
+        Arguments.of("In", (Function<Random, Case>) ImposeGroundingCases::in),
+        Arguments.of("AmongVar", (Function<Random, Case>) ImposeGroundingCases::amongVar),
+        Arguments.of("ElementBool", (Function<Random, Case>) ImposeGroundingCases::elementBool),
+        Arguments.of("MaxSimple", maxOrMinSimple(true)),
+        Arguments.of("MinSimple", maxOrMinSimple(false)),
+        Arguments.of("NoGood", (Function<Random, Case>) ImposeGroundingCases::noGood),
+        Arguments.of(
+            "CountValuesBounds", (Function<Random, Case>) ImposeGroundingCases::countValuesBounds),
+        Arguments.of("Sum", (Function<Random, Case>) ImposeGroundingCases::sum),
+        Arguments.of("LinearIntPrimitive", linearPrimitive(false)),
+        Arguments.of("LinearIntDomPrimitive", linearPrimitive(true)));
+  }
+
+  static Case in(Random random) {
+    int[] values = domain(random, -2, 4);
+    IntDomain dom = new IntervalDomain();
+    for (int v : values) {
+      dom.unionAdapt(v);
+    }
+    return Case.primitive(
+        domains(random, 1, -3, 5), x -> new In(x[0], dom), t -> dom.contains(t[0]), "dom=" + dom);
+  }
+
+  /**
+   * AmongVar(X, Y, n): X is x[0..nx-1], n is x[nx] and the Y variables are new ones or, sometimes,
+   * X variables.
+   */
+  static Case amongVar(Random random) {
+    int nx = 1 + random.nextInt(3);
+    int ny = 1 + random.nextInt(2);
+    int[] ys = new int[ny];
+    int vars = nx + 1;
+    for (int j = 0; j < ny; j++) {
+      // AmongVar rejects a variable listed twice in Y, so only the first Y may be an X variable
+      ys[j] = j == 0 && random.nextInt(3) == 0 ? random.nextInt(nx) : vars++;
+    }
+    int[][] domains = new int[vars][];
+    for (int i = 0; i < vars; i++) {
+      domains[i] = domain(random, 0, 3);
+    }
+    domains[nx] = domain(random, 0, nx);
+    return Case.of(
+        domains,
+        (store, x) -> store.impose(new AmongVar(Arrays.copyOf(x, nx), pick(x, ys), x[nx])),
+        t -> {
+          int count = 0;
+          for (int i = 0; i < nx; i++) {
+            for (int y : ys) {
+              if (t[i] == t[y]) {
+                count++;
+                break;
+              }
+            }
+          }
+          return count == t[nx];
+        },
+        "nx=" + nx + " ys=" + Arrays.toString(ys));
+  }
+
+  /** ElementBool(index, list, value, offset); the value domain may hold values other than 0/1. */
+  static Case elementBool(Random random) {
+    int[] list = new int[1 + random.nextInt(4)];
+    for (int i = 0; i < list.length; i++) {
+      list[i] = random.nextInt(2);
+    }
+    int offset = random.nextInt(3) - 1;
+    int[][] domains = {domain(random, offset - 1, offset + list.length + 1), domain(random, -1, 2)};
+    return Case.of(
+        domains,
+        (store, x) -> store.impose(new ElementBool(x[0], list, x[1], offset)),
+        t -> {
+          int i = t[0] - 1 - offset;
+          return i >= 0 && i < list.length && list[i] == t[1];
+        },
+        "list=" + Arrays.toString(list) + " offset=" + offset);
+  }
+
+  /** MaxSimple/MinSimple(a, b, m) where a, b and m may be the same variable. */
+  static Function<Random, Case> maxOrMinSimple(boolean max) {
+    return random -> {
+      int[] p = aliases(random, 3);
+      return Case.of(
+          domains(random, count(p), -2, 3),
+          (store, x) ->
+              store.impose(
+                  max
+                      ? new MaxSimple(x[p[0]], x[p[1]], x[p[2]])
+                      : new MinSimple(x[p[0]], x[p[1]], x[p[2]])),
+          t -> t[p[2]] == (max ? Math.max(t[p[0]], t[p[1]]) : Math.min(t[p[0]], t[p[1]])),
+          "positions=" + Arrays.toString(p));
+    };
+  }
+
+  /** NoGood on a list that may repeat variables. */
+  static Case noGood(Random random) {
+    int n = 1 + random.nextInt(4);
+    int length = 1 + random.nextInt(4);
+    int[] position = new int[length];
+    int[] values = new int[length];
+    for (int i = 0; i < length; i++) {
+      position[i] = random.nextInt(4) == 0 ? random.nextInt(n) : Math.min(i, n - 1);
+      values[i] = random.nextInt(4);
+    }
+    return Case.of(
+        domains(random, n, 0, 3),
+        (store, x) -> {
+          IntVar[] vars = new IntVar[length];
+          for (int i = 0; i < length; i++) {
+            vars[i] = x[position[i]];
+          }
+          store.impose(new NoGood(vars, values));
+        },
+        t -> {
+          for (int i = 0; i < length; i++) {
+            if (t[position[i]] != values[i]) {
+              return true;
+            }
+          }
+          return false;
+        },
+        "positions=" + Arrays.toString(position) + " values=" + Arrays.toString(values));
+  }
+
+  static Case countValuesBounds(Random random) {
+    int[] p = aliases(random, 1 + random.nextInt(4));
+    int n = p.length;
+    int k = 1 + random.nextInt(2);
+    int[] values = k == 1 ? new int[] {random.nextInt(3)} : new int[] {0, 1 + random.nextInt(2)};
+    int[] lb = new int[k];
+    int[] ub = new int[k];
+    for (int j = 0; j < k; j++) {
+      lb[j] = random.nextInt(2);
+      ub[j] = lb[j] + random.nextInt(n + 1 - lb[j]);
+    }
+    return Case.of(
+        domains(random, count(p), 0, 3),
+        (store, x) -> store.impose(new CountValuesBounds(pick(x, p), lb, ub, values)),
+        t -> {
+          for (int j = 0; j < k; j++) {
+            int count = 0;
+            for (int i : p) {
+              if (t[i] == values[j]) {
+                count++;
+              }
+            }
+            if (count < lb[j] || count > ub[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "positions="
+            + Arrays.toString(p)
+            + " values="
+            + Arrays.toString(values)
+            + " lb="
+            + Arrays.toString(lb)
+            + " ub="
+            + Arrays.toString(ub));
+  }
+
+  /** Sum(list, sum); the list may repeat variables and contain the sum variable. */
+  static Case sum(Random random) {
+    int[] p = aliases(random, 2 + random.nextInt(4));
+    int n = p.length - 1;
+    return Case.of(
+        domains(random, count(p), -2, 3),
+        (store, x) -> store.impose(new Sum(pick(x, Arrays.copyOf(p, n)), x[p[n]])),
+        t -> {
+          int s = 0;
+          for (int i = 0; i < n; i++) {
+            s += t[p[i]];
+          }
+          return s == t[p[n]];
+        },
+        "positions=" + Arrays.toString(p) + " (the last is the sum)");
+  }
+
+  private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
+
+  /** LinearInt or LinearIntDom as a primitive constraint, with a constant or a variable sum. */
+  static Function<Random, Case> linearPrimitive(boolean dom) {
+    return random -> {
+      boolean varSum = random.nextBoolean();
+      int[] p = aliases(random, 1 + random.nextInt(3) + (varSum ? 1 : 0));
+      int n = varSum ? p.length - 1 : p.length;
+      int[] weights = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(7) - 3;
+        if (weights[i] == 0 && random.nextBoolean()) {
+          weights[i] = 1;
+        }
+      }
+      String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+      int c = random.nextInt(7) - 3;
+      int[][] domains = domains(random, count(p), -2, 2);
+      return Case.primitive(
+          domains,
+          x -> {
+            IntVar[] list = pick(x, Arrays.copyOf(p, n));
+            if (varSum) {
+              return dom
+                  ? new LinearIntDom(list, weights, rel, x[p[n]])
+                  : new LinearInt(list, weights, rel, x[p[n]]);
+            }
+            return dom
+                ? new LinearIntDom(list, weights, rel, c)
+                : new LinearInt(list, weights, rel, c);
+          },
+          t -> {
+            long s = 0;
+            for (int i = 0; i < n; i++) {
+              s += (long) weights[i] * t[p[i]];
+            }
+            long r = varSum ? t[p[n]] : c;
+            return switch (rel) {
+              case "==" -> s == r;
+              case "!=" -> s != r;
+              case "<" -> s < r;
+              case "<=" -> s <= r;
+              case ">" -> s > r;
+              default -> s >= r;
+            };
+          },
+          "positions="
+              + Arrays.toString(p)
+              + " weights="
+              + Arrays.toString(weights)
+              + " rel="
+              + rel
+              + (varSum ? " sum=last variable" : " sum=" + c));
+    };
+  }
+
+  /**
+   * Positions of k constraint arguments among the variables of a case: mostly a new variable each,
+   * sometimes one used before, so that the constraint sees the same variable twice.
+   */
+  static int[] aliases(Random random, int k) {
+    int[] p = new int[k];
+    int vars = 0;
+    for (int i = 0; i < k; i++) {
+      p[i] = vars > 0 && random.nextInt(5) == 0 ? random.nextInt(vars) : vars++;
+    }
+    return p;
+  }
+
+  /** The number of variables used by positions from {@link #aliases}. */
+  static int count(int[] p) {
+    return Arrays.stream(p).max().orElse(-1) + 1;
+  }
+
+  static IntVar[] pick(IntVar[] x, int[] p) {
+    return Arrays.stream(p).mapToObj(i -> x[i]).toArray(IntVar[]::new);
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
