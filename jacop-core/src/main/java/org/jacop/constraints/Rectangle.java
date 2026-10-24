@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -151,17 +149,17 @@ public class Rectangle {
   public static Rectangle[] toArrayOf2dRectangles(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-    if (ASSERTS_ENABLED && origin1 == null) {
-      throw new IllegalStateException(String.valueOf("o1 list is null"));
+    if (origin1 == null) {
+      throw new IllegalArgumentException("o1 list is null");
     }
-    if (ASSERTS_ENABLED && origin2 == null) {
-      throw new IllegalStateException(String.valueOf("o2 list is null"));
+    if (origin2 == null) {
+      throw new IllegalArgumentException("o2 list is null");
     }
-    if (ASSERTS_ENABLED && length1 == null) {
-      throw new IllegalStateException(String.valueOf("l1 list is null"));
+    if (length1 == null) {
+      throw new IllegalArgumentException("l1 list is null");
     }
-    if (ASSERTS_ENABLED && length2 == null) {
-      throw new IllegalStateException(String.valueOf("l2 list is null"));
+    if (length2 == null) {
+      throw new IllegalArgumentException("l2 list is null");
     }
 
     int size = origin1.length;
@@ -191,17 +189,16 @@ public class Rectangle {
    */
   public static Rectangle[] toArrayOf2dRectangles(IntVar[][] rectangles) {
 
-    if (ASSERTS_ENABLED && rectangles == null) {
-      throw new IllegalStateException(String.valueOf("Rectangles list is null"));
+    if (rectangles == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
     }
 
     Rectangle[] result = new Rectangle[rectangles.length];
 
     for (int i = 0; i < rectangles.length; i++) {
 
-      if (ASSERTS_ENABLED && rectangles[i] == null) {
-        throw new IllegalStateException(
-            String.valueOf(i + "-th list within rectangles list is null"));
+      if (rectangles[i] == null) {
+        throw new IllegalArgumentException(i + "-th list within rectangles list is null");
       }
 
       if (rectangles[i].length == 4) {
