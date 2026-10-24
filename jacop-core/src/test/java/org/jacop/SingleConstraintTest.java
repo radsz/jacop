@@ -123,6 +123,7 @@ import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
@@ -2528,6 +2529,121 @@ class SingleConstraintTest extends TestHelper {
       assertThat(linearStore.consistency()).as(state).isTrue();
       assertThat(domainsOf(copies)).as(state).isEqualTo(domainsOf(vars));
     }
+  }
+
+  @Test
+  void knapsackDpReachesDomainConsistency() {
+    // With a maximal profit that does not restrict, the dynamic program keeps exactly the values of
+    // the quantities and of the capacity that belong to a solution, and the exact profit bounds.
+    Random random = new Random(11);
+    for (int run = 0; run < 1500; run++) {
+      int n = 1 + random.nextInt(6);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(8);
+        profits[i] = random.nextInt(9);
+        vars[i] = randomSubsetVar(store, "q" + i, random.nextInt(2), 3, random);
+        weightSum += weights[i] * vars[i].max();
+        profitSum += profits[i] * vars[i].max();
+      }
+      vars[n] = randomSubsetVar(store, "capacity", 0, weightSum, random);
+      vars[n + 1] = new IntVar(store, "profit", random.nextInt(profitSum + 1), profitSum);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      List<int[]> solutions = knapsackSolutions(profits, weights, vars);
+      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
+      if (!consistent) {
+        continue;
+      }
+      for (int i = 0; i <= n; i++) {
+        int k = i;
+        int[] supported = solutions.stream().mapToInt(a -> a[k]).distinct().sorted().toArray();
+        assertThat(valuesOf(vars[i]))
+            .as(instance + " " + domainsOf(vars))
+            .containsExactly(supported);
+      }
+      int profitMin = solutions.stream().mapToInt(a -> a[n + 1]).min().getAsInt();
+      int profitMax = solutions.stream().mapToInt(a -> a[n + 1]).max().getAsInt();
+      assertThat(vars[n + 1].max()).as(instance).isEqualTo(profitMax);
+      assertThat(vars[n + 1].min()).as(instance).isLessThanOrEqualTo(profitMin);
+    }
+  }
+
+  @Test
+  void knapsackDpKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(13);
+    for (int run = 0; run < 1500; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(4);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(10);
+        profits[i] = random.nextInt(12);
+        vars[i] = randomSubsetVar(store, "q" + i, 0, 1 + random.nextInt(3), random);
+        weightSum += weights[i] * vars[i].max();
+        profitSum += profits[i] * vars[i].max();
+      }
+      vars[n] = randomSubsetVar(store, "capacity", 0, weightSum, random);
+      vars[n + 1] = randomSubsetVar(store, "profit", 0, profitSum, random);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> knapsackSolutions(profits, weights, vs),
+          () -> {
+            Store copyStore = new Store();
+            IntVar[] copies = new IntVar[vars.length];
+            for (int i = 0; i < vars.length; i++) {
+              copies[i] = new IntVar(copyStore, vars[i].id());
+              copies[i].addDom(vars[i].dom());
+            }
+            copyStore.impose(
+                new KnapsackDP(
+                    profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+            return copyStore.consistency() ? domainsOf(copies) : "FAIL";
+          },
+          random);
+    }
+  }
+
+  @Test
+  void knapsackDpSkipsAboveLimit() {
+    Store store = new Store();
+    IntVar[] q = {new IntVar(store, "q0", 0, 10), new IntVar(store, "q1", 0, 10)};
+    IntVar capacity = new IntVar(store, "capacity", 0, 1000);
+    IntVar profit = new IntVar(store, "profit", 0, 1000);
+    store.impose(new KnapsackDP(new int[] {3, 5}, new int[] {7, 11}, q, capacity, profit, 10));
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.max()).isEqualTo(1000);
+    assertThat(q[0].max()).isEqualTo(10);
   }
 
   private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
