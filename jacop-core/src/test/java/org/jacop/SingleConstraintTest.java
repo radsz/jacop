@@ -305,6 +305,21 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(42);
   }
 
+  // Among ignored events on the count variable, so when the count variable was also in the list
+  // its value was never counted and wrong solutions were accepted, e.g. x = [3, 3, 1] with
+  // n = x[2] and K = {1}. Such models are now rejected.
+  @Test
+  void testAmongRejectsCountVariableInList() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 1, 3), new IntVar(store, "x2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new Among(x, new IntervalDomain(1, 1), x[2]))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 
