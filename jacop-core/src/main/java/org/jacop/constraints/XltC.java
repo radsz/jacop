@@ -57,6 +57,10 @@ public class XltC extends AbstractXcompC {
 
   @Override
   public void consistency(final Store store) {
+    if (c == Integer.MIN_VALUE) {
+      // c - 1 overflows; no int is less than c
+      throw Store.failException;
+    }
     x.domain.inMax(store.level, x, c - 1);
   }
 
