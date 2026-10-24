@@ -31,8 +31,6 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -67,8 +65,9 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
 
     super(idNumber, x, y, z);
 
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    String error = checkInvariants();
+    if (error != null) {
+      throw new IllegalArgumentException(error);
     }
   }
 

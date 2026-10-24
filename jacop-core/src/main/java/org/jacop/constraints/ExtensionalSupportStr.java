@@ -162,6 +162,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
     checkInputForNullness("list", list);
     checkInputForNullness("tuples", tuples);
+    checkInput(
+        tuples, t -> t.length == list.length, "tuple needs to have the same size as list argument");
     checkInputForDuplication("list", list);
 
     this.list = Arrays.copyOf(list, list.length);

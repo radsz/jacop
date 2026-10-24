@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -88,8 +86,9 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
     this.list = varSet.toArray(IntVar[]::new);
     this.result = result;
 
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    String error = checkInvariants();
+    if (error != null) {
+      throw new IllegalArgumentException(error);
     }
 
     if (l > 2) {

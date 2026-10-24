@@ -86,6 +86,9 @@ public abstract class AbstractExtensionalVa extends Constraint
    */
   protected AbstractExtensionalVa(AtomicInteger idNum, IntVar[] list, int[][] tuples) {
     checkInputForNullness("list", list);
+    checkInputForNullness("tuples", tuples);
+    checkInput(
+        tuples, t -> t.length == list.length, "tuple needs to have the same size as list argument");
     this.list = Arrays.copyOf(list, list.length);
     this.tuplesFromConstructor = tuples;
     numberId = idNum.incrementAndGet();
@@ -99,6 +102,7 @@ public abstract class AbstractExtensionalVa extends Constraint
    * @param list the constraint scope
    */
   protected AbstractExtensionalVa(AtomicInteger idNum, IntVar[] list) {
+    checkInputForNullness("list", list);
     this.list = new IntVar[list.length];
     System.arraycopy(list, 0, this.list, 0, list.length);
     numberId = idNum.incrementAndGet();

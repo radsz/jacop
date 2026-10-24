@@ -77,6 +77,10 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
     checkInputForNullness("list", list);
     checkInputForNullness("set", new Object[] {set});
+    if (q < 1) {
+      throw new IllegalArgumentException(
+          "Constraint Sequence needs a subsequence length q >= 1, not " + q + ".");
+    }
 
     this.min = min;
     this.max = max;
@@ -184,7 +188,12 @@ public class Sequence extends DecomposedConstraint<Constraint> {
   public List<Constraint> decompose(Store store) {
 
     if (constraints == null) {
-      constraints = decomposeByRegular(this);
+      if (q > list.length) {
+        // no subsequence of length q, so nothing to constrain
+        constraints = new ArrayList<>();
+      } else {
+        constraints = decomposeByRegular(this);
+      }
     }
 
     return constraints;

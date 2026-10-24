@@ -107,6 +107,8 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    * @throws IllegalArgumentException if a value is repeated.
    */
   protected AbstractCountValues(AtomicInteger idNum, IntVar[] list, int[] values) {
+    checkInputForNullness("list", list);
+    checkInputForNullness("values", values);
     this.queueIndex = 1;
     this.numberId = idNum.incrementAndGet();
     this.n = list.length;

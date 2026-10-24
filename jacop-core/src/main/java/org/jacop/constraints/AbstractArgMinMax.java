@@ -68,6 +68,10 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
   protected AbstractArgMinMax(AtomicInteger idNum, IntVar[] list, IntVar extremeIndex) {
 
     checkInputForNullness(new String[] {"list", "extremeIndex"}, list, new Object[] {extremeIndex});
+    if (list.length == 0) {
+      throw new IllegalArgumentException(
+          "Constraint " + getClass().getSimpleName() + " needs a non-empty list");
+    }
 
     this.queueIndex = 1;
     this.numberId = idNum.incrementAndGet();
