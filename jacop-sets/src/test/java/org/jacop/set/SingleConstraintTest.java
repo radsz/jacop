@@ -43,6 +43,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.set.constraints.AunionBeqC;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
@@ -373,6 +374,20 @@ class SingleConstraintTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new ChannelIntSet(new IntVar[] {x}, new SetVar[] {null}))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testAunionBeqCSatisfiedWhenGround() {
+    // satisfied() compared the hull of the domains of a and b, whose glb is the intersection
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1)));
+    SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(2), dom(2)));
+    SetVar c = new SetVar(store, "c", new BoundSetDomain(dom(1, 2), dom(1, 2)));
+    AunionBeqC union = new AunionBeqC(a, b, c);
+    store.impose(union);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(union.satisfied()).isTrue();
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
