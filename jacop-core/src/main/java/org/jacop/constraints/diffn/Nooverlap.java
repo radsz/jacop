@@ -25,8 +25,6 @@
 
 package org.jacop.constraints.diffn;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,8 +75,8 @@ public class Nooverlap extends Constraint {
    */
   public Nooverlap(IntVar[][] rectangle) {
 
-    if (ASSERTS_ENABLED && rectangle == null) {
-      throw new IllegalStateException(String.valueOf("Rectangles list is null"));
+    if (rectangle == null) {
+      throw new IllegalArgumentException("Rectangles list is null");
     }
 
     this.queueIndex = 2;
@@ -87,12 +85,11 @@ public class Nooverlap extends Constraint {
     this.rectangle = new Rectangle[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      if (ASSERTS_ENABLED && rectangle[i] == null) {
-        throw new IllegalStateException(String.valueOf(i + "-th rectangle in the list is null"));
+      if (rectangle[i] == null) {
+        throw new IllegalArgumentException(i + "-th rectangle in the list is null");
       }
-      if (ASSERTS_ENABLED && rectangle[i].length != 4) {
-        throw new IllegalStateException(
-            String.valueOf("The rectangle has to have exactly two dimensions"));
+      if (rectangle[i].length != 4) {
+        throw new IllegalArgumentException("The rectangle has to have exactly two dimensions");
       }
       this.rectangle[i] =
           new Rectangle(rectangle[i][0], rectangle[i][1], rectangle[i][2], rectangle[i][3]);

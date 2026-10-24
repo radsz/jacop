@@ -34,6 +34,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.BiFunction;
+import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -46,7 +47,9 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
@@ -131,6 +134,23 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
 
     assertThat(removeValues(store, x[2], 0)).isFalse();
+  }
+
+  @Test
+  void testAlldifferentExceptChecksMatchingWhenAVariableLosesAValue() {
+
+    // Except 4: three variables end up over {1, 5} and cannot all differ. Neither change fixes a
+    // variable, so the matching check must run on other domain changes.
+    Store store = new Store();
+    IntDomain s = new IntervalDomain(4, 4);
+    IntVar[] x = {
+      variable(store, "x0", 1, 5), variable(store, "x1", 1, 5), variable(store, "x2", 1, 4, 5, 6)
+    };
+    store.impose(new AlldifferentExcept(x, s));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, x[2], 6)).isTrue();
+    assertThat(removeValues(store, x[2], 4)).isFalse();
   }
 
   @Test

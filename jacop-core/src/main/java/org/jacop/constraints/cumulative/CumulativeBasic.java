@@ -92,8 +92,8 @@ public class CumulativeBasic extends Constraint {
         durations,
         resources,
         new Object[] {limit});
-    checkInput(durations, i -> i.min() >= 0, "durations cannot allow non-negative values");
-    checkInput(resources, i -> i.min() >= 0, "resources cannot allow non-negative values");
+    checkInput(durations, i -> i.min() >= 0, "durations cannot allow negative values");
+    checkInput(resources, i -> i.min() >= 0, "resources cannot allow negative values");
 
     if (starts.length != durations.length) {
       throw new IllegalArgumentException(
@@ -160,6 +160,20 @@ public class CumulativeBasic extends Constraint {
         durations.toArray(IntVar[]::new),
         resources.toArray(IntVar[]::new),
         limit);
+  }
+
+  /**
+   * It imposes the constraint; a constraint without tasks is always satisfied, since the limit is
+   * not negative, so it is not imposed.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
+  @Override
+  public void impose(Store store) {
+    if (taskNormal.length == 0) {
+      return;
+    }
+    super.impose(store);
   }
 
   @Override

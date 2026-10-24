@@ -50,7 +50,15 @@ public class PdivCeqR extends PmulCeqR {
    * @param r variable r.
    */
   public PdivCeqR(FloatVar p, double c, FloatVar r) {
-    super(r, c, p);
+    super(r, checkDivisor(c), p);
+  }
+
+  private static double checkDivisor(double c) {
+    if (c == 0) {
+      // p / 0 = r is decomposed as r * 0 = p, which wrongly accepts p = 0 and any r
+      throw new IllegalArgumentException("Constraint PdivCeqR has constant divisor 0.");
+    }
+    return c;
   }
 
   @Override

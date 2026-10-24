@@ -69,6 +69,8 @@ public class EquationSystem extends Constraint {
   public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
     checkInputForNullness(new String[] {"f", "x"}, new Object[] {f, x});
+    checkInputForNullness("f", f);
+    checkInputForNullness("x", x);
 
     this.f = Arrays.copyOf(f, f.length);
     this.x = Arrays.copyOf(x, x.length);
