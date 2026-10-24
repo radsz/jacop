@@ -74,7 +74,11 @@ public class XltY extends AbstractXcompY {
 
   @Override
   public void consistency(final Store store) {
-
+    if (x == y) {
+      // x op x never holds; pruning one bound at a time on the same variable would not reach a
+      // fixpoint in one call
+      throw Store.failException;
+    }
     x.domain.inMax(store.level, x, y.max() - 1);
     y.domain.inMin(store.level, y, x.min() + 1);
   }

@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -4260,6 +4261,46 @@ class SingleConstraintTest extends TestHelper {
     IntVar alsoTwo = new IntVar(store, "alsoTwo", 2, 2);
     store.impose(new XneqY(two, alsoTwo));
     assertThat(store.consistency()).isFalse();
+  }
+
+  // x <= x and x >= x hold for every x, so their negations have no solution; x < x and x > x never
+  // hold, so under Xor with b = 0 (the constraint must hold) there is none either. Pruning one
+  // bound at a time on the same variable left the propagator short of its fixpoint, so search
+  // accepted a value.
+  @Test
+  void testComparisonOfAVariableWithItselfHasNoSolutionWhenItMustFail() {
+
+    assertThat(countOnSameVariable(XlteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XltY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XgtY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XltY::new, (c, b) -> new Not(c), -1)).isEqualTo(6);
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 0)).isEqualTo(6);
+  }
+
+  /**
+   * Solutions of wrapper(x op x, b) for x in {-3, -1, 0, 1, 2, 3}, with b fixed to bValue, or b in
+   * 0..1 (and not labelled) when bValue is negative.
+   */
+  private static int countOnSameVariable(
+      BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison,
+      BiFunction<PrimitiveConstraint, IntVar, Constraint> wrapper,
+      int bValue) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 3);
+    x.domain.inComplement(store.level, x, -2);
+    IntVar b = bValue < 0 ? new IntVar(store, "b", 0, 1) : new IntVar(store, "b", bValue, bValue);
+    store.impose(wrapper.apply(comparison.apply(x, x), b));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    // smallest value first reaches a node where the propagator itself grounds x
+    boolean found =
+        search.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    return found ? search.getSolutionListener().solutionsNo() : 0;
   }
 
   // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
