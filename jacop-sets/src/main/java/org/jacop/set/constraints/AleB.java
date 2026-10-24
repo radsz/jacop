@@ -32,7 +32,6 @@ package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetVar;
@@ -78,23 +77,7 @@ public class AleB extends AbstractAleqB {
   @Override
   public void consistency(Store store) {
 
-    if (a.domain.card().min() > 0) {
-      b.domain.inLub(
-          store.level,
-          b,
-          new IntervalDomain(
-              a.domain.lub().min(),
-              IntDomain.MAX_INT)); // any b with cardinalirty > 0 is fine since a = {}
-    } else {
-      return; // any b with cardinalirty > 0 is fine since a = {}
-    }
-    if (a.domain.singleton()
-        && b.domain.singleton()
-        && !setLexCompare(a.domain.glb(), b.domain.glb())) {
-      throw Store.failException;
-    }
-
-    consistencyCommonPrefix(store);
+    consistencyLexBounds(store);
   }
 
   @Override

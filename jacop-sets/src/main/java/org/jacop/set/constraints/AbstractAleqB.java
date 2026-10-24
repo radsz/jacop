@@ -33,8 +33,8 @@ package org.jacop.set.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -135,59 +135,49 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
    *
    * @param store the constraint store
    */
-  protected void consistencyCommonPrefix(Store store) {
-    if (b.domain.glb().getSize() <= 0) {
-      return;
-    }
-    ValueEnumeration lubEnum = a.domain.lub().valueEnumeration();
-    ValueEnumeration glbEnum = b.domain.glb().valueEnumeration();
-    int be = glbEnum.nextElement();
-    compareCommonPrefixLoop(store, lubEnum, glbEnum, be);
-  }
-
   /**
-   * Compares elements in the common prefix of a's lub and b's glb. Returns when comparison
-   * determines ordering; throws Store.failException if incompatible.
-   */
-  private void compareCommonPrefixLoop(
-      Store store, ValueEnumeration lubEnum, ValueEnumeration glbEnum, int be) {
-    int ae;
-    do {
-      if (!lubEnum.hasMoreElements()) {
-        return; // b has more elements and up to now all equal
-      }
-      ae = lubEnum.nextElement();
-
-      if (ae == be) {
-        if (glbEnum.hasMoreElements()) {
-          be = glbEnum.nextElement();
-          if (!lubEnum.hasMoreElements()) {
-            return; // b has more elements than a
-          }
-        } else {
-          afterCommonPrefix(store, a, b, lubEnum, ae);
-          return;
-        }
-      } else if (ae < be) {
-        return; // b already greater
-      } else {
-        throw Store.failException;
-      }
-    } while (true);
-  }
-
-  /**
-   * Hook called after the common prefix loop when bGlbEnum is exhausted. Subclasses may override to
-   * add strict-less-than checks.
+   * The common propagation of a {@literal <=} b and a {@literal <} b: a non-empty a makes b
+   * non-empty with no element below the smallest element a may have, and the constraint fails when
+   * even the lexicographically smallest value of a is not before the largest value of b.
    *
    * @param store the constraint store
-   * @param a the first set variable
-   * @param b the second set variable
-   * @param lubEnum the enumeration of a's lub values (positioned after the common prefix)
-   * @param lastAe the last element value read from aLubEnum
    */
-  protected void afterCommonPrefix(
-      Store store, SetVar a, SetVar b, ValueEnumeration lubEnum, int lastAe) {
-    // Default: no additional check (used by AleB)
+  protected void consistencyLexBounds(Store store) {
+
+    if (!a.domain.lub().isEmpty() && (a.domain.card().min() > 0 || !a.domain.glb().isEmpty())) {
+      // b = {} is before any non-empty a, and an element of b below min(a) puts b before a
+      b.domain.inCardinality(store.level, b, 1, IntDomain.MAX_INT);
+      b.domain.inLub(store.level, b, new IntervalDomain(a.domain.lub().min(), IntDomain.MAX_INT));
+    }
+
+    if (!setLexCompare(lexMin(a), lexMax(b))) {
+      throw Store.failException;
+    }
+  }
+
+  /**
+   * The lexicographically smallest value of a set variable, ignoring its cardinality: the elements
+   * of the lub up to the largest element of the glb (a proper prefix is smaller and an element
+   * between two glb elements makes the sequence smaller).
+   */
+  static IntDomain lexMin(SetVar v) {
+    IntDomain glb = v.domain.glb();
+    if (glb.isEmpty()) {
+      return glb;
+    }
+    return v.domain.lub().intersect(IntDomain.MIN_INT, glb.max());
+  }
+
+  /**
+   * The lexicographically largest value of a set variable, ignoring its cardinality: the glb
+   * followed by the largest element of the lub (an element between glb elements would make the
+   * sequence smaller, and one more element at the end makes it larger).
+   */
+  static IntDomain lexMax(SetVar v) {
+    IntDomain lub = v.domain.lub();
+    if (lub.isEmpty()) {
+      return lub;
+    }
+    return v.domain.glb().union(lub.max());
   }
 }
