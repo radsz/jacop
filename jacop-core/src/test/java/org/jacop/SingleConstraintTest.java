@@ -972,6 +972,40 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void circuitOnLargeGraphDoesNotOverflowTheStack() throws InterruptedException {
+    // The SCC check was a recursive DFS, one Java frame per node, and threw StackOverflowError
+    // for circuits of a few ten thousand nodes with the default thread stack. Every node i may go
+    // to i - 1 or i + 1 (cyclic). Run on a thread with a 512 KB stack, since tests use -Xss100m.
+    int n = 100_000;
+    boolean[] result = new boolean[1];
+    Throwable[] error = new Throwable[1];
+    Thread thread =
+        new Thread(
+            null,
+            () -> {
+              try {
+                Store store = new Store();
+                IntVar[] x = new IntVar[n];
+                for (int i = 0; i < n; i++) {
+                  x[i] = new IntVar(store, "x" + i);
+                  x[i].addDom((i + 1) % n + 1, (i + 1) % n + 1);
+                  x[i].addDom((i + n - 1) % n + 1, (i + n - 1) % n + 1);
+                }
+                store.impose(new Circuit(x));
+                result[0] = store.consistency();
+              } catch (Throwable t) {
+                error[0] = t;
+              }
+            },
+            "small-stack",
+            512 * 1024);
+    thread.start();
+    thread.join();
+    assertThat(error[0]).isNull();
+    assertThat(result[0]).isTrue();
+  }
+
+  @Test
   void minSimpleReachesFixpoint() {
     // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
     // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
