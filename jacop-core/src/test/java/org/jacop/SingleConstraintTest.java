@@ -4124,6 +4124,27 @@ class SingleConstraintTest extends TestHelper {
     assertThat(counts[0]).isEqualTo(counts[1]);
   }
 
+  // The network matched the counters and bounds, given in the order of the counted values, to the
+  // value nodes in increasing value order, so unsorted counted values swapped them.
+  @Test
+  void testSoftGccWithUnsortedCountedValues() {
+
+    Store store = new Store();
+    // x = [1, 1]: value 1 occurs twice and value -1 never
+    IntVar[] x = {new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1)};
+    int[] values = {1, -1};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("2");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("0");
+    assertThat(cost.dom().toString()).isEqualTo("0");
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 

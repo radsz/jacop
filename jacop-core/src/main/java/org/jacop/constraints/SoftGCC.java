@@ -400,15 +400,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
   private Constraint buildSoftGCCConstraint() {
     IntDomain all = new IntervalDomain();
-    for (int value : countedValue) {
-      all.unionAdapt(value);
-    }
-    int d = all.getSize();
-    IntDomain[] doms = new IntDomain[d];
-    ValueEnumeration it = all.valueEnumeration();
-    for (int i = 0; it.hasMoreElements(); i++) {
-      int value = it.nextElement();
-      doms[i] = new IntervalDomain(value, value);
+    // value node i stands for countedValue[i], the value its counters and bounds refer to
+    IntDomain[] doms = new IntDomain[countedValue.length];
+    for (int i = 0; i < countedValue.length; i++) {
+      all.unionAdapt(countedValue[i]);
+      doms[i] = new IntervalDomain(countedValue[i], countedValue[i]);
     }
     return new SoftGCCBuilder(all, doms, violationMeasure).build();
   }
