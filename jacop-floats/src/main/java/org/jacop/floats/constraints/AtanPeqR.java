@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -50,6 +52,42 @@ public class AtanPeqR extends TanPeqR {
    */
   public AtanPeqR(FloatVar p, FloatVar q) {
     super(q, p);
+  }
+
+  /**
+   * Propagates R = atan(P) on the principal branch: R is restricted to -PI/2..PI/2, where tan is
+   * increasing, so both directions are bounds of monotone functions (tan(R) = P alone also accepted
+   * R = atan(P) + kPI).
+   */
+  @Override
+  void boundConsistency(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      if (satisfied()) {
+        return;
+      }
+
+      p.domain.in(
+          store.level, p, FloatDomain.down(Math.atan(q.min())), FloatDomain.up(Math.atan(q.max())));
+      double qMin =
+          p.min() <= -FloatDomain.PI / 2
+              ? -FloatDomain.MAX_FLOAT
+              : FloatDomain.down(Math.tan(p.min()));
+      double qMax =
+          p.max() >= FloatDomain.PI / 2 ? FloatDomain.MAX_FLOAT : FloatDomain.up(Math.tan(p.max()));
+      q.domain.in(store.level, q, qMin, qMax);
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean satisfied() {
+    // also compare in the direction of atan, which is well conditioned where the forward
+    // function is not (tan near its poles, sin and cos near their extrema)
+    return (super.satisfied()
+            || AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(q, p, Math::atan))
+        && p.min() >= FloatDomain.down(-FloatDomain.PI / 2)
+        && p.max() <= FloatDomain.up(FloatDomain.PI / 2);
   }
 
   @Override

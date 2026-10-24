@@ -35,6 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
 
+import java.util.function.BiFunction;
+import java.util.function.DoubleUnaryOperator;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Not;
@@ -44,6 +47,9 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.AbsPeqR;
+import org.jacop.floats.constraints.AcosPeqR;
+import org.jacop.floats.constraints.AsinPeqR;
+import org.jacop.floats.constraints.AtanPeqR;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
@@ -63,6 +69,7 @@ import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
 import org.jacop.floats.constraints.SqrtPeqR;
 import org.jacop.floats.constraints.SumFloat;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.api.Test;
@@ -465,5 +472,56 @@ class SingleConstraintTest {
     assertThat(new ExpPeqR(p, q).satisfied()).isFalse();
     assertThat(new ExpPeqR(p, r).satisfied()).isFalse();
     assertThat(new ExpPeqR(p, one).satisfied()).isTrue();
+  }
+
+  @Test
+  void testInverseTrigonometricResultsStayOnPrincipalBranch() {
+    checkInverse(AsinPeqR::new, Math::asin, new double[] {-1, -0.5, 0, 0.25, 0.5, 1});
+    checkInverse(AcosPeqR::new, Math::acos, new double[] {-1, -0.5, 0, 0.25, 0.5, 1});
+    checkInverse(AtanPeqR::new, Math::atan, new double[] {-1e6, -2, -0.5, 0, 0.25, 1, 3});
+
+    // other branches of sin(r) = p, cos(r) = p and tan(r) = p were accepted
+    assertThat(groundInverse(AsinPeqR::new, 0.5, 5 * FloatDomain.PI / 6)).isFalse();
+    assertThat(groundInverse(AcosPeqR::new, 0.5, -FloatDomain.PI / 3)).isFalse();
+    assertThat(groundInverse(AtanPeqR::new, 1, 5 * FloatDomain.PI / 4)).isFalse();
+    assertThat(groundInverse(AsinPeqR::new, 0.5, FloatDomain.PI / 6)).isTrue();
+    assertThat(groundInverse(AcosPeqR::new, 0.5, FloatDomain.PI / 3)).isTrue();
+    assertThat(groundInverse(AtanPeqR::new, 1, FloatDomain.PI / 4)).isTrue();
+    // ground pairs (x, f(x)) that the forward function maps back only approximately
+    for (double x : new double[] {-0.9999, 0.3, 0.9999}) {
+      assertThat(groundInverse(AsinPeqR::new, x, Math.asin(x))).as("asin %s", x).isTrue();
+      assertThat(groundInverse(AcosPeqR::new, x, Math.acos(x))).as("acos %s", x).isTrue();
+    }
+    for (double x : new double[] {-61315.44894204959, 41.553635841197824, 9939.357064796095}) {
+      assertThat(groundInverse(AtanPeqR::new, x, Math.atan(x))).as("atan %s", x).isTrue();
+    }
+  }
+
+  /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */
+  private static void checkInverse(
+      BiFunction<FloatVar, FloatVar, Constraint> build, DoubleUnaryOperator f, double[] points) {
+    for (double x : points) {
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", x, x);
+      FloatVar r = new FloatVar(store, "r", -10, 10);
+      store.impose(build.apply(p, r));
+
+      assertThat(store.consistency()).as("%s at %s", build.apply(p, r), x).isTrue();
+      assertThat(r.min()).as("r min at %s", x).isCloseTo(f.applyAsDouble(x), offset(1e-9));
+      assertThat(r.max()).as("r max at %s", x).isCloseTo(f.applyAsDouble(x), offset(1e-9));
+    }
+  }
+
+  private static boolean groundInverse(
+      BiFunction<FloatVar, FloatVar, Constraint> build, double x, double y) {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", x, x);
+    FloatVar r = new FloatVar(store, "r", y, y);
+    try {
+      store.impose(build.apply(p, r));
+      return store.consistency();
+    } catch (FailException e) {
+      return false;
+    }
   }
 }
