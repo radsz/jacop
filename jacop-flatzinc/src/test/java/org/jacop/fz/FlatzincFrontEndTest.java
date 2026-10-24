@@ -523,12 +523,96 @@ class FlatzincFrontEndTest {
     assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f")[0]));
   }
 
+  @Test
+  void newFreeSearchEngineGivesTheResultsOfTheLegacyOne() throws IOException {
+    String[] models = {
+      // satisfaction with integers and Booleans
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve satisfy;
+      """,
+      // optimisation
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve minimize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve maximize x;
+      """,
+      // no solution
+      """
+      var 1..2: x :: output_var;
+      var 1..2: y :: output_var;
+      var 1..2: z :: output_var;
+      constraint int_ne(x, y);
+      constraint int_ne(y, z);
+      constraint int_ne(x, z);
+      solve satisfy;
+      """,
+      // sets
+      """
+      var set of 1..3: s :: output_var;
+      var 1..3: x :: output_var;
+      constraint set_card(s, 2);
+      constraint set_in(x, s);
+      solve satisfy;
+      """
+    };
+    String[][] engines = {
+      {"--free-engine", "new"},
+      {"--free-engine", "new", "--restart", "luby", "--restart-scale", "1"}
+    };
+    for (String model : models) {
+      boolean optimisation = model.contains("minimize") || model.contains("maximize");
+      String legacy = normalised(run(model, "-f", "-a")[0], optimisation);
+      for (String[] engine : engines) {
+        String[] options = Arrays.copyOf(new String[] {"-f", "-a"}, 2 + engine.length);
+        System.arraycopy(engine, 0, options, 2, engine.length);
+        assertEquals(
+            legacy,
+            normalised(run(model, options)[0], optimisation),
+            model + Arrays.toString(engine));
+      }
+    }
+  }
+
   /** The solution lines of an output, without comments. */
   private static String solutionLines(String stdout) {
     return stdout
         .lines()
         .filter(line -> !line.startsWith("%") && !line.startsWith("-") && !line.startsWith("="))
         .collect(Collectors.joining("\n"));
+  }
+
+  /**
+   * An output reduced to what free search engines must agree on: for satisfaction the set of
+   * solutions, for optimisation the last one, and the final status lines.
+   */
+  private static String normalised(String stdout, boolean optimisation) {
+    List<String> blocks =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(b -> b.lines().filter(l -> !l.startsWith("%")).collect(Collectors.joining(" ")))
+            .filter(b -> !b.isBlank())
+            .toList();
+    List<String> solutions = blocks.stream().filter(b -> !b.startsWith("=")).toList();
+    String status = blocks.stream().filter(b -> b.startsWith("=")).collect(Collectors.joining());
+    return (optimisation ? solutions.getLast() : new TreeSet<>(solutions).toString())
+        + " "
+        + status;
   }
 
   /** Runs the model with the given options and returns its stdout and stderr. */

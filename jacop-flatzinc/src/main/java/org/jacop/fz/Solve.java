@@ -35,9 +35,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
@@ -67,10 +69,12 @@ import org.jacop.search.Lds;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.free.FreeSearch;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -113,6 +117,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // restart search
   Calculator restartCalculator;
   RestartSearch<T> rs;
+  // free search with the FreeSearch engine
+  FreeSearch freeSearch;
+  FreeSearch.Status freeSearchStatus;
   // -------- for print-out of statistics
   boolean singleSearch;
   boolean result;
@@ -680,6 +687,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     try {
+      if (useFreeSearchEngine(costVar)) {
+        return executeFreeSearch(costVar);
+      }
       if (restartCalculator != null) {
         return executeRestartSearch(label, select, costVar, solveType);
       }
@@ -687,6 +697,60 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } catch (NumberSolutionsReached _) {
       return numberSolutions > 0;
     }
+  }
+
+  private boolean useFreeSearchEngine(Var costVar) {
+    return options.freeSearch()
+        && options.newFreeSearchEngine()
+        && singleSearch
+        && defaultSearch
+        && relaxVars == null
+        && (costVar == null || costVar instanceof IntVar);
+  }
+
+  /**
+   * Runs free search with the FreeSearch engine: it branches on the set, integer, Boolean and float
+   * variables of the model in that order, as the chained depth-first searches of free search do.
+   */
+  private boolean executeFreeSearch(Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+    if (searchVars.getSetVars().length > 0) {
+      selects.add(
+          new SimpleSelect<>(
+              searchVars.getSetVars(), new AfcMaxDeg<>(store), new IndomainSetMin<>()));
+    }
+    if (searchVars.getIntVars().length > 0) {
+      selects.add(
+          new SimpleSelect<>(searchVars.getIntVars(), new AfcMaxDeg<>(store), new IndomainMin<>()));
+    }
+    if (searchVars.getBoolVars().length > 0) {
+      selects.add(
+          new SimpleSelect<>(searchVars.getBoolVars(), new AfcMax<>(store), new IndomainMin<>()));
+    }
+    if (searchVars.getFloatVars().length > 0) {
+      selects.add(
+          new SplitSelectFloat<>(store, searchVars.getFloatVars(), new LargestDomainFloat<>()));
+    }
+    FreeSearch.Builder builder =
+        FreeSearch.builder(store, new SequenceSelect(selects))
+            .restarts(restartCalculator)
+            .restartOnSolution(restartCalculator != null)
+            .allSolutions(options.getAll())
+            .onSolution(s -> printSolution());
+    if (options.getTimeOut() > 0) {
+      builder.timeLimit(Duration.ofMillis(options.getTimeOut()));
+    }
+    if (costVar != null) {
+      builder.minimize((IntVar) costVar);
+    }
+    freeSearch = builder.build();
+    if (options.debug()) {
+      IO.println("% FreeSearch(" + restartCalculator + ") " + selects);
+    }
+    freeSearchStatus = freeSearch.solve();
+    return freeSearch.getSolutions() > 0;
   }
 
   /**
@@ -877,6 +941,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+      return;
+    }
+
+    if (freeSearch != null) {
+      boolean complete =
+          freeSearchStatus == FreeSearch.Status.OPTIMAL
+              || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
+      printResultStatus(
+          interrupted,
+          freeSearch.getSolutions() > 0,
+          freeSearch.limitReached(),
+          complete && !interrupted);
+      if (options.getStatistics()) {
+        printStatisticsOutput(
+            (int) freeSearch.getNodes(),
+            (int) freeSearch.getFailures(),
+            freeSearch.getMaxDepth(),
+            (int) freeSearch.getSolutions());
+      }
       return;
     }
 
@@ -1302,7 +1385,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     if (restartCalculator != null) {
-      if (solveKind == 0) {
+      // the FreeSearch engine finds all solutions without restarts
+      if (solveKind == 0 && !useFreeSearchEngine(null)) {
         throw new IllegalArgumentException(
             "Flatzinc option for search for all solutions (-a) cannot be used in restart search"
                 + " of a satisfaction problem.");
@@ -1409,7 +1493,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solutions total solutions found.
    */
   private void printStatisticsOutput(int nodes, int wrong, int depth, int solutions) {
-    int restarts = rs != null ? rs.restarts() : 0;
+    long restarts = rs != null ? rs.restarts() : 0;
+    if (freeSearch != null) {
+      restarts = freeSearch.getRestarts();
+    }
 
     IO.println(
         "%%%mzn-stat: variables="

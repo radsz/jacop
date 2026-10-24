@@ -51,6 +51,7 @@ public class Options {
   boolean verbose;
   boolean statistics;
   boolean freeSearch;
+  boolean newFreeSearchEngine;
   int timeOut;
   int numberSolutions = -1;
   boolean interval;
@@ -110,6 +111,7 @@ public class Options {
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
+            --free-engine <value> engine for free search; one of "legacy" (default), "new"
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -149,6 +151,7 @@ public class Options {
       case "-t", "--time-out" -> i = handleTimeOut(args, i);
       case "-s", "--statistics" -> i = handleStatistics(i);
       case "-f", "--free-search" -> i = handleFreeSearch(i);
+      case "--free-engine" -> i = handleFreeEngine(args, i);
       case "-sat" -> i = handleSat(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
@@ -197,6 +200,16 @@ public class Options {
 
   private int handleFreeSearch(int i) {
     freeSearch = true;
+    return i + 1;
+  }
+
+  private int handleFreeEngine(String[] args, int i) {
+    String engine = args[++i];
+    switch (engine) {
+      case "legacy" -> newFreeSearchEngine = false;
+      case "new" -> newFreeSearchEngine = true;
+      default -> System.err.println("%% Free search engine " + engine + " not known; ignored");
+    }
     return i + 1;
   }
 
@@ -478,6 +491,16 @@ public class Options {
    */
   public boolean freeSearch() {
     return freeSearch;
+  }
+
+  /**
+   * It defines whether free search uses the FreeSearch engine instead of chained depth-first
+   * searches.
+   *
+   * @return true if free search uses the FreeSearch engine.
+   */
+  public boolean newFreeSearchEngine() {
+    return newFreeSearchEngine;
   }
 
   public String getOutputFilename() {
