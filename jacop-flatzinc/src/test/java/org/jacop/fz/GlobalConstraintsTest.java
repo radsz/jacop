@@ -72,6 +72,16 @@ class GlobalConstraintsTest {
             """,
             36),
         Arguments.of(
+            "sequence with a repeated variable",
+            """
+            var 0..1: a:: output_var;
+            var 0..1: b:: output_var;
+            array [1..3] of var int: x = [a,a,b];
+            constraint jacop_sequence(x,{1},2,0,1);
+            solve satisfy;
+            """,
+            2),
+        Arguments.of(
             "circuit with a repeated constant",
             """
             var 0..1: v1:: output_var;
