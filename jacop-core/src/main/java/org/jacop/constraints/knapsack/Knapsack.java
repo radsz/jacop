@@ -159,6 +159,12 @@ public class Knapsack extends Constraint
   /** It counts the number of time the consistency function has been executed. */
   private int countConsistency;
 
+  /** Whether the dynamic program is used next to the relaxation. */
+  private boolean useDynamicProgramming = true;
+
+  /** The dynamic program propagating with this constraint, or null when it is not used. */
+  private KnapsackDP dynamicProgram;
+
   /** It counts the number of times the queueVariable function has been executed. */
   private int countQueueVariable;
 
@@ -257,6 +263,22 @@ public class Knapsack extends Constraint
     this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));
 
     setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
+  }
+
+  /**
+   * It decides whether the constraint also propagates with the dynamic program of {@link
+   * KnapsackDP}, which is on by default. The dynamic program is domain consistent on the
+   * quantities, but costs time proportional to the number of items times the remaining capacity, so
+   * it runs only when its tables fit within {@link KnapsackDP#DEFAULT_LIMIT} and, during search,
+   * only as often as its work budget allows (see {@link KnapsackDP}). It must be set before the
+   * constraint is imposed.
+   *
+   * @param use true to also propagate with the dynamic program.
+   * @return this constraint.
+   */
+  public Knapsack dynamicProgramming(boolean use) {
+    this.useDynamicProgramming = use;
+    return this;
   }
 
   @Override
@@ -439,7 +461,7 @@ public class Knapsack extends Constraint
         currentLevel,
         knapsackProfit,
         toInt(tree.alreadyObtainedProfit),
-        toInt(tree.alreadyObtainedProfit + (long) Math.ceil(tree.optimalProfit)));
+        toInt(tree.alreadyObtainedProfit + Tree.floorSafe(tree.optimalProfit)));
 
     if (DEBUG_ALL) {
       log.debug("Profit after potential update : {}", knapsackProfit);
@@ -478,12 +500,16 @@ public class Knapsack extends Constraint
     // pruning, and the store does not re-queue this constraint for its own changes. Repeat a full
     // pass until a pass changes nothing.
     do {
-      store.propagationHasOccurred = false;
-      singlePass(store);
-      if (store.propagationHasOccurred) {
-        setFlagsForCapacityOrProfit();
-      }
-    } while (store.propagationHasOccurred);
+      do {
+        store.propagationHasOccurred = false;
+        singlePass(store);
+        if (store.propagationHasOccurred) {
+          setFlagsForCapacityOrProfit();
+        }
+      } while (store.propagationHasOccurred);
+      // The dynamic program reports its own pruning; the changes reach this constraint through
+      // queueVariable, so another pass of the relaxation runs only when it pruned.
+    } while (dynamicProgram != null && dynamicProgram.propagateIfWorthIt(store));
   }
 
   private void singlePass(Store store) {
@@ -573,6 +599,14 @@ public class Knapsack extends Constraint
       computeForbidden();
     }
 
+    if (needMandatory || needForbidden) {
+      blockUpdate();
+      computeCritical();
+    }
+
+    blockUpdate();
+    restrictByMaxProfitAndMinCapacity();
+
     blockUpdate();
     if (ASSERTS_ENABLED && !checkInvariants()) {
       throw new IllegalStateException("Assertion failed");
@@ -655,6 +689,78 @@ public class Knapsack extends Constraint
     }
   }
 
+  /**
+   * It prunes the quantities by the bounds reasoning of the two linear equalities in the directions
+   * which the relaxation does not cover: no item can bring more profit than the maximal profit
+   * allows, and an item must be taken if the other items can not reach the minimal capacity.
+   */
+  private void restrictByMaxProfitAndMinCapacity() {
+
+    long profitAllowance = (long) knapsackProfit.max() - tree.alreadyObtainedProfit;
+    long weightNeeded = (long) knapsackCapacity.min() - tree.alreadyUsedCapacity;
+    boolean profitPrunes = profitAllowance < tree.root.getPSum();
+    boolean weightPrunes = weightNeeded > tree.root.getWSum() - tree.root.getWMax();
+    if (!profitPrunes && !weightPrunes) {
+      return;
+    }
+
+    long weightSum = tree.root.getWSum();
+    for (TreeLeaf leaf : leaves) {
+      if (leaf.max() == 0) {
+        continue;
+      }
+      IntVar quantity = leaf.getQuantity();
+      int slice = leaf.slice;
+      if (profitPrunes && leaf.getPSum() > profitAllowance) {
+        quantity.domain.inMax(
+            currentLevel,
+            quantity,
+            toInt(slice + Math.floorDiv(profitAllowance, (long) leaf.profitOfOne)));
+        needUpdate = true;
+      }
+      long missingWeight = weightNeeded - (weightSum - leaf.getWSum());
+      if (weightPrunes && missingWeight > 0) {
+        quantity.domain.inMin(
+            currentLevel,
+            quantity,
+            toInt(slice + (missingWeight + leaf.weightOfOne - 1) / leaf.weightOfOne));
+        needUpdate = true;
+      }
+    }
+  }
+
+  /**
+   * It computes the mandatory and the forbidden part of the knapsack pruning for the critical item,
+   * the only item which can be both partially mandatory and partially forbidden.
+   */
+  private void computeCritical() {
+
+    TreeLeaf critical = tree.criticalLeaf;
+    if (critical.getWMax() == 0 || tree.root.getPSum() == 0) {
+      return;
+    }
+
+    double profitSlack = profitSlack();
+    long taken = tree.takenWeightOfCriticalItem;
+    long replacable = tree.computeCriticalReplacableWeight(profitSlack);
+    long intrusion = tree.computeCriticalIntrusionWeight(profitSlack);
+    IntVar quantity = critical.getQuantity();
+    int slice = critical.slice;
+
+    if (replacable < taken) {
+      long mandatoryQuantity =
+          (taken - replacable + critical.weightOfOne - 1) / critical.weightOfOne;
+      quantity.domain.inMin(currentLevel, quantity, toInt(slice + mandatoryQuantity));
+      needUpdate = true;
+    }
+
+    if (taken + intrusion < critical.getWMax()) {
+      long allowedQuantity = (taken + intrusion) / critical.weightOfOne;
+      quantity.domain.inMax(currentLevel, quantity, toInt(slice + allowedQuantity));
+      needUpdate = true;
+    }
+  }
+
   /** It computes the mandatory part of the knapsack pruning. */
   private void computeMandatory() {
 
@@ -721,6 +827,16 @@ public class Knapsack extends Constraint
     store.registerRemoveLevelLateListener(this);
 
     hashForUpdate = new HashMap<>();
+
+    if (useDynamicProgramming) {
+      dynamicProgram =
+          new KnapsackDP(
+              Arrays.stream(items).mapToInt(KnapsackItem::getProfit).toArray(),
+              Arrays.stream(items).mapToInt(KnapsackItem::getWeight).toArray(),
+              Arrays.stream(items).map(KnapsackItem::getQuantity).toArray(IntVar[]::new),
+              knapsackCapacity,
+              knapsackProfit);
+    }
 
     /* We sort it with a sorting method */
     Arrays.sort(items);
@@ -873,7 +989,8 @@ public class Knapsack extends Constraint
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // The dynamic program also prunes values inside the domains, so it is called on any change.
+    return useDynamicProgramming ? IntDomain.ANY : IntDomain.BOUND;
   }
 
   @Override

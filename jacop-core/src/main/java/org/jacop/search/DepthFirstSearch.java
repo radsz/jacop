@@ -910,6 +910,14 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (checkTimeOut()) {
       markTimeOutOccurred();
+      // leave the store at the level it had when this search started
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      depth--;
+      if (raisedLevel) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
       return false;
     }
 
