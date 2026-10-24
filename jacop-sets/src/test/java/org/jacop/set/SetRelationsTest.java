@@ -42,6 +42,7 @@ import org.jacop.set.constraints.AinS;
 import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.SinA;
 import org.jacop.set.constraints.XeqA;
+import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
@@ -142,6 +143,18 @@ class SetRelationsTest {
     assertThat(strict.satisfied()).isFalse();
     assertThat(strict.notSatisfied()).isTrue();
     store.impose(new Not(new EinA(2, a, true)));
+    assertThat(store.consistency()).isTrue();
+  }
+
+  @Test
+  void testNotXinAStrictAcceptsTheSingletonSet() {
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 2);
+    IntVar x = new IntVar(store, "x", 2, 2);
+    XinA strict = new XinA(x, a, true);
+    assertThat(strict.satisfied()).isFalse();
+    assertThat(strict.notSatisfied()).isTrue();
+    store.impose(new Not(new XinA(x, a, true)));
     assertThat(store.consistency()).isTrue();
   }
 
