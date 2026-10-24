@@ -22,9 +22,10 @@ predicate fzn_geost_bb(
     array[int    ] of int    : l               ,
     array[int    ] of int    : u
 ) =
-        jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset),
-                       jacop_geost_shapes(rect_size, shape), array1d(x),
-                       jacop_geost_kinds(shape, kind), l, u)
+        forall(o in index_set(kind))(kind[o] in index_set(shape))
+        /\ jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset),
+                          jacop_geost_shapes(rect_size, shape), array1d(x),
+                          jacop_geost_kinds(shape, kind), l, u)
     ;
 
 
@@ -47,7 +48,7 @@ predicate fzn_geost_bb(
         fzn_geost(k, rect_size, rect_offset, shape, x, kind)
         /\ % Posting the bounding box constraints
         forall(o in OBJECTS)(
-            forall(s in dom(kind[o]))(
+            forall(s in dom(kind[o]) intersect index_set(shape))(
                 (kind[o] = s ->
                     forall(r in shape[s], j in DIMS)(
                         x[o,j] + rect_offset[r,j] >= l[j]

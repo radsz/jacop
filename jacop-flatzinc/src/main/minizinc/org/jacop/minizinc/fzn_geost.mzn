@@ -27,6 +27,8 @@ predicate fzn_geost(
     array[int,int] of var int    : x           ,
     array[int    ] of var int    : kind
 ) =
+    forall(o in index_set(kind))(kind[o] in index_set(shape))
+    /\
 	jacop_geost(k, array1d(rect_size), array1d(rect_offset), jacop_geost_shapes(rect_size, shape),
                     array1d(x), jacop_geost_kinds(shape, kind))
     ;
