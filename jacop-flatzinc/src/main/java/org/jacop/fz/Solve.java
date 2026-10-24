@@ -740,6 +740,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
+    boolean nogoods = "1".equals(options.freeConfig("nogoods", "0"));
     Calculator restarts = restartCalculator;
     if (!options.restartGiven()) {
       int scale = Integer.parseInt(options.freeConfig("scale", "100"));
@@ -804,6 +805,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         FreeSearch.builder(store, free)
             .restarts(restarts)
             .restartOnSolution(restartOnSolution)
+            .nogoodsFromRestarts(nogoods)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
     if (shown != null) {
@@ -1703,6 +1705,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(depth)
             + "\n%%%mzn-stat: solutions="
             + nf.format(solutions)
+            + (freeSearch != null && freeSearch.getNogoods() > 0
+                ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
+                : "")
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {

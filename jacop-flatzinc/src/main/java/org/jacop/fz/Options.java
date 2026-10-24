@@ -119,7 +119,8 @@ public class Options {
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
                 scale=<failures>, base=<growth of geometric restarts>,
-                restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none
+                restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
+                nogoods=0|1 (nogoods from restarts)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
