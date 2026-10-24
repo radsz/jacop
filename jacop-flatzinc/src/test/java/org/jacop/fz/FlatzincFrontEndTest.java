@@ -358,6 +358,62 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void restartSearchFindsTheOptimumAfterRestartsWithoutABetterSolution() throws IOException {
+    // Restart search stopped after the first restart that found no better solution and printed
+    // ========== for the last solution (c = 1 here) as if it were optimal.
+    String model =
+        """
+        array [1..6] of var 1..6: x :: output_array([1..6]);
+        var -100..100: c :: output_var;
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[1], x[3]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_ne(x[4], x[5]);
+        constraint int_ne(x[5], x[6]);
+        constraint int_ne(x[4], x[6]);
+        constraint int_ne(x[1], x[6]);
+        constraint int_lin_eq([-3,2,-1,4,-2,1,-1],[x[1],x[2],x[3],x[4],x[5],x[6],c],0);
+        solve :: int_search(x,input_order,indomain_min,complete) :: %s minimize c;
+        """;
+
+    for (String restart : List.of("restart_luby(1)", "restart_geometric(1.5,1)")) {
+      List<String> lines = run(model.formatted(restart))[0].lines().toList();
+      assertTrue(lines.contains("c = -27;"), restart + ":\n" + lines);
+      assertTrue(lines.contains("=========="), restart + ":\n" + lines);
+    }
+
+    // With a limit on the number of restarts the search is not complete.
+    String limited = run(model.formatted("restart_luby(1)"), "--restart-limit", "1")[0];
+    assertTrue(limited.contains("----------"), limited);
+    assertTrue(!limited.contains("=========="), limited);
+  }
+
+  @Test
+  void restartSearchReportsUnsatisfiableModels() throws IOException {
+    // Restart search printed ========== without any solution for an unsatisfiable optimization
+    // model, and nothing at all for an unsatisfiable satisfaction model.
+    String model =
+        """
+        array [1..4] of var 1..3: x :: output_array([1..4]);
+        var 0..20: c :: output_var;
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[1], x[3]);
+        constraint int_ne(x[1], x[4]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[2], x[4]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_lin_eq([1,1,1,1,-1],[x[1],x[2],x[3],x[4],c],0);
+        solve :: int_search(x,input_order,indomain_min,complete) :: restart_luby(1) %s;
+        """;
+
+    for (String kind : List.of("minimize c", "satisfy")) {
+      String stdout = run(model.formatted(kind))[0];
+      assertEquals(List.of("=====UNSATISFIABLE====="), stdout.lines().toList(), kind);
+    }
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
