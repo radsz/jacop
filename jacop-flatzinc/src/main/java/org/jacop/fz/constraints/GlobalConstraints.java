@@ -1957,7 +1957,16 @@ class GlobalConstraints implements ParserTreeConstants {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 
-      InArea constraint2 = new InArea(new Dbox(lb, ub), null);
+      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length
+      int[] length = new int[dim];
+      for (int j = 0; j < dim; j++) {
+        length[j] = ub[j] - lb[j];
+        if (length[j] < 0 && kind.length > 0) {
+          throw Store.failException;
+        }
+      }
+
+      InArea constraint2 = new InArea(new Dbox(lb, length), null);
       constraints.add(constraint2);
     }
 
