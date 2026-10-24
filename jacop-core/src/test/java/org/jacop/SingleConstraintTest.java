@@ -137,6 +137,7 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
@@ -4729,6 +4730,24 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(1);
     assertThat(counters[1].value()).isEqualTo(2);
+  }
+
+  // CostRegular dropped the changes queued between impose and its first consistency call, so
+  // values removed then still labelled edges and a wrong cost was accepted.
+  @Test
+  void testCostRegularWithVariablesGroundAfterImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", -3, 8);
+    int[][] delta = {{1, 0, 0}, {0, 0, 1}};
+    int[][][] costs = {{{2, -2, 3}, {1, -2, 3}}};
+    store.impose(new CostRegular(x, delta, 0, 0, new int[] {0, 1}, costs, cost));
+    x[0].domain.in(store.level, x[0], 0, 0);
+    cost.domain.in(store.level, cost, -2, -2);
+
+    // label 0 from the initial state costs 2
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isZero();
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
