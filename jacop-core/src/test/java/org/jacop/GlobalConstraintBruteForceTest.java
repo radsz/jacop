@@ -64,6 +64,7 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
+import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
@@ -237,6 +238,7 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DiffnDecomposed", rectangles("DiffnDecomposed")),
         Arguments.of("Diff2", rectangles("Diff2")),
         Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")),
+        Arguments.of("Disjoint", rectangles("Disjoint")),
         Arguments.of("DisjointConditional", rectangles("DisjointConditional")));
   }
 
@@ -1050,6 +1052,9 @@ class GlobalConstraintBruteForceTest {
       int n = 1 + random.nextInt(3);
       boolean strict = kind.equals("DiffnStrict") || kind.equals("DiffnDecomposed");
       boolean conditional = kind.equals("DisjointConditional");
+      // Disjoint and DisjointConditional treat zero-length rectangles neither strictly nor
+      // non-strictly, so they are checked with positive lengths only
+      boolean positiveLengths = conditional || kind.equals("Disjoint");
       // pairs of rectangles (numbered from 1) that may overlap: always for Diff2 with an exclusive
       // list, and for DisjointConditional when the pair's condition variable, which follows the
       // rectangles, is 0
@@ -1068,8 +1073,7 @@ class GlobalConstraintBruteForceTest {
       for (int p = 0; p < conditions; p++) {
         domains[4 * n + p] = new int[] {0, 1};
       }
-      // DisjointConditional treats zero-length rectangles neither strictly nor non-strictly
-      if (conditional) {
+      if (positiveLengths) {
         for (int i = 0; i < n; i++) {
           domains[4 * i + 2] = domain(random, 1, 2);
           domains[4 * i + 3] = domain(random, 1, 2);
@@ -1089,6 +1093,7 @@ class GlobalConstraintBruteForceTest {
               case "DiffnDecomposed" -> store.imposeDecomposition(new DiffnDecomposed(rectangles));
               case "Nooverlap" -> store.impose(new Nooverlap(rectangles, false));
               case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));
+              case "Disjoint" -> store.impose(new Disjoint(rectangles));
               case "DisjointConditional" ->
                   store.impose(new DisjointConditional(rectangles, pairs, condition));
               default ->

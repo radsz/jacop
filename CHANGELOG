@@ -1,3 +1,17 @@
+Version 5.0 (unreleased)
+========================
+
+1. Constraint Diff is removed. Its zero-length rectangles followed neither
+   the strict nor the non-strict semantics of diffn. Use
+   new Diffn(rectangles, true) (strict, minizinc diffn) or
+   new Diff2(rectangles) (non-strict, minizinc diffn_nonstrict) instead;
+   Diff.builder() becomes Diffn.builder()...strict(true).build() or
+   Diff2.diff2Builder(). With positive lengths all of them accept the
+   same solutions, but they may search differently. Diff2, Disjoint and
+   DisjointConditional, which extended Diff, now extend the package-private
+   AbstractDiff and keep their behaviour. The Scala diff2 wrappers now post
+   Diff2, as documented, instead of Diff.
+
 Version 4.11
 =============
 

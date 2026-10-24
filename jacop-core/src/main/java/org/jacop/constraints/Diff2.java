@@ -49,7 +49,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Diff2 extends Diff {
+public class Diff2 extends AbstractDiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

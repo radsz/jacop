@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -67,7 +68,6 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.Diff;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -2691,31 +2691,6 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
-  void testDiff() {
-
-    Store store = new Store();
-
-    int noOfRectangles = 4;
-    int xSize = 2;
-    int ySize = 2;
-    int durationSize = 3;
-
-    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-    Diff diff = new Diff(origin1, origin2, length1, length2);
-
-    store.impose(diff);
-
-    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
-
-    assertThat(noOfSolutions).isEqualTo(741642);
-  }
-
-  @Test
   void testDisjoint() {
 
     Store store = new Store();
@@ -2787,7 +2762,7 @@ class SingleConstraintTest extends TestHelper {
 
     IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
-    Diff disjointConditional =
+    DisjointConditional disjointConditional =
         new DisjointConditional(
             origin1,
             origin2,
@@ -3763,6 +3738,153 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     return count;
+  }
+
+  /**
+   * Fingerprints the search of the rectangle constraints built on AbstractDiff: for each kind, the
+   * solutions found, in order, and the search statistics on seeded random instances. Refactoring
+   * that engine must leave every fingerprint unchanged, which means the same search tree and not
+   * only the same solutions.
+   */
+  @Test
+  void rectangleConstraintsKeepTheirSearchTrees() {
+    Map<String, String> actual = new LinkedHashMap<>();
+    for (String kind :
+        List.of(
+            "Diff2",
+            "Diff2NoProfile",
+            "Diff2Exclusive",
+            "Disjoint",
+            "DisjointNoProfile",
+            "DisjointConditional",
+            "DisjointConditionalNoProfile")) {
+      actual.put(kind, rectangleSearchFingerprint(kind));
+    }
+
+    assertThat(actual)
+        .isEqualTo(
+            Map.of(
+                "Diff2",
+                "solutions=261426 nodes=271150 decisions=266268 wrong=4882 hash=67a9b6d05bb56939",
+                "Diff2NoProfile",
+                "solutions=261426 nodes=275572 decisions=268479 wrong=7093 hash=1d2a26df1730729",
+                "Diff2Exclusive",
+                "solutions=274199 nodes=281043 decisions=277601 wrong=3442 hash=e3ba8c5362d530ad",
+                "Disjoint",
+                "solutions=250703 nodes=258629 decisions=254646 wrong=3983 hash=688d304cb8d0f443",
+                "DisjointNoProfile",
+                "solutions=250683 nodes=263587 decisions=257115 wrong=6472 hash=37879c275e329ec3",
+                "DisjointConditional",
+                "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
+                "DisjointConditionalNoProfile",
+                "solutions=737646 nodes=766920 decisions=752263 wrong=14657 hash=5f89905bc162726d"));
+  }
+
+  private static String rectangleSearchFingerprint(String kind) {
+    Random random = new Random(20261024L);
+    long solutions = 0;
+    long nodes = 0;
+    long decisions = 0;
+    long wrongDecisions = 0;
+    long[] hash = {17};
+    for (int instance = 0; instance < 40; instance++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(2);
+      List<List<? extends IntVar>> rectangles = new ArrayList<>();
+      List<IntVar> vars = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        List<IntVar> r =
+            List.of(
+                rectangleVar(store, random, 0, 3),
+                rectangleVar(store, random, 0, 3),
+                rectangleVar(store, random, 0, 2),
+                rectangleVar(store, random, 0, 2));
+        rectangles.add(r);
+        vars.addAll(r);
+      }
+      List<List<Integer>> pairs = new ArrayList<>();
+      for (int i = 1; i <= n; i++) {
+        for (int j = i + 1; j <= n; j++) {
+          if (random.nextInt(3) == 0) {
+            pairs.add(List.of(i, j));
+          }
+        }
+      }
+      List<IntVar> conditions = new ArrayList<>();
+      for (int p = 0; p < pairs.size(); p++) {
+        conditions.add(new IntVar(store, "c" + p, 0, 1));
+      }
+      switch (kind) {
+        case "Diff2" -> store.impose(new Diff2(rectangles));
+        case "Diff2NoProfile" -> store.impose(new Diff2(rectangles, false));
+        case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));
+        case "Disjoint" -> store.impose(new Disjoint(rectangles));
+        case "DisjointNoProfile" -> store.impose(new Disjoint(rectangles, false));
+        case "DisjointConditional" ->
+            store.impose(new DisjointConditional(rectangles, pairs, conditions));
+        case "DisjointConditionalNoProfile" ->
+            store.impose(new DisjointConditional(rectangles, pairs, conditions, false));
+        default -> throw new IllegalArgumentException(kind);
+      }
+      if (kind.startsWith("DisjointConditional")) {
+        vars.addAll(conditions);
+      }
+      Collections.shuffle(vars, random);
+
+      IntVar[] order = vars.toArray(IntVar[]::new);
+      SelectChoicePoint<IntVar> select =
+          new SimpleSelect<>(
+              order,
+              null,
+              instance % 2 == 0 ? new IndomainMin<>() : new IndomainRandom<>(instance));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      // hashes every solution in the order the search finds it
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(
+                Search<IntVar> s, SelectChoicePoint<IntVar> choicePoint) {
+              long value = 0;
+              for (IntVar v : order) {
+                value = value * 31 + v.value();
+              }
+              hash[0] = hash[0] * 1_000_003 + value;
+              return super.executeAfterSolution(s, choicePoint);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(store, select);
+
+      solutions += search.getSolutionListener().solutionsNo();
+      nodes += search.getNodes();
+      decisions += search.getDecisions();
+      wrongDecisions += search.getWrongDecisions();
+    }
+    return "solutions="
+        + solutions
+        + " nodes="
+        + nodes
+        + " decisions="
+        + decisions
+        + " wrong="
+        + wrongDecisions
+        + " hash="
+        + Long.toHexString(hash[0]);
+  }
+
+  private static IntVar rectangleVar(Store store, Random random, int min, int max) {
+    IntVar v = new IntVar(store);
+    for (int value = min; value <= max; value++) {
+      if (random.nextInt(3) != 0) {
+        v.addDom(value, value);
+      }
+    }
+    if (v.dom().isEmpty()) {
+      v.addDom(min, min);
+    }
+    return v;
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

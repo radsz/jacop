@@ -552,7 +552,7 @@ package object scala {
     * @param ly length in derection Y of rectangle.
     */
   def diff2(x: Array[IntVar], y: Array[IntVar], lx: Array[IntVar], ly: Array[IntVar]) : Unit = {
-    val c = new Diff(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
+    val c = new Diff2(x.asInstanceOf[Array[org.jacop.core.IntVar]], y.asInstanceOf[Array[org.jacop.core.IntVar]],
       lx.asInstanceOf[Array[org.jacop.core.IntVar]], ly.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
@@ -564,7 +564,7 @@ package object scala {
     * @param rectangles array of four element vectors representing rectnagles [x, y, lx, ly]
     */
   def diff2(rectangles: Array[Array[IntVar]]) : Unit = {
-    val c = new Diff(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
+    val c = new Diff2(rectangles.asInstanceOf[Array[Array[org.jacop.core.IntVar]]])
     if (trace) println(c)
     impModel.impose(c)
   }

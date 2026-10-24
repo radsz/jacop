@@ -1,5 +1,5 @@
 /*
- * Diff.java
+ * AbstractDiff.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -31,16 +31,13 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
-import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -54,19 +51,18 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Diff constraint assures that any two rectangles from a vector of rectangles does not overlap in
- * at least one direction. It is a simple implementation which does not use sophisticated techniques
- * for efficient backtracking.
+ * The propagation shared by the two-dimensional rectangle constraints Diff2, Disjoint and
+ * DisjointConditional: forbidden regions, area checks, profiles and pruning of the lengths.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
 @Slf4j
-public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+abstract class AbstractDiff extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   protected static final boolean TRACE = false;
   protected static boolean traceOn = TRACE;
-  static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean TRACE_NARR = false;
   private static boolean traceNarrOn = TRACE_NARR;
   protected final IntFunction<Comparator<IntRectangle>> dimIthMinComparator =
@@ -89,159 +85,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   // use to collect information on possible length of rectangles for pruning
   private List<Integer> durMax;
 
-  /** It constructs an empty Diff constraint. */
-  protected Diff() {}
-
-  /**
-   * It specifies a diff constraint.
-   *
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
-   * @param doProfile should the constraint compute and use the profile functionality.
-   */
-  public Diff(Rectangle[] rectangles, boolean doProfile) {
-
-    checkInputForNullness("rectangles", rectangles);
-    checkInput(rectangles, r -> r.dim == 2, "rectangle has to have exactly two dimensions");
-
-    this.queueIndex = 2;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.rectangles = Arrays.copyOf(rectangles, rectangles.length);
-    this.doProfile = doProfile;
-
-    setScope(Rectangle.getStream(this.rectangles));
-  }
-
-  /**
-   * It specifies a diff constraint.
-   *
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
-   */
-  public Diff(IntVar[][] rectangles) {
-
-    if (rectangles == null) {
-      throw new IllegalArgumentException("Rectangles list is null");
-    }
-
-    queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
-    numberId = idNumber.incrementAndGet();
-    setScope(Rectangle.getStream(this.rectangles));
-  }
-
-  /**
-   * It constructs a diff constraint.
-   *
-   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-   * @param l1 list of variables denoting length of the rectangle in the first dimension.
-   * @param l2 list of variables denoting length of the rectangle in the second dimension.
-   * @param profile it specifies if the profile should be computed and used.
-   */
-  @Builder
-  public Diff(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
-    this(o1, o2, l1, l2);
-    doProfile = profile;
-  }
-
-  /**
-   * It constructs a diff constraint.
-   *
-   * @param origin1 list of variables denoting origin of the rectangle in the first dimension.
-   * @param origin2 list of variables denoting origin of the rectangle in the second dimension.
-   * @param length1 list of variables denoting length of the rectangle in the first dimension.
-   * @param length2 list of variables denoting length of the rectangle in the second dimension.
-   */
-  public Diff(IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
-
-    checkInputForNullness(
-        new String[] {"origin1", "origin2", "length1", "length2"},
-        origin1,
-        origin2,
-        length1,
-        length2);
-
-    queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2dRectangles(origin1, origin2, length1, length2);
-    numberId = idNumber.incrementAndGet();
-    setScope(Rectangle.getStream(this.rectangles));
-  }
-
-  /**
-   * It specifies a diffn constraint.
-   *
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
-   */
-  public Diff(List<? extends List<? extends IntVar>> rectangles) {
-
-    queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
-    numberId = idNumber.incrementAndGet();
-    setScope(Rectangle.getStream(this.rectangles));
-  }
-
-  /**
-   * It specifies a diff constraint.
-   *
-   * @param profile specifies is the profiles are used.
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
-   */
-  public Diff(List<? extends List<? extends IntVar>> rectangles, boolean profile) {
-
-    this(rectangles);
-    doProfile = profile;
-  }
-
-  /**
-   * It constructs a diff constraint.
-   *
-   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-   * @param l1 list of variables denoting length of the rectangle in the first dimension.
-   * @param l2 list of variables denoting length of the rectangle in the second dimension.
-   */
-  public Diff(
-      List<? extends IntVar> o1,
-      List<? extends IntVar> o2,
-      List<? extends IntVar> l1,
-      List<? extends IntVar> l2) {
-
-    this(
-        o1.toArray(IntVar[]::new),
-        o2.toArray(IntVar[]::new),
-        l1.toArray(IntVar[]::new),
-        l2.toArray(IntVar[]::new));
-  }
-
-  /**
-   * It constructs a diff constraint.
-   *
-   * @param o1 list of variables denoting origin of the rectangle in the first dimension.
-   * @param o2 list of variables denoting origin of the rectangle in the second dimension.
-   * @param l1 list of variables denoting length of the rectangle in the first dimension.
-   * @param l2 list of variables denoting length of the rectangle in the second dimension.
-   * @param profile it specifies if the profile should be computed and used.
-   */
-  public Diff(
-      List<? extends IntVar> o1,
-      List<? extends IntVar> o2,
-      List<? extends IntVar> l1,
-      List<? extends IntVar> l2,
-      boolean profile) {
-    this(o1, o2, l1, l2);
-    doProfile = profile;
-  }
-
-  /**
-   * It specifies a diff constraint.
-   *
-   * @param profile specifies is the profiles are used.
-   * @param rectangles list of rectangles which can not overlap in at least one dimension.
-   */
-  public Diff(IntVar[][] rectangles, boolean profile) {
-    this(rectangles);
-    doProfile = profile;
-  }
+  /** It constructs the shared part of a rectangle constraint. */
+  protected AbstractDiff() {}
 
   @Override
   public void removeLevel(int level) {
@@ -273,15 +118,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       i++;
     }
     return contains;
-  }
-
-  /**
-   * Returns the array of rectangles constrained by this diff constraint.
-   *
-   * @return the array of rectangles.
-   */
-  Rectangle[] getRectangles() {
-    return rectangles;
   }
 
   boolean intervalOverlap(int min1, int max1, int min2, int max2) {
@@ -461,9 +297,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
   }
 
-  void narrowRectangles(Set<IntVar> fdvQueue) {
-    narrowRectanglesEval(null, fdvQueue, false, true);
-  }
+  abstract void narrowRectangles(Set<IntVar> fdvQueue);
 
   private boolean notFit(
       int i, Rectangle r, List<IntRectangle> consideredRect, int barierPosition) {
@@ -722,29 +556,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
   }
 
-  @Override
-  public boolean satisfied() {
-    boolean sat = true;
-
-    Rectangle recti;
-    Rectangle rectj;
-    int i = 0;
-    while (sat && i < rectangles.length) {
-      recti = rectangles[i];
-      int j = i + 1;
-      while (sat && j < rectangles.length) {
-        rectj = rectangles[j];
-        sat = !recti.domOverlap(rectj);
-        j++;
-      }
-      i++;
-    }
-    return sat;
-  }
-
   /**
-   * Checks satisfaction using evalRects (backtrackable rectangle sets). Shared by Diff2 and
-   * Disjoint.
+   * Checks satisfaction using evalRects (backtrackable rectangle sets), for Diff2 and Disjoint.
    *
    * @param evalRects the backtrackable rectangle variables.
    * @return true if no evaluated rectangle pairs overlap.
@@ -768,7 +581,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   /**
    * Shared narrowRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
    *
-   * @param evalRects the backtrackable rectangle variables (null for base Diff class).
+   * @param evalRects the backtrackable rectangle variables.
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
    *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
@@ -787,7 +600,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     for (int l = 0; l < rectangles.length; l++) {
       Rectangle r = rectangles[l];
       RectState state = computeRectangleState(r, allowZeroLength);
-      if (!shouldProcessRectangle(state, evalRects)) {
+      if (!shouldProcessRectangle(state)) {
         continue;
       }
 
@@ -795,9 +608,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       List<IntRectangle> usedRect = new ArrayList<>();
       List<Rectangle> profileCandidates = new ArrayList<>();
-      List<Rectangle> overlappingRects = evalRects != null ? new ArrayList<>() : null;
-      Rectangle[] rectsToCheck =
-          evalRects != null ? ((Diff2VarValue) evalRects[l].value()).rects : rectangles;
+      List<Rectangle> overlappingRects = new ArrayList<>();
+      Rectangle[] rectsToCheck = ((Diff2VarValue) evalRects[l].value()).rects;
       boolean ntN =
           findRectanglesEval(
               rectsToCheck,
@@ -841,17 +653,12 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return new RectState(settled, minLengthEq0, maxLevel);
   }
 
-  private boolean shouldProcessRectangle(RectState state, Diff2Var[] evalRects) {
-    if (evalRects != null) {
-      return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
-    }
-    return !state.settled() || state.maxLevel() >= currentStore.level;
+  private boolean shouldProcessRectangle(RectState state) {
+    return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
   }
 
   private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {
-    if (evalRects == null
-        || overlappingRects == null
-        || overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
+    if (overlappingRects.size() == ((Diff2VarValue) evalRects[l].value()).rects.length) {
       return;
     }
     Diff2VarValue newRects = new Diff2VarValue();
@@ -866,7 +673,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    * @param r the rectangle being narrowed.
    * @param usedRect output list of used rectangles.
    * @param profileCandidates output list of profile candidate rectangles.
-   * @param overlappingRects output list of overlapping rectangles (may be null if not needed).
+   * @param overlappingRects output list of overlapping rectangles.
    * @param fdvQueue set of changed variables.
    * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
    *     (Diff2).
@@ -963,9 +770,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         if (overlap) {
 
-          if (overlappingRects != null) {
-            overlappingRects.add(s);
-          }
+          overlappingRects.add(s);
 
           if (use) { // rectangles taking space
             usedRect.add(useRect);
@@ -1087,24 +892,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
 
     return contains;
-  }
-
-  @Override
-  public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : diff (");
-
-    int i = 0;
-    for (Rectangle r : rectangles) {
-      result.append(r);
-      if (i < rectangles.length - 1) {
-        result.append(", ");
-      }
-      i++;
-    }
-    return result.append(")").toString();
   }
 
   record Pair(int min, int max) {}

@@ -49,7 +49,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class Disjoint extends Diff {
+public class Disjoint extends AbstractDiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
