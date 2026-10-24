@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Stateful;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -59,7 +60,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class LinearInt extends PrimitiveConstraint {
+public class LinearInt extends PrimitiveConstraint implements Stateful {
 
   /*
    * Defines relations
@@ -115,6 +116,18 @@ public class LinearInt extends PrimitiveConstraint {
    */
   long sumMin;
   long sumMax;
+
+  /** The variables with positive weights that propagation reads are x[0..freePos). */
+  int freePos;
+
+  /** The variables with negative weights that propagation reads are x[pos..freeNeg). */
+  int freeNeg;
+
+  /**
+   * The free and dropped variables when fixed variables are moved out of the free part of x, which
+   * only an imposed LinearInt does: it is then told when the store backtracks. Otherwise null.
+   */
+  private DroppedTerms dropped;
 
   private static final String WEIGHTS = "weights";
 
@@ -293,10 +306,31 @@ public class LinearInt extends PrimitiveConstraint {
    */
   public void propagate(int rel) {
     computeInit();
-    do {
-      store.propagationHasOccurred = false;
+    if (rel == EQ) {
+      propagateEq();
+    } else if (rel == NE) {
+      do {
+        store.propagationHasOccurred = false;
+        applyRelation(rel);
+      } while (store.propagationHasOccurred);
+    } else {
+      // an inequality prunes only the bounds that its own sum bound does not read, so one pass
+      // reaches the fixpoint
       applyRelation(rel);
-    } while (store.propagationHasOccurred);
+    }
+  }
+
+  /**
+   * Prunes the maximal and the minimal values in turn until the minimum of the sum stops growing:
+   * pruning maximal values reads only that minimum, and the pruning of minimal values has just run.
+   */
+  private void propagateEq() {
+    long lastSumMin;
+    do {
+      pruneLtEq(b);
+      lastSumMin = sumMin;
+      pruneGtEq(b);
+    } while (sumMin != lastSumMin);
   }
 
   private void applyRelation(int rel) {
@@ -411,10 +445,19 @@ public class LinearInt extends PrimitiveConstraint {
       return;
     }
 
+    // a subclass may rely on the order of x, and short sums gain nothing from dropping
+    if (getClass() == LinearInt.class && l > 3) {
+      dropped = new DroppedTerms(store, pos, l);
+    }
+
     super.impose(store);
   }
 
   void computeInit() {
+    if (dropped != null) {
+      computeInitDropping();
+      return;
+    }
     long f = 0;
     long e = 0;
     long min;
@@ -438,8 +481,77 @@ public class LinearInt extends PrimitiveConstraint {
       e += max;
       variability[i] = max - min;
     }
+    freePos = pos;
+    freeNeg = l;
     sumMin = f;
     sumMax = e;
+  }
+
+  /** Computes the bounds of the sum like computeInit and moves the fixed variables out. */
+  private void computeInitDropping() {
+    long f = dropped.fixedSum;
+    long e = f;
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    int end = dropped.freeFirst;
+    while (i < end) {
+      IntDomain xd = x[i].dom();
+      min = xd.min() * a[i];
+      max = xd.max() * a[i];
+      f += min;
+      e += max;
+      if (min == max) {
+        dropped.drop(min);
+        swap(i, --end);
+        dropped.freeFirst = end;
+      } else {
+        variability[i] = max - min;
+        i++;
+      }
+    }
+    freePos = end;
+    // negative weights
+    i = pos;
+    end = dropped.freeSecond;
+    while (i < end) {
+      IntDomain xd = x[i].dom();
+      min = xd.max() * a[i];
+      max = xd.min() * a[i];
+      f += min;
+      e += max;
+      if (min == max) {
+        dropped.drop(min);
+        swap(i, --end);
+        dropped.freeSecond = end;
+      } else {
+        variability[i] = max - min;
+        i++;
+      }
+    }
+    freeNeg = end;
+    sumMin = f;
+    sumMax = e;
+  }
+
+  private void swap(int i, int j) {
+    IntVar v = x[i];
+    x[i] = x[j];
+    x[j] = v;
+    long w = a[i];
+    a[i] = a[j];
+    a[j] = w;
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    dropped.removeLevel(level);
+  }
+
+  @Override
+  public boolean isStateful() {
+    return dropped != null;
   }
 
   void pruneLtEq(long b) {
@@ -452,7 +564,7 @@ public class LinearInt extends PrimitiveConstraint {
     long max;
     int i = 0;
     // positive weights
-    for (; i < pos; i++) {
+    for (; i < freePos; i++) {
       if (variability[i] > b - sumMin) {
         min = x[i].min() * a[i];
         max = min + variability[i];
@@ -464,7 +576,8 @@ public class LinearInt extends PrimitiveConstraint {
       }
     }
     // negative weights
-    for (; i < l; i++) {
+    i = pos;
+    for (; i < freeNeg; i++) {
       if (variability[i] > b - sumMin) {
         min = x[i].max() * a[i];
         max = min + variability[i];
@@ -487,7 +600,7 @@ public class LinearInt extends PrimitiveConstraint {
     long max;
     int i = 0;
     // positive weights
-    for (; i < pos; i++) {
+    for (; i < freePos; i++) {
       if (variability[i] > -(b - sumMax)) {
         max = x[i].max() * a[i];
         min = max - variability[i];
@@ -499,7 +612,8 @@ public class LinearInt extends PrimitiveConstraint {
       }
     }
     // negative weights
-    for (; i < l; i++) {
+    i = pos;
+    for (; i < freeNeg; i++) {
       if (variability[i] > -(b - sumMax)) {
         max = x[i].min() * a[i];
         min = max - variability[i];
@@ -522,7 +636,7 @@ public class LinearInt extends PrimitiveConstraint {
     long max;
     int i = 0;
     // positive weights
-    for (; i < pos; i++) {
+    for (; i < freePos; i++) {
       min = x[i].min() * a[i];
       max = min + variability[i];
 
@@ -535,7 +649,8 @@ public class LinearInt extends PrimitiveConstraint {
       }
     }
     // negative weights
-    for (; i < l; i++) {
+    i = pos;
+    for (; i < freeNeg; i++) {
       min = x[i].max() * a[i];
       max = min + variability[i];
 
