@@ -51,9 +51,11 @@ import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
+import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
+import org.jacop.floats.constraints.SqrtPeqR;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.api.Test;
@@ -284,5 +286,53 @@ class SingleConstraintTest {
     store.impose(new Reified(new PplusCeqR(p, 1, r), b));
     assertThat(store.consistency()).isTrue();
     assertThat(b.value()).isZero();
+  }
+
+  @Test
+  void testMultiplicationWithProductSameAsFactor() {
+    // p * q = p was propagated as q = 1, which loses p = 0 with any q
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 0, 0);
+    FloatVar q = new FloatVar(store, "q", 2, 3);
+    store.impose(new PmulQeqR(p, q, p));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q.min()).isEqualTo(2.0);
+    assertThat(q.max()).isEqualTo(3.0);
+
+    store = new Store();
+    FloatVar p2 = new FloatVar(store, "p", 2, 3);
+    FloatVar q2 = new FloatVar(store, "q", 0, 0);
+    store.impose(new PmulQeqR(p2, q2, q2));
+    assertThat(store.consistency()).isTrue();
+
+    // p * q = p with p not containing 0 forces q = 1, with q not containing 1 forces p = 0
+    store = new Store();
+    FloatVar p3 = new FloatVar(store, "p", 1, 2);
+    FloatVar q3 = new FloatVar(store, "q", 0, 4);
+    store.impose(new PmulQeqR(p3, q3, p3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q3.singleton(1.0)).isTrue();
+
+    store = new Store();
+    FloatVar p4 = new FloatVar(store, "p", -1, 2);
+    FloatVar q4 = new FloatVar(store, "q", 2, 4);
+    store.impose(new PmulQeqR(p4, q4, p4));
+    assertThat(store.consistency()).isTrue();
+    assertThat(p4.singleton(0.0)).isTrue();
+  }
+
+  @Test
+  void testSquareRootOfItself() {
+    // sqrt(x) = x has the solutions 0 and 1, but x = 0 failed
+    for (double v : new double[] {0, 1}) {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", v, v);
+      store.impose(new SqrtPeqR(x, x));
+      assertThat(store.consistency()).isTrue();
+    }
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", 2, 2);
+    store.impose(new SqrtPeqR(x, x));
+    assertThat(store.consistency()).isFalse();
   }
 }
