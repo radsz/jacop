@@ -41,9 +41,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.DomainOperationHandler;
+import org.jacop.search.IndomainMin;
 import org.jacop.search.SearchHandlerRegistry;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.restart.Calculator;
+import org.jacop.search.restart.LubyCalculator;
 
 /**
  * A search engine for free search: depth-first search with binary branching, restarts,
@@ -112,6 +114,9 @@ public final class FreeSearch {
     boolean right;
   }
 
+  /** The scale, in failures, of the Luby restarts of {@link #withDefaults(Store, IntVar[])}. */
+  public static final int DEFAULT_RESTART_SCALE = 250;
+
   private final Store store;
   private final SelectChoicePoint<? extends Var> mainSelect;
   private final SelectChoicePoint<? extends Var> alternative;
@@ -178,6 +183,28 @@ public final class FreeSearch {
    */
   public static Builder builder(Store store, SelectChoicePoint<? extends Var> select) {
     return new Builder(store, select);
+  }
+
+  /**
+   * Starts building a search with the default free search heuristics: dom/wdeg over the given
+   * variables with last conflict, the value of the last solution or else the minimum, Luby restarts
+   * counted in failures, and a restart after each solution for optimisation. For optimisation,
+   * leave the objective out of the variables when it is defined by them.
+   *
+   * @param store the store with the model.
+   * @param vars the variables to branch on.
+   * @return the builder, to which an objective, limits and a solution handler can be added.
+   */
+  public static Builder withDefaults(Store store, IntVar[] vars) {
+    IndomainLastSolution values = new IndomainLastSolution(vars, new IndomainMin<>());
+    DomWdeg domWdeg = new DomWdeg(vars, values);
+    LastConflict lastConflict = new LastConflict(domWdeg, values, 1);
+    return builder(store, lastConflict)
+        .monitor(values)
+        .monitor(domWdeg)
+        .monitor(lastConflict)
+        .restarts(new LubyCalculator(DEFAULT_RESTART_SCALE))
+        .restartOnSolution(true);
   }
 
   /**
