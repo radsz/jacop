@@ -103,6 +103,11 @@ public class AllEqual extends PrimitiveConstraint {
   @Override
   public void notConsistency(final Store store) {
 
+    // at most one variable is always all equal, so the negation cannot hold
+    if (n <= 1) {
+      throw Store.failException;
+    }
+
     int start = position.value();
 
     for (int i = start; i < n; i++) {

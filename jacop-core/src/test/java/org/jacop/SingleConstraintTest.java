@@ -2964,6 +2964,16 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void allEqualNegatedOnOneVariableFails() {
+    // a single variable is always all equal, so its negation has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new Not(new AllEqual(new IntVar[] {x})));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
   void disjointConditionalProfileCountsOverlappingPairOnce() {
     // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
     // of which rectangles a profile segment holds and counted both, removing y2 = 0
