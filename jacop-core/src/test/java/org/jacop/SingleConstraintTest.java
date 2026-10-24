@@ -4905,6 +4905,35 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void hybridTableRefiltersTheChangedColumnWhenTheRevisionRemovesItsSupports() {
+    // The second tuple, x0 != x1 + 2 and x1 = x0 - 2, allows nothing, but arc consistency on its
+    // restrictions only finds that out once x0 has lost values. At the root it is the only support
+    // of x0 = 0; after x0 != 3 it is removed and x0 = 0 must go too, or the constraint is removed
+    // with x0 = 0, x1 = -2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", 0, 0);
+      x0.addDom(3, 4);
+      IntVar x1 = new IntVar(store, "x1", -2, -2);
+      x1.addDom(1, 1);
+      IntVar[] x = {x0, x1};
+      Restriction[][] tuples = {
+        {Restriction.eq(4), Restriction.eq(-2)},
+        {
+          Restriction.column(Restriction.Relation.NE, 1, 2),
+          Restriction.column(Restriction.Relation.EQ, 0, -2)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      x0.domain.inComplement(1, x0, 3);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x0.dom()).as("expand " + expand).hasToString("4");
+    }
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
   @Test
   void xmulYeqCNegatedWithZeroFactor() {

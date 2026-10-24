@@ -818,6 +818,16 @@ public class HybridTable extends Constraint
     }
     queueSize = 0;
 
+    // Restrictions between columns can remove further values of the changed column itself, for
+    // example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple, and the tuples they remove may have
+    // been the only supports of other values of that column. The tuples that involve the column
+    // are looked at before the revision, which removes some of them.
+    if (onlyChanged >= 0
+        && binaryColumn[onlyChanged] != null
+        && intersects(binaryColumn[onlyChanged])) {
+      onlyChanged = -1;
+    }
+
     if (binaryAll != null) {
       reviseBinaryTuples();
     }
@@ -826,12 +836,6 @@ public class HybridTable extends Constraint
       firstConsistency = false;
       onlyChanged = -1;
       changed = arity;
-    } else if (onlyChanged >= 0
-        && binaryColumn[onlyChanged] != null
-        && intersects(binaryColumn[onlyChanged])) {
-      // Restrictions between columns can remove further values of the changed column itself,
-      // for example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple.
-      onlyChanged = -1;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
       // The valid tuples are those of the previous call, which supported every remaining value.
       return;
