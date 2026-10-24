@@ -133,6 +133,22 @@ public class Tree {
   /** It specifies the profit obtained from the remaining part of the critical item. */
   double profitFromCriticalTaken;
 
+  /**
+   * It rounds down a weight or profit computed in floating point, allowing for a small rounding
+   * error so that the result is never below the exact value rounded down.
+   */
+  static long floorSafe(double value) {
+    return (long) Math.floor(value + 1e-9 * Math.max(1.0, Math.abs(value)));
+  }
+
+  /**
+   * It rounds up a weight or profit computed in floating point, allowing for a small rounding error
+   * so that the result is never above the exact value rounded up.
+   */
+  static long ceilSafe(double value) {
+    return (long) Math.ceil(value - 1e-9 * Math.max(1.0, Math.abs(value)));
+  }
+
   /** The replaceable or intrusion weight returned when it can not be bounded: no pruning. */
   static final long NO_PRUNING = Long.MAX_VALUE / 4;
 
@@ -460,6 +476,45 @@ public class Tree {
       currentWeight = availableWeightOfCriticalItem;
     }
 
+    return replaceFromCurrentNode(
+        weightOfItemChecked,
+        maxNoOfItems,
+        profitOfItemChecked,
+        efficiencyOfItemChecked,
+        profitSlack);
+  }
+
+  /**
+   * It returns the amount of weight of the critical item, out of the weight taken in the optimal
+   * solution of the relaxation, which can be replaced by the items on its right given the amount of
+   * profitSlack. It overwrites the state of the mandatory computation.
+   *
+   * @param profitSlack the amount of reserve profit which can be sacrificed before violating the
+   *     constraint.
+   * @return the amount of weight of the critical item that can be replaced by Right items without
+   *     violating the constraint.
+   */
+  public long computeCriticalReplacableWeight(double profitSlack) {
+    currentWeight = 0;
+    currentProfit = 0;
+    profitFromCriticalLeft = 0;
+    currentNode = criticalLeaf;
+    exhaustedRightItems = false;
+    return replaceFromCurrentNode(
+        criticalLeaf.weightOfOne,
+        criticalLeaf.max(),
+        criticalLeaf.profitOfOne,
+        criticalLeaf.efficiency,
+        profitSlack);
+  }
+
+  private long replaceFromCurrentNode(
+      int weightOfItemChecked,
+      int maxNoOfItems,
+      int profitOfItemChecked,
+      double efficiencyOfItemChecked,
+      double profitSlack) {
+
     exhaustRightItemsLoop(efficiencyOfItemChecked, profitSlack);
     if (!exhaustedRightItems) {
       finalReplacementLoopRight(efficiencyOfItemChecked, profitSlack);
@@ -511,7 +566,7 @@ public class Tree {
       // miss mandatory item.
       // currentWeight += (int) Math.floor( lastWeight );
     }
-    return currentWeight + (long) Math.ceil(lastWeight);
+    return currentWeight + floorSafe(lastWeight);
   }
 
   /** Returns replacement weight if critical leaf case applies, else null. */
@@ -527,14 +582,13 @@ public class Tree {
             <= (long) weightOfItemChecked * criticalLeaf.profitOfOne) {
       return null;
     }
-    return (long)
-        Math.ceil(
-            profitSlack
-                * criticalLeaf.weightOfOne
-                * weightOfItemChecked
-                / (double)
-                    ((long) criticalLeaf.weightOfOne * profitOfItemChecked
-                        - (long) weightOfItemChecked * criticalLeaf.profitOfOne));
+    return floorSafe(
+        profitSlack
+            * criticalLeaf.weightOfOne
+            * weightOfItemChecked
+            / (double)
+                ((long) criticalLeaf.weightOfOne * profitOfItemChecked
+                    - (long) weightOfItemChecked * criticalLeaf.profitOfOne));
   }
 
   private void exhaustRightItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
@@ -694,6 +748,45 @@ public class Tree {
       currentWeight = takenWeightOfCriticalItem;
     }
 
+    return intrudeFromCurrentNode(
+        weightOfItemChecked,
+        maxNoOfItems,
+        profitOfItemChecked,
+        efficiencyOfItemChecked,
+        profitSlack);
+  }
+
+  /**
+   * It returns the amount of weight of the critical item, on top of the weight taken in the optimal
+   * solution of the relaxation, which can be put in the knapsack instead of the items on its left
+   * given the amount of profitSlack. It overwrites the state of the forbidden computation.
+   *
+   * @param profitSlack the amount of reserve profit which can be sacrificed before violating the
+   *     constraint.
+   * @return the amount of weight of the critical item that can be added without violating the
+   *     constraint.
+   */
+  public long computeCriticalIntrusionWeight(double profitSlack) {
+    currentWeight = 0;
+    currentProfit = 0;
+    profitFromCriticalTaken = 0;
+    currentNode = criticalLeaf;
+    exhaustedLeftItems = false;
+    return intrudeFromCurrentNode(
+        criticalLeaf.weightOfOne,
+        criticalLeaf.max(),
+        criticalLeaf.profitOfOne,
+        criticalLeaf.efficiency,
+        profitSlack);
+  }
+
+  private long intrudeFromCurrentNode(
+      int weightOfItemChecked,
+      int maxNoOfItems,
+      int profitOfItemChecked,
+      double efficiencyOfItemChecked,
+      double profitSlack) {
+
     exhaustLeftItemsLoop(efficiencyOfItemChecked, profitSlack);
     if (!exhaustedLeftItems) {
       finalIntrusionLoopLeft(efficiencyOfItemChecked, profitSlack);
@@ -739,7 +832,7 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
     }
     lastWeight /= efficiencyLoss;
-    return currentWeight + (long) Math.ceil(lastWeight);
+    return currentWeight + floorSafe(lastWeight);
   }
 
   /** Returns intrusion weight if critical leaf case applies, else null. */
@@ -755,14 +848,13 @@ public class Tree {
             <= (long) profitOfItemChecked * criticalLeaf.weightOfOne) {
       return null;
     }
-    return (long)
-        Math.ceil(
-            profitSlack
-                * criticalLeaf.weightOfOne
-                * weightOfItemChecked
-                / (double)
-                    ((long) criticalLeaf.profitOfOne * weightOfItemChecked
-                        - (long) profitOfItemChecked * criticalLeaf.weightOfOne));
+    return floorSafe(
+        profitSlack
+            * criticalLeaf.weightOfOne
+            * weightOfItemChecked
+            / (double)
+                ((long) criticalLeaf.profitOfOne * weightOfItemChecked
+                    - (long) profitOfItemChecked * criticalLeaf.weightOfOne));
   }
 
   private void exhaustLeftItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
@@ -895,6 +987,7 @@ public class Tree {
 
     TreeNode current = root;
     long obtainedProfit = 0;
+    long usedCapacity = 0;
 
     while (!current.isLeaf()) {
 
@@ -904,8 +997,8 @@ public class Tree {
         current = current.left;
       } else if (obtainedProfit + current.left.getPSum() <= minProfit) {
 
-        //         usedCapacity += current.left.getWSum();
-        /* we add the profit of all the left part */
+        /* we add the weight and the profit of all the left part */
+        usedCapacity += current.left.getWSum();
         obtainedProfit += current.left.getPSum();
 
         current = current.right;
@@ -919,11 +1012,9 @@ public class Tree {
     TreeLeaf finalLeaf = (TreeLeaf) current;
 
     long minWeightForCurrentTree =
-        (long)
-            Math.ceil(
-                remainingProfitToFind * (double) finalLeaf.weightOfOne / finalLeaf.profitOfOne);
+        ceilSafe(remainingProfitToFind * (double) finalLeaf.weightOfOne / finalLeaf.profitOfOne);
 
-    return alreadyUsedCapacity + minWeightForCurrentTree;
+    return alreadyUsedCapacity + usedCapacity + minWeightForCurrentTree;
   }
 
   /**
@@ -941,6 +1032,7 @@ public class Tree {
 
     TreeNode current = root;
     long usedCapacity = 0;
+    long obtainedProfit = 0;
 
     while (!current.isLeaf()) {
 
@@ -951,8 +1043,8 @@ public class Tree {
       } else if (usedCapacity + current.right.getWSum() <= minWeight) {
 
         usedCapacity += current.right.getWSum();
-        /* we add the profit of all the left part */
-        //         obtainedProfit += current.right.getPSum();
+        /* we add the profit of all the right part */
+        obtainedProfit += current.right.getPSum();
 
         current = current.left;
       } else {
@@ -965,10 +1057,8 @@ public class Tree {
     TreeLeaf finalLeaf = (TreeLeaf) current;
 
     long minProfitForCurrentTree =
-        (long)
-            Math.ceil(
-                remainingWeightToFind * (double) finalLeaf.profitOfOne / finalLeaf.weightOfOne);
+        ceilSafe(remainingWeightToFind * (double) finalLeaf.profitOfOne / finalLeaf.weightOfOne);
 
-    return alreadyObtainedProfit + minProfitForCurrentTree;
+    return alreadyObtainedProfit + obtainedProfit + minProfitForCurrentTree;
   }
 }
