@@ -64,13 +64,14 @@ import org.jacop.core.ValueEnumeration;
  *
  * <p>A call costs at most O(n * C * d) time for n items, a remaining capacity C and quantities with
  * at most d values, and the tables take O(n * C) memory, so the constraint does nothing when n * C
- * is above a limit. It is meant to be used together with {@link Knapsack}, which is cheap and
- * propagates in all cases. By default it is adaptive: every call earns a work budget proportional
- * to the number of items (see {@link #workRatio(double)}), and the tables are updated only when the
- * budget covers the cost of the previous update, so the constraint spends at most about as much
- * work as the rest of the search and costs little on instances where {@link Knapsack} alone
- * suffices. {@link #adaptive(boolean)} with false propagates at every call to a fixpoint. It always
- * propagates when all quantities are fixed, so it never accepts a wrong solution.
+ * is above a limit. {@link Knapsack} runs it by default next to its cheap relaxation (see {@link
+ * Knapsack#dynamicProgramming(boolean)}), so it rarely needs to be posted on its own. By default it
+ * is adaptive: every call earns a work budget proportional to the number of items (see {@link
+ * #workRatio(double)}), and the tables are updated only when the budget covers the cost of the
+ * previous update, so the constraint spends at most about as much work as the rest of the search
+ * and costs little on instances where {@link Knapsack} alone suffices. {@link #adaptive(boolean)}
+ * with false propagates at every call to a fixpoint. It always propagates when all quantities are
+ * fixed, so it never accepts a wrong solution.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -254,6 +255,16 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
 
   @Override
   public void consistency(Store store) {
+    propagateIfWorthIt(store);
+  }
+
+  /**
+   * It propagates to a fixpoint unless the adaptive mode skips this call.
+   *
+   * @param store the constraint store.
+   * @return true if a domain was pruned.
+   */
+  boolean propagateIfWorthIt(Store store) {
 
     boolean allFixed = true;
     for (IntVar q : quantity) {
@@ -266,17 +277,24 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
     if (adaptive && !allFixed) {
       budget += workRatio * WORK_PER_CALL_AND_ITEM * quantity.length;
       if (budget < (lastWork < 0 ? fullWork() : lastWork)) {
-        return;
+        return false;
       }
     }
 
+    return propagate(store);
+  }
+
+  private boolean propagate(Store store) {
     long before = work;
+    boolean pruned = false;
     do {
       store.propagationHasOccurred = false;
       singlePass(store);
+      pruned |= store.propagationHasOccurred;
     } while (store.propagationHasOccurred);
     lastWork = work - before;
     budget -= lastWork;
+    return pruned;
   }
 
   /** It estimates the work of computing all the tables, for the first call. */

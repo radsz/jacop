@@ -2215,7 +2215,8 @@ class SingleConstraintTest extends TestHelper {
     }
     int n = profits.length;
     copyStore.impose(
-        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+            .dynamicProgramming(false));
     return copyStore.consistency() ? domainsOf(copies) : "FAIL";
   }
 
@@ -2256,7 +2257,8 @@ class SingleConstraintTest extends TestHelper {
     IntVar profit = vars[weights.length + 1];
     store.impose(
         new Knapsack(
-            profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit));
+                profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit)
+            .dynamicProgramming(false));
     assertThat(store.consistency()).isTrue();
 
     store.setLevel(store.level + 1);
@@ -2296,7 +2298,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       checkSupportsAndFixpointAlongRandomWalk(
           instance,
           store,
@@ -2535,7 +2539,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       if (!store.consistency()) {
         continue;
       }
@@ -2679,7 +2685,7 @@ class SingleConstraintTest extends TestHelper {
 
   @Test
   void knapsackDpAdaptiveFindsAllSolutions() {
-    // The adaptive mode skips calls, so it is checked through search: alone or with Knapsack it
+    // The adaptive mode skips calls, so it is checked through search: alone and inside Knapsack it
     // must find exactly the solutions of the brute force.
     Random random = new Random(17);
     for (int run = 0; run < 300; run++) {
@@ -2715,8 +2721,9 @@ class SingleConstraintTest extends TestHelper {
             && Arrays.stream(weights).allMatch(w -> w > 0)
             && Arrays.stream(profits).allMatch(p -> p > 0)) {
           store.impose(new Knapsack(profits, weights, q, vars[n], vars[n + 1]));
+        } else {
+          store.impose(new KnapsackDP(profits, weights, q, vars[n], vars[n + 1]));
         }
-        store.impose(new KnapsackDP(profits, weights, q, vars[n], vars[n + 1]));
         long found = 0;
         if (store.consistency()) {
           DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
