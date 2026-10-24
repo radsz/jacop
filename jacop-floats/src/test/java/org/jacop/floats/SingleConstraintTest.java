@@ -335,4 +335,25 @@ class SingleConstraintTest {
     store.impose(new SqrtPeqR(x, x));
     assertThat(store.consistency()).isFalse();
   }
+
+  @Test
+  void testDivisionByVariableWithZeroBound() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 0, 0);
+    FloatVar q = new FloatVar(store, "q", 0, 1.5);
+    FloatVar r = new FloatVar(store, "r", 2, 2);
+    store.impose(new PdivQeqR(p, q, r));
+
+    // R * Q = P accepted Q = 0, so 0 / q = 2 was consistent and search reported q = 0
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    p = new FloatVar(store, "p", 0, 0);
+    q = new FloatVar(store, "q", -1, 0);
+    r = new FloatVar(store, "r", -1, 2);
+    store.impose(new PdivQeqR(p, q, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q.max()).isLessThan(0.0);
+    assertThat(r.singleton(0.0)).isTrue();
+  }
 }
