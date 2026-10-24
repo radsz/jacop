@@ -4755,4 +4755,25 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
   }
+
+  @Test
+  void testStretchRejectsRepeatedValues() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    // with value 1 listed twice, [1, 1] was accepted as two stretches of length 1
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 1}, new int[] {1, 1}, new int[] {1, 1}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchRejectsArraysOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 2}, new int[] {1}, new int[] {2, 2}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }
