@@ -16,8 +16,8 @@ predicate fzn_diffn_k(array[int,int] of var int: box_posn,
         let {
           array[BOXES, DIMS] of int: rect_size = array2d(BOXES, DIMS,  [fix(box_size[i,j]) | i in BOXES, j in DIMS]);
           array[BOXES, DIMS] of int: rect_offset = array2d(BOXES, DIMS, [0 | i in BOXES, j in DIMS]);
-          array[BOXES] of set of int: shape = [{i} | i in BOXES];
-          array[BOXES] of var int: kind = [i | i in BOXES];
+          array[BOXES] of set of int: shape = array1d(BOXES, [{i} | i in BOXES]);
+          array[BOXES] of var int: kind = array1d(BOXES, [i | i in BOXES]);
         } in
           geost(card(DIMS), rect_size, rect_offset, shape, box_posn, kind)
         else
