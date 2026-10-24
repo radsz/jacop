@@ -38,6 +38,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.set.constraints.AinS;
+import org.jacop.set.constraints.SinA;
 import org.jacop.set.constraints.XeqA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -90,6 +91,24 @@ class SetRelationsTest {
     SetVar a = groundSetVar(store, "a", 1, 3, 4, 5);
     store.impose(new AinS(a, dom(1, 3, 4, 5), true));
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testSinASatisfiedMeansInclusion() {
+    Store store = new Store();
+    // {3} is not a subset of {} although {} is lexicographically smaller
+    assertThat(new SinA(dom(3), groundSetVar(store, "a")).satisfied()).isFalse();
+    assertThat(new SinA(dom(3), groundSetVar(store, "b", 3, 4), true).satisfied()).isTrue();
+  }
+
+  @Test
+  void testNotSinAStrictMakesTheVariableEqualToTheSet() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(3), dom(3, 4)));
+    // not ({3} strictly in a) with 3 in a leaves only a = {3}
+    store.impose(new Not(new SinA(dom(3), a, true)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.domain.singleton(dom(3))).isTrue();
   }
 
   private static IntDomain dom(int... values) {
