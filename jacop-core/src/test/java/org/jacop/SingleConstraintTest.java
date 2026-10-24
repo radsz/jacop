@@ -69,6 +69,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -82,6 +83,7 @@ import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -2986,6 +2988,23 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(store.consistency()).isTrue();
     assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  @Test
+  void increasingWithRepeatedVariableReachesFixpoint() {
+    // [x, y, x] increasing means x = y; strictly decreasing [x, x] has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 2, 5);
+    store.impose(new Increasing(new IntVar[] {x, y, x}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2..3}");
+    assertThat(y.dom().toString()).isEqualTo("{2..3}");
+
+    Store store2 = new Store();
+    IntVar z = new IntVar(store2, "z", 0, 2);
+    store2.impose(new Decreasing(new IntVar[] {z, z}, true));
+    assertThat(store2.consistency()).isFalse();
   }
 
   @Test
