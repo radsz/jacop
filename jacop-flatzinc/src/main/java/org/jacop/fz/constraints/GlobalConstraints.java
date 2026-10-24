@@ -45,7 +45,6 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
-import org.jacop.constraints.And;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -2149,9 +2148,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
     if (x.length == 2) {
       support.pose(new Reified(new XeqY(x[0], x[1]), b));
-    } else if (x.length == 3) {
-      support.pose(
-          new Reified(new And(new XeqY[] {new XeqY(x[0], x[1]), new XeqY(x[1], x[2])}), b));
     } else {
       support.pose(new Reified(new AllEqual(x), b));
     }

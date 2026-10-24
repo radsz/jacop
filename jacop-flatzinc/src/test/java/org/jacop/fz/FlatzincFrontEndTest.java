@@ -80,6 +80,26 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
+    // x1 and x3 have no common value, so b must be false before any search. Three variables
+    // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
+    // needed a failed decision b = true.
+    String fzn =
+        """
+        var 1..1: x1;
+        var 1..2: x2;
+        var 2..2: x3;
+        var bool: b:: output_var;
+        constraint jacop_all_equal_int_reif([x1,x2,x3],b);
+        solve :: bool_search([b],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("b = false;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void searchOnOutputVariablesAssignsTheOtherVariablesToo() throws IOException {
     // The annotated search labels only x and then the output variables, also only x. For x = 1
     // y, z and w must be pairwise different values in 1..2, which propagation of int_ne does not
