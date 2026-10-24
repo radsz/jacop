@@ -1,0 +1,1198 @@
+/*
+ * CdclSolver.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.jasat.cdcl;
+
+import java.util.Arrays;
+
+/**
+ * A CDCL SAT solver built on flat arrays.
+ *
+ * <p>Literals are internal integers {@code 2*var + sign} (sign 1 for a negative literal); the
+ * public API takes DIMACS literals (variables from 1, negative for negation). Clauses of three or
+ * more literals live in one {@code int[]} arena: a header (size, flags with LBD, activity, saved
+ * search position) followed by the literals. Binary clauses are kept only in the watch lists.
+ * Every watch entry is a pair (blocker literal, clause reference), with {@link #BINARY} as the
+ * reference of a binary clause.
+ *
+ * <p>Search: first-UIP learning with recursive minimisation, LBD, EVSIDS with phase saving,
+ * alternating focused mode (Glucose-style LBD restarts) and stable mode (Luby restarts), a
+ * three-tier learnt clause database with periodic reduction, optional DRAT proof output, and
+ * solving under assumptions.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public final class CdclSolver {
+
+  /** Result of {@link #solve}: satisfiable. */
+  public static final int SAT = 10;
+
+  /** Result of {@link #solve}: unsatisfiable (under the assumptions, if any). */
+  public static final int UNSAT = 20;
+
+  /** Result of {@link #solve}: stopped by a limit or {@link #interrupt()}. */
+  public static final int UNKNOWN = 0;
+
+  static final int BINARY = -1;
+  private static final int NO_CONFLICT = -1;
+  private static final int BINARY_CONFLICT = -2;
+  private static final int NO_REASON = -1;
+
+  // clause header
+  private static final int SIZE = 0;
+  private static final int META = 1;
+  private static final int ACT = 2;
+  private static final int POS = 3;
+  private static final int HEADER = 4;
+
+  // META bits; LBD in the bits from LBD_SHIFT
+  private static final int LEARNT = 1;
+  private static final int DELETED = 2;
+  private static final int USED = 4;
+  private static final int TIER_SHIFT = 3;
+  private static final int TIER_MASK = 3 << TIER_SHIFT;
+  private static final int LBD_SHIFT = 8;
+  private static final int MAX_LBD = 255;
+
+  private static final int TIER_CORE = 0;
+  private static final int TIER_MID = 1;
+  private static final int TIER_LOCAL = 2;
+  private static final int CORE_LBD = 2;
+  private static final int MID_LBD = 6;
+
+  // --- variables and assignment
+  private int numVars;
+  private byte[] vals = new byte[0];
+  private int[] level = new int[0];
+  private int[] reason = new int[0];
+  private byte[] savedSign = new byte[0];
+  private double[] activity = new double[0];
+  private byte[] seen = new byte[0];
+  private final VarHeap order = new VarHeap();
+
+  private int[] trail = new int[0];
+  private int trailSize;
+  private int qhead;
+  private int[] trailLim = new int[16];
+  private int decisionLevel;
+
+  // --- clauses
+  private int[] mem = new int[1 << 16];
+  private int memSize;
+  private int wasted;
+  private int[] originals = new int[64];
+  private int numOriginals;
+  private int[] learnts = new int[64];
+  private int numLearnts;
+  private int[][] watches = new int[0][];
+  private int[] watchSize = new int[0];
+  private boolean ok = true;
+
+  // --- conflict and analysis scratch
+  private int conflictRef;
+  private int conflictLit0;
+  private int conflictLit1;
+  private int[] learnt = new int[16];
+  private int learntSize;
+  private int[] stack = new int[16];
+  private int[] toClear = new int[16];
+  private int toClearSize;
+  private int[] levelStamp = new int[16];
+  private int stamp;
+
+  // --- heuristics
+  private double varInc = 1;
+  private double varDecay = 0.8;
+  private float claInc = 1;
+  private static final float CLA_DECAY = 0.999f;
+  private boolean stable;
+  private long modeSwitchAt = 1000;
+  private int modePhases;
+  private long conflictsAtRestart;
+  private int lubyIndex;
+  private long lubyLimit;
+  private final int[] lbdQueue = new int[50];
+  private int lbdQueueSize;
+  private int lbdQueueHead;
+  private long lbdQueueSum;
+  private long lbdSum;
+  private final int[] trailQueue = new int[5000];
+  private int trailQueueSize;
+  private int trailQueueHead;
+  private long trailQueueSum;
+  private long nextReduce = 2000;
+  private int reduceInc = 300;
+  private int simplifyAssigns = -1;
+
+  // --- assumptions and model
+  private int[] assumptions = new int[0];
+  private int[] failed = new int[0];
+  private boolean[] model = new boolean[0];
+
+  // --- limits, proof, statistics
+  private volatile boolean interrupted;
+  private long deadline = Long.MAX_VALUE;
+  private long conflictLimit = Long.MAX_VALUE;
+  private DratWriter proof;
+
+  /** Number of conflicts so far. */
+  public long conflicts;
+
+  /** Number of decisions so far. */
+  public long decisions;
+
+  /** Number of propagated literals so far. */
+  public long propagations;
+
+  /** Number of restarts so far. */
+  public long restarts;
+
+  /** Number of learnt clause database reductions so far. */
+  public long reductions;
+
+  /** Creates an empty solver. */
+  public CdclSolver() {
+    // arrays grow with the variables
+  }
+
+  // ----------------------------------------------------------------------------------------- API
+
+  /**
+   * Makes sure variables 1..n exist.
+   *
+   * @param n the largest DIMACS variable
+   */
+  public void ensureVars(int n) {
+    if (n <= numVars) {
+      return;
+    }
+    int cap = vals.length / 2;
+    if (n > cap) {
+      int c = Math.max(n, 2 * cap);
+      vals = Arrays.copyOf(vals, 2 * c);
+      level = Arrays.copyOf(level, c);
+      reason = Arrays.copyOf(reason, c);
+      savedSign = Arrays.copyOf(savedSign, c);
+      activity = Arrays.copyOf(activity, c);
+      seen = Arrays.copyOf(seen, c);
+      trail = Arrays.copyOf(trail, c);
+      watches = Arrays.copyOf(watches, 2 * c);
+      watchSize = Arrays.copyOf(watchSize, 2 * c);
+    }
+    order.grow(n, activity);
+    for (int v = numVars; v < n; v++) {
+      reason[v] = NO_REASON;
+      savedSign[v] = 1;
+      watches[2 * v] = new int[4];
+      watches[2 * v + 1] = new int[4];
+      order.insert(v);
+    }
+    numVars = n;
+  }
+
+  /**
+   * Returns the number of variables.
+   *
+   * @return the largest DIMACS variable in use
+   */
+  public int numVars() {
+    return numVars;
+  }
+
+  /**
+   * Adds a clause of DIMACS literals. The solver must not be in the middle of a search.
+   *
+   * @param lits the literals (no terminating 0)
+   * @return false when the formula is now known to be unsatisfiable
+   */
+  public boolean addClause(int... lits) {
+    return addClause(lits, lits.length);
+  }
+
+  /**
+   * Adds a clause given by the first {@code n} DIMACS literals of {@code lits}.
+   *
+   * @param lits the literals (no terminating 0)
+   * @param n how many of them form the clause
+   * @return false when the formula is now known to be unsatisfiable
+   */
+  public boolean addClause(int[] lits, int n) {
+    if (!ok) {
+      return false;
+    }
+    backtrack(0);
+    int maxVar = 0;
+    for (int i = 0; i < n; i++) {
+      if (lits[i] == 0) {
+        throw new IllegalArgumentException("0 is not a literal");
+      }
+      maxVar = Math.max(maxVar, Math.abs(lits[i]));
+    }
+    ensureVars(maxVar);
+    int[] c = new int[n];
+    for (int i = 0; i < n; i++) {
+      c[i] = toLit(lits[i]);
+    }
+    Arrays.sort(c);
+    int size = 0;
+    boolean changed = false;
+    for (int i = 0; i < n; i++) {
+      int l = c[i];
+      if (vals[l] > 0 || (size > 0 && c[size - 1] == (l ^ 1))) {
+        return true; // satisfied at level 0, or a tautology
+      }
+      if (vals[l] < 0 || (size > 0 && c[size - 1] == l)) {
+        changed |= vals[l] < 0;
+        continue;
+      }
+      c[size++] = l;
+    }
+    if (changed && proof != null) {
+      proof.add(c, 0, size);
+    }
+    if (size == 0) {
+      ok = false;
+      return false;
+    }
+    if (size == 1) {
+      assign(c[0], NO_REASON);
+      if (propagate() != NO_CONFLICT) {
+        ok = false;
+        if (proof != null) {
+          proof.add(c, 0, 0);
+        }
+      }
+      return ok;
+    }
+    if (size == 2) {
+      addBinary(c[0], c[1]);
+      return true;
+    }
+    int ref = allocate(c, size, false, 0);
+    originals = push(originals, numOriginals++, ref);
+    attach(ref);
+    return true;
+  }
+
+  /**
+   * Solves the formula.
+   *
+   * @return {@link #SAT}, {@link #UNSAT} or {@link #UNKNOWN}
+   */
+  public int solve() {
+    return solve(new int[0]);
+  }
+
+  /**
+   * Solves the formula under assumptions (DIMACS literals that must hold in this call only).
+   *
+   * @param assumed the assumptions
+   * @return {@link #SAT}, {@link #UNSAT} or {@link #UNKNOWN}; after UNSAT with assumptions, {@link
+   *     #failedAssumptions()} gives a subset of them that is enough for unsatisfiability
+   */
+  public int solve(int... assumed) {
+    failed = new int[0];
+    if (!ok) {
+      return UNSAT;
+    }
+    int maxVar = 0;
+    for (int a : assumed) {
+      maxVar = Math.max(maxVar, Math.abs(a));
+    }
+    ensureVars(maxVar);
+    assumptions = new int[assumed.length];
+    for (int i = 0; i < assumed.length; i++) {
+      assumptions[i] = toLit(assumed[i]);
+    }
+    interrupted = false;
+    backtrack(0);
+    int result = search();
+    if (result == SAT) {
+      model = new boolean[numVars];
+      for (int v = 0; v < numVars; v++) {
+        model[v] = vals[2 * v] > 0;
+      }
+    }
+    backtrack(0);
+    return result;
+  }
+
+  /**
+   * Returns the value of a variable in the last model.
+   *
+   * @param var a DIMACS variable
+   * @return true when the variable is true in the model found by the last SAT answer
+   */
+  public boolean modelValue(int var) {
+    return model[var - 1];
+  }
+
+  /**
+   * Returns the failed assumptions of the last UNSAT answer under assumptions.
+   *
+   * @return DIMACS literals, a subset of the assumptions that together are unsatisfiable
+   */
+  public int[] failedAssumptions() {
+    return failed.clone();
+  }
+
+  /** Asks a running {@link #solve} to stop and return {@link #UNKNOWN}; safe from another thread. */
+  public void interrupt() {
+    interrupted = true;
+  }
+
+  /**
+   * Sets a wall-clock deadline for {@link #solve}.
+   *
+   * @param nanoTime a {@link System#nanoTime()} value, or {@link Long#MAX_VALUE} for none
+   */
+  public void setDeadline(long nanoTime) {
+    deadline = nanoTime;
+  }
+
+  /**
+   * Limits the total number of conflicts.
+   *
+   * @param limit the conflict count at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public void setConflictLimit(long limit) {
+    conflictLimit = limit;
+  }
+
+  /**
+   * Writes a DRAT proof of every derived and deleted clause. Set it before adding clauses.
+   *
+   * @param writer the proof output, or null for none
+   */
+  public void setProof(DratWriter writer) {
+    proof = writer;
+  }
+
+  /**
+   * Returns whether the formula is still possibly satisfiable.
+   *
+   * @return false once the empty clause has been derived
+   */
+  public boolean isOk() {
+    return ok;
+  }
+
+  // ---------------------------------------------------------------------------------- literals
+
+  private static int toLit(int dimacs) {
+    return dimacs > 0 ? 2 * (dimacs - 1) : 2 * (-dimacs - 1) + 1;
+  }
+
+  static int toDimacs(int lit) {
+    return (lit & 1) == 0 ? (lit >> 1) + 1 : -((lit >> 1) + 1);
+  }
+
+  private static int[] push(int[] a, int size, int x) {
+    if (size == a.length) {
+      a = Arrays.copyOf(a, 2 * a.length + 1);
+    }
+    a[size] = x;
+    return a;
+  }
+
+  // ---------------------------------------------------------------------------------- clauses
+
+  private int allocate(int[] lits, int size, boolean isLearnt, int lbd) {
+    int need = HEADER + size;
+    if (memSize + need > mem.length) {
+      mem = Arrays.copyOf(mem, Math.max(memSize + need, mem.length + (mem.length >> 1)));
+    }
+    int ref = memSize;
+    mem[ref + SIZE] = size;
+    int tier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : TIER_LOCAL;
+    mem[ref + META] =
+        (isLearnt ? LEARNT : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
+    mem[ref + ACT] = Float.floatToRawIntBits(0f);
+    mem[ref + POS] = 2;
+    System.arraycopy(lits, 0, mem, ref + HEADER, size);
+    memSize += need;
+    return ref;
+  }
+
+  private void addWatch(int lit, int blocker, int ref) {
+    int[] ws = watches[lit];
+    int n = watchSize[lit];
+    if (n + 2 > ws.length) {
+      ws = Arrays.copyOf(ws, 2 * ws.length);
+      watches[lit] = ws;
+    }
+    ws[n] = blocker;
+    ws[n + 1] = ref;
+    watchSize[lit] = n + 2;
+  }
+
+  private void attach(int ref) {
+    int l0 = mem[ref + HEADER];
+    int l1 = mem[ref + HEADER + 1];
+    addWatch(l0, l1, ref);
+    addWatch(l1, l0, ref);
+  }
+
+  private void addBinary(int a, int b) {
+    addWatch(a, b, BINARY);
+    addWatch(b, a, BINARY);
+  }
+
+  private boolean isLocked(int ref) {
+    int l0 = mem[ref + HEADER];
+    return vals[l0] > 0 && reason[l0 >> 1] == ref;
+  }
+
+  private void deleteClause(int ref) {
+    int size = mem[ref + SIZE];
+    if (proof != null) {
+      proof.delete(mem, ref + HEADER, size);
+    }
+    mem[ref + META] |= DELETED;
+    wasted += HEADER + size;
+  }
+
+  private static int lbdOf(int meta) {
+    return meta >>> LBD_SHIFT;
+  }
+
+  private static int tierOf(int meta) {
+    return (meta & TIER_MASK) >> TIER_SHIFT;
+  }
+
+  // ------------------------------------------------------------------------------ assignment
+
+  private void assign(int lit, int why) {
+    int v = lit >> 1;
+    vals[lit] = 1;
+    vals[lit ^ 1] = -1;
+    level[v] = decisionLevel;
+    reason[v] = why;
+    trail[trailSize++] = lit;
+  }
+
+  private void newDecisionLevel() {
+    if (decisionLevel == trailLim.length) {
+      trailLim = Arrays.copyOf(trailLim, 2 * trailLim.length);
+    }
+    trailLim[decisionLevel++] = trailSize;
+  }
+
+  private void backtrack(int target) {
+    if (decisionLevel <= target) {
+      return;
+    }
+    int start = trailLim[target];
+    for (int i = trailSize - 1; i >= start; i--) {
+      int lit = trail[i];
+      int v = lit >> 1;
+      vals[lit] = 0;
+      vals[lit ^ 1] = 0;
+      savedSign[v] = (byte) (lit & 1);
+      order.insert(v);
+    }
+    trailSize = start;
+    qhead = start;
+    decisionLevel = target;
+  }
+
+  // ----------------------------------------------------------------------------- propagation
+
+  private int propagate() {
+    int conflict = NO_CONFLICT;
+    final byte[] vals = this.vals;
+    final int[] mem = this.mem;
+    while (qhead < trailSize) {
+      int falseLit = trail[qhead++] ^ 1;
+      propagations++;
+      int[] ws = watches[falseLit];
+      int n = watchSize[falseLit];
+      int i = 0;
+      int j = 0;
+      while (i < n) {
+        int blocker = ws[i];
+        int ref = ws[i + 1];
+        i += 2;
+        int bv = vals[blocker];
+        if (bv > 0) {
+          ws[j++] = blocker;
+          ws[j++] = ref;
+          continue;
+        }
+        if (ref == BINARY) {
+          ws[j++] = blocker;
+          ws[j++] = ref;
+          if (bv < 0) {
+            conflict = BINARY_CONFLICT;
+            conflictLit0 = blocker;
+            conflictLit1 = falseLit;
+            break;
+          }
+          assign(blocker, -2 - falseLit);
+          continue;
+        }
+        int lits = ref + HEADER;
+        if (mem[lits] == falseLit) {
+          mem[lits] = mem[lits + 1];
+          mem[lits + 1] = falseLit;
+        }
+        int first = mem[lits];
+        int fv = vals[first];
+        if (first != blocker && fv > 0) {
+          ws[j++] = first;
+          ws[j++] = ref;
+          continue;
+        }
+        int size = mem[ref + SIZE];
+        int pos = mem[ref + POS];
+        int k = pos;
+        int found = -1;
+        for (; k < size; k++) {
+          if (vals[mem[lits + k]] >= 0) {
+            found = k;
+            break;
+          }
+        }
+        if (found < 0) {
+          for (k = 2; k < pos; k++) {
+            if (vals[mem[lits + k]] >= 0) {
+              found = k;
+              break;
+            }
+          }
+        }
+        if (found >= 0) {
+          mem[ref + POS] = found;
+          int w = mem[lits + found];
+          mem[lits + 1] = w;
+          mem[lits + found] = falseLit;
+          addWatch(w, first, ref);
+          continue;
+        }
+        ws[j++] = first;
+        ws[j++] = ref;
+        if (fv < 0) {
+          conflict = ref;
+          break;
+        }
+        assign(first, ref);
+      }
+      if (conflict != NO_CONFLICT) {
+        while (i < n) {
+          ws[j++] = ws[i++];
+        }
+        watchSize[falseLit] = j;
+        qhead = trailSize;
+        conflictRef = conflict;
+        return conflict;
+      }
+      watchSize[falseLit] = j;
+    }
+    return NO_CONFLICT;
+  }
+
+  // -------------------------------------------------------------------------------- analysis
+
+  private void addLearnt(int lit) {
+    if (learntSize == learnt.length) {
+      learnt = Arrays.copyOf(learnt, 2 * learnt.length);
+    }
+    learnt[learntSize++] = lit;
+  }
+
+  private void markClear(int v) {
+    if (toClearSize == toClear.length) {
+      toClear = Arrays.copyOf(toClear, 2 * toClear.length);
+    }
+    toClear[toClearSize++] = v;
+  }
+
+  private void bumpVar(int v) {
+    if ((activity[v] += varInc) > 1e100) {
+      for (int i = 0; i < numVars; i++) {
+        activity[i] *= 1e-100;
+      }
+      varInc *= 1e-100;
+    }
+    order.increased(v);
+  }
+
+  private void bumpClause(int ref) {
+    float a = Float.intBitsToFloat(mem[ref + ACT]) + claInc;
+    mem[ref + ACT] = Float.floatToRawIntBits(a);
+    if (a > 1e20f) {
+      for (int i = 0; i < numLearnts; i++) {
+        int r = learnts[i];
+        mem[r + ACT] = Float.floatToRawIntBits(Float.intBitsToFloat(mem[r + ACT]) * 1e-20f);
+      }
+      claInc *= 1e-20f;
+    }
+  }
+
+  private int computeLbd(int[] a, int from, int size) {
+    if (++stamp == Integer.MAX_VALUE) {
+      Arrays.fill(levelStamp, 0);
+      stamp = 1;
+    }
+    int lbd = 0;
+    for (int i = from; i < from + size; i++) {
+      int l = level[a[i] >> 1];
+      if (l >= levelStamp.length) {
+        levelStamp = Arrays.copyOf(levelStamp, 2 * l + 2);
+      }
+      if (levelStamp[l] != stamp) {
+        levelStamp[l] = stamp;
+        lbd++;
+      }
+    }
+    return lbd;
+  }
+
+  /** Marks a learnt clause used in a conflict; recomputes its LBD and promotes it if smaller. */
+  private void touchLearnt(int ref) {
+    int meta = mem[ref + META];
+    bumpClause(ref);
+    meta |= USED;
+    int tier = tierOf(meta);
+    if (tier != TIER_CORE) {
+      int lbd = computeLbd(mem, ref + HEADER, mem[ref + SIZE]);
+      if (lbd < lbdOf(meta)) {
+        int newTier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : tier;
+        meta = (meta & ((1 << LBD_SHIFT) - 1) & ~TIER_MASK) | (newTier << TIER_SHIFT);
+        meta |= lbd << LBD_SHIFT;
+      }
+    }
+    mem[ref + META] = meta;
+  }
+
+  /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
+  private int analyze() {
+    learntSize = 0;
+    addLearnt(0);
+    toClearSize = 0;
+    int pathCount = 0;
+    int p = -1;
+    int index = trailSize - 1;
+    int ref = conflictRef;
+    do {
+      if (p == -1 && ref == BINARY_CONFLICT) {
+        pathCount += analyzeLit(conflictLit0) + analyzeLit(conflictLit1);
+      } else if (ref < NO_REASON) {
+        pathCount += analyzeLit(-2 - ref);
+      } else {
+        if ((mem[ref + META] & LEARNT) != 0) {
+          touchLearnt(ref);
+        }
+        int lits = ref + HEADER;
+        int size = mem[ref + SIZE];
+        for (int k = p == -1 ? 0 : 1; k < size; k++) {
+          pathCount += analyzeLit(mem[lits + k]);
+        }
+      }
+      while (seen[trail[index] >> 1] == 0) {
+        index--;
+      }
+      p = trail[index--];
+      ref = reason[p >> 1];
+      seen[p >> 1] = 0;
+      pathCount--;
+    } while (pathCount > 0);
+    learnt[0] = p ^ 1;
+
+    // recursive minimisation
+    int abstractLevels = 0;
+    for (int i = 1; i < learntSize; i++) {
+      abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
+    }
+    int j = 1;
+    for (int i = 1; i < learntSize; i++) {
+      int v = learnt[i] >> 1;
+      if (reason[v] == NO_REASON || !redundant(learnt[i], abstractLevels)) {
+        learnt[j++] = learnt[i];
+      }
+    }
+    learntSize = j;
+
+    for (int i = 0; i < toClearSize; i++) {
+      seen[toClear[i]] = 0;
+    }
+    seen[learnt[0] >> 1] = 0;
+
+    if (learntSize == 1) {
+      return 0;
+    }
+    int maxIndex = 1;
+    for (int i = 2; i < learntSize; i++) {
+      if (level[learnt[i] >> 1] > level[learnt[maxIndex] >> 1]) {
+        maxIndex = i;
+      }
+    }
+    int tmp = learnt[1];
+    learnt[1] = learnt[maxIndex];
+    learnt[maxIndex] = tmp;
+    return level[learnt[1] >> 1];
+  }
+
+  /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
+  private int analyzeLit(int q) {
+    int v = q >> 1;
+    if (seen[v] != 0 || level[v] == 0) {
+      return 0;
+    }
+    seen[v] = 1;
+    markClear(v);
+    bumpVar(v);
+    if (level[v] >= decisionLevel) {
+      return 1;
+    }
+    addLearnt(q);
+    return 0;
+  }
+
+  /** Whether literal p of the learnt clause is implied by the other literals (MiniSat's test). */
+  private boolean redundant(int p, int abstractLevels) {
+    int top = toClearSize;
+    int sp = 0;
+    stack = push(stack, sp++, p);
+    while (sp > 0) {
+      int v = stack[--sp] >> 1;
+      int r = reason[v];
+      if (r < NO_REASON) {
+        int q = -2 - r;
+        if (!redundantStep(q, abstractLevels)) {
+          return undo(top);
+        }
+        if (seen[q >> 1] == 0 && level[q >> 1] > 0) {
+          seen[q >> 1] = 1;
+          markClear(q >> 1);
+          stack = push(stack, sp++, q);
+        }
+        continue;
+      }
+      int lits = r + HEADER;
+      int size = mem[r + SIZE];
+      for (int k = 1; k < size; k++) {
+        int q = mem[lits + k];
+        int qv = q >> 1;
+        if (seen[qv] != 0 || level[qv] == 0) {
+          continue;
+        }
+        if (!redundantStep(q, abstractLevels)) {
+          return undo(top);
+        }
+        seen[qv] = 1;
+        markClear(qv);
+        stack = push(stack, sp++, q);
+      }
+    }
+    return true;
+  }
+
+  private boolean redundantStep(int q, int abstractLevels) {
+    int v = q >> 1;
+    if (seen[v] != 0 || level[v] == 0) {
+      return true;
+    }
+    return reason[v] != NO_REASON && ((1 << (level[v] & 31)) & abstractLevels) != 0;
+  }
+
+  private boolean undo(int top) {
+    for (int i = top; i < toClearSize; i++) {
+      seen[toClear[i]] = 0;
+    }
+    toClearSize = top;
+    return false;
+  }
+
+  /** Collects the assumptions responsible for {@code p} being false into {@code failed}. */
+  private void analyzeFinal(int p) {
+    int[] out = new int[assumptions.length];
+    int n = 0;
+    out[n++] = toDimacs(p ^ 1);
+    if (decisionLevel == 0) {
+      failed = Arrays.copyOf(out, n);
+      return;
+    }
+    seen[p >> 1] = 1;
+    for (int i = trailSize - 1; i >= trailLim[0]; i--) {
+      int x = trail[i] >> 1;
+      if (seen[x] == 0) {
+        continue;
+      }
+      int r = reason[x];
+      if (r == NO_REASON) {
+        out[n++] = toDimacs(trail[i]);
+      } else if (r < NO_REASON) {
+        int q = -2 - r;
+        if (level[q >> 1] > 0) {
+          seen[q >> 1] = 1;
+        }
+      } else {
+        for (int k = 1; k < mem[r + SIZE]; k++) {
+          int q = mem[r + HEADER + k];
+          if (level[q >> 1] > 0) {
+            seen[q >> 1] = 1;
+          }
+        }
+      }
+      seen[x] = 0;
+    }
+    seen[p >> 1] = 0;
+    failed = Arrays.copyOf(out, n);
+  }
+
+  // ---------------------------------------------------------------------------------- search
+
+  private int search() {
+    if (propagate() != NO_CONFLICT) {
+      ok = false;
+      if (proof != null) {
+        proof.add(learnt, 0, 0);
+      }
+      return UNSAT;
+    }
+    while (true) {
+      int confl = propagate();
+      if (confl != NO_CONFLICT) {
+        conflicts++;
+        if (decisionLevel == 0) {
+          ok = false;
+          if (proof != null) {
+            proof.add(learnt, 0, 0);
+          }
+          return UNSAT;
+        }
+        trailQueuePush(trailSize);
+        int btLevel = analyze();
+        backtrack(btLevel);
+        learnClause();
+        varInc /= varDecay;
+        claInc /= CLA_DECAY;
+        if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
+          varDecay += 0.01;
+        }
+        if (conflicts >= conflictLimit || interrupted || System.nanoTime() > deadline) {
+          return UNKNOWN;
+        }
+        continue;
+      }
+      if (shouldRestart()) {
+        restart();
+        continue;
+      }
+      if (conflicts >= nextReduce) {
+        nextReduce = conflicts + 2000 + (long) reduceInc * ++reductions;
+        reduceDb();
+      }
+      if (decisionLevel == 0 && trailSize != simplifyAssigns) {
+        simplifyDb();
+      }
+      int next = -1;
+      while (decisionLevel < assumptions.length) {
+        int a = assumptions[decisionLevel];
+        if (vals[a] > 0) {
+          newDecisionLevel();
+        } else if (vals[a] < 0) {
+          analyzeFinal(a ^ 1);
+          return UNSAT;
+        } else {
+          next = a;
+          break;
+        }
+      }
+      if (next == -1) {
+        next = pickBranch();
+        if (next == -1) {
+          return SAT;
+        }
+        if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+          return UNKNOWN;
+        }
+      }
+      newDecisionLevel();
+      assign(next, NO_REASON);
+    }
+  }
+
+  private int pickBranch() {
+    while (!order.isEmpty()) {
+      int v = order.removeMax();
+      if (vals[2 * v] == 0) {
+        return 2 * v + savedSign[v];
+      }
+    }
+    return -1;
+  }
+
+  private void learnClause() {
+    int lbd;
+    if (learntSize == 1) {
+      lbd = 1;
+      if (proof != null) {
+        proof.add(learnt, 0, 1);
+      }
+      assign(learnt[0], NO_REASON);
+    } else if (learntSize == 2) {
+      lbd = 2;
+      if (proof != null) {
+        proof.add(learnt, 0, 2);
+      }
+      addBinary(learnt[0], learnt[1]);
+      assign(learnt[0], -2 - learnt[1]);
+    } else {
+      lbd = computeLbd(learnt, 0, learntSize);
+      if (proof != null) {
+        proof.add(learnt, 0, learntSize);
+      }
+      int ref = allocate(learnt, learntSize, true, lbd);
+      learnts = push(learnts, numLearnts++, ref);
+      attach(ref);
+      bumpClause(ref);
+      assign(learnt[0], ref);
+    }
+    lbdSum += lbd;
+    lbdQueueSum += lbd;
+    if (lbdQueueSize == lbdQueue.length) {
+      lbdQueueSum -= lbdQueue[lbdQueueHead];
+    } else {
+      lbdQueueSize++;
+    }
+    lbdQueue[lbdQueueHead] = lbd;
+    lbdQueueHead = (lbdQueueHead + 1) % lbdQueue.length;
+  }
+
+  private void trailQueuePush(int size) {
+    trailQueueSum += size;
+    if (trailQueueSize == trailQueue.length) {
+      trailQueueSum -= trailQueue[trailQueueHead];
+    } else {
+      trailQueueSize++;
+    }
+    trailQueue[trailQueueHead] = size;
+    trailQueueHead = (trailQueueHead + 1) % trailQueue.length;
+    // Glucose restart blocking: a much longer trail than usual suggests we are close to a model
+    if (!stable
+        && conflicts > 10000
+        && lbdQueueSize == lbdQueue.length
+        && trailQueueSize == trailQueue.length
+        && size > 1.4 * trailQueueSum / trailQueueSize) {
+      lbdQueueSize = 0;
+      lbdQueueSum = 0;
+    }
+  }
+
+  private boolean shouldRestart() {
+    if (decisionLevel <= assumptions.length) {
+      return false;
+    }
+    if (stable) {
+      return conflicts - conflictsAtRestart >= lubyLimit;
+    }
+    return lbdQueueSize == lbdQueue.length
+        && conflicts > 0
+        && (double) lbdQueueSum / lbdQueueSize * 0.8 > (double) lbdSum / conflicts;
+  }
+
+  private void restart() {
+    restarts++;
+    backtrack(0);
+    conflictsAtRestart = conflicts;
+    lbdQueueSize = 0;
+    lbdQueueSum = 0;
+    if (conflicts >= modeSwitchAt) {
+      stable = !stable;
+      modePhases++;
+      modeSwitchAt = conflicts + 1000L * (modePhases / 2 + 1) * (modePhases / 2 + 1);
+      lubyIndex = 0;
+    }
+    if (stable) {
+      lubyLimit = 512L * luby(++lubyIndex);
+    }
+  }
+
+  /** The i-th element (from 1) of the Luby sequence 1, 1, 2, 1, 1, 2, 4, 1, 1, 2, ... */
+  static long luby(int i) {
+    int x = i - 1;
+    int size = 1;
+    int seq = 0;
+    while (size < x + 1) {
+      seq++;
+      size = 2 * size + 1;
+    }
+    while (size - 1 != x) {
+      size = (size - 1) >> 1;
+      seq--;
+      x = x % size;
+    }
+    return 1L << seq;
+  }
+
+  // ------------------------------------------------------------------------- clause database
+
+  private void reduceDb() {
+    long[] keys = new long[numLearnts];
+    int candidates = 0;
+    for (int i = 0; i < numLearnts; i++) {
+      int ref = learnts[i];
+      int meta = mem[ref + META];
+      int tier = tierOf(meta);
+      if (tier == TIER_CORE || isLocked(ref)) {
+        mem[ref + META] = meta & ~USED;
+        continue;
+      }
+      if ((meta & USED) != 0) {
+        mem[ref + META] = meta & ~USED;
+        continue;
+      }
+      if (tier == TIER_MID) {
+        mem[ref + META] = (meta & ~TIER_MASK) | (TIER_LOCAL << TIER_SHIFT);
+        continue;
+      }
+      long act = Float.floatToRawIntBits(Float.intBitsToFloat(mem[ref + ACT])) >>> 8;
+      keys[candidates++] = ((long) (MAX_LBD - lbdOf(meta)) << 55) | (act << 32) | i;
+    }
+    Arrays.sort(keys, 0, candidates);
+    for (int c = 0; c < candidates / 2; c++) {
+      deleteClause(learnts[(int) keys[c]]);
+    }
+    purge();
+  }
+
+  /** Removes satisfied clauses at level 0. */
+  private void simplifyDb() {
+    for (int pass = 0; pass < 2; pass++) {
+      int[] list = pass == 0 ? originals : learnts;
+      int n = pass == 0 ? numOriginals : numLearnts;
+      for (int i = 0; i < n; i++) {
+        int ref = list[i];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        int size = mem[ref + SIZE];
+        for (int k = 0; k < size; k++) {
+          if (vals[mem[ref + HEADER + k]] > 0) {
+            int v = mem[ref + HEADER] >> 1;
+            if (reason[v] == ref) {
+              reason[v] = NO_REASON;
+            }
+            deleteClause(ref);
+            break;
+          }
+        }
+      }
+    }
+    purge();
+    simplifyAssigns = trailSize;
+  }
+
+  /** Drops deleted clauses from the clause lists and watches, compacting the arena if worthwhile. */
+  private void purge() {
+    numOriginals = filterDeleted(originals, numOriginals);
+    numLearnts = filterDeleted(learnts, numLearnts);
+    if (wasted > memSize / 2) {
+      compact();
+      return;
+    }
+    for (int lit = 0; lit < 2 * numVars; lit++) {
+      int[] ws = watches[lit];
+      int n = watchSize[lit];
+      int j = 0;
+      for (int i = 0; i < n; i += 2) {
+        int ref = ws[i + 1];
+        if (ref == BINARY || (mem[ref + META] & DELETED) == 0) {
+          ws[j++] = ws[i];
+          ws[j++] = ref;
+        }
+      }
+      watchSize[lit] = j;
+    }
+  }
+
+  private int filterDeleted(int[] list, int n) {
+    int j = 0;
+    for (int i = 0; i < n; i++) {
+      if ((mem[list[i] + META] & DELETED) == 0) {
+        list[j++] = list[i];
+      }
+    }
+    return j;
+  }
+
+  /** Copies the live clauses into a fresh arena and remaps every reference. */
+  private void compact() {
+    int[] to = new int[Math.max(1 << 16, (memSize - wasted) * 3 / 2)];
+    int top = 0;
+    int off = 0;
+    while (off < memSize) {
+      int size = mem[off + SIZE];
+      int len = HEADER + size;
+      if ((mem[off + META] & DELETED) == 0) {
+        System.arraycopy(mem, off, to, top, len);
+        mem[off + ACT] = top; // forwarding address
+        top += len;
+      }
+      off += len;
+    }
+    for (int i = 0; i < numOriginals; i++) {
+      originals[i] = mem[originals[i] + ACT];
+    }
+    for (int i = 0; i < numLearnts; i++) {
+      learnts[i] = mem[learnts[i] + ACT];
+    }
+    for (int i = 0; i < trailSize; i++) {
+      int v = trail[i] >> 1;
+      int r = reason[v];
+      if (r >= 0) {
+        reason[v] = (mem[r + META] & DELETED) == 0 ? mem[r + ACT] : NO_REASON;
+      }
+    }
+    for (int lit = 0; lit < 2 * numVars; lit++) {
+      int[] ws = watches[lit];
+      int n = watchSize[lit];
+      int j = 0;
+      for (int i = 0; i < n; i += 2) {
+        int ref = ws[i + 1];
+        if (ref == BINARY) {
+          ws[j++] = ws[i];
+          ws[j++] = ref;
+        } else if ((mem[ref + META] & DELETED) == 0) {
+          ws[j++] = ws[i];
+          ws[j++] = mem[ref + ACT];
+        }
+      }
+      watchSize[lit] = j;
+    }
+    mem = to;
+    memSize = top;
+    wasted = 0;
+  }
+}

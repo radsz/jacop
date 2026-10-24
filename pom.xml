@@ -189,6 +189,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/CdclSolverTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -234,6 +235,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/CdclSolverTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -286,6 +288,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/CdclSolverTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -338,6 +341,7 @@ setup to run configuration. -->
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
+                                <include>**/CdclSolverTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -770,6 +774,7 @@ setup to run configuration. -->
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
+                        <include>**/CdclSolverTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
