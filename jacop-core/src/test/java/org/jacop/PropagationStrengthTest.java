@@ -39,8 +39,10 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
+import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
+import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -208,6 +210,33 @@ class PropagationStrengthTest {
 
     assertThat(x[0].dom().toString()).isEqualTo("1");
     assertThat(x[1].dom().toString()).isEqualTo("2");
+  }
+
+  @Test
+  void testNetworkFlowPropagatesItsOwnPruningOfACounter() {
+
+    // Value 0 must occur 0 or 3 times; x1 = 1 rules out 3, so the network prunes the counter to 0
+    // and must then remove 0 from x0 and x2 in the same propagation.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 0, 1)
+    };
+    IntVar[] counter = {variable(store, "h", 0, 3)};
+    IntVar cost = new IntVar(store, "cost", 0, 6);
+    store.imposeDecomposition(
+        new SoftGCC(
+            x,
+            counter,
+            new int[] {0},
+            new int[] {0},
+            new int[] {2},
+            cost,
+            ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(counter[0].dom().toString()).isEqualTo("0");
+    assertThat(x[0].dom().toString()).isEqualTo("1");
+    assertThat(x[2].dom().toString()).isEqualTo("1");
   }
 
   private static IntVar variable(Store store, String name, int... values) {
