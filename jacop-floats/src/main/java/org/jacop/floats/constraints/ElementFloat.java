@@ -103,6 +103,11 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
     super(index, indexOffset);
     checkInputForNullness(
         new String[] {"index", "list", "value"}, new Object[][] {{index}, {list}, {value}});
+    for (double element : list) {
+      if (Double.isNaN(element)) {
+        throw new IllegalArgumentException("Constraint ElementFloat has a list with NaN.");
+      }
+    }
 
     queueIndex = 1;
 

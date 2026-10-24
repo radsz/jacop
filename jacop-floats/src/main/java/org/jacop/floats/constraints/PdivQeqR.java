@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -51,6 +52,20 @@ public class PdivQeqR extends PmulQeqR {
    */
   public PdivQeqR(FloatVar p, FloatVar q, FloatVar r) {
     super(r, q, p);
+  }
+
+  @Override
+  public void consistency(Store store) {
+    // P / Q = R is decomposed as R * Q = P, which accepts Q = 0 with P = 0 and any R
+    if (q.singleton() && q.value() == 0) {
+      throw Store.failException;
+    }
+    super.consistency(store);
+  }
+
+  @Override
+  public boolean satisfied() {
+    return !(q.singleton() && q.value() == 0) && super.satisfied();
   }
 
   @Override
