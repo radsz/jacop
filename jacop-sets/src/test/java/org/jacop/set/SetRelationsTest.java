@@ -39,6 +39,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AinS;
+import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.SinA;
 import org.jacop.set.constraints.XeqA;
 import org.jacop.set.core.BoundSetDomain;
@@ -131,6 +132,17 @@ class SetRelationsTest {
     assertThat(store2.consistency()).isTrue();
     assertThat(c.domain.singleton(dom(1, 2))).isTrue();
     assertThat(d.domain.singleton(dom(1, 2))).isTrue();
+  }
+
+  @Test
+  void testNotEinAStrictAcceptsTheSingletonSet() {
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 2);
+    EinA strict = new EinA(2, a, true);
+    assertThat(strict.satisfied()).isFalse();
+    assertThat(strict.notSatisfied()).isTrue();
+    store.impose(new Not(new EinA(2, a, true)));
+    assertThat(store.consistency()).isTrue();
   }
 
   private static IntDomain dom(int... values) {
