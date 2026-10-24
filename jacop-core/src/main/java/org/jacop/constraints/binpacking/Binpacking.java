@@ -51,7 +51,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
@@ -93,7 +92,6 @@ public class Binpacking extends Constraint
   private long sizeAllItems;
   private long alphaP;
   private long betaP;
-  private TimeStamp<Boolean> lbPruningStamp;
 
   /**
    * It constructs the binpacking constraint for the supplied variable.
@@ -223,12 +221,6 @@ public class Binpacking extends Constraint
     this.lbPruning = lbPruning;
   }
 
-  @Override
-  public void impose(Store store) {
-    super.impose(store);
-    lbPruningStamp = new TimeStamp<>(store, true);
-  }
-
   /** Rule "Pack All" -- applied only on first consistency check. */
   private void applyPackAllRule(Store store) {
     if (!firstConsistencyCheck) {
@@ -241,24 +233,6 @@ public class Binpacking extends Constraint
       b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
     }
     firstConsistencyCheck = false;
-  }
-
-  /** Returns true if LB pruning should be skipped this round (all bins used). */
-  private boolean updatePruneLbFlag(boolean pruneLb) {
-    if (!pruneLb) {
-      return false;
-    }
-    BitSet binUsed = new BitSet(load.length);
-    for (BinItem itemEl : item) {
-      if (itemEl.bin().singleton()) {
-        binUsed.set(itemEl.bin().value() - minBinNumber);
-      }
-    }
-    if (binUsed.cardinality() == load.length) {
-      lbPruningStamp.update(false);
-      return false;
-    }
-    return true;
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
@@ -444,8 +418,6 @@ public class Binpacking extends Constraint
   @Override
   public void consistency(Store store) {
     applyPackAllRule(store);
-    boolean pruneLb = lbPruning && lbPruningStamp.value();
-    pruneLb = updatePruneLbFlag(pruneLb);
     todo.clear();
     IntervalDomain d = collectChangedDomains();
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
@@ -462,7 +434,7 @@ public class Binpacking extends Constraint
       }
       applyLoadAndSizeCoherence(store);
     } while (!todo.isEmpty());
-    if (lbPruning && pruneLb) {
+    if (lbPruning) {
       lbNumberBins();
     }
   }
@@ -486,40 +458,48 @@ public class Binpacking extends Constraint
       return;
     }
 
+    int firstBin = IntDomain.MAX_INT;
+    int lastBin = IntDomain.MIN_INT;
+    for (BinItem anItem : item) {
+      firstBin = Math.min(firstBin, anItem.bin().min());
+      lastBin = Math.max(lastBin, anItem.bin().max());
+    }
+    int first = Math.max(0, firstBin - minBinNumber);
+    int last = Math.min(load.length - 1, lastBin - minBinNumber);
+    int nb = last - first + 1;
+
+    // Free space of every bin that items can still use; the items already packed and the
+    // capacity a bin lacks compared to the largest one become one virtual item per bin.
+    int[] free = new int[nb];
     int maxCapacity = 0;
-    for (IntVar c : load) {
-      int maxC = c.max();
-      if (maxCapacity < maxC) {
-        maxCapacity = maxC;
-      }
+    int maxFree = 0;
+    for (int i = first; i <= last; i++) {
+      free[i - first] = load[i].max() - a[i];
+      maxCapacity = Math.max(maxCapacity, load[i].max());
+      maxFree = Math.max(maxFree, free[i - first]);
     }
 
-    for (int i = 0; i < load.length; i++) {
-      if (a[i] != 0) { // consider only already loaded bins to add additional "load"
-        a[i] += maxCapacity - load[i].max();
-      }
+    if (maxCapacity <= 0) {
+      throw Store.failException; // unpacked items of positive weight and no capacity
     }
 
-    Arrays.sort(a); // sort array a in ascending order
-
-    int[] z = merge(unpacked, unpackedLength, a);
-
-    // check if there is enough binns to pack all items by computing LB.
-    // If the number of possible bins is lower than lower bound then fail
-    lbBins(z, maxCapacity, getNumberBins(item));
+    // Reduction R0 (Shaw 2004): capacity is the largest bin capacity.
+    lbBins(withVirtualItems(unpacked, unpackedLength, free, maxCapacity), maxCapacity, nb);
+    // Reduction RMin (Dupuis, Schaus and Deville 2010): capacity and virtual items lowered by
+    // the smallest virtual item, i.e. capacity is the largest free space. Neither dominates.
+    if (maxFree > 0 && maxFree < maxCapacity) {
+      lbBins(withVirtualItems(unpacked, unpackedLength, free, maxFree), maxFree, nb);
+    }
   }
 
-  private int getNumberBins(BinItem[] item) {
-    int min = IntDomain.MAX_INT;
-    int max = 0;
-    for (BinItem anItem : item) {
-      IntVar bin = anItem.bin();
-      int bmin = bin.min();
-      int bmax = bin.max();
-      max = Math.max(max, bmax);
-      min = Math.min(min, bmin);
+  /** Unpacked items and one virtual item per bin (capacity - free space), in descending order. */
+  private int[] withVirtualItems(int[] unpacked, int unpackedLength, int[] free, int capacity) {
+    int[] v = new int[free.length];
+    for (int i = 0; i < free.length; i++) {
+      v[i] = capacity - free[i];
     }
-    return max - min + 1;
+    Arrays.sort(v); // ascending, merge reads it backwards
+    return merge(unpacked, unpackedLength, v);
   }
 
   private int[] merge(int[] a, int arrLength, int[] b) {
