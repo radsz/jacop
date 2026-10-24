@@ -102,14 +102,18 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -1682,6 +1686,131 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
   }
 
+  // A constraint that reads one bound of a variable is attached with the MIN_EVENT or MAX_EVENT
+  // event and is
+  // not woken when only the other bound changes.
+  @Test
+  void testBoundConstraintIsWokenOnlyByTheBoundItReads() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar z = new IntVar(store, "z", 0, 10);
+    XplusClteqZ c = new XplusClteqZ(x, 2, z);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().modelConstraints[IntDomain.MIN_EVENT]).contains(c);
+    assertThat(z.dom().modelConstraints[IntDomain.MAX_EVENT]).contains(c);
+
+    store.setLevel(1);
+    x.domain.inMax(store.level, x, 7);
+    z.domain.inMin(store.level, z, 3);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isFalse();
+    x.domain.inMin(store.level, x, 2);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isTrue();
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(4);
+    z.domain.inMax(store.level, z, 6);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isEqualTo(4);
+
+    // with the same variable on both sides, or an event set by the user, both bounds are watched
+    XlteqY same = new XlteqY(x, x);
+    assertThat(same.getBoundPruningEvent(x)).isEqualTo(IntDomain.BOUND);
+    XplusClteqZ set = new XplusClteqZ(x, 1, z);
+    set.setConsistencyPruningEvent(x, IntDomain.BOUND);
+    store.impose(set);
+    assertThat(x.dom().modelConstraints[IntDomain.BOUND]).contains(set);
+  }
+
+  // Constraints attached with MIN_EVENT or MAX_EVENT keep every solution and reach a fixpoint after
+  // any
+  // decision, including decisions that change only one bound.
+  @Test
+  void testBoundSideConstraintsKeepSupportsAndReachFixpoint() {
+
+    record Case(
+        String name, int arity, Function<IntVar[], Constraint> constraint, Predicate<int[]> test) {}
+
+    List<Case> cases =
+        List.of(
+            new Case("x <= y", 2, v -> new XlteqY(v[0], v[1]), t -> t[0] <= t[1]),
+            new Case("x < y", 2, v -> new XltY(v[0], v[1]), t -> t[0] < t[1]),
+            new Case("x >= y", 2, v -> new XgteqY(v[0], v[1]), t -> t[0] >= t[1]),
+            new Case("x > y", 2, v -> new XgtY(v[0], v[1]), t -> t[0] > t[1]),
+            new Case("x + 2 <= z", 2, v -> new XplusClteqZ(v[0], 2, v[1]), t -> t[0] + 2 <= t[1]),
+            new Case(
+                "x + y <= z", 3, v -> new XplusYlteqZ(v[0], v[1], v[2]), t -> t[0] + t[1] <= t[2]),
+            new Case(
+                "b => x - 1 <= z",
+                3,
+                v -> new XplusClteqZImplied(v[0], v[1], -1, v[2]),
+                t -> t[0] == 0 || t[1] - 1 <= t[2]),
+            new Case(
+                "2x - 3y + z <= 4",
+                3,
+                v -> new LinearInt(v, new int[] {2, -3, 1}, "<=", 4),
+                t -> 2 * t[0] - 3 * t[1] + t[2] <= 4),
+            new Case(
+                "2x - 3y + z < 4",
+                3,
+                v -> new LinearInt(v, new int[] {2, -3, 1}, "<", 4),
+                t -> 2 * t[0] - 3 * t[1] + t[2] < 4),
+            new Case(
+                "x - 2y + 3z >= 5",
+                3,
+                v -> new LinearInt(v, new int[] {1, -2, 3}, ">=", 5),
+                t -> t[0] - 2 * t[1] + 3 * t[2] >= 5),
+            new Case(
+                "x - 2y + 3z > 5",
+                3,
+                v -> new LinearInt(v, new int[] {1, -2, 3}, ">", 5),
+                t -> t[0] - 2 * t[1] + 3 * t[2] > 5),
+            new Case(
+                "x + y <= z (sum)",
+                3,
+                v -> new SumInt(new IntVar[] {v[0], v[1]}, "<=", v[2]),
+                t -> t[0] + t[1] <= t[2]),
+            new Case(
+                "x + y > z (sum)",
+                3,
+                v -> new SumInt(new IntVar[] {v[0], v[1]}, ">", v[2]),
+                t -> t[0] + t[1] > t[2]));
+
+    Random random = new Random(53);
+    for (Case c : cases) {
+      for (int run = 0; run < 300; run++) {
+        Store store = new Store();
+        IntVar[] vars = new IntVar[c.arity()];
+        for (int i = 0; i < vars.length; i++) {
+          vars[i] =
+              c.name().startsWith("b ") && i == 0
+                  ? new IntVar(store, "b", 0, 1)
+                  : randomVar(store, "v" + i, -3, 6, random);
+        }
+        Constraint constraint = c.constraint().apply(vars);
+        store.impose(constraint);
+        String instance = c.name() + " run " + run + " " + domainsOf(vars);
+        checkSupportsAndFixpoint(
+            instance,
+            store,
+            vars,
+            v -> bruteForce(v, c.test()),
+            () -> rerunAtNewLevel(store, constraint, vars),
+            random,
+            true);
+      }
+    }
+  }
+
+  private static void decideOnBound(Store store, IntVar v, int value, Random random) {
+    switch (random.nextInt(4)) {
+      case 0 -> v.domain.inMin(store.level, v, value);
+      case 1 -> v.domain.inMax(store.level, v, value);
+      case 2 -> v.domain.inComplement(store.level, v, value);
+      default -> v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
+    }
+  }
+
   private static IntVar randomVar(Store store, String name, int lo, int hi, Random random) {
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {
@@ -1760,8 +1889,24 @@ class SingleConstraintTest extends TestHelper {
       Function<IntVar[], List<int[]>> solver,
       Supplier<String> rerun,
       Random random) {
+    checkSupportsAndFixpoint(instance, store, vars, solver, rerun, random, false);
+  }
+
+  /**
+   * Checks supports and fixpoint along a random walk. With bound decisions, the decisions also move
+   * a single bound, so that a constraint that misses the event of the bound it reads leaves values
+   * it should prune.
+   */
+  private static void checkSupportsAndFixpoint(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random,
+      boolean boundDecisions) {
     List<int[]> solutions = solver.apply(vars);
-    for (int step = 0; step < 6; step++) {
+    for (int step = 0; step < (boundDecisions ? 8 : 6); step++) {
       boolean consistent = store.consistency();
       if (solutions.isEmpty()) {
         // propagation does not have to detect every failure
@@ -1785,7 +1930,9 @@ class SingleConstraintTest extends TestHelper {
       }
       store.setLevel(store.level + 1);
       int value = valuesOf(v)[random.nextInt(v.getSize())];
-      if (random.nextBoolean()) {
+      if (boundDecisions) {
+        decideOnBound(store, v, value, random);
+      } else if (random.nextBoolean()) {
         v.domain.inValue(store.level, v, value);
       } else {
         v.domain.inComplement(store.level, v, value);

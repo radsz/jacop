@@ -68,6 +68,11 @@ public class XltY extends AbstractXcompY {
   }
 
   @Override
+  protected boolean readsMinOfX() {
+    return true;
+  }
+
+  @Override
   public void consistency(final Store store) {
 
     x.domain.inMax(store.level, x, y.max() - 1);

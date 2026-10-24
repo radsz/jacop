@@ -39,9 +39,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * LinearInt constraint implements the weighted summation over several variables .
@@ -372,6 +374,27 @@ public class LinearInt extends PrimitiveConstraint {
   public int getDefaultConsistencyPruningEvent() {
     // != prunes only when every variable but one is fixed, so only grounding can enable it.
     return relationType == NE ? IntDomain.GROUND : IntDomain.BOUND;
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // <= and < read only the minimum of the weighted sum, >= and > only its maximum
+    boolean readsSumMin = relationType == LE || relationType == LT;
+    if (!readsSumMin && relationType != GE && relationType != GT) {
+      return IntDomain.BOUND;
+    }
+    int event = Domain.NONE;
+    for (int i = 0; i < l; i++) {
+      if (x[i] == v) {
+        boolean positive = i < pos;
+        int side = readsSumMin == positive ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
+        if (event != Domain.NONE && event != side) {
+          return IntDomain.BOUND;
+        }
+        event = side;
+      }
+    }
+    return event == Domain.NONE ? IntDomain.BOUND : event;
   }
 
   @Override

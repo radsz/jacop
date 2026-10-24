@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
 
 /**
  * Abstract base for two-variable integer comparison constraints (XgtY, XltY, XgteqY, XlteqY).
@@ -54,6 +55,22 @@ public abstract class AbstractXcompY extends AbstractConstraintXandY {
   protected AbstractXcompY(AtomicInteger idNum, IntVar x, IntVar y) {
 
     super(idNum, x, y);
+  }
+
+  /**
+   * It tells which bounds consistency() reads: the minimum of x and the maximum of y for x
+   * {@literal <=} y and x {@literal <} y, or the maximum of x and the minimum of y otherwise.
+   *
+   * @return true if consistency() reads the minimum of x and the maximum of y.
+   */
+  protected abstract boolean readsMinOfX();
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    if (x == y) {
+      return IntDomain.BOUND;
+    }
+    return (v == x) == readsMinOfX() ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
   }
 
   @Override

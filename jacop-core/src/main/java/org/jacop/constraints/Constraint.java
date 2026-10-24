@@ -330,6 +330,41 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * It returns the event with which this constraint is attached to a variable when it is imposed.
+   * It is the consistency pruning event, narrowed by {@link #getBoundPruningEvent(Var)} when that
+   * event is BOUND, the variable is an integer variable, and neither an event set for the variable
+   * nor the nested constraints decide it.
+   *
+   * @param v variable for which the event is computed.
+   * @return the pruning event used to attach this constraint to v.
+   */
+  protected int getSubscriptionPruningEvent(Var v) {
+    int event = getConsistencyPruningEvent(v);
+    if (event != IntDomain.BOUND
+        || !(v instanceof IntVar)
+        || consistencyPruningEvents != null && consistencyPruningEvents.containsKey(v)
+        || constraintScope != null && !constraintScope.isEmpty()) {
+      return event;
+    }
+    return getBoundPruningEvent(v);
+  }
+
+  /**
+   * It returns the bound of v whose change can make consistency() prune, for a variable that the
+   * constraint watches with the BOUND event. A constraint which reads only the minimum of v in
+   * consistency() returns {@link IntDomain#MIN_EVENT}, one which reads only its maximum returns
+   * {@link IntDomain#MAX_EVENT}, and it is then not woken when only the other bound of v changes. A
+   * change of that other bound can still make the constraint satisfied, which is then noticed
+   * later. The nested and negated uses of a constraint always watch both bounds.
+   *
+   * @param v variable for which the event is computed.
+   * @return BOUND, MIN_EVENT or MAX_EVENT; BOUND by default.
+   */
+  public int getBoundPruningEvent(Var v) {
+    return IntDomain.BOUND;
+  }
+
+  /**
    * It returns the default pruning event used for consistency checking when no specific event is
    * defined for a variable.
    *
@@ -454,7 +489,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public void impose(Store store) {
 
-    arguments().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+    arguments().forEach(i -> i.putModelConstraint(this, getSubscriptionPruningEvent(i)));
     store.addChanged(this);
     store.countConstraint();
     if (constraintScope != null) {

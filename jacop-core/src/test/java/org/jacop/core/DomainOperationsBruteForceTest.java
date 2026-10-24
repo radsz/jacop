@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -248,6 +249,61 @@ class DomainOperationsBruteForceTest {
     }
   }
 
+  /** The pruning operations of a variable with a BoundDomain, which holds no holes. */
+  @Test
+  void boundDomainPruningReportsTheChangedBounds() {
+    Random random = new Random(11);
+    Function<TreeSet<Integer>, IntDomain> kind = s -> new BoundDomain(s.first(), s.last());
+    for (int trial = 0; trial < TRIALS; trial++) {
+      int first = random.nextInt(10);
+      TreeSet<Integer> a = range(first, first + random.nextInt(8));
+      int lo = random.nextInt(20) - 2;
+      int hi = lo + random.nextInt(8);
+      int value = random.nextInt(20) - 2;
+      String context = "a=" + a + " range=" + lo + ".." + hi + " value=" + value;
+
+      prune(
+          kind,
+          a,
+          intersect(a, range(lo, hi)),
+          "in(min, max) " + context,
+          (d, l, v) -> d.in(l, v, lo, hi));
+      prune(
+          kind,
+          a,
+          subtractBounds(a, lo, hi),
+          "inComplement(min, max) " + context,
+          (d, l, v) -> d.inComplement(l, v, lo, hi));
+      prune(
+          kind,
+          a,
+          subtractBounds(a, value, value),
+          "inComplement(value) " + context,
+          (d, l, v) -> d.inComplement(l, v, value));
+      prune(
+          kind,
+          a,
+          intersect(a, range(value, 30)),
+          "inMin " + context,
+          (d, l, v) -> d.inMin(l, v, value));
+      prune(
+          kind,
+          a,
+          intersect(a, range(-5, value)),
+          "inMax " + context,
+          (d, l, v) -> d.inMax(l, v, value));
+    }
+  }
+
+  /** Removes lo..hi from a, unless that makes a hole, which a BoundDomain cannot hold. */
+  private static TreeSet<Integer> subtractBounds(TreeSet<Integer> a, int lo, int hi) {
+    TreeSet<Integer> result = subtract(a, range(lo, hi));
+    if (!result.isEmpty() && result.last() - result.first() + 1 != result.size()) {
+      return a;
+    }
+    return result;
+  }
+
   private interface Pruning {
     void apply(IntDomain domain, int level, IntVar var);
   }
@@ -287,10 +343,11 @@ class DomainOperationsBruteForceTest {
     }
     TreeSet<Integer> initial = union(a, range(extra, extra));
     Store store = new Store();
-    IntVar x = new IntVar(store, "x", kind.apply(initial));
+    RecordingVar x = new RecordingVar(store, kind.apply(initial));
     store.setLevel(1);
     x.domain.inComplement(store.level, x, extra);
     check(x.domain, a, operation + " (same level) removal of " + extra);
+    x.events.clear();
     boolean failed = false;
     try {
       pruning.apply(x.domain, store.level, x);
@@ -300,6 +357,7 @@ class DomainOperationsBruteForceTest {
     assertThat(failed).as(operation + " (same level) failure").isEqualTo(expected.isEmpty());
     if (!failed) {
       check(x.domain, expected, operation + " (same level)");
+      checkEvents(x.events, a, expected, operation + " (same level)");
     }
     store.removeLevel(1);
     store.setLevel(0);
@@ -313,7 +371,7 @@ class DomainOperationsBruteForceTest {
       String operation,
       Pruning pruning) {
     Store store = new Store();
-    IntVar x = new IntVar(store, "x", kind.apply(a));
+    RecordingVar x = new RecordingVar(store, kind.apply(a));
     store.setLevel(1);
     boolean failed = false;
     try {
@@ -324,10 +382,52 @@ class DomainOperationsBruteForceTest {
     assertThat(failed).as(operation + " failure").isEqualTo(expected.isEmpty());
     if (!failed) {
       check(x.domain, expected, operation);
+      checkEvents(x.events, a, expected, operation);
     }
     store.removeLevel(1);
     store.setLevel(0);
     check(x.domain, a, operation + " after backtracking");
+  }
+
+  /** A variable that records the events its domain reports. */
+  private static final class RecordingVar extends IntVar {
+    final List<Integer> events = new ArrayList<>();
+
+    RecordingVar(Store store, IntDomain dom) {
+      super(store, "x", dom);
+    }
+
+    @Override
+    public void domainHasChanged(int event) {
+      events.add(event);
+      super.domainHasChanged(event);
+    }
+  }
+
+  /**
+   * Checks that a pruning from domain a to domain expected reports exactly the change: one event,
+   * MIN_EVENT or MAX_EVENT only when the other bound is unchanged, and none when nothing is
+   * removed.
+   */
+  private static void checkEvents(
+      List<Integer> events, TreeSet<Integer> a, TreeSet<Integer> expected, String operation) {
+    List<Integer> wanted = new ArrayList<>();
+    if (expected.size() == 1 && a.size() > 1) {
+      wanted.add(IntDomain.GROUND);
+    } else if (!expected.equals(a)) {
+      boolean minChanged = !expected.first().equals(a.first());
+      boolean maxChanged = !expected.last().equals(a.last());
+      if (minChanged && maxChanged) {
+        wanted.add(IntDomain.BOUND);
+      } else if (minChanged) {
+        wanted.add(IntDomain.MIN_EVENT);
+      } else if (maxChanged) {
+        wanted.add(IntDomain.MAX_EVENT);
+      } else {
+        wanted.add(IntDomain.ANY);
+      }
+    }
+    assertThat(events).as(operation + " events").isEqualTo(wanted);
   }
 
   private static void check(IntDomain domain, TreeSet<Integer> expected, String operation) {

@@ -67,6 +67,22 @@ public abstract class IntDomain extends Domain {
   /** It specifies the constant for ANY event. */
   public static final int ANY = 2;
 
+  /**
+   * It specifies the constant for the event of a change of the minimum only: the minimum has
+   * increased and the maximum is unchanged. A constraint subscribed with MIN_EVENT is woken by
+   * MIN_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * minimum. A domain may report BOUND instead of MIN_EVENT.
+   */
+  public static final int MIN_EVENT = 3;
+
+  /**
+   * It specifies the constant for the event of a change of the maximum only: the maximum has
+   * decreased and the minimum is unchanged. A constraint subscribed with MAX_EVENT is woken by
+   * MAX_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * maximum. A domain may report BOUND instead of MAX_EVENT.
+   */
+  public static final int MAX_EVENT = 4;
+
   /** Unique identifier for an interval domain type. */
   public static final int INTERVAL_DOMAIN_ID = 0;
 
@@ -84,10 +100,26 @@ public abstract class IntDomain extends Domain {
    * this by bit flags in int.
    */
   static final int[][] eventsInclusion = {
-    {GROUND, BOUND, ANY}, // GROUND event
-    {BOUND, ANY}, // BOUND event
-    {ANY}
-  }; // ANY event
+    {GROUND, BOUND, ANY, MIN_EVENT, MAX_EVENT}, // GROUND event
+    {BOUND, ANY, MIN_EVENT, MAX_EVENT}, // BOUND event
+    {ANY}, // ANY event
+    {BOUND, ANY, MIN_EVENT}, // MIN_EVENT
+    {BOUND, ANY, MAX_EVENT} // MAX_EVENT
+  };
+
+  /**
+   * It returns the event for a change of bounds that leaves more than one value in the domain.
+   *
+   * @param minChanged true if the minimum has changed.
+   * @param maxChanged true if the maximum has changed.
+   * @return MIN_EVENT or MAX_EVENT if only one bound has changed, BOUND otherwise.
+   */
+  protected static int boundEvent(boolean minChanged, boolean maxChanged) {
+    if (minChanged) {
+      return maxChanged ? BOUND : MIN_EVENT;
+    }
+    return maxChanged ? MAX_EVENT : BOUND;
+  }
 
   /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
@@ -1236,7 +1268,9 @@ public abstract class IntDomain extends Domain {
     return searchConstraintsToEvaluate
         + modelConstraintsToEvaluate[GROUND]
         + modelConstraintsToEvaluate[BOUND]
-        + modelConstraintsToEvaluate[ANY];
+        + modelConstraintsToEvaluate[ANY]
+        + modelConstraintsToEvaluate[MIN_EVENT]
+        + modelConstraintsToEvaluate[MAX_EVENT];
   }
 
   /**
@@ -1248,10 +1282,7 @@ public abstract class IntDomain extends Domain {
    */
   private Constraint[][] copyModelConstraintsArray(
       int pruningEvent, Constraint[] newPruningEventConstraints) {
-    Constraint[][] newModelConstraints = new Constraint[3][];
-    newModelConstraints[0] = modelConstraints[0];
-    newModelConstraints[1] = modelConstraints[1];
-    newModelConstraints[2] = modelConstraints[2];
+    Constraint[][] newModelConstraints = modelConstraints.clone();
     newModelConstraints[pruningEvent] = newPruningEventConstraints;
     return newModelConstraints;
   }
@@ -1265,10 +1296,7 @@ public abstract class IntDomain extends Domain {
    * @return a new modelConstraintsToEvaluate array
    */
   private int[] copyModelConstraintsToEvaluateArray(int pruningEvent, int delta) {
-    int[] newModelConstraintsToEvaluate = new int[3];
-    newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-    newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-    newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+    int[] newModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
     newModelConstraintsToEvaluate[pruningEvent] = modelConstraintsToEvaluate[pruningEvent] + delta;
     return newModelConstraintsToEvaluate;
   }
@@ -1314,10 +1342,7 @@ public abstract class IntDomain extends Domain {
       newPruningEventConstraints[0] = constraint;
 
       modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
-      int[] newModelConstraintsToEvaluate = new int[3];
-      newModelConstraintsToEvaluate[0] = modelConstraintsToEvaluate[0];
-      newModelConstraintsToEvaluate[1] = modelConstraintsToEvaluate[1];
-      newModelConstraintsToEvaluate[2] = modelConstraintsToEvaluate[2];
+      int[] newModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
       newModelConstraintsToEvaluate[pruningEvent] = 1;
       modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
     }
@@ -1427,7 +1452,13 @@ public abstract class IntDomain extends Domain {
     if (removeConstraintFromPruningEvent(c, BOUND)) {
       return;
     }
-    removeConstraintFromPruningEvent(c, ANY);
+    if (removeConstraintFromPruningEvent(c, ANY)) {
+      return;
+    }
+    if (removeConstraintFromPruningEvent(c, MIN_EVENT)) {
+      return;
+    }
+    removeConstraintFromPruningEvent(c, MAX_EVENT);
   }
 
   @Override

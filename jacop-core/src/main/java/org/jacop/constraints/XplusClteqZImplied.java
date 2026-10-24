@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Constraint b =&gt; X + C{@literal <=} Z, where b is a 0/1 variable (half reification).
@@ -104,6 +105,15 @@ public class XplusClteqZImplied extends PrimitiveConstraint {
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // consistency() reads both bounds of b, but only the minimum of x and the maximum of z
+    if (v == b || x == z) {
+      return IntDomain.BOUND;
+    }
+    return v == x ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
   }
 
   @Override

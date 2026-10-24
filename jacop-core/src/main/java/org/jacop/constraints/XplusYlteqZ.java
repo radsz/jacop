@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Constraint X + Y{@literal =<} Z.
@@ -88,6 +89,15 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ {
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // consistency() reads only the minima of x and y and the maximum of z
+    if (x == z || y == z) {
+      return IntDomain.BOUND;
+    }
+    return v == z ? IntDomain.MAX_EVENT : IntDomain.MIN_EVENT;
   }
 
   @Override
