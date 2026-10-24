@@ -42,7 +42,8 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
- * ElementBool constraint defines a relation list[index - indexOffset] = value.
+ * ElementBool constraint defines a relation list[index - indexOffset] = value, where the list
+ * contains only 0 and 1.
  *
  * <p>The first element of the list corresponds to index - indexOffset = 1. By default indexOffset
  * is equal 0 so first value within a list corresponds to index equal 1.
@@ -83,14 +84,23 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
    * It constructs an element constraint.
    *
    * @param index variable index
-   * @param list list of integers from which an index-th element is taken
+   * @param list list of 0/1 integers from which an index-th element is taken
    * @param value a value of the index-th element from list
    * @param indexOffset shift applied to index variable.
+   * @throws IllegalArgumentException if the list contains a value other than 0 or 1.
    */
   public ElementBool(IntVar index, int[] list, IntVar value, int indexOffset) {
 
     checkInputForNullness(new String[] {"index", "value"}, new Object[] {index, value});
     checkInputForNullness("list", list);
+    for (int element : list) {
+      if (element != 0 && element != 1) {
+        // the propagation only knows the positions of 0s and 1s, so any other value would be
+        // selectable whatever the value variable is
+        throw new IllegalArgumentException(
+            "ElementBool list must contain only 0 and 1, found " + element);
+      }
+    }
 
     this.indexOffset = indexOffset;
     this.numberId = idNumber.incrementAndGet();

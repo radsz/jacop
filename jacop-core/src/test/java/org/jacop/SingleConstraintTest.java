@@ -72,6 +72,7 @@ import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
@@ -2849,6 +2850,17 @@ class SingleConstraintTest extends TestHelper {
     b.domain.in(store.level, b, 3, 3);
     assertThat(store.consistency()).isTrue();
     assertThat(value.domain.contains(2)).isFalse();
+  }
+
+  @Test
+  void elementBoolRejectsNonBooleanList() {
+    // Positions holding a value other than 0 or 1 were never removed from the index, so with
+    // list [2, 0] and value in 0..1 the solution index = 1, value = 0 was accepted.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 2);
+    IntVar value = new IntVar(store, "value", 0, 1);
+    assertThatThrownBy(() -> new ElementBool(index, new int[] {2, 0}, value, 0))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
