@@ -80,6 +80,25 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void valuePrecedeChainIsDomainConsistentForTheWholeChain() throws IOException {
+    // Walsh's example with values 5, 3, 8, 9: each pair of consecutive values is consistent but
+    // the chain forbids x2 = 5. Pairwise ValuePrecede needed a failed decision to find it.
+    String fzn =
+        """
+        var 5..5: x1;
+        var {3,5}: x2:: output_var;
+        var {5,8}: x3;
+        var {8,9}: x4;
+        constraint jacop_value_precede_chain_int([5,3,8,9],[x1,x2,x3,x4,x2]);
+        solve :: int_search([x2],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("x2 = 3;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void searchOnOutputVariablesAssignsTheOtherVariablesToo() throws IOException {
     // The annotated search labels only x and then the output variables, also only x. For x = 1
     // y, z and w must be pairwise different values in 1..2, which propagation of int_ne does not

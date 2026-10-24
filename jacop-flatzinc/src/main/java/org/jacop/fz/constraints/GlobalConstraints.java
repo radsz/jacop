@@ -1794,21 +1794,21 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-    // no duplicated variables allowed in ValuePrecede and
-    // we create a new vector with different variables
-    IntVar[] xs = removeDuplicates(x);
-
     if (c.length > 1) {
       HashSet<Integer> values = new HashSet<>();
-      values.add(c[0]);
-      for (int i = 1; i < c.length; i++) {
-        if (values.contains(c[i])) {
+      for (int v : c) {
+        if (!values.add(v)) {
           throw new IllegalArgumentException(
               "%% Values in int_value_precede_chain must be distinct");
         }
-        values.add(c[i]);
-        support.pose(new ValuePrecede(c[i - 1], c[i], xs));
       }
+      // a later occurrence of a variable equals its first one and adds nothing to the
+      // precedences, so only first occurrences are kept
+      IntVar[] xs = Arrays.stream(x).distinct().toArray(IntVar[]::new);
+
+      // c[i] takes the role of i and other values the role of 0 (Gange and Stuckey): one domain
+      // consistent propagator for the whole chain instead of pairwise ValuePrecede
+      support.pose(new SeqPrecedeChain(xs, c));
     }
   }
 
