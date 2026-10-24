@@ -130,6 +130,11 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
     if (p.singleton() && q.singleton()) {
       double trigMin = trigFunction.applyAsDouble(p.min());
       double trigMax = trigFunction.applyAsDouble(p.max());
+      if (!Double.isFinite(trigMin) || !Double.isFinite(trigMax)) {
+        // outside the domain of the function (log of 0, asin of 2); an infinite difference
+        // would pass the precision test below
+        return false;
+      }
 
       FloatInterval minDiff =
           trigMin < q.min()

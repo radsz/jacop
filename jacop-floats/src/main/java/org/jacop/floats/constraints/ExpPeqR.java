@@ -79,6 +79,12 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
   public void consistency(Store store) {
 
     do {
+      if (p.min() == p.max() && q.min() == q.max() && satisfied()) {
+        // a ground pair that agrees within the float precision, such as (x, Math.exp(x)); the
+        // pruning below rounds outward and need not keep the other value
+        return;
+      }
+
       double[] pBounds = computeFirstBoundsFromSecond();
       p.domain.in(store.level, p, pBounds[0], pBounds[1]);
 
@@ -136,7 +142,9 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
 
   @Override
   public boolean satisfied() {
-    return AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(p, q, Math::exp);
+    // also compare ln(q) with p, which is better conditioned for large p
+    return AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(p, q, Math::exp)
+        || AbstractTrigConstraint.satisfiedWithTrigFunctionStatic(q, p, Math::log);
   }
 
   @Override

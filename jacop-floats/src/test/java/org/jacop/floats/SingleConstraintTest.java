@@ -56,6 +56,7 @@ import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
 import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.PdivCeqR;
 import org.jacop.floats.constraints.PdivQeqR;
 import org.jacop.floats.constraints.PeqC;
@@ -545,6 +546,23 @@ class SingleConstraintTest {
         }
       }
     }
+  }
+
+  @Test
+  void testExpAndLnAcceptGroundPairs() {
+    // exp(x) rounded to a double maps back to x only approximately: both directions pruned with
+    // outward rounding and failed although the pair agrees within the float precision
+    for (double x : new double[] {-3, 0.021939883301229743, 0.5, 11.197850576036105}) {
+      assertThat(groundInverse(ExpPeqR::new, x, Math.exp(x))).as("exp %s", x).isTrue();
+    }
+    for (double x : new double[] {0.0069290397440928755, 2, 72973.42232045328}) {
+      assertThat(groundInverse(LnPeqR::new, x, Math.log(x))).as("ln %s", x).isTrue();
+    }
+    assertThat(groundInverse(ExpPeqR::new, 0.5, Math.exp(0.5) + 1e-6)).isFalse();
+    assertThat(groundInverse(LnPeqR::new, 2, Math.log(2) - 1e-6)).isFalse();
+    // ln(0) = -infinity passed the precision test
+    assertThat(groundInverse(ExpPeqR::new, 1, 0)).isFalse();
+    assertThat(groundInverse(LnPeqR::new, 0, 0.25)).isFalse();
   }
 
   /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */
