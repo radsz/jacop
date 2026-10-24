@@ -130,6 +130,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -4152,6 +4153,35 @@ class SingleConstraintTest extends TestHelper {
             x, hard, new int[] {0, 1, 2}, lower, upper, cost, ViolationMeasure.VALUE_BASED));
     assertThat(noOfAllSolutions(store, x, hard, new IntVar[] {cost})).isEqualTo(1);
     assertThat(cost.value()).isZero();
+  }
+
+  // satisfied() compared the rectangles twice in dimension 0, so rectangles side by side in
+  // dimension 1 counted as overlapping; satisfied() and notSatisfied() also ignored that rectangles
+  // of size 0 may overlap anything unless the constraint is strict.
+  @Test
+  void testNooverlapSatisfied() {
+
+    Store store = new Store();
+    // [0, 2) x [0, 1) and [1, 3) x [1, 2): overlapping in dimension 0 only
+    IntVar[][] apart = {rectangle(store, 0, 0, 2, 1), rectangle(store, 1, 1, 2, 1)};
+    assertThat(new Nooverlap(apart, true).satisfied()).isTrue();
+    assertThat(new Nooverlap(apart, true).notSatisfied()).isFalse();
+
+    // [0, 2) x [0, 2) and a rectangle of width 0 at (1, 1)
+    IntVar[][] inside = {rectangle(store, 0, 0, 2, 2), rectangle(store, 1, 1, 0, 1)};
+    assertThat(new Nooverlap(inside, false).satisfied()).isTrue();
+    assertThat(new Nooverlap(inside, false).notSatisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).satisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).notSatisfied()).isTrue();
+  }
+
+  private static IntVar[] rectangle(Store store, int x, int y, int width, int height) {
+    return new IntVar[] {
+      new IntVar(store, x, x),
+      new IntVar(store, y, y),
+      new IntVar(store, width, width),
+      new IntVar(store, height, height)
+    };
   }
 
   // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
