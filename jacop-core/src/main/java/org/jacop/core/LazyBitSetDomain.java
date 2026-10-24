@@ -625,6 +625,17 @@ public class LazyBitSetDomain extends IntDomain {
     return extract(bits, base, lo) & mask;
   }
 
+  /**
+   * The values lo..lo + 63 of domain as bits. Most domains met here are bit sets too, and calling
+   * bitsFrom on them directly lets it be inlined.
+   */
+  private static long bitsOf(IntDomain domain, int lo) {
+    if (domain instanceof LazyBitSetDomain bitSet) {
+      return bitSet.bitsFrom(lo);
+    }
+    return domain.bitsFrom(lo);
+  }
+
   /** The bits of words for the values lo..lo + 63, where value v has bit v - base. */
   private static long extract(long[] words, int base, int lo) {
     int index = lo - base;
@@ -692,7 +703,7 @@ public class LazyBitSetDomain extends IntDomain {
   /** The first value x in lo..hi of this domain for which x - shift is in other, or hi + 1. */
   private int firstCommon(IntDomain other, int shift, int lo, int hi) {
     for (int start = lo; start <= hi; start += 64) {
-      long common = bitsFrom(start) & other.bitsFrom(start - shift);
+      long common = bitsFrom(start) & bitsOf(other, start - shift);
       if (hi - start < 63) {
         common &= -1L >>> (63 - (hi - start));
       }
@@ -707,7 +718,7 @@ public class LazyBitSetDomain extends IntDomain {
   private int lastCommon(IntDomain other, int shift, int lo, int hi) {
     for (int end = hi; end > lo; end -= 64) {
       int start = Math.max(end - 63, lo);
-      long common = bitsFrom(start) & other.bitsFrom(start - shift);
+      long common = bitsFrom(start) & bitsOf(other, start - shift);
       common &= -1L >>> (63 - (end - start));
       if (common != 0) {
         return start + 63 - Long.numberOfLeadingZeros(common);
@@ -731,7 +742,7 @@ public class LazyBitSetDomain extends IntDomain {
     int to = max - 1 - base;
     int removed = 0;
     for (int i = from >>> 6; i <= to >>> 6; i++) {
-      long mask = ~other.bitsFrom(base + (i << 6) - shift);
+      long mask = ~bitsOf(other, base + (i << 6) - shift);
       if (i == from >>> 6) {
         mask &= -1L << from;
       }
@@ -756,7 +767,7 @@ public class LazyBitSetDomain extends IntDomain {
   private static boolean hasHole(IntDomain domain, int lo, int hi) {
     for (int start = lo; start <= hi; start += 64) {
       long all = -1L >>> (63 - Math.min(63, hi - start));
-      if ((domain.bitsFrom(start) & all) != all) {
+      if ((bitsOf(domain, start) & all) != all) {
         return true;
       }
     }
@@ -1173,7 +1184,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (!byIntervals(domain)) {
       int hi = domain.max();
       for (int start = domain.min(); start <= hi; start += 64) {
-        if ((domain.bitsFrom(start) & ~bitsFrom(start)) != 0) {
+        if ((bitsOf(domain, start) & ~bitsFrom(start)) != 0) {
           return false;
         }
       }
@@ -1197,7 +1208,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (!byIntervals(domain)) {
       int hi = Math.min(max, domain.max());
       for (int start = Math.max(min, domain.min()); start <= hi; start += 64) {
-        if ((bitsFrom(start) & domain.bitsFrom(start)) != 0) {
+        if ((bitsFrom(start) & bitsOf(domain, start)) != 0) {
           return true;
         }
       }
@@ -1230,7 +1241,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (!byIntervals(domain)) {
       int hi = Math.min(max, domain.max());
       for (int start = Math.max(min, domain.min()); start <= hi; start += 64) {
-        result += Long.bitCount(bitsFrom(start) & domain.bitsFrom(start));
+        result += Long.bitCount(bitsFrom(start) & bitsOf(domain, start));
       }
       return result;
     }

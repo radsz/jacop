@@ -76,15 +76,12 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ {
   @Override
   public void consistency(final Store store) {
 
-    do {
-
+    // after the two shifts z equals x shifted by c, a fixpoint unless x only keeps its bounds
+    x.domain.inShift(store.level, x, z.domain, -c);
+    z.domain.inShift(store.level, z, x.domain, c);
+    if (x.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
       x.domain.inShift(store.level, x, z.domain, -c);
-
-      store.propagationHasOccurred = false;
-
-      z.domain.inShift(store.level, z, x.domain, c);
-
-    } while (store.propagationHasOccurred);
+    }
   }
 
   @Override
