@@ -37,6 +37,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.set.constraints.AeqS;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AinS;
 import org.jacop.set.constraints.EinA;
@@ -156,6 +157,17 @@ class SetRelationsTest {
     assertThat(strict.notSatisfied()).isTrue();
     store.impose(new Not(new XinA(x, a, true)));
     assertThat(store.consistency()).isTrue();
+  }
+
+  @Test
+  void testNotAeqSKeepsBothValuesWhenNeitherIsTheSet() {
+    Store store = new Store();
+    // a is {1, 4} or {1, 4, 5}, and neither is {1, 4, 6}
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1, 4), dom(1, 4, 5)));
+    store.impose(new Not(new AeqS(a, dom(1, 4, 6))));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.domain.glb().eq(dom(1, 4))).isTrue();
+    assertThat(a.domain.lub().eq(dom(1, 4, 5))).isTrue();
   }
 
   private static IntDomain dom(int... values) {
