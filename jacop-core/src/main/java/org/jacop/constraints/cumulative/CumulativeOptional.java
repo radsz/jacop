@@ -66,7 +66,7 @@ public class CumulativeOptional extends Cumulative {
 
     super(starts, durations, resources, limit);
 
-    this.opt = opt;
+    this.opt = ProfileOptional.checkOptional(opt, starts.length, "CumulativeOptional");
 
     up = new ProfileOptional(limit);
 
@@ -75,7 +75,7 @@ public class CumulativeOptional extends Cumulative {
             Stream.concat(
                 Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
                 Stream.concat(Arrays.stream(resources), Stream.of(limit))),
-            Arrays.stream(opt)));
+            Arrays.stream(this.opt)));
   }
 
   /**

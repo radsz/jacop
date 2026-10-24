@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -73,10 +71,15 @@ public class Conditional extends Constraint implements SatisfiedPresent {
       throw new IllegalArgumentException(
           "The length of the two lists in Conditional constraints must be equal");
     }
+    if (b.length == 0) {
+      throw new IllegalArgumentException(
+          "Conditional constraint: the lists of conditions and constraints must not be empty");
+    }
     for (IntVar be : b) {
-      if (ASSERTS_ENABLED && (be.min() < 0 || be.max() > 1)) {
-        throw new IllegalStateException(
-            String.valueOf("The elements of condition list must be 0/1 variables"));
+      if (be.min() < 0 || be.max() > 1) {
+        throw new IllegalArgumentException(
+            "Conditional constraint: the elements of condition list must be 0/1 variables, not "
+                + be);
       }
     }
     if (b[b.length - 1].min() != 1) {
