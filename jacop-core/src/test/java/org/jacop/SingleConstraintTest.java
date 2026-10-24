@@ -5463,6 +5463,19 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(15);
   }
 
+  // ElementBool never restricted the value variable to 0..1, so value 2 was accepted once the
+  // value variable had 1 as its minimum.
+  @Test
+  void testElementBoolValueOutsideZeroOne() {
+
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    store.impose(new ElementBool(index, new int[] {1, 1, 0}, value, 0));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {index, value})).isEqualTo(2);
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
