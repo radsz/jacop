@@ -72,6 +72,8 @@ import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
@@ -3057,6 +3059,95 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, z});
 
     assertThat(noOfSolutions).isEqualTo(length);
+  }
+
+  @Test
+  void elementVariableRemovesEveryPositionOfRepeatedVariable() {
+    // A variable repeated on the list kept its first position when it became disjoint from the
+    // value, so the index could still select it.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new ElementVariable(index, new IntVar[] {y, y, z}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 0, 0);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.singleton(3)).isTrue();
+  }
+
+  @Test
+  void elementVariableStaysAttachedToIndexOnTheList() {
+    // The index is also on the list, at a position it cannot take. Removing that position
+    // detached the index from the constraint, which then ignored the index being fixed.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 1);
+    index.addDom(3, 3);
+    IntVar value = new IntVar(store, "value", 5, 6);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    IntVar b = new IntVar(store, "b", 5, 7);
+    store.impose(new ElementVariable(index, new IntVar[] {a, index, b}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 3, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isEqualTo(6);
+  }
+
+  @Test
+  void elementIntegerWithoutDuplicateCheck() {
+    // The constructor option checkDuplicates = false left the duplicate structures null, so the
+    // first consistency call threw a NullPointerException.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 4);
+    IntVar value = new IntVar(store, "value", 0, 9);
+    store.impose(new ElementInteger(index, new int[] {3, 1, 3, 7}, value, 0, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{1, 3, 7}");
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {index, value});
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  @Test
+  void elementVariableLooksForSupportsWithinIndex() {
+    // A value that lost its support was given a new support at a position the index can no
+    // longer take, so it stayed in the value domain.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 3);
+    IntVar a = new IntVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 1, 3);
+    IntVar c = new IntVar(store, "c", 1, 1);
+    c.addDom(3, 3);
+    store.impose(new ElementVariable(index, new IntVar[] {a, b, c}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 1);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(2)).isFalse();
+  }
+
+  @Test
+  void elementBoolRejectsNonBooleanList() {
+    // Positions holding a value other than 0 or 1 were never removed from the index, so with
+    // list [2, 0] and value in 0..1 the solution index = 1, value = 0 was accepted.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 2);
+    IntVar value = new IntVar(store, "value", 0, 1);
+    assertThatThrownBy(() -> new ElementBool(index, new int[] {2, 0}, value, 0))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
