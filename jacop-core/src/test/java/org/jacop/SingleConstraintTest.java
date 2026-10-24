@@ -76,6 +76,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
@@ -5514,6 +5515,21 @@ class SingleConstraintTest extends TestHelper {
     assertThat(min.satisfied()).isFalse();
     x1.domain.in(store.level, x1, 2, 2);
     assertThat(min.satisfied()).isTrue();
+  }
+
+  // CountValuesBounds.satisfied() counted only the ground variables, so it held while variables
+  // that may still take a value could exceed its upper bound.
+  @Test
+  void testCountValuesBoundsSatisfied() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 2, 2), new IntVar(store, "x1", 0, 2)};
+    CountValuesBounds count =
+        new CountValuesBounds(x, new int[] {0, 1}, new int[] {1, 1}, new int[] {0, 2});
+    // x1 = 2 counts 2 twice
+    assertThat(count.satisfied()).isFalse();
+    x[1].domain.in(store.level, x[1], 0, 0);
+    assertThat(count.satisfied()).isTrue();
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {
