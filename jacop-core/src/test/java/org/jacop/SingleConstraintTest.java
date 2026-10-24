@@ -2974,6 +2974,21 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void allEqualReifiedFalseWithoutCommonValue() {
+    // the domains intersect pairwise but have no common value, so b must be 0
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 2, 3), new IntVar(store, "x2", 1, 2)
+    };
+    x[0].addDom(3, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AllEqual(x), b));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  @Test
   void disjointConditionalProfileCountsOverlappingPairOnce() {
     // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
     // of which rectangles a profile segment holds and counted both, removing y2 = 0

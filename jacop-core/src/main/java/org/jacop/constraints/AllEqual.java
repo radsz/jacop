@@ -156,11 +156,25 @@ public class AllEqual extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
 
-    for (int i = 0; i < n; i++) {
-      for (int j = i + 1; j < n; j++) {
-        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) {
-          return true;
-        }
+    // not all equal as soon as the domains have no common value; pairwise intersection is not
+    // enough ({1, 3}, {2, 3}, {1, 2})
+    if (n < 2) {
+      return false;
+    }
+    int lo = x[0].min();
+    int hi = x[0].max();
+    for (int i = 1; i < n; i++) {
+      lo = Math.max(lo, x[i].min());
+      hi = Math.min(hi, x[i].max());
+    }
+    if (lo > hi) {
+      return true;
+    }
+    IntDomain common = x[0].dom();
+    for (int i = 1; i < n; i++) {
+      common = common.intersect(x[i].dom());
+      if (common.isEmpty()) {
+        return true;
       }
     }
     return false;
