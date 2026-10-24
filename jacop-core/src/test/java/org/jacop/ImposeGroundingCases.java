@@ -40,6 +40,10 @@ import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.core.IntVar;
@@ -66,7 +70,14 @@ final class ImposeGroundingCases {
                         "")),
         Arguments.of("GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
         Arguments.of("Knapsack without DP", knapsack("Knapsack")),
-        Arguments.of("KnapsackDP", knapsack("KnapsackDP")));
+        Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
+        Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
+        Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
+        Arguments.of("CumulativeEF", cumulative("Cumulative")),
+        Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
+        Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
+        Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
+        Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")));
   }
 
   /** Quantities, then capacity, then profit; weights and profits from 0 (KnapsackDP) or 1. */
@@ -144,6 +155,103 @@ final class ImposeGroundingCases {
           return true;
         },
         "counted values 0.." + (m - 1));
+  }
+
+  /**
+   * The cumulative family. Variables are starts, durations, resources (n each), the limit, and for
+   * the optional constraints n 0/1 presence variables. "CumulativePrimary" is CumulativeBasic with
+   * constant durations and resources, which it delegates to the package-private CumulativePrimary.
+   * The unary variants keep two positive resource usages above the limit and run the profile or
+   * edge finding (with neither they do not check the constraint). A task with zero duration or zero
+   * resource use (or absent) does not occupy the resource. The old org.jacop.constraints.Cumulative
+   * also bounds every resource use by the limit; it is checked with profiles on (edge finding alone
+   * is not a checker) and without pruning the limit to the maximal profile (setLimit), which is not
+   * a relation on assignments.
+   */
+  private static Function<Random, Case> cumulative(String kind) {
+    return random -> {
+      boolean unary = kind.startsWith("CumulativeUnary");
+      boolean optional = kind.endsWith("Optional");
+      boolean primary = kind.equals("CumulativePrimary");
+      boolean old = kind.equals("CumulativeOld");
+      int n = 1 + random.nextInt(3);
+      List<int[]> domains = new ArrayList<>(Arrays.asList(domains(random, n, 0, 3)));
+      for (int i = 0; i < 2 * n; i++) {
+        domains.add(primary ? new int[] {random.nextInt(3)} : domain(random, 0, 2));
+      }
+      domains.add(domain(random, 0, unary ? 1 : 3));
+      if (optional) {
+        domains.addAll(Arrays.asList(domains(random, n, 0, 1)));
+      }
+      boolean[] flags = new boolean[5];
+      for (int i = 0; i < flags.length; i++) {
+        flags[i] = random.nextBoolean();
+      }
+      return Case.of(
+          domains.toArray(int[][]::new),
+          (store, x) -> {
+            IntVar[] s = Arrays.copyOfRange(x, 0, n);
+            IntVar[] d = Arrays.copyOfRange(x, n, 2 * n);
+            IntVar[] r = Arrays.copyOfRange(x, 2 * n, 3 * n);
+            IntVar l = x[3 * n];
+            IntVar[] o = optional ? Arrays.copyOfRange(x, 3 * n + 1, 4 * n + 1) : null;
+            switch (kind) {
+              case "CumulativeOld" ->
+                  store.impose(
+                      new org.jacop.constraints.Cumulative(s, d, r, l, flags[0], true, false));
+              case "CumulativeBasic", "CumulativePrimary" ->
+                  store.impose(new CumulativeBasic(s, d, r, l));
+              case "Cumulative" -> {
+                org.jacop.constraints.cumulative.Cumulative c =
+                    new org.jacop.constraints.cumulative.Cumulative(s, d, r, l);
+                c.doEdgeFind(flags[0]);
+                c.doQuadraticEdgeFind(flags[1]);
+                c.doOverload(flags[2]);
+                c.doTimeTableEdgeFind(flags[3]);
+                c.doTimeTableDisjunctive(flags[4]);
+                store.impose(c);
+              }
+              case "CumulativeUnary" ->
+                  store.impose(
+                      flags[0] || flags[1]
+                          ? new CumulativeUnary(s, d, r, l, flags[0], flags[1])
+                          : new CumulativeUnary(s, d, r, l));
+              case "CumulativeOptional" -> {
+                CumulativeOptional c = new CumulativeOptional(s, d, r, l, o);
+                c.doOptionalOverload(flags[0]);
+                c.doEdgeFind(flags[1]);
+                store.impose(c);
+              }
+              default -> {
+                CumulativeUnaryOptional c =
+                    new CumulativeUnaryOptional(s, d, r, l, o, flags[0], flags[1] || !flags[0]);
+                c.doOptionalOverload(flags[2]);
+                store.impose(c);
+              }
+            }
+          },
+          x -> {
+            for (int i = 0; old && i < n; i++) {
+              if (x[2 * n + i] > x[3 * n]) {
+                return false;
+              }
+            }
+            for (int t = 0; t <= 6; t++) {
+              int use = 0;
+              for (int i = 0; i < n; i++) {
+                boolean present = !optional || x[3 * n + 1 + i] == 1;
+                if (present && x[i] <= t && t < x[i] + x[n + i]) {
+                  use += x[2 * n + i];
+                }
+              }
+              if (use > x[3 * n]) {
+                return false;
+              }
+            }
+            return true;
+          },
+          kind + " flags=" + Arrays.toString(flags));
+    };
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
