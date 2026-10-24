@@ -94,8 +94,12 @@ public class AinS extends PrimitiveConstraint {
 
     a.domain.inLub(store.level, a, set);
 
-    if (strict && set.getSize() - 1 == a.domain.glb().getSize()) {
-      a.domain.inLubComplement(store.level, a, set.subtract(a.domain.glb()).value());
+    if (strict) {
+      // a is within set, so it differs from set only if it misses an element of set
+      a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, set.getSize() - 1);
+      if (set.getSize() - 1 == a.domain.glb().getSize()) {
+        a.domain.inLubComplement(store.level, a, set.subtract(a.domain.glb()).value());
+      }
     }
   }
 
@@ -107,7 +111,7 @@ public class AinS extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
 
-    return grounded() && a.domain.lub().lex(set) < 0;
+    return set.contains(a.domain.lub()) && (!strict || a.domain.lub().getSize() < set.getSize());
   }
 
   @Override
