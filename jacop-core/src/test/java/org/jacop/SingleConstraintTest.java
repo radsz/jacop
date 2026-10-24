@@ -5047,6 +5047,14 @@ class SingleConstraintTest extends TestHelper {
     assertThat(consistentWithNestedAnd((and, b) -> new Not(new Not(new Xor(and, b[0]))))).isFalse();
   }
 
+  @Test
+  void conditionalForwardsVariableEventsToNestedConstraint() {
+    assertThat(
+            consistentWithNestedAnd(
+                (and, b) -> new Conditional(new IntVar[] {b[1]}, new PrimitiveConstraint[] {and})))
+        .isFalse();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
