@@ -485,6 +485,19 @@ class SingleConstraintTest {
         1);
   }
 
+  @Test
+  void testElementSetSatisfiedWithIndexOutOfRange() {
+    // satisfied() indexed the list with an index outside 1..list.length
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 0, 0);
+    SetVar value = new SetVar(store, "value", new BoundSetDomain(dom(1), dom(1)));
+    ElementSet element = new ElementSet(index, new IntDomain[] {dom(1)}, value);
+    store.impose(element);
+
+    assertThat(element.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
     IntervalDomain d = new IntervalDomain();
     for (int v = min; v <= max; v++) {
