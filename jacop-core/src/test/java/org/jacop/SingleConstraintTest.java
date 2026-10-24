@@ -2218,7 +2218,8 @@ class SingleConstraintTest extends TestHelper {
     }
     int n = profits.length;
     copyStore.impose(
-        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+            .dynamicProgramming(false));
     return copyStore.consistency() ? domainsOf(copies) : "FAIL";
   }
 
@@ -2259,7 +2260,8 @@ class SingleConstraintTest extends TestHelper {
     IntVar profit = vars[weights.length + 1];
     store.impose(
         new Knapsack(
-            profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit));
+                profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit)
+            .dynamicProgramming(false));
     assertThat(store.consistency()).isTrue();
 
     store.setLevel(store.level + 1);
@@ -2299,7 +2301,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       checkSupportsAndFixpointAlongRandomWalk(
           instance,
           store,
@@ -2538,7 +2542,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
       if (!store.consistency()) {
         continue;
       }
@@ -2605,7 +2611,9 @@ class SingleConstraintTest extends TestHelper {
               + " "
               + domainsOf(vars);
       List<int[]> solutions = knapsackSolutions(profits, weights, vars);
-      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
       boolean consistent = store.consistency();
       assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
       if (!consistent) {
@@ -2654,7 +2662,9 @@ class SingleConstraintTest extends TestHelper {
               + Arrays.toString(profits)
               + " "
               + domainsOf(vars);
-      store.impose(new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
       checkSupportsAndFixpointAlongRandomWalk(
           instance,
           store,
@@ -2668,11 +2678,70 @@ class SingleConstraintTest extends TestHelper {
               copies[i].addDom(vars[i].dom());
             }
             copyStore.impose(
-                new KnapsackDP(
-                    profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1]));
+                new KnapsackDP(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+                    .adaptive(false));
             return copyStore.consistency() ? domainsOf(copies) : "FAIL";
           },
           random);
+    }
+  }
+
+  @Test
+  void knapsackDpAdaptiveFindsAllSolutions() {
+    // The adaptive mode skips calls, so it is checked through search: alone and inside Knapsack it
+    // must find exactly the solutions of the brute force.
+    Random random = new Random(17);
+    for (int run = 0; run < 300; run++) {
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      int[] maxima = new int[n];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(8);
+        profits[i] = random.nextInt(9);
+        maxima[i] = 1 + random.nextInt(2);
+        weightSum += weights[i] * maxima[i];
+        profitSum += profits[i] * maxima[i];
+      }
+      int capacityMin = random.nextInt(weightSum / 2 + 1);
+      int profitMin = random.nextInt(profitSum / 2 + 1);
+      long expected = -1;
+      for (boolean withKnapsack : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] vars = new IntVar[n + 2];
+        for (int i = 0; i < n; i++) {
+          vars[i] = new IntVar(store, "q" + i, 0, maxima[i]);
+        }
+        vars[n] = new IntVar(store, "capacity", capacityMin, weightSum);
+        vars[n + 1] = new IntVar(store, "profit", profitMin, profitSum);
+        if (expected < 0) {
+          expected = knapsackSolutions(profits, weights, vars).size();
+        }
+        IntVar[] q = Arrays.copyOf(vars, n);
+        if (withKnapsack
+            && Arrays.stream(weights).allMatch(w -> w > 0)
+            && Arrays.stream(profits).allMatch(p -> p > 0)) {
+          store.impose(new Knapsack(profits, weights, q, vars[n], vars[n + 1]));
+        } else {
+          store.impose(new KnapsackDP(profits, weights, q, vars[n], vars[n + 1]));
+        }
+        long found = 0;
+        if (store.consistency()) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.setPrintInfo(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+          found = search.getSolutionListener().solutionsNo();
+        }
+        assertThat(found)
+            .as(
+                "run %d weights %s profits %s",
+                run, Arrays.toString(weights), Arrays.toString(profits))
+            .isEqualTo(expected);
+      }
     }
   }
 
