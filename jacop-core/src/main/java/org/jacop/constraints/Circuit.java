@@ -60,7 +60,6 @@ public class Circuit extends Alldiff implements Stateful {
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
   int idd;
-  int sccLength;
   int firstConsistencyLevel;
 
   /**
@@ -227,18 +226,15 @@ public class Circuit extends Alldiff implements Stateful {
 
   // --- Strongly Connected Conmponents
 
-  // Uses Trajan's algorithm to find strongly connected components
-  // if found strongly connected component is shorter than the
-  // Hamiltonian circuit length fail is enforced (one is unable to
-  // to build a circuit. Based on the algorithm from the book
-  // Robert Sedgewick, Algorithms, 1988, p. 482.
+  // Uses Tarjan's algorithm to check that the graph of the domains is one strongly connected
+  // component; otherwise no Hamiltonian circuit exists and failure is enforced. Based on the
+  // algorithm from the book Robert Sedgewick, Algorithms, 1988, p. 482.
 
   void sccs() {
 
     Arrays.fill(val, 0);
     idd = 0;
 
-    sccLength = 0;
     visit(0);
   }
 
@@ -277,7 +273,6 @@ public class Circuit extends Alldiff implements Stateful {
     idd++;
     val[k] = idd;
     int min = idd;
-    sccLength++;
     for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
       int t = e.nextElement() - 1;
       int m;
@@ -291,12 +286,13 @@ public class Circuit extends Alldiff implements Stateful {
       }
     }
     if (min == val[k]) {
-      if (sccLength != list.length && sccLength != 0) {
-        // the scc is shorter than all nodes in the circuit constraints
-        sccLength = 0;
+      // k is the root of a strongly connected component. It is the first component completed
+      // (the search stops at the first one), so all visited nodes are still in the DFS stack and
+      // min is the correct Tarjan lowlink. The graph is strongly connected only if this
+      // component is rooted at node 0 and contains all nodes.
+      if (k != 0 || idd != list.length) {
         throw Store.failException;
       }
-      sccLength = 0;
     }
     return min;
   }

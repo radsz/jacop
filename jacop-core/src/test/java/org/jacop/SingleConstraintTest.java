@@ -947,6 +947,31 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void circuitFailsWhenGraphIsNotStronglyConnected() {
+    // No successor domain contains 1 (first graph), or nodes 3..6 never lead back to 1 or 2
+    // (second graph), so no Hamiltonian circuit exists. The SCC check only failed when the DFS
+    // from node 1 had not yet visited all nodes at the moment it closed a component; here the
+    // component without node 1 is closed after all nodes have been visited.
+    int[][][] graphs = {
+      {{2, 3}, {3, 4, 5}, {2, 4, 5}, {2, 3, 5}, {2, 3, 4}},
+      {{2}, {1, 3}, {4, 5, 6}, {3, 5, 6}, {3, 4, 6}, {3, 4, 5}}
+    };
+    for (int[][] graph : graphs) {
+      assertThat(circuitSolutions(graph, new int[graph.length], 0, false)).isZero();
+      Store store = new Store();
+      IntVar[] x = new IntVar[graph.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + (i + 1));
+        for (int v : graph[i]) {
+          x[i].addDom(v, v);
+        }
+      }
+      store.impose(new Circuit(x));
+      assertThat(store.consistency()).as(Arrays.deepToString(graph)).isFalse();
+    }
+  }
+
+  @Test
   void minSimpleReachesFixpoint() {
     // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
     // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
