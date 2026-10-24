@@ -122,20 +122,23 @@ public class Sequence extends DecomposedConstraint<Constraint> {
         String stateString = entry.getKey();
         FsmState state = entry.getValue();
 
-        if (mappingQuantity.get(state) < sequence.max) {
+        int count = mappingQuantity.get(state);
+        // a transition is allowed if the count after it is at most max and the count can still
+        // reach min in the q - i - 1 remaining positions of the first window
+        if (count + 1 <= sequence.max && count + sequence.q - i >= sequence.min) {
           // transition 1 (within a set) is allowed
           FsmState nextState = new FsmState();
           state.addTransition(new FsmTransition(sequence.set, nextState));
           mappingStringNext.put(stateString + "1", nextState);
-          mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
+          mappingQuantity.put(nextState, count + 1);
         }
 
-        if (mappingQuantity.get(state) + sequence.q - i > sequence.min) {
+        if (count <= sequence.max && count + sequence.q - i - 1 >= sequence.min) {
           // transition 0 (outside set) is allowed
           FsmState nextState = new FsmState();
           state.addTransition(new FsmTransition(setComplement, nextState));
           mappingStringNext.put(stateString + "0", nextState);
-          mappingQuantity.put(nextState, mappingQuantity.get(state));
+          mappingQuantity.put(nextState, count);
         }
       }
 

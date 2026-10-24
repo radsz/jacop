@@ -99,6 +99,7 @@ import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -4695,6 +4696,23 @@ class SingleConstraintTest extends TestHelper {
     @Override
     public void beforeEach(ExtensionContext context) {
       log.info("Starting test: " + context.getDisplayName());
+    }
+  }
+
+  @Test
+  void testSequenceWithBoundsOutsideWindowHasNoSolution() {
+
+    // a window of 2 holds at most 2 values of the set, so min = 3 or max = -1 cannot be met
+    for (int[] minMax : new int[][] {{3, 3}, {-1, -1}}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+
+      store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, minMax[0], minMax[1]));
+
+      assertThat(noOfAllSolutions(store, x)).isZero();
     }
   }
 }
