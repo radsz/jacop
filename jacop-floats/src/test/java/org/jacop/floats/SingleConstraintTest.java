@@ -497,6 +497,17 @@ class SingleConstraintTest {
     }
   }
 
+  @Test
+  void testAtanToStringKeepsArgumentOrder() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 0, 1);
+    FloatVar r = new FloatVar(store, "r", 0, 1);
+
+    // printed AtanPeqR(r, p), unlike AsinPeqR and AcosPeqR
+    assertThat(new AtanPeqR(p, r).toString()).contains("AtanPeqR(p");
+    assertThat(new AsinPeqR(p, r).toString()).contains("AsinPeqR(p");
+  }
+
   /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */
   private static void checkInverse(
       BiFunction<FloatVar, FloatVar, Constraint> build, DoubleUnaryOperator f, double[] points) {

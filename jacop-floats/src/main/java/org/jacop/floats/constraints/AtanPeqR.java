@@ -93,6 +93,6 @@ public class AtanPeqR extends TanPeqR {
   @Override
   public String toString() {
 
-    return id() + " : AtanPeqR(" + p + ", " + q + " )";
+    return id() + " : AtanPeqR(" + q + ", " + p + " )";
   }
 }
