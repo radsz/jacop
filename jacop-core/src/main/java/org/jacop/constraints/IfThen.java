@@ -82,23 +82,20 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void consistency(Store store) {
 
+    // Propagates in place rather than imposing thenC or not(condC) at the current level: imposing
+    // during search runs their impose() again for every node where the condition gets decided.
     if (condC.satisfied()) {
-      if (imposed) {
-        this.removeConstraint();
-        store.impose(thenC);
-        return;
-      } else {
-        thenC.consistency(store);
+      thenC.consistency(store);
+      if (imposed && thenC.satisfied()) {
+        removeConstraint();
       }
-    }
-
-    if (thenC.notSatisfied()) {
-      if (imposed) {
-        this.removeConstraint();
-        store.impose(new Not(condC));
-      } else {
-        condC.notConsistency(store);
+    } else if (thenC.notSatisfied()) {
+      condC.notConsistency(store);
+      if (imposed && condC.notSatisfied()) {
+        removeConstraint();
       }
+    } else if (imposed && condC.notSatisfied()) {
+      removeConstraint();
     }
   }
 

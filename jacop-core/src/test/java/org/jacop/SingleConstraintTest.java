@@ -5087,6 +5087,28 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void ifThenPropagatesWithoutImposingItsParts() {
+    // x = 1 => (y = 1 or z = 1), decided at a search level: the consequence is propagated in
+    // place, and after backtracking all solutions are found again
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    store.impose(new IfThen(new XeqC(x, 1), new Or(new XeqC(y, 1), new XeqC(z, 1))));
+    int constraints = store.numberConstraints();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(store.level, x, 1, 1);
+    z.domain.in(store.level, z, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.value()).isEqualTo(1);
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(countSolutions(store, new IntVar[] {x, y, z}, new Random(1))).isEqualTo(7);
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
