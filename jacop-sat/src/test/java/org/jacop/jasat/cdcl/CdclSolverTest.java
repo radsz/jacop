@@ -253,4 +253,114 @@ class CdclSolverTest {
     String text = proof.toString(StandardCharsets.US_ASCII);
     assertTrue(text.endsWith("0\n") && text.lines().anyMatch("0"::equals), text);
   }
+
+  /** A depth-first search driven from outside, like the CP solver drives the SAT core. */
+  private static final class ExternalSearch {
+    final CdclSolver s;
+    final int vars;
+    final List<int[]> late;
+    int nextLate;
+    long steps;
+
+    ExternalSearch(CdclSolver s, int vars, List<int[]> late) {
+      this.s = s;
+      this.vars = vars;
+      this.late = late;
+    }
+
+    /** Learns the pending clause if it is no longer false; false when this node must fail. */
+    private boolean settle() {
+      if (!s.isOk()) {
+        return false;
+      }
+      while (s.hasPendingClause()) {
+        if (s.pendingFalsified()) {
+          return false;
+        }
+        s.addPendingClause();
+      }
+      return true;
+    }
+
+    boolean dfs() {
+      while (true) {
+        if (++steps > 1_000_000) {
+          throw new IllegalStateException("external search does not terminate");
+        }
+        if (!settle()) {
+          return false;
+        }
+        if (nextLate < late.size() && steps % 3 == 0) {
+          int[] c = late.get(nextLate++);
+          if (s.addClauseLive(c, c.length)) {
+            s.propagateUnits();
+          }
+          continue;
+        }
+        int v = 1;
+        while (v <= vars && s.value(v) != 0) {
+          v++;
+        }
+        if (v > vars) {
+          if (nextLate < late.size()) {
+            int[] c = late.get(nextLate++);
+            if (s.addClauseLive(c, c.length)) {
+              s.propagateUnits();
+            }
+            continue;
+          }
+          return true;
+        }
+        int lvl = s.decisionLevel();
+        for (int lit : new int[] {v, -v}) {
+          if (s.value(lit) != 0) {
+            break; // forced by a clause learnt in the first branch
+          }
+          s.newLevel();
+          s.assume(lit);
+          s.propagateUnits();
+          if (dfs()) {
+            return true;
+          }
+          s.backtrackTo(lvl);
+          if (!settle()) {
+            return false;
+          }
+        }
+        if (s.value(v) == 0 && !s.hasPendingClause()) {
+          return false;
+        }
+      }
+    }
+  }
+
+  @Test
+  void externalSearchAgreesWithBruteForce() {
+    Random rnd = new Random(5);
+    for (int run = 0; run < 3000; run++) {
+      int vars = 3 + rnd.nextInt(10);
+      List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
+      CdclSolver s = new CdclSolver();
+      s.ensureVars(vars);
+      List<int[]> late = new ArrayList<>();
+      for (int[] c : f) {
+        if (rnd.nextInt(3) == 0) {
+          late.add(c);
+        } else {
+          s.addClause(c);
+        }
+      }
+      ExternalSearch search = new ExternalSearch(s, vars, late);
+      boolean found = search.dfs();
+      boolean expected = bruteForce(f, vars, new int[0]);
+      assertEquals(expected, found, "run " + run);
+      if (found) {
+        boolean[] value = new boolean[vars + 1];
+        for (int v = 1; v <= vars; v++) {
+          value[v] = s.value(v) > 0;
+        }
+        assertTrue(satisfies(f, value), "model of run " + run);
+      }
+    }
+  }
 }

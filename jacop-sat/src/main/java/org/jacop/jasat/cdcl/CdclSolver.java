@@ -66,6 +66,8 @@ public final class CdclSolver {
   private static final int NO_CONFLICT = -1;
   private static final int BINARY_CONFLICT = -2;
   private static final int NO_REASON = -1;
+  // reason of a unit clause asserted above level 0: true in every model, so analysis skips it
+  private static final int UNIT_REASON = Integer.MIN_VALUE;
 
   // clause header
   private static final int SIZE = 0;
@@ -154,6 +156,19 @@ public final class CdclSolver {
   private long nextReduce = 2000;
   private int reduceInc = 300;
   private int simplifyAssigns = -1;
+
+  // --- driven by an external search (the CP solver): see "External search" below
+  private int[] units = new int[16];
+  private int numUnits;
+  private int[] pending = new int[16];
+  private int pendingSize;
+  private int pendingLbd;
+  private boolean hasPending;
+  private boolean pendingAttached;
+  private int pendingRef;
+  private int lastAssumedLevel;
+  private int[] originalBinaries = new int[16];
+  private int numOriginalBinaries;
 
   // --- assumptions and model
   private int[] assumptions = new int[0];
@@ -298,7 +313,7 @@ public final class CdclSolver {
       return ok;
     }
     if (size == 2) {
-      addBinary(c[0], c[1]);
+      addOriginalBinary(c[0], c[1]);
       return true;
     }
     int ref = allocate(c, size, false, 0);
@@ -527,6 +542,8 @@ public final class CdclSolver {
     trailSize = start;
     qhead = start;
     decisionLevel = target;
+    lastAssumedLevel = Math.min(lastAssumedLevel, target);
+    reassertUnits();
   }
 
   // ----------------------------------------------------------------------------- propagation
@@ -769,7 +786,7 @@ public final class CdclSolver {
   /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
   private int analyzeLit(int q) {
     int v = q >> 1;
-    if (seen[v] != 0 || level[v] == 0) {
+    if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
       return 0;
     }
     seen[v] = 1;
@@ -795,7 +812,7 @@ public final class CdclSolver {
         if (!redundantStep(q, abstractLevels)) {
           return undo(top);
         }
-        if (seen[q >> 1] == 0 && level[q >> 1] > 0) {
+        if (seen[q >> 1] == 0 && level[q >> 1] > 0 && reason[q >> 1] != UNIT_REASON) {
           seen[q >> 1] = 1;
           markClear(q >> 1);
           stack = push(stack, sp++, q);
@@ -807,7 +824,7 @@ public final class CdclSolver {
       for (int k = 1; k < size; k++) {
         int q = mem[lits + k];
         int qv = q >> 1;
-        if (seen[qv] != 0 || level[qv] == 0) {
+        if (seen[qv] != 0 || level[qv] == 0 || reason[qv] == UNIT_REASON) {
           continue;
         }
         if (!redundantStep(q, abstractLevels)) {
@@ -823,7 +840,7 @@ public final class CdclSolver {
 
   private boolean redundantStep(int q, int abstractLevels) {
     int v = q >> 1;
-    if (seen[v] != 0 || level[v] == 0) {
+    if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
       return true;
     }
     return reason[v] != NO_REASON && ((1 << (level[v] & 31)) & abstractLevels) != 0;
@@ -853,6 +870,10 @@ public final class CdclSolver {
         continue;
       }
       int r = reason[x];
+      if (r == UNIT_REASON) {
+        seen[x] = 0;
+        continue;
+      }
       if (r == NO_REASON) {
         out[n++] = toDimacs(trail[i]);
       } else if (r < NO_REASON) {
@@ -872,6 +893,477 @@ public final class CdclSolver {
     }
     seen[p >> 1] = 0;
     failed = Arrays.copyOf(out, n);
+  }
+
+  // ------------------------------------------------------------------------- external search
+
+  /*
+   * External search: another solver (JaCoP's CP search) makes the decisions. It opens levels with
+   * newLevel(), assigns literals with assume(), runs propagateUnits(), and moves back with
+   * backtrackTo(). A conflict is analysed into a pending clause; the caller backtracks until
+   * pendingFalsified() is false and then calls addPendingClause(), which learns the clause,
+   * asserts its literal if it is unit and propagates. Clauses can be added at any level with
+   * addClauseLive(). Units learnt above level 0 are kept and re-asserted after every backtrack.
+   */
+
+  /**
+   * Creates fresh variables.
+   *
+   * @param count how many
+   * @return the first new DIMACS variable; the new ones are consecutive
+   */
+  public int newVariables(int count) {
+    int first = numVars + 1;
+    ensureVars(numVars + count);
+    return first;
+  }
+
+  /**
+   * Returns the current decision level.
+   *
+   * @return the number of open levels
+   */
+  public int decisionLevel() {
+    return decisionLevel;
+  }
+
+  /** Opens a new decision level. */
+  public void newLevel() {
+    newDecisionLevel();
+  }
+
+  /**
+   * Returns the value of a literal under the current assignment.
+   *
+   * @param lit a DIMACS literal of an existing variable
+   * @return 1 when true, -1 when false, 0 when unassigned
+   */
+  public int value(int lit) {
+    return vals[toLit(lit)];
+  }
+
+  /**
+   * Assigns an unassigned literal at the current level, without a reason (as a decision). Call
+   * {@link #propagateUnits()} afterwards.
+   *
+   * @param lit a DIMACS literal whose variable is unassigned
+   */
+  public void assume(int lit) {
+    int l = toLit(lit);
+    if (vals[l] != 0) {
+      throw new IllegalStateException("literal " + lit + " is already assigned");
+    }
+    if (decisionLevel == 0 || lastAssumedLevel >= decisionLevel) {
+      throw new IllegalStateException("assume needs a new level for every literal (newLevel())");
+    }
+    lastAssumedLevel = decisionLevel;
+    assign(l, NO_REASON);
+  }
+
+  /**
+   * Returns the number of assigned literals.
+   *
+   * @return the size of the trail
+   */
+  public int trailSize() {
+    return trailSize;
+  }
+
+  /**
+   * Returns an assigned literal in assignment order.
+   *
+   * @param i a position below {@link #trailSize()}
+   * @return the DIMACS literal assigned at that position
+   */
+  public int trailLiteral(int i) {
+    return toDimacs(trail[i]);
+  }
+
+  /**
+   * Unit propagation. On a conflict, the conflict is analysed into the pending clause.
+   *
+   * @return false on a conflict
+   */
+  public boolean propagateUnits() {
+    if (!ok) {
+      setPending(learnt, 0, true);
+      return false;
+    }
+    if (propagate() == NO_CONFLICT) {
+      return true;
+    }
+    conflicts++;
+    if (decisionLevel == 0) {
+      ok = false;
+      if (proof != null) {
+        proof.add(learnt, 0, 0);
+      }
+      setPending(learnt, 0, true);
+      return false;
+    }
+    if (!conflictAtCurrentLevel()) {
+      // possible when units re-asserted after a backtrack conflict with lower levels: the
+      // conflicting clause itself waits until the caller has backtracked below it
+      if (conflictRef == BINARY_CONFLICT) {
+        setPending(new int[] {conflictLit0, conflictLit1}, 2, true);
+        pendingRef = BINARY;
+      } else {
+        rewatch(conflictRef);
+        setPending(mem, conflictRef + HEADER, mem[conflictRef + SIZE]);
+        pendingRef = conflictRef;
+      }
+      return false;
+    }
+    analyze();
+    setPending(learnt, learntSize, false);
+    pendingLbd = learntSize <= 2 ? learntSize : computeLbd(learnt, 0, learntSize);
+    varInc /= varDecay;
+    claInc /= CLA_DECAY;
+    return false;
+  }
+
+  /**
+   * Backtracks to a level; units learnt above level 0 are asserted again at that level.
+   *
+   * @param level the level to keep, at most {@link #decisionLevel()}
+   */
+  public void backtrackTo(int level) {
+    backtrack(level);
+  }
+
+  /**
+   * Returns whether a clause waits to be learnt (after a conflict, or a clause added while false).
+   *
+   * @return true when there is a pending clause
+   */
+  public boolean hasPendingClause() {
+    return hasPending;
+  }
+
+  /**
+   * Returns whether the pending clause is false under the current assignment, so the search must
+   * backtrack further before {@link #addPendingClause()}.
+   *
+   * @return true when every literal of the pending clause is false (always, for the empty clause)
+   */
+  public boolean pendingFalsified() {
+    if (!hasPending) {
+      return false;
+    }
+    for (int i = 0; i < pendingSize; i++) {
+      if (vals[pending[i]] >= 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the pending clause.
+   *
+   * @return its DIMACS literals
+   */
+  public int[] pendingClause() {
+    int[] c = new int[pendingSize];
+    for (int i = 0; i < pendingSize; i++) {
+      c[i] = toDimacs(pending[i]);
+    }
+    return c;
+  }
+
+  /**
+   * Learns the pending clause, asserts its literal when it is unit, and propagates. The pending
+   * clause must not be falsified.
+   *
+   * @return false on a conflict (which leaves a new pending clause)
+   */
+  public boolean addPendingClause() {
+    if (!hasPending) {
+      return propagateUnits();
+    }
+    if (pendingFalsified()) {
+      throw new IllegalStateException("the pending clause is still false");
+    }
+    hasPending = false;
+    int[] c = Arrays.copyOf(pending, pendingSize);
+    int ref = pendingRef;
+    if (!pendingAttached && proof != null) {
+      proof.add(c, 0, c.length);
+    }
+    if (c.length == 1) {
+      if (!pendingAttached) {
+        addUnit(c[0]);
+      }
+    } else {
+      orderForWatches(c);
+      if (c.length == 2) {
+        if (!pendingAttached) {
+          addBinary(c[0], c[1]);
+        }
+        ref = BINARY;
+      } else if (!pendingAttached) {
+        ref = allocate(c, c.length, true, pendingLbd);
+        learnts = push(learnts, numLearnts++, ref);
+        attach(ref);
+        bumpClause(ref);
+      }
+      assertIfUnit(c, ref);
+    }
+    if (conflicts >= nextReduce) {
+      nextReduce = conflicts + 2000 + (long) reduceInc * ++reductions;
+      reduceDb();
+    }
+    return propagateUnits();
+  }
+
+  /**
+   * Adds a clause at any level, without backtracking. If the clause is unit under the current
+   * assignment its literal is asserted (call {@link #propagateUnits()} next); if it is false, it
+   * becomes the pending clause and false is returned.
+   *
+   * @param lits DIMACS literals
+   * @param n how many of them form the clause
+   * @return false when the clause is false under the current assignment
+   */
+  public boolean addClauseLive(int[] lits, int n) {
+    if (decisionLevel == 0) {
+      boolean result = addClause(lits, n);
+      if (!result) {
+        setPending(learnt, 0, true);
+      }
+      return result;
+    }
+    if (!ok) {
+      setPending(learnt, 0, true);
+      return false;
+    }
+    int maxVar = 0;
+    for (int i = 0; i < n; i++) {
+      maxVar = Math.max(maxVar, Math.abs(lits[i]));
+    }
+    ensureVars(maxVar);
+    int[] c = new int[n];
+    for (int i = 0; i < n; i++) {
+      c[i] = toLit(lits[i]);
+    }
+    Arrays.sort(c);
+    int size = 0;
+    for (int i = 0; i < n; i++) {
+      int l = c[i];
+      boolean fixed = vals[l] != 0 && level[l >> 1] == 0;
+      if ((fixed && vals[l] > 0) || (size > 0 && c[size - 1] == (l ^ 1))) {
+        return true; // satisfied at level 0, or a tautology
+      }
+      if ((fixed && vals[l] < 0) || (size > 0 && c[size - 1] == l)) {
+        continue;
+      }
+      c[size++] = l;
+    }
+    c = Arrays.copyOf(c, size);
+    if (size == 0) {
+      ok = false;
+      setPending(c, 0, true);
+      return false;
+    }
+    if (size == 1) {
+      addUnit(c[0]);
+      if (vals[c[0]] < 0) {
+        setPending(c, 1, true);
+        return false;
+      }
+      return true;
+    }
+    orderForWatches(c);
+    int ref = BINARY;
+    if (size == 2) {
+      addOriginalBinary(c[0], c[1]);
+    } else {
+      ref = allocate(c, size, false, 0);
+      originals = push(originals, numOriginals++, ref);
+      attach(ref);
+    }
+    if (vals[c[0]] < 0) {
+      setPending(c, size, true);
+      pendingRef = ref;
+      return false;
+    }
+    assertIfUnit(c, ref);
+    return true;
+  }
+
+  /**
+   * Writes the original clauses (and the units fixed at level 0) in DIMACS format.
+   *
+   * @param out the destination
+   * @throws java.io.IOException if writing fails
+   */
+  public void writeDimacs(java.io.Writer out) throws java.io.IOException {
+    int fixed = 0;
+    for (int i = 0; i < trailSize && level[trail[i] >> 1] == 0; i++) {
+      fixed++;
+    }
+    out.write("p cnf " + numVars + " " + (fixed + numUnits + numOriginalBinaries / 2 + numOriginals) + "\n");
+    for (int i = 0; i < fixed; i++) {
+      out.write(toDimacs(trail[i]) + " 0\n");
+    }
+    for (int i = 0; i < numUnits; i++) {
+      out.write(toDimacs(units[i]) + " 0\n");
+    }
+    for (int i = 0; i < numOriginalBinaries; i += 2) {
+      out.write(toDimacs(originalBinaries[i]) + " " + toDimacs(originalBinaries[i + 1]) + " 0\n");
+    }
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      StringBuilder line = new StringBuilder();
+      for (int k = 0; k < mem[ref + SIZE]; k++) {
+        line.append(toDimacs(mem[ref + HEADER + k])).append(' ');
+      }
+      out.write(line.append("0\n").toString());
+    }
+  }
+
+  private boolean conflictAtCurrentLevel() {
+    if (conflictRef == BINARY_CONFLICT) {
+      return atCurrentLevel(conflictLit0) || atCurrentLevel(conflictLit1);
+    }
+    for (int k = 0; k < mem[conflictRef + SIZE]; k++) {
+      if (atCurrentLevel(mem[conflictRef + HEADER + k])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean atCurrentLevel(int lit) {
+    int v = lit >> 1;
+    return level[v] == decisionLevel && reason[v] != UNIT_REASON;
+  }
+
+  /** Copies an arena clause into the pending clause (attached). */
+  private void setPending(int[] from, int offset, int size) {
+    setPending(Arrays.copyOfRange(from, offset, offset + size), size, true);
+  }
+
+  /** Moves the watches of an arena clause to its best literals (see orderForWatches). */
+  private void rewatch(int ref) {
+    int lits = ref + HEADER;
+    removeWatch(mem[lits], ref);
+    removeWatch(mem[lits + 1], ref);
+    int[] c = Arrays.copyOfRange(mem, lits, lits + mem[ref + SIZE]);
+    orderForWatches(c);
+    System.arraycopy(c, 0, mem, lits, c.length);
+    mem[ref + POS] = 2;
+    attach(ref);
+  }
+
+  private void removeWatch(int lit, int ref) {
+    int[] ws = watches[lit];
+    int n = watchSize[lit];
+    for (int i = 0; i < n; i += 2) {
+      if (ws[i + 1] == ref) {
+        System.arraycopy(ws, i + 2, ws, i, n - i - 2);
+        watchSize[lit] = n - 2;
+        return;
+      }
+    }
+  }
+
+  private void setPending(int[] lits, int size, boolean attached) {
+    if (pending.length < size) {
+      pending = new int[size];
+    }
+    System.arraycopy(lits, 0, pending, 0, size);
+    pendingSize = size;
+    pendingAttached = attached;
+    pendingRef = NO_REASON;
+    hasPending = true;
+  }
+
+  private void addOriginalBinary(int a, int b) {
+    addBinary(a, b);
+    originalBinaries = push(originalBinaries, numOriginalBinaries++, a);
+    originalBinaries = push(originalBinaries, numOriginalBinaries++, b);
+  }
+
+  /** A unit clause: fixed now at level 0, or kept and re-asserted after backtracking. */
+  private void addUnit(int l) {
+    if (decisionLevel > 0) {
+      units = push(units, numUnits++, l);
+    }
+    if (vals[l] == 0) {
+      assign(l, decisionLevel > 0 ? UNIT_REASON : NO_REASON);
+    }
+  }
+
+  private void reassertUnits() {
+    for (int i = 0; i < numUnits; i++) {
+      int u = units[i];
+      if (vals[u] == 0) {
+        assign(u, decisionLevel > 0 ? UNIT_REASON : NO_REASON);
+      } else if (vals[u] < 0 && !hasPending) {
+        setPending(new int[] {u}, 1, true);
+      }
+    }
+    if (decisionLevel == 0 && numUnits > 0) {
+      int j = 0;
+      for (int i = 0; i < numUnits; i++) {
+        if (vals[units[i]] <= 0) {
+          units[j++] = units[i];
+        }
+      }
+      numUnits = j;
+    }
+  }
+
+  /** Moves the two best literals to the front: true, then unassigned, then false at the highest level. */
+  private void orderForWatches(int[] c) {
+    for (int pos = 0; pos < 2 && pos < c.length; pos++) {
+      int best = pos;
+      for (int i = pos + 1; i < c.length; i++) {
+        if (watchScore(c[i]) > watchScore(c[best])) {
+          best = i;
+        }
+      }
+      int t = c[pos];
+      c[pos] = c[best];
+      c[best] = t;
+    }
+  }
+
+  private int watchScore(int l) {
+    int v = vals[l];
+    return v > 0 ? Integer.MAX_VALUE : v == 0 ? Integer.MAX_VALUE - 1 : level[l >> 1];
+  }
+
+  /**
+   * Asserts c[0] when it is unassigned and the rest of the clause is false. For a clause in the
+   * arena, ref is its reference and the literal order is read from the arena.
+   */
+  private void assertIfUnit(int[] c, int ref) {
+    int[] lits = c;
+    int from = 0;
+    int size = c.length;
+    if (ref >= 0) {
+      lits = mem;
+      from = ref + HEADER;
+      size = mem[ref + SIZE];
+      if (vals[lits[from]] == 0 && vals[lits[from + 1]] > 0) {
+        return;
+      }
+      // the arena keeps the watch order; make sure the best literal is watched first
+      if (watchScore(lits[from + 1]) > watchScore(lits[from])) {
+        return; // two non-false literals or already satisfied
+      }
+    }
+    if (vals[lits[from]] != 0) {
+      return;
+    }
+    for (int i = from + 1; i < from + size; i++) {
+      if (vals[lits[i]] >= 0) {
+        return;
+      }
+    }
+    assign(lits[from], ref >= 0 ? ref : ref == BINARY ? -2 - lits[from + 1] : NO_REASON);
   }
 
   // ---------------------------------------------------------------------------------- search
