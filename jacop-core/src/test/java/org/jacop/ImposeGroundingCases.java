@@ -48,10 +48,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
+import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.And;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.Distance;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportMdd;
@@ -68,8 +70,10 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XgteqC;
@@ -78,6 +82,10 @@ import org.jacop.constraints.XltC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmodYeqZ;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -160,7 +168,8 @@ final class ImposeGroundingCases {
             Arguments.of("Geost", geost(false)),
             Arguments.of("GeostTime", geost(true))),
         Stream.concat(
-            Stream.concat(additive(), tables()), Stream.concat(comparisons(), logical())));
+            Stream.concat(additive(), tables()),
+            Stream.concat(comparisons(), Stream.concat(logical(), nonlinearArithmetic()))));
   }
 
   /** The table constraints. */
@@ -1094,6 +1103,195 @@ final class ImposeGroundingCases {
   /** XeqC rejects constants outside IntDomain.MIN_INT..MAX_INT, so clamp the extremes for it. */
   static int inRange(int c) {
     return Math.max(IntDomain.MIN_INT, Math.min(IntDomain.MAX_INT, c));
+  }
+
+  /** XmulCeqZ, XmulYeqC, XmulYeqZ, XdivYeqZ, XmodYeqZ, XexpYeqZ, AbsXeqY and Distance. */
+  private static Stream<Arguments> nonlinearArithmetic() {
+    return Stream.of(
+        nonlinear(
+            "XmulCeqZ",
+            random -> {
+              int c = random.nextInt(7) - 3;
+              return Case.primitive(
+                  domains(random, 2, -6, 6),
+                  x -> new XmulCeqZ(x[0], c, x[1]),
+                  t -> t[0] * c == t[1],
+                  "c=" + c);
+            }),
+        nonlinear(
+            "XmulYeqC",
+            random -> {
+              int c = random.nextInt(13) - 6;
+              return Case.primitive(
+                  domains(random, 2, -4, 4),
+                  x -> new XmulYeqC(x[0], x[1], c),
+                  t -> t[0] * t[1] == c,
+                  "c=" + c);
+            }),
+        nonlinear(
+            "XmulYeqC square",
+            random -> {
+              int c = random.nextInt(11) - 1;
+              return Case.primitive(
+                  domains(random, 1, -4, 4),
+                  x -> new XmulYeqC(x[0], x[0], c),
+                  t -> t[0] * t[0] == c,
+                  "c=" + c);
+            }),
+        nonlinear(
+            "XmulYeqZ",
+            random ->
+                Case.of(
+                    domains(random, 3, -4, 4),
+                    (store, x) -> store.impose(new XmulYeqZ(x[0], x[1], x[2])),
+                    t -> t[0] * t[1] == t[2],
+                    "")),
+        nonlinear(
+            "XmulYeqZ square",
+            random ->
+                Case.of(
+                    domains(random, 2, -4, 9),
+                    (store, x) -> store.impose(new XmulYeqZ(x[0], x[0], x[1])),
+                    t -> t[0] * t[0] == t[1],
+                    "")),
+        nonlinear(
+            "XdivYeqZ",
+            random ->
+                Case.of(
+                    domains(random, 3, -7, 7),
+                    (store, x) -> store.impose(new XdivYeqZ(x[0], x[1], x[2])),
+                    t -> t[1] != 0 && t[0] / t[1] == t[2],
+                    "")),
+        nonlinear(
+            "XmodYeqZ",
+            random ->
+                Case.of(
+                    domains(random, 3, -7, 7),
+                    (store, x) -> store.impose(new XmodYeqZ(x[0], x[1], x[2])),
+                    t -> t[1] != 0 && t[0] % t[1] == t[2],
+                    "")),
+        nonlinear(
+            "XexpYeqZ",
+            random ->
+                Case.of(
+                    new int[][] {
+                      domain(random, -3, 3), domain(random, -2, 4), domain(random, -30, 30)
+                    },
+                    (store, x) -> store.impose(new XexpYeqZ(x[0], x[1], x[2])),
+                    t -> !(t[0] == 0 && t[1] < 0) && (long) Math.pow(t[0], t[1]) == t[2],
+                    "")),
+        nonlinear(
+            "AbsXeqY",
+            random -> {
+              boolean dom = random.nextBoolean();
+              return Case.primitive(
+                  domains(random, 2, -5, 5),
+                  x -> new AbsXeqY(x[0], x[1], dom),
+                  t -> Math.abs(t[0]) == t[1],
+                  "domConsistency=" + dom);
+            }),
+        nonlinear(
+            "AbsXeqY same",
+            random ->
+                Case.primitive(
+                    domains(random, 1, -5, 5),
+                    x -> new AbsXeqY(x[0], x[0], random.nextBoolean()),
+                    t -> t[0] >= 0,
+                    "")),
+        nonlinear(
+            "Distance",
+            random ->
+                Case.primitive(
+                    domains(random, 3, -4, 6),
+                    x -> new Distance(x[0], x[1], x[2]),
+                    t -> Math.abs(t[0] - t[1]) == t[2],
+                    "")),
+        nonlinear(
+            "Distance same",
+            random ->
+                Case.primitive(
+                    domains(random, 2, -3, 3),
+                    x -> new Distance(x[0], x[0], x[1]),
+                    t -> t[1] == 0,
+                    "")),
+        nonlinear(
+            "Distance x=z",
+            random ->
+                Case.primitive(
+                    domains(random, 2, -4, 6),
+                    x -> new Distance(x[0], x[1], x[0]),
+                    t -> Math.abs(t[0] - t[1]) == t[0],
+                    "")),
+        nonlinear(
+            "XmulCeqZ x=z",
+            random -> {
+              int c = random.nextInt(7) - 3;
+              return Case.primitive(
+                  domains(random, 1, -4, 4),
+                  x -> new XmulCeqZ(x[0], c, x[0]),
+                  t -> t[0] * c == t[0],
+                  "c=" + c);
+            }),
+        nonlinear(
+            "XmulYeqZ x=z",
+            random ->
+                Case.of(
+                    domains(random, 2, -4, 4),
+                    (store, x) -> store.impose(new XmulYeqZ(x[0], x[1], x[0])),
+                    t -> t[0] * t[1] == t[0],
+                    "")),
+        nonlinear(
+            "XmulYeqZ x=y=z",
+            random ->
+                Case.of(
+                    domains(random, 1, -4, 4),
+                    (store, x) -> store.impose(new XmulYeqZ(x[0], x[0], x[0])),
+                    t -> t[0] * t[0] == t[0],
+                    "")),
+        nonlinear(
+            "XdivYeqZ x=y",
+            random ->
+                Case.of(
+                    domains(random, 2, -4, 4),
+                    (store, x) -> store.impose(new XdivYeqZ(x[0], x[0], x[1])),
+                    t -> t[0] != 0 && t[1] == 1,
+                    "")),
+        nonlinear(
+            "XdivYeqZ x=z",
+            random ->
+                Case.of(
+                    domains(random, 2, -4, 4),
+                    (store, x) -> store.impose(new XdivYeqZ(x[0], x[1], x[0])),
+                    t -> t[1] != 0 && t[0] / t[1] == t[0],
+                    "")),
+        nonlinear(
+            "XmodYeqZ x=y",
+            random ->
+                Case.of(
+                    domains(random, 2, -4, 4),
+                    (store, x) -> store.impose(new XmodYeqZ(x[0], x[0], x[1])),
+                    t -> t[0] != 0 && t[1] == 0,
+                    "")),
+        nonlinear(
+            "XmodYeqZ x=z",
+            random ->
+                Case.of(
+                    domains(random, 2, -6, 6),
+                    (store, x) -> store.impose(new XmodYeqZ(x[0], x[1], x[0])),
+                    t -> t[1] != 0 && t[0] % t[1] == t[0],
+                    "")),
+        nonlinear(
+            "XexpYeqZ x=y",
+            random ->
+                Case.of(
+                    new int[][] {domain(random, -3, 3), domain(random, -30, 30)},
+                    (store, x) -> store.impose(new XexpYeqZ(x[0], x[0], x[1])),
+                    t -> !(t[0] == 0 && t[0] < 0) && (long) Math.pow(t[0], t[0]) == t[1],
+                    "")));
+  }
+
+  private static Arguments nonlinear(String name, Function<Random, Case> generator) {
+    return Arguments.of(name, generator);
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
