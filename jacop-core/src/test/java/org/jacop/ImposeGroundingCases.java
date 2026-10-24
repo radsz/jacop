@@ -55,6 +55,18 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XgteqY;
+import org.jacop.constraints.XltC;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -133,7 +145,7 @@ final class ImposeGroundingCases {
             Arguments.of("NetworkFlow", (Function<Random, Case>) ImposeGroundingCases::networkFlow),
             Arguments.of("Geost", geost(false)),
             Arguments.of("GeostTime", geost(true))),
-        Stream.concat(additive(), tables()));
+        Stream.concat(Stream.concat(additive(), tables()), comparisons()));
   }
 
   /** The table constraints. */
@@ -985,6 +997,88 @@ final class ImposeGroundingCases {
           },
           kind + " flags=" + Arrays.toString(flags));
     };
+  }
+
+  /** Batch B2: the binary comparisons, also with the same variable on both sides. */
+  static Stream<Arguments> comparisons() {
+    return Stream.of(
+        binary("XeqY", XeqY::new, (a, b) -> a == b),
+        binary("XneqY", XneqY::new, (a, b) -> a != b),
+        binary("XltY", XltY::new, (a, b) -> a < b),
+        binary("XlteqY", XlteqY::new, (a, b) -> a <= b),
+        binary("XgtY", XgtY::new, (a, b) -> a > b),
+        binary("XgteqY", XgteqY::new, (a, b) -> a >= b),
+        binarySame("XeqYsame", XeqY::new, true),
+        binarySame("XneqYsame", XneqY::new, false),
+        binarySame("XltYsame", XltY::new, false),
+        binarySame("XlteqYsame", XlteqY::new, true),
+        binarySame("XgtYsame", XgtY::new, false),
+        binarySame("XgteqYsame", XgteqY::new, true),
+        withConstant("XeqC", (x, c) -> new XeqC(x, inRange(c)), (a, c) -> a == c),
+        withConstant("XneqC", XneqC::new, (a, c) -> a != c),
+        withConstant("XltC", XltC::new, (a, c) -> a < c),
+        withConstant("XlteqC", XlteqC::new, (a, c) -> a <= c),
+        withConstant("XgtC", XgtC::new, (a, c) -> a > c),
+        withConstant("XgteqC", XgteqC::new, (a, c) -> a >= c));
+  }
+
+  /** x op y on two variables. */
+  static Arguments binary(
+      String name, BiFunction<IntVar, IntVar, PrimitiveConstraint> build, IntRelation op) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random ->
+                Case.primitive(
+                    domains(random, 2, -3, 3),
+                    x -> build.apply(x[0], x[1]),
+                    t -> op.test(t[0], t[1]),
+                    ""));
+  }
+
+  /** x op x: both arguments are the same variable, so it is ground in both places at once. */
+  static Arguments binarySame(
+      String name, BiFunction<IntVar, IntVar, PrimitiveConstraint> build, boolean holds) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random ->
+                Case.primitive(
+                    domains(random, 1, -3, 3), x -> build.apply(x[0], x[0]), t -> holds, ""));
+  }
+
+  /** A relation on two ints, unboxed so that == compares values. */
+  interface IntRelation {
+    boolean test(int a, int b);
+  }
+
+  private static final int[] EXTREMES = {
+    Integer.MIN_VALUE, Integer.MAX_VALUE, IntDomain.MIN_INT, IntDomain.MAX_INT
+  };
+
+  /** x op c, with c anywhere from below to above the domain of x. */
+  static Arguments withConstant(
+      String name, BiFunction<IntVar, Integer, PrimitiveConstraint> build, IntRelation op) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random -> {
+              // mostly near the domain, sometimes at the ends of int where c + 1 or c - 1 overflows
+              int c =
+                  random.nextInt(8) == 0
+                      ? EXTREMES[random.nextInt(EXTREMES.length)]
+                      : -5 + random.nextInt(11);
+              return Case.primitive(
+                  domains(random, 1, -3, 3),
+                  x -> build.apply(x[0], c),
+                  t -> op.test(t[0], c),
+                  "c = " + c);
+            });
+  }
+
+  /** XeqC rejects constants outside IntDomain.MIN_INT..MAX_INT, so clamp the extremes for it. */
+  static int inRange(int c) {
+    return Math.max(IntDomain.MIN_INT, Math.min(IntDomain.MAX_INT, c));
   }
 
   static int[][] domains(Random random, int n, int lo, int hi) {
