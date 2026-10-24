@@ -331,6 +331,11 @@ final class ImposeGroundingCases {
             (x, c) -> new XplusClteqZ(x[0], c, x[1]),
             (t, c) -> t[0] + c <= t[1]),
         primitive(
+            "XplusClteqZ(x,c,x)",
+            r -> domains(r, 1, -3, 4),
+            (x, c) -> new XplusClteqZ(x[0], c, x[0]),
+            (t, c) -> c <= 0),
+        primitive(
             "XplusClteqZImplied",
             r -> new int[][] {domain(r, 0, 1), domain(r, -3, 4), domain(r, -3, 4)},
             (x, c) -> new XplusClteqZImplied(x[0], x[1], c, x[2]),
