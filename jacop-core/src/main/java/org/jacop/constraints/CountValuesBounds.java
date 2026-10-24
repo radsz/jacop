@@ -71,10 +71,21 @@ public class CountValuesBounds extends AbstractCountValues {
 
     super(idNumber, list, values);
 
-    checkInputForNullness("list", list);
+    checkInputForNullness("lb", lb);
+    checkInputForNullness("ub", ub);
+    if (lb.length != values.length || ub.length != values.length) {
+      throw new IllegalArgumentException(
+          "Constraint CountValuesBounds has "
+              + lb.length
+              + " lower bounds and "
+              + ub.length
+              + " upper bounds for "
+              + values.length
+              + " values.");
+    }
 
-    this.lb = lb;
-    this.ub = ub;
+    this.lb = Arrays.copyOf(lb, lb.length);
+    this.ub = Arrays.copyOf(ub, ub.length);
     this.counter = new Bounds[values.length];
     this.counterRest = new Bounds(0, n);
 

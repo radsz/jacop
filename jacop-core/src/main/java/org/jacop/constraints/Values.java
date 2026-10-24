@@ -180,6 +180,12 @@ public class Values extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
+    if (list.length == 0) {
+      // an empty list has no values
+      count.domain.in(store.level, count, 0, 0);
+      return;
+    }
+
     if (!prepareValueIndex()) {
       consistencyWithHashing(store);
       return;
