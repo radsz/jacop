@@ -1,3 +1,5 @@
+include "fzn_geost.mzn";
+
 predicate jacop_geost_bb(
                       int        : k       ,
     array[int] of int        : rect_size   ,
@@ -20,7 +22,9 @@ predicate fzn_geost_bb(
     array[int    ] of int    : l               ,
     array[int    ] of int    : u
 ) =
-        jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset), shape, array1d(x), kind, l, u)
+        jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset),
+                       jacop_geost_shapes(rect_size, shape), array1d(x),
+                       jacop_geost_kinds(shape, kind), l, u)
     ;
 
 
