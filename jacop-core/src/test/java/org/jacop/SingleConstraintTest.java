@@ -5040,6 +5040,13 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void nestedXorForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new Reified(new Xor(and, b[0]), b[1])))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Not(new Not(new Xor(and, b[0]))))).isFalse();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
