@@ -37,6 +37,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.set.constraints.AinS;
 import org.jacop.set.constraints.XeqA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -70,6 +71,25 @@ class SetRelationsTest {
     XeqA xeqa = new XeqA(y, e);
     assertThat(xeqa.satisfied()).isFalse();
     assertThat(xeqa.notSatisfied()).isTrue();
+  }
+
+  @Test
+  void testAinSSatisfiedMeansInclusion() {
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 5);
+    // {5} is a subset of {0, 2, 5} although it is lexicographically larger
+    assertThat(new AinS(a, dom(0, 2, 5)).satisfied()).isTrue();
+    // {1, 3, 4, 5} is not a subset of {1, 4} although it is lexicographically smaller
+    SetVar b = groundSetVar(store, "b", 1, 3, 4, 5);
+    assertThat(new AinS(b, dom(1, 4), true).satisfied()).isFalse();
+  }
+
+  @Test
+  void testAinSStrictFailsWhenTheSetEqualsTheGlb() {
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 1, 3, 4, 5);
+    store.impose(new AinS(a, dom(1, 3, 4, 5), true));
+    assertThat(store.consistency()).isFalse();
   }
 
   private static IntDomain dom(int... values) {
