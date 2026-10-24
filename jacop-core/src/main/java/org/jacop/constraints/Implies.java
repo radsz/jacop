@@ -98,8 +98,9 @@ public class Implies extends AbstractReifiedConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    c.notConsistency(store);
+    // b first: c may share b, and c.notConsistency() must see it fixed
     b.domain.inValue(store.level, b, 1);
+    c.notConsistency(store);
   }
 
   @Override

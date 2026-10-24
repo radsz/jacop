@@ -5031,6 +5031,15 @@ class SingleConstraintTest extends TestHelper {
     assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
   }
 
+  @Test
+  void negatedImpliesFixesItsVariableBeforeNegatingTheConstraint() {
+    // not(b => (b = 1 <=> b)) has no solution; the reification is decided only once b is fixed
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Not(new Implies(b, new Reified(new XeqC(b, 1), b))));
+    assertThat(store.consistency()).isFalse();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
