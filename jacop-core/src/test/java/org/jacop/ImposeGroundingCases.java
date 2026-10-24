@@ -33,13 +33,21 @@ package org.jacop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
+import org.jacop.constraints.ExtensionalConflictVa;
+import org.jacop.constraints.ExtensionalSupportMdd;
+import org.jacop.constraints.ExtensionalSupportStr;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XplusCeqZ;
@@ -56,7 +64,15 @@ import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.NegativeTable;
+import org.jacop.constraints.table.Restriction;
+import org.jacop.constraints.table.SimpleTable;
+import org.jacop.constraints.table.Table;
+import org.jacop.constraints.table.TableReified;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.junit.jupiter.params.provider.Arguments;
 
 /**
@@ -90,7 +106,346 @@ final class ImposeGroundingCases {
             Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
             Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
             Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional"))),
-        additive());
+        Stream.concat(additive(), tables()));
+  }
+
+  /** The table constraints. */
+  private static Stream<Arguments> tables() {
+    return Stream.of(
+        Arguments.of("TableWide", tableCase("Table")),
+        Arguments.of("TableReuse", tableCase("TableReuse")),
+        Arguments.of("SimpleTableWide", tableCase("SimpleTable")),
+        Arguments.of("SimpleTableReuse", tableCase("SimpleTableReuse")),
+        Arguments.of("NegativeTable", tableCase("NegativeTable")),
+        Arguments.of("TableReified", tableCase("TableReified")),
+        Arguments.of("TableImplied", tableCase("TableImplied")),
+        Arguments.of("HybridTableInt", tableCase("HybridTableInt")),
+        Arguments.of("HybridTableStar", tableCase("HybridTableStar")),
+        Arguments.of("HybridTableRestrictions", hybridRestrictions(true)),
+        Arguments.of("HybridTableRestrictionsNoExpand", hybridRestrictions(false)),
+        Arguments.of("ExtensionalSupportVaWide", tableCase("ExtensionalSupportVa")),
+        Arguments.of("ExtensionalSupportStrTT", tableCase("ExtensionalSupportStrTT")),
+        Arguments.of("ExtensionalSupportStrTF", tableCase("ExtensionalSupportStrTF")),
+        Arguments.of("ExtensionalSupportStrFT", tableCase("ExtensionalSupportStrFT")),
+        Arguments.of("ExtensionalSupportStrFF", tableCase("ExtensionalSupportStrFF")),
+        Arguments.of("ExtensionalSupportMddTable", tableCase("ExtensionalSupportMddIncremental")),
+        Arguments.of("ExtensionalSupportMddSearch", tableCase("ExtensionalSupportMddSearch")),
+        Arguments.of("ExtensionalSupportMddEdges", mddEdges()),
+        Arguments.of("ExtensionalConflictVaWide", tableCase("ExtensionalConflictVa")));
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Table constraints.
+
+  /**
+   * Random tables of arity 1..4 over values -2..4 on domains within -1..3, so some tuple values are
+   * outside the domains; the table may be empty, have duplicates, or contain every combination.
+   * Kinds ending in Reified/Implied have a 0/1 control variable last.
+   */
+  private static Function<Random, Case> tableCase(String kind) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int[][] domains = domains(random, n, -1, 3);
+      int[][] table = randomTuples(random, domains, n);
+      if (kind.startsWith("SimpleTable") && table.length > 64) {
+        // SimpleTable takes at most 64 tuples
+        table = Arrays.copyOf(table, 64);
+      }
+      final int[][] tuples = table;
+      Set<List<Integer>> tupleSet = new HashSet<>();
+      for (int[] t : tuples) {
+        tupleSet.add(Arrays.stream(t).boxed().toList());
+      }
+      int star = 9;
+      boolean starred = kind.equals("HybridTableStar");
+      if (starred) {
+        for (int[] t : tuples) {
+          for (int j = 0; j < n; j++) {
+            if (random.nextInt(4) == 0) {
+              t[j] = star;
+            }
+          }
+        }
+      }
+      boolean control = kind.equals("TableReified") || kind.equals("TableImplied");
+      int[][] all = domains;
+      if (control) {
+        all = Arrays.copyOf(domains, n + 1);
+        all[n] = new int[] {0, 1};
+      }
+      Predicate<int[]> inTable =
+          t -> {
+            if (starred) {
+              for (int[] tuple : tuples) {
+                boolean match = true;
+                for (int j = 0; j < n && match; j++) {
+                  match = tuple[j] == star || tuple[j] == t[j];
+                }
+                if (match) {
+                  return true;
+                }
+              }
+              return false;
+            }
+            return tupleSet.contains(Arrays.stream(t, 0, n).boxed().toList());
+          };
+      Predicate<int[]> semantics =
+          switch (kind) {
+            case "NegativeTable", "ExtensionalConflictVa" -> t -> !inTable.test(t);
+            case "TableReified" -> t -> (t[n] == 1) == inTable.test(t);
+            case "TableImplied" -> t -> t[n] == 0 || inTable.test(t);
+            default -> inTable;
+          };
+      return Case.of(
+          all,
+          (store, x) -> {
+            int[][] copy = Arrays.stream(tuples).map(int[]::clone).toArray(int[][]::new);
+            IntVar[] list = Arrays.copyOf(x, n);
+            store.impose(
+                switch (kind) {
+                  case "Table" -> new Table(list, copy);
+                  case "TableReuse" -> new Table(list, copy, true);
+                  case "SimpleTable" -> new SimpleTable(list, copy);
+                  case "SimpleTableReuse" -> new SimpleTable(list, copy, true);
+                  case "NegativeTable" -> new NegativeTable(list, copy);
+                  case "TableReified" -> new TableReified(list, copy, x[n]);
+                  case "TableImplied" -> new TableReified(list, copy, x[n], true);
+                  case "HybridTableInt" -> new HybridTable(list, copy);
+                  case "HybridTableStar" -> new HybridTable(list, copy, star);
+                  case "ExtensionalSupportVa" -> new ExtensionalSupportVa(list, copy);
+                  case "ExtensionalSupportStrTT" ->
+                      new ExtensionalSupportStr(list, copy, true, true);
+                  case "ExtensionalSupportStrTF" ->
+                      new ExtensionalSupportStr(list, copy, true, false);
+                  case "ExtensionalSupportStrFT" ->
+                      new ExtensionalSupportStr(list, copy, false, true);
+                  case "ExtensionalSupportStrFF" ->
+                      new ExtensionalSupportStr(list, copy, false, false);
+                  case "ExtensionalSupportMddIncremental", "ExtensionalSupportMddSearch" -> {
+                    ExtensionalSupportMdd mdd = new ExtensionalSupportMdd(list, copy);
+                    mdd.setPropagation(
+                        kind.endsWith("Search")
+                            ? ExtensionalSupportMdd.Propagation.SUPPORT_SEARCH
+                            : ExtensionalSupportMdd.Propagation.INCREMENTAL);
+                    yield mdd;
+                  }
+                  default -> new ExtensionalConflictVa(list, copy);
+                });
+          },
+          semantics,
+          "tuples=" + Arrays.deepToString(tuples) + (starred ? " star=" + star : ""));
+    };
+  }
+
+  /**
+   * Random tuples: none, a few random ones (values -2..4, with duplicates), the full product of the
+   * domains, or the full product minus some.
+   */
+  private static int[][] randomTuples(Random random, int[][] domains, int n) {
+    int mode = random.nextInt(6);
+    if (mode == 0) {
+      return new int[0][];
+    }
+    if (mode == 1) {
+      List<int[]> product = new ArrayList<>();
+      product(domains, new int[n], 0, product);
+      Collections.shuffle(product, random);
+      int keep = random.nextBoolean() ? product.size() : random.nextInt(product.size() + 1);
+      return product.subList(0, keep).toArray(int[][]::new);
+    }
+    int k = 1 + random.nextInt(10);
+    int[][] tuples = new int[k][n];
+    for (int[] t : tuples) {
+      for (int j = 0; j < n; j++) {
+        // mostly domain values, sometimes a value outside the domain
+        t[j] =
+            random.nextInt(5) == 0
+                ? -2 + random.nextInt(7)
+                : domains[j][random.nextInt(domains[j].length)];
+      }
+    }
+    if (k > 1 && random.nextBoolean()) {
+      tuples[k - 1] = tuples[0].clone();
+    }
+    return tuples;
+  }
+
+  private static void product(int[][] domains, int[] t, int i, List<int[]> out) {
+    if (i == t.length) {
+      out.add(t.clone());
+      return;
+    }
+    for (int v : domains[i]) {
+      t[i] = v;
+      product(domains, t, i + 1, out);
+    }
+  }
+
+  /** A restriction and its meaning for {@link #hybridRestrictions}. */
+  private record Cell(Restriction restriction, BiPredicate<Integer, int[]> accepts) {}
+
+  private static Cell randomCell(Random random, int column, int n) {
+    int v = -1 + random.nextInt(5);
+    int w = -1 + random.nextInt(5);
+    switch (random.nextInt(10)) {
+      case 0:
+        return new Cell(Restriction.any(), (a, t) -> true);
+      case 1:
+        return new Cell(Restriction.ne(v), (a, t) -> a != v);
+      case 2:
+        return new Cell(Restriction.le(v), (a, t) -> a <= v);
+      case 3:
+        return new Cell(Restriction.gt(v), (a, t) -> a > v);
+      case 4:
+        return new Cell(Restriction.in(v, w), (a, t) -> a == v || a == w);
+      case 5:
+        return new Cell(Restriction.notIn(v, w), (a, t) -> a != v && a != w);
+      case 6:
+        if (n > 1) {
+          int other = (column + 1 + random.nextInt(n - 1)) % n;
+          Restriction.Relation[] relations = Restriction.Relation.values();
+          Restriction.Relation relation = relations[random.nextInt(relations.length)];
+          int offset = random.nextInt(3) - 1;
+          return new Cell(
+              Restriction.column(relation, other, offset),
+              (a, t) ->
+                  switch (relation) {
+                    case LT -> a < t[other] + offset;
+                    case LE -> a <= t[other] + offset;
+                    case EQ -> a == t[other] + offset;
+                    case NE -> a != t[other] + offset;
+                    case GE -> a >= t[other] + offset;
+                    case GT -> a > t[other] + offset;
+                  });
+        }
+        return new Cell(Restriction.eq(v), (a, t) -> a == v);
+      default:
+        return new Cell(Restriction.eq(v), (a, t) -> a == v);
+    }
+  }
+
+  /** HybridTable with unary and between-column restrictions. */
+  private static Function<Random, Case> hybridRestrictions(boolean expand) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int[][] domains = domains(random, n, -1, 3);
+      int k = random.nextInt(6);
+      Cell[][] cells = new Cell[k][n];
+      for (int r = 0; r < k; r++) {
+        for (int j = 0; j < n; j++) {
+          cells[r][j] = randomCell(random, j, n);
+        }
+      }
+      Predicate<int[]> semantics =
+          t -> {
+            for (Cell[] row : cells) {
+              boolean match = true;
+              for (int j = 0; j < n && match; j++) {
+                match = row[j].accepts().test(t[j], t);
+              }
+              if (match) {
+                return true;
+              }
+            }
+            return false;
+          };
+      Restriction[][] tuples =
+          Arrays.stream(cells)
+              .map(row -> Arrays.stream(row).map(Cell::restriction).toArray(Restriction[]::new))
+              .toArray(Restriction[][]::new);
+      return Case.of(
+          domains,
+          (store, x) -> store.impose(new HybridTable(x, tuples, expand)),
+          semantics,
+          "tuples=" + Arrays.deepToString(tuples));
+    };
+  }
+
+  /**
+   * ExtensionalSupportMdd given as a random layered graph (node 1 the root, node 0 the terminal),
+   * with up to 3 nodes per inner level, labels within -2..4 and nodes without in- or out-edges.
+   */
+  private static Function<Random, Case> mddEdges() {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int[][] domains = domains(random, n, -1, 3);
+      List<Integer> level = new ArrayList<>();
+      List<List<Integer>> nodesAt = new ArrayList<>();
+      level.add(1);
+      nodesAt.add(List.of(1));
+      for (int l = 2; l <= n; l++) {
+        List<Integer> nodes = new ArrayList<>();
+        int width = 1 + random.nextInt(3);
+        for (int w = 0; w < width; w++) {
+          level.add(l);
+          nodes.add(level.size());
+        }
+        nodesAt.add(nodes);
+      }
+      nodesAt.add(List.of(0));
+      List<Integer> from = new ArrayList<>();
+      List<Integer> to = new ArrayList<>();
+      List<int[]> labels = new ArrayList<>();
+      for (int l = 0; l < n; l++) {
+        for (int node : nodesAt.get(l)) {
+          int edges = random.nextInt(3);
+          for (int e = 0; e < edges; e++) {
+            List<Integer> next = nodesAt.get(l + 1);
+            from.add(node);
+            to.add(next.get(random.nextInt(next.size())));
+            int a = -2 + random.nextInt(7);
+            int b = random.nextBoolean() ? a : -2 + random.nextInt(7);
+            labels.add(new int[] {a, b});
+          }
+        }
+      }
+      boolean search = random.nextBoolean();
+      int[] levelArray = level.stream().mapToInt(Integer::intValue).toArray();
+      int[] fromArray = from.stream().mapToInt(Integer::intValue).toArray();
+      int[] toArray = to.stream().mapToInt(Integer::intValue).toArray();
+      Predicate<int[]> semantics =
+          t -> {
+            Set<Integer> current = Set.of(1);
+            for (int i = 0; i < n; i++) {
+              Set<Integer> next = new HashSet<>();
+              for (int e = 0; e < fromArray.length; e++) {
+                int[] label = labels.get(e);
+                if (current.contains(fromArray[e]) && (t[i] == label[0] || t[i] == label[1])) {
+                  next.add(toArray[e]);
+                }
+              }
+              current = next;
+            }
+            return current.contains(0);
+          };
+      return Case.of(
+          domains,
+          (store, x) -> {
+            IntDomain[] label = new IntDomain[labels.size()];
+            for (int e = 0; e < label.length; e++) {
+              label[e] = new IntervalDomain();
+              label[e].unionAdapt(labels.get(e)[0], labels.get(e)[0]);
+              label[e].unionAdapt(labels.get(e)[1], labels.get(e)[1]);
+            }
+            ExtensionalSupportMdd mdd =
+                new ExtensionalSupportMdd(x, levelArray, fromArray, label, toArray);
+            mdd.setPropagation(
+                search
+                    ? ExtensionalSupportMdd.Propagation.SUPPORT_SEARCH
+                    : ExtensionalSupportMdd.Propagation.INCREMENTAL);
+            store.impose(mdd);
+          },
+          semantics,
+          "level="
+              + level
+              + " from="
+              + from
+              + " to="
+              + to
+              + " labels="
+              + labels.stream().map(Arrays::toString).toList()
+              + (search ? " SUPPORT_SEARCH" : " INCREMENTAL"));
+    };
   }
 
   /** Quantities, then capacity, then profit; weights and profits from 0 (KnapsackDP) or 1. */
