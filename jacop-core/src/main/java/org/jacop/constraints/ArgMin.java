@@ -215,22 +215,7 @@ public class ArgMin extends AbstractArgMinMax {
 
   @Override
   public boolean satisfied() {
-    // entailed when the index is fixed to a position that holds the first minimum: every earlier
-    // element is strictly larger and every later one is larger or equal, whatever their values
-    if (!extremeIndex.singleton()) {
-      return false;
-    }
-    int idx = extremeIndex.value() - 1 - indexOffset;
-    if (idx < 0 || idx >= list.length || !list[idx].singleton()) {
-      return false;
-    }
-    int extreme = list[idx].value();
-    for (int i = 0; i < list.length; i++) {
-      if (list[i].min() < (i < idx ? extreme + 1 : extreme)) {
-        return false;
-      }
-    }
-    return true;
+    return firstExtremumEntailed(false);
   }
 
   @Override
