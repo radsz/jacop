@@ -137,15 +137,15 @@ public class EqBool extends PrimitiveConstraint {
     int x0 = counts[1];
     int index01 = counts[2];
 
-    boolean resultIsPositive = negated ? result.max() == 0 : result.min() == 1;
+    // the list must be all equal when result is 1 (result is 0 for the negation), and must not be
+    // all equal when result is 0 (result is 1 for the negation)
+    boolean mustBeEqual = negated ? result.max() == 0 : result.min() == 1;
+    boolean mustDiffer = negated ? result.min() == 1 : result.max() == 0;
 
-    if (resultIsPositive) {
-      applyResultPositivePropagation(store, negated, x0, x1, index01);
-    } else {
-      boolean resultIsNegative = negated ? result.min() == 1 : result.max() == 0;
-      if (resultIsNegative) {
-        applyResultNegativePropagation(store, negated, x0, x1, index01);
-      }
+    if (mustBeEqual) {
+      propagateAllEqual(store, x0, x1);
+    } else if (mustDiffer) {
+      propagateNotAllEqual(store, x0, x1, index01);
     }
 
     if (x0 > 0 && x1 > 0) {
@@ -172,25 +172,7 @@ public class EqBool extends PrimitiveConstraint {
     return new int[] {x1, x0, index01};
   }
 
-  private void applyResultPositivePropagation(
-      Store store, boolean negated, int x0, int x1, int index01) {
-    if (negated) {
-      applyResultPositivePropagationNegated(store, x0, x1, index01);
-    } else {
-      applyResultPositivePropagationNonNegated(store, x0, x1);
-    }
-  }
-
-  private void applyResultPositivePropagationNegated(Store store, int x0, int x1, int index01) {
-    if (x0 == 0 && x1 == list.length - 1) {
-      list[index01].domain.inValue(store.level, list[index01], 0);
-    }
-    if (x1 == 0 && x0 == list.length - 1) {
-      list[index01].domain.inValue(store.level, list[index01], 1);
-    }
-  }
-
-  private void applyResultPositivePropagationNonNegated(Store store, int x0, int x1) {
+  private void propagateAllEqual(Store store, int x0, int x1) {
     if (x0 > 0) {
       for (IntVar intVar : list) {
         intVar.domain.inValue(store.level, intVar, 0);
@@ -203,29 +185,7 @@ public class EqBool extends PrimitiveConstraint {
     }
   }
 
-  private void applyResultNegativePropagation(
-      Store store, boolean negated, int x0, int x1, int index01) {
-    if (negated) {
-      applyResultNegativePropagationNegated(store, x0, x1);
-    } else {
-      applyResultNegativePropagationNonNegated(store, x0, x1, index01);
-    }
-  }
-
-  private void applyResultNegativePropagationNegated(Store store, int x0, int x1) {
-    if (x0 > 0) {
-      for (IntVar intVar : list) {
-        intVar.domain.inValue(store.level, intVar, 0);
-      }
-    }
-    if (x1 > 0) {
-      for (IntVar intVar : list) {
-        intVar.domain.inValue(store.level, intVar, 1);
-      }
-    }
-  }
-
-  private void applyResultNegativePropagationNonNegated(Store store, int x0, int x1, int index01) {
+  private void propagateNotAllEqual(Store store, int x0, int x1, int index01) {
     if (x0 == 0 && x1 == list.length - 1) {
       list[index01].domain.inValue(store.level, list[index01], 0);
     }

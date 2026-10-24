@@ -5261,6 +5261,41 @@ class SingleConstraintTest extends TestHelper {
     assertThat(new ChannelImply(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
   }
 
+  /** Counts all solutions, labelling the variables in the given order. */
+  private static int countInOrder(Store store, IntVar... vars) {
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
+  }
+
+  @Test
+  void testNegatedEqBoolKeepsAllSolutions() {
+    // not(eqBool(x, r)) holds for exactly the half of the 16 assignments where r differs from
+    // "all x are equal"; the negation used to force the wrong values
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Not(new EqBool(x, r)));
+    assertThat(countInOrder(store, x[0], x[1], x[2], r)).isEqualTo(8);
+
+    // with x0 = 0 and the result 0, the negation needs all equal: x1 = x2 = 0 only
+    Store store2 = new Store();
+    IntVar[] y = {
+      new IntVar(store2, "y0", 0, 0), new IntVar(store2, "y1", 0, 1), new IntVar(store2, "y2", 0, 1)
+    };
+    IntVar b = new IntVar(store2, "b", 0, 1);
+    IntVar r2 = new IntVar(store2, "r2", 0, 0);
+    store2.impose(new Reified(new EqBool(y, r2), b));
+    // b = 1 needs y not all equal (3 assignments), b = 0 needs all equal (1 assignment)
+    assertThat(countInOrder(store2, b, y[1], y[2])).isEqualTo(4);
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
