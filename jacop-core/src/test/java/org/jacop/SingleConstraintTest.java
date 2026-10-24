@@ -122,6 +122,7 @@ import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -4893,6 +4894,38 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
+  @Test
+  void xmulYeqCNegatedWithZeroFactor() {
+    // with x = 0 the negation divided c by 0; x * y != c then holds for all y when c != 0 and for
+    // no y when c == 0
+    for (int c : new int[] {-5, 0}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 0);
+      IntVar y = new IntVar(store, "y", -2, 2);
+      store.impose(new Not(new XmulYeqC(x, y, c)));
+      IntVar[] vars = {x, y};
+      int expected = c == 0 ? 0 : 5;
+      assertThat(store.consistency() ? countSolutions(store, vars, new Random(c)) : 0)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void xmulYeqCNotSatisfiedWithNegativeBounds() {
+    // -2 * 3 = -6 is possible, but notSatisfied() compared c with min * min and max * max only
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 4);
+    XmulYeqC mul = new XmulYeqC(x, y, -6);
+    assertThat(mul.notSatisfied()).isFalse();
+
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, -6), b));
+    IntVar[] vars = {x, y, b};
+    List<int[]> expected = bruteForce(vars, t -> (t[0] * t[1] == -6) == (t[2] == 1));
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {

@@ -143,7 +143,12 @@ public class XmulYeqC extends AbstractConstraintXandY {
 
       store.propagationHasOccurred = false;
 
-      if (x.singleton() && c % x.value() == 0) {
+      if (x.singleton(0) || y.singleton(0)) {
+        // the product is 0 whatever the other variable is
+        if (c == 0) {
+          throw Store.failException;
+        }
+      } else if (x.singleton() && c % x.value() == 0) {
         y.domain.inComplement(store.level, y, c / x.value());
       } else if (y.singleton() && c % y.value() == 0) {
         x.domain.inComplement(store.level, x, c / y.value());
@@ -154,9 +159,11 @@ public class XmulYeqC extends AbstractConstraintXandY {
 
   @Override
   public boolean notSatisfied() {
-    IntDomain xDom = x.dom();
-    IntDomain yDom = y.dom();
-    return xDom.max() * yDom.max() < c || xDom.min() * yDom.min() > c;
+    if (xSquare && c < 0) {
+      return true;
+    }
+    Interval r = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+    return c < r.min() || c > r.max();
   }
 
   @Override
