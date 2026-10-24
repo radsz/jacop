@@ -590,7 +590,19 @@ public class Binpacking extends Constraint
       throw Store.failException;
     }
 
-    for (int k = 0; k <= capacity / 2; k++) {
+    // Martello and Toth's L2 is the maximum of L(k) over 0 <= k <= capacity / 2, but L(k) only
+    // needs to be evaluated for k = 0 and for the distinct item sizes up to capacity / 2
+    // (x is sorted in descending order).
+    int previous = -1;
+    for (int j = nn; j >= 0; j--) {
+      int k = j == nn ? 0 : x[j];
+      if (k > capacity / 2) {
+        break;
+      }
+      if (k == previous) {
+        continue;
+      }
+      previous = k;
       int currentLb = computeLbForK(x, nn, capacity, k);
       if (currentLb > lb) {
         lb = currentLb;
