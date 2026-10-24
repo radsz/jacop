@@ -195,6 +195,8 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -202,6 +204,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincFreeSearchTest.java</include>
                             </includes>
                             <excludes>
                                 <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
@@ -240,6 +243,8 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -254,6 +259,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
@@ -292,6 +298,8 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -306,6 +314,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -344,6 +353,8 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -353,6 +364,7 @@ setup to run configuration. -->
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -775,12 +787,15 @@ setup to run configuration. -->
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
+                        <include>**/AccumulatedFailureCountTest.java</include>
+                        <include>**/FreeSearchTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                     </includes>
                     <excludes>
                         <exclude>**/MinizincBasedUpTo5SecondsTest.java</exclude>
+                        <exclude>**/MinizincFreeSearchTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>

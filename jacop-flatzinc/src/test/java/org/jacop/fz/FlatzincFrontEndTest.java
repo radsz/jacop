@@ -544,6 +544,170 @@ class FlatzincFrontEndTest {
         "constraints missing from -debug output:\n" + stdout);
   }
 
+  @Test
+  void freeSearchIgnoresSeveralSearchAnnotations() throws IOException {
+    // With two or more search annotations -f followed them instead of using free search.
+    String fzn =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve :: int_search([x], input_order, indomain_max, complete)
+              :: int_search([y], input_order, indomain_max, complete) satisfy;
+        """;
+
+    assertEquals("x = 3;\ny = 2;", solutionLines(run(fzn)[0]));
+    assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-engine", "legacy")[0]));
+    // the new engine follows the annotations only on the runs it interleaves them on
+    assertEquals(
+        "x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-config", "interleave=none")[0]));
+  }
+
+  @Test
+  void freeSearchReportsAllSolutionsOncePerAssignmentOfOutputVariables() throws IOException {
+    // Free search labelled every variable, so with -a x = 0 was reported once for each value of
+    // b, which x = 0 leaves free and which is not an output variable, and the set s, which is not
+    // an output variable either, gave every solution again for each of its values.
+    String fzn =
+        """
+        var 0..1: x:: output_var;
+        var bool: b;
+        var set of 1..2: s;
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn, "-f", "-a")[0];
+    List<String> solutions =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(FlatzincFrontEndTest::solutionLines)
+            .filter(b -> !b.isBlank())
+            .sorted()
+            .toList();
+    assertEquals(List.of("x = 0;", "x = 1;"), solutions, stdout);
+    assertTrue(stdout.contains("=========="), stdout);
+  }
+
+  @Test
+  void newFreeSearchEngineGivesTheResultsOfTheLegacyOne() throws IOException {
+    String[] models = {
+      // satisfaction with integers and Booleans
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve satisfy;
+      """,
+      // optimisation
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve minimize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve maximize x;
+      """,
+      // no solution
+      """
+      var 1..2: x :: output_var;
+      var 1..2: y :: output_var;
+      var 1..2: z :: output_var;
+      constraint int_ne(x, y);
+      constraint int_ne(y, z);
+      constraint int_ne(x, z);
+      solve satisfy;
+      """,
+      // annotated searches, interleaved with free search
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve :: int_search([y, x], input_order, indomain_max, complete) maximize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      solve :: seq_search([bool_search([b], input_order, indomain_max, complete),
+                           int_search([y], input_order, indomain_max, complete)]) satisfy;
+      """,
+      // sets
+      """
+      var set of 1..3: s :: output_var;
+      var 1..3: x :: output_var;
+      constraint set_card(s, 2);
+      constraint set_in(x, s);
+      solve satisfy;
+      """
+    };
+    String[][] engines = {
+      {"--free-engine", "new"},
+      {"--free-engine", "new", "--restart", "luby", "--restart-scale", "1"},
+      {"--free-engine", "new", "--restart-scale", "1", "--free-config", "interleave=solution"},
+      {
+        "--free-engine",
+        "new",
+        "--free-config",
+        "heuristic=afc,lc=0,phase=0,restarts=none,interleave=none"
+      }
+    };
+    for (String model : models) {
+      boolean optimisation = model.contains("minimize") || model.contains("maximize");
+      String legacy =
+          normalised(run(model, "-f", "--free-engine", "legacy", "-a")[0], optimisation);
+      for (String[] engine : engines) {
+        String[] options = Arrays.copyOf(new String[] {"-f", "-a"}, 2 + engine.length);
+        System.arraycopy(engine, 0, options, 2, engine.length);
+        assertEquals(
+            legacy,
+            normalised(run(model, options)[0], optimisation),
+            model + Arrays.toString(engine));
+      }
+    }
+  }
+
+  /** The solution lines of an output, without comments. */
+  private static String solutionLines(String stdout) {
+    return stdout
+        .lines()
+        .filter(line -> !line.startsWith("%") && !line.startsWith("-") && !line.startsWith("="))
+        .collect(Collectors.joining("\n"));
+  }
+
+  /**
+   * An output reduced to what free search engines must agree on: for satisfaction the set of
+   * solutions, for optimisation the last one, and the final status lines.
+   */
+  private static String normalised(String stdout, boolean optimisation) {
+    List<String> blocks =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(b -> b.lines().filter(l -> !l.startsWith("%")).collect(Collectors.joining(" ")))
+            .filter(b -> !b.isBlank())
+            .toList();
+    List<String> solutions = blocks.stream().filter(b -> !b.startsWith("=")).toList();
+    String status = blocks.stream().filter(b -> b.startsWith("=")).collect(Collectors.joining());
+    return (optimisation ? solutions.getLast() : new TreeSet<>(solutions).toString())
+        + " "
+        + status;
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");

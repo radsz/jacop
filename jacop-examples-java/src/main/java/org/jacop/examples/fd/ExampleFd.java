@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
@@ -53,6 +54,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.WeightedDegree;
+import org.jacop.search.free.FreeSearch;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.
@@ -81,6 +83,9 @@ public abstract class ExampleFd {
 
   /** It specifies the search procedure used by a given example. */
   public Search<IntVar> searchLabel;
+
+  /** It specifies the free search used by {@link #searchFree()}. */
+  public FreeSearch freeSearch;
 
   /**
    * It prints a matrix of variables. All variables must be grounded.
@@ -162,6 +167,39 @@ public abstract class ExampleFd {
     boolean result = searchLabel.labeling(store, select, cost);
 
     if (result) {
+      store.print();
+    }
+
+    printExecutionTime(t1);
+    return result;
+  }
+
+  /**
+   * It searches with free search: dom/wdeg with last conflict, phase saving and restarts (see
+   * {@link FreeSearch#withDefaults(Store, IntVar[])}), minimizing the cost function if there is
+   * one. The variables keep the values of the last solution found.
+   *
+   * @return true if there is a solution, false otherwise.
+   */
+  public boolean searchFree() {
+
+    final long t1 = System.currentTimeMillis();
+
+    IntVar[] decisionVars = vars.stream().filter(v -> v != cost).toArray(IntVar[]::new);
+    IntVar[] recorded = Arrays.copyOf(decisionVars, decisionVars.length + 1);
+    recorded[decisionVars.length] = cost != null ? cost : decisionVars[0];
+    FreeSearch.Builder builder = FreeSearch.withDefaults(store, decisionVars).record(recorded);
+    if (cost != null) {
+      builder.minimize(cost);
+    }
+    freeSearch = builder.build();
+    FreeSearch.Status status = freeSearch.solve();
+    log.info("Free search: {}", status);
+
+    boolean result =
+        status != FreeSearch.Status.UNSATISFIABLE && status != FreeSearch.Status.UNKNOWN;
+    if (result) {
+      freeSearch.assignSolution();
       store.print();
     }
 
