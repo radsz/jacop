@@ -5066,6 +5066,27 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void ifThenElseReachesFixpoint() {
+    // the false branch rules out its side of the condition, then the other branch fixes the
+    // condition's variables to the side that was ruled out
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar zero = new IntVar(store, "zero", 0, 0);
+    PrimitiveConstraint both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XeqY(x0, x1), new XeqC(zero, 1), both));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x0 = new IntVar(store, "x0", 0, 1);
+    x1 = new IntVar(store, "x1", 0, 1);
+    zero = new IntVar(store, "zero", 0, 0);
+    both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XneqY(x0, x1), both, new XeqC(zero, 1)));
+    assertThat(store.consistency()).isFalse();
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
