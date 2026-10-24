@@ -53,6 +53,7 @@ import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SumWeightedSet;
 import org.jacop.set.core.BoundSetDomain;
@@ -509,6 +510,33 @@ class SingleConstraintTest {
 
     assertThat(sum.satisfied()).isFalse();
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testMatchReachesFixpoint() {
+    // the general case completed the glb of a without checking the list against it, so the search
+    // accepted a = {-1, 2, 3} with list [-1, 3, 2]; there is no solution
+    SetImposeGroundingHarness.check(
+        "Match",
+        random ->
+            new Case(
+                new Spec[] {
+                  Spec.setVar(new int[0], new int[] {-1, 0, 2, 3, 4}),
+                  Spec.intVar(-1, 1, 4),
+                  Spec.intVar(1, 3, 4),
+                  Spec.intVar(0, 1, 2)
+                },
+                (store, x) -> {
+                  Match c = new Match((SetVar) x[0], Arrays.copyOfRange(x, 1, 4, IntVar[].class));
+                  store.impose(c);
+                  return c;
+                },
+                t -> {
+                  int[] e = t.elements(0);
+                  return e.length == 3 && e[0] == t.i(1) && e[1] == t.i(2) && e[2] == t.i(3);
+                },
+                ""),
+        1);
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
