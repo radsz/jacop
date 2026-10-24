@@ -39,6 +39,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.floats.constraints.AbsPeqR;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
@@ -376,4 +377,18 @@ class SingleConstraintTest {
     z.domain.in(store.level, z, -0.25, -0.25);
     assertThat(store.consistency()).isFalse();
   }
+
+  @Test
+  void testAbsAndSqrtNotSatisfiedByNegativeResult() {
+    // |1| = -1 and sqrt(1) = -1 counted as satisfied: AbsPeqR compared -p with q, SqrtPeqR checked
+    // only r * r = p
+    Store store = new Store();
+    FloatVar one = new FloatVar(store, "one", 1, 1);
+    FloatVar minusOne = new FloatVar(store, "minusOne", -1, -1);
+    assertThat(new AbsPeqR(one, minusOne).satisfied()).isFalse();
+    assertThat(new AbsPeqR(minusOne, one).satisfied()).isTrue();
+    assertThat(new SqrtPeqR(one, minusOne).satisfied()).isFalse();
+    assertThat(new SqrtPeqR(one, one).satisfied()).isTrue();
+  }
+
 }
