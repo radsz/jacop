@@ -55,19 +55,6 @@ public class XgtY extends AbstractXcompY {
   }
 
   @Override
-  public void impose(Store store) {
-
-    // only the same variable twice is rejected here; other inconsistencies make consistency fail
-    if (x == y) {
-      // If x and y are the same, XgtY is trivially inconsistent.
-      throw new IllegalArgumentException(
-          "Arguments to XgtY are the same, the model is trivially inconsistent.");
-    }
-
-    super.impose(store);
-  }
-
-  @Override
   protected boolean readsMinOfX() {
     return false;
   }

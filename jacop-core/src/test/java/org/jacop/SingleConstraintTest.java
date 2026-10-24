@@ -107,6 +107,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
@@ -4278,6 +4279,28 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countOnSameVariable(XgtY::new, Xor::new, 0)).isZero();
     assertThat(countOnSameVariable(XltY::new, (c, b) -> new Not(c), -1)).isEqualTo(6);
     assertThat(countOnSameVariable(XlteqY::new, Xor::new, 0)).isEqualTo(6);
+  }
+
+  // x < x, x > x and x != x never hold. impose rejected them with IllegalArgumentException, which
+  // also escaped from search when IfThen imposed its then-part once the condition held.
+  @Test
+  void testComparisonOfAVariableWithItselfThatNeverHoldsFails() {
+
+    List<BiFunction<IntVar, IntVar, PrimitiveConstraint>> never =
+        List.of(XltY::new, XgtY::new, XneqY::new);
+    for (BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison : never) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 3);
+      store.impose(comparison.apply(x, x));
+      assertThat(store.consistency()).isFalse();
+
+      store = new Store();
+      x = new IntVar(store, "x", 0, 3);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      store.impose(new IfThen(new XeqC(b, 1), comparison.apply(x, x)));
+      // only b = 0 is left, with any x
+      assertThat(countSolutions(store, new IntVar[] {b, x}, new Random(1))).isEqualTo(4);
+    }
   }
 
   /**
