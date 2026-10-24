@@ -374,6 +374,23 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void sequenceSearchStatisticsCountReportedSolutions() throws IOException {
+    // Each search of a seq_search counted the solutions of its own phase and the statistics
+    // summed them: 4 solutions were reported as solutions=22.
+    String model =
+        """
+        array [1..2] of var 1..2: x;
+        array [1..2] of var bool: b;
+        constraint int_ne(x[1],x[2]);
+        constraint bool_xor(b[1],b[2],true);
+        solve :: seq_search([int_search(x,input_order,indomain_min,complete),bool_search(b,input_order,indomain_min,complete)]) satisfy;
+        """;
+    String out = run(model, "-a", "-s")[0];
+    assertEquals(4, out.lines().filter(l -> l.equals("----------")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: solutions=4\n"), out);
+  }
+
+  @Test
   void restartSearchFindsTheOptimumAfterRestartsWithoutABetterSolution() throws IOException {
     // Restart search stopped after the first restart that found no better solution and printed
     // ========== for the last solution (c = 1 here) as if it were optimal.
