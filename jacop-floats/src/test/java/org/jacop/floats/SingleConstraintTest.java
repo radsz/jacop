@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
 
 import org.jacop.constraints.Not;
+import org.jacop.constraints.Reified;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.ElementFloat;
@@ -51,6 +52,7 @@ import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
@@ -251,5 +253,36 @@ class SingleConstraintTest {
       domain.unionAdapt(v, v);
     }
     return domain;
+  }
+
+  @Test
+  void testAdditionNotSatisfiedWhenSumIsTooSmall() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 1, 1);
+    FloatVar q = new FloatVar(store, "q", 1, 1);
+    FloatVar r = new FloatVar(store, "r", 0, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+
+    // satisfied() tested r - p - q < epsilon without abs, so 1 + 1 = 0 counted as satisfied
+    PplusQeqR sum = new PplusQeqR(p, q, r);
+    assertThat(sum.satisfied()).isFalse();
+    PplusCeqR sumC = new PplusCeqR(p, 1, r);
+    assertThat(sumC.satisfied()).isFalse();
+
+    store.impose(new Reified(new PplusQeqR(p, q, r), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.value()).isZero();
+  }
+
+  @Test
+  void testAdditionWithConstantReifiedWhenGround() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", 1, 1);
+    FloatVar r = new FloatVar(store, "r", 0, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+
+    store.impose(new Reified(new PplusCeqR(p, 1, r), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.value()).isZero();
   }
 }
