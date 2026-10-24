@@ -80,7 +80,9 @@ public class LinearIntDom extends LinearInt {
    * @param sum the sum of weighted variables.
    */
   public LinearIntDom(IntVar[] list, int[] weights, String rel, int sum) {
-    commonInitialization(list[0].getStore(), list, weights, rel, sum);
+    checkInputForNullness("list", list);
+    checkInputForNullness("weights", weights);
+    commonInitialization(storeOf(list), list, weights, rel, sum);
     numberId = idNumber.incrementAndGet();
     queueIndex = 4;
   }
@@ -95,6 +97,9 @@ public class LinearIntDom extends LinearInt {
    * @param sum variable containing the sum of weighted variables.
    */
   public LinearIntDom(IntVar[] list, int[] weights, String rel, IntVar sum) {
+    checkInputForNullness("list", list);
+    checkInputForNullness("weights", weights);
+    checkInputForNullness("sum", new Object[] {sum});
     commonInitialization(
         sum.getStore(),
         Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
@@ -117,7 +122,7 @@ public class LinearIntDom extends LinearInt {
   public LinearIntDom(
       List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
     commonInitialization(
-        variables.getFirst().getStore(),
+        storeOf(variables.toArray(new IntVar[0])),
         variables.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
