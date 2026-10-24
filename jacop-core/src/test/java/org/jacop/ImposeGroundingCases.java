@@ -35,11 +35,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYgtC;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -58,26 +68,29 @@ final class ImposeGroundingCases {
   private ImposeGroundingCases() {}
 
   static Stream<Arguments> cases() {
-    return Stream.of(
-        Arguments.of(
-            "XplusYeqZ",
-            (Function<Random, Case>)
-                random ->
-                    Case.primitive(
-                        domains(random, 3, -2, 4),
-                        x -> new XplusYeqZ(x[0], x[1], x[2]),
-                        t -> t[0] + t[1] == t[2],
-                        "")),
-        Arguments.of("GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
-        Arguments.of("Knapsack without DP", knapsack("Knapsack")),
-        Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
-        Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
-        Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
-        Arguments.of("CumulativeEF", cumulative("Cumulative")),
-        Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
-        Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
-        Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
-        Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional")));
+    return Stream.concat(
+        Stream.of(
+            Arguments.of(
+                "XplusYeqZ",
+                (Function<Random, Case>)
+                    random ->
+                        Case.primitive(
+                            domains(random, 3, -2, 4),
+                            x -> new XplusYeqZ(x[0], x[1], x[2]),
+                            t -> t[0] + t[1] == t[2],
+                            "")),
+            Arguments.of(
+                "GCC with first value", (Function<Random, Case>) ImposeGroundingCases::gcc),
+            Arguments.of("Knapsack without DP", knapsack("Knapsack")),
+            Arguments.of("KnapsackDP", knapsack("KnapsackDP")),
+            Arguments.of("CumulativeOld", cumulative("CumulativeOld")),
+            Arguments.of("CumulativeBasic flags", cumulative("CumulativeBasic")),
+            Arguments.of("CumulativeEF", cumulative("Cumulative")),
+            Arguments.of("CumulativeUnary flags", cumulative("CumulativeUnary")),
+            Arguments.of("CumulativePrimary", cumulative("CumulativePrimary")),
+            Arguments.of("CumulativeOptional", cumulative("CumulativeOptional")),
+            Arguments.of("CumulativeUnaryOptional", cumulative("CumulativeUnaryOptional"))),
+        additive());
   }
 
   /** Quantities, then capacity, then profit; weights and profits from 0 (KnapsackDP) or 1. */
@@ -274,5 +287,87 @@ final class ImposeGroundingCases {
       values.add(lo + random.nextInt(hi - lo + 1));
     }
     return values.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  /**
+   * Batch B3: the additive constraints, including instances whose variables are aliased (the same
+   * variable passed twice), where impose() and consistency() take special paths.
+   */
+  static Stream<Arguments> additive() {
+    return Stream.of(
+        primitive(
+            "XplusYeqZ(x,x,z)",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYeqZ(x[0], x[0], x[1]),
+            (t, c) -> t[0] + t[0] == t[1]),
+        primitive(
+            "XplusCeqZ",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusCeqZ(x[0], c, x[1]),
+            (t, c) -> t[0] + c == t[1]),
+        primitive(
+            "XplusClteqZ",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusClteqZ(x[0], c, x[1]),
+            (t, c) -> t[0] + c <= t[1]),
+        primitive(
+            "XplusClteqZImplied",
+            r -> new int[][] {domain(r, 0, 1), domain(r, -3, 4), domain(r, -3, 4)},
+            (x, c) -> new XplusClteqZImplied(x[0], x[1], c, x[2]),
+            (t, c) -> t[0] == 0 || t[1] + c <= t[2]),
+        primitive(
+            "XplusCneqZ",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusCneqZ(x[0], c, x[1]),
+            (t, c) -> t[0] + c != t[1]),
+        primitive(
+            "XplusYeqC",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYeqC(x[0], x[1], c),
+            (t, c) -> t[0] + t[1] == c),
+        primitive(
+            "XplusYeqC(x,x,c)",
+            r -> domains(r, 1, -3, 4),
+            (x, c) -> new XplusYeqC(x[0], x[0], c),
+            (t, c) -> t[0] + t[0] == c),
+        primitive(
+            "XplusYgtC",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYgtC(x[0], x[1], c),
+            (t, c) -> t[0] + t[1] > c),
+        primitive(
+            "XplusYgtC(x,x,c)",
+            r -> domains(r, 1, -3, 4),
+            (x, c) -> new XplusYgtC(x[0], x[0], c),
+            (t, c) -> t[0] + t[0] > c),
+        primitive(
+            "XplusYlteqZ",
+            r -> domains(r, 3, -3, 4),
+            (x, c) -> new XplusYlteqZ(x[0], x[1], x[2]),
+            (t, c) -> t[0] + t[1] <= t[2]),
+        primitive(
+            "XplusYlteqZ(x,x,z)",
+            r -> domains(r, 2, -3, 4),
+            (x, c) -> new XplusYlteqZ(x[0], x[0], x[1]),
+            (t, c) -> t[0] + t[0] <= t[1]));
+  }
+
+  /** A primitive constraint case with a random constant c in -3..3. */
+  static Arguments primitive(
+      String name,
+      Function<Random, int[][]> domains,
+      BiFunction<IntVar[], Integer, PrimitiveConstraint> build,
+      BiPredicate<int[], Integer> semantics) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random -> {
+              int c = random.nextInt(7) - 3;
+              return Case.primitive(
+                  domains.apply(random),
+                  x -> build.apply(x, c),
+                  t -> semantics.test(t, c),
+                  "c = " + c);
+            });
   }
 }
