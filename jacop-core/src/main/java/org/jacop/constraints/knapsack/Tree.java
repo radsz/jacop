@@ -84,22 +84,22 @@ public class Tree {
    * It specifies the fraction of the critical item which has been not included in the optimal
    * non-integral solution.
    */
-  int availableWeightOfCriticalItem;
+  long availableWeightOfCriticalItem;
 
   /** It specifies how much weight is used by an optimal non-fractional solution. */
-  int takenWeightOfCriticalItem;
+  long takenWeightOfCriticalItem;
 
   /**
    * It specifies the already obtained profit due to the items which are already included in the
    * solution.
    */
-  int alreadyObtainedProfit;
+  long alreadyObtainedProfit;
 
   /**
    * It specifies the already used capacity due to the items which are already included in the
    * solution.
    */
-  int alreadyUsedCapacity;
+  long alreadyUsedCapacity;
 
   /**
    * It specifies if the mandatory check has run out of right items to complement mandatory items.
@@ -122,16 +122,19 @@ public class Tree {
    * It specifies the currentWeight from which searching for next mandatory item starts from. Only
    * items with weight greater or equal to currentWeight can be (partially) mandatory.
    */
-  int currentWeight;
+  long currentWeight;
 
   /** It specifies the current profit obtained by all already traversed right items. */
-  int currentProfit;
+  long currentProfit;
 
   /** It specifies the profit obtained from the remaining part of the critical item. */
   double profitFromCriticalLeft;
 
   /** It specifies the profit obtained from the remaining part of the critical item. */
   double profitFromCriticalTaken;
+
+  /** The replaceable or intrusion weight returned when it can not be bounded: no pruning. */
+  static final long NO_PRUNING = Long.MAX_VALUE / 4;
 
   /**
    * Create a single node tree.
@@ -256,7 +259,7 @@ public class Tree {
    *
    * @param capacity available capacity to be used by knapsack.
    */
-  public void updateCritical(int capacity) {
+  public void updateCritical(long capacity) {
 
     if (capacity == 0 || root.getPSum() == 0) {
       criticalLeaf = first;
@@ -268,7 +271,7 @@ public class Tree {
     }
 
     TreeNode current = root;
-    int usedCapacity = 0;
+    long usedCapacity = 0;
     double obtainedProfit = 0;
 
     while (!current.isLeaf()) {
@@ -321,7 +324,7 @@ public class Tree {
    * @param capacity available capacity to be used by knapsack.
    * @return the position of the item.
    */
-  public int getCriticalPosition(int capacity) {
+  public int getCriticalPosition(long capacity) {
 
     if (capacity < 0) {
       return 0;
@@ -332,7 +335,7 @@ public class Tree {
     }
 
     TreeNode current = root;
-    int usedCapacity = 0;
+    long usedCapacity = 0;
 
     while (!current.isLeaf()) {
 
@@ -440,14 +443,14 @@ public class Tree {
    * @return the amount of weight of a given item that can be replaced by Right items without
    *     violating the constraint.
    */
-  public int computeReplacableWeight(
+  public long computeReplacableWeight(
       int weightOfItemChecked,
       int maxNoOfItems,
       int profitOfItemChecked,
       double efficiencyOfItemChecked,
       double profitSlack) {
 
-    Integer criticalReturn =
+    Long criticalReturn =
         tryCriticalLeafReturnReplacable(
             weightOfItemChecked, profitOfItemChecked, efficiencyOfItemChecked, profitSlack);
     if (criticalReturn != null) {
@@ -462,13 +465,9 @@ public class Tree {
       finalReplacementLoopRight(efficiencyOfItemChecked, profitSlack);
     }
 
-    if (!exhaustedRightItems && currentNode.rightNeighbor.getPSum() == 0) {
-      currentNode = currentNode.rightNeighbor;
-    }
-
     // Found the last leaf before exceeding slack.
 
-    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
+    long weightNoPruning = (long) weightOfItemChecked * maxNoOfItems;
     if (currentWeight > weightNoPruning) {
       // Checked item does not have anything mandatory.
       // Next item must have weightNoPruning larger than currentWeight.
@@ -487,13 +486,14 @@ public class Tree {
 
     if (!exhaustedRightItems) {
 
-      if (currentNode.rightNeighbor == null) {
-        log.debug("Problem {}", this);
-      }
-
       double efficiencyLoss =
           profitOfItemChecked / (double) weightOfItemChecked
               - currentNode.rightNeighbor.getPSum() / (double) currentNode.rightNeighbor.getWSum();
+      if (!(efficiencyLoss > 0)) {
+        // The next item is as efficient as the checked one (only possible through rounding errors,
+        // as such an item is consumed above), so the replacement can not be bounded here.
+        return NO_PRUNING;
+      }
       lastWeight /= efficiencyLoss;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
@@ -511,28 +511,30 @@ public class Tree {
       // miss mandatory item.
       // currentWeight += (int) Math.floor( lastWeight );
     }
-    return currentWeight + (int) Math.ceil(lastWeight);
+    return currentWeight + (long) Math.ceil(lastWeight);
   }
 
   /** Returns replacement weight if critical leaf case applies, else null. */
-  private Integer tryCriticalLeafReturnReplacable(
+  private Long tryCriticalLeafReturnReplacable(
       int weightOfItemChecked,
       int profitOfItemChecked,
       double efficiencyOfItemChecked,
       double profitSlack) {
     if (currentNode != criticalLeaf
         || efficiencyOfItemChecked * availableWeightOfCriticalItem - profitFromCriticalLeft
-            <= profitSlack) {
+            <= profitSlack
+        || (long) criticalLeaf.weightOfOne * profitOfItemChecked
+            <= (long) weightOfItemChecked * criticalLeaf.profitOfOne) {
       return null;
     }
-    return (int)
+    return (long)
         Math.ceil(
             profitSlack
                 * criticalLeaf.weightOfOne
                 * weightOfItemChecked
                 / (double)
-                    (criticalLeaf.weightOfOne * profitOfItemChecked
-                        - weightOfItemChecked * criticalLeaf.profitOfOne));
+                    ((long) criticalLeaf.weightOfOne * profitOfItemChecked
+                        - (long) weightOfItemChecked * criticalLeaf.profitOfOne));
   }
 
   private void exhaustRightItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
@@ -574,22 +576,25 @@ public class Tree {
   }
 
   private void finalReplacementLoopRight(double efficiencyOfItemChecked, double profitSlack) {
+    // It descends towards the leaves, at each level taking the right neighbor while the profit
+    // slack allows it. The neighbor of a leaf reached by descending must still be checked, as must
+    // the neighbors of a taken leaf (e.g. items which are already fixed have no weight left).
     while (true) {
-      if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
-              - (currentProfit + currentNode.rightNeighbor.getPSum())
-              - profitFromCriticalLeft
-          < profitSlack) {
-        currentNode = currentNode.rightNeighbor;
+      TreeNode next = currentNode.rightNeighbor;
+      if (next != null
+          && efficiencyOfItemChecked * (currentWeight + next.getWSum())
+                  - (currentProfit + next.getPSum())
+                  - profitFromCriticalLeft
+              <= profitSlack) {
+        currentNode = next;
         currentWeight += currentNode.getWSum();
         currentProfit += currentNode.getPSum();
+      } else if (!currentNode.isLeaf()) {
+        currentNode = currentNode.right;
       } else {
-        if (!currentNode.isLeaf()) {
-          currentNode = currentNode.right;
-        } else {
-          break;
+        if (next == null) {
+          exhaustedRightItems = true;
         }
-      }
-      if (currentNode.isLeaf()) {
         break;
       }
     }
@@ -603,7 +608,7 @@ public class Tree {
    * @param weight weight condition which must be satisfied by the found leaf.
    * @return tree leaf on the right to the supplied leaf with at least specified weight.
    */
-  public TreeLeaf findNextLeafAtLeastOfWeight(TreeLeaf leaf, int weight) {
+  public TreeLeaf findNextLeafAtLeastOfWeight(TreeLeaf leaf, long weight) {
 
     if (leaf.rightNeighbor == null) {
       return null;
@@ -672,14 +677,14 @@ public class Tree {
    * @return the amount of weight of a given item that can be replaced by Right items without
    *     violating the constraint.
    */
-  public int computeIntrusionWeight(
+  public long computeIntrusionWeight(
       int weightOfItemChecked,
       int maxNoOfItems,
       int profitOfItemChecked,
       double efficiencyOfItemChecked,
       double profitSlack) {
 
-    Integer criticalReturn =
+    Long criticalReturn =
         tryCriticalLeafReturnIntrusion(
             weightOfItemChecked, profitOfItemChecked, efficiencyOfItemChecked, profitSlack);
     if (criticalReturn != null) {
@@ -694,13 +699,9 @@ public class Tree {
       finalIntrusionLoopLeft(efficiencyOfItemChecked, profitSlack);
     }
 
-    if (!exhaustedLeftItems && currentNode.leftNeighbor.getPSum() == 0) {
-      currentNode = currentNode.leftNeighbor;
-    }
-
     // Found the last leaf before exceeding slack.
 
-    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
+    long weightNoPruning = (long) weightOfItemChecked * maxNoOfItems;
     if (currentWeight > weightNoPruning) {
       // Checked item does not have anything mandatory.
       // Next item must have weightNoPruning larger than currentWeight.
@@ -723,6 +724,11 @@ public class Tree {
       efficiencyLoss =
           -profitOfItemChecked / (double) weightOfItemChecked
               + currentNode.leftNeighbor.getPSum() / (double) currentNode.leftNeighbor.getWSum();
+      if (!(efficiencyLoss > 0)) {
+        // The previous item is as efficient as the checked one (only possible through rounding
+        // errors, as such an item is consumed above), so the intrusion can not be bounded here.
+        return NO_PRUNING;
+      }
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
 
@@ -733,28 +739,30 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
     }
     lastWeight /= efficiencyLoss;
-    return currentWeight + (int) Math.ceil(lastWeight);
+    return currentWeight + (long) Math.ceil(lastWeight);
   }
 
   /** Returns intrusion weight if critical leaf case applies, else null. */
-  private Integer tryCriticalLeafReturnIntrusion(
+  private Long tryCriticalLeafReturnIntrusion(
       int weightOfItemChecked,
       int profitOfItemChecked,
       double efficiencyOfItemChecked,
       double profitSlack) {
     if (currentNode != criticalLeaf
         || profitFromCriticalTaken - efficiencyOfItemChecked * takenWeightOfCriticalItem
-            <= profitSlack) {
+            <= profitSlack
+        || (long) criticalLeaf.profitOfOne * weightOfItemChecked
+            <= (long) profitOfItemChecked * criticalLeaf.weightOfOne) {
       return null;
     }
-    return (int)
+    return (long)
         Math.ceil(
             profitSlack
                 * criticalLeaf.weightOfOne
                 * weightOfItemChecked
                 / (double)
-                    (criticalLeaf.profitOfOne * weightOfItemChecked
-                        - profitOfItemChecked * criticalLeaf.weightOfOne));
+                    ((long) criticalLeaf.profitOfOne * weightOfItemChecked
+                        - (long) profitOfItemChecked * criticalLeaf.weightOfOne));
   }
 
   private void exhaustLeftItemsLoop(double efficiencyOfItemChecked, double profitSlack) {
@@ -799,23 +807,26 @@ public class Tree {
   }
 
   private void finalIntrusionLoopLeft(double efficiencyOfItemChecked, double profitSlack) {
+    // It descends towards the leaves, at each level taking the left neighbor while the profit
+    // slack allows it. The neighbor of a leaf reached by descending must still be checked, as must
+    // the neighbors of a taken leaf (e.g. items which are already fixed have no weight left).
     while (true) {
-      if (profitSlack
-              + efficiencyOfItemChecked * (currentWeight + currentNode.leftNeighbor.getWSum())
-              - (currentProfit + currentNode.leftNeighbor.getPSum())
-              - profitFromCriticalTaken
-          < 0) {
-        if (!currentNode.isLeaf()) {
-          currentNode = currentNode.left;
-        } else {
-          break;
-        }
-      } else {
-        currentNode = currentNode.leftNeighbor;
+      TreeNode next = currentNode.leftNeighbor;
+      if (next != null
+          && profitSlack
+                  + efficiencyOfItemChecked * (currentWeight + next.getWSum())
+                  - (currentProfit + next.getPSum())
+                  - profitFromCriticalTaken
+              >= 0) {
+        currentNode = next;
         currentWeight += currentNode.getWSum();
         currentProfit += currentNode.getPSum();
-      }
-      if (currentNode.isLeaf()) {
+      } else if (!currentNode.isLeaf()) {
+        currentNode = currentNode.left;
+      } else {
+        if (next == null) {
+          exhaustedLeftItems = true;
+        }
         break;
       }
     }
@@ -829,7 +840,7 @@ public class Tree {
    * @param weight weight condition which must be satisfied by the found leaf.
    * @return tree leaf on the left to the supplied leaf with at least specified weight.
    */
-  public TreeLeaf findPreviousLeafAtLeastOfWeight(TreeLeaf leaf, int weight) {
+  public TreeLeaf findPreviousLeafAtLeastOfWeight(TreeLeaf leaf, long weight) {
 
     if (leaf.leftNeighbor == null) {
       return null;
@@ -876,14 +887,14 @@ public class Tree {
    * @param minProfit minimum profit obtained by the knapsack.
    * @return it returns the minimum required weight to satisfy min profit requirements.
    */
-  public int computeMinWeight(int minProfit) {
+  public long computeMinWeight(long minProfit) {
 
     if (minProfit == 0) {
       return 0;
     }
 
     TreeNode current = root;
-    int obtainedProfit = 0;
+    long obtainedProfit = 0;
 
     while (!current.isLeaf()) {
 
@@ -903,14 +914,14 @@ public class Tree {
       }
     }
 
-    int remainingProfitToFind = minProfit - obtainedProfit;
+    long remainingProfitToFind = minProfit - obtainedProfit;
 
     TreeLeaf finalLeaf = (TreeLeaf) current;
 
-    int minWeightForCurrentTree =
-        (int)
+    long minWeightForCurrentTree =
+        (long)
             Math.ceil(
-                remainingProfitToFind * finalLeaf.weightOfOne / (double) finalLeaf.profitOfOne);
+                remainingProfitToFind * (double) finalLeaf.weightOfOne / finalLeaf.profitOfOne);
 
     return alreadyUsedCapacity + minWeightForCurrentTree;
   }
@@ -922,14 +933,14 @@ public class Tree {
    * @param minWeight - the minimum of weight within a knapsack.
    * @return it returns the minimum required weight to satisfy min profit requirements.
    */
-  public int computeMinProfit(int minWeight) {
+  public long computeMinProfit(long minWeight) {
 
     if (minWeight == 0) {
       return 0;
     }
 
     TreeNode current = root;
-    int usedCapacity = 0;
+    long usedCapacity = 0;
 
     while (!current.isLeaf()) {
 
@@ -949,14 +960,14 @@ public class Tree {
       }
     }
 
-    int remainingWeightToFind = minWeight - usedCapacity;
+    long remainingWeightToFind = minWeight - usedCapacity;
 
     TreeLeaf finalLeaf = (TreeLeaf) current;
 
-    int minProfitForCurrentTree =
-        (int)
+    long minProfitForCurrentTree =
+        (long)
             Math.ceil(
-                remainingWeightToFind * finalLeaf.profitOfOne / (double) finalLeaf.weightOfOne);
+                remainingWeightToFind * (double) finalLeaf.profitOfOne / finalLeaf.weightOfOne);
 
     return alreadyObtainedProfit + minProfitForCurrentTree;
   }
