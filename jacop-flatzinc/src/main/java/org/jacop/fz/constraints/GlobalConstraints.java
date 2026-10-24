@@ -1894,8 +1894,13 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
 
     // ---- KK, 2023-06-29
-    // geost must not have duplicated variables
-    IntVar[] xx = removeDuplicates(x);
+    // geost must not have duplicated variables, neither within nor across x and kind
+    IntVar[] all = new IntVar[x.length + kind.length];
+    System.arraycopy(x, 0, all, 0, x.length);
+    System.arraycopy(kind, 0, all, x.length, kind.length);
+    all = removeDuplicates(all);
+    IntVar[] xx = Arrays.copyOfRange(all, 0, x.length);
+    IntVar[] kk = Arrays.copyOfRange(all, x.length, all.length);
 
     ArrayList<Shape> shapes = new ArrayList<>();
 
@@ -1940,7 +1945,7 @@ class GlobalConstraints implements ParserTreeConstants {
       IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
       IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
       IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
-      GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end);
+      GeostObject obj = new GeostObject(i, coords, kk[i], start, duration, end);
       objects.add(obj);
     }
 
