@@ -43,12 +43,16 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.floats.FloatImposeGroundingHarness.Case;
 import org.jacop.floats.FloatImposeGroundingHarness.Spec;
+import org.jacop.floats.constraints.AbsPeqR;
 import org.jacop.floats.constraints.CeilPeqX;
 import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.FloorPeqX;
+import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.Max;
 import org.jacop.floats.constraints.Min;
+import org.jacop.floats.constraints.PdivCeqR;
+import org.jacop.floats.constraints.PdivQeqR;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.constraints.PgtC;
@@ -59,9 +63,17 @@ import org.jacop.floats.constraints.PltC;
 import org.jacop.floats.constraints.PltQ;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.constraints.PlteqQ;
+import org.jacop.floats.constraints.PminusCeqR;
+import org.jacop.floats.constraints.PminusQeqR;
+import org.jacop.floats.constraints.PmulCeqR;
+import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PneqC;
 import org.jacop.floats.constraints.PneqQ;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
+import org.jacop.floats.constraints.SqrtPeqR;
+import org.jacop.floats.constraints.SumFloat;
 import org.jacop.floats.constraints.XeqP;
 import org.jacop.floats.core.FloatVar;
 import org.junit.jupiter.params.provider.Arguments;
@@ -176,7 +188,216 @@ final class FloatImposeGroundingCases {
                 }));
     cases.add(minMax("Max", true));
     cases.add(minMax("Min", false));
+    cases.add(
+        arithmetic(
+            "PplusQeqR",
+            random -> new Spec[] {quarter(random), quarter(random), quarter(random, -3, 3)},
+            x -> new PplusQeqR(x[0], x[1], x[2]),
+            t -> t[0] + t[1] == t[2]));
+    cases.add(
+        arithmetic(
+            "PminusQeqR",
+            random -> new Spec[] {quarter(random), quarter(random), quarter(random, -3, 3)},
+            x -> new PminusQeqR(x[0], x[1], x[2]),
+            t -> t[0] - t[1] == t[2]));
+    cases.add(
+        arithmetic(
+            "PmulQeqR",
+            random ->
+                new Spec[] {
+                  floatVar(random, 0.5, -2, 2), floatVar(random, 0.5, -2, 2), quarter(random, -3, 3)
+                },
+            x -> new PmulQeqR(x[0], x[1], x[2]),
+            t -> t[0] * t[1] == t[2]));
+    cases.add(
+        arithmetic(
+            "PmulQeqR square",
+            random -> new Spec[] {floatVar(random, 0.5, -2, 2), quarter(random, -1, 4)},
+            x -> new PmulQeqR(x[0], x[0], x[1]),
+            t -> t[0] * t[0] == t[1]));
+    cases.add(
+        arithmetic(
+            "PmulQeqR product is a factor",
+            random -> new Spec[] {floatVar(random, 0.5, -1, 1), floatVar(random, 0.5, -1, 2)},
+            x -> new PmulQeqR(x[0], x[1], x[0]),
+            t -> t[0] * t[1] == t[0]));
+    cases.add(
+        arithmetic(
+            "PdivQeqR",
+            random ->
+                new Spec[] {
+                  floatVar(random, 0.125, -1, 1),
+                  pick(random, -2, -1, -0.5, 0, 0.5, 1, 2),
+                  quarter(random, -2, 2)
+                },
+            x -> new PdivQeqR(x[0], x[1], x[2]),
+            t -> t[1] != 0 && t[0] / t[1] == t[2]));
+    cases.add(
+        withArithmeticConstant(
+            "PplusCeqR", (p, c, r) -> new PplusCeqR(p, c, r), (p, c) -> p + c, 0.25, -1, 1));
+    cases.add(
+        withArithmeticConstant(
+            "PminusCeqR", (p, c, r) -> new PminusCeqR(p, c, r), (p, c) -> p - c, 0.25, -1, 1));
+    cases.add(
+        withArithmeticConstant(
+            "PmulCeqR", (p, c, r) -> new PmulCeqR(p, c, r), (p, c) -> p * c, 0.5, -2, 2));
+    cases.add(
+        withArithmeticConstant(
+            "PdivCeqR", (p, c, r) -> new PdivCeqR(p, c, r), (p, c) -> p / c, 0.5, -2, 2));
+    cases.add(
+        arithmetic(
+            "AbsPeqR",
+            random -> new Spec[] {quarter(random), quarter(random, -1, 2)},
+            x -> new AbsPeqR(x[0], x[1]),
+            t -> Math.abs(t[0]) == t[1]));
+    cases.add(
+        arithmetic(
+            "SqrtPeqR",
+            random ->
+                new Spec[] {
+                  pick(random, -1, 0, 0.0625, 0.25, 0.5, 0.5625, 1, 1.5625, 2.25, 3, 4),
+                  quarter(random, -1, 2)
+                },
+            x -> new SqrtPeqR(x[0], x[1]),
+            t -> t[0] >= 0 && Math.sqrt(t[0]) == t[1]));
+    cases.add(
+        Arguments.of("LinearFloat", (Function<Random, Case>) random -> linear(random, false)));
+    cases.add(Arguments.of("SumFloat", (Function<Random, Case>) random -> linear(random, true)));
     return cases.stream();
+  }
+
+  /** A constraint on float variables only. */
+  private interface OnFloats {
+    Constraint build(FloatVar[] x);
+  }
+
+  private static Arguments arithmetic(
+      String name,
+      Function<Random, Spec[]> vars,
+      OnFloats build,
+      java.util.function.Predicate<double[]> relation) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random ->
+                new Case(
+                    vars.apply(random),
+                    x -> build.build(Arrays.copyOf(x, x.length, FloatVar[].class)),
+                    relation,
+                    name));
+  }
+
+  /** The constructor of an arithmetic constraint with a constant. */
+  private interface ArithmeticWithConstant {
+    Constraint build(FloatVar p, double c, FloatVar r);
+  }
+
+  private static Arguments withArithmeticConstant(
+      String name,
+      ArithmeticWithConstant build,
+      java.util.function.DoubleBinaryOperator function,
+      double step,
+      double lo,
+      double hi) {
+    return Arguments.of(
+        name,
+        (Function<Random, Case>)
+            random -> {
+              // powers of two (and 0 and 1.5 where allowed) keep the results on the grid
+              double c =
+                  new double[] {-2, -1, -0.5, 0.25, 0.5, 1, 2, name.startsWith("PdivCeqR") ? 4 : 0}
+                      [random.nextInt(8)];
+              double c2 = name.equals("PmulCeqR") && random.nextInt(4) == 0 ? 1.5 : c;
+              return new Case(
+                  new Spec[] {floatVar(random, step, lo, hi), floatVar(random, 0.125, -4, 4)},
+                  x -> build.build((FloatVar) x[0], c2, (FloatVar) x[1]),
+                  t -> function.applyAsDouble(t[0], c2) == t[1],
+                  name + "(x0, " + c2 + ", x1)");
+            });
+  }
+
+  private static final String[] RELATIONS = {"==", "<", "<=", "!=", ">", ">="};
+
+  /**
+   * LinearFloat with a constant sum, or SumFloat with a sum variable. Weights are powers of two so
+   * that the weighted sums are exact; a variable sometimes appears twice.
+   */
+  private static Case linear(Random random, boolean sumVariable) {
+    int n = 1 + random.nextInt(3);
+    String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+    double[] weights = new double[n];
+    int[] index = new int[n];
+    for (int i = 0; i < n; i++) {
+      weights[i] = sumVariable ? 1 : new double[] {-2, -1, -0.5, 0.5, 1, 2}[random.nextInt(6)];
+      index[i] = i > 0 && random.nextInt(6) == 0 ? 0 : i;
+    }
+    double sum = grid(random, 0.25, -2, 2);
+    Spec[] vars = new Spec[sumVariable ? n + 1 : n];
+    for (int i = 0; i < n; i++) {
+      vars[i] = quarter(random);
+    }
+    if (sumVariable) {
+      vars[n] = quarter(random, -3, 3);
+    }
+    return new Case(
+        vars,
+        x -> {
+          FloatVar[] list = new FloatVar[n];
+          for (int i = 0; i < n; i++) {
+            list[i] = (FloatVar) x[index[i]];
+          }
+          return sumVariable
+              ? new SumFloat(list, rel, (FloatVar) x[n])
+              : new LinearFloat(list, weights, rel, sum);
+        },
+        t -> {
+          double total = 0;
+          for (int i = 0; i < n; i++) {
+            total += weights[i] * t[index[i]];
+          }
+          double right = sumVariable ? t[n] : sum;
+          return switch (rel) {
+            case "==" -> total == right;
+            case "<" -> total < right;
+            case "<=" -> total <= right;
+            case "!=" -> total != right;
+            case ">" -> total > right;
+            default -> total >= right;
+          };
+        },
+        (sumVariable ? "SumFloat(" : "LinearFloat(" + Arrays.toString(weights) + ", ")
+            + "x"
+            + Arrays.toString(index)
+            + ", "
+            + rel
+            + ", "
+            + (sumVariable ? "x" + n : sum)
+            + ")");
+  }
+
+  /** A float variable on multiples of 0.25 in -1..1. */
+  private static Spec quarter(Random random) {
+    return floatVar(random, 0.25, -1, 1);
+  }
+
+  /** A float variable on multiples of 0.25 in lo..hi. */
+  private static Spec quarter(Random random, double lo, double hi) {
+    return floatVar(random, 0.25, lo, hi);
+  }
+
+  /** A float variable on a random non-empty subset of the given values. */
+  private static Spec pick(Random random, double... values) {
+    List<Double> chosen = new ArrayList<>();
+    for (double v : values) {
+      if (random.nextInt(3) != 0) {
+        chosen.add(v);
+      }
+    }
+    if (chosen.isEmpty()) {
+      chosen.add(values[random.nextInt(values.length)]);
+    }
+    double[] grid = chosen.stream().mapToDouble(Double::doubleValue).toArray();
+    return random.nextInt(3) == 0 ? Spec.points(grid) : Spec.interval(grid);
   }
 
   private static Arguments withConstant(String name, WithConstant build, Comparison relation) {
