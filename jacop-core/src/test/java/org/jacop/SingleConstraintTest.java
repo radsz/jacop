@@ -4715,4 +4715,29 @@ class SingleConstraintTest extends TestHelper {
       assertThat(noOfAllSolutions(store, x)).isZero();
     }
   }
+
+  @Test
+  void testSequenceWithWindowLongerThanListHoldsTrivially() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+
+    // no window of 4 fits in 3 variables, so every assignment is a solution
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 4, 1, 1));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(8);
+  }
+
+  @Test
+  void testSequenceRejectsNonPositiveWindow() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 2);
+
+    assertThatThrownBy(() -> new Sequence(x, new IntervalDomain(1, 1), 0, 0, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }
