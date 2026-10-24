@@ -498,6 +498,19 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void testSumWeightedSetSatisfiedWithElementWithoutWeight() {
+    // satisfied() threw NullPointerException for an element of the set without a weight
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(2), dom(2)));
+    IntVar total = new IntVar(store, "total", 0, 0);
+    SumWeightedSet sum = new SumWeightedSet(a, new int[] {1}, new int[] {1}, total);
+    store.impose(sum);
+
+    assertThat(sum.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
     IntervalDomain d = new IntervalDomain();
     for (int v = min; v <= max; v++) {
