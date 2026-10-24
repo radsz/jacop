@@ -527,6 +527,31 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void freeSearchReportsAllSolutionsOncePerAssignmentOfOutputVariables() throws IOException {
+    // Free search labelled every variable, so with -a x = 0 was reported once for each value of
+    // b, which x = 0 leaves free and which is not an output variable, and the set s, which is not
+    // an output variable either, gave every solution again for each of its values.
+    String fzn =
+        """
+        var 0..1: x:: output_var;
+        var bool: b;
+        var set of 1..2: s;
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn, "-f", "-a")[0];
+    List<String> solutions =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(FlatzincFrontEndTest::solutionLines)
+            .filter(b -> !b.isBlank())
+            .sorted()
+            .toList();
+    assertEquals(List.of("x = 0;", "x = 1;"), solutions, stdout);
+    assertTrue(stdout.contains("=========="), stdout);
+  }
+
+  @Test
   void newFreeSearchEngineGivesTheResultsOfTheLegacyOne() throws IOException {
     String[] models = {
       // satisfaction with integers and Booleans

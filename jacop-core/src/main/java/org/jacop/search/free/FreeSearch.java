@@ -32,7 +32,11 @@ package org.jacop.search.free;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -112,6 +116,7 @@ public final class FreeSearch {
     int firstIndex;
     int level;
     boolean right;
+    boolean projected;
   }
 
   /** The fail limit of the first run of {@link #withDefaults(Store, IntVar[])}. */
@@ -134,6 +139,7 @@ public final class FreeSearch {
   private final long failLimit;
   private final long timeLimitMillis;
   private final Var[] recorded;
+  private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
   private final Consumer<FreeSearch> solutionHandler;
 
@@ -173,6 +179,11 @@ public final class FreeSearch {
     failLimit = builder.failLimit;
     timeLimitMillis = builder.timeLimitMillis;
     recorded = builder.recorded == null ? new Var[0] : builder.recorded;
+    projection =
+        builder.projection == null ? null : Collections.newSetFromMap(new IdentityHashMap<>());
+    if (projection != null) {
+      projection.addAll(Arrays.asList(builder.projection));
+    }
     monitors = List.copyOf(builder.monitors);
     solutionHandler = builder.solutionHandler;
   }
@@ -291,6 +302,7 @@ public final class FreeSearch {
             return end;
           }
           // backtrack from the solution without counting a failure
+          skipUnprojected();
           if (backtrack()) {
             return RunEnd.EXHAUSTED;
           }
@@ -348,6 +360,18 @@ public final class FreeSearch {
     return true;
   }
 
+  /**
+   * After a solution, removes the decisions on variables outside the projection: other values of
+   * them would only repeat the solution.
+   */
+  private void skipUnprojected() {
+    while (stackSize > 0 && !top().projected) {
+      Frame f = stack.get(--stackSize);
+      store.removeLevel(f.level);
+      store.setLevel(f.level - 1);
+    }
+  }
+
   /** Removes all decisions, back to the root level. */
   private void unwind() {
     while (stackSize > 0) {
@@ -383,6 +407,11 @@ public final class FreeSearch {
     f.choice = choice;
     f.firstIndex = firstIndex;
     f.right = false;
+    f.projected =
+        projection == null
+            || (var != null
+                ? projection.contains(var)
+                : projection.containsAll(choice.arguments()));
     store.setLevel(store.level + 1);
     f.level = store.level;
     maxDepth = Math.max(maxDepth, stackSize);
@@ -657,6 +686,7 @@ public final class FreeSearch {
     private long failLimit;
     private long timeLimitMillis;
     private Var[] recorded;
+    private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
     private Consumer<FreeSearch> solutionHandler;
 
@@ -736,6 +766,20 @@ public final class FreeSearch {
      */
     public Builder allSolutions(boolean all) {
       this.allSolutions = all;
+      return this;
+    }
+
+    /**
+     * With {@link #allSolutions(boolean)}, reports solutions that differ in the given variables
+     * only, once each: after a solution the search does not try other values of the other
+     * variables. The branching must fix the given variables before the others, for example with a
+     * {@link org.jacop.search.SequenceSelect} whose first selection is on them.
+     *
+     * @param vars the variables that tell solutions apart.
+     * @return this builder.
+     */
+    public Builder distinctOn(Var... vars) {
+      this.projection = vars.clone();
       return this;
     }
 

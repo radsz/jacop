@@ -374,6 +374,53 @@ class FreeSearchTest {
   }
 
   @Test
+  void allSolutionsDistinctOnSomeVariablesMatchBruteForce() {
+    Random rnd = new Random(6);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      // the distinct values of x0..x2 over all solutions
+      Set<List<Integer>> expected = new HashSet<>();
+      int total = (int) Math.pow(MAX_VALUE + 1, N);
+      int[] x = new int[N];
+      int[] b = new int[N];
+      for (int code = 0; code < total; code++) {
+        int c = code;
+        for (int i = 0; i < N; i++) {
+          x[i] = c % (MAX_VALUE + 1);
+          c /= MAX_VALUE + 1;
+          b[i] = x[i] == instance.eq()[i] ? 1 : 0;
+        }
+        if (instance.satisfied(x, b)) {
+          expected.add(List.of(x[0], x[1], x[2]));
+        }
+      }
+      Model model = new Model(instance);
+      IntVar[] shown = Arrays.copyOfRange(model.x, 0, 3);
+      IntVar[] rest = Arrays.copyOfRange(concat(model), 3, 2 * N);
+      List<List<Integer>> found = new ArrayList<>();
+      FreeSearch search =
+          FreeSearch.builder(
+                  model.store,
+                  new SequenceSelect(
+                      List.of(
+                          new SimpleSelect<>(shown, new SmallestDomain<>(), new IndomainMax<>()),
+                          new SimpleSelect<>(rest, null, new IndomainMin<>()))))
+              .allSolutions(true)
+              .distinctOn(shown)
+              .onSolution(
+                  s -> {
+                    model.checkSolution();
+                    found.add(List.of(shown[0].value(), shown[1].value(), shown[2].value()));
+                  })
+              .build();
+      Status status = search.solve();
+      assertEquals(expected.isEmpty() ? Status.UNSATISFIABLE : Status.OPTIMAL, status);
+      assertEquals(expected.size(), found.size(), instance.toString());
+      assertEquals(expected, new HashSet<>(found), instance.toString());
+    }
+  }
+
+  @Test
   void optimumMatchesBruteForce() {
     Random rnd = new Random(3);
     for (int k = 0; k < INSTANCES; k++) {

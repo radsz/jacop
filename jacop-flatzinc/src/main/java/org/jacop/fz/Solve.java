@@ -38,9 +38,13 @@ import java.text.NumberFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
@@ -734,9 +738,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
-    String heuristic = options.freeConfig("heuristic", "domwdeg");
-    int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
-    boolean phase = "1".equals(options.freeConfig("phase", "1"));
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
     Calculator restarts = restartCalculator;
@@ -754,52 +755,45 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     List<SearchMonitor> monitors = new ArrayList<>();
     List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
-    if (searchVars.getSetVars().length > 0) {
-      selects.add(
-          new SimpleSelect<>(
-              searchVars.getSetVars(), new AfcMaxDeg<>(store), new IndomainSetMin<>()));
-    }
-    LinkedHashSet<IntVar> intAndBool = new LinkedHashSet<>(Arrays.asList(searchVars.getIntVars()));
-    intAndBool.addAll(Arrays.asList(searchVars.getBoolVars()));
     IntVar objective = costVar instanceof IntVar c && objectiveLast ? c : null;
-    if (objective != null) {
-      intAndBool.remove(objective);
-      // for maximisation the cost variable is the negation of the objective of the model
-      if (objectiveVariable instanceof IntVar o) {
-        intAndBool.remove(o);
-      }
-    }
-    IntVar[] vars = intAndBool.toArray(new IntVar[0]);
-    Indomain<IntVar> values = new IndomainMin<>();
-    if (phase) {
-      IndomainLastSolution saving = new IndomainLastSolution(vars, values);
-      monitors.add(saving);
-      values = saving;
-    }
-    if ("afc".equals(heuristic)) {
-      if (searchVars.getIntVars().length > 0) {
-        selects.add(new SimpleSelect<>(searchVars.getIntVars(), new AfcMaxDeg<>(store), values));
-      }
-      if (searchVars.getBoolVars().length > 0) {
-        selects.add(new SimpleSelect<>(searchVars.getBoolVars(), new AfcMax<>(store), values));
-      }
-    } else if (vars.length > 0) {
-      DomWdeg domWdeg = new DomWdeg(vars, values);
-      monitors.add(domWdeg);
-      SelectChoicePoint<IntVar> select = domWdeg;
-      if (lastConflict > 0) {
-        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
-        monitors.add(lc);
-        select = lc;
-      }
-      selects.add(select);
-    }
-    if (objective != null) {
-      selects.add(new SimpleSelect<>(new IntVar[] {objective}, null, new IndomainMin<>()));
-    }
-    if (searchVars.getFloatVars().length > 0) {
-      selects.add(
-          new SplitSelectFloat<>(store, searchVars.getFloatVars(), new LargestDomainFloat<>()));
+    boolean allSolutions = options.getAll() && costVar == null;
+    Var[] shown = null;
+    if (allSolutions) {
+      // solutions are told apart by the output variables, so they are fixed first and the
+      // other variables are completed once per solution
+      DefaultSearchVars output = new DefaultSearchVars(dictionary);
+      output.outputVars();
+      Set<Var> outputSet = Collections.newSetFromMap(new IdentityHashMap<>());
+      outputSet.addAll(Arrays.asList(output.getSetVars()));
+      outputSet.addAll(Arrays.asList(output.getIntVars()));
+      outputSet.addAll(Arrays.asList(output.getBoolVars()));
+      outputSet.addAll(Arrays.asList(output.getFloatVars()));
+      shown = outputSet.toArray(new Var[0]);
+      addFreeSelects(
+          selects,
+          monitors,
+          output.getSetVars(),
+          output.getIntVars(),
+          output.getBoolVars(),
+          output.getFloatVars(),
+          null);
+      addFreeSelects(
+          selects,
+          monitors,
+          withoutVars(searchVars.getSetVars(), outputSet, SetVar[]::new),
+          withoutVars(searchVars.getIntVars(), outputSet, IntVar[]::new),
+          withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
+          withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
+          null);
+    } else {
+      addFreeSelects(
+          selects,
+          monitors,
+          searchVars.getSetVars(),
+          searchVars.getIntVars(),
+          searchVars.getBoolVars(),
+          searchVars.getFloatVars(),
+          objective);
     }
     if (selects.isEmpty()) {
       selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
@@ -812,12 +806,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .restartOnSolution(restartOnSolution)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
+    if (shown != null) {
+      builder.distinctOn(shown);
+    }
     for (SearchMonitor m : monitors) {
       builder.monitor(m);
     }
     String interleave = options.freeConfig("interleave", "restart");
+    // all solutions are found in one run without restarts, which interleaving would give to the
+    // annotation
     SelectChoicePoint<? extends Var> annotated =
-        "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
+        "none".equals(interleave) || allSolutions ? null : annotationSelect(annotatedSearch);
     if (annotated != null) {
       // free search completes what the annotation leaves unfixed
       builder.alternateWith(
@@ -838,6 +837,72 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     freeSearchStatus = freeSearch.solve();
     return freeSearch.getSolutions() > 0;
+  }
+
+  /**
+   * Adds the free search branching on the given variables: the set variables first, then the
+   * integer and Boolean variables, then the objective and the float variables. The settings of
+   * --free-config select the heuristics.
+   */
+  private void addFreeSelects(
+      List<SelectChoicePoint<? extends Var>> selects,
+      List<SearchMonitor> monitors,
+      SetVar[] sets,
+      IntVar[] ints,
+      BooleanVar[] bools,
+      FloatVar[] floats,
+      IntVar objective) {
+    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
+    boolean phase = "1".equals(options.freeConfig("phase", "1"));
+    if (sets.length > 0) {
+      selects.add(new SimpleSelect<>(sets, new AfcMaxDeg<>(store), new IndomainSetMin<>()));
+    }
+    LinkedHashSet<IntVar> intAndBool = new LinkedHashSet<>(Arrays.asList(ints));
+    intAndBool.addAll(Arrays.asList(bools));
+    if (objective != null) {
+      intAndBool.remove(objective);
+      // for maximisation the cost variable is the negation of the objective of the model
+      if (objectiveVariable instanceof IntVar o) {
+        intAndBool.remove(o);
+      }
+    }
+    IntVar[] vars = intAndBool.toArray(new IntVar[0]);
+    Indomain<IntVar> values = new IndomainMin<>();
+    if (phase) {
+      IndomainLastSolution saving = new IndomainLastSolution(vars, values);
+      monitors.add(saving);
+      values = saving;
+    }
+    if ("afc".equals(heuristic)) {
+      if (ints.length > 0) {
+        selects.add(new SimpleSelect<>(ints, new AfcMaxDeg<>(store), values));
+      }
+      if (bools.length > 0) {
+        selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
+      }
+    } else if (vars.length > 0) {
+      DomWdeg domWdeg = new DomWdeg(vars, values);
+      monitors.add(domWdeg);
+      SelectChoicePoint<IntVar> select = domWdeg;
+      if (lastConflict > 0) {
+        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        monitors.add(lc);
+        select = lc;
+      }
+      selects.add(select);
+    }
+    if (objective != null) {
+      selects.add(new SimpleSelect<>(new IntVar[] {objective}, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
+    }
+  }
+
+  private static <V extends Var> V[] withoutVars(
+      V[] vars, Set<Var> excluded, IntFunction<V[]> array) {
+    return Arrays.stream(vars).filter(v -> !excluded.contains(v)).toArray(array);
   }
 
   /**
