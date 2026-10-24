@@ -366,6 +366,25 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(2);
   }
 
+  // The total weight of all items exceeded Integer.MAX_VALUE and overflowed, so the constraint
+  // failed on a satisfiable problem.
+  @Test
+  void testBinpackingTotalWeightAboveIntRange() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 5);
+    IntVar[] binLoad = new IntVar[5];
+    for (int i = 0; i < binLoad.length; i++) {
+      binLoad[i] = new IntVar(store, "binLoad" + i, 0, IntDomain.MAX_INT);
+    }
+    int[] w = new int[5];
+    Arrays.fill(w, 500_000_000);
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    // one item per bin
+    assertThat(noOfAllSolutions(store, items)).isEqualTo(120);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

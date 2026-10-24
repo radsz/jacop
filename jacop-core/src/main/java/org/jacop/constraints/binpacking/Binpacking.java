@@ -90,9 +90,9 @@ public class Binpacking extends Constraint
   boolean lbPruning = true;
   private boolean firstConsistencyCheck = true;
   private int minBinNumber;
-  private int sizeAllItems;
-  private int alphaP;
-  private int betaP;
+  private long sizeAllItems;
+  private long alphaP;
+  private long betaP;
   private TimeStamp<Boolean> lbPruningStamp;
 
   /**
@@ -144,9 +144,9 @@ public class Binpacking extends Constraint
         zeroWeight.add(bin[i]);
       } else {
         if (itemPar.get(bin[i]) != null) {
-          Integer s = itemPar.get(bin[i]);
-          Integer ns = s + w[i];
-          itemPar.put(bin[i], ns);
+          // a weight above IntDomain.MAX_INT fits in no bin; capping it avoids int overflow
+          int s = itemPar.get(bin[i]);
+          itemPar.put(bin[i], (int) Math.min((long) s + w[i], IntDomain.MAX_INT + 1L));
         } else {
           itemPar.put(bin[i], w[i]);
         }
@@ -292,8 +292,8 @@ public class Binpacking extends Constraint
     }
     BinItem[] candidates = new BinItem[item.length];
     int candidatesLength = 0;
-    int required = 0;
-    int possible = 0;
+    long required = 0;
+    long possible = 0;
     int binIdx = i + minBinNumber;
     for (BinItem itemEl : item) {
       if (itemEl.bin().dom().contains(binIdx)) {
@@ -305,7 +305,7 @@ public class Binpacking extends Constraint
         }
       }
     }
-    load[i].domain.in(store.level, load[i], required, possible);
+    load[i].domain.in(store.level, load[i], clamp(required), clamp(possible));
     applyLoadMaintenanceToCandidates(
         store, i, binIdx, required, possible, candidates, candidatesLength);
     int[] Cj = new int[candidatesLength];
@@ -320,8 +320,8 @@ public class Binpacking extends Constraint
       Store store,
       int i,
       int binIdx,
-      int required,
-      int possible,
+      long required,
+      long possible,
       BinItem[] candidates,
       int candidatesLength) {
     for (int l = 0; l < candidatesLength; l++) {
@@ -334,12 +334,12 @@ public class Binpacking extends Constraint
     }
   }
 
-  private void applyTighteningBounds(Store store, int i, int required, int[] candidateWeights) {
+  private void applyTighteningBounds(Store store, int i, long required, int[] candidateWeights) {
     if (noSum(candidateWeights, load[i].min() - required, load[i].min() - required)) {
-      load[i].domain.inMin(store.level, load[i], required + betaP);
+      load[i].domain.inMin(store.level, load[i], clamp(required + betaP));
     }
     if (noSum(candidateWeights, load[i].max() - required, load[i].max() - required)) {
-      load[i].domain.inMax(store.level, load[i], required + alphaP);
+      load[i].domain.inMax(store.level, load[i], clamp(required + alphaP));
     }
   }
 
@@ -347,7 +347,7 @@ public class Binpacking extends Constraint
       Store store,
       int i,
       int binIdx,
-      int required,
+      long required,
       BinItem[] candidates,
       int[] candidateWeights,
       int candidatesLength) {
@@ -374,16 +374,16 @@ public class Binpacking extends Constraint
 
   /** Rule "Load and Size Coherence": updates load domains from global capacity. */
   private void applyLoadAndSizeCoherence(Store store) {
-    int allCapacityMin = 0;
-    int allCapacityMax = 0;
+    long allCapacityMin = 0;
+    long allCapacityMax = 0;
     for (IntVar aLoad : load) {
       allCapacityMin += aLoad.min();
       allCapacityMax += aLoad.max();
     }
-    int s1 = sizeAllItems - allCapacityMax;
-    int s2 = sizeAllItems - allCapacityMin;
+    long s1 = sizeAllItems - allCapacityMax;
+    long s2 = sizeAllItems - allCapacityMin;
     for (IntVar aLoad : load) {
-      aLoad.domain.in(store.level, aLoad, s1 + aLoad.max(), s2 + aLoad.min());
+      aLoad.domain.in(store.level, aLoad, clamp(s1 + aLoad.max()), clamp(s2 + aLoad.min()));
     }
   }
 
@@ -534,15 +534,20 @@ public class Binpacking extends Constraint
     return result.toString();
   }
 
-  private boolean noSum(int[] x, int alpha, int beta) {
+  /** Converts a long bound to an int; values outside the domain range still prune or fail. */
+  private static int clamp(long v) {
+    return (int) Math.max(IntDomain.MIN_INT - 1L, Math.min(IntDomain.MAX_INT + 1L, v));
+  }
+
+  private boolean noSum(int[] x, long alpha, long beta) {
 
     if (alpha <= 0 || beta >= sum(x)) {
       return false;
     }
 
-    int sumA = 0;
-    int sumB;
-    int sumC = 0;
+    long sumA = 0;
+    long sumB;
+    long sumC = 0;
     int k = 0;
     int kPrime = 0;
     int n = x.length - 1; // |x|
@@ -573,8 +578,8 @@ public class Binpacking extends Constraint
     return sumA < alpha;
   }
 
-  private int sum(int[] x) {
-    int summa = 0;
+  private long sum(int[] x) {
+    long summa = 0;
     for (int v : x) {
       summa += v;
     }
@@ -583,8 +588,8 @@ public class Binpacking extends Constraint
 
   private void lbBins(int[] x, int capacity, int nb) {
     int nn = x.length;
-    int sum = sum(x);
-    int lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
+    long sum = sum(x);
+    long lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
 
     if (nb < lb) {
       throw Store.failException;
@@ -603,7 +608,7 @@ public class Binpacking extends Constraint
         continue;
       }
       previous = k;
-      int currentLb = computeLbForK(x, nn, capacity, k);
+      long currentLb = computeLbForK(x, nn, capacity, k);
       if (currentLb > lb) {
         lb = currentLb;
       }
@@ -613,7 +618,7 @@ public class Binpacking extends Constraint
     }
   }
 
-  private int computeLbForK(int[] x, int nn, int capacity, int k) {
+  private long computeLbForK(int[] x, int nn, int capacity, int k) {
     int N1 = 0;
     int N2 = 0;
     int i = 0;
@@ -621,19 +626,19 @@ public class Binpacking extends Constraint
       N1++;
       i++;
     }
-    int freeSpaceN2 = 0;
+    long freeSpaceN2 = 0;
     while (i < nn && x[i] > capacity / 2) {
       N2++;
       freeSpaceN2 += capacity - x[i];
       i++;
     }
-    int sizeInN3 = 0;
+    long sizeInN3 = 0;
     while (i < nn && x[i] >= k) {
       sizeInN3 += x[i];
       i++;
     }
-    int toPack = sizeInN3 - freeSpaceN2;
-    int noBinsN3 = 0;
+    long toPack = sizeInN3 - freeSpaceN2;
+    long noBinsN3 = 0;
     if (toPack > 0) {
       noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
     }
