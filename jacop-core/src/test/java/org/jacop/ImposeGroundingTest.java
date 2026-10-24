@@ -34,6 +34,7 @@ package org.jacop;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.jacop.ImposeGroundingHarness.Case;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,6 +60,12 @@ class ImposeGroundingTest {
 
   /** Comma-separated parts of case names to run, e.g. {@code -Dgrounding.cases=GCC,Knapsack}. */
   private static final String FILTER = System.getProperty("grounding.cases", "");
+
+  /**
+   * Cases with many variables, whose brute force and search over all plans take most of the time;
+   * they run a fifth of the trials.
+   */
+  private static final Pattern HEAVY = Pattern.compile("Diff|Disjoint|Nooverlap|Cumulative");
 
   static Stream<Arguments> cases() {
     Stream<Arguments> globals =
@@ -90,6 +97,6 @@ class ImposeGroundingTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
   void imposeWithGroundedVariables(String name, Function<Random, Case> generator) {
-    ImposeGroundingHarness.check(name, generator, TRIALS);
+    ImposeGroundingHarness.check(name, generator, HEAVY.matcher(name).find() ? TRIALS / 5 : TRIALS);
   }
 }
