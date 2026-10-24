@@ -30,8 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
@@ -72,6 +73,9 @@ public class NoGood extends Constraint {
   private IntVar secondWatch;
   private int secondValue;
 
+  /** True if a variable is listed with two different values, so no assignment matches. */
+  private boolean alwaysSatisfied;
+
   /**
    * It creates a no-good constraint.
    *
@@ -110,10 +114,19 @@ public class NoGood extends Constraint {
 
     this.queueIndex = 0;
     this.numberId = idNumber.incrementAndGet();
-    this.listOfVars = Arrays.copyOf(listOfVars, listOfVars.length);
-    this.listOfValues = Arrays.copyOf(listOfValues, listOfValues.length);
+    // a variable listed twice is watched once; with two different values the assignment can never
+    // happen, so the no-good always holds
+    Map<IntVar, Integer> assignment = new LinkedHashMap<>();
+    for (int i = 0; i < listOfVars.length; i++) {
+      Integer previous = assignment.putIfAbsent(listOfVars[i], listOfValues[i]);
+      if (previous != null && previous != listOfValues[i]) {
+        alwaysSatisfied = true;
+      }
+    }
+    this.listOfVars = assignment.keySet().toArray(IntVar[]::new);
+    this.listOfValues = assignment.values().stream().mapToInt(i -> i).toArray();
 
-    setScope(listOfVars);
+    setScope(this.listOfVars);
   }
 
   @Override
@@ -231,6 +244,10 @@ public class NoGood extends Constraint {
 
     if (store.watchedConstraints == null) {
       store.watchedConstraints = Var.createEmptyPositioning();
+    }
+
+    if (alwaysSatisfied) {
+      return;
     }
 
     if (listOfVars.length == 1) {

@@ -5442,6 +5442,27 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // NoGood watched a repeated variable as if it were two, so a no-good that can never match (one
+  // variable with two values) removed a value, and one with a repeated value threw
+  // IllegalStateException.
+  @Test
+  void testNoGoodWithRepeatedVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    store.impose(new NoGood(new IntVar[] {x, y, y}, new int[] {3, 1, 2}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(12);
+
+    store = new Store();
+    x = new IntVar(store, "x", 0, 3);
+    y = new IntVar(store, "y", 0, 3);
+    store.impose(new NoGood(new IntVar[] {x, x, y}, new int[] {1, 1, 1}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(15);
+  }
+
   static class TestWatcherExtension implements BeforeEachCallback {
     @Override
     public void beforeEach(ExtensionContext context) {
