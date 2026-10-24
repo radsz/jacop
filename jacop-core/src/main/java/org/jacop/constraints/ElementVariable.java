@@ -338,7 +338,10 @@ public class ElementVariable extends AbstractElement
         if (array != null) {
           array.add(i);
         } else {
+          // mapping keeps the last position only, so the list of a repeated variable holds all
+          // its positions, the first one included
           array = new ArrayList<>();
+          array.add(oldInteger);
           array.add(i);
           duplicates.put(list[i], array);
         }

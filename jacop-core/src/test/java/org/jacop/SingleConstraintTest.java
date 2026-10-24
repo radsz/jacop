@@ -2773,6 +2773,25 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementVariableRemovesEveryPositionOfRepeatedVariable() {
+    // A variable repeated on the list kept its first position when it became disjoint from the
+    // value, so the index could still select it.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new ElementVariable(index, new IntVar[] {y, y, z}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 0, 0);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.singleton(3)).isTrue();
+  }
+
+  @Test
   void testEqBool() {
 
     Store store = new Store();
