@@ -141,6 +141,8 @@ import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
@@ -4701,6 +4703,32 @@ class SingleConstraintTest extends TestHelper {
       store.setLevel(store.level + 1);
       store.impose(new Table(new IntVar[] {x, y}, new int[][] {{0, 2}, {1, 1}}, reuse));
       assertThat(store.consistency()).as("reuse " + reuse).isFalse();
+    }
+  }
+
+  @Test
+  void hybridTableWithTwoRestrictionsBetweenTheSameColumnsPrunesTheChangedColumn() {
+    // x1 > x2 and x2 >= x1 - 1 in one tuple mean x1 = x2 + 1: (0, -1) and (3, 2). After x1 != 0
+    // the tuple removes 2 from x1 itself; skipping the only changed column kept it and the
+    // constraint was removed with x1 = 2, x2 = 2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", new IntervalDomain(-1, 0));
+      x0.addDom(2, 3);
+      IntVar x1 = new IntVar(store, "x1", 0, 0);
+      x1.addDom(2, 3);
+      IntVar x2 = new IntVar(store, "x2", -1, -1);
+      x2.addDom(2, 3);
+      IntVar[] x = {x0, x1, x2};
+      Restriction[][] tuples = {
+        {
+          Restriction.le(3),
+          Restriction.column(Restriction.Relation.GT, 2),
+          Restriction.column(Restriction.Relation.GE, 1, -1)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(noOfAllSolutionsNoRecord(store, x)).as("expand " + expand).isEqualTo(8);
     }
   }
 
