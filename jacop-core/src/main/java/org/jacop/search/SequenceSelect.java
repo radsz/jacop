@@ -30,6 +30,8 @@
 
 package org.jacop.search;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +69,19 @@ public class SequenceSelect implements SelectChoicePoint<Var> {
     if (selects.isEmpty() || selects.size() > (1 << (31 - SHIFT))) {
       throw new IllegalArgumentException("Between 1 and 128 selections are supported");
     }
-    this.selects = selects.toArray(new SelectChoicePoint[0]);
+    // nested sequences are flattened, since each keeps the index of its selection in the same bits
+    List<SelectChoicePoint<? extends Var>> flat = new ArrayList<>();
+    for (SelectChoicePoint<? extends Var> s : selects) {
+      if (s instanceof SequenceSelect seq) {
+        flat.addAll(Arrays.asList(seq.selects));
+      } else {
+        flat.add(s);
+      }
+    }
+    if (flat.size() > (1 << (31 - SHIFT))) {
+      throw new IllegalArgumentException("At most 128 selections are supported");
+    }
+    this.selects = flat.toArray(new SelectChoicePoint[0]);
   }
 
   @Override

@@ -279,6 +279,20 @@ class FreeSearchTest {
                     List.of(
                         new SimpleSelect<>(m.b, new WeightedDegree<>(), new IndomainMax<>()),
                         new SimpleSelect<>(m.x, new SmallestDomain<>(), new IndomainRandom<>(7))))),
+        // nested sequences of selections of different sizes
+        m ->
+            new Branching(
+                new SequenceSelect(
+                    List.of(
+                        new SequenceSelect(
+                            List.of(
+                                new SimpleSelect<>(
+                                    Arrays.copyOfRange(m.x, 0, 2), null, new IndomainMin<>()),
+                                new SimpleSelect<>(
+                                    Arrays.copyOfRange(m.x, 2, N),
+                                    new SmallestDomain<>(),
+                                    new IndomainMax<>()))),
+                        new SimpleSelect<>(m.b, null, new IndomainMin<>())))),
         m -> {
           IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMax<>());
           DomWdeg domWdeg = new DomWdeg(concat(m), phase);
