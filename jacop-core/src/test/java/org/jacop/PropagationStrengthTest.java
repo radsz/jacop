@@ -39,6 +39,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -170,6 +171,23 @@ class PropagationStrengthTest {
 
     assertThat(x[0].dom().toString()).isEqualTo("4");
     assertThat(x[1].dom().toString()).isEqualTo("3");
+  }
+
+  @Test
+  void testValuePrecedeForcesFirstWhenLaterValueIsFixed() {
+
+    // 0 must precede 2; only x0 can take 0, so fixing x1 = 2 must fix x0 = 0. Before, the first
+    // occurrence of 2 was not recorded when no second position for 0 existed.
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 1, 2)};
+    store.impose(new ValuePrecede(0, 2, x));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("{0..1}");
+
+    store.setLevel(store.level + 1);
+    x[1].domain.in(store.level, x[1], 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("0");
   }
 
   private static IntVar variable(Store store, String name, int... values) {
