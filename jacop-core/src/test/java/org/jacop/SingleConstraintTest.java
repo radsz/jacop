@@ -2792,6 +2792,26 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementVariableStaysAttachedToIndexOnTheList() {
+    // The index is also on the list, at a position it cannot take. Removing that position
+    // detached the index from the constraint, which then ignored the index being fixed.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 1);
+    index.addDom(3, 3);
+    IntVar value = new IntVar(store, "value", 5, 6);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    IntVar b = new IntVar(store, "b", 5, 7);
+    store.impose(new ElementVariable(index, new IntVar[] {a, index, b}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 3, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isEqualTo(6);
+  }
+
+  @Test
   void testEqBool() {
 
     Store store = new Store();

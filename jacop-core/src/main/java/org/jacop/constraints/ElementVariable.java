@@ -242,7 +242,7 @@ public class ElementVariable extends AbstractElement
       int position = e.nextElement() - 1 - indexOffset;
       if (!list[position].domain.isIntersecting(value.domain)) {
         index.domain.inComplement(store.level, index, position + 1 + indexOffset);
-        list[position].removeConstraint(this);
+        detach(position);
       }
     }
   }
@@ -312,12 +312,22 @@ public class ElementVariable extends AbstractElement
     }
   }
 
+  /**
+   * Detaches the variable at a position that the index can no longer select. The index itself may
+   * be on the list, and it must stay attached.
+   */
+  private void detach(int position) {
+    if (list[position] != index) {
+      list[position].removeConstraint(this);
+    }
+  }
+
   private void processIndexRemovalForDisjoint(Store store, IntVar changedVar, int position) {
     if (changedVar.domain.isIntersecting(value.domain)) {
       return;
     }
     index.domain.inComplement(store.level, index, position + 1 + indexOffset);
-    list[position].removeConstraint(this);
+    detach(position);
     List<Integer> array = duplicates.get(changedVar);
     if (array != null) {
       for (int additionalPosition : array) {
