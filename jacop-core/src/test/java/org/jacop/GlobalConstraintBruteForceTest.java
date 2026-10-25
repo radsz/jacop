@@ -81,6 +81,7 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -229,6 +230,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("ArgMin", argMaxOrMin(false)),
         Arguments.of("Increasing", monotonic(true)),
         Arguments.of("Decreasing", monotonic(false)),
+        Arguments.of(
+            "IncreasingSum",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
         Arguments.of(
             "ValuePrecede",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuePrecede),
@@ -1400,6 +1404,42 @@ class GlobalConstraintBruteForceTest {
           },
           "strict=" + strict);
     };
+  }
+
+  // x[0..n-1] ordered and summing to the last variable, which may also occur in x
+  private static Instance increasingSum(Random random) {
+    int n = 1 + random.nextInt(4);
+    boolean strict = random.nextBoolean();
+    boolean repeated = n > 1 && random.nextInt(5) == 0;
+    int[][] domains = new int[n + 1][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = domain(random, -1, 4);
+    }
+    domains[n] = domain(random, -2, 4 * n + 2);
+    return new Instance(
+        domains,
+        (store, v) -> {
+          IntVar[] x = Arrays.copyOf(v, n);
+          if (repeated) {
+            x[n - 1] = x[0];
+          }
+          store.impose(new IncreasingSum(x, v[n], strict));
+        },
+        t -> {
+          int[] x = Arrays.copyOf(t, n);
+          if (repeated) {
+            x[n - 1] = x[0];
+          }
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            if (i > 0 && (strict ? x[i] <= x[i - 1] : x[i] < x[i - 1])) {
+              return false;
+            }
+            total += x[i];
+          }
+          return total == t[n];
+        },
+        "strict=" + strict + " repeated=" + repeated);
   }
 
   private static Instance valuePrecede(Random random) {

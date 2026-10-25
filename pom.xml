@@ -233,6 +233,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -312,6 +313,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
@@ -390,6 +392,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
@@ -467,6 +470,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
