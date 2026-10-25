@@ -105,6 +105,8 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
   private final int[] savedPot;
   private boolean potFound;
   private final int[] queue;
+  private int queueHead;
+  private int queueSize;
   private final boolean[] inQueue;
   private final boolean[] scan;
   private final int[] parent;
@@ -184,6 +186,7 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
     boolean changed;
     do {
       readBounds();
+      checkWindows();
       findSolution();
       changed = prune(store);
     } while (hasDuplicates && changed);
@@ -202,8 +205,19 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
       } else if (setIsInterval) {
         int dmin = d.min();
         int dmax = d.max();
-        lb[i] = dmin >= setMin && dmax <= setMax ? 1 : 0;
-        ub[i] = lb[i] == 1 || d.isIntersecting(setMin, setMax) ? 1 : 0;
+        if (dmin >= setMin && dmax <= setMax) {
+          lb[i] = 1;
+          ub[i] = 1;
+        } else {
+          // a bound inside the set intersects it, and a domain beside the set does not
+          lb[i] = 0;
+          ub[i] =
+              dmax >= setMin
+                      && dmin <= setMax
+                      && (dmin >= setMin || dmax <= setMax || d.isIntersecting(setMin, setMax))
+                  ? 1
+                  : 0;
+        }
       } else {
         lb[i] = set.contains(d) ? 1 : 0;
         ub[i] = lb[i] == 1 || d.isIntersecting(set) ? 1 : 0;
@@ -212,33 +226,8 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
   }
 
   // The edges of the network: u -> v with weight w stands for S_v - S_u <= w. Every node u has
-  // at most four outgoing edges, numbered 0..3: to u + 1, to u - 1, to u + q and to u - q.
-
-  private int target(int u, int e) {
-    switch (e) {
-      case 0:
-        return u < n ? u + 1 : -1;
-      case 1:
-        return u > 0 ? u - 1 : -1;
-      case 2:
-        return u + q <= n ? u + q : -1;
-      default:
-        return u - q >= 0 ? u - q : -1;
-    }
-  }
-
-  private int weight(int u, int e) {
-    switch (e) {
-      case 0:
-        return ub[u];
-      case 1:
-        return -lb[u - 1];
-      case 2:
-        return max;
-      default:
-        return -min;
-    }
-  }
+  // at most four outgoing edges: to u + 1 with weight ub[u], to u - 1 with weight -lb[u - 1],
+  // to u + q with weight max and to u - q with weight -min.
 
   /**
    * Label correcting (FIFO Bellman-Ford) from the previous solution, with Tarjan's subtree
@@ -249,10 +238,29 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
   private void findSolution() {
 
     int nodes = n + 1;
-    int root = nodes;
-    System.arraycopy(pot, 0, savedPot, 0, nodes);
+    queueHead = 0;
+    queueSize = 0;
+    for (int u = 0; u < nodes; u++) {
+      // the previous solution satisfies the window edges, whose weights never change, and the
+      // edges between neighbours with the weights it was found for; weights only decrease along
+      // a branch, so only the sources of now violated neighbour edges need to be queued
+      boolean violated =
+          !potFound
+              || u < n && pot[u + 1] - pot[u] > ub[u]
+              || u > 0 && pot[u - 1] - pot[u] > -lb[u - 1];
+      scan[u] = violated;
+      inQueue[u] = violated;
+      if (violated) {
+        queue[queueSize++] = u;
+      }
+    }
+    if (queueSize == 0) {
+      return;
+    }
 
+    System.arraycopy(pot, 0, savedPot, 0, nodes);
     // every node starts as a child of a virtual root, with an edge of weight pot[u]
+    int root = nodes;
     depth[root] = 0;
     threadNext[root] = 0;
     threadPrev[root] = n;
@@ -263,46 +271,27 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
       threadPrev[u] = u > 0 ? u - 1 : root;
     }
 
-    // The previous solution satisfies the window edges, whose weights never change, and the
-    // edges between neighbours with the weights it was found for. Weights only decrease along a
-    // branch, so only the sources of now violated neighbour edges need to be queued.
-    int head = 0;
-    int size = 0;
-    for (int u = 0; u < nodes; u++) {
-      boolean violated =
-          !potFound
-              || u < n && pot[u + 1] - pot[u] > ub[u]
-              || u > 0 && pot[u - 1] - pot[u] > -lb[u - 1];
-      scan[u] = violated;
-      inQueue[u] = violated;
-      if (violated) {
-        queue[size++] = u;
-      }
-    }
-
-    while (size > 0) {
-      int u = queue[head];
-      head = head + 1 == nodes ? 0 : head + 1;
-      size--;
+    while (queueSize > 0) {
+      int u = queue[queueHead];
+      queueHead = queueHead + 1 == nodes ? 0 : queueHead + 1;
+      queueSize--;
       inQueue[u] = false;
       if (!scan[u]) {
         continue;
       }
       scan[u] = false;
       int pu = pot[u];
-      for (int e = 0; e < 4; e++) {
-        int v = target(u, e);
-        if (v >= 0 && pu + weight(u, e) < pot[v]) {
-          pot[v] = pu + weight(u, e);
-          relink(u, v);
-          scan[v] = true;
-          if (!inQueue[v]) {
-            inQueue[v] = true;
-            int tail = head + size;
-            queue[tail >= nodes ? tail - nodes : tail] = v;
-            size++;
-          }
-        }
+      if (u < n) {
+        relax(u, u + 1, pu + ub[u]);
+      }
+      if (u > 0) {
+        relax(u, u - 1, pu - lb[u - 1]);
+      }
+      if (u + q < nodes) {
+        relax(u, u + q, pu + max);
+      }
+      if (u >= q) {
+        relax(u, u - q, pu - min);
       }
     }
 
@@ -311,6 +300,21 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
     if (offset != 0) {
       for (int u = 0; u < nodes; u++) {
         pot[u] -= offset;
+      }
+    }
+  }
+
+  private void relax(int u, int v, int label) {
+    if (label < pot[v]) {
+      pot[v] = label;
+      relink(u, v);
+      scan[v] = true;
+      if (!inQueue[v]) {
+        inQueue[v] = true;
+        int nodes = n + 1;
+        int tail = queueHead + queueSize;
+        queue[tail >= nodes ? tail - nodes : tail] = v;
+        queueSize++;
       }
     }
   }
@@ -344,26 +348,42 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
     depth[v] = depth[u] + 1;
   }
 
-  private boolean tight(int u, int e) {
-    int v = target(u, e);
-    return v >= 0 && pot[v] - pot[u] == weight(u, e);
-  }
+  /**
+   * Tarjan's algorithm on the tight edges between the nodes first..last, without recursion. Edges
+   * leaving these nodes are left out, which is safe when the nodes below first and above last
+   * belong to blocks of fixed variables, see prune.
+   */
+  private void components(int first, int last) {
 
-  /** Tarjan's algorithm on the tight edges, without recursion. */
-  private void components() {
-
-    int nodes = n + 1;
-    Arrays.fill(index, -1);
+    // nextEdge[u] holds the tight edges of u not yet followed: bit 0 to u + 1, bit 1 to u - 1, bit
+    // 2 to u + q and bit 3 to u - q
+    for (int u = first; u <= last; u++) {
+      index[u] = -1;
+      int pu = pot[u];
+      int mask = 0;
+      if (u < last && pot[u + 1] - pu == ub[u]) {
+        mask = 1;
+      }
+      if (u > first && pu - pot[u - 1] == lb[u - 1]) {
+        mask |= 2;
+      }
+      if (u + q <= last && pot[u + q] - pu == max) {
+        mask |= 4;
+      }
+      if (u - q >= first && pu - pot[u - q] == min) {
+        mask |= 8;
+      }
+      nextEdge[u] = mask;
+    }
     int counter = 0;
     int stackSize = 0;
     int componentCount = 0;
 
-    for (int root = 0; root < nodes; root++) {
+    for (int root = first; root <= last; root++) {
       if (index[root] >= 0) {
         continue;
       }
       callStack[0] = root;
-      nextEdge[root] = 0;
       index[root] = low[root] = counter++;
       sccStack[stackSize++] = root;
       onStack[root] = true;
@@ -371,15 +391,13 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
 
       while (top >= 0) {
         int u = callStack[top];
-        if (nextEdge[u] < 4) {
-          int e = nextEdge[u]++;
-          if (!tight(u, e)) {
-            continue;
-          }
-          int v = target(u, e);
+        int mask = nextEdge[u];
+        if (mask != 0) {
+          nextEdge[u] = mask & (mask - 1);
+          int e = Integer.numberOfTrailingZeros(mask);
+          int v = e == 0 ? u + 1 : e == 1 ? u - 1 : e == 2 ? u + q : u - q;
           if (index[v] < 0) {
             index[v] = low[v] = counter++;
-            nextEdge[v] = 0;
             sccStack[stackSize++] = v;
             onStack[v] = true;
             callStack[++top] = v;
@@ -410,10 +428,24 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
 
   private boolean prune(Store store) {
 
-    components();
+    int firstFree = 0;
+    while (firstFree < n && lb[firstFree] == ub[firstFree]) {
+      firstFree++;
+    }
+    if (firstFree == n) {
+      return false;
+    }
+    int lastFree = n - 1;
+    while (lb[lastFree] == ub[lastFree]) {
+      lastFree--;
+    }
+    // Nodes 0..firstFree are linked both ways by the fixed variables, so they are in one
+    // component, and a node below firstFree - q has edges only to nodes below firstFree. The
+    // nodes above lastFree + 1 + q are left out in the same way.
+    components(Math.max(0, firstFree - q), Math.min(n, lastFree + 1 + q));
 
     boolean changed = false;
-    for (int i = 0; i < n; i++) {
+    for (int i = firstFree; i <= lastFree; i++) {
       if (lb[i] == ub[i] || component[i] != component[i + 1]) {
         continue;
       }
@@ -427,6 +459,30 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
       changed |= x.getSize() != size;
     }
     return changed;
+  }
+
+  /**
+   * It fails when a window has more than max variables that must take a value from the set, or
+   * fewer than min that can. This catches most failures in linear time, before the network is
+   * solved.
+   */
+  private void checkWindows() {
+    if (q > n) {
+      return;
+    }
+    int sure = 0;
+    int possible = 0;
+    for (int i = 0; i < n; i++) {
+      sure += lb[i];
+      possible += ub[i];
+      if (i >= q) {
+        sure -= lb[i - q];
+        possible -= ub[i - q];
+      }
+      if (i >= q - 1 && (sure > max || possible < min)) {
+        throw Store.failException;
+      }
+    }
   }
 
   /** It checks whether every window holds whatever values the variables take. */
