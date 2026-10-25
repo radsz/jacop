@@ -1286,4 +1286,74 @@ public final class ConstraintFncs {
   public void jacop_graph_isomorphism(SimpleNode n) {
     graph.gen_jacop_graph_isomorphism(n);
   }
+
+  /** Handles the jacop_reachable FlatZinc constraint. */
+  public void jacop_reachable(SimpleNode n) {
+    graph.gen_jacop_reachable(n, false);
+  }
+
+  /** Handles the jacop_dreachable FlatZinc constraint. */
+  public void jacop_dreachable(SimpleNode n) {
+    graph.gen_jacop_reachable(n, true);
+  }
+
+  /** Handles the jacop_connected FlatZinc constraint. */
+  public void jacop_connected(SimpleNode n) {
+    graph.gen_jacop_connected(n, false);
+  }
+
+  /** Handles the jacop_dconnected FlatZinc constraint. */
+  public void jacop_dconnected(SimpleNode n) {
+    graph.gen_jacop_connected(n, true);
+  }
+
+  /** Handles the jacop_tree FlatZinc constraint. */
+  public void jacop_tree(SimpleNode n) {
+    graph.gen_jacop_tree(n, false);
+  }
+
+  /** Handles the jacop_dtree FlatZinc constraint. */
+  public void jacop_dtree(SimpleNode n) {
+    graph.gen_jacop_tree(n, true);
+  }
+
+  /** Handles the jacop_path FlatZinc constraint. */
+  public void jacop_path(SimpleNode n) {
+    graph.gen_jacop_path(n, false);
+  }
+
+  /** Handles the jacop_dpath FlatZinc constraint. */
+  public void jacop_dpath(SimpleNode n) {
+    graph.gen_jacop_path(n, true);
+  }
+
+  /** Handles the jacop_bounded_path FlatZinc constraint. */
+  public void jacop_bounded_path(SimpleNode n) {
+    graph.gen_jacop_bounded_path(n, false);
+  }
+
+  /** Handles the jacop_bounded_dpath FlatZinc constraint. */
+  public void jacop_bounded_dpath(SimpleNode n) {
+    graph.gen_jacop_bounded_path(n, true);
+  }
+
+  /** Handles the jacop_steiner FlatZinc constraint. */
+  public void jacop_steiner(SimpleNode n) {
+    graph.gen_jacop_steiner(n);
+  }
+
+  /** Handles the jacop_dsteiner FlatZinc constraint. */
+  public void jacop_dsteiner(SimpleNode n) {
+    graph.gen_jacop_dsteiner(n);
+  }
+
+  /** Handles the jacop_wst FlatZinc constraint. */
+  public void jacop_wst(SimpleNode n) {
+    graph.gen_jacop_wst(n);
+  }
+
+  /** Handles the jacop_dwst FlatZinc constraint. */
+  public void jacop_dwst(SimpleNode n) {
+    graph.gen_jacop_dwst(n);
+  }
 }

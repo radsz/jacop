@@ -31,7 +31,6 @@
 package org.jacop.constraints.graph;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.jacop.constraints.ChannelReif;
@@ -122,8 +121,9 @@ public class Tree extends DecomposedConstraint<Constraint> {
     result.add(edgeCount(ns, es));
     if (directed) {
       IntVar[] isRoot = nodeIndicators(store, root, ns.length, base, result, auxiliary);
+      int[][] entering = edgesByNode(from, to, ns.length, base, true, false);
       for (int v = 0; v < ns.length; v++) {
-        result.add(degree(edgesTo(from, to, v + base), es, isRoot[v], null, ns[v], 1));
+        result.add(degree(entering[v], es, isRoot[v], null, ns[v], 1));
       }
     }
     return result;
@@ -172,31 +172,38 @@ public class Tree extends DecomposedConstraint<Constraint> {
     return b;
   }
 
-  /** The edges other than self-loops whose head is the given node. */
-  static int[] edgesTo(int[] from, int[] to, int node) {
-    return Arrays.stream(indexes(to.length))
-        .filter(e -> to[e] == node && from[e] != node)
-        .toArray();
-  }
-
-  /** The edges other than self-loops whose tail is the given node. */
-  static int[] edgesFrom(int[] from, int[] to, int node) {
-    return Arrays.stream(indexes(to.length))
-        .filter(e -> from[e] == node && to[e] != node)
-        .toArray();
-  }
-
-  /** The edges other than self-loops that touch the given node. */
-  static int[] edgesAt(int[] from, int[] to, int node) {
-    return Arrays.stream(indexes(to.length))
-        .filter(e -> (from[e] == node) != (to[e] == node))
-        .toArray();
-  }
-
-  private static int[] indexes(int n) {
-    int[] r = new int[n];
-    Arrays.setAll(r, i -> i);
-    return r;
+  /**
+   * The edges other than self-loops by node: entering it (heads), leaving it (tails) or touching it
+   * (both), as {@code result[node - base]}.
+   */
+  static int[][] edgesByNode(int[] from, int[] to, int n, int base, boolean heads, boolean tails) {
+    int[] count = new int[n];
+    for (int e = 0; e < from.length; e++) {
+      if (from[e] != to[e]) {
+        if (tails) {
+          count[from[e] - base]++;
+        }
+        if (heads) {
+          count[to[e] - base]++;
+        }
+      }
+    }
+    int[][] result = new int[n][];
+    for (int v = 0; v < n; v++) {
+      result[v] = new int[count[v]];
+      count[v] = 0;
+    }
+    for (int e = 0; e < from.length; e++) {
+      if (from[e] != to[e]) {
+        if (tails) {
+          result[from[e] - base][count[from[e] - base]++] = e;
+        }
+        if (heads) {
+          result[to[e] - base][count[to[e] - base]++] = e;
+        }
+      }
+    }
+    return result;
   }
 
   /** The degree equation sum(es[edges]) + a + b = k * node. */

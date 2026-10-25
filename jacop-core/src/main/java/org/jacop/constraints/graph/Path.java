@@ -129,12 +129,17 @@ public class Path extends DecomposedConstraint<Constraint> {
     int n = ns.length;
     IntVar[] isS = Tree.nodeIndicators(store, s, n, base, result, auxiliary);
     IntVar[] isT = Tree.nodeIndicators(store, t, n, base, result, auxiliary);
-    for (int v = 0; v < n; v++) {
-      if (directed) {
-        result.add(Tree.degree(Tree.edgesTo(from, to, v + base), es, isS[v], null, ns[v], 1));
-        result.add(Tree.degree(Tree.edgesFrom(from, to, v + base), es, isT[v], null, ns[v], 1));
-      } else {
-        result.add(Tree.degree(Tree.edgesAt(from, to, v + base), es, isS[v], isT[v], ns[v], 2));
+    if (directed) {
+      int[][] entering = Tree.edgesByNode(from, to, n, base, true, false);
+      int[][] leaving = Tree.edgesByNode(from, to, n, base, false, true);
+      for (int v = 0; v < n; v++) {
+        result.add(Tree.degree(entering[v], es, isS[v], null, ns[v], 1));
+        result.add(Tree.degree(leaving[v], es, isT[v], null, ns[v], 1));
+      }
+    } else {
+      int[][] touching = Tree.edgesByNode(from, to, n, base, true, true);
+      for (int v = 0; v < n; v++) {
+        result.add(Tree.degree(touching[v], es, isS[v], isT[v], ns[v], 2));
       }
     }
     return result;

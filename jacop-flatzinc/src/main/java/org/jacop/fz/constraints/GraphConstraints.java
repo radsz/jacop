@@ -36,6 +36,12 @@ import java.util.Arrays;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.graph.BoundedPath;
+import org.jacop.constraints.graph.Path;
+import org.jacop.constraints.graph.Reachable;
+import org.jacop.constraints.graph.Steiner;
+import org.jacop.constraints.graph.Tree;
+import org.jacop.constraints.graph.WeightedSpanningTree;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -204,5 +210,152 @@ class GraphConstraints implements ParserTreeConstants {
               + " is not available in this version; requires "
               + GRAPH_PACKAGE_PREFIX);
     }
+  }
+
+  // MiniZinc graph globals; node numbers start at base, the smallest index of ns
+
+  private int[] ints(SimpleNode node, int i) {
+    return support.getIntArray((SimpleNode) node.jjtGetChild(i));
+  }
+
+  private IntVar[] vars(SimpleNode node, int i) {
+    return support.getVarArray((SimpleNode) node.jjtGetChild(i));
+  }
+
+  private IntVar var(SimpleNode node, int i) {
+    return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
+  }
+
+  private int integer(SimpleNode node, int i) {
+    return support.getInt((ASTScalarFlatExpr) node.jjtGetChild(i));
+  }
+
+  /** jacop_reachable and jacop_dreachable: from, to, r, ns, es, base. */
+  void gen_jacop_reachable(SimpleNode node, boolean directed) {
+    support.pose(
+        new Reachable(
+            ints(node, 0),
+            ints(node, 1),
+            var(node, 2),
+            vars(node, 3),
+            vars(node, 4),
+            integer(node, 5),
+            directed));
+  }
+
+  /** jacop_connected and jacop_dconnected: from, to, ns, es, base. */
+  void gen_jacop_connected(SimpleNode node, boolean directed) {
+    support.pose(
+        new Reachable(
+            ints(node, 0),
+            ints(node, 1),
+            null,
+            vars(node, 2),
+            vars(node, 3),
+            integer(node, 4),
+            directed));
+  }
+
+  /** jacop_tree and jacop_dtree: from, to, r, ns, es, base. */
+  void gen_jacop_tree(SimpleNode node, boolean directed) {
+    support.poseDc(
+        new Tree(
+            ints(node, 0),
+            ints(node, 1),
+            var(node, 2),
+            vars(node, 3),
+            vars(node, 4),
+            integer(node, 5),
+            directed));
+  }
+
+  /** jacop_path and jacop_dpath: from, to, s, t, ns, es, base. */
+  void gen_jacop_path(SimpleNode node, boolean directed) {
+    support.poseDc(
+        new Path(
+            ints(node, 0),
+            ints(node, 1),
+            var(node, 2),
+            var(node, 3),
+            vars(node, 4),
+            vars(node, 5),
+            integer(node, 6),
+            directed));
+  }
+
+  /** jacop_bounded_path and jacop_bounded_dpath: from, to, w, s, t, ns, es, K, base. */
+  void gen_jacop_bounded_path(SimpleNode node, boolean directed) {
+    support.poseDc(
+        new BoundedPath(
+            ints(node, 0),
+            ints(node, 1),
+            ints(node, 2),
+            var(node, 3),
+            var(node, 4),
+            vars(node, 5),
+            vars(node, 6),
+            var(node, 7),
+            integer(node, 8),
+            directed));
+  }
+
+  /** jacop_steiner: from, to, w, ns, es, K, base. */
+  void gen_jacop_steiner(SimpleNode node) {
+    support.poseDc(
+        new Steiner(
+            ints(node, 0),
+            ints(node, 1),
+            ints(node, 2),
+            null,
+            vars(node, 3),
+            vars(node, 4),
+            var(node, 5),
+            integer(node, 6),
+            false));
+  }
+
+  /** jacop_dsteiner: from, to, w, r, ns, es, K, base. */
+  void gen_jacop_dsteiner(SimpleNode node) {
+    support.poseDc(
+        new Steiner(
+            ints(node, 0),
+            ints(node, 1),
+            ints(node, 2),
+            var(node, 3),
+            vars(node, 4),
+            vars(node, 5),
+            var(node, 6),
+            integer(node, 7),
+            true));
+  }
+
+  /** jacop_wst: N, from, to, w, es, K; nodes 1..N. */
+  void gen_jacop_wst(SimpleNode node) {
+    support.poseDc(
+        new WeightedSpanningTree(
+            integer(node, 0),
+            ints(node, 1),
+            ints(node, 2),
+            ints(node, 3),
+            null,
+            vars(node, 4),
+            var(node, 5),
+            1,
+            false));
+  }
+
+  /** jacop_dwst: N, from, to, w, r, es, K; nodes 1..N. */
+  void gen_jacop_dwst(SimpleNode node) {
+    support.poseDc(
+        new WeightedSpanningTree(
+            integer(node, 0),
+            ints(node, 1),
+            ints(node, 2),
+            ints(node, 3),
+            var(node, 4),
+            vars(node, 5),
+            var(node, 6),
+            1,
+            true));
   }
 }
