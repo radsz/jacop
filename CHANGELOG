@@ -12,6 +12,12 @@ Version 5.0 (unreleased)
    AbstractDiff and keep their behaviour. The Scala diff2 wrappers now post
    Diff2, as documented, instead of Diff.
 
+2. The MiniZinc solver configuration org.jacop.msc declares -debug, so
+   minizinc --solver org.jacop -debug model.mzn prints the constraints
+   as imposed in JaCoP; before, minizinc rejected -debug and it had to
+   be passed with --fzn-flags -debug. The MiniZinc IDE shows it as a
+   solver option.
+
 Version 4.11
 =============
 
