@@ -20,6 +20,7 @@
   ],
   "circuit": [
     "jacop_circuit",
+    "jacop_circuit_offset",
     "jacop_subcircuit"
   ],
   "element": [

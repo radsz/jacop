@@ -102,6 +102,13 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ {
 
   @Override
   public void consistency(final Store store) {
+    if (x == z || y == z) {
+      // x + y <= x means y <= 0 (and x + y <= y means x <= 0); the bounds below would shrink by
+      // the other variable per call, but the constraint is not woken by its own pruning
+      IntVar other = x == z ? y : x;
+      other.domain.inMax(store.level, other, 0);
+      return;
+    }
     x.domain.inMax(store.level, x, z.max() - y.min());
     y.domain.inMax(store.level, y, z.max() - x.min());
     z.domain.inMin(store.level, z, x.min() + y.min());
@@ -109,6 +116,11 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ {
 
   @Override
   public void notConsistency(final Store store) {
+    if (x == z || y == z) {
+      IntVar other = x == z ? y : x;
+      other.domain.inMin(store.level, other, 1);
+      return;
+    }
 
     x.domain.inMin(store.level, x, z.min() - y.max() + 1);
 
@@ -119,11 +131,17 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ {
 
   @Override
   public boolean notSatisfied() {
+    if (x == z || y == z) {
+      return (x == z ? y : x).min() > 0;
+    }
     return x.min() + y.min() > z.max();
   }
 
   @Override
   public boolean satisfied() {
+    if (x == z || y == z) {
+      return (x == z ? y : x).max() <= 0;
+    }
     return x.max() + y.max() <= z.min();
   }
 

@@ -88,12 +88,13 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   @Override
   public void consistency(Store store) {
 
+    // p * q = p holds when p = 0 or q = 1 (and symmetrically for q * p = q)
     if (p.equals(r)) {
-      q.domain.in(store.level, q, 1.0, 1.0);
+      consistencyFactorIsOne(store, p, q);
       return;
     }
     if (q.equals(r)) {
-      p.domain.in(store.level, p, 1.0, 1.0);
+      consistencyFactorIsOne(store, q, p);
       return;
     }
 
@@ -101,6 +102,22 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
       consistencySquare(store);
     } else {
       consistencyProduct(store);
+    }
+  }
+
+  /**
+   * Propagates x * y = x, which holds exactly when x = 0 or y = 1.
+   *
+   * @param store the constraint store
+   * @param x the variable that is both a factor and the product
+   * @param y the other factor
+   */
+  private static void consistencyFactorIsOne(Store store, FloatVar x, FloatVar y) {
+    if (!x.domain.contains(0.0)) {
+      y.domain.in(store.level, y, 1.0, 1.0);
+    }
+    if (!y.domain.contains(1.0)) {
+      x.domain.in(store.level, x, 0.0, 0.0);
     }
   }
 

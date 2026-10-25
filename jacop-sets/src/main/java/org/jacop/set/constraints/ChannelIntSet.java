@@ -47,7 +47,9 @@ import org.jacop.set.core.SetVar;
 /**
  * Channel constraint requires that array of int variables x and array of set variables y are
  * related such that (x[i] = j) {@literal <->} (i in s[j]). Indexes start form 0, both for integer
- * and set variables, by default. To define other starting index use offset definitions.
+ * and set variables, by default. To define other starting index use offset definitions: x[k] stands
+ * for index i = k + offsetInt and s[l] for index j = l + offsetSet, so the values of x are indexes
+ * of s and the elements of s are indexes of x.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -118,12 +120,13 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   }
 
   private void doFirstConsistencyCheck(Store store) {
+    // the values of x index s and the elements of s index x
     for (int i = 0; i < ni; i++) {
-      x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+      x[i].domain.in(store.level, x[i], offsetSet, ns - 1 + offsetSet);
     }
 
     for (int i = 0; i < ns; i++) {
-      s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+      s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetInt, ni - 1 + offsetInt));
     }
   }
 
@@ -132,7 +135,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
         int xd = e.nextElement();
-        if (s[xd - offsetInt].dom().lub().contains(i + offsetInt)) {
+        if (s[xd - offsetSet].dom().lub().contains(i + offsetInt)) {
           vs.unionAdapt(xd);
         }
       }
@@ -140,8 +143,8 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       x[i].domain.in(store.level, x[i], vs);
 
       if (x[i].singleton()) {
-        IntDomain glb = new IntervalDomain(i + offsetInt, i + offsetInt);
-        s[x[i].value() - offsetInt].dom().inGlb(store.level, s[x[i].value() - offsetInt], glb);
+        SetVar si = s[x[i].value() - offsetSet];
+        si.domain.inGlb(store.level, si, i + offsetInt);
       }
     }
   }
@@ -152,9 +155,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = lub.valueEnumeration(); e.hasMoreElements(); ) {
         int se = e.nextElement();
-        if (se >= offsetSet
-            && se <= ni + offsetInt
-            && x[se - offsetSet].domain.contains(i + offsetSet)) {
+        if (se >= offsetInt
+            && se < ni + offsetInt
+            && x[se - offsetInt].domain.contains(i + offsetSet)) {
           vs.unionAdapt(se);
         }
       }
@@ -164,7 +167,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       IntDomain glb = s[i].dom().glb();
       for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
         int se = e.nextElement();
-        x[se - offsetSet].domain.in(store.level, x[se - offsetSet], i + offsetSet, i + offsetSet);
+        x[se - offsetInt].domain.in(store.level, x[se - offsetInt], i + offsetSet, i + offsetSet);
       }
     }
   }
@@ -175,9 +178,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
     for (int i = 0; i < ni; i++) {
       if (x[i].singleton()) {
         int v = x[i].value();
-        if (v < offsetInt
-            || v >= ns + offsetInt
-            || !s[v - offsetInt].dom().lub().contains(i + offsetSet)) {
+        if (v < offsetSet
+            || v >= ns + offsetSet
+            || !s[v - offsetSet].dom().lub().contains(i + offsetInt)) {
           return false;
         }
       }
@@ -186,9 +189,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       IntDomain glb = s[i].dom().glb();
       for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
         int se = e.nextElement();
-        if (se < offsetSet
-            || se >= ni + offsetSet
-            || !x[se - offsetSet].domain.contains(i + offsetInt)) {
+        if (se < offsetInt
+            || se >= ni + offsetInt
+            || !x[se - offsetInt].domain.contains(i + offsetSet)) {
           return false;
         }
       }

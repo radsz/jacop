@@ -135,7 +135,8 @@ public class AunionBeqC extends AbstractSetOpBeqC {
 
   @Override
   public boolean satisfied() {
-    return grounded() && a.domain.union(b.domain).eq(c.domain);
+    // SetDomain.union is the hull of two domains (intersection of the glbs), not the set union
+    return grounded() && a.domain.glb().union(b.domain.glb()).eq(c.domain.glb());
   }
 
   @Override

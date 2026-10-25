@@ -144,7 +144,7 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
   @Override
   public boolean satisfied() {
-    return grounded() && (p.min() == q.min() || -p.min() == q.min());
+    return grounded() && Math.abs(p.min()) == q.min();
   }
 
   @Override

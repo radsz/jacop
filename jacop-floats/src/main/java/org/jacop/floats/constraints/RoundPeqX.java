@@ -66,10 +66,7 @@ public class RoundPeqX extends AbstractRoundPeqX {
 
       store.propagationHasOccurred = false;
 
-      double pMin = Math.nextUp(x.min() - 0.5);
-      double pMax = Math.nextDown(x.max() + 0.5);
-
-      p.domain.in(store.level, p, pMin, pMax);
+      p.domain.in(store.level, p, lowest(x.min()), highest(x.max()));
 
     } while (store.propagationHasOccurred);
   }
@@ -100,9 +97,25 @@ public class RoundPeqX extends AbstractRoundPeqX {
     return r;
   }
 
+  /**
+   * The smallest p that rounds to x; halves round away from zero, so x - 0.5 rounds to x when x is
+   * positive.
+   */
+  static double lowest(int x) {
+    return x > 0 ? x - 0.5 : Math.nextUp(x - 0.5);
+  }
+
+  /**
+   * The largest p that rounds to x; halves round away from zero, so x + 0.5 rounds to x when x is
+   * negative.
+   */
+  static double highest(int x) {
+    return x < 0 ? x + 0.5 : Math.nextDown(x + 0.5);
+  }
+
   @Override
   public boolean satisfied() {
-    return x.singleton() && p.min() > x.value() - 0.5 && p.max() < x.value() + 0.5;
+    return x.singleton() && p.min() >= lowest(x.value()) && p.max() <= highest(x.value());
   }
 
   @Override

@@ -64,6 +64,12 @@ public class SqrtPeqR extends PmulQeqR {
   }
 
   @Override
+  public boolean satisfied() {
+    // field p holds R, the root, which must be non-negative; R * R = P alone accepts R < 0
+    return p.min() >= 0 && super.satisfied();
+  }
+
+  @Override
   public String toString() {
 
     return id() + " : SqrtPeqR(" + p + ", " + r + " )";

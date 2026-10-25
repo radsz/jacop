@@ -37,6 +37,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
@@ -46,12 +48,17 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.set.SetImposeGroundingHarness.Case;
+import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AltB;
+import org.jacop.set.constraints.AunionBeqC;
+import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SumWeightedSet;
 import org.jacop.set.core.BoundSetDomain;
@@ -378,6 +385,163 @@ class SingleConstraintTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new ChannelIntSet(new IntVar[] {x}, new SetVar[] {null}))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testAunionBeqCSatisfiedWhenGround() {
+    // satisfied() compared the hull of the domains of a and b, whose glb is the intersection
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1)));
+    SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(2), dom(2)));
+    SetVar c = new SetVar(store, "c", new BoundSetDomain(dom(1, 2), dom(1, 2)));
+    AunionBeqC union = new AunionBeqC(a, b, c);
+    store.impose(union);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(union.satisfied()).isTrue();
+  }
+
+  @Test
+  void testCardARespectsHolesInCardinality() {
+    // only the bounds 0..2 of the cardinality {0, 2} were used, so a set of size 1 was accepted
+    SetImposeGroundingHarness.check(
+        "CardA {0, 2}",
+        random ->
+            new Case(
+                new Spec[] {Spec.setVar(new int[0], new int[] {1, 2, 3})},
+                (store, x) -> {
+                  CardA c = new CardA((SetVar) x[0], dom(0, 2));
+                  store.impose(c);
+                  return c;
+                },
+                t -> t.s(0).size() == 0 || t.s(0).size() == 2,
+                ""),
+        1);
+
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1)));
+    store.impose(new CardA(a, dom(0, 2)));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testChannelBoolSetNotSatisfiedByElementOutsideRange() {
+    // s = {0} has an element without a Boolean (the only index is -1 + 1 = 0, element -1)
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 0);
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(0), dom(0)));
+    ChannelBoolSet channel = new ChannelBoolSet(new IntVar[] {b}, s, -1);
+    store.impose(channel);
+
+    assertThat(channel.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testChannelIntSetWithDifferentOffsets() {
+    // x[k] stands for index k + offsetInt and s[l] for index l + offsetSet; the propagation mixed
+    // up the two offsets and threw IllegalStateException or ArrayIndexOutOfBoundsException
+    int ni = 2;
+    int ns = 3;
+    int offsetInt = 1;
+    int offsetSet = 3;
+    SetImposeGroundingHarness.check(
+        "ChannelIntSet offsets",
+        random -> {
+          Spec[] vars = new Spec[ni + ns];
+          for (int i = 0; i < ni; i++) {
+            vars[i] = Spec.intVar(2, 3, 4, 5, 6);
+          }
+          for (int j = 0; j < ns; j++) {
+            vars[ni + j] = Spec.setVar(new int[0], new int[] {0, 1, 2, 3});
+          }
+          return new Case(
+              vars,
+              (store, x) -> {
+                ChannelIntSet c =
+                    new ChannelIntSet(
+                        Arrays.copyOf(x, ni, IntVar[].class),
+                        Arrays.copyOfRange(x, ni, ni + ns, SetVar[].class),
+                        offsetInt,
+                        offsetSet);
+                store.impose(c);
+                return c;
+              },
+              t -> {
+                for (int i = 0; i < ni; i++) {
+                  if (t.i(i) < offsetSet || t.i(i) >= offsetSet + ns) {
+                    return false;
+                  }
+                }
+                for (int j = 0; j < ns; j++) {
+                  Set<Integer> expected = new TreeSet<>();
+                  for (int i = 0; i < ni; i++) {
+                    if (t.i(i) == j + offsetSet) {
+                      expected.add(i + offsetInt);
+                    }
+                  }
+                  if (!expected.equals(t.s(ni + j))) {
+                    return false;
+                  }
+                }
+                return true;
+              },
+              "");
+        },
+        1);
+  }
+
+  @Test
+  void testElementSetSatisfiedWithIndexOutOfRange() {
+    // satisfied() indexed the list with an index outside 1..list.length
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 0, 0);
+    SetVar value = new SetVar(store, "value", new BoundSetDomain(dom(1), dom(1)));
+    ElementSet element = new ElementSet(index, new IntDomain[] {dom(1)}, value);
+    store.impose(element);
+
+    assertThat(element.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testSumWeightedSetSatisfiedWithElementWithoutWeight() {
+    // satisfied() threw NullPointerException for an element of the set without a weight
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(2), dom(2)));
+    IntVar total = new IntVar(store, "total", 0, 0);
+    SumWeightedSet sum = new SumWeightedSet(a, new int[] {1}, new int[] {1}, total);
+    store.impose(sum);
+
+    assertThat(sum.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testMatchReachesFixpoint() {
+    // the general case completed the glb of a without checking the list against it, so the search
+    // accepted a = {-1, 2, 3} with list [-1, 3, 2]; there is no solution
+    SetImposeGroundingHarness.check(
+        "Match",
+        random ->
+            new Case(
+                new Spec[] {
+                  Spec.setVar(new int[0], new int[] {-1, 0, 2, 3, 4}),
+                  Spec.intVar(-1, 1, 4),
+                  Spec.intVar(1, 3, 4),
+                  Spec.intVar(0, 1, 2)
+                },
+                (store, x) -> {
+                  Match c = new Match((SetVar) x[0], Arrays.copyOfRange(x, 1, 4, IntVar[].class));
+                  store.impose(c);
+                  return c;
+                },
+                t -> {
+                  int[] e = t.elements(0);
+                  return e.length == 3 && e[0] == t.i(1) && e[1] == t.i(2) && e[2] == t.i(3);
+                },
+                ""),
+        1);
   }
 
   private static IntDomain randomSet(Random random, int min, int max, double probability) {
