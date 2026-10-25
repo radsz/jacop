@@ -358,6 +358,9 @@ class BoundDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
+    if (domain.isEmpty()) {
+      throw failException;
+    }
     in(storeLevel, v, domain.min(), domain.max());
   }
 

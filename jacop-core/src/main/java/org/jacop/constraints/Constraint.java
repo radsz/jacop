@@ -719,21 +719,26 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
-   * Updates the accumulated failure count (AFC) weight with decay, rescaling all constraint weights
-   * if overflow is imminent.
+   * Adds the given increment to the accumulated failure count (AFC) weight of this constraint.
    *
-   * @param allConstraints the set of all constraints used for rescaling on overflow.
-   * @param decay the decay factor applied to the updated weight.
+   * <p>The store decays the weights of all constraints lazily: instead of multiplying every weight
+   * by the decay factor at each failure, it divides the increment by it, so the ratios between
+   * weights are those of the decayed counts.
+   *
+   * @param increment the amount added to the weight, the store's current AFC increment.
    */
-  public void updateAfc(Set<Constraint> allConstraints, double decay) {
-    afcWeight = (afcWeight + 1.0d) / decay;
+  public void updateAfc(double increment) {
+    afcWeight += increment;
+  }
 
-    if (afcWeight > Double.MAX_VALUE * 1e-50) {
-      // re-scale weights
-      for (Constraint c : allConstraints) {
-        c.afcWeight *= 1e-150;
-      }
-    }
+  /**
+   * Multiplies the accumulated failure count (AFC) weight of this constraint by the given factor;
+   * the store uses it to rescale all weights before they overflow.
+   *
+   * @param factor the factor applied to the weight.
+   */
+  public void scaleAfc(double factor) {
+    afcWeight *= factor;
   }
 
   /** It is executed after the constraint has failed. It allows to clean some data structures. */

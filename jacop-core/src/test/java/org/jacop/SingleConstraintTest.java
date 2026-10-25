@@ -69,6 +69,7 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
@@ -114,6 +115,7 @@ import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
@@ -150,6 +152,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Nooverlap;
+import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -329,6 +332,140 @@ class SingleConstraintTest extends TestHelper {
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
     assertThat(noOfSolutions).isEqualTo(42);
+  }
+
+  // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
+  // and threw NegativeArraySizeException or IndexOutOfBoundsException.
+  @Test
+  void testBinpackingNegativeBinNumbers() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", -4, -2),
+      new IntVar(store, "i1", -4, -2),
+      new IntVar(store, "i2", -4, -2)
+    };
+    IntVar[] binLoad = getIntVars(store, "binLoad", 3, 7);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 1}, -4));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    assertThat(noOfSolutions).isEqualTo(27);
+  }
+
+  // Items of weight zero were dropped from the constraint, so their bin variables could take
+  // values outside the bins (MiniZinc bin_packing_capa and bin_packing_load require every item
+  // to be in one of the bins).
+  @Test
+  void testBinpackingZeroWeightItemInExistingBin() {
+
+    Store store = new Store();
+    IntVar[] items = {new IntVar(store, "i0", 0, 3), new IntVar(store, "i1", 0, 3)};
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 3);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 2}, 1));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // i0 in {1, 2}, i1 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  // The constructor without minBin computes the first bin from items of non-zero weight, but it
+  // started from the first item even when its weight was zero, shifting all bins.
+  @Test
+  void testBinpackingDefaultMinBinIgnoresZeroWeightItems() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", 0, 2), new IntVar(store, "i1", 1, 2), new IntVar(store, "i2", 2, 2)
+    };
+    IntVar[] binLoad = {new IntVar(store, "l1", 0, 0), new IntVar(store, "l2", 4, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 3, 1}));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // bins are 1 and 2: i1 = i2 = 2, i0 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  // The total weight of all items exceeded Integer.MAX_VALUE and overflowed, so the constraint
+  // failed on a satisfiable problem.
+  @Test
+  void testBinpackingTotalWeightAboveIntRange() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 5);
+    IntVar[] binLoad = new IntVar[5];
+    for (int i = 0; i < binLoad.length; i++) {
+      binLoad[i] = new IntVar(store, "binLoad" + i, 0, IntDomain.MAX_INT);
+    }
+    int[] w = new int[5];
+    Arrays.fill(w, 500_000_000);
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    // one item per bin
+    assertThat(noOfAllSolutions(store, items)).isEqualTo(120);
+  }
+
+  // Changes made by Binpacking itself are not queued again by the store, and bins affected by its
+  // own pruning were not processed again. Here the propagator fixed item 0 to bin 3 and removed
+  // bin 3 from item 2, but did not process bin 1 again, whose load can then be at most 10.
+  @Test
+  void testBinpackingReachesFixpoint() {
+
+    Store store = new Store();
+    int[][] binDomains = {{1, 3}, {0, 1, 2}, {0, 2, 3}, {0, 1, 2}, {0, 1, 2}, {3}, {1}};
+    IntVar[] items = new IntVar[binDomains.length];
+    for (int i = 0; i < items.length; i++) {
+      items[i] = new IntVar(store, "item" + i);
+      for (int v : binDomains[i]) {
+        items[i].addDom(v, v);
+      }
+    }
+    IntVar[] binLoad = {
+      new IntVar(store, "l0"),
+      new IntVar(store, "l1", 1, 11),
+      new IntVar(store, "l2", 0, 11),
+      new IntVar(store, "l3", 9, 11)
+    };
+    binLoad[0].addDom(0, 2);
+    binLoad[0].addDom(6, 11);
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 1, 3, 5, 8, 5, 1}, 0));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].value()).isEqualTo(3);
+    assertThat(binLoad[3].value()).isEqualTo(10);
+    assertThat(binLoad[1].max()).isEqualTo(10);
+  }
+
+  // Bins of capacity 9 hold 3, 2, 6 and 6, so their free space is 6, 7, 3 and 3: the items 5, 5
+  // and 4 cannot all be packed. The bin-count lower bound used capacity 9 and padded only bins
+  // with items (reduction R0), and was switched off once every bin was used; with the largest free
+  // space as capacity (reduction RMin) it detects the failure.
+  @Test
+  void testBinpackingLowerBoundWithAllBinsUsed() {
+
+    Store store = new Store();
+    IntVar[] items = new IntVar[9];
+    for (int i = 0; i < 4; i++) {
+      items[i] = new IntVar(store, "f" + i, i, i);
+    }
+    for (int i = 4; i < 9; i++) {
+      items[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar[] binLoad = getIntVars(store, "binLoad", 4, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 6, 6, 5, 1, 2, 4, 5}, 0));
+
+    assertThat(store.consistency()).isFalse();
   }
 
   @Test
@@ -979,6 +1116,75 @@ class SingleConstraintTest extends TestHelper {
     x[0].domain.inComplement(store.level, x[0], 3);
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void assignmentRejectsArraysOfDifferentLength() {
+    // a shorter ds threw ArrayIndexOutOfBoundsException, a longer one NullPointerException later
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Assignment(x, d)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Assignment(d, x)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void assignmentPropagatesVariablesSharedByBothArraysInBothRoles() {
+    // A variable occurring in both xs and ds was only propagated as an x when its domain changed,
+    // so it pruned less than the same model with a separate copy joined by XeqY.
+    Random random = new Random(3);
+    for (int trial = 0; trial < 400; trial++) {
+      int n = 2 + random.nextInt(4);
+      int[][] domains = new int[2 * n][];
+      for (int i = 0; i < 2 * n; i++) {
+        domains[i] =
+            random.ints(0, n).limit(1 + random.nextInt(n + 1)).distinct().sorted().toArray();
+      }
+      int[] shared = new int[n]; // ds[j] is xs[shared[j]] when shared[j] >= 0
+      for (int j = 0; j < n; j++) {
+        shared[j] = random.nextInt(3) == 0 ? random.nextInt(n) : -1;
+      }
+      String[] result = new String[2];
+      for (int copy = 0; copy < 2; copy++) {
+        Store store = new Store();
+        IntVar[] v = new IntVar[2 * n];
+        for (int i = 0; i < 2 * n; i++) {
+          v[i] = new IntVar(store, "v" + i);
+          for (int value : domains[i]) {
+            v[i].addDom(value, value);
+          }
+        }
+        IntVar[] xs = Arrays.copyOfRange(v, 0, n);
+        IntVar[] ds = Arrays.copyOfRange(v, n, 2 * n);
+        for (int j = 0; j < n; j++) {
+          if (shared[j] >= 0) {
+            if (copy == 0) {
+              ds[j] = xs[shared[j]];
+            } else {
+              ds[j] = new IntVar(store, "copy" + j, 0, n - 1);
+              store.impose(new XeqY(ds[j], xs[shared[j]]));
+            }
+          }
+        }
+        store.impose(new Assignment(xs, ds));
+        boolean consistent = store.consistency();
+        // compare the variables that both models have: xs and the ds that are not shared
+        StringBuilder domainsAfter = new StringBuilder();
+        for (int i = 0; i < 2 * n; i++) {
+          if (i < n || shared[i - n] < 0) {
+            domainsAfter.append(v[i].dom()).append(' ');
+          }
+        }
+        result[copy] = consistent ? domainsAfter.toString() : "fail";
+      }
+      if (!result[1].equals("fail")) {
+        assertThat(result[0])
+            .as(
+                "trial %d, shared %s, domains %s",
+                trial, Arrays.toString(shared), Arrays.deepToString(domains))
+            .isEqualTo(result[1]);
+      }
+    }
   }
 
   @Test
@@ -3767,6 +3973,37 @@ class SingleConstraintTest extends TestHelper {
     return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
   }
 
+  @Test
+  void geostKeepsInterleavedShapesApartAtNegativeCoordinates() {
+    // Shape = cells x and x + 2. With object 0 at x0 the cells x0 + 1 and x0 + 3 are free, so
+    // object 1 fits at x0 + 1. The frame of the fixed object was rounded with % 4, which is
+    // negative for negative coordinates, and covered the hole whenever x0 <= -1.
+    for (int x0 = -6; x0 <= 3; x0++) {
+      Store store = new Store();
+      List<Dbox> cells =
+          List.of(new Dbox(new int[] {0}, new int[] {1}), new Dbox(new int[] {2}, new int[] {1}));
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {1}), new Shape(1, cells));
+      IntVar[] x = {new IntVar(store, "x0", x0, x0), new IntVar(store, "x1", x0 - 3, x0 + 3)};
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                new IntVar[] {x[i]},
+                new IntVar(store, 1, 1),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(
+          new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+
+      assertThat(store.consistency()).as("x0 = %d", x0).isTrue();
+      // x1 = x0 - 3, x0 - 1, x0 + 1, x0 + 3 interleave or touch; x0 +- 2 and x0 overlap
+      assertThat(noOfAllSolutions(store, x)).as("x0 = %d", x0).isEqualTo(4);
+    }
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/46
   @Test
   void testAmongVarWithGroundedX() {
@@ -5636,5 +5873,99 @@ class SingleConstraintTest extends TestHelper {
     public void beforeEach(ExtensionContext context) {
       log.info("Starting test: " + context.getDisplayName());
     }
+  }
+
+  @Test
+  void testSequenceWithBoundsOutsideWindowHasNoSolution() {
+
+    // a window of 2 holds at most 2 values of the set, so min = 3 or max = -1 cannot be met
+    for (int[] minMax : new int[][] {{3, 3}, {-1, -1}}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+
+      store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, minMax[0], minMax[1]));
+
+      assertThat(noOfAllSolutions(store, x)).isZero();
+    }
+  }
+
+  @Test
+  void testSequenceWithWindowLongerThanListHoldsTrivially() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+
+    // no window of 4 fits in 3 variables, so every assignment is a solution
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 4, 1, 1));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(8);
+  }
+
+  @Test
+  void testSequenceRejectsNonPositiveWindow() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 2);
+
+    assertThatThrownBy(() -> new Sequence(x, new IntervalDomain(1, 1), 0, 0, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchForbidsValueWithZeroMaximalLength() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+
+    // value 2 may form stretches of length 0 only, so x must be [1, 1, 1]
+    store.imposeDecomposition(new Stretch(new int[] {1, 2}, new int[] {1, 0}, new int[] {3, 0}, x));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
+  }
+
+  @Test
+  void testStretchRejectsRepeatedValues() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    // with value 1 listed twice, [1, 1] was accepted as two stretches of length 1
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 1}, new int[] {1, 1}, new int[] {1, 1}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchRejectsArraysOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 2}, new int[] {1}, new int[] {2, 2}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testBoundDomainInEmptyDomainFails() {
+
+    Store store = new Store();
+    // Boolean variables have a BoundDomain
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+
+    // the automaton has no accepting word, so Regular restricts x to empty domains
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
+
+    assertThat(store.consistency()).isFalse();
   }
 }

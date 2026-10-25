@@ -274,6 +274,15 @@ public class Store {
   double decay = 0.99d;
 
   /**
+   * The amount added to the AFC weight of a failing constraint. It grows by 1/decay at each
+   * failure, which decays all the other weights relative to it.
+   */
+  double afcIncrement = 1.0d;
+
+  /** The AFC increment above which all weights and the increment are rescaled. */
+  static final double AFC_RESCALE_LIMIT = 1e20d;
+
+  /**
    * Variables for pruning count (variable activity) for constraints. variableActivityManagement-
    * opens activity menagement variablePrunnedConstraints- all constraints in the store
    */
@@ -581,7 +590,7 @@ public class Store {
         currentConstraint.increaseWeight();
       }
       if (constraintAfcManagement) {
-        currentConstraint.updateAfc(allConstraints, decay);
+        updateAfc(currentConstraint);
       }
       if (variableActivityManagement) {
         updateActivities(currentConstraint);
@@ -1297,6 +1306,24 @@ public class Store {
     }
 
     return constraints;
+  }
+
+  private void updateAfc(Constraint failed) {
+    if (allConstraints == null) {
+      setAllConstraints();
+    }
+    // constraints imposed after setAllConstraints() are registered when they first fail
+    allConstraints.add(failed);
+    afcIncrement /= Math.max(decay, 1e-3d);
+    failed.updateAfc(afcIncrement);
+    if (afcIncrement > AFC_RESCALE_LIMIT) {
+      allConstraints.addAll(getConstraints());
+      double factor = 1.0d / afcIncrement;
+      for (Constraint c : allConstraints) {
+        c.scaleAfc(factor);
+      }
+      afcIncrement = 1.0d;
+    }
   }
 
   /** Caches the set of all constraints currently present in this store. */

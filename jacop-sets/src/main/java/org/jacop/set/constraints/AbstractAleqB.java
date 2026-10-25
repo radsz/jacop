@@ -131,53 +131,50 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
   }
 
   /**
-   * Shared consistency logic for the common prefix comparison between a's lub and b's glb.
+   * Fails when no set in the domain of a is ordered before a set in the domain of b: when the
+   * lexicographically smallest set that a can take is not before the largest that b can take.
+   * Cardinality bounds are ignored except that a non-empty a stays non-empty.
    *
-   * @param store the constraint store
+   * @param store the constraint store.
    */
-  /**
-   * The common propagation of a {@literal <=} b and a {@literal <} b: a non-empty a makes b
-   * non-empty with no element below the smallest element a may have, and the constraint fails when
-   * even the lexicographically smallest value of a is not before the largest value of b.
-   *
-   * @param store the constraint store
-   */
-  protected void consistencyLexBounds(Store store) {
-
-    if (!a.domain.lub().isEmpty() && (a.domain.card().min() > 0 || !a.domain.glb().isEmpty())) {
-      // b = {} is before any non-empty a, and an element of b below min(a) puts b before a
-      b.domain.inCardinality(store.level, b, 1, IntDomain.MAX_INT);
-      b.domain.inLub(store.level, b, new IntervalDomain(a.domain.lub().min(), IntDomain.MAX_INT));
-    }
-
-    if (!setLexCompare(lexMin(a), lexMax(b))) {
+  protected void checkOrderPossible(Store store) {
+    if (!setLexCompare(smallest(a), largest(b))) {
       throw Store.failException;
     }
   }
 
   /**
-   * The lexicographically smallest value of a set variable, ignoring its cardinality: the elements
-   * of the lub up to the largest element of the glb (a proper prefix is smaller and an element
-   * between two glb elements makes the sequence smaller).
+   * Returns the lexicographically smallest set between the glb and the lub of s: the glb with every
+   * element of the lub below its largest element, since a smaller element first makes a set
+   * smaller.
    */
-  static IntDomain lexMin(SetVar v) {
-    IntDomain glb = v.domain.glb();
+  static IntDomain smallest(SetVar s) {
+    IntDomain glb = s.domain.glb();
+    IntDomain lub = s.domain.lub();
     if (glb.isEmpty()) {
-      return glb;
+      if (s.domain.card().min() > 0 && !lub.isEmpty()) {
+        return new IntervalDomain(lub.min(), lub.min());
+      }
+      return new IntervalDomain();
     }
-    return v.domain.lub().intersect(IntDomain.MIN_INT, glb.max());
+    return lub.intersect(IntDomain.MIN_INT, glb.max());
   }
 
   /**
-   * The lexicographically largest value of a set variable, ignoring its cardinality: the glb
-   * followed by the largest element of the lub (an element between glb elements would make the
-   * sequence smaller, and one more element at the end makes it larger).
+   * Returns the lexicographically largest set between the glb and the lub of s: the glb followed by
+   * the largest element of the lub when it is larger than the glb, since any other element would
+   * come before a larger one of the glb.
    */
-  static IntDomain lexMax(SetVar v) {
-    IntDomain lub = v.domain.lub();
-    if (lub.isEmpty()) {
-      return lub;
+  static IntDomain largest(SetVar s) {
+    IntDomain glb = s.domain.glb();
+    IntDomain lub = s.domain.lub();
+    if (lub.isEmpty() || s.domain.card().max() == 0) {
+      return new IntervalDomain();
     }
-    return v.domain.glb().union(lub.max());
+    IntDomain result = glb.cloneLight();
+    if (glb.isEmpty() || lub.max() > glb.max()) {
+      result.unionAdapt(lub.max(), lub.max());
+    }
+    return result;
   }
 }

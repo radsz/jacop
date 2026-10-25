@@ -1421,6 +1421,11 @@ class GlobalConstraints implements ParserTreeConstants {
     int indexF = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     int indexInvf = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
+    // inverse functions are bijections, so index sets of different sizes cannot be satisfied
+    if (f.length != invf.length) {
+      throw Store.failException;
+    }
+
     // we do not not pose Assignment directly because of possible inconsistency with its
     // initialization; we collect all constraints and pose them at the end when all other
     // constraints are posed
@@ -1683,8 +1688,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntervalDomain setImpl = new IntervalDomain();
     setImpl.addDom(u);
 
+    // Sequence is decomposed into Regular, which does not accept the same variable twice;
+    // repeated variables or constants (that share one variable) are replaced by copies
+    IntVar[] xx = distinctCopies(x, new HashSet<>());
+
     DecomposedConstraint<Constraint> c =
-        Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
+        Sequence.builder().list(xx).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
   }
 
@@ -1694,7 +1703,11 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] max = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, x);
+    // Stretch is decomposed into Regular, which does not accept the same variable twice;
+    // repeated variables or constants (that share one variable) are replaced by copies
+    IntVar[] xx = distinctCopies(x, new HashSet<>());
+
+    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, xx);
     support.poseDc(c);
   }
 
@@ -1795,21 +1808,21 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-    // no duplicated variables allowed in ValuePrecede and
-    // we create a new vector with different variables
-    IntVar[] xs = removeDuplicates(x);
-
     if (c.length > 1) {
       HashSet<Integer> values = new HashSet<>();
-      values.add(c[0]);
-      for (int i = 1; i < c.length; i++) {
-        if (values.contains(c[i])) {
+      for (int v : c) {
+        if (!values.add(v)) {
           throw new IllegalArgumentException(
               "%% Values in int_value_precede_chain must be distinct");
         }
-        values.add(c[i]);
-        support.pose(new ValuePrecede(c[i - 1], c[i], xs));
       }
+      // a later occurrence of a variable equals its first one and adds nothing to the
+      // precedences, so only first occurrences are kept
+      IntVar[] xs = Arrays.stream(x).distinct().toArray(IntVar[]::new);
+
+      // c[i] takes the role of i and other values the role of 0 (Gange and Stuckey): one domain
+      // consistent propagator for the whole chain instead of pairwise ValuePrecede
+      support.pose(new SeqPrecedeChain(xs, c));
     }
   }
 
@@ -1894,8 +1907,13 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
 
     // ---- KK, 2023-06-29
-    // geost must not have duplicated variables
-    IntVar[] xx = removeDuplicates(x);
+    // geost must not have duplicated variables, neither within nor across x and kind
+    IntVar[] all = new IntVar[x.length + kind.length];
+    System.arraycopy(x, 0, all, 0, x.length);
+    System.arraycopy(kind, 0, all, x.length, kind.length);
+    all = removeDuplicates(all);
+    IntVar[] xx = Arrays.copyOfRange(all, 0, x.length);
+    IntVar[] kk = Arrays.copyOfRange(all, x.length, all.length);
 
     ArrayList<Shape> shapes = new ArrayList<>();
 
@@ -1940,7 +1958,7 @@ class GlobalConstraints implements ParserTreeConstants {
       IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
       IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
       IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
-      GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end);
+      GeostObject obj = new GeostObject(i, coords, kk[i], start, duration, end);
       objects.add(obj);
     }
 
@@ -1957,7 +1975,16 @@ class GlobalConstraints implements ParserTreeConstants {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 
-      InArea constraint2 = new InArea(new Dbox(lb, ub), null);
+      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length
+      int[] length = new int[dim];
+      for (int j = 0; j < dim; j++) {
+        length[j] = ub[j] - lb[j];
+        if (length[j] < 0 && kind.length > 0) {
+          throw Store.failException;
+        }
+      }
+
+      InArea constraint2 = new InArea(new Dbox(lb, length), null);
       constraints.add(constraint2);
     }
 

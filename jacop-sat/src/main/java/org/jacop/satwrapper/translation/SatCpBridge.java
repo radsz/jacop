@@ -160,22 +160,6 @@ public abstract class SatCpBridge implements WrapperComponent {
   }
 
   /**
-   * Does all propagation required, in a way specific to this range. This part may not be used, if
-   * the variable is not bound to a DomainClausesDatabase. This will be called only if <code>
-   * this.isTranslated()</code> is false.
-   *
-   * @param literal the literal that has been asserted
-   */
-  public abstract void propagate(int literal);
-
-  /**
-   * Predicate for whether this variable should be handled by the DomainClausesDatabase or not.
-   *
-   * @return true if the variable should be handled by the DomainClausesDatabase
-   */
-  public abstract boolean isTranslated();
-
-  /**
    * Registers this bridge with the wrapper for the associated variable. This should be called after
    * the wrapper field is set.
    */

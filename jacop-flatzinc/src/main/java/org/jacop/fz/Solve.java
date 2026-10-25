@@ -35,10 +35,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
@@ -60,6 +66,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
+import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
@@ -67,10 +74,16 @@ import org.jacop.search.Lds;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FreeSearch;
+import org.jacop.search.free.IndomainLastSolution;
+import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -110,9 +123,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   ArrayList<Search<T>> listSeqSearches;
   boolean heuristicSeqSearch;
   Var costVariable;
+  // the variable of the solve item; for maximisation costVariable is its negation
+  Var objectiveVariable;
   // restart search
   Calculator restartCalculator;
   RestartSearch<T> rs;
+  // free search with the FreeSearch engine
+  FreeSearch freeSearch;
+  FreeSearch.Status freeSearchStatus;
+  // the search annotation of the model, interleaved with free search
+  SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
   boolean singleSearch;
   boolean result;
@@ -284,6 +304,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     si.searchParameters(node, 0);
     ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(1);
     solveKind = getKind(kind.getKind());
+    annotatedSearch = si;
     runSearchForSingleAnnotation(opt, kind, solveKind, si, node);
   }
 
@@ -292,6 +313,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     si.searchParametersForSeveralAnnotations(node, 0);
 
     ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
+
+    if (options.freeSearch()) {
+      if (!nsi.isEmpty()) {
+        annotatedSearch = new SearchItem<>(store, dictionary);
+        annotatedSearch.setSearchType(SEQ_SEARCH);
+        for (SearchItem<T> se : nsi) {
+          annotatedSearch.addSearch(se);
+        }
+      }
+      ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
+      solveKind = getKind(kind.getKind());
+      run_single_search(solveKind, kind, null);
+      return;
+    }
 
     if (nsi.size() == 1) {
       runSingleOrSequenceSearch(node, si, nsi.getFirst());
@@ -673,6 +708,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     try {
+      if (useFreeSearchEngine(costVar)) {
+        return executeFreeSearch(costVar);
+      }
       if (restartCalculator != null) {
         return executeRestartSearch(label, select, costVar, solveType);
       }
@@ -680,6 +718,219 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } catch (NumberSolutionsReached _) {
       return numberSolutions > 0;
     }
+  }
+
+  private boolean useFreeSearchEngine(Var costVar) {
+    return options.freeSearch()
+        && options.newFreeSearchEngine()
+        && singleSearch
+        && defaultSearch
+        && relaxVars == null
+        && (costVar == null || costVar instanceof IntVar);
+  }
+
+  /**
+   * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
+   * the integer and Boolean variables, then on the objective and on the float variables. The
+   * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
+   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5).
+   */
+  private boolean executeFreeSearch(Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
+    boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
+    Calculator restarts = restartCalculator;
+    if (!options.restartGiven()) {
+      int scale = Integer.parseInt(options.freeConfig("scale", "100"));
+      restarts =
+          switch (options.freeConfig("restarts", "geometric")) {
+            case "luby" -> new LubyCalculator(scale);
+            case "geometric" ->
+                new GeometricCalculator(
+                    Double.parseDouble(options.freeConfig("base", "1.5")), scale);
+            default -> null;
+          };
+    }
+
+    List<SearchMonitor> monitors = new ArrayList<>();
+    List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+    IntVar objective = costVar instanceof IntVar c && objectiveLast ? c : null;
+    boolean allSolutions = options.getAll() && costVar == null;
+    Var[] shown = null;
+    if (allSolutions) {
+      // solutions are told apart by the output variables, so they are fixed first and the
+      // other variables are completed once per solution
+      DefaultSearchVars output = new DefaultSearchVars(dictionary);
+      output.outputVars();
+      Set<Var> outputSet = Collections.newSetFromMap(new IdentityHashMap<>());
+      outputSet.addAll(Arrays.asList(output.getSetVars()));
+      outputSet.addAll(Arrays.asList(output.getIntVars()));
+      outputSet.addAll(Arrays.asList(output.getBoolVars()));
+      outputSet.addAll(Arrays.asList(output.getFloatVars()));
+      shown = outputSet.toArray(new Var[0]);
+      addFreeSelects(
+          selects,
+          monitors,
+          output.getSetVars(),
+          output.getIntVars(),
+          output.getBoolVars(),
+          output.getFloatVars(),
+          null);
+      addFreeSelects(
+          selects,
+          monitors,
+          withoutVars(searchVars.getSetVars(), outputSet, SetVar[]::new),
+          withoutVars(searchVars.getIntVars(), outputSet, IntVar[]::new),
+          withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
+          withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
+          null);
+    } else {
+      addFreeSelects(
+          selects,
+          monitors,
+          searchVars.getSetVars(),
+          searchVars.getIntVars(),
+          searchVars.getBoolVars(),
+          searchVars.getFloatVars(),
+          objective);
+    }
+    if (selects.isEmpty()) {
+      selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
+    }
+
+    SequenceSelect free = new SequenceSelect(selects);
+    FreeSearch.Builder builder =
+        FreeSearch.builder(store, free)
+            .restarts(restarts)
+            .restartOnSolution(restartOnSolution)
+            .allSolutions(options.getAll())
+            .onSolution(s -> printSolution());
+    if (shown != null) {
+      builder.distinctOn(shown);
+    }
+    for (SearchMonitor m : monitors) {
+      builder.monitor(m);
+    }
+    String interleave = options.freeConfig("interleave", "restart");
+    // all solutions are found in one run without restarts, which interleaving would give to the
+    // annotation
+    SelectChoicePoint<? extends Var> annotated =
+        "none".equals(interleave) || allSolutions ? null : annotationSelect(annotatedSearch);
+    if (annotated != null) {
+      // free search completes what the annotation leaves unfixed
+      builder.alternateWith(
+          new SequenceSelect(List.of(annotated, free)),
+          "solution".equals(interleave)
+              ? FreeSearch.Alternation.UNTIL_FIRST_SOLUTION
+              : FreeSearch.Alternation.EVERY_RESTART);
+    }
+    if (options.getTimeOut() > 0) {
+      builder.timeLimit(Duration.ofMillis(options.getTimeOut()));
+    }
+    if (costVar != null) {
+      builder.minimize((IntVar) costVar);
+    }
+    freeSearch = builder.build();
+    if (options.debug()) {
+      IO.println("% FreeSearch(" + restarts + ") " + selects);
+    }
+    freeSearchStatus = freeSearch.solve();
+    return freeSearch.getSolutions() > 0;
+  }
+
+  /**
+   * Adds the free search branching on the given variables: the set variables first, then the
+   * integer and Boolean variables, then the objective and the float variables. The settings of
+   * --free-config select the heuristics.
+   */
+  private void addFreeSelects(
+      List<SelectChoicePoint<? extends Var>> selects,
+      List<SearchMonitor> monitors,
+      SetVar[] sets,
+      IntVar[] ints,
+      BooleanVar[] bools,
+      FloatVar[] floats,
+      IntVar objective) {
+    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
+    boolean phase = "1".equals(options.freeConfig("phase", "1"));
+    if (sets.length > 0) {
+      selects.add(new SimpleSelect<>(sets, new AfcMaxDeg<>(store), new IndomainSetMin<>()));
+    }
+    LinkedHashSet<IntVar> intAndBool = new LinkedHashSet<>(Arrays.asList(ints));
+    intAndBool.addAll(Arrays.asList(bools));
+    if (objective != null) {
+      intAndBool.remove(objective);
+      // for maximisation the cost variable is the negation of the objective of the model
+      if (objectiveVariable instanceof IntVar o) {
+        intAndBool.remove(o);
+      }
+    }
+    IntVar[] vars = intAndBool.toArray(new IntVar[0]);
+    Indomain<IntVar> values = new IndomainMin<>();
+    if (phase) {
+      IndomainLastSolution saving = new IndomainLastSolution(vars, values);
+      monitors.add(saving);
+      values = saving;
+    }
+    if ("afc".equals(heuristic)) {
+      if (ints.length > 0) {
+        selects.add(new SimpleSelect<>(ints, new AfcMaxDeg<>(store), values));
+      }
+      if (bools.length > 0) {
+        selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
+      }
+    } else if (vars.length > 0) {
+      DomWdeg domWdeg = new DomWdeg(vars, values);
+      monitors.add(domWdeg);
+      SelectChoicePoint<IntVar> select = domWdeg;
+      if (lastConflict > 0) {
+        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        monitors.add(lc);
+        select = lc;
+      }
+      selects.add(select);
+    }
+    if (objective != null) {
+      selects.add(new SimpleSelect<>(new IntVar[] {objective}, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
+    }
+  }
+
+  private static <V extends Var> V[] withoutVars(
+      V[] vars, Set<Var> excluded, IntFunction<V[]> array) {
+    return Arrays.stream(vars).filter(v -> !excluded.contains(v)).toArray(array);
+  }
+
+  /**
+   * The branching of a search annotation, or null when there is none or it cannot be expressed as a
+   * selection (priority search).
+   */
+  private SelectChoicePoint<? extends Var> annotationSelect(SearchItem<T> item) {
+    if (item == null || item.type() == null) {
+      return null;
+    }
+    return switch (item.type()) {
+      case INT_SEARCH, BOOL_SEARCH -> item.getIntSelect();
+      case SET_SEARCH -> item.getSetSelect();
+      case FLOAT_SEARCH -> item.getFloatSelect();
+      case WARM_START -> item.getWarmStartSelect();
+      case SEQ_SEARCH -> {
+        List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+        for (SearchItem<T> sub : item.getSearchItems()) {
+          SelectChoicePoint<? extends Var> s = annotationSelect(sub);
+          if (s == null) {
+            yield null;
+          }
+          selects.add(s);
+        }
+        yield selects.isEmpty() ? null : new SequenceSelect(selects);
+      }
+      default -> null;
+    };
   }
 
   /**
@@ -754,6 +1005,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private Var setupCostVariable(SimpleNode kind, int solveKind) {
     Var cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
     Var max_cost = null;
+    objectiveVariable = cost;
 
     if (cost != null) {
       if (solveKind == 1) { // minimize
@@ -870,6 +1122,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+      return;
+    }
+
+    if (freeSearch != null) {
+      boolean complete =
+          freeSearchStatus == FreeSearch.Status.OPTIMAL
+              || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
+      printResultStatus(
+          interrupted,
+          freeSearch.getSolutions() > 0,
+          freeSearch.limitReached(),
+          complete && !interrupted);
+      if (options.getStatistics()) {
+        printStatisticsOutput(
+            (int) freeSearch.getNodes(),
+            (int) freeSearch.getFailures(),
+            freeSearch.getMaxDepth(),
+            (int) freeSearch.getSolutions());
+      }
       return;
     }
 
@@ -1295,7 +1566,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     if (restartCalculator != null) {
-      if (solveKind == 0) {
+      // the FreeSearch engine finds all solutions without restarts
+      if (solveKind == 0 && !useFreeSearchEngine(null)) {
         throw new IllegalArgumentException(
             "Flatzinc option for search for all solutions (-a) cannot be used in restart search"
                 + " of a satisfaction problem.");
@@ -1402,7 +1674,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solutions total solutions found.
    */
   private void printStatisticsOutput(int nodes, int wrong, int depth, int solutions) {
-    int restarts = rs != null ? rs.restarts() : 0;
+    long restarts = rs != null ? rs.restarts() : 0;
+    if (freeSearch != null) {
+      restarts = freeSearch.getRestarts();
+    }
 
     IO.println(
         "%%%mzn-stat: variables="
