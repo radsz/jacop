@@ -39,7 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
+import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,7 +62,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class LinearInt extends PrimitiveConstraint implements Stateful {
+public class LinearInt extends PrimitiveConstraint implements Stateful, Copyable<LinearInt> {
 
   /*
    * Defines relations
@@ -253,6 +255,28 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
     }
 
     setScope(list);
+  }
+
+  /**
+   * Initializes this constraint as a copy of another one over the counterparts of its variables.
+   * The terms are already merged and split by sign; the order within each sign may differ from the
+   * original order, which does not change the meaning of the sum.
+   *
+   * @param original the constraint to copy.
+   * @param map the counterparts of the variables of the original.
+   */
+  protected void copyFrom(LinearInt original, VarMap map) {
+    this.relationType = original.relationType;
+    this.store = map.target();
+    this.b = original.b;
+    this.x = map.get(original.x);
+    this.a = original.a.clone();
+    this.pos = original.pos;
+    this.l = original.l;
+    this.variability = new long[l];
+    checkForOverflow();
+    queueIndex = l <= 3 ? 0 : 1;
+    setScope(x);
   }
 
   private LinkedHashMap<IntVar, Long> normalizeAndMergeParameters(IntVar[] list, int[] weights) {
@@ -935,5 +959,13 @@ public class LinearInt extends PrimitiveConstraint implements Stateful {
     result.append("], ").append(rel2String()).append(", ").append(b).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public LinearInt copy(VarMap map) {
+    LinearInt copy = new LinearInt();
+    copy.copyFrom(this, map);
+    copy.numberId = idNumber.incrementAndGet();
+    return copy;
   }
 }

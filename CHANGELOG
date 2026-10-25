@@ -12,7 +12,13 @@ Version 5.0 (unreleased)
    AbstractDiff and keep their behaviour. The Scala diff2 wrappers now post
    Diff2, as documented, instead of Diff.
 
-2. New constraint CircuitCost(x, costs, cost): x is a circuit and cost is
+2. The MiniZinc solver configuration org.jacop.msc declares -debug, so
+   minizinc --solver org.jacop -debug model.mzn prints the constraints
+   as imposed in JaCoP; before, minizinc rejected -debug and it had to
+   be passed with --fzn-flags -debug. The MiniZinc IDE shows it as a
+   solver option.
+
+3. New constraint CircuitCost(x, costs, cost): x is a circuit and cost is
    the sum of its arc costs. It bounds the cost and removes arcs with the
    assignment relaxation (incremental Hungarian method, reduced costs) and,
    for symmetric costs, the Held-Karp 1-tree bound. The FlatZinc front end

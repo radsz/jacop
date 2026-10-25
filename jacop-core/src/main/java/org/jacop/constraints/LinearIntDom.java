@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -69,6 +70,8 @@ public class LinearIntDom extends LinearInt {
   int[] assignments;
 
   // ================ constructors ===================
+
+  private LinearIntDom() {}
 
   /**
    * It constructs the constraint LinearIntDom.
@@ -485,5 +488,14 @@ public class LinearIntDom extends LinearInt {
     result.append("], ").append(rel2String()).append(", ").append(b).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public LinearIntDom copy(VarMap map) {
+    LinearIntDom copy = new LinearIntDom();
+    copy.copyFrom(this, map);
+    copy.numberId = idNumber.incrementAndGet();
+    copy.queueIndex = 4;
+    return copy;
   }
 }

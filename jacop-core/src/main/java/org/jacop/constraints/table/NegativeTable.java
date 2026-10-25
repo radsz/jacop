@@ -31,7 +31,9 @@
 package org.jacop.constraints.table;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,7 +48,8 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class NegativeTable extends CompactGroundTable implements SatisfiedPresent {
+public class NegativeTable extends CompactGroundTable
+    implements SatisfiedPresent, Copyable<NegativeTable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -58,6 +61,11 @@ public class NegativeTable extends CompactGroundTable implements SatisfiedPresen
    */
   public NegativeTable(IntVar[] list, int[][] tuples) {
     super(list, tuples, null);
+    numberId = idNumber.incrementAndGet();
+  }
+
+  private NegativeTable(NegativeTable original, VarMap map) {
+    super(original, map, null);
     numberId = idNumber.incrementAndGet();
   }
 
@@ -94,5 +102,10 @@ public class NegativeTable extends CompactGroundTable implements SatisfiedPresen
   @Override
   public String toString() {
     return appendTuples(new StringBuilder(id()).append(" : negativeTable(")).append(")").toString();
+  }
+
+  @Override
+  public NegativeTable copy(VarMap map) {
+    return new NegativeTable(this, map);
   }
 }

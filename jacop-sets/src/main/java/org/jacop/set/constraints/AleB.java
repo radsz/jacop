@@ -31,6 +31,8 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -47,7 +49,7 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AleB extends AbstractAleqB {
+public class AleB extends AbstractAleqB implements Copyable<AleB> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -130,5 +132,10 @@ public class AleB extends AbstractAleqB {
   public String toString() {
 
     return id() + " : AleB(" + a + ", " + b + ")";
+  }
+
+  @Override
+  public AleB copy(VarMap map) {
+    return new AleB(map.get(a), map.get(b));
   }
 }

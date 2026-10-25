@@ -179,6 +179,20 @@ public abstract class Var implements Backtrackable {
   public abstract Domain dom();
 
   /**
+   * Creates a variable of the same class in another store, with the same name and this variable's
+   * current domain. Deriving a store from this variable's store uses it; variable classes that do
+   * not support it throw.
+   *
+   * @param target the store of the new variable.
+   * @return the new variable.
+   * @throws UnsupportedOperationException if this variable class cannot be copied.
+   */
+  public Var copyTo(Store target) {
+    throw new UnsupportedOperationException(
+        "Variable class " + getClass().getName() + " cannot be copied to another store");
+  }
+
+  /**
    * It returns the size of the current domain.
    *
    * @return the size of the variables domain.

@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -155,6 +156,24 @@ public class Cumulative extends CumulativeBasic {
       limitOnEdgeFind = Integer.parseInt(s);
     }
     return limitOnEdgeFind;
+  }
+
+  /**
+   * Gives a copy of this constraint the propagation options of this constraint.
+   *
+   * @param <C> the class of the copy.
+   * @param copy the copy.
+   * @return the copy.
+   */
+  <C extends Cumulative> C withOptionsOf(C copy) {
+    copy.doEdgeFind(doEdgeFind);
+    copy.doQuadraticEdgeFind(doQuadraticEdgeFind);
+    copy.doOverload(doOverload);
+    copy.doTimeTableEdgeFind(doTimeTableEdgeFind);
+    copy.doTimeTableDisjunctive(doTimeTableDisjunctive);
+    copy.doHorizontallyElasticEdgeFind(doHorizontallyElasticEdgeFind);
+    copy.doAdaptiveEnergyReasoning(adaptiveEnergy);
+    return copy;
   }
 
   /**
@@ -791,5 +810,11 @@ public class Cumulative extends CumulativeBasic {
         .append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Cumulative copy(VarMap map) {
+    IntVar[][] t = taskVariables(map);
+    return withOptionsOf(new Cumulative(t[0], t[1], t[2], map.get(limit)));
   }
 }

@@ -38,11 +38,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TrailedInts;
 
 /**
  * Abstract base for CountValues and CountValuesBounds constraints. Provides shared fields (list,
- * values, valuesDomain, position, equal[], rest), impose, swap, and default pruning event.
+ * values, valuesDomain, the trailed counts), impose, swap, and default pruning event.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -88,15 +88,18 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   /** Up to this many counted values within the bounds of a domain are checked one by one. */
   private static final int SMALL_RANGE = 64;
 
-  /** Tracks the first position of undecided variables. */
-  protected TimeStamp<Integer> position;
+  private static final int POSITION = 0;
 
-  /** Tracks the number of variables equal to each value. */
-  @SuppressWarnings("unchecked")
-  protected TimeStamp<Integer>[] equal;
+  private static final int REST = 1;
 
-  /** Tracks the number of variables not matching any counted value. */
-  protected TimeStamp<Integer> rest;
+  /** The index in state of the number of decided variables equal to the first value. */
+  private static final int EQUAL = 2;
+
+  /**
+   * The first position of undecided variables, the number of decided variables not matching any
+   * counted value, and the number of decided variables equal to each value.
+   */
+  protected TrailedInts state;
 
   /**
    * Constructs the common parts of a CountValues constraint.
@@ -141,18 +144,12 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     this.mayBeDifference = new int[values.length + 1];
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void impose(Store store) {
 
     super.impose(store);
 
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp[values.length];
-    for (int i = 0; i < values.length; i++) {
-      equal[i] = new TimeStamp<>(store, 0);
-    }
-    rest = new TimeStamp<>(store, 0);
+    state = new TrailedInts(store, EQUAL + values.length);
   }
 
   /**
@@ -277,6 +274,22 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   }
 
   /**
+   * Counts the variables whose domain contains a value.
+   *
+   * @param value the value.
+   * @return the number of variables that can take the value.
+   */
+  protected int countPossible(int value) {
+    int count = 0;
+    for (int j = 0; j < n; j++) {
+      if (list[j].domain.contains(value)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Shared consistency propagation logic for CountValues and CountValuesBounds.
    *
    * @param store the store for propagation.
@@ -288,10 +301,10 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   @Override
   public void consistency(final Store store) {
 
-    int start = position.value();
-    restEq = rest.value();
+    int start = state.get(POSITION);
+    restEq = state.get(REST);
     for (int i = 0; i < values.length; i++) {
-      numberEq[i] = equal[i].value();
+      numberEq[i] = state.get(EQUAL + i);
     }
 
     do {
@@ -315,11 +328,10 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     } while (store.propagationHasOccurred);
 
     for (int i = 0; i < values.length; i++) {
-      equal[i].update(numberEq[i]);
+      state.set(EQUAL + i, numberEq[i]);
     }
-    rest.update(restEq);
-
-    position.update(start);
+    state.set(REST, restEq);
+    state.set(POSITION, start);
   }
 
   /**

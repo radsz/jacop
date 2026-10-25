@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -44,7 +46,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Increasing extends Constraint {
+public class Increasing extends Constraint implements Copyable<Increasing> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final IntVar[] x;
@@ -177,5 +179,10 @@ public class Increasing extends Constraint {
     result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Increasing copy(VarMap map) {
+    return new Increasing(map.get(x), strict == 1);
   }
 }

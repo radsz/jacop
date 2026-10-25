@@ -39,6 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Min;
@@ -761,5 +762,10 @@ public class Diffn extends Nooverlap {
       result += r + ", " + date + ", " + value + ", " + block + ")\n";
       return result;
     }
+  }
+
+  @Override
+  public Diffn copy(VarMap map) {
+    return new Diffn(rectangleVariables(map), strict);
   }
 }

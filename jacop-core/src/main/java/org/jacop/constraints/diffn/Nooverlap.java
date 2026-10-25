@@ -28,6 +28,8 @@ package org.jacop.constraints.diffn;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -41,7 +43,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Nooverlap extends Constraint {
+public class Nooverlap extends Constraint implements Copyable<Nooverlap> {
 
   static final boolean TRACE_ON = false;
   static final boolean TRACE_NARR_ON = false;
@@ -463,5 +465,28 @@ public class Nooverlap extends Constraint {
       i++;
     }
     return result.append("], ").append(strict).append(")").toString();
+  }
+
+  /**
+   * Returns the counterparts of the variables of the rectangles in the order they were given.
+   *
+   * @param map the counterparts of the variables of this constraint.
+   * @return for each rectangle its two origins and its two lengths.
+   */
+  IntVar[][] rectangleVariables(VarMap map) {
+    IntVar[][] vars = new IntVar[rectangle.length][];
+    for (int i = 0; i < rectangle.length; i++) {
+      Rectangle r = rectangle[i];
+      vars[i] =
+          new IntVar[] {
+            map.get(r.origin[0]), map.get(r.origin[1]), map.get(r.length[0]), map.get(r.length[1])
+          };
+    }
+    return vars;
+  }
+
+  @Override
+  public Nooverlap copy(VarMap map) {
+    return new Nooverlap(rectangleVariables(map), strict);
   }
 }

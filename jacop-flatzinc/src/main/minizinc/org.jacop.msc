@@ -27,6 +27,7 @@
         ["--restart-scale", "Scale factor for restart search", "int", "250"],
         ["--restart-limit", "limits number of restarts in restart search.", "int", "0"],
         ["--free-engine", "engine for free search (-f)", "opt:new:legacy", "new"],
-        ["--free-config", "settings of the new free search engine as key=value,...; see fzn-jacop -h", "string", ""]
+        ["--free-config", "settings of the new free search engine as key=value,...; see fzn-jacop -h", "string", ""],
+        ["-debug", "print the constraints as imposed in JaCoP and the search used.", "bool", "false"]
     ]
 }

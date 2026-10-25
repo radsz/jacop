@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -45,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.util.SparseSet;
@@ -107,7 +109,26 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed before it has actually began.
    */
-  public final Set<Stateful> removeLevelListeners = new LinkedHashSet<>(10);
+  public final Set<Stateful> removeLevelListeners = new ListenerSet<>();
+
+  /** The state of this store in a chain of derived stores. */
+  private StoreState state = StoreState.ACTIVE;
+
+  /** True while a derivation writes a solution into this store or propagates it. */
+  private boolean returning;
+
+  /** The constraints imposed so far, in imposition order, when recording is on; otherwise null. */
+  private List<Constraint> model;
+
+  /** Constraints by the level of their first consistency call, in the order of the levels. */
+  private Constraint[] firstRuns = new Constraint[64];
+
+  private int firstRunsSize;
+
+  /** One-time work done so far, in the order of the levels at which it was done. */
+  private InitOnce[] initOnce = new InitOnce[16];
+
+  private int initOnceSize;
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -115,7 +136,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed after it has been removed.
    */
-  public final Set<RemoveLevelLate> removeLevelLateListeners = new LinkedHashSet<>(10);
+  public final Set<RemoveLevelLate> removeLevelLateListeners = new ListenerSet<>();
 
   /**
    * It indicates that consistency function should immediately return fail if last inconsistency was
@@ -144,10 +165,9 @@ public class Store {
   protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
 
   /**
-   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
-   * search items are push onto the stack. If the search backtracks then the old values can be
-   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
-   * data types.
+   * The stateful objects registered with {@link #putMutableVar(Stateful)}. Each one is informed of
+   * every removed level. Timestamps are not kept here: the store restores only the timestamps that
+   * changed at the removed level.
    */
   protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
@@ -204,11 +224,26 @@ public class Store {
    */
   public boolean propagationHasOccurred;
 
-  /**
-   * It specifies the current pointer to put next changed boolean variable. It has to be maintained
-   * manually (within removeLevel function).
-   */
-  public TimeStamp<Integer> pointer4GroundedBooleanVariables;
+  /** The position in changeHistory4BooleanVariables where the next changed variable is put. */
+  private int booleanChangePosition;
+
+  /** The levels at which booleanChangePosition was saved, most recent last. */
+  private int[] booleanChangeLevels = new int[16];
+
+  /** The value of booleanChangePosition saved at the corresponding level. */
+  private int[] booleanChangeSaved = new int[16];
+
+  private int booleanChangeLevelsSize;
+
+  /** The timestamps that got a value at a new level, in the order of the levels. */
+  private TimeStamp<?>[] timeStampTrail = new TimeStamp<?>[64];
+
+  /** The level of the corresponding entry of timeStampTrail. */
+  private int[] timeStampTrailLevel = new int[64];
+
+  private int timeStampTrailSize;
+
+  private int timeStampCount;
 
   /**
    * It stores number of queues used in this store. It has to be at least 1. No constraint can be
@@ -312,8 +347,7 @@ public class Store {
       changed[i] = new ConstraintQueue(this, i);
     }
 
-    trailManager =
-        new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
+    trailManager = new TrailBacktrackableManager(vars, this.size);
   }
 
   /**
@@ -611,6 +645,10 @@ public class Store {
    */
   public boolean consistency() {
 
+    if (state != StoreState.ACTIVE && !returning) {
+      throw new IllegalStateException("Store is " + state + "; it cannot propagate");
+    }
+
     if (strict && isLastConsistencyFailure) {
       return false;
     }
@@ -629,6 +667,9 @@ public class Store {
       while (currentQueue < queueNo) {
         while (!changed[currentQueue].isEmpty()) {
           currentConstraint = getFirstChanged();
+          if (currentConstraint.firstRunAt() < 0) {
+            startFirstRun(currentConstraint);
+          }
           numberConsistencyCalls++;
           currentConstraint.consistency(this);
           if (variableActivityManagement) {
@@ -772,6 +813,8 @@ public class Store {
   @SuppressWarnings("unchecked")
   public void impose(Constraint c) {
 
+    checkImposeAllowed();
+    record(c);
     Optional.ofNullable(replacements.get(c.getClass()))
         .ifPresent(
             l ->
@@ -799,6 +842,8 @@ public class Store {
       throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
     }
 
+    checkImposeAllowed();
+    record(c);
     c.impose(this, queueIndex);
   }
 
@@ -812,6 +857,8 @@ public class Store {
    */
   public void imposeWithConsistency(Constraint c) throws FailException {
 
+    checkImposeAllowed();
+    record(c);
     c.impose(this);
 
     if (!consistency()) {
@@ -834,6 +881,8 @@ public class Store {
       throw new IllegalStateException(String.valueOf(CONSTRAINT_QUEUE_TOO_LARGE));
     }
 
+    checkImposeAllowed();
+    record(c);
     c.impose(this, queueIndex);
 
     if (!consistency()) {
@@ -930,12 +979,12 @@ public class Store {
   }
 
   /**
-   * Any entity (for example constraints) may have their own mutable variables (timestamps) which
-   * can be register at store and then store will be responsible for calling appropriate functions
-   * from TimeStamp class to keep the variables consistent with the search.
+   * Any entity (for example constraints) may have their own stateful objects which can be register
+   * at store and then store will call their removeLevel function for every removed level. A {@link
+   * TimeStamp} registers itself and does not need to be registered.
    *
-   * @param value timestamp to be added and maintained by a store.
-   * @return the position of timestamp at which it is being stored.
+   * @param value stateful object to be added and maintained by a store.
+   * @return the position of the object at which it is being stored.
    */
   public int putMutableVar(Stateful value) {
     timeStamps.add(value);
@@ -999,7 +1048,7 @@ public class Store {
    */
   public void recordBooleanChange(BooleanVar recordedVariable) {
 
-    int position = pointer4GroundedBooleanVariables.value();
+    int position = booleanChangePosition;
 
     if (position >= changeHistory4BooleanVariables.length) {
 
@@ -1010,7 +1059,64 @@ public class Store {
 
     changeHistory4BooleanVariables[position] = recordedVariable;
 
-    pointer4GroundedBooleanVariables.update(position + 1);
+    int top = booleanChangeLevelsSize - 1;
+    if (top < 0 || booleanChangeLevels[top] != level) {
+      if (booleanChangeLevelsSize >= booleanChangeLevels.length) {
+        growBooleanChangeLevels();
+      }
+      booleanChangeLevels[booleanChangeLevelsSize] = level;
+      booleanChangeSaved[booleanChangeLevelsSize] = position;
+      booleanChangeLevelsSize++;
+    }
+
+    booleanChangePosition = position + 1;
+  }
+
+  private void growBooleanChangeLevels() {
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // booleanChangeLevelsSize.
+    if (booleanChangeLevelsSize > (Integer.MAX_VALUE - 16) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * booleanChangeLevelsSize + 16;
+    booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
+    booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
+  }
+
+  /**
+   * Registers a timestamp. The store restores the timestamps that changed at a level when the level
+   * is removed, see {@link #recordTimeStampLevel(TimeStamp, int)}.
+   *
+   * @return the index of the timestamp among the timestamps of this store.
+   */
+  int registerTimeStamp() {
+    return timeStampCount++;
+  }
+
+  /**
+   * Records that a timestamp got a value at a new level, so the value is removed with the level.
+   *
+   * @param timeStamp the timestamp.
+   * @param stampLevel the level of the new value.
+   */
+  void recordTimeStampLevel(TimeStamp<?> timeStamp, int stampLevel) {
+    if (timeStampTrailSize >= timeStampTrail.length) {
+      growTimeStampTrail();
+    }
+    timeStampTrail[timeStampTrailSize] = timeStamp;
+    timeStampTrailLevel[timeStampTrailSize] = stampLevel;
+    timeStampTrailSize++;
+  }
+
+  private void growTimeStampTrail() {
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // timeStampTrailSize.
+    if (timeStampTrailSize > (Integer.MAX_VALUE - 64) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * timeStampTrailSize + 64;
+    timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
+    timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
   }
 
   /**
@@ -1115,6 +1221,10 @@ public class Store {
    */
   public void removeLevel(int level) {
 
+    if (state != StoreState.ACTIVE && !returning) {
+      throw new IllegalStateException("Store is " + state + "; it cannot remove a level");
+    }
+
     // Remove level is called so we clear flag isLastConsistencyFailure.
     isLastConsistencyFailure = false;
 
@@ -1122,27 +1232,48 @@ public class Store {
       changed[currentQueue++].clear();
     }
 
+    while (firstRunsSize > 0 && firstRuns[firstRunsSize - 1].firstRunAt() >= level) {
+      firstRuns[--firstRunsSize].setFirstRunAt(Constraint.RUN_UNDONE);
+      firstRuns[firstRunsSize] = null;
+    }
+
+    // One-time work done at this level is due again; listeners below can already see it.
+    while (initOnceSize > 0 && initOnce[initOnceSize - 1].level() >= level) {
+      initOnce[--initOnceSize].rearm();
+      initOnce[initOnceSize] = null;
+    }
+
     // It has to inform listeners first, as they may use values of
     // mutables variables, just before they get deleted.
 
-    for (Stateful statefulConstraint : removeLevelListeners) {
-      statefulConstraint.removeLevel(level);
+    for (Object statefulConstraint : ((ListenerSet<Stateful>) removeLevelListeners).elements()) {
+      ((Stateful) statefulConstraint).removeLevel(level);
     }
 
-    // It needs to be before as there is a timestamp for number of boolean variables.
-    for (Stateful v : timeStamps) {
-      v.removeLevel(level);
+    if (!timeStamps.isEmpty()) {
+      for (Stateful v : timeStamps) {
+        v.removeLevel(level);
+      }
+    }
+
+    while (timeStampTrailSize > 0 && timeStampTrailLevel[timeStampTrailSize - 1] >= level) {
+      timeStampTrailSize--;
+      timeStampTrail[timeStampTrailSize].removeLevel(level);
+      timeStampTrail[timeStampTrailSize] = null;
     }
 
     // Boolean Variables.
 
     if (changeHistory4BooleanVariables != null) {
 
-      int previousPosition = pointer4GroundedBooleanVariables.value();
+      int previousPosition = booleanChangePosition;
 
-      pointer4GroundedBooleanVariables.removeLevel(level);
+      while (booleanChangeLevelsSize > 0
+          && booleanChangeLevels[booleanChangeLevelsSize - 1] >= level) {
+        booleanChangePosition = booleanChangeSaved[--booleanChangeLevelsSize];
+      }
 
-      int currentPosition = pointer4GroundedBooleanVariables.value();
+      int currentPosition = booleanChangePosition;
 
       for (int i = currentPosition; i < previousPosition; i++) {
 
@@ -1172,13 +1303,115 @@ public class Store {
       mutableVariables.get(i).removeLevel(level);
     }
 
-    for (RemoveLevelLate c : removeLevelLateListeners) {
-      c.removeLevelLate(level);
+    for (Object c : ((ListenerSet<RemoveLevelLate>) removeLevelLateListeners).elements()) {
+      ((RemoveLevelLate) c).removeLevelLate(level);
     }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
+  }
+
+  /**
+   * Returns the state of this store in a chain of derived stores.
+   *
+   * @return the state; {@link StoreState#ACTIVE} for a store that never derived a child.
+   */
+  public StoreState state() {
+    return state;
+  }
+
+  /**
+   * Sets the state of this store; only a derivation calls it.
+   *
+   * @param state the new state.
+   */
+  public void setState(StoreState state) {
+    this.state = state;
+  }
+
+  /**
+   * Runs a step of a derivation's return path (writing a child's solution into this store and
+   * propagating it), which a store that is not {@link StoreState#ACTIVE} otherwise refuses.
+   *
+   * @param step the step.
+   */
+  public void runReturning(Runnable step) {
+    boolean previous = returning;
+    returning = true;
+    try {
+      step.run();
+    } finally {
+      returning = previous;
+    }
+  }
+
+  private void checkImposeAllowed() {
+    // propagating a returned solution may impose constraints, such as the consequent of IfThen
+    if (state != StoreState.ACTIVE && !returning) {
+      throw new IllegalStateException("Store is " + state + "; it cannot impose constraints");
+    }
+  }
+
+  /**
+   * Switches on recording: from now on every constraint imposed through this store's {@code impose}
+   * methods, including the constraints of decompositions, is appended to {@link #model()}. Checking
+   * presolve against the whole original model needs it, so it has to be switched on before the
+   * first constraint is imposed.
+   *
+   * @param on true to record.
+   */
+  public void recordModel(boolean on) {
+    if (on && model == null) {
+      model = new ArrayList<>();
+    } else if (!on) {
+      model = null;
+    }
+  }
+
+  /**
+   * Returns the constraints recorded so far, in imposition order.
+   *
+   * @return the recorded constraints, or an empty list if recording is off.
+   */
+  public List<Constraint> model() {
+    return model == null ? List.of() : Collections.unmodifiableList(model);
+  }
+
+  private void record(Constraint c) {
+    if (model != null) {
+      model.add(c);
+    }
+  }
+
+  /**
+   * Records the first consistency call of a constraint at the current level. If an earlier first
+   * call was undone by removing its level, the constraint's variables are queued again, as imposing
+   * the constraint did, since the constraint dropped what it had queued with that level.
+   *
+   * @param c the constraint about to be called.
+   */
+  private void startFirstRun(Constraint c) {
+    if (c.firstRunAt() == Constraint.RUN_UNDONE && c instanceof UsesQueueVariable) {
+      c.arguments().forEach(v -> c.queueVariable(level, v));
+    }
+    c.setFirstRunAt(level);
+    if (firstRunsSize == firstRuns.length) {
+      firstRuns = Arrays.copyOf(firstRuns, firstRunsSize * 2);
+    }
+    firstRuns[firstRunsSize++] = c;
+  }
+
+  /**
+   * Records one-time work done at the current level, so that removing the level makes it due again.
+   *
+   * @param work the work just done.
+   */
+  void recordInitOnce(InitOnce work) {
+    if (initOnceSize == initOnce.length) {
+      initOnce = Arrays.copyOf(initOnce, 2 * initOnceSize);
+    }
+    initOnce[initOnceSize++] = work;
   }
 
   /**
@@ -1198,6 +1431,10 @@ public class Store {
    * @param levelSetTo level number to which store is changing to.
    */
   public void setLevel(int levelSetTo) {
+
+    if (state != StoreState.ACTIVE && !returning && levelSetTo != level) {
+      throw new IllegalStateException("Store is " + state + "; it cannot change its level");
+    }
 
     trailManager.setLevel(levelSetTo);
 

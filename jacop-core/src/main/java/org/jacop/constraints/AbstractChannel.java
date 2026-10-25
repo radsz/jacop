@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -116,6 +117,24 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
             constraintName + ": variable " + b + " must have a domain within 0..1");
       }
     }
+  }
+
+  /** The counterparts of the 0/1 variables, in the order of {@link #itemValues()}. */
+  IntVar[] itemVariables(VarMap map) {
+    IntVar[] bs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      bs[i] = map.get(item[i].b());
+    }
+    return bs;
+  }
+
+  /** The values of the items, in their current order. */
+  int[] itemValues() {
+    int[] values = new int[n];
+    for (int i = 0; i < n; i++) {
+      values[i] = item[i].value();
+    }
+    return values;
   }
 
   static int[] toArray(IntDomain d) {

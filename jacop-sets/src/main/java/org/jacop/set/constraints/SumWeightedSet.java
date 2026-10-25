@@ -33,7 +33,9 @@ package org.jacop.set.constraints;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,7 +53,8 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SumWeightedSet extends Constraint implements SatisfiedPresent {
+public class SumWeightedSet extends Constraint
+    implements SatisfiedPresent, Copyable<SumWeightedSet> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -354,5 +357,17 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
       ret.append(totalWeight.dom()).append(" )");
       return ret.toString();
     }
+  }
+
+  @Override
+  public SumWeightedSet copy(VarMap map) {
+    int[] elements = new int[elementWeights.size()];
+    int[] weights = new int[elements.length];
+    int i = 0;
+    for (Map.Entry<Integer, Integer> e : elementWeights.entrySet()) {
+      elements[i] = e.getKey();
+      weights[i++] = e.getValue();
+    }
+    return new SumWeightedSet(map.get(a), elements, weights, map.get(totalWeight));
   }
 }

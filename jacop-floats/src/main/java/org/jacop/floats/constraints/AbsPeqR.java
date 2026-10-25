@@ -31,9 +31,11 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
@@ -46,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
+public class AbsPeqR extends Constraint implements SatisfiedPresent, Copyable<AbsPeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -56,8 +58,8 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   /** It contains variable q. */
   private final FloatVar q;
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   /**
    * It constructs |P| = Q constraints.
@@ -79,19 +81,10 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       q.domain.inMin(store.level, q, 0.0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     boundConsistency(store);
@@ -151,5 +144,10 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   public String toString() {
 
     return id() + " : absPeqR(" + p + ", " + q + " )";
+  }
+
+  @Override
+  public AbsPeqR copy(VarMap map) {
+    return new AbsPeqR(map.get(p), map.get(q));
   }
 }
