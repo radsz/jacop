@@ -295,6 +295,160 @@ class DomainOperationsBruteForceTest {
     }
   }
 
+  /**
+   * The operations of a BoundDomain with domains that have holes or lie outside it. The operations
+   * that return a new domain are exact, and the ones that change the BoundDomain give the smallest
+   * interval holding the result, since a BoundDomain cannot hold holes.
+   */
+  @Test
+  void boundDomainOperationsMatchSets() {
+    Random random = new Random(12);
+    Scale scale = SMALL;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      TreeSet<Integer> a = randomInterval(random, scale);
+      TreeSet<Integer> b = randomSet(random, scale);
+      int lo = randomValue(random, scale);
+      int hi = lo + random.nextInt(scale.maxValue() + 1 - lo);
+      int value = scale.minValue() - 2 + random.nextInt(scale.maxValue() - scale.minValue() + 5);
+      int shift = random.nextInt(5) - 2;
+      TreeSet<Integer> range = range(lo, hi);
+      TreeSet<Integer> shifted = new TreeSet<>();
+      b.forEach(v -> shifted.add(v + shift));
+      String context =
+          "a=" + a + " b=" + b + " range=" + lo + ".." + hi + " value=" + value + " shift=" + shift;
+
+      for (IntDomain db : arguments(b)) {
+        IntDomain da = bound(a);
+        String c = context + " argument " + db.getClass().getSimpleName();
+        check(da.union(db), union(a, b), "union(dom) " + c);
+        check(da.intersect(db), intersect(a, b), "intersect(dom) " + c);
+        check(da.subtract(db), hull(subtract(a, b)), "subtract(dom) " + c);
+        assertThat(da.isIntersecting(db))
+            .as("isIntersecting(dom) " + c)
+            .isEqualTo(!intersect(a, b).isEmpty());
+        assertThat(da.contains(db)).as("contains(dom) " + c).isEqualTo(a.containsAll(b));
+        assertThat(da.eq(db)).as("eq(dom) " + c).isEqualTo(a.equals(b));
+        assertThat(da.sizeOfIntersection(db))
+            .as("sizeOfIntersection(dom) " + c)
+            .isEqualTo(intersect(a, b).size());
+
+        IntDomain adapted = bound(a);
+        adapted.unionAdapt(db);
+        check(adapted, hull(union(a, b)), "unionAdapt(dom) " + c);
+
+        adapted = bound(a);
+        adapted.addDom(db);
+        check(adapted, hull(union(a, b)), "addDom(dom) " + c);
+
+        adapted = bound(a);
+        int event = adapted.intersectAdapt(db);
+        check(adapted, hull(intersect(a, b)), "intersectAdapt(dom) " + c);
+        assertThat(event)
+            .as("intersectAdapt(dom) event " + c)
+            .isEqualTo(adaptEvent(a, hull(intersect(a, b))));
+
+        if (!a.isEmpty()) {
+          prune(
+              s -> bound(s), a, hull(intersect(a, b)), "in(dom) " + c, (d, l, v) -> d.in(l, v, db));
+          prune(
+              s -> bound(s),
+              a,
+              hull(intersect(a, shifted)),
+              "inShift " + c,
+              (d, l, v) -> d.inShift(l, v, db, shift));
+        }
+      }
+
+      IntDomain da = bound(a);
+      check(da.union(lo, hi), union(a, range), "union(min, max) " + context);
+      check(da.union(value), union(a, range(value, value)), "union(value) " + context);
+      check(da.intersect(lo, hi), intersect(a, range), "intersect(min, max) " + context);
+      check(da.subtract(lo, hi), hull(subtract(a, range)), "subtract(min, max) " + context);
+      check(
+          da.subtract(value), hull(subtract(a, range(value, value))), "subtract(value) " + context);
+      assertThat(da.isIntersecting(lo, hi))
+          .as("isIntersecting(min, max) " + context)
+          .isEqualTo(!intersect(a, range).isEmpty());
+      assertThat(da.contains(lo, hi))
+          .as("contains(min, max) " + context)
+          .isEqualTo(a.containsAll(range));
+      assertThat(da.contains(value)).as("contains(value) " + context).isEqualTo(a.contains(value));
+      if (!a.isEmpty()) {
+        Integer next = a.higher(value);
+        assertThat(da.nextValue(value))
+            .as("nextValue " + context)
+            .isEqualTo(next == null ? value : next);
+        Integer previous = a.lower(value);
+        assertThat(da.previousValue(value))
+            .as("previousValue " + context)
+            .isEqualTo(previous == null ? value : previous);
+        checkStructure(da, a, context);
+      }
+
+      IntDomain adapted = bound(a);
+      adapted.unionAdapt(lo, hi);
+      check(adapted, hull(union(a, range)), "unionAdapt(min, max) " + context);
+
+      adapted = bound(a);
+      adapted.unionAdapt(new Interval(lo, hi));
+      check(adapted, hull(union(a, range)), "unionAdapt(interval) " + context);
+
+      adapted = bound(a);
+      int event = adapted.intersectAdapt(lo, hi);
+      check(adapted, intersect(a, range), "intersectAdapt(min, max) " + context);
+      assertThat(event)
+          .as("intersectAdapt(min, max) event " + context)
+          .isEqualTo(adaptEvent(a, intersect(a, range)));
+
+      adapted = bound(a);
+      adapted.subtractAdapt(lo, hi);
+      check(adapted, hull(subtract(a, range)), "subtractAdapt(min, max) " + context);
+
+      adapted = bound(a);
+      adapted.subtractAdapt(value);
+      check(adapted, hull(subtract(a, range(value, value))), "subtractAdapt(value) " + context);
+
+      if (!a.isEmpty()) {
+        for (int mul : new int[] {-3, -1, 2}) {
+          TreeSet<Integer> product = new TreeSet<>();
+          a.forEach(v -> product.add(v * mul));
+          check(
+              ((BoundDomain) da).multiply(mul), hull(product), "multiply(" + mul + ") " + context);
+        }
+      }
+    }
+  }
+
+  /** A BoundDomain holding the values of an interval, or an empty one. */
+  private static IntDomain bound(TreeSet<Integer> interval) {
+    return interval.isEmpty()
+        ? new BoundDomain()
+        : new BoundDomain(interval.first(), interval.last());
+  }
+
+  /** A random interval of the values of the scale, sometimes empty or a single value. */
+  private static TreeSet<Integer> randomInterval(Random random, Scale scale) {
+    if (random.nextInt(20) == 0) {
+      return new TreeSet<>();
+    }
+    int min = randomValue(random, scale);
+    int max = random.nextInt(4) == 0 ? min : Math.min(scale.maxValue(), min + random.nextInt(6));
+    return range(min, max);
+  }
+
+  /** The smallest interval holding the values of a set. */
+  private static TreeSet<Integer> hull(TreeSet<Integer> set) {
+    return set.isEmpty() ? set : range(set.first(), set.last());
+  }
+
+  /** The event that intersectAdapt reports for a change from domain a to domain result. */
+  private static int adaptEvent(TreeSet<Integer> a, TreeSet<Integer> result) {
+    if (result.equals(a)) {
+      return IntDomain.NONE;
+    }
+    return result.size() <= 1 ? IntDomain.GROUND : IntDomain.BOUND;
+  }
+
   /** Removes lo..hi from a, unless that makes a hole, which a BoundDomain cannot hold. */
   private static TreeSet<Integer> subtractBounds(TreeSet<Integer> a, int lo, int hi) {
     TreeSet<Integer> result = subtract(a, range(lo, hi));
