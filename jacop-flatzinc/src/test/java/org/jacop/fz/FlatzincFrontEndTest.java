@@ -599,6 +599,53 @@ class FlatzincFrontEndTest {
     }
   }
 
+  private static List<Integer> distances(String stdout) {
+    return stdout
+        .lines()
+        .filter(l -> l.startsWith("distance = "))
+        .map(l -> Integer.parseInt(l.substring(11, l.length() - 1)))
+        .toList();
+  }
+
+  private static String annotationModel(String name) throws IOException {
+    return Files.readString(Path.of("src/test/fz/annotations", name + ".fzn"));
+  }
+
+  @Test
+  void relaxAndReconstructTspKeepsImproving() throws IOException {
+    // tsp-relax (16 cities, relax_and_reconstruct(d, 60), restart_luby(3000)) improved to 6875 and
+    // then printed worse and worse tours, up to 9257, because the bound on the distance was lost
+    // after the first relaxed restart. The optimum is 6859 (proved by tsp-restart and by Gecode).
+    String model = annotationModel("tsp-relax");
+    for (String seed : List.of("1", "4")) {
+      String out = run(model, "-a", "-r", seed, "--restart-limit", "1200")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), "seed " + seed + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), "seed " + seed + ": " + distances);
+    }
+  }
+
+  @Test
+  void restartAndWarmStartAnnotationModels() throws IOException {
+    for (String name : List.of("tsp-restart", "tsp-warm-restart")) {
+      String out = run(annotationModel(name), "-a")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), name + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), name + ": " + distances);
+      assertTrue(out.contains("=========="), name + ":\n" + out);
+    }
+    // warm_start puts its values first: all six permutations, starting with [3,2,1]
+    List<String> warm =
+        run(annotationModel("warm"), "-a")[0].lines().filter(l -> l.startsWith("x = ")).toList();
+    assertEquals(6, new TreeSet<>(warm).size(), warm.toString());
+    assertEquals(6, warm.size(), warm.toString());
+    assertTrue(warm.getFirst().contains("[3, 2, 1]"), warm.toString());
+  }
+
   @Test
   void restartSearchReportsUnsatisfiableModels() throws IOException {
     // Restart search printed ========== without any solution for an unsatisfiable optimization
