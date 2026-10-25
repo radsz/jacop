@@ -59,9 +59,9 @@ import org.jacop.core.Var;
 public class ElementInteger extends AbstractElement implements UsesQueueVariable, SatisfiedPresent {
 
   /**
-   * It specifies the maximal size of index domain when the constraint will apply domain consistency
-   * for value. Otherwise bound consistency is applied. This limit applies to both duplicates and
-   * index.
+   * It specifies the size of index domain from which the values supported by the index are
+   * collected through the value ranks of the list (sorted or marked) instead of being added one by
+   * one to the value domain. Both ways give domain consistency for value.
    */
   static final int LIMIT_FOR_DOMAIN_PRUNING = 100;
 
@@ -108,6 +108,23 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
   List<IntDomain> duplicates;
 
   IntDomain duplicatesIndexes;
+
+  /**
+   * The distinct values of the list in increasing order. It is only computed when the list has at
+   * least limitForDomainPruning elements.
+   */
+  private int[] sortedValues;
+
+  /** For each position of the list, the rank of its value in sortedValues. */
+  private int[] valueRank;
+
+  /** A buffer for the ranks of the values supported by the current index domain. */
+  private int[] supportedRanks;
+
+  /** For each rank, the stamp of the last call that found the value supported. */
+  private int[] rankStamp;
+
+  private int stamp;
 
   /**
    * It constructs an element constraint.
@@ -226,19 +243,84 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
 
   private void propagateIndexChanged(Store store) {
     indexHasChanged = false;
-    IntDomain indexDom = index.dom().cloneLight();
-    IntervalDomain domValue = addDuplicatesToDomValue(indexDom);
 
-    indexDom = indexDom.subtract(duplicatesIndexes);
-
-    if (indexDom.getSize() < limitForDomainPruning) {
+    IntervalDomain domValue;
+    if (index.getSize() < limitForDomainPruning || sortedValues == null) {
+      IntDomain indexDom = index.dom().cloneLight();
+      domValue = addDuplicatesToDomValue(indexDom);
+      if (!duplicates.isEmpty()) {
+        indexDom = indexDom.subtract(duplicatesIndexes);
+      }
       addIndexDomValuesToDomValue(indexDom, domValue);
     } else {
-      setDomValueBoundsFromIndexDom(indexDom, domValue);
+      domValue = supportedValuesByRank();
     }
 
     value.domain.in(store.level, value, domValue);
     valueHasChanged = false;
+  }
+
+  /**
+   * It computes the values of the list at the positions of the index domain. The ranks of these
+   * values are collected and then turned into a domain in increasing order, either by sorting the
+   * ranks or by a sweep over all ranks, whichever is cheaper. It takes O(|D(index)| log |D(index)|)
+   * or O(|D(index)| + number of distinct values) instead of the quadratic worst case of adding
+   * values out of order to an interval domain.
+   *
+   * @return the domain of values supported by the index.
+   */
+  private IntervalDomain supportedValuesByRank() {
+
+    int count = 0;
+    IntDomain indexDom = index.dom();
+    if (!duplicates.isEmpty()) {
+      for (IntDomain duplicate : duplicates) {
+        if (indexDom.isIntersecting(duplicate)) {
+          supportedRanks[count++] = valueRank[duplicate.min() - 1 - indexOffset];
+        }
+      }
+      indexDom = indexDom.subtract(duplicatesIndexes);
+    }
+    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
+      supportedRanks[count++] = valueRank[e.nextElement() - 1 - indexOffset];
+    }
+
+    IntervalDomain domValue = new IntervalDomain(5);
+    if (count == 0) {
+      return domValue;
+    }
+
+    if ((long) count * (32 - Integer.numberOfLeadingZeros(count)) < sortedValues.length) {
+      Arrays.sort(supportedRanks, 0, count);
+      int previous = supportedRanks[0];
+      domValue.unionAdapt(sortedValues[previous]);
+      for (int i = 1; i < count; i++) {
+        int rank = supportedRanks[i];
+        if (rank != previous) {
+          domValue.addLastElement(sortedValues[rank]);
+          previous = rank;
+        }
+      }
+    } else {
+      if (stamp == Integer.MAX_VALUE) {
+        Arrays.fill(rankStamp, 0);
+        stamp = 0;
+      }
+      stamp++;
+      for (int i = 0; i < count; i++) {
+        rankStamp[supportedRanks[i]] = stamp;
+      }
+      for (int rank = 0; rank < sortedValues.length; rank++) {
+        if (rankStamp[rank] == stamp) {
+          if (domValue.isEmpty()) {
+            domValue.unionAdapt(sortedValues[rank]);
+          } else {
+            domValue.addLastElement(sortedValues[rank]);
+          }
+        }
+      }
+    }
+    return domValue;
   }
 
   private IntervalDomain addDuplicatesToDomValue(IntDomain indexDom) {
@@ -263,17 +345,6 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
       int valueOfElement = list[e.nextElement() - 1 - indexOffset];
       domValue.unionAdapt(valueOfElement);
     }
-  }
-
-  private void setDomValueBoundsFromIndexDom(IntDomain indexDom, IntervalDomain domValue) {
-    int min = IntDomain.MAX_INT;
-    int max = IntDomain.MIN_INT;
-    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
-      int valueOfElement = list[e.nextElement() - 1 - indexOffset];
-      min = Math.min(min, valueOfElement);
-      max = Math.max(max, valueOfElement);
-    }
-    domValue.unionAdapt(min, max);
   }
 
   private void propagateValueChanged(Store store) {
@@ -328,8 +399,31 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
       }
     }
 
+    if (list.length >= limitForDomainPruning) {
+      computeValueRanks();
+    }
+
     valueHasChanged = true;
     indexHasChanged = true;
+  }
+
+  private void computeValueRanks() {
+    int[] values = Arrays.copyOf(list, list.length);
+    Arrays.sort(values);
+    int distinct = 0;
+    for (int i = 0; i < values.length; i++) {
+      if (i == 0 || values[i] != values[i - 1]) {
+        values[distinct++] = values[i];
+      }
+    }
+    sortedValues = Arrays.copyOf(values, distinct);
+    valueRank = new int[list.length];
+    for (int pos = 0; pos < list.length; pos++) {
+      valueRank[pos] = Arrays.binarySearch(sortedValues, list[pos]);
+    }
+    supportedRanks = new int[list.length];
+    rankStamp = new int[distinct];
+    stamp = 0;
   }
 
   @Override

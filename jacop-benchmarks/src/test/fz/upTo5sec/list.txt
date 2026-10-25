@@ -334,6 +334,8 @@ einav_puzzle/einav_puzzle
 einstein_hurlimann/einstein_hurlimann
 einstein_opl/einstein_opl
 element_sparse/element_sparse
+element_spread/spread_12_500
+element_spread/spread_14_300
 elevator_6_3/elevator_6_3
 elitserien/handball12
 elitserien/handball14
@@ -2724,3 +2726,7 @@ ttppv_cost_regular/rand6_1
 ttppv_cost_regular/rand6_4
 ttppv_cost_regular/rand6_12
 ttppv_cost_regular/rand8_0_unsat
+member_reif_var/member_reif_var
+member_reif_var_first/member_reif_var_first
+atsp0/atsp22-1
+atsp0/atsp22-2

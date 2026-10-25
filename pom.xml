@@ -259,6 +259,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -322,6 +323,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>

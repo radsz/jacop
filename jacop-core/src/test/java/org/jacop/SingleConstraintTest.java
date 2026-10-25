@@ -1092,6 +1092,67 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void circuitWithOffsetMatchesBruteForceAndShiftedCircuit() {
+    // Circuit numbered from an offset must have the solutions of the 1-based circuit on values
+    // shifted by 1 - offset, and prune the same at the root.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 500; trial++) {
+      int n = 2 + random.nextInt(5);
+      int offset = random.nextInt(7) - 3;
+      int[][] domains = new int[n][]; // 1-based, with values outside 1..n
+      for (int i = 0; i < n; i++) {
+        domains[i] =
+            random.ints(0, n + 2).limit(1 + random.nextInt(n)).distinct().sorted().toArray();
+      }
+      int[][] inRange = new int[n][];
+      for (int i = 0; i < n; i++) {
+        inRange[i] = Arrays.stream(domains[i]).filter(v -> v >= 1 && v <= n).toArray();
+      }
+      int expected = circuitSolutions(inRange, new int[n], 0, false);
+      String[] pruned = new String[2];
+      for (int shifted = 0; shifted < 2; shifted++) {
+        int base = shifted == 0 ? offset : 1;
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v - 1 + base, v - 1 + base);
+          }
+        }
+        store.impose(shifted == 0 ? new Circuit(x, offset) : new Circuit(x));
+        boolean consistent = store.consistency();
+        // root domains in the 1-based numbering
+        StringBuilder after = new StringBuilder();
+        for (IntVar v : x) {
+          after.append(consistent ? shift(v.dom(), 1 - base) : "fail").append(' ');
+        }
+        pruned[shifted] = after.toString();
+        int actual = consistent ? noOfAllSolutions(store, x) : 0;
+        assertThat(actual)
+            .as("trial %d, offset %d, domains %s", trial, base, Arrays.deepToString(domains))
+            .isEqualTo(expected);
+      }
+      assertThat(pruned[0])
+          .as("trial %d, offset %d, domains %s", trial, offset, Arrays.deepToString(domains))
+          .isEqualTo(pruned[1]);
+    }
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Circuit(x, IntDomain.MAX_INT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private static String shift(IntDomain dom, int by) {
+    IntervalDomain result = new IntervalDomain();
+    for (ValueEnumeration e = dom.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement() + by;
+      result.unionAdapt(v, v);
+    }
+    return result.toString();
+  }
+
   private static int circuitSolutions(int[][] domains, int[] values, int i, boolean sub) {
     int n = values.length;
     if (i == n) {
@@ -3466,6 +3527,91 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementIntegerIsDomainConsistentForLargeIndex() {
+    // With 100 or more index values the value domain was only pruned to the bounds of the
+    // supported values, here 3..360 instead of the multiples of 3.
+    Store store = new Store();
+    int[] list = IntStream.rangeClosed(1, 120).map(i -> 3 * i).toArray();
+    IntVar index = new IntVar(store, "index", 1, 120);
+    IntVar value = new IntVar(store, "value", 0, 400);
+    store.impose(new ElementInteger(index, list, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.getSize()).isEqualTo(120);
+    assertThat(value.domain.contains(4)).isFalse();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 60);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(180)).isFalse();
+    assertThat(value.getSize()).isEqualTo(119);
+
+    // Values repeated more than ten times are grouped as duplicates.
+    store = new Store();
+    int[] repeated = IntStream.range(0, 150).map(i -> i % 2 == 0 ? 0 : 10).toArray();
+    index = new IntVar(store, "index", 1, 150);
+    value = new IntVar(store, "value", 0, 20);
+    store.impose(new ElementInteger(index, repeated, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{0, 10}");
+  }
+
+  @Test
+  void elementIntegerWithLargeIndexMatchesBruteForce() {
+    // Long lists against the supports computed directly, at every node of random dives.
+    Random random = new Random(7);
+    for (int instance = 0; instance < 200; instance++) {
+      Store store = new Store();
+      int length = 100 + random.nextInt(150);
+      int spread = 1 + random.nextInt(400);
+      int[] list = new int[length];
+      for (int i = 0; i < length; i++) {
+        list[i] = random.nextInt(spread) - spread / 3;
+      }
+      int offset = random.nextInt(3) - 1;
+      IntVar index = new IntVar(store, "index", offset - 2, length + offset + 2);
+      IntVar value = new IntVar(store, "value", -spread, spread);
+      store.impose(new ElementInteger(index, list, value, offset, random.nextBoolean()));
+
+      for (int step = 0; step < 30; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = random.nextBoolean() ? index : value;
+        int v = x.min() + random.nextInt(x.max() - x.min() + 1);
+        try {
+          if (random.nextInt(4) == 0) {
+            x.domain.in(
+                store.level,
+                x,
+                random.nextBoolean() ? x.min() : v,
+                random.nextBoolean() ? v : x.max());
+          } else if (x.domain.contains(v) && !x.singleton()) {
+            x.domain.inComplement(store.level, x, v);
+          }
+        } catch (FailException e) {
+          break;
+        }
+        if (!store.consistency()) {
+          break;
+        }
+        IntervalDomain expectedValue = new IntervalDomain();
+        IntervalDomain expectedIndex = new IntervalDomain();
+        for (int i = 1 + offset; i <= length + offset; i++) {
+          int val = list[i - 1 - offset];
+          if (index.domain.contains(i) && value.domain.contains(val)) {
+            expectedIndex.unionAdapt(i);
+            expectedValue.unionAdapt(val);
+          }
+        }
+        assertThat(value.dom().eq(expectedValue))
+            .as("value %s, expected %s", value.dom(), expectedValue)
+            .isTrue();
+        assertThat(index.dom().eq(expectedIndex))
+            .as("index %s, expected %s", index.dom(), expectedIndex)
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
   void elementVariableLooksForSupportsWithinIndex() {
     // A value that lost its support was given a new support at a position the index can no
     // longer take, so it stayed in the value domain.
@@ -4039,6 +4185,66 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void geostNonOverlappingWithoutTimeKeepsObjectsApart() {
+    // Two unit squares, object 0 at (0, 0), object 1 at (x1, 0) with x1 in 0..1. NonOverlapping
+    // over the spatial dimensions only (no time dimension, 2) must forbid x1 = 0, and so must
+    // NonOverlapping over dimension 0 only. The filter of useful internal constraints overflowed
+    // on the unbounded time extent and dropped the obstacle, which accepted x1 = 0.
+    for (int[] dims : new int[][] {{0, 1}, {0}, {0, 1, 2}}) {
+      Store store = new Store();
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+      IntVar x1 = new IntVar(store, "x1", 0, 1);
+      IntVar[][] coords = {
+        {new IntVar(store, 0, 0), new IntVar(store, 0, 0)}, {x1, new IntVar(store, 0, 0)}
+      };
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                coords[i],
+                new IntVar(store, 0, 0),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(new Geost(objects, List.of(new NonOverlapping(objects, dims)), shapes));
+
+      assertThat(noOfAllSolutions(store, new IntVar[] {x1}))
+          .as("dims %s", Arrays.toString(dims))
+          .isEqualTo(1);
+    }
+  }
+
+  @Test
+  void geostPrunesWithObjectsFreeInDimensionNotSelected() {
+    // NonOverlapping over dimension 0 only: object 0 occupies x = 0 whatever its y, so object 1
+    // (x1 in 0..1) must move to x1 = 1. The frame of object 0 also required a compulsory part in
+    // the dimension that is not selected (y in 0..5), found none and pruned nothing.
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar[][] coords = {
+      {new IntVar(store, 0, 0), new IntVar(store, 0, 5)}, {x1, new IntVar(store, 0, 0)}
+    };
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              coords[i],
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    store.impose(new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0})), shapes));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.min()).isEqualTo(1);
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/46
   @Test
   void testAmongVarWithGroundedX() {
@@ -4530,6 +4736,51 @@ class SingleConstraintTest extends TestHelper {
     }
     assertThat(counts[1]).isPositive();
     assertThat(counts[0]).isEqualTo(counts[1]);
+  }
+
+  // The network matched the counters and bounds, given in the order of the counted values, to the
+  // value nodes in increasing value order, so unsorted counted values swapped them.
+  @Test
+  void testSoftGccWithUnsortedCountedValues() {
+
+    Store store = new Store();
+    // x = [1, 1]: value 1 occurs twice and value -1 never
+    IntVar[] x = {new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1)};
+    int[] values = {1, -1};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("2");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("0");
+    assertThat(cost.dom().toString()).isEqualTo("0");
+  }
+
+  // A value counted twice had one value node in the network but two counters, so solutions were
+  // lost.
+  @Test
+  void testSoftGccWithAValueCountedTwice() {
+
+    Store store = new Store();
+    // x = [1, 0, 1]: value 0 occurs once
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 0), new IntVar(store, "x2", 1, 1)
+    };
+    int[] values = {0, 0};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 5);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    // both counters count the single 0; the costs are |1 - 2| + |1 - 0|
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("1");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("1");
+    assertThat(cost.dom().toString()).isEqualTo("2");
   }
 
   @Test
@@ -5107,6 +5358,75 @@ class SingleConstraintTest extends TestHelper {
 
     late.consistency(other);
     assertThat(y[1].singleton(3)).isTrue();
+  }
+
+  @Test
+  void reifiedMemberIsEntailedWhenFixedListValuesCoverTheElement() {
+    // e in {0, 1}, x = [1, 0, {0, 1}]: both values of e are taken by fixed list variables, so
+    // member holds whatever e and x3 become and b must be 1. satisfied() checked only a fixed e.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 0, 0), new IntVar(store, "x3", 0, 1)
+    };
+    IntVar e = new IntVar(store, "e", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Member(x, e), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberSatisfiedIsExactEntailment() {
+    // Without repeated variables, member is entailed exactly when every tuple of the domains
+    // satisfies it.
+    Random random = new Random(47);
+    for (int instance = 0; instance < 5000; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(4);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int min = random.nextInt(4);
+        x[i] =
+            new IntVar(store, "x" + i, min, random.nextInt(3) == 0 ? min : min + random.nextInt(3));
+      }
+      IntVar e = new IntVar(store, "e");
+      for (int v = 0; v < 5; v++) {
+        if (random.nextInt(3) == 0) {
+          e.addDom(v, v);
+        }
+      }
+      if (e.dom().isEmpty()) {
+        e.addDom(2, 2);
+      }
+      boolean entailed = true;
+      int[] tuple = new int[n];
+      for (ValueEnumeration ev = e.dom().valueEnumeration(); ev.hasMoreElements(); ) {
+        int value = ev.nextElement();
+        for (int i = 0; i < n; i++) {
+          tuple[i] = x[i].min();
+        }
+        do {
+          boolean found = false;
+          for (int i = 0; i < n; i++) {
+            found |= tuple[i] == value;
+          }
+          entailed &= found;
+        } while (nextBoxTuple(tuple, x));
+      }
+      Member member = new Member(x, e);
+      assertThat(member.satisfied()).as(member.toString()).isEqualTo(entailed);
+    }
+  }
+
+  private static boolean nextBoxTuple(int[] tuple, IntVar[] x) {
+    for (int i = 0; i < tuple.length; i++) {
+      if (tuple[i] < x[i].max()) {
+        tuple[i]++;
+        return true;
+      }
+      tuple[i] = x[i].min();
+    }
+    return false;
   }
 
   @Test
@@ -6067,5 +6387,56 @@ class SingleConstraintTest extends TestHelper {
 
     // checked before propagation, which would remove 3 from x1: x1 = 3 would still give two 3s
     assertThat(c.satisfied()).isFalse();
+  }
+
+  // With min = max the windows force a period of q, so Sequence posts reified memberships on q
+  // Booleans and one sum instead of Regular. It must keep the solutions and the domain
+  // consistency of the Regular automaton.
+  @Test
+  void testSequenceWithEqualBoundsMatchesRegular() {
+
+    Random random = new Random(7);
+    for (int instance = 0; instance < 300; instance++) {
+      int n = 2 + random.nextInt(6);
+      int q = 1 + random.nextInt(n);
+      int count = random.nextInt(q + 1);
+      int[][] values = new int[n][];
+      for (int i = 0; i < n; i++) {
+        values[i] = random.ints(1 + random.nextInt(3), 0, 4).toArray();
+      }
+      IntervalDomain set = new IntervalDomain(1, 1 + random.nextInt(2));
+
+      Store periodStore = new Store();
+      IntVar[] x = sequenceVariables(periodStore, values);
+      Sequence periodic = new Sequence(x, set, q, count, count);
+      assertThat(periodic.decompose(periodStore)).noneMatch(c -> c instanceof Regular);
+      periodStore.imposeDecomposition(periodic);
+
+      Store regularStore = new Store();
+      IntVar[] y = sequenceVariables(regularStore, values);
+      for (Constraint c : Sequence.decomposeByRegular(new Sequence(y, set, q, count, count))) {
+        regularStore.impose(c);
+      }
+
+      boolean consistent = regularStore.consistency();
+      assertThat(periodStore.consistency()).isEqualTo(consistent);
+      if (consistent) {
+        for (int i = 0; i < n; i++) {
+          assertThat(x[i].dom().toString()).isEqualTo(y[i].dom().toString());
+        }
+        assertThat(noOfAllSolutions(periodStore, x)).isEqualTo(noOfAllSolutions(regularStore, y));
+      }
+    }
+  }
+
+  private static IntVar[] sequenceVariables(Store store, int[][] values) {
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i);
+      for (int v : values[i]) {
+        x[i].addDom(v, v);
+      }
+    }
+    return x;
   }
 }

@@ -47,6 +47,10 @@ import org.jacop.core.Var;
  * Circuit constraint assures that all variables build a Hamiltonian circuit. Value of every
  * variable x[i] points to the next variable in the circuit. Variables create one circuit.
  *
+ * <p>Variables are numbered from 1 by default, so x[i] = j means that the successor of the i-th
+ * variable (counted from 1) is the j-th one. With an offset, they are numbered from the offset
+ * instead; for example offset 0 numbers them from 0.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
@@ -66,15 +70,42 @@ public class Circuit extends Alldiff {
   MutableVar[] graph;
   int idd;
 
+  /** The number of the first variable, that is the value pointing to list[0]. */
+  final int offset;
+
+  /** The value pointing to a node minus the node number used by the chains (1..n), offset - 1. */
+  private final int shift;
+
   /**
    * It constructs a circuit constraint.
    *
    * @param list variables which must form a circuit.
    */
   public Circuit(IntVar[] list) {
+    this(list, 1);
+  }
+
+  /**
+   * It constructs a circuit constraint whose variables are numbered from the given offset.
+   *
+   * @param list variables which must form a circuit.
+   * @param offset the value that points to list[0]; list[i] is pointed to by offset + i.
+   */
+  public Circuit(IntVar[] list, int offset) {
 
     checkInputForNullness("list", list);
     checkInputForDuplication("list", list);
+    if ((long) offset < IntDomain.MIN_INT || (long) offset + list.length - 1 > IntDomain.MAX_INT) {
+      throw new IllegalArgumentException(
+          "Circuit has values "
+              + offset
+              + ".."
+              + ((long) offset + list.length - 1)
+              + " out of range");
+    }
+
+    this.offset = offset;
+    this.shift = offset - 1;
 
     this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
@@ -102,6 +133,16 @@ public class Circuit extends Alldiff {
     this(list.toArray(new IntVar[0]));
   }
 
+  /**
+   * It constructs a circuit constraint whose variables are numbered from the given offset.
+   *
+   * @param list variables which must form a circuit.
+   * @param offset the value that points to the first variable of the list.
+   */
+  public Circuit(List<? extends IntVar> list, int offset) {
+    this(list.toArray(new IntVar[0]), offset);
+  }
+
   // Alldiff queues only grounded variables, but consistency() here reads every changed variable
   // from variableQueue.
   @Override
@@ -114,8 +155,8 @@ public class Circuit extends Alldiff {
 
     if (init.begin(store)) {
       for (int i = 0; i < list.length; i++) {
-        list[i].domain.in(store.level, list[i], 1, list.length);
-        list[i].domain.inComplement(store.level, list[i], i + 1);
+        list[i].domain.in(store.level, list[i], offset, shift + list.length);
+        list[i].domain.inComplement(store.level, list[i], offset + i);
       }
     }
 
@@ -186,14 +227,14 @@ public class Circuit extends Alldiff {
       dom = v.dom();
       if (dom.singleton()) {
         updateChains(v);
-        int qMin = dom.min();
+        int qMin = dom.min() - shift;
 
         chainLength = 0;
         int lastInChain = lastNode(qMin);
         int firstInChain = firstNode(qMin);
         if (chainLength < list.length - 1) {
           list[lastInChain - 1].domain.inComplement(
-              store.level, list[lastInChain - 1], firstInChain);
+              store.level, list[lastInChain - 1], firstInChain + shift);
         }
       }
     }
@@ -219,7 +260,7 @@ public class Circuit extends Alldiff {
       int i = 0;
       int no = 0;
       do {
-        i = list[i].min() - 1;
+        i = list[i].min() - offset;
         no++;
       } while (no < list.length && i != 0);
       if (no != list.length || i != 0) {
@@ -251,7 +292,7 @@ public class Circuit extends Alldiff {
       if (last < dom.max()) {
         int value = last < dom.min() ? dom.min() : dom.nextValue(last);
         dfsValue[sp - 1] = value;
-        int t = value - 1;
+        int t = value - offset;
         if (val[t] == 0) {
           push(t, sp++);
         } else if (val[t] < low[k]) {
@@ -289,7 +330,11 @@ public class Circuit extends Alldiff {
     StringBuilder result = new StringBuilder(id());
     result.append(" : circuit([");
     appendArrayToString(result, list);
-    result.append("])");
+    result.append(']');
+    if (offset != 1) {
+      result.append(", ").append(offset);
+    }
+    result.append(')');
 
     return result.toString();
   }
@@ -299,7 +344,7 @@ public class Circuit extends Alldiff {
   void updateChains(IntVar v) {
 
     int i = valueIndex.get(v);
-    int vMin = v.min();
+    int vMin = v.min() - shift;
 
     graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
     graph[vMin - 1].update(

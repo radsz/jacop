@@ -186,8 +186,13 @@ public class NetworkFlow extends Constraint
     }
   }
 
-  /** Updates the network graph with queued variable changes. */
-  private void updateGraph() {
+  /**
+   * Updates the network graph with queued variable changes.
+   *
+   * @return true if any variable change was processed.
+   */
+  private boolean updateGraph() {
+    boolean changed = !queue.isEmpty();
     // update graph
     network.increaseLevel();
     try {
@@ -200,6 +205,7 @@ public class NetworkFlow extends Constraint
       queue.clear();
       disableQueueVariable = false;
     }
+    return changed;
   }
 
   /** Performs one simplex iteration: run simplex, check feasibility, prune cost min, analyze. */
@@ -272,7 +278,10 @@ public class NetworkFlow extends Constraint
     previousLevel = store.level;
 
     int iteration = 0;
-    while (network.needsUpdate(costVariable.max()) || iteration == 0) {
+    // The pruning of one iteration (of flow variables such as counters) changes arc bounds, which
+    // the next iteration must analyse again for the constraint to reach its fixpoint.
+    boolean graphChanged = false;
+    while (iteration == 0 || graphChanged || network.needsUpdate(costVariable.max())) {
 
       if (DO_INSTRUMENTATION) {
         statistics.consistencyIterations++;
@@ -284,7 +293,7 @@ public class NetworkFlow extends Constraint
       }
 
       runOneSimplexIteration(store);
-      updateGraph();
+      graphChanged = updateGraph();
     }
 
     finishConsistencyCostPruning(store);
