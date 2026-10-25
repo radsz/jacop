@@ -130,6 +130,12 @@ public class GeostObject {
     }
 
     groundCount = 0;
+    // variables fixed already are never reported as grounded by Geost, count them now
+    for (Var v : variables) {
+      if (v.singleton()) {
+        groundCount++;
+      }
+    }
   }
 
   /**

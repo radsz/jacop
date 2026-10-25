@@ -71,6 +71,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
   /** It specifies if the time dimension is used within computation. */
   final boolean useTime;
 
+  /** It specifies for each dimension (time included) whether it is selected. */
+  final boolean[] selected;
+
   /**
    * The collection of holes that are included in all possible shapes, enlarged to include the whole
    * domain that can be covered for any feasible choice of the origin.
@@ -110,6 +113,11 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     // check whether time should be used or not
     useTime = selectedDimensions[selectedDimensions.length - 1] == obstacle.dimension;
+
+    selected = new boolean[obstacle.dimension + 1];
+    for (int d : selectedDimensions) {
+      selected[d] = true;
+    }
 
     extendedHoles = new ArrayList<>();
   }
@@ -263,6 +271,13 @@ public class ObstacleObjectFrame extends InternalConstraint {
   private boolean fillDomainFromBoundingBox(Dbox domain, Dbox boundingBox) {
     for (int i = 0; i < obstacle.dimension; i++) {
       IntVar coordVar = obstacle.coords[i];
+      if (!selected[i]) {
+        // objects are unbounded in a dimension that is not selected, so the frame does not need
+        // a compulsory part there; only its extent in the selected dimensions is used
+        domain.origin[i] = coordVar.min() + boundingBox.origin[i];
+        domain.length[i] = coordVar.max() + boundingBox.length[i] - coordVar.min();
+        continue;
+      }
       domain.origin[i] = coordVar.max() + boundingBox.origin[i];
       domain.length[i] = coordVar.min() + boundingBox.length[i] - coordVar.max();
       if (domain.length[i] < 0) {
@@ -339,9 +354,10 @@ public class ObstacleObjectFrame extends InternalConstraint {
           Dbox.dispatchBox(piece);
           iterator.remove();
         } else {
-          int originMod = piece.origin[i] % 4;
+          // floorMod: the scaled coordinates can be negative, where % 4 gives -1 instead of 3
+          int originMod = Math.floorMod(piece.origin[i], 4);
           int end = piece.origin[i] + piece.length[i];
-          int endMod = end % 4;
+          int endMod = Math.floorMod(end, 4);
           piece.origin[i] =
               originMod == 3
                   ? (int) Math.ceil(piece.origin[i] / 4.0)

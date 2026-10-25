@@ -555,6 +555,19 @@ class ExampleBasedTest {
   }
 
   @Test
+  void testGolombFreeSearch() {
+
+    Golomb example = new Golomb();
+    example.noMarks = 8;
+    example.model();
+    assertThat(example.searchFree()).isTrue();
+    // no limit is set, so the search ended by proving optimality
+    assertThat(example.freeSearch.limitReached()).isFalse();
+    // the optimal Golomb ruler with 8 marks has length 34
+    assertThat(example.cost.value()).isEqualTo(34);
+  }
+
+  @Test
   void testGolomb() {
 
     Golomb example = new Golomb();

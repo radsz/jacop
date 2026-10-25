@@ -39,21 +39,16 @@ import java.util.HashSet;
 import java.util.Set;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
-import org.jacop.jasat.core.Core;
-import org.jacop.jasat.modules.interfaces.AssertionListener;
-import org.jacop.jasat.modules.interfaces.BackjumpListener;
-import org.jacop.jasat.modules.interfaces.PropagateListener;
 import org.jacop.satwrapper.translation.SatCpBridge;
 
 /**
- * This class listens to changes in literals in SAT solver, and reminds what changes this implies
- * for CP variables.
+ * Collects the literals assigned by the SAT core and turns them into the strongest bounds and
+ * removed values for the CP variables.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 5.0
  */
-public final class SatChangesListener
-    implements AssertionListener, PropagateListener, BackjumpListener {
+public final class SatChangesListener {
 
   /*
    * invariant: upperBounds.length == lowerBounds.length == excludedValues.length
@@ -64,9 +59,6 @@ public final class SatChangesListener
   private final Set<BooleanVar> booleanVarsToUpdate = new HashSet<>();
   // the wrapper
   private SatWrapper wrapper;
-
-  // the core of the SAT solver
-  private Core core;
 
   // set of forbidden values for variables
   // (not BitSet because some values could be < 0)
@@ -92,37 +84,16 @@ public final class SatChangesListener
     booleanVarsToUpdate.clear();
   }
 
-  /** {@inheritDoc} */
-  public void onPropagate(int literal, int clauseId) {
-    if (wrapper.isVarLiteral(literal)) {
-      onAssertion(literal);
-    }
-  }
-
-  /** {@inheritDoc} */
-  public void onAssertion(int literal, int level) {
-    if (wrapper.isVarLiteral(literal)) {
-      onAssertion(literal);
-    }
-  }
-
   /**
-   * This should be called every time a new boolean variable representing a CP proposition is
-   * asserted, but preferably only once per variable, so that it can later update the CP variables
-   * domains.
+   * Records a literal assigned by the SAT core; literals that do not stand for a CP variable are
+   * ignored.
    *
-   * @param literal the boolean literal that has been asserted
+   * @param literal the literal that is true
    */
-  private void onAssertion(int literal) {
+  public void onAssertion(int literal) {
 
-    if (ASSERTS_ENABLED && !wrapper.isVarLiteral(literal)) {
-      throw new IllegalStateException("Assertion failed");
-    }
-    if (ASSERTS_ENABLED && !core.trail.isSet(Math.abs(literal))) {
-      throw new IllegalStateException("Assertion failed");
-    }
-    if (ASSERTS_ENABLED && core.trail.values[Math.abs(literal)] != literal) {
-      throw new IllegalStateException("Assertion failed");
+    if (!wrapper.isVarLiteral(literal)) {
+      return;
     }
 
     int cpValue = wrapper.boolVarToCpValue(literal);
@@ -182,16 +153,6 @@ public final class SatChangesListener
     }
   }
 
-  /** {@inheritDoc} */
-  public void onBackjump(int oldLevel, int newLevel) {
-    clear();
-  }
-
-  /** {@inheritDoc} */
-  public void onRestart(int oldLevel) {
-    onBackjump(oldLevel, 0);
-  }
-
   /**
    * Using all data accumulated since last clear(), update the domain of the given CP variable.
    *
@@ -203,18 +164,8 @@ public final class SatChangesListener
       return;
     }
 
-    if (ASSERTS_ENABLED
-        && !wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate)) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
     updateIntVars(storeLevel);
     updateBooleanVars(storeLevel);
-
-    if (ASSERTS_ENABLED
-        && !wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate)) {
-      throw new IllegalStateException("Assertion failed");
-    }
   }
 
   private void updateIntVars(int storeLevel) {
@@ -222,17 +173,6 @@ public final class SatChangesListener
         index >= 0;
         index = intVarsToUpdate.nextSetBit(index + 1)) {
       IntVar variable = (IntVar) wrapper.store.vars[index];
-
-      if (ASSERTS_ENABLED
-          && !wrapper.log(
-              this,
-              "updating %s, with lower %s and upper %s, " + "excluded values are %s",
-              variable,
-              lowerBounds[index],
-              upperBounds[index],
-              excludedValues[index])) {
-        throw new IllegalStateException("Assertion failed");
-      }
 
       Integer lower = lowerBounds[index];
       Integer upper = upperBounds[index];
@@ -258,21 +198,16 @@ public final class SatChangesListener
 
   private void updateBooleanVars(int storeLevel) {
     for (BooleanVar variable : booleanVarsToUpdate) {
-      int isOne = wrapper.cpVarToBoolVar(variable, 1, true);
-      int isZero = wrapper.cpVarToBoolVar(variable, 0, true);
-      int isOneValue = core.trail.values[isOne];
-      int isZeroValue = core.trail.values[isZero];
-
-      if (ASSERTS_ENABLED && isZeroValue * isOneValue > 0) {
-        throw new IllegalStateException("Assertion failed");
+      if (variable.singleton()) {
+        continue;
       }
-      if (ASSERTS_ENABLED && isOneValue == 0 && isZeroValue == 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-
-      if (isOneValue > 0 || isZeroValue < 0) {
+      // the literals [b=0], [b=1] and [b<=0]; only some of them may be assigned
+      int isZero = wrapper.sat.value(wrapper.cpVarToBoolVar(variable, 0, true));
+      int isOne = wrapper.sat.value(wrapper.cpVarToBoolVar(variable, 1, true));
+      int atMostZero = wrapper.sat.value(wrapper.cpVarToBoolVar(variable, 0, false));
+      if (isOne > 0 || isZero < 0 || atMostZero < 0) {
         variable.domain.in(storeLevel, variable, 1, 1);
-      } else {
+      } else if (isOne < 0 || isZero > 0 || atMostZero > 0) {
         variable.domain.in(storeLevel, variable, 0, 0);
       }
     }
@@ -303,20 +238,6 @@ public final class SatChangesListener
     return String.format(
         "SatChangesListener (%d IntVar and %d BoolVar) " + "vars have changes",
         countPos, booleanVarsToUpdate.size());
-  }
-
-  /**
-   * Initializes the listener with the SAT solver core.
-   *
-   * @param core the SAT solver core
-   */
-  public void initialize(Core core) {
-    this.core = core;
-
-    // register
-    core.assertionModules[core.numAssertionModules++] = this;
-    core.propagateModules[core.numPropagateModules++] = this;
-    core.backjumpModules[core.numBackjumpModules++] = this;
   }
 
   /**

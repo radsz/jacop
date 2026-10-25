@@ -114,7 +114,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    *
    * @param listOfX the list of variables whose equality to other set of variables we count
    * @param listOfY the list of variable to which equality is counted.
-   * @param n how many variables from list x are equal to at least one variable from list y.
+   * @param n how many variables from list x are equal to at least one variable from list y. The
+   *     lists and n must not share variables.
    */
   public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
@@ -122,6 +123,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         new String[] {"listOfX", "listOfY", "n"}, listOfX, listOfY, new Object[] {n});
     checkInputForDuplication("listOfX", listOfX);
     checkInputForDuplication("listOfY", listOfY);
+    checkInputForDuplication(
+        "listOfX, listOfY and n",
+        Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n))
+            .toArray());
 
     this.queueIndex = 1;
 

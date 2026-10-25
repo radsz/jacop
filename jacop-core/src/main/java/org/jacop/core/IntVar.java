@@ -154,6 +154,7 @@ public class IntVar extends Var {
    * @param max the right bound of the interval being added.
    */
   public void addDom(int min, int max) {
+    widenDomainFor(min, max);
     domain.unionAdapt(min, max);
   }
 
@@ -164,7 +165,46 @@ public class IntVar extends Var {
    * @param dom the added domain.
    */
   public void addDom(IntDomain dom) {
+    if (!dom.isEmpty()) {
+      widenDomainFor(dom.min(), dom.max());
+    }
     domain.addDom(dom);
+  }
+
+  /**
+   * Replaces a bit set domain that cannot hold the values min..max as well by the representation
+   * that IntVar(store, name, min, max) chooses for the joined span: a SmallDenseDomain holds at
+   * most 64 values and a LazyBitSetDomain is kept below LazyBitSetDomain.MAX_SPAN.
+   */
+  private void widenDomainFor(int min, int max) {
+    if (domain.isEmpty()) {
+      return;
+    }
+    long span = (long) Math.max(domain.max(), max) - Math.min(domain.min(), min);
+    int id = domain.domainId();
+    boolean tooSmall =
+        id == IntDomain.SMALL_DENSE_DOMAIN_ID && span > 63L
+            || id == IntDomain.LAZY_BIT_SET_DOMAIN_ID && span >= LazyBitSetDomain.MAX_SPAN;
+    if (!tooSmall) {
+      return;
+    }
+    IntDomain wider;
+    if (span >= LazyBitSetDomain.MAX_SPAN) {
+      IntervalDomain intervals = new IntervalDomain();
+      intervals.addDom(domain);
+      wider = intervals;
+    } else {
+      wider = new LazyBitSetDomain(domain.min(), domain.max());
+      wider.setDomain(domain);
+    }
+    wider.searchConstraints = domain.searchConstraints;
+    wider.modelConstraints = domain.modelConstraints;
+    wider.modelConstraintsToEvaluate = domain.modelConstraintsToEvaluate;
+    wider.searchConstraintsToEvaluate = domain.searchConstraintsToEvaluate;
+    wider.searchConstraintsCloned = domain.searchConstraintsCloned;
+    wider.previousDomain = domain.previousDomain;
+    wider.stamp = domain.stamp;
+    domain = wider;
   }
 
   /**

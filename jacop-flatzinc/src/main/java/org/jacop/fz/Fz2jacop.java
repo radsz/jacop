@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,7 +70,18 @@ public class Fz2jacop {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
     }
 
-    Parser parser = new Parser(opt.getFile());
+    // the model file is closed when solving ends, also after an error (an open file cannot be
+    // deleted on Windows)
+    try (FileInputStream file = opt.getFile()) {
+      solve(opt, file);
+    } catch (IOException e) {
+      log.error("Failed to close {}", opt.getFileName(), e);
+    }
+  }
+
+  private void solve(Options opt, FileInputStream file) {
+
+    Parser parser = new Parser(file);
     parser.setOptions(opt);
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);

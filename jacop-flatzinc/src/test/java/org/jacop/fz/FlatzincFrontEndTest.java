@@ -80,6 +80,25 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void valuePrecedeChainIsDomainConsistentForTheWholeChain() throws IOException {
+    // Walsh's example with values 5, 3, 8, 9: each pair of consecutive values is consistent but
+    // the chain forbids x2 = 5. Pairwise ValuePrecede needed a failed decision to find it.
+    String fzn =
+        """
+        var 5..5: x1;
+        var {3,5}: x2:: output_var;
+        var {5,8}: x3;
+        var {8,9}: x4;
+        constraint jacop_value_precede_chain_int([5,3,8,9],[x1,x2,x3,x4,x2]);
+        solve :: int_search([x2],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("x2 = 3;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
     // x1 and x3 have no common value, so b must be false before any search. Three variables
     // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
@@ -417,6 +436,53 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void circuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
+    // x1 and x2 take 3 and 4 between them (a Hall set), so x5 cannot be 3 or 4. Circuit alone
+    // propagates all-different on fixed values only and needed two failed decisions on x5;
+    // the Alldistinct posted with it removes them at the root. Option -b leaves it out.
+    String fzn =
+        """
+        var {3,4}: x1:: output_var;
+        var {3,4}: x2:: output_var;
+        var {1,2,4,5}: x3:: output_var;
+        var {1,2,3,5}: x4:: output_var;
+        var {1,2,3,4}: x5:: output_var;
+        array [1..5] of var int: x = [x1,x2,x3,x4,x5];
+        constraint jacop_circuit(x);
+        solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_max,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("x5 = 2;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    String bounds = run(fzn, "-s", "-b")[0];
+    assertTrue(bounds.contains("x5 = 2;"), bounds);
+    assertTrue(bounds.contains("%%%mzn-stat: failures=2"), bounds);
+  }
+
+  @Test
+  void subcircuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
+    // The same Hall set {x1, x2} on {3, 4}: Subcircuit alone tried x5 = 3 and x5 = 4 first.
+    String fzn =
+        """
+        var {3,4}: x1:: output_var;
+        var {3,4}: x2:: output_var;
+        var 1..5: x3:: output_var;
+        var 1..5: x4:: output_var;
+        var {3,4,5}: x5:: output_var;
+        array [1..5] of var int: x = [x1,x2,x3,x4,x5];
+        constraint jacop_subcircuit(x);
+        solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_min,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("x5 = 5;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    String bounds = run(fzn, "-s", "-b")[0];
+    assertTrue(bounds.contains("%%%mzn-stat: failures=3"), bounds);
+  }
+
+  @Test
   void sequenceSearchStatisticsCountReportedSolutions() throws IOException {
     // Each search of a seq_search counted the solutions of its own phase and the statistics
     // summed them: 4 solutions were reported as solutions=22.
@@ -490,6 +556,41 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void memberOfEmptyBoolArrayIsUnsatisfiable() throws IOException {
+    // member on an empty array restricted y to an empty domain. For a 0/1 variable that threw a
+    // NullPointerException in BoundDomain.in instead of failing.
+    String fzn =
+        """
+        var bool: y :: output_var;
+        var 0..1: yi;
+        constraint jacop_member_bool([],yi);
+        constraint bool2int(y,yi);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn)[0];
+    assertTrue(stdout.contains("=====UNSATISFIABLE====="), stdout);
+  }
+
+  @Test
+  void inverseWithIndexSetsOfDifferentSizeIsUnsatisfiable() throws IOException {
+    // jacop_assignment with arrays of different length threw ArrayIndexOutOfBoundsException when
+    // posting (invf shorter) or NullPointerException during propagation (invf longer).
+    String model =
+        """
+        array [1..%d] of var 1..%d: f :: output_array([1..%1$d]);
+        array [1..%2$d] of var 1..%1$d: g :: output_array([1..%2$d]);
+        constraint jacop_assignment(f,g,1,1);
+        solve satisfy;
+        """;
+    for (int[] size : new int[][] {{2, 3}, {3, 2}}) {
+      String[] out = run(model.formatted(size[0], size[1]), "-a");
+      List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
+      assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
+    }
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
@@ -505,6 +606,170 @@ class FlatzincFrontEndTest {
     assertTrue(
         stdout.lines().anyMatch(line -> line.startsWith("% XneqY")),
         "constraints missing from -debug output:\n" + stdout);
+  }
+
+  @Test
+  void freeSearchIgnoresSeveralSearchAnnotations() throws IOException {
+    // With two or more search annotations -f followed them instead of using free search.
+    String fzn =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_ne(x, y);
+        solve :: int_search([x], input_order, indomain_max, complete)
+              :: int_search([y], input_order, indomain_max, complete) satisfy;
+        """;
+
+    assertEquals("x = 3;\ny = 2;", solutionLines(run(fzn)[0]));
+    assertEquals("x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-engine", "legacy")[0]));
+    // the new engine follows the annotations only on the runs it interleaves them on
+    assertEquals(
+        "x = 1;\ny = 2;", solutionLines(run(fzn, "-f", "--free-config", "interleave=none")[0]));
+  }
+
+  @Test
+  void freeSearchReportsAllSolutionsOncePerAssignmentOfOutputVariables() throws IOException {
+    // Free search labelled every variable, so with -a x = 0 was reported once for each value of
+    // b, which x = 0 leaves free and which is not an output variable, and the set s, which is not
+    // an output variable either, gave every solution again for each of its values.
+    String fzn =
+        """
+        var 0..1: x:: output_var;
+        var bool: b;
+        var set of 1..2: s;
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    String stdout = run(fzn, "-f", "-a")[0];
+    List<String> solutions =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(FlatzincFrontEndTest::solutionLines)
+            .filter(b -> !b.isBlank())
+            .sorted()
+            .toList();
+    assertEquals(List.of("x = 0;", "x = 1;"), solutions, stdout);
+    assertTrue(stdout.contains("=========="), stdout);
+  }
+
+  @Test
+  void newFreeSearchEngineGivesTheResultsOfTheLegacyOne() throws IOException {
+    String[] models = {
+      // satisfaction with integers and Booleans
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve satisfy;
+      """,
+      // optimisation
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve minimize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      constraint int_lin_le([1, 1], [x, y], 6);
+      solve maximize x;
+      """,
+      // no solution
+      """
+      var 1..2: x :: output_var;
+      var 1..2: y :: output_var;
+      var 1..2: z :: output_var;
+      constraint int_ne(x, y);
+      constraint int_ne(y, z);
+      constraint int_ne(x, z);
+      solve satisfy;
+      """,
+      // annotated searches, interleaved with free search
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      var -20..20: c :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      constraint int_lin_eq([3, -2, 5, -1], [x, y, b, c], 0);
+      solve :: int_search([y, x], input_order, indomain_max, complete) maximize c;
+      """,
+      """
+      var 1..4: x :: output_var;
+      var 1..4: y :: output_var;
+      var bool: b :: output_var;
+      constraint int_ne(x, y);
+      constraint int_le_reif(x, y, b);
+      solve :: seq_search([bool_search([b], input_order, indomain_max, complete),
+                           int_search([y], input_order, indomain_max, complete)]) satisfy;
+      """,
+      // sets
+      """
+      var set of 1..3: s :: output_var;
+      var 1..3: x :: output_var;
+      constraint set_card(s, 2);
+      constraint set_in(x, s);
+      solve satisfy;
+      """
+    };
+    String[][] engines = {
+      {"--free-engine", "new"},
+      {"--free-engine", "new", "--restart", "luby", "--restart-scale", "1"},
+      {"--free-engine", "new", "--restart-scale", "1", "--free-config", "interleave=solution"},
+      {
+        "--free-engine",
+        "new",
+        "--free-config",
+        "heuristic=afc,lc=0,phase=0,restarts=none,interleave=none"
+      }
+    };
+    for (String model : models) {
+      boolean optimisation = model.contains("minimize") || model.contains("maximize");
+      String legacy =
+          normalised(run(model, "-f", "--free-engine", "legacy", "-a")[0], optimisation);
+      for (String[] engine : engines) {
+        String[] options = Arrays.copyOf(new String[] {"-f", "-a"}, 2 + engine.length);
+        System.arraycopy(engine, 0, options, 2, engine.length);
+        assertEquals(
+            legacy,
+            normalised(run(model, options)[0], optimisation),
+            model + Arrays.toString(engine));
+      }
+    }
+  }
+
+  /** The solution lines of an output, without comments. */
+  private static String solutionLines(String stdout) {
+    return stdout
+        .lines()
+        .filter(line -> !line.startsWith("%") && !line.startsWith("-") && !line.startsWith("="))
+        .collect(Collectors.joining("\n"));
+  }
+
+  /**
+   * An output reduced to what free search engines must agree on: for satisfaction the set of
+   * solutions, for optimisation the last one, and the final status lines.
+   */
+  private static String normalised(String stdout, boolean optimisation) {
+    List<String> blocks =
+        Arrays.stream(stdout.split("----------\\R"))
+            .map(b -> b.lines().filter(l -> !l.startsWith("%")).collect(Collectors.joining(" ")))
+            .filter(b -> !b.isBlank())
+            .toList();
+    List<String> solutions = blocks.stream().filter(b -> !b.startsWith("=")).toList();
+    String status = blocks.stream().filter(b -> b.startsWith("=")).collect(Collectors.joining());
+    return (optimisation ? solutions.getLast() : new TreeSet<>(solutions).toString())
+        + " "
+        + status;
   }
 
   /** Runs the model with the given options and returns its stdout and stderr. */

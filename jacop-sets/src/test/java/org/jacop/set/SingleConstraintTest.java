@@ -33,11 +33,14 @@ package org.jacop.set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -47,6 +50,8 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
+import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.AunionBeqC;
 import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.CardAeqX;
@@ -555,5 +560,105 @@ class SingleConstraintTest {
       d.unionAdapt(v, v);
     }
     return d;
+  }
+
+  @Test
+  void testLexOrderKeepsSetsThatMayStopBeforeALargerElement() {
+
+    // a in [{1}..{1, 3}] can be {1}, a prefix of b = {1, 2}, so a <= b and a < b hold; the
+    // constraints failed because 3, an element that a need not contain, is larger than 2.
+    for (boolean strict : new boolean[] {false, true}) {
+      Store store = new Store();
+      SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(1), dom(1, 3)));
+      SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(1, 2), dom(1, 2)));
+      store.impose(strict ? new AltB(a, b) : new AleB(a, b));
+      assertThat(store.consistency()).as(strict ? "AltB" : "AleB").isTrue();
+      assertThat(a.domain.lub().contains(1)).isTrue();
+    }
+  }
+
+  @Test
+  void testLexOrderMatchesBruteForce() {
+
+    // Propagation must keep every pair of sets in the domains that is ordered, and must fail on
+    // fixed sets that are not ordered.
+    Random random = new Random(5);
+    for (int trial = 0; trial < 3000; trial++) {
+      boolean strict = random.nextBoolean();
+      Store store = new Store();
+      SetVar a = randomSetVar(store, random, "a", 4);
+      SetVar b = randomSetVar(store, random, "b", 4);
+      store.impose(strict ? new AltB(a, b) : new AleB(a, b));
+      boolean consistent = store.consistency();
+      String context = (strict ? "AltB " : "AleB ") + a + " " + b;
+      for (IntDomain x : subsets(a)) {
+        for (IntDomain y : subsets(b)) {
+          int order = lexCompare(x.toIntArray(), y.toIntArray());
+          if (strict ? order < 0 : order <= 0) {
+            assertThat(consistent).as("solution %s, %s removed: %s", x, y, context).isTrue();
+            assertThat(inDomain(a, x) && inDomain(b, y))
+                .as("solution %s, %s removed: %s", x, y, context)
+                .isTrue();
+          }
+        }
+      }
+    }
+    for (int[] x : allSubsets(3)) {
+      for (int[] y : allSubsets(3)) {
+        for (boolean strict : new boolean[] {false, true}) {
+          Store store = new Store();
+          SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(x), dom(x)));
+          SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(y), dom(y)));
+          store.impose(strict ? new AltB(a, b) : new AleB(a, b));
+          int order = lexCompare(x, y);
+          assertThat(store.consistency())
+              .as("%s %s %s", Arrays.toString(x), strict ? "<" : "<=", Arrays.toString(y))
+              .isEqualTo(strict ? order < 0 : order <= 0);
+        }
+      }
+    }
+  }
+
+  /** Compares two sorted sets in the lexicographic order of their elements; a prefix is smaller. */
+  private static int lexCompare(int[] x, int[] y) {
+    for (int i = 0; i < Math.min(x.length, y.length); i++) {
+      if (x[i] != y[i]) {
+        return Integer.compare(x[i], y[i]);
+      }
+    }
+    return Integer.compare(x.length, y.length);
+  }
+
+  private static boolean inDomain(SetVar s, IntDomain set) {
+    return set.contains(s.domain.glb())
+        && s.domain.lub().contains(set)
+        && s.domain.card().contains(set.getSize());
+  }
+
+  /** The sets between the glb and the lub of a set variable with a cardinality in its domain. */
+  private static List<IntDomain> subsets(SetVar s) {
+    int[] lub = s.domain.lub().toIntArray();
+    List<IntDomain> result = new ArrayList<>();
+    for (int mask = 0; mask < 1 << lub.length; mask++) {
+      IntDomain set = new IntervalDomain();
+      for (int i = 0; i < lub.length; i++) {
+        if ((mask & 1 << i) != 0) {
+          set.unionAdapt(lub[i], lub[i]);
+        }
+      }
+      if (set.contains(s.domain.glb()) && s.domain.card().contains(set.getSize())) {
+        result.add(set);
+      }
+    }
+    return result;
+  }
+
+  private static List<int[]> allSubsets(int max) {
+    List<int[]> result = new ArrayList<>();
+    for (int mask = 0; mask < 1 << max; mask++) {
+      int m = mask;
+      result.add(IntStream.rangeClosed(1, max).filter(v -> (m & 1 << v - 1) != 0).toArray());
+    }
+    return result;
   }
 }
