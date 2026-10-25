@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -68,6 +70,9 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
    * Defines first position of the variable that might equal e
    */
   private TimeStamp<Integer> position;
+
+  /* Whether e is itself on the list, which makes the constraint always true; null until checked. */
+  private Boolean aliased;
 
   /**
    * Constructs a Member constraint to check if a variable equals one in the list.
@@ -166,6 +171,10 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
   @Override
   public void notConsistency(Store store) {
 
+    if (aliased()) {
+      throw Store.failException;
+    }
+
     int start = position.value();
 
     do {
@@ -245,8 +254,34 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
     // search. Keep a stamp that still has a value, as one created at a search level loses it on
     // backtracking while the constraint may still be used below that level.
     if (position == null || position.pointer4Last < 0) {
-      position = new TimeStamp<>(store, 0);
+      position = new TimeStamp<>(store, moveRepeatedVariablesToFront());
     }
+  }
+
+  /**
+   * Moves repeated list variables to the front, before the first position that can still equal e,
+   * so that each variable is a candidate only once and the last candidate is recognised.
+   *
+   * @return the number of repeated variables moved.
+   */
+  private int moveRepeatedVariablesToFront() {
+    Set<IntVar> seen = new HashSet<>();
+    int start = 0;
+    for (int i = 0; i < l; i++) {
+      if (!seen.add(x[i])) {
+        swap(start, i);
+        start++;
+      }
+    }
+    return start;
+  }
+
+  /** Whether e is itself on the list; member is then always true. */
+  private boolean aliased() {
+    if (aliased == null) {
+      aliased = Arrays.asList(x).contains(e);
+    }
+    return aliased;
   }
 
   @Override
@@ -263,6 +298,10 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
 
   @Override
   public boolean satisfied() {
+
+    if (aliased()) {
+      return true;
+    }
 
     if (e.singleton()) {
       for (int i = 0; i < l; i++) {
@@ -297,6 +336,9 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
 
   @Override
   public boolean notSatisfied() {
+    if (aliased()) {
+      return false;
+    }
     for (int i = 0; i < l; i++) {
       if (x[i].domain.isIntersecting(e.domain)) {
         return false;

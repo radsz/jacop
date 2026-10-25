@@ -90,6 +90,7 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -228,6 +229,9 @@ class GlobalConstraintBruteForceTest {
             "SeqPrecedeChainValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChainValues),
         Arguments.of("Member", (Function<Random, Instance>) GlobalConstraintBruteForceTest::member),
+        Arguments.of("MemberRepeated", memberRepeated("plain")),
+        Arguments.of("ReifiedMemberRepeated", memberRepeated("reified")),
+        Arguments.of("NotMemberRepeated", memberRepeated("not")),
         Arguments.of(
             "AmongVar", (Function<Random, Instance>) GlobalConstraintBruteForceTest::amongVar),
         Arguments.of(
@@ -1248,6 +1252,47 @@ class GlobalConstraintBruteForceTest {
           return count == x[nx + ny];
         },
         "nx=" + nx + " ny=" + ny);
+  }
+
+  /**
+   * Member whose list repeats variables and may contain the element itself; the last variable is
+   * the element, and for the reified form the one before it is the 0/1 control.
+   */
+  private static Function<Random, Instance> memberRepeated(String form) {
+    return random -> {
+      int vars = 2 + random.nextInt(3);
+      int length = 1 + random.nextInt(4);
+      int[] picks = new int[length];
+      for (int i = 0; i < length; i++) {
+        picks[i] = random.nextInt(vars);
+      }
+      int e = vars - 1;
+      boolean reified = form.equals("reified");
+      int[][] domains = domains(random, vars + (reified ? 1 : 0), 0, 4);
+      if (reified) {
+        domains[vars] = new int[] {0, 1};
+      }
+      return new Instance(
+          domains,
+          (store, x) -> {
+            IntVar[] list = Arrays.stream(picks).mapToObj(i -> x[i]).toArray(IntVar[]::new);
+            Member member = new Member(list, x[e]);
+            switch (form) {
+              case "reified" -> store.impose(new Reified(member, x[vars]));
+              case "not" -> store.impose(new Not(member));
+              default -> store.impose(member);
+            }
+          },
+          x -> {
+            boolean holds = Arrays.stream(picks).anyMatch(i -> x[i] == x[e]);
+            return switch (form) {
+              case "reified" -> holds == (x[vars] == 1);
+              case "not" -> !holds;
+              default -> holds;
+            };
+          },
+          "list=" + Arrays.toString(picks));
+    };
   }
 
   private static Instance distance(Random random) {

@@ -202,6 +202,7 @@ setup to run configuration. -->
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
@@ -211,6 +212,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -222,6 +224,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -271,6 +275,7 @@ setup to run configuration. -->
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
@@ -280,6 +285,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -292,6 +298,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -340,6 +348,7 @@ setup to run configuration. -->
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
@@ -349,6 +358,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -361,6 +371,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -409,6 +421,7 @@ setup to run configuration. -->
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
@@ -418,6 +431,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -429,6 +443,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -860,6 +876,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>
+                        <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                     </includes>
                     <excludes>

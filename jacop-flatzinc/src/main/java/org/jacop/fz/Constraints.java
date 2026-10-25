@@ -33,6 +33,7 @@ package org.jacop.fz;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.Support;
 import org.jacop.satwrapper.SatTranslation;
@@ -119,6 +120,10 @@ public class Constraints implements ParserTreeConstants {
           generateConstraint(snode);
         }
       }
+    }
+
+    if (CircuitCostDetector.enabled()) {
+      new CircuitCostDetector(support).detect(astTree);
     }
 
     support.poseDelayedConstraints();

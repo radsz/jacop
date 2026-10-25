@@ -544,14 +544,21 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   void gen_jacop_softgcc(SimpleNode node) {
+    genSoftGcc(node, ViolationMeasure.VALUE_BASED);
+  }
+
+  void gen_jacop_softgcc_var(SimpleNode node) {
+    genSoftGcc(node, ViolationMeasure.VARIABLE_BASED);
+  }
+
+  private void genSoftGcc(SimpleNode node, ViolationMeasure measure) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] hardCounters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] soft_counters = support.getVarArray((SimpleNode) node.jjtGetChild(3));
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
 
-    SoftGCC sgcc =
-        new SoftGCC(x, hardCounters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
+    SoftGCC sgcc = new SoftGCC(x, hardCounters, values, soft_counters, cost, measure);
     support.poseDc(sgcc);
   }
 
