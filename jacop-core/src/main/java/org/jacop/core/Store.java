@@ -1037,7 +1037,12 @@ public class Store {
   }
 
   private void growBooleanChangeLevels() {
-    int capacity = Math.max(16, Math.addExact(Math.multiplyExact(2, booleanChangeLevelsSize), 1));
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // booleanChangeLevelsSize.
+    if (booleanChangeLevelsSize > (Integer.MAX_VALUE - 16) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * booleanChangeLevelsSize + 16;
     booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
     booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
   }
@@ -1068,7 +1073,12 @@ public class Store {
   }
 
   private void growTimeStampTrail() {
-    int capacity = Math.max(64, Math.addExact(Math.multiplyExact(2, timeStampTrailSize), 1));
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // timeStampTrailSize.
+    if (timeStampTrailSize > (Integer.MAX_VALUE - 64) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * timeStampTrailSize + 64;
     timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
     timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
   }

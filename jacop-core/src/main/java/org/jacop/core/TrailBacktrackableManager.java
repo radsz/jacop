@@ -98,7 +98,11 @@ public class TrailBacktrackableManager implements BacktrackableManager {
   }
 
   private void grow() {
-    int capacity = Math.max(64, Math.addExact(Math.multiplyExact(2, trailSize), 1));
+    // An explicit bound instead of Math.max, so the new capacity is provably above trailSize.
+    if (trailSize > (Integer.MAX_VALUE - 64) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * trailSize + 64;
     trailIndex = Arrays.copyOf(trailIndex, capacity);
     trailLevel = Arrays.copyOf(trailLevel, capacity);
     trailPrevious = Arrays.copyOf(trailPrevious, capacity);
