@@ -32,14 +32,18 @@
 package org.jacop.jasat.lcg;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.lcg.AtomicTrail;
@@ -73,13 +77,13 @@ public final class LcgSolver implements ExternalPropagator {
   private final int baseLevel;
   private final boolean rootFailed;
 
-  // per store variable index: the root domain and the literals created so far (value -> variable)
+  // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
   private final TreeMap<Integer, Integer>[] ge;
   private final Map<Integer, Integer>[] eq;
 
-  // per DIMACS variable: its store variable index, kind and value
+  // per DIMACS variable: its variable's trail id, kind and value
   private int[] litVar = new int[16];
   private byte[] litKind = new byte[16];
   private int[] litValue = new int[16];
@@ -128,20 +132,33 @@ public final class LcgSolver implements ExternalPropagator {
     this.store = store;
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
-    int n = store.size();
+    trail = new AtomicTrail(store);
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof IntVar x) {
+        all.add(x);
+      }
+    }
+    for (Var v : store.variablesHashMap.values()) {
+      if (v instanceof BooleanVar b) {
+        all.add(b);
+      }
+    }
+    int n = 0;
+    for (IntVar x : all) {
+      n = Math.max(n, trail.id(x) + 1);
+    }
     vars = new IntVar[n];
     root = new IntDomain[n];
     ge = newTreeMaps(n);
     eq = newHashMaps(n);
-    for (int i = 0; i < n; i++) {
-      if (store.vars[i] instanceof IntVar x) {
-        vars[i] = x;
-        root[i] = x.dom().cloneLight();
-        ge[i] = new TreeMap<>();
-        eq[i] = new HashMap<>();
-      }
+    for (IntVar x : all) {
+      int i = trail.id(x);
+      vars[i] = x;
+      root[i] = x.dom().cloneLight();
+      ge[i] = new TreeMap<>();
+      eq[i] = new HashMap<>();
     }
-    trail = new AtomicTrail(store);
     sat.connect(this);
   }
 
@@ -231,7 +248,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
   private int atomLit(int entry) {
-    int i = trail.variable(entry).index();
+    int i = trail.id(trail.variable(entry));
     int v = trail.value(entry);
     return switch (trail.kind(entry)) {
       case AtomicTrail.GE -> geLit(i, v);
@@ -274,7 +291,7 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
-    int i = objective.index();
+    int i = trail.id(objective);
     int[] best = null;
     while (true) {
       int result = solve();
@@ -305,7 +322,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (solution == null) {
       throw new IllegalStateException("no solution");
     }
-    return solution[x.index()];
+    return solution[trail.id(x)];
   }
 
   // ------------------------------------------------------------------ the external propagator
