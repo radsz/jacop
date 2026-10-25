@@ -273,7 +273,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     int kind = trail.kind(entry);
-    if (kind == AtomicTrail.NE || !fixedTasks()) {
+    if (!fixedTasks()) {
       return false;
     }
     IntVar y = trail.var(entry);
@@ -292,7 +292,15 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     int d = taskNormal[j].dur.value();
     int room = limit.value() - taskNormal[j].res.value();
     int v = trail.value(entry);
-    if (kind == AtomicTrail.GE) {
+    if (kind == AtomicTrail.NE) {
+      for (int t = v; t < v + d; t++) {
+        if (overloaded(trail, entry, j, t, room, null)) {
+          overloaded(trail, entry, j, t, room, out);
+          return true;
+        }
+      }
+      return false;
+    } else if (kind == AtomicTrail.GE) {
       trail.addLowerBound(y, entry, out);
       int u = trail.minBefore(y, entry);
       while (u < v) {

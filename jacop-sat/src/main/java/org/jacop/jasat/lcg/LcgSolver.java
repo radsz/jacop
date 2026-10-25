@@ -31,8 +31,12 @@
 
 package org.jacop.jasat.lcg;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
-import org.jacop.constraints.Constraint;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,20 +49,23 @@ import org.jacop.lcg.EntryList;
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
  * of {@link CdclSolver}, whose conflict analysis learns from their explanations.
  *
- * <p>Every integer variable of the store gets the literals {@code [x >= v]} and {@code [x = v]} for
- * the values of its domain after root propagation, linked by clauses so that unit propagation keeps
- * them a domain. The atoms of the store's {@link AtomicTrail} are those literals; the store level
- * follows the solver's decision level. When the solver assigns literals they are applied to the
- * domains and the store propagates; every atom it records goes back to the solver with its
- * explanation as reason, and a failure becomes a conflict clause of the explanations.
- *
- * <p>The literals are created when the solver is built (not lazily yet), so this suits variables
- * with small domains.
+ * <p>The atoms of the store's {@link AtomicTrail} are the solver's literals {@code [x >= v]} and
+ * {@code [x = v]}, created lazily when an atom, a reason or a decision first needs one. Each new
+ * {@code [x >= v]} is linked by clauses to the nearest ones of its variable and each {@code [x =
+ * v]} to {@code [x >= v]} and {@code [x >= v + 1]}. The store level follows the solver's decision
+ * level. When the solver assigns literals they are applied to the domains and the store propagates;
+ * every atom it records goes back to the solver with its explanation as reason, and a failure
+ * becomes a conflict clause of the explanations. When every literal is assigned and a variable is
+ * not fixed, the solver branches on {@code [x <= min]} of the unfixed variable with the smallest
+ * domain.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public final class LcgSolver implements ExternalPropagator {
+
+  private static final int GE_KIND = 0;
+  private static final int EQ_KIND = 1;
 
   private final Store store;
   private final CdclSolver sat = new CdclSolver();
@@ -66,33 +73,47 @@ public final class LcgSolver implements ExternalPropagator {
   private final int baseLevel;
   private final boolean rootFailed;
 
-  // per store variable index: the variables with literals, their root bounds and first literals
+  // per store variable index: the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
-  private int[] lo = new int[0];
-  private int[] hi = new int[0];
-  private int[] geBase =
-      new int[0]; // DIMACS variable of [x >= lo + 1]; [x >= v] is geBase + v - lo - 1
-  private int[] eqBase = new int[0]; // DIMACS variable of [x = lo]; [x = v] is eqBase + v - lo
+  private IntDomain[] root = new IntDomain[0];
+  private TreeMap<Integer, Integer>[] ge;
+  private Map<Integer, Integer>[] eq;
 
-  // per DIMACS variable: its store variable index, kind (0 ge, 1 eq) and value
-  private int[] litVar = new int[1];
-  private byte[] litKind = new byte[1];
-  private int[] litValue = new int[1];
+  // per DIMACS variable: its store variable index, kind and value
+  private int[] litVar = new int[16];
+  private byte[] litKind = new byte[16];
+  private int[] litValue = new int[16];
+
+  // clauses linking new literals, added through externalClause
+  private final ArrayDeque<int[]> structural = new ArrayDeque<>();
 
   // SAT assignments not yet applied to the domains
   private int[] pending = new int[64];
   private int numPending;
 
+  // per trail entry recorded while applying a solver literal: that literal
+  private int[] cause = new int[64];
+
   private int pushed; // trail entries below are true in the solver
   private boolean failed;
   private int[] pushedReason;
-  private final EntryList reasonEntries = new EntryList();
+  private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
+  private int[] solution;
 
-  /** Statistics: atoms propagated to the solver, and conflicts found by the constraints. */
+  /** Statistics: reasons the solver asked for. */
+  public long reasons;
+
+  /** Statistics: literals of those reasons. */
+  public long reasonLiterals;
+
+  /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
 
   /** Statistics: failures of the constraints turned into conflict clauses. */
   public long constraintConflicts;
+
+  /** Statistics: decisions made on unfixed variables when every literal was assigned. */
+  public long searchDecisions;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -104,100 +125,115 @@ public final class LcgSolver implements ExternalPropagator {
     this.store = store;
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
-    if (!rootFailed) {
-      for (int i = 0; i < store.size(); i++) {
-        if (store.vars[i] instanceof IntVar x && !x.singleton()) {
-          encode(x);
-        }
+    int n = store.size();
+    vars = new IntVar[n];
+    root = new IntDomain[n];
+    ge = newTreeMaps(n);
+    eq = newHashMaps(n);
+    for (int i = 0; i < n; i++) {
+      if (store.vars[i] instanceof IntVar x) {
+        vars[i] = x;
+        root[i] = x.dom().cloneLight();
+        ge[i] = new TreeMap<>();
+        eq[i] = new HashMap<>();
       }
     }
     trail = new AtomicTrail(store);
     sat.connect(this);
   }
 
-  private void encode(IntVar x) {
-    int i = x.index();
-    if (i >= vars.length) {
-      int n = Math.max(i + 1, 2 * vars.length);
-      vars = Arrays.copyOf(vars, n);
-      lo = Arrays.copyOf(lo, n);
-      hi = Arrays.copyOf(hi, n);
-      geBase = Arrays.copyOf(geBase, n);
-      eqBase = Arrays.copyOf(eqBase, n);
-    }
-    IntDomain d = x.dom();
-    int min = d.min();
-    int max = d.max();
-    int width = max - min;
-    vars[i] = x;
-    lo[i] = min;
-    hi[i] = max;
-    geBase[i] = sat.newVariables(width + (width + 1));
-    eqBase[i] = geBase[i] + width;
-    int last = eqBase[i] + width;
-    if (last >= litVar.length) {
-      int n = Math.max(last + 1, 2 * litVar.length);
+  @SuppressWarnings("unchecked")
+  private static TreeMap<Integer, Integer>[] newTreeMaps(int n) {
+    return new TreeMap[n];
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<Integer, Integer>[] newHashMaps(int n) {
+    return new Map[n];
+  }
+
+  // ------------------------------------------------------------------------------- literals
+
+  private int newLiteral(int i, int kind, int value) {
+    int d = sat.newVariables(1);
+    sat.observe(d);
+    if (d >= litVar.length) {
+      int n = 2 * d;
       litVar = Arrays.copyOf(litVar, n);
       litKind = Arrays.copyOf(litKind, n);
       litValue = Arrays.copyOf(litValue, n);
     }
-    for (int v = min + 1; v <= max; v++) {
-      int g = geBase[i] + v - min - 1;
-      litVar[g] = i;
-      litKind[g] = 0;
-      litValue[g] = v;
-      sat.observe(g);
-      if (v > min + 1) {
-        sat.addClause(-g, g - 1); // [x >= v] -> [x >= v - 1]
-      }
-    }
-    for (int v = min; v <= max; v++) {
-      int e = eqBase[i] + v - min;
-      litVar[e] = i;
-      litKind[e] = 1;
-      litValue[e] = v;
-      sat.observe(e);
-      int ge = geLit(i, v); // [x >= v], 0 when always true
-      int gt = geLit(i, v + 1); // [x >= v + 1], 0 when always false
-      if (!d.contains(v)) {
-        sat.addClause(-e);
-      }
-      if (v > min) {
-        sat.addClause(-e, ge);
-      }
-      if (v < max) {
-        sat.addClause(-e, -gt);
-      }
-      // [x >= v] and not [x >= v + 1] -> [x = v]
-      if (v == min && v == max) {
-        sat.addClause(e);
-      } else if (v == min) {
-        sat.addClause(e, gt);
-      } else if (v == max) {
-        sat.addClause(e, -ge);
-      } else {
-        sat.addClause(e, -ge, gt);
-      }
-    }
+    litVar[d] = i;
+    litKind[d] = (byte) kind;
+    litValue[d] = value;
+    return d;
   }
 
-  /** The literal [x >= v] for v in (lo, hi]; outside it the caller handles the constant. */
-  private int geLit(int i, int v) {
-    if (v <= lo[i] || v > hi[i]) {
-      return 0;
+  /** The variable of [x >= v] for v in (root min, root max], created when missing. */
+  private int geVar(int i, int v) {
+    Integer d = ge[i].get(v);
+    if (d != null) {
+      return d;
     }
-    return geBase[i] + v - lo[i] - 1;
+    int lit = newLiteral(i, GE_KIND, v);
+    Map.Entry<Integer, Integer> below = ge[i].lowerEntry(v);
+    Map.Entry<Integer, Integer> above = ge[i].higherEntry(v);
+    if (below != null) {
+      structural.add(new int[] {-lit, below.getValue()}); // [x >= v] -> [x >= below]
+    }
+    if (above != null) {
+      structural.add(new int[] {-above.getValue(), lit}); // [x >= above] -> [x >= v]
+    }
+    ge[i].put(v, lit);
+    return lit;
+  }
+
+  /** The literal [x >= v]; 0 stands for a constant, which callers rule out. */
+  private int geLit(int i, int v) {
+    if (v <= root[i].min() || v > root[i].max()) {
+      throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
+    }
+    return geVar(i, v);
+  }
+
+  /** The variable of [x = v] for v in the root domain, created when missing. */
+  private int eqVar(int i, int v) {
+    Integer d = eq[i].get(v);
+    if (d != null) {
+      return d;
+    }
+    int lit = newLiteral(i, EQ_KIND, v);
+    boolean atMin = v == root[i].min();
+    boolean atMax = v == root[i].max();
+    int geV = atMin ? 0 : geVar(i, v);
+    int geNext = atMax ? 0 : geVar(i, v + 1);
+    if (!atMin) {
+      structural.add(new int[] {-lit, geV});
+    }
+    if (!atMax) {
+      structural.add(new int[] {-lit, -geNext});
+    }
+    if (atMin && atMax) {
+      structural.add(new int[] {lit});
+    } else if (atMin) {
+      structural.add(new int[] {lit, geNext});
+    } else if (atMax) {
+      structural.add(new int[] {lit, -geV});
+    } else {
+      structural.add(new int[] {lit, -geV, geNext});
+    }
+    eq[i].put(v, lit);
+    return lit;
   }
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
   private int atomLit(int entry) {
-    IntVar x = trail.var(entry);
-    int i = x.index();
+    int i = trail.var(entry).index();
     int v = trail.value(entry);
     return switch (trail.kind(entry)) {
       case AtomicTrail.GE -> geLit(i, v);
       case AtomicTrail.LE -> -geLit(i, v + 1);
-      default -> -(eqBase[i] + v - lo[i]);
+      default -> -eqVar(i, v);
     };
   }
 
@@ -213,13 +249,13 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Solves the store's constraints.
    *
-   * @return {@link CdclSolver#SAT}, with every variable then fixed in the store until the next
-   *     call, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
+   * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
+    solution = null;
     return sat.solve();
   }
 
@@ -230,16 +266,10 @@ public final class LcgSolver implements ExternalPropagator {
    * @return its value
    */
   public int value(IntVar x) {
-    int i = x.index();
-    if (i >= vars.length || vars[i] == null) {
-      return x.value();
+    if (solution == null) {
+      throw new IllegalStateException("no solution");
     }
-    for (int v = lo[i]; v <= hi[i]; v++) {
-      if (sat.modelValue(eqBase[i] + v - lo[i])) {
-        return v;
-      }
-    }
-    throw new IllegalStateException("no value for " + x);
+    return solution[x.index()];
   }
 
   // ------------------------------------------------------------------ the external propagator
@@ -268,22 +298,9 @@ public final class LcgSolver implements ExternalPropagator {
     pushed = Math.min(pushed, trail.size());
   }
 
-  private void apply(int lit) {
-    int var = Math.abs(lit);
-    IntVar x = vars[litVar[var]];
-    int v = litValue[var];
-    store.currentConstraint = null;
-    if (litKind[var] == 0) {
-      if (lit > 0) {
-        x.domain.inMin(store.level, x, v);
-      } else {
-        x.domain.inMax(store.level, x, v - 1);
-      }
-    } else if (lit > 0) {
-      x.domain.in(store.level, x, v, v);
-    } else if (x.domain.contains(v)) {
-      x.domain.inComplement(store.level, x, v);
-    }
+  @Override
+  public int[] externalClause() {
+    return structural.poll();
   }
 
   /**
@@ -304,60 +321,74 @@ public final class LcgSolver implements ExternalPropagator {
         if (sat.value(lit) > 0) {
           continue;
         }
-        if (trail.reason(e) == null) {
-          throw new IllegalStateException(
-              "atom " + trail.atomString(e) + " has no reason and is not set");
+        int var = Math.abs(lit);
+        if (var >= propagated.length) {
+          propagated = Arrays.copyOf(propagated, Math.max(var + 1, 2 * propagated.length));
         }
-        reasonEntries.clear();
-        trail.explain(e, reasonEntries);
-        int[] clause = new int[reasonEntries.size() + 1];
-        clause[0] = lit;
-        for (int k = 0; k < reasonEntries.size(); k++) {
-          clause[k + 1] = -atomLit(reasonEntries.get(k));
-        }
-        pushedReason = clause;
+        propagated[var] = e;
         atomsPropagated++;
         return lit;
       }
       if (numPending == 0) {
         return 0;
       }
+      int from = trail.size();
       for (int k = 0; k < numPending; k++) {
-        apply(pending[k]);
+        int lit = pending[k];
+        try {
+          apply(lit);
+        } catch (FailException ex) {
+          IntVar x = vars[litVar[Math.abs(lit)]];
+          EntryList atoms = new EntryList();
+          trail.atomsBefore(x, trail.size(), atoms);
+          return conflict(atoms, lit);
+        }
+        if (trail.size() > cause.length) {
+          cause = Arrays.copyOf(cause, Math.max(trail.size(), 2 * cause.length));
+        }
+        for (; from < trail.size(); from++) {
+          cause[from] = lit;
+        }
       }
       numPending = 0;
       if (!store.consistency()) {
-        failed = true;
         constraintConflicts++;
-        int[] clause = conflictClause(store.recentlyFailedConstraint);
-        if (clause.length == 0) {
-          throw new IllegalStateException("the constraints failed on the root domains");
-        }
-        pushedReason = clause;
-        return clause[0];
+        EntryList atoms = new EntryList();
+        trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        return conflict(atoms, 0);
       }
     }
   }
 
-  @Override
-  public int[] reason(int lit) {
-    if (pushedReason == null || pushedReason[0] != lit) {
-      throw new IllegalStateException("no reason for " + lit);
+  /**
+   * Adds the reason entries of an entry to {@code out}; an entry recorded while applying a solver
+   * literal is explained by its variable's atoms before it and that literal, which is returned.
+   *
+   * @return the solver literal that is part of the reason, or 0
+   */
+  private int explainEntry(int e, EntryList out) {
+    if (trail.reason(e) == null) {
+      trail.atomsBefore(trail.var(e), e, out);
+      return cause[e];
     }
-    int[] r = pushedReason;
-    pushedReason = null;
-    return r;
+    trail.explain(e, out);
+    return 0;
   }
 
   /**
-   * The clause of a failure: the negated atoms of the failed constraint's explanation, each atom
-   * not yet in the solver replaced by its own explanation.
+   * Turns a failure into a conflict: the negated atoms, each one not yet in the solver replaced by
+   * its own explanation, and the negated solver literal extra unless 0. Returns a false literal of
+   * the clause, whose reason is the clause.
    */
-  private int[] conflictClause(Constraint failedConstraint) {
-    EntryList atoms = new EntryList();
-    trail.explainFailure(failedConstraint, atoms);
+  private int conflict(EntryList atoms, int extra) {
+    numPending = 0;
+    failed = true;
     boolean[] seen = new boolean[trail.size()];
-    EntryList out = new EntryList();
+    EntryList inSolver = new EntryList();
+    EntryList lits = new EntryList();
+    if (extra != 0) {
+      lits.add(-extra);
+    }
     EntryList stack = atoms;
     while (stack.size() > 0) {
       int e = stack.get(stack.size() - 1);
@@ -368,20 +399,109 @@ public final class LcgSolver implements ExternalPropagator {
       seen[e] = true;
       int lit = atomLit(e);
       if (sat.value(lit) > 0) {
-        out.add(e);
+        inSolver.add(e);
       } else {
-        trail.explain(e, stack);
+        int more = explainEntry(e, stack);
+        if (more != 0) {
+          lits.add(-more);
+        }
       }
     }
-    int[] clause = new int[out.size()];
-    for (int k = 0; k < out.size(); k++) {
-      clause[k] = -atomLit(out.get(k));
+    int[] clause = new int[inSolver.size() + lits.size()];
+    for (int k = 0; k < inSolver.size(); k++) {
+      clause[k] = -atomLit(inSolver.get(k));
     }
+    for (int k = 0; k < lits.size(); k++) {
+      clause[inSolver.size() + k] = lits.get(k);
+    }
+    clause = Arrays.stream(clause).distinct().toArray();
+    if (clause.length == 0) {
+      throw new IllegalStateException("the constraints failed on the root domains");
+    }
+    pushedReason = clause;
+    return clause[0];
+  }
+
+  private void apply(int lit) {
+    int var = Math.abs(lit);
+    IntVar x = vars[litVar[var]];
+    int v = litValue[var];
+    store.currentConstraint = null;
+    if (litKind[var] == GE_KIND) {
+      if (lit > 0) {
+        x.domain.inMin(store.level, x, v);
+      } else {
+        x.domain.inMax(store.level, x, v - 1);
+      }
+    } else if (lit > 0) {
+      x.domain.in(store.level, x, v, v);
+    } else if (x.domain.contains(v)) {
+      x.domain.inComplement(store.level, x, v);
+    }
+  }
+
+  /**
+   * Returns the reason of a literal: the conflict clause just returned by {@link #propagate}, or
+   * the explanation of the atom pushed as that literal, computed now.
+   */
+  @Override
+  public int[] reason(int lit) {
+    if (pushedReason != null && pushedReason[0] == lit) {
+      int[] r = pushedReason;
+      pushedReason = null;
+      return r;
+    }
+    int e = propagated[Math.abs(lit)];
+    EntryList reason = new EntryList();
+    int extra = explainEntry(e, reason);
+    int[] clause = new int[reason.size() + (extra != 0 ? 2 : 1)];
+    clause[0] = lit;
+    for (int k = 0; k < reason.size(); k++) {
+      clause[k + 1] = -atomLit(reason.get(k));
+    }
+    if (extra != 0) {
+      clause[clause.length - 1] = -extra;
+    }
+    reasons++;
+    reasonLiterals += clause.length;
     return clause;
+  }
+
+  /**
+   * When every literal is assigned, branches on {@code [x <= min]} of the unfixed variable with the
+   * smallest domain; otherwise leaves the decision to the solver.
+   */
+  @Override
+  public int decide() {
+    if (sat.trailSize() < sat.numVars() || !structural.isEmpty()) {
+      return 0;
+    }
+    int best = -1;
+    int bestSize = Integer.MAX_VALUE;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null && !vars[i].singleton() && vars[i].getSize() < bestSize) {
+        best = i;
+        bestSize = vars[i].getSize();
+      }
+    }
+    if (best < 0) {
+      return 0;
+    }
+    searchDecisions++;
+    return -geLit(best, vars[best].min() + 1);
   }
 
   @Override
   public boolean checkModel(int[] model) {
+    solution = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null) {
+        if (!vars[i].singleton()) {
+          throw new IllegalStateException(vars[i] + " is not fixed in a model");
+        }
+        solution[i] = vars[i].value();
+      }
+    }
     return true;
   }
 }
