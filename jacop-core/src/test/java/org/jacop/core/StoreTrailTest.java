@@ -55,8 +55,10 @@ class StoreTrailTest {
    */
   @Test
   void removeLevelRestoresStateOfRandomDives() {
+    Random random = new Random();
     for (int seed = 0; seed < 200; seed++) {
-      runRandomDives(new Random(seed));
+      random.setSeed(seed);
+      runRandomDives(random);
     }
   }
 

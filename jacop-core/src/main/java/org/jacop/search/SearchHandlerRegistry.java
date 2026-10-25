@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jacop.core.Var;
 
 /**
@@ -53,8 +54,10 @@ public class SearchHandlerRegistry {
 
   // The handlers are kept in arrays that are replaced on every change, so the lookups done by the
   // search at every node neither lock nor allocate an iterator.
-  private volatile CostVariableHandler[] costHandlers = new CostVariableHandler[0];
-  private volatile DomainOperationHandler[] domainHandlers = new DomainOperationHandler[0];
+  private final AtomicReference<CostVariableHandler[]> costHandlers =
+      new AtomicReference<>(new CostVariableHandler[0]);
+  private final AtomicReference<DomainOperationHandler[]> domainHandlers =
+      new AtomicReference<>(new DomainOperationHandler[0]);
 
   private SearchHandlerRegistry() {
     registerDefaultHandlers();
@@ -81,10 +84,11 @@ public class SearchHandlerRegistry {
    * @param handler the handler to register
    */
   public synchronized void registerCostHandler(CostVariableHandler handler) {
-    if (handler != null && !Arrays.asList(costHandlers).contains(handler)) {
-      CostVariableHandler[] handlers = Arrays.copyOf(costHandlers, costHandlers.length + 1);
-      handlers[handlers.length - 1] = handler;
-      costHandlers = handlers;
+    CostVariableHandler[] current = costHandlers.get();
+    if (handler != null && !Arrays.asList(current).contains(handler)) {
+      CostVariableHandler[] handlers = Arrays.copyOf(current, current.length + 1);
+      handlers[current.length] = handler;
+      costHandlers.set(handlers);
     }
   }
 
@@ -95,10 +99,11 @@ public class SearchHandlerRegistry {
    * @param handler the handler to register
    */
   public synchronized void registerDomainHandler(DomainOperationHandler handler) {
-    if (handler != null && !Arrays.asList(domainHandlers).contains(handler)) {
-      DomainOperationHandler[] handlers = Arrays.copyOf(domainHandlers, domainHandlers.length + 1);
-      handlers[handlers.length - 1] = handler;
-      domainHandlers = handlers;
+    DomainOperationHandler[] current = domainHandlers.get();
+    if (handler != null && !Arrays.asList(current).contains(handler)) {
+      DomainOperationHandler[] handlers = Arrays.copyOf(current, current.length + 1);
+      handlers[current.length] = handler;
+      domainHandlers.set(handlers);
     }
   }
 
@@ -109,7 +114,7 @@ public class SearchHandlerRegistry {
    * @return the first applicable handler, or null if none found
    */
   public CostVariableHandler findCostHandler(Var v) {
-    for (CostVariableHandler handler : costHandlers) {
+    for (CostVariableHandler handler : costHandlers.get()) {
       if (handler.isApplicable(v)) {
         return handler;
       }
@@ -124,7 +129,7 @@ public class SearchHandlerRegistry {
    * @return the first applicable handler, or null if none found
    */
   public DomainOperationHandler findDomainHandler(Var v) {
-    for (DomainOperationHandler handler : domainHandlers) {
+    for (DomainOperationHandler handler : domainHandlers.get()) {
       if (handler.isApplicable(v)) {
         return handler;
       }
@@ -134,8 +139,8 @@ public class SearchHandlerRegistry {
 
   /** Resets the registry to its default state (only IntVar handlers). Useful for testing. */
   public synchronized void reset() {
-    costHandlers = new CostVariableHandler[0];
-    domainHandlers = new DomainOperationHandler[0];
+    costHandlers.set(new CostVariableHandler[0]);
+    domainHandlers.set(new DomainOperationHandler[0]);
     registerDefaultHandlers();
   }
 }
