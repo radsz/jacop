@@ -375,6 +375,8 @@ class RestartSearchTest {
     }
     assertArrayEquals(new long[] {3, 3, 6, 3, 3, 6, 12, 3}, limits(new LubyCalculator(3), 8));
     assertArrayEquals(new long[] {2, 4, 6, 8}, limits(new LinearCalculator(2), 4));
+    // the restart strategy printed with -d named a linear calculator constant
+    assertEquals("linearCalculator(2)", new LinearCalculator(2).toString());
   }
 
   @Test

@@ -63,10 +63,10 @@ public class LinearCalculator extends Calculator {
   /**
    * Returns a string representation of this linear calculator.
    *
-   * @return a string describing the calculator with current fails and fail limit.
+   * @return a string describing the calculator and its increment.
    */
   @Override
   public String toString() {
-    return "constantCalculator: " + numberFails + "(" + failLimit + ")";
+    return "linearCalculator(" + increment + ")";
   }
 }
