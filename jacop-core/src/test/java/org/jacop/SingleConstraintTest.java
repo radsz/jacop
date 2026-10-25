@@ -5570,6 +5570,39 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void memberWithTheElementOnItsListIsAlwaysTrue() {
+    // e is x[0], so member holds whatever the values are. Not(Member) must fail and the reified
+    // form must set b = 1 at once, not only when e is fixed.
+    Store store = new Store();
+    IntVar e = new IntVar(store, "e", 0, 3);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    store.impose(new Not(new Member(new IntVar[] {e, a}, e)));
+    assertThat(store.consistency()).isFalse();
+
+    Store other = new Store();
+    IntVar f = new IntVar(other, "f", 0, 3);
+    IntVar c = new IntVar(other, "c", 5, 6);
+    IntVar b = new IntVar(other, "b", 0, 1);
+    other.impose(new Reified(new Member(new IntVar[] {c, f}, f), b));
+    assertThat(other.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberPrunesTheLastCandidateWhenItIsRepeated() {
+    // x = [a, a, c] with c disjoint from e: a is the only candidate and must equal e, although it
+    // takes two positions of the list.
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar c = new IntVar(store, "c", 8, 9);
+    IntVar e = new IntVar(store, "e", 2, 3);
+    store.impose(new Member(new IntVar[] {a, a, c}, e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.min()).isEqualTo(2);
+    assertThat(a.max()).isEqualTo(3);
+  }
+
+  @Test
   void memberSatisfiedIsExactEntailment() {
     // Without repeated variables, member is entailed exactly when every tuple of the domains
     // satisfies it.
