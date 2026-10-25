@@ -30,7 +30,6 @@
 
 package org.jacop.presolve;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
@@ -73,8 +72,11 @@ public final class DisjunctiveCliques {
   /** The default largest number of cliques returned. */
   public static final int DEFAULT_MAX_CLIQUES = 500;
 
-  // word operations allowed for the closure of precedences and for the clique search
-  private static final long WORK_BUDGET = 200_000_000L;
+  // arcs relaxed by the longest paths of the precedences; sources left over add no order
+  private static final long CLOSURE_BUDGET = 20_000_000L;
+
+  // word operations of the clique search; the cliques found before it runs out are kept
+  private static final long CLIQUE_BUDGET = 50_000_000L;
 
   private static final long NO_PATH = Long.MIN_VALUE;
 
@@ -87,7 +89,9 @@ public final class DisjunctiveCliques {
   private final List<int[]> durationBounds = new ArrayList<>();
   private final Map<IntVar, List<Integer>> tasksOfStart = new IdentityHashMap<>();
 
-  private final List<int[]> conflicts = new ArrayList<>();
+  // pairs of tasks, two entries each
+  private int[] conflicts = new int[64];
+  private int conflictEntries;
   private final List<int[]> unaries = new ArrayList<>();
 
   // a disjunction: b >= a + lagAB or a >= b + lagBA
@@ -173,7 +177,11 @@ public final class DisjunctiveCliques {
    */
   public void conflict(int i, int j) {
     if (i >= 0 && j >= 0 && i != j) {
-      conflicts.add(new int[] {i, j});
+      if (conflictEntries == conflicts.length) {
+        conflicts = Arrays.copyOf(conflicts, 2 * conflicts.length);
+      }
+      conflicts[conflictEntries++] = i;
+      conflicts[conflictEntries++] = j;
     }
   }
 
@@ -281,10 +289,9 @@ public final class DisjunctiveCliques {
     if (n < 3 || n > maxTasks) {
       return result;
     }
-    work = 0;
     Graph g = new Graph(n);
-    for (int[] c : conflicts) {
-      g.edge(c[0], c[1], false);
+    for (int k = 0; k < conflictEntries; k += 2) {
+      g.edge(conflicts[k], conflicts[k + 1], false);
     }
     for (Disjunction d : disjunctions) {
       List<Integer> ta = tasksOfStart.get(d.a);
@@ -312,8 +319,9 @@ public final class DisjunctiveCliques {
         }
       }
     }
+    work = 0;
     g.uncovered();
-    while (result.size() < maxCliques && work < WORK_BUDGET) {
+    while (result.size() < maxCliques && work < CLIQUE_BUDGET) {
       int[] clique = g.nextClique();
       if (clique == null) {
         break;
@@ -327,68 +335,82 @@ public final class DisjunctiveCliques {
 
   // adds the edges of the tasks ordered by the longest paths of the difference constraints
   private void orderByPrecedences(Graph g) {
+    // the vertices of the start variables of tasks and their tasks
+    List<Integer> hosts = new ArrayList<>();
+    List<List<Integer>> hostTasks = new ArrayList<>();
+    for (Map.Entry<IntVar, List<Integer>> e : tasksOfStart.entrySet()) {
+      Integer x = vertexOf.get(e.getKey());
+      if (x != null) {
+        hosts.add(x);
+        hostTasks.add(e.getValue());
+      }
+    }
     int v = out.size();
     long[] dist = new long[v];
     int[] relaxed = new int[v];
     boolean[] queued = new boolean[v];
-    ArrayDeque<Integer> queue = new ArrayDeque<>();
-    for (Map.Entry<IntVar, List<Integer>> e : tasksOfStart.entrySet()) {
-      Integer source = vertexOf.get(e.getKey());
-      if (source == null || out.get(source).isEmpty()) {
+    // a circular queue; a vertex is in it at most once
+    int[] queue = new int[v + 1];
+    work = 0;
+    for (int h = 0; h < hosts.size() && work < CLOSURE_BUDGET; h++) {
+      int source = hosts.get(h);
+      if (out.get(source).isEmpty()) {
         continue;
-      }
-      if (work >= WORK_BUDGET) {
-        return;
       }
       Arrays.fill(dist, NO_PATH);
       Arrays.fill(relaxed, 0);
+      Arrays.fill(queued, false);
       dist[source] = 0;
-      queue.add(source);
-      queued[source] = true;
-      boolean positiveCycle = false;
-      while (!queue.isEmpty()) {
-        int x = queue.poll();
-        queued[x] = false;
-        for (long[] arc : out.get(x)) {
-          work++;
-          int y = (int) arc[0];
-          long d = dist[x] + arc[1];
-          if (d > dist[y]) {
-            dist[y] = d;
-            if (++relaxed[y] > v || y == source) {
-              positiveCycle = true;
-              break;
-            }
-            if (!queued[y]) {
-              queued[y] = true;
-              queue.add(y);
-            }
-          }
-        }
-        if (positiveCycle) {
-          break;
-        }
-      }
-      if (positiveCycle) {
-        // the model has no solution; leave it to the propagators
-        queue.clear();
-        Arrays.fill(queued, false);
+      if (!longestPaths(source, dist, relaxed, queued, queue)) {
+        // a positive cycle: the model has no solution, which the propagators find
         continue;
       }
-      for (Map.Entry<IntVar, List<Integer>> f : tasksOfStart.entrySet()) {
-        Integer y = vertexOf.get(f.getKey());
-        if (y == null || y.intValue() == source || dist[y] == NO_PATH) {
+      for (int k = 0; k < hosts.size(); k++) {
+        long d = dist[hosts.get(k)];
+        if (k == h || d == NO_PATH) {
           continue;
         }
-        for (int i : e.getValue()) {
-          for (int j : f.getValue()) {
-            if (dist[y] >= maxDuration(i)) {
+        for (int i : hostTasks.get(h)) {
+          if (d >= maxDuration(i)) {
+            for (int j : hostTasks.get(k)) {
               g.edge(i, j, true);
             }
           }
         }
       }
     }
+  }
+
+  // the longest paths from the source by label correction; false on a positive cycle
+  private boolean longestPaths(
+      int source, long[] dist, int[] relaxed, boolean[] queued, int[] queue) {
+    int v = out.size();
+    int head = 0;
+    int tail = 0;
+    queue[tail++] = source;
+    queued[source] = true;
+    while (head != tail) {
+      int x = queue[head];
+      head = head == v ? 0 : head + 1;
+      queued[x] = false;
+      for (long[] arc : out.get(x)) {
+        work++;
+        int y = (int) arc[0];
+        long d = dist[x] + arc[1];
+        if (d > dist[y]) {
+          if (y == source || ++relaxed[y] > v) {
+            return false;
+          }
+          dist[y] = d;
+          if (!queued[y]) {
+            queued[y] = true;
+            queue[tail] = y;
+            tail = tail == v ? 0 : tail + 1;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   // the conflict graph as bit sets

@@ -109,6 +109,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    long start = System.nanoTime();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -123,7 +124,18 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     for (IntVar[] c : clauses) {
       disjunction(c[0], c[1]);
     }
-    post();
+    List<int[]> found = cliques.cliques();
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% disjunctive cliques: "
+              + cliques.size()
+              + " tasks, "
+              + found.size()
+              + " cliques, "
+              + (System.nanoTime() - start) / 1_000_000
+              + " ms");
+    }
+    post(found);
   }
 
   private void collect(ASTConstElem node) {
@@ -168,27 +180,28 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     IntVar[] d = support.getVarArray(child(node, 1));
     IntVar[] r = support.getVarArray(child(node, 2));
     int capacity = var(node, 3).max();
-    List<Integer> tasks = new ArrayList<>();
-    List<Integer> use = new ArrayList<>();
+    int[] tasks = new int[s.length];
+    int[] use = new int[s.length];
+    int n = 0;
     for (int i = 0; i < s.length; i++) {
       int t = r[i].min() > 0 ? cliques.task(s[i], d[i]) : -1;
       if (t >= 0) {
-        tasks.add(t);
-        use.add(r[i].min());
+        tasks[n] = t;
+        use[n++] = r[i].min();
       }
     }
-    boolean unary = tasks.size() > 1;
-    for (int i = 0; i < tasks.size(); i++) {
-      for (int j = i + 1; j < tasks.size(); j++) {
-        if ((long) use.get(i) + use.get(j) > capacity) {
-          cliques.conflict(tasks.get(i), tasks.get(j));
+    boolean unary = n > 1;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if ((long) use[i] + use[j] > capacity) {
+          cliques.conflict(tasks[i], tasks[j]);
         } else {
           unary = false;
         }
       }
     }
     if (unary) {
-      cliques.unary(tasks.stream().mapToInt(Integer::intValue).toArray());
+      cliques.unary(java.util.Arrays.copyOf(tasks, n));
     }
   }
 
@@ -237,8 +250,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     }
   }
 
-  private void post() {
-    List<int[]> found = cliques.cliques();
+  private void post(List<int[]> found) {
     if (found.isEmpty()) {
       return;
     }
