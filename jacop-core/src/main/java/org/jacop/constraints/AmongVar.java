@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +102,21 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   private TimeStamp<Integer> ub0Ts;
   private TimeStamp<Integer> yGrounded;
   private TimeStamp<Integer> xGrounded;
+
+  // Scratch space of consistency, kept between calls so that the counting allocates nothing.
+  // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
+  // the stamp of the current call.
+  private int[] lbOfValue = new int[0];
+  private int[] ubOfValue = new int[0];
+  private int[] valueStamp = new int[0];
+  private int valueOffset;
+  private int callStamp;
+  // per position of listOfX: how many values the x shares with ub(S) and has outside lb(S),
+  // 0, 1 or 2 for two or more, and the value when there is exactly one
+  private int[] ubShared;
+  private int[] ubSharedValue;
+  private int[] lbOutside;
+  private int[] lbOutsideValue;
 
   private static final String DEBUG_LEVEL = "--LEVEL : {}";
   private static final String DEBUG_SEPARATOR = "------------";
@@ -571,8 +585,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // pureUbs ubs usually equals to ubs \ lbs and is used upon calculating
     // the lbV and ubV hashtables
     IntervalDomain pureUbs = new IntervalDomain();
-    HashMap<Integer, Integer> lbV = new HashMap<>();
-    HashMap<Integer, Integer> ubV = new HashMap<>();
+    callStamp++;
 
     // Take the lbs domain computed on the previous level
     // it contain the Y values that will be or must be present in S domain
@@ -801,8 +814,21 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       int ubMax = Integer.MIN_VALUE;
       if (firstTimeWhileLoop) {
         pureUbs = (IntervalDomain) ubSdom.subtract(lbSdom);
+        // later rounds of this call only look at values of this first set
+        if (!pureUbs.isEmpty()) {
+          reserveValues(pureUbs.min(), pureUbs.max());
+        }
       } else {
         pureUbs = (IntervalDomain) pureUbs.intersect(ubSdom.subtract(lbSdom));
+      }
+
+      if (!pureUbs.isEmpty()) {
+        for (int i = 0; i < ub0; i++) {
+          ubShared[i] = countShared(listOfX[i].domain, ubSdom, ubSharedValue, i);
+        }
+        for (int i = lb0; i < ub0; i++) {
+          lbOutside[i] = countOutside(listOfX[i].domain, lbSdom, lbOutsideValue, i);
+        }
       }
 
       Interval inv;
@@ -817,9 +843,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             weight = 0;
             ubTmp = 0;
 
+            // x intersects ub(S) \ {v} unless it shares no value with ub(S) or only v
             for (int i = 0; i < lb0; i++) {
-              x = listOfX[i];
-              if (ubSdom.subtract(v, v).isIntersecting(x.domain)) {
+              if (ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v)) {
                 ubTmp++;
               }
             }
@@ -830,12 +856,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               if (firstTimeWhileLoop && x.domain.contains(v)) {
                 weight++;
               }
-              // b)count the relation with lbS
-              if (lbSdom.union(v).contains(x.domain)) {
+              // b) x is within lb(S) U {v}
+              if (lbOutside[i] == 0 || (lbOutside[i] == 1 && lbOutsideValue[i] == v)) {
                 lbTmp++;
               }
-              // c)count the relation with ubs
-              if (ubSdom.subtract(v, v).isIntersecting(x.domain)) {
+              // c) x intersects ub(S) \ {v}
+              if (ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v)) {
                 ubTmp++;
               }
             }
@@ -845,8 +871,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             if (DEBUG_ALL) {
               log.debug("--- ub[{}] = {}", v, ubTmp);
             }
-            lbV.put(v, lbTmp);
-            ubV.put(v, ubTmp);
+            int index = v - valueOffset;
+            lbOfValue[index] = lbTmp;
+            ubOfValue[index] = ubTmp;
+            valueStamp[index] = callStamp;
             if (ubTmp > ubMax) {
               ubMax = ubTmp;
             }
@@ -909,7 +937,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             if (DEBUG_ALL) {
               log.debug(">>>>>>>>>>>>>>>>>>>{}", v);
             }
-            if (ubV.get(v) < n.min()) {
+            if (ubOfValue(v) < n.min()) {
               if (DEBUG_ALL) {
                 log.debug("{} must be be present in S", v);
               }
@@ -953,7 +981,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               }
             }
 
-            if (lbV.get(v) > n.max()) {
+            if (lbOfValue(v) > n.max()) {
               ubSdom = ubSdom.subtract(v, v);
               recalculateUb0 = true;
 
@@ -1091,6 +1119,80 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
   }
 
+  /** Makes the value arrays cover min..max for this call. */
+  private void reserveValues(int min, int max) {
+    int size = max - min + 1;
+    if (size > valueStamp.length) {
+      lbOfValue = new int[size];
+      ubOfValue = new int[size];
+      valueStamp = new int[size];
+    }
+    valueOffset = min;
+  }
+
+  private int lbOfValue(int v) {
+    checkValueComputed(v);
+    return lbOfValue[v - valueOffset];
+  }
+
+  private int ubOfValue(int v) {
+    checkValueComputed(v);
+    return ubOfValue[v - valueOffset];
+  }
+
+  private void checkValueComputed(int v) {
+    int index = v - valueOffset;
+    if (index < 0 || index >= valueStamp.length || valueStamp[index] != callStamp) {
+      throw new IllegalStateException("lb[" + v + "] and ub[" + v + "] were not computed");
+    }
+  }
+
+  /**
+   * The number of values d shares with s, 0, 1 or 2 for two or more; with exactly one it is stored
+   * in value[i]. It enumerates the smaller of the two domains.
+   */
+  private static int countShared(IntDomain d, IntDomain s, int[] value, int i) {
+    if (s.isEmpty() || !d.isIntersecting(s)) {
+      return 0;
+    }
+    IntDomain small = d.getSize() <= s.getSize() ? d : s;
+    IntDomain large = small == d ? s : d;
+    int count = 0;
+    for (int w = small.min(); ; w = small.nextValue(w)) {
+      if (large.contains(w)) {
+        if (++count == 2) {
+          return 2;
+        }
+        value[i] = w;
+      }
+      if (w == small.max()) {
+        return count;
+      }
+    }
+  }
+
+  /**
+   * The number of values of d outside s, 0, 1 or 2 for two or more; with exactly one it is stored
+   * in value[i].
+   */
+  private static int countOutside(IntDomain d, IntDomain s, int[] value, int i) {
+    if (d.getSize() > s.getSize() + 1) {
+      return 2;
+    }
+    int count = 0;
+    for (int w = d.min(); ; w = d.nextValue(w)) {
+      if (!s.contains(w)) {
+        if (++count == 2) {
+          return 2;
+        }
+        value[i] = w;
+      }
+      if (w == d.max()) {
+        return count;
+      }
+    }
+  }
+
   /**
    * It returns the queued Y variables and clears the queue. Grounded Y are swapped to the front of
    * listOfY during consistency, which changes the meaning of the queued indices, so the queued
@@ -1124,6 +1226,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     lbS = new MutableDomain(store);
     futureLbS = new MutableDomain(store);
+
+    ubShared = new int[listOfX.length];
+    ubSharedValue = new int[listOfX.length];
+    lbOutside = new int[listOfX.length];
+    lbOutsideValue = new int[listOfX.length];
 
     lb0Ts = new TimeStamp<>(store, 0);
     ub0Ts = new TimeStamp<>(store, listOfX.length);
