@@ -410,6 +410,9 @@ public class IntVar extends Var {
       throw new IllegalStateException(String.valueOf("Wrong event generated"));
     }
 
+    if (store.domainChangeRecorder != null) {
+      store.domainChangeRecorder.domainChanged(this, event);
+    }
     store.addChanged(this, event, Integer.MIN_VALUE);
   }
 

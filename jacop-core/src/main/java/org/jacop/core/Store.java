@@ -198,6 +198,12 @@ public class Store {
   /** It stores constraint which is currently re-evaluated. */
   public Constraint currentConstraint;
 
+  /**
+   * Receives every domain change of an integer variable when set (lazy clause generation); null by
+   * default, which costs one test per change.
+   */
+  public DomainChangeRecorder domainChangeRecorder;
+
   /** It stores constraint that has recently failed during store.consistency() execution. */
   public Constraint recentlyFailedConstraint;
 
