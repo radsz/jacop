@@ -725,6 +725,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     /** Last child search run in the child loop (used when no early return). */
     DepthFirstSearch<T> lastChildSearchRun;
 
+    /** Solutions the last child search run had found before this run. */
+    int lastChildSolutionsBefore;
+
     LinkingSearch(DepthFirstSearch<T> m) {
       master = m;
     }
@@ -826,7 +829,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (earlyReturn.isPresent()) {
           return earlyReturn.get();
         }
-        noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+        noSolutions +=
+            lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
         constraineCostFromChild(lastChildSearchRun);
       } else {
         constraineCost();
@@ -845,6 +849,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         child.getSolutionListener().setParentSolutionListener(solutionListener);
         child.setCostVar(costVariable);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
         if (result) {
           break;
@@ -872,6 +877,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         child.setStore(store);
         child.getSolutionListener().setParentSolutionListener(solutionListener);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
         if (result) {
           break;
@@ -904,7 +910,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (earlyReturn.isPresent()) {
         return earlyReturn.get();
       }
-      noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+      noSolutions +=
+          lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
       if (noSolutions >= solutionsLimit) {
         throw new SolutionsLimitReached();
       }

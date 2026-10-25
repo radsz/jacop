@@ -1995,7 +1995,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     if (options.getNumberSolutions() > 0) {
-      label.setSolutionLimit(options.getNumberSolutions());
+      // printSolution stops the search at the requested number of solutions; the priority search
+      // cannot count them itself, since its child searches' listeners count each other's solutions
+      label.setSolutionLimit(Integer.MAX_VALUE);
     }
   }
 

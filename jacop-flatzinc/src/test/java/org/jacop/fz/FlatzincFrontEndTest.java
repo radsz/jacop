@@ -832,6 +832,16 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void prioritySearchStopsAtTheRequestedNumberOfSolutions() throws IOException {
+    // The priority search stopped at its own count of solutions, taken from the listeners of its
+    // child searches, which count each other's solutions: -n 3 stopped after 2 solutions and
+    // reported the search complete.
+    String out = run(PRIORITY_WITH_SEQ_SEARCH_ROW, "-n", "3")[0];
+    assertEquals(3, out.split("----------", -1).length - 1, out);
+    assertTrue(!out.contains("=========="), out);
+  }
+
+  @Test
   void prioritySearchSkipsASearchWithNoVariables() throws IOException {
     // An empty search was dropped from the list of searches, so the priority variables and the
     // searches no longer matched and the solver stopped with a RuntimeException.
