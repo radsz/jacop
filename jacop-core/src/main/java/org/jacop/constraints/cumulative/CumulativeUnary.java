@@ -37,12 +37,14 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * CumulativeUnary implements the scheduling constraint for unary resources using.
- *
- * <p>overload, not-first-not-last and detectable algorithms based on
+ * CumulativeUnary implements the scheduling constraint for unary resources using the overload
+ * check, detectable precedences, not-first/not-last and edge finding of
  *
  * <p>Petr Vilim, "O(n log n) Filtering Algorithms for Unary Resource Constraints", Proceedings of
  * CP-AI-OR 2004,
+ *
+ * <p>with the overload check and detectable precedences in linear time after sorting on the time
+ * line of Fahimi, Ouellet and Quimper, Constraints 23(3), 2018 (see {@link UnaryReasoning}).
  *
  * @author Krzysztof Kuchcinski
  * @version 5.0
@@ -231,13 +233,7 @@ public class CumulativeUnary extends Cumulative {
       }
 
       if (doUnaryEdgeFind && !store.propagationHasOccurred) {
-
-        if (!doProfile) {
-          overload(tn);
-        }
-        detectable(store, tn, tr);
-        notFirstNotLast(store, tn, tr);
-        edgeFind(store, tn, tr);
+        unaryRules(store, tn, tr, !doProfile);
       }
 
     } while (store.propagationHasOccurred);
@@ -260,30 +256,51 @@ public class CumulativeUnary extends Cumulative {
     }
   }
 
-  void overload(TaskView[] ts) {
-    unaryNormal.load(ts, ts.length);
-    unaryNormal.overload(ts.length);
+  /**
+   * The overload check (optional), detectable precedences, not-last and edge finding on the normal
+   * and the reversed view. Each rule sees the current bounds: the bounds are read once and again
+   * only after a rule changed some of them.
+   *
+   * @param store the constraint store.
+   * @param tn the tasks in the normal view.
+   * @param tr the same tasks in the reversed view, in the same order.
+   * @param overload true to run the overload check first.
+   */
+  void unaryRules(Store store, TaskView[] tn, TaskView[] tr, boolean overload) {
+    int n = tn.length;
+    boolean changed = store.propagationHasOccurred;
+    store.propagationHasOccurred = false;
+    loadViews(tn, n);
+    if (overload) {
+      unaryNormal.overload(n);
+    }
+    unaryNormal.detectable(tn, n, store);
+    changed |= reloadIfChanged(store, tn, n);
+    unaryReversed.detectable(tr, n, store);
+    changed |= reloadIfChanged(store, tn, n);
+    unaryNormal.notLast(tn, n, store);
+    changed |= reloadIfChanged(store, tn, n);
+    unaryReversed.notLast(tr, n, store);
+    changed |= reloadIfChanged(store, tn, n);
+    unaryNormal.edgeFind(tn, n, store);
+    changed |= reloadIfChanged(store, tn, n);
+    unaryReversed.edgeFind(tr, n, store);
+    store.propagationHasOccurred |= changed;
   }
 
-  void notFirstNotLast(Store store, TaskView[] tn, TaskView[] tr) {
-    unaryNormal.load(tn, tn.length);
-    unaryNormal.notLast(tn, tn.length, store);
-    unaryReversed.load(tr, tr.length);
-    unaryReversed.notLast(tr, tr.length, store);
+  private void loadViews(TaskView[] tn, int n) {
+    unaryNormal.loadNormal(tn, n);
+    unaryReversed.loadReversed(unaryNormal, n);
   }
 
-  void detectable(Store store, TaskView[] tn, TaskView[] tr) {
-    unaryNormal.load(tn, tn.length);
-    unaryNormal.detectable(tn, tn.length, store);
-    unaryReversed.load(tr, tr.length);
-    unaryReversed.detectable(tr, tr.length, store);
-  }
-
-  void edgeFind(Store store, TaskView[] tn, TaskView[] tr) {
-    unaryNormal.load(tn, tn.length);
-    unaryNormal.edgeFind(tn, tn.length, store);
-    unaryReversed.load(tr, tr.length);
-    unaryReversed.edgeFind(tr, tr.length, store);
+  // reloads the bounds if the previous rule changed some, and tells whether it did
+  private boolean reloadIfChanged(Store store, TaskView[] tn, int n) {
+    if (!store.propagationHasOccurred) {
+      return false;
+    }
+    store.propagationHasOccurred = false;
+    loadViews(tn, n);
+    return true;
   }
 
   @Override

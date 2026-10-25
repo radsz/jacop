@@ -25,7 +25,16 @@ Version 5.0 (unreleased)
    posts it as a redundant constraint on circuit(x) with
    cost = sum(i)(d[i, x[i]]); -Dorg.jacop.fz.circuitCost=false turns this off.
 
-4. CumulativeUnary (MiniZinc disjunctive) runs its unary rules (detectable
+4. CumulativeUnary (and CumulativeUnaryOptional, MiniZinc disjunctive) is
+   about 2x faster on job shop models with the same pruning. The overload
+   check and detectable precedences run in linear time after sorting on
+   the union-find time line of Fahimi, Ouellet and Quimper (Constraints,
+   2018) instead of the Theta tree; not-last reads ect(Theta \ {i}) from
+   the tree without changing it; edge finding builds its tree bottom up;
+   and the bounds of the tasks are read once per pass and again only after
+   a rule changed them. Search trees are unchanged.
+
+5. CumulativeUnary (MiniZinc disjunctive) runs its unary rules (detectable
    precedences, not-first/not-last, edge finding) for any number of tasks.
    Before, with more than 100 tasks (max_edge_find_size) it ran only the
    time-table profile, contrary to properties.txt; a single machine with

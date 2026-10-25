@@ -64,6 +64,16 @@ import org.jacop.core.Var;
  * the sorted union of initial domains. One variable with domain 0..1000000 makes the value graph
  * huge and the constraint very ineffective, so use it with care.
  *
+ * <p>When the union of initial domains spans at most 512 values, or has at most 512 values, the
+ * graph is kept in bit sets instead, in the spirit of Li et al. (A Bitwise GAC Algorithm for
+ * Alldifferent Constraints, IJCAI 2023). A variable is represented by the bit of its matched value,
+ * so the residual graph is read directly from the domain bits. The component of the free values is
+ * computed first (Zhang et al., A Fast Algorithm for Generalized Arc Consistency of the
+ * Alldifferent Constraint, IJCAI 2018), and an execution stops as soon as the remaining variables
+ * are found to form a single component, as they do in most executions during search (Zhang et al.,
+ * Early and Efficient Identification of Useless Constraint Propagation for Alldifferent
+ * Constraints, IJCAI 2020).
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
@@ -78,6 +88,10 @@ public class Alldistinct extends Constraint
   // than this factor.
   private static final int DENSE_FACTOR = 4;
 
+  // The bit set representation is used when the union of initial domains spans, or has, at most
+  // this many 64 bit words of values.
+  static final int MAX_BIT_WORDS = 8;
+
   /** It specifies all variables which have to have different values. */
   private final IntVar[] list;
 
@@ -90,9 +104,29 @@ public class Alldistinct extends Constraint
   private final int minValue;
 
   // Maximum matching, it is not trailed. Any maximum matching can be used for pruning, so after
-  // backtracking (domains only grow) the matching is still valid and is reused.
+  // backtracking (domains only grow) the matching is still valid and is reused. In bit mode values
+  // are given by their bit number.
   private final int[] varMatch;
   private final int[] valMatch;
+
+  // Number of 64 bit words of the bit mode, 0 if it is not used. Bit k of word w stands for value
+  // minValue + 64 * w + k if bitOffsets holds, otherwise for the value of index 64 * w + k.
+  private final int words;
+  private final boolean bitOffsets;
+
+  // Domains of not grounded variables, words per variable, read at each execution (bit mode).
+  private final long[] domainBits;
+
+  // Bit mode work sets of words each: values matched with any variable, values matched with not
+  // grounded variables, free values, not yet classified variables, and reachability search sets.
+  // Variables are given by the bit of their matched value.
+  private final long[] taken;
+  private final long[] matched;
+  private final long[] free;
+  private final long[] alive;
+  private final long[] reach;
+  private final long[] frontier;
+  private final long[] back;
 
   // Variables (indexes) on positions 0..notGrounded-1 are not yet processed as grounded.
   private final int[] position;
@@ -173,20 +207,38 @@ public class Alldistinct extends Constraint
     }
 
     int n = this.list.length;
+    long valueSpan = noValues > 0 ? (long) values[noValues - 1] - minValue + 1 : 0;
+    bitOffsets = valueSpan <= 64L * MAX_BIT_WORDS;
+    long bitValues = bitOffsets ? valueSpan : noValues;
+    words = noValues > 0 && bitValues <= 64L * MAX_BIT_WORDS ? (int) ((bitValues + 63) / 64) : 0;
+    domainBits = new long[n * words];
+    taken = new long[words];
+    matched = new long[words];
+    free = new long[words];
+    alive = new long[words];
+    reach = new long[words];
+    frontier = new long[words];
+    back = new long[words];
+
     varMatch = new int[n];
-    valMatch = new int[noValues];
+    valMatch = new int[words > 0 ? (int) bitValues : noValues];
     Arrays.fill(varMatch, -1);
     Arrays.fill(valMatch, -1);
 
     position = new int[n];
-    adjacency = new int[n][];
-    degree = new int[n];
     for (int i = 0; i < n; i++) {
       position[i] = i;
+    }
+
+    // adjacency lists and Tarjan algorithm data are only used without bit mode
+    int listed = words > 0 ? 0 : n;
+    adjacency = new int[listed][];
+    degree = new int[listed];
+    for (int i = 0; i < listed; i++) {
       adjacency[i] = new int[this.list[i].getSize()];
     }
 
-    int noNodes = n + 1;
+    int noNodes = words > 0 ? 0 : n + 1;
     dfsNumber = new int[noNodes];
     lowLink = new int[noNodes];
     component = new int[noNodes];
@@ -195,7 +247,7 @@ public class Alldistinct extends Constraint
     sccStack = new int[noNodes];
     onStack = new boolean[noNodes];
 
-    visitedValue = new int[noValues];
+    visitedValue = new int[words > 0 ? 0 : noValues];
     freeVariables = new int[n];
     pendingVariables = new IntVar[Math.max(4, n)];
 
@@ -220,13 +272,26 @@ public class Alldistinct extends Constraint
     notGrounded = new TimeStamp<>(store, list.length);
 
     // the initial maximum matching needs to be computed, failure is reported by consistency
-    for (int i = 0; i < list.length; i++) {
-      buildAdjacency(i);
-    }
-    for (int i = 0; i < list.length; i++) {
-      if (!findMatch(i)) {
-        impositionFailure = true;
-        break;
+    if (words > 0) {
+      Arrays.fill(taken, 0);
+      for (int i = 0; i < list.length; i++) {
+        readBits(i);
+      }
+      for (int i = 0; i < list.length; i++) {
+        if (!findMatchBits(i)) {
+          impositionFailure = true;
+          break;
+        }
+      }
+    } else {
+      for (int i = 0; i < list.length; i++) {
+        buildAdjacency(i);
+      }
+      for (int i = 0; i < list.length; i++) {
+        if (!findMatch(i)) {
+          impositionFailure = true;
+          break;
+        }
       }
     }
 
@@ -268,11 +333,18 @@ public class Alldistinct extends Constraint
     int notGroundedNo = removeGrounded(store);
 
     if (notGroundedNo > 1) {
-      if (!repairMatching(notGroundedNo)) {
-        throw Store.failException;
-      }
-      if (computeComponents(notGroundedNo) > 1) {
-        prune(store, notGroundedNo);
+      if (words > 0) {
+        if (!repairMatchingBits(notGroundedNo)) {
+          throw Store.failException;
+        }
+        filterBits(store, notGroundedNo);
+      } else {
+        if (!repairMatching(notGroundedNo)) {
+          throw Store.failException;
+        }
+        if (computeComponents(notGroundedNo) > 1) {
+          prune(store, notGroundedNo);
+        }
       }
     }
 
@@ -327,7 +399,7 @@ public class Alldistinct extends Constraint
           position[notGroundedNo] = i;
 
           int xValue = x.value();
-          match(i, valueIndex(xValue));
+          match(i, words > 0 && bitOffsets ? xValue - minValue : valueIndex(xValue));
 
           for (int k = 0; k < notGroundedNo; k++) {
             IntVar y = list[position[k]];
@@ -581,6 +653,338 @@ public class Alldistinct extends Constraint
     }
 
     return componentId;
+  }
+
+  /** It reads the domain of variable i into its words of domainBits (bit mode). */
+  private void readBits(int i) {
+    IntDomain dom = list[i].domain;
+    int base = i * words;
+    if (bitOffsets) {
+      for (int w = 0; w < words; w++) {
+        domainBits[base + w] = dom.bitsFrom(minValue + 64 * w);
+      }
+      return;
+    }
+
+    Arrays.fill(domainBits, base, base + words, 0);
+    if (dom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
+      IntervalDomain id = (IntervalDomain) dom;
+      for (int k = 0; k < id.size; k++) {
+        Interval interval = id.intervals[k];
+        // consecutive values have consecutive indexes in the sorted union
+        int a = valueIndex(interval.min());
+        for (int last = a + interval.max() - interval.min(); a <= last; a++) {
+          domainBits[base + (a >>> 6)] |= 1L << a;
+        }
+      }
+    } else {
+      for (ValueEnumeration enumer = dom.valueEnumeration(); enumer.hasMoreElements(); ) {
+        int a = valueIndex(enumer.nextElement());
+        domainBits[base + (a >>> 6)] |= 1L << a;
+      }
+    }
+  }
+
+  /**
+   * It reads the domains of not grounded variables and repairs the maximum matching for variables
+   * which lost their matched value (bit mode).
+   *
+   * @return false if there is no matching covering all variables.
+   */
+  private boolean repairMatchingBits(int notGroundedNo) {
+
+    Arrays.fill(taken, 0);
+    for (int i = 0; i < list.length; i++) {
+      int a = varMatch[i];
+      if (a >= 0) {
+        taken[a >>> 6] |= 1L << a;
+      }
+    }
+
+    int noFree = 0;
+    for (int j = 0; j < notGroundedNo; j++) {
+      int i = position[j];
+      readBits(i);
+      int a = varMatch[i];
+      if (a < 0 || (domainBits[i * words + (a >>> 6)] & (1L << a)) == 0) {
+        if (a >= 0) {
+          valMatch[a] = -1;
+          varMatch[i] = -1;
+          taken[a >>> 6] &= ~(1L << a);
+        }
+        freeVariables[noFree++] = i;
+      }
+    }
+
+    for (int k = 0; k < noFree; k++) {
+      if (!findMatchBits(freeVariables[k])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /** It matches variable i, first with a free value, otherwise by an augmenting path (bit mode). */
+  private boolean findMatchBits(int i) {
+
+    int base = i * words;
+    for (int w = 0; w < words; w++) {
+      long available = domainBits[base + w] & ~taken[w];
+      if (available != 0) {
+        int a = (w << 6) + Long.numberOfTrailingZeros(available);
+        varMatch[i] = a;
+        valMatch[a] = i;
+        taken[w] |= available & -available;
+        return true;
+      }
+    }
+
+    // reach is used as the set of visited values
+    Arrays.fill(reach, 0);
+    return augmentBits(i);
+  }
+
+  private boolean augmentBits(int i) {
+
+    int base = i * words;
+    for (int w = 0; w < words; w++) {
+      long available = domainBits[base + w] & ~taken[w];
+      if (available != 0) {
+        int a = (w << 6) + Long.numberOfTrailingZeros(available);
+        varMatch[i] = a;
+        valMatch[a] = i;
+        taken[w] |= available & -available;
+        return true;
+      }
+    }
+    for (int w = 0; w < words; w++) {
+      long candidates = domainBits[base + w] & ~reach[w];
+      while (candidates != 0) {
+        long bit = candidates & -candidates;
+        candidates ^= bit;
+        if ((reach[w] & bit) != 0) {
+          continue;
+        }
+        reach[w] |= bit;
+        int a = (w << 6) + Long.numberOfTrailingZeros(bit);
+        if (augmentBits(valMatch[a])) {
+          varMatch[i] = a;
+          valMatch[a] = i;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * It removes the values of not grounded variables which belong to no maximum matching (bit mode).
+   * The variables are partitioned into strongly connected components of the residual graph, where a
+   * variable points to the variables matched with its other values and to the free values, and the
+   * free values point to all variables. A value is kept if it is free or matched with a variable of
+   * the same component. Components are computed one at a time by forward and backward reachability,
+   * starting with the component of the free values, and the computation stops when the remaining
+   * variables form a single component.
+   */
+  private void filterBits(Store store, int notGroundedNo) {
+
+    Arrays.fill(matched, 0);
+    Arrays.fill(free, 0);
+    for (int j = 0; j < notGroundedNo; j++) {
+      int i = position[j];
+      int a = varMatch[i];
+      matched[a >>> 6] |= 1L << a;
+      int base = i * words;
+      for (int w = 0; w < words; w++) {
+        free[w] |= domainBits[base + w];
+      }
+    }
+    boolean anyFree = false;
+    for (int w = 0; w < words; w++) {
+      free[w] &= ~matched[w];
+      alive[w] = matched[w];
+      anyFree |= free[w] != 0;
+    }
+
+    boolean first = true;
+    if (anyFree) {
+      // the variables which reach a free value form one component with the free values
+      Arrays.fill(back, 0);
+      reachBackward(free);
+      if (pruneComponent(store, back, true)) {
+        return;
+      }
+      first = false;
+    }
+
+    while (true) {
+      int w0 = 0;
+      while (alive[w0] == 0) {
+        w0++;
+      }
+      long rootBit = alive[w0] & -alive[w0];
+      reachForward(w0, rootBit);
+      Arrays.fill(back, 0);
+      back[w0] = rootBit;
+      reachBackward(back);
+      if (pruneComponent(store, back, first)) {
+        return;
+      }
+      first = false;
+    }
+  }
+
+  // It computes in reach the alive variables reachable from the variable matched with the value
+  // given by word w and bit.
+  private void reachForward(int w, long bit) {
+
+    Arrays.fill(reach, 0);
+    Arrays.fill(frontier, 0);
+    reach[w] = bit;
+    frontier[w] = bit;
+
+    int word = w;
+    while (word < words) {
+      long f = frontier[word];
+      if (f == 0) {
+        word++;
+        continue;
+      }
+      long b = f & -f;
+      frontier[word] = f ^ b;
+      int base = valMatch[(word << 6) + Long.numberOfTrailingZeros(b)] * words;
+      int lowest = word;
+      for (int v = 0; v < words; v++) {
+        long next = domainBits[base + v] & alive[v] & ~reach[v];
+        if (next != 0) {
+          reach[v] |= next;
+          frontier[v] |= next;
+          if (v < lowest) {
+            lowest = v;
+          }
+        }
+      }
+      word = lowest;
+    }
+  }
+
+  // It adds to back the variables in reach (or all alive variables if target holds the free values)
+  // which reach a variable of back or a value of target.
+  private void reachBackward(long[] target) {
+
+    long[] candidates = target == free ? alive : reach;
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (int w = 0; w < words; w++) {
+        long c = candidates[w] & ~back[w];
+        while (c != 0) {
+          long b = c & -c;
+          c ^= b;
+          int base = valMatch[(w << 6) + Long.numberOfTrailingZeros(b)] * words;
+          for (int v = 0; v < words; v++) {
+            if ((domainBits[base + v] & (target[v] | back[v])) != 0) {
+              back[w] |= b;
+              changed = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * It removes from the variables of the component the values matched with variables of other
+   * components, and removes the component from the alive variables. The variables of the first
+   * component have no such values if it contains all variables.
+   *
+   * @return true if the component contains all alive variables, it is the last one.
+   */
+  private boolean pruneComponent(Store store, long[] component, boolean first) {
+
+    boolean all = true;
+    for (int w = 0; w < words; w++) {
+      if (component[w] != alive[w]) {
+        all = false;
+        break;
+      }
+    }
+    if (all && first) {
+      return true;
+    }
+
+    for (int w = 0; w < words; w++) {
+      long c = component[w];
+      while (c != 0) {
+        long b = c & -c;
+        c ^= b;
+        int i = valMatch[(w << 6) + Long.numberOfTrailingZeros(b)];
+        int base = i * words;
+        for (int v = 0; v < words; v++) {
+          // reach is not needed any more and keeps the values to remove
+          reach[v] = domainBits[base + v] & matched[v] & ~component[v];
+        }
+        removeBits(store, i, reach);
+      }
+    }
+
+    for (int w = 0; w < words; w++) {
+      alive[w] &= ~component[w];
+    }
+    return all;
+  }
+
+  // It removes the values given by bits from variable i.
+  private void removeBits(Store store, int i, long[] bits) {
+
+    IntVar x = list[i];
+    if (x.domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID) {
+      SmallDenseDomain sdd = (SmallDenseDomain) x.domain;
+      long removed;
+      if (bitOffsets) {
+        // the 64 values from sdd.minBound, lowest value first
+        int offset = sdd.minBound - minValue;
+        int w = offset >>> 6;
+        int shift = offset & 63;
+        long window = bits[w] >>> shift;
+        if (shift != 0 && w + 1 < words) {
+          window |= bits[w + 1] << (64 - shift);
+        }
+        removed = Long.reverse(window);
+      } else {
+        removed = 0;
+        for (int w = 0; w < words; w++) {
+          for (long r = bits[w]; r != 0; r &= r - 1) {
+            removed |=
+                Long.MIN_VALUE
+                    >>> (values[(w << 6) + Long.numberOfTrailingZeros(r)] - sdd.minBound);
+          }
+        }
+      }
+      if (removed != 0) {
+        sdd.in(store.level, x, ~removed);
+      }
+      return;
+    }
+
+    for (int w = 0; w < words; w++) {
+      long r = bits[w];
+      while (r != 0) {
+        int low = Long.numberOfTrailingZeros(r);
+        int high = low + Long.numberOfTrailingZeros(~(r >>> low)) - 1;
+        r &= high == 63 ? 0 : -1L << (high + 1);
+        if (bitOffsets) {
+          int base = minValue + 64 * w;
+          x.domain.inComplement(store.level, x, base + low, base + high);
+        } else {
+          for (int a = (w << 6) + low; a <= (w << 6) + high; a++) {
+            x.domain.inComplement(store.level, x, values[a]);
+          }
+        }
+      }
+    }
   }
 
   /**

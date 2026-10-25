@@ -1806,6 +1806,153 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // Alldistinct keeps its graph in bit sets over value offsets when the union of initial domains
+  // spans at most 512 values, in bit sets over value indexes when it has at most 512 values, and in
+  // adjacency lists otherwise. In each representation, with domains spread over several words and
+  // mixed domain types, the remaining values after every propagation of a dive must be exactly the
+  // values that take part in a matching (domain consistency), and backtracking must restore them.
+  @Test
+  void testAlldistinctIsDomainConsistentInEveryRepresentation() {
+
+    Random random = new Random(31);
+    for (int trial = 0; trial < 1600; trial++) {
+      int kind = trial % 4;
+      int n = 2 + random.nextInt(7);
+      int m = n + random.nextInt(4);
+      // kind 0: one word, 1: offsets over several words, 2: sparse indexes, 3: adjacency lists
+      int span = kind == 0 ? 64 : kind == 1 ? 65 + random.nextInt(448) : 1_000_000;
+      int origin = random.nextInt(201) - 100;
+      int[] pool = random.ints(origin, origin + span).distinct().limit(m).sorted().toArray();
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = new IntervalDomain();
+        for (int value : pool) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(value, value);
+          }
+        }
+        if (kind == 3 && i < 2) {
+          // wide variables make the union larger than 512 values
+          random.ints(origin, origin + 3000).limit(600).forEach(v -> dom.unionAdapt(v, v));
+        }
+        if (dom.isEmpty()) {
+          int value = pool[random.nextInt(m)];
+          dom.unionAdapt(value, value);
+        }
+        if (dom.max() - dom.min() < 64 && random.nextBoolean()) {
+          SmallDenseDomain small = new SmallDenseDomain();
+          small.unionAdapt(dom);
+          x[i] = new IntVar(store, "x" + i, small);
+        } else {
+          x[i] = new IntVar(store, "x" + i, dom);
+        }
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldistinct(x));
+
+      Map<Integer, String> domainsAtLevel = new HashMap<>();
+      boolean consistent = store.consistency();
+      assertAlldistinctDomainConsistent(x, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.put(store.level, Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(3); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          switch (random.nextInt(4)) {
+            case 0 -> v.domain.in(store.level, v, value, value);
+            case 1 -> v.domain.in(store.level, v, value, v.max());
+            default -> v.domain.inComplement(store.level, v, value);
+          }
+        }
+        consistent = store.consistency();
+        assertAlldistinctDomainConsistent(x, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (domainsAtLevel.containsKey(store.level)) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  // The values of each variable which take part in a matching of all variables to distinct values
+  // (computed by augmenting paths, so domains may be large), or null if there is no such matching.
+  private static int[][] alldistinctSupports(IntVar[] x) {
+    int n = x.length;
+    int[][] domains = new int[n][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = valuesOf(x[i]);
+    }
+    int[][] supports = new int[n][];
+    for (int i = 0; i < n; i++) {
+      int variable = i;
+      supports[i] =
+          Arrays.stream(domains[i]).filter(v -> matchingExists(domains, variable, v)).toArray();
+      if (supports[i].length == 0) {
+        return null;
+      }
+    }
+    return supports;
+  }
+
+  private static boolean matchingExists(int[][] domains, int fixed, int fixedValue) {
+    Map<Integer, Integer> holder = new HashMap<>();
+    holder.put(fixedValue, fixed);
+    for (int i = 0; i < domains.length; i++) {
+      if (i != fixed && !augmentMatching(domains, i, fixed, fixedValue, holder, new HashSet<>())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean augmentMatching(
+      int[][] domains,
+      int i,
+      int fixed,
+      int fixedValue,
+      Map<Integer, Integer> holder,
+      Set<Integer> visited) {
+    for (int v : domains[i]) {
+      if (v != fixedValue && visited.add(v)) {
+        Integer j = holder.get(v);
+        if (j == null || augmentMatching(domains, j, fixed, fixedValue, holder, visited)) {
+          holder.put(v, i);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static void assertAlldistinctDomainConsistent(
+      IntVar[] x, boolean consistent, String instance) {
+    if (!consistent) {
+      assertThat(alldistinctSupports(x)).as(instance + " failed with solutions").isNull();
+      return;
+    }
+    int[][] supports = alldistinctSupports(x);
+    assertThat(supports).as(instance + " no solution " + Arrays.toString(x)).isNotNull();
+    for (int i = 0; i < x.length; i++) {
+      assertThat(valuesOf(x[i]))
+          .as(instance + " " + Arrays.toString(x))
+          .containsExactly(supports[i]);
+    }
+  }
+
   // Alldiff must be bounds(Z) consistent: after propagation the minimum and the maximum of every
   // variable take part in an all different assignment where every variable ranges over the interval
   // between its bounds. It must also never remove a solution, along random dives and after
