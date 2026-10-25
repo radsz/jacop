@@ -854,7 +854,7 @@ public class HybridTable extends Constraint
     for (int i = 0; i < arity; i++) {
       IntVar xi = x[i];
       boolean wasSingleton = xi.singleton();
-      if (i != onlyChanged && (!wasSingleton || changed > 0)) {
+      if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
         filterDomain(i);
       }
       if (!xi.singleton()) {
@@ -962,12 +962,7 @@ public class HybridTable extends Constraint
     if (useMarks) {
       for (int i = 0; i < arity; i++) {
         if (marks[i] != null) {
-          Arrays.fill(marks[i], 0L);
-          markCount[i] = 0;
-          markNeed[i] = x[i].getSize();
-          if (wordMasks) {
-            domainMask[i] = wordOf(i, x[i].dom());
-          }
+          resetMarks(i);
         }
       }
     } else {
@@ -999,19 +994,20 @@ public class HybridTable extends Constraint
     }
   }
 
+  private void resetMarks(int i) {
+    if (wordMasks) {
+      marks[i][0] = 0L;
+      domainMask[i] = wordOf(i, x[i].dom());
+    } else {
+      Arrays.fill(marks[i], 0L);
+    }
+    markCount[i] = 0;
+    markNeed[i] = x[i].getSize();
+  }
+
   /** The values of d as a bit-set relative to markBase[i]. */
   private long wordOf(int i, IntDomain d) {
-    long m = 0L;
-    int base = markBase[i];
-    int v = d.min();
-    while (true) {
-      m |= 1L << (v - base);
-      int next = d.nextValue(v);
-      if (next == v) {
-        return m;
-      }
-      v = next;
-    }
+    return d.bitsFrom(markBase[i]);
   }
 
   /** The bit-set of the positions p with p at most bound, for 64 positions. */
@@ -1118,6 +1114,11 @@ public class HybridTable extends Constraint
 
   private boolean fullyMarked(int i) {
     return markCount[i] >= markNeed[i];
+  }
+
+  /** It tells whether the tuples with restrictions between columns support every value of x[i]. */
+  private boolean supportedByRestrictions(int i) {
+    return useMarks && binaryColumn[i] != null && fullyMarked(i);
   }
 
   /**
