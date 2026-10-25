@@ -4012,6 +4012,38 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void geostNonOverlappingWithoutTimeKeepsObjectsApart() {
+    // Two unit squares, object 0 at (0, 0), object 1 at (x1, 0) with x1 in 0..1. NonOverlapping
+    // over the spatial dimensions only (no time dimension, 2) must forbid x1 = 0, and so must
+    // NonOverlapping over dimension 0 only. The filter of useful internal constraints overflowed
+    // on the unbounded time extent and dropped the obstacle, which accepted x1 = 0.
+    for (int[] dims : new int[][] {{0, 1}, {0}, {0, 1, 2}}) {
+      Store store = new Store();
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+      IntVar x1 = new IntVar(store, "x1", 0, 1);
+      IntVar[][] coords = {
+        {new IntVar(store, 0, 0), new IntVar(store, 0, 0)}, {x1, new IntVar(store, 0, 0)}
+      };
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                coords[i],
+                new IntVar(store, 0, 0),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(new Geost(objects, List.of(new NonOverlapping(objects, dims)), shapes));
+
+      assertThat(noOfAllSolutions(store, new IntVar[] {x1}))
+          .as("dims %s", Arrays.toString(dims))
+          .isEqualTo(1);
+    }
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/46
   @Test
   void testAmongVarWithGroundedX() {

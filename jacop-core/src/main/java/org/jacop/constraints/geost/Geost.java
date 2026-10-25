@@ -385,6 +385,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   /** It specifies the last useful constraint in the array of useful internal constraints. */
   int lastConstraintToCheck;
 
+  /** A preallocated array for the lower extreme infeasible point of an internal constraint. */
+  private final long[] lowerInfeasible;
+
   /**
    * It is set by queueVariable after a time variable has been changed. It indicates that we should
    * run the consistency function of the time constraint.
@@ -470,6 +473,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     c = new int[dimension + 1];
     n = new int[dimension + 1];
+    lowerInfeasible = new long[dimension + 1];
 
     double[] averageSizes = computeAverageSizes(objects);
     order = new PredefinedOrder(computeDimensionOrdering(averageSizes), 0);
@@ -1394,31 +1398,42 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     Dbox bb = Dbox.boundingBox(workingList).copyInto(Dbox.newBox(dimension));
 
     Dbox domainBox = buildDomainBoxForObject(o, bb);
-    Dbox constraintBox = Dbox.newBox(dimension + 1);
-    int[] constraintBoxOrigin = constraintBox.origin;
-    int[] constraintBoxLength = constraintBox.length;
 
     lastConstraintToCheck = 0;
     for (InternalConstraint c : objectConstraints[o.no]) {
-      if (c.cardInfeasible() > 0) {
-        int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
-        for (int i = 0; i < dimension + 1; i++) {
-          constraintBoxOrigin[i] = lowerBound[i] - 1;
-        }
-        int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
-        for (int i = 0; i < dimension + 1; i++) {
-          constraintBoxLength[i] = upperBound[i] - constraintBoxOrigin[i] + 2;
-        }
-        if (domainBox.intersectWith(constraintBox) != null) {
-          stillUsefulInternalConstraints[lastConstraintToCheck] = c;
-          lastConstraintToCheck++;
-        }
+      if (c.cardInfeasible() > 0 && mayBeInfeasibleWithin(c, domainBox)) {
+        stillUsefulInternalConstraints[lastConstraintToCheck] = c;
+        lastConstraintToCheck++;
       }
     }
 
     Dbox.dispatchBox(bb);
-    Dbox.dispatchBox(constraintBox);
     Dbox.dispatchBox(domainBox);
+  }
+
+  /**
+   * It checks whether the region between the extreme infeasible points of an internal constraint,
+   * enlarged by one in every direction, intersects the domain box of the object being pruned.
+   * Internal constraints use extreme values (up to Integer.MIN_VALUE and Integer.MAX_VALUE) for
+   * unbounded dimensions, so the bounds are compared as longs.
+   */
+  private boolean mayBeInfeasibleWithin(InternalConstraint c, Dbox domainBox) {
+    int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
+    // copied, the arrays returned by absInfeasible may be reused by the next call
+    long[] lower = lowerInfeasible;
+    for (int i = 0; i < dimension + 1; i++) {
+      lower[i] = (long) lowerBound[i] - 1;
+    }
+    int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
+    for (int i = 0; i < dimension + 1; i++) {
+      long upper = (long) upperBound[i] + 1;
+      long from = Math.max(lower[i], domainBox.origin[i]);
+      long to = Math.min(upper + 1, (long) domainBox.origin[i] + domainBox.length[i]);
+      if (to <= from) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private Dbox buildDomainBoxForObject(GeostObject o, Dbox bb) {
