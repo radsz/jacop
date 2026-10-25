@@ -130,33 +130,72 @@ class PropagationStrengthTest {
   @Test
   void testAlldifferentExceptZeroChecksMatchingWhenZeroIsRemoved() {
 
-    // Three variables over {3, 4} cannot all differ; the third one only joins the matching check
-    // once 0 is removed from its domain, which does not fix it.
+    // Three variables over {3, 4} cannot all differ, so x2 has to take 0 as soon as x1 loses 6,
+    // which does not fix x1. Once 0 is removed as well, the constraint fails.
     Store store = new Store();
     IntVar[] x = {
-      new IntVar(store, "x0", 3, 4), new IntVar(store, "x1", 3, 4), variable(store, "x2", 0, 3, 4)
+      new IntVar(store, "x0", 3, 4), variable(store, "x1", 3, 4, 6), variable(store, "x2", 0, 3, 4)
     };
     store.impose(new AlldifferentExceptZero(x));
     assertThat(store.consistency()).isTrue();
+    assertThat(x[2].dom().toString()).isEqualTo("{0, 3..4}");
 
-    assertThat(removeValues(store, x[2], 0)).isFalse();
+    assertThat(removeValues(store, x[1], 6)).isTrue();
+    assertThat(x[2].singleton(0)).isTrue();
   }
 
   @Test
   void testAlldifferentExceptChecksMatchingWhenAVariableLosesAValue() {
 
-    // Except 4: three variables end up over {1, 5} and cannot all differ. Neither change fixes a
-    // variable, so the matching check must run on other domain changes.
+    // Except 4: once x1 loses 7, x0 and x1 take 1 and 5 between them, so x2 loses 1 and 5. Neither
+    // change fixes a variable, so the filtering must run on other domain changes; removing 6 and 4
+    // from x2 then fails.
     Store store = new Store();
     IntDomain s = new IntervalDomain(4, 4);
     IntVar[] x = {
-      variable(store, "x0", 1, 5), variable(store, "x1", 1, 5), variable(store, "x2", 1, 4, 5, 6)
+      variable(store, "x0", 1, 5), variable(store, "x1", 1, 5, 7), variable(store, "x2", 1, 4, 5, 6)
     };
     store.impose(new AlldifferentExcept(x, s));
     assertThat(store.consistency()).isTrue();
+    assertThat(x[2].dom().toString()).isEqualTo("{1, 4..6}");
 
+    assertThat(removeValues(store, x[1], 7)).isTrue();
+    assertThat(x[2].dom().toString()).isEqualTo("{4, 6}");
     assertThat(removeValues(store, x[2], 6)).isTrue();
-    assertThat(removeValues(store, x[2], 4)).isFalse();
+    assertThat(x[2].singleton(4)).isTrue();
+  }
+
+  @Test
+  void testAlldifferentExceptZeroPrunesWithZeroAsJoker() {
+
+    // x0 and x1 take 1 and 2 between them, so x2 can only take the exception value 0.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 0, 2)
+    };
+    store.impose(new AlldifferentExceptZero(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[2].singleton(0)).isTrue();
+  }
+
+  @Test
+  void testAlldifferentExceptPrunesAHallSetFromVariablesWithoutExceptionValues() {
+
+    // Except 0: x0, x1 over {1, 2} are a Hall set, so x2 (without 0) loses 1 and 2, while x3
+    // keeps 0 and 3 and loses 1 and 2.
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 1, 2),
+      variable(store, "x1", 1, 2),
+      variable(store, "x2", 1, 2, 3, 4),
+      variable(store, "x3", 0, 1, 2, 3)
+    };
+    store.impose(new AlldifferentExcept(x, new IntervalDomain(0, 0)));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[2].dom().toString()).isEqualTo("{3..4}");
+    assertThat(x[3].dom().toString()).isEqualTo("{0, 3}");
   }
 
   @Test

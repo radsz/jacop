@@ -39,8 +39,15 @@ import java.io.PrintStream;
  * Command-line front end of {@link CdclSolver}, following the SAT Competition output format.
  *
  * <pre>
- * CdclMain [-t seconds] [-q] [--drat proof-file] file.cnf[.gz]
+ * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
+ *          [--vivify 0|1] [--walk 0|1] [--seed n] [--elim-interval conflicts] file.cnf[.gz]
  * </pre>
+ *
+ * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
+ * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
+ * variable elimination off, {@code --vivify 0} turns vivification off and {@code --walk 0} turns
+ * local search off. {@code --seed} changes the initial decision order and {@code --elim-interval}
+ * sets when elimination runs again during search (0 for never).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -64,19 +71,43 @@ public final class CdclMain {
     String proofFile = null;
     boolean quiet = false;
     double timeout = 0;
+    int chrono = 100;
+    boolean shrink = true;
+    boolean elim = true;
+    boolean vivify = true;
+    boolean walk = true;
+    long seed = 0;
+    int elimInterval = 5000;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
         case "-q" -> quiet = true;
         case "--drat" -> proofFile = args[++i];
+        case "--chrono" -> chrono = Integer.parseInt(args[++i]);
+        case "--shrink" -> shrink = !"0".equals(args[++i]);
+        case "--elim" -> elim = !"0".equals(args[++i]);
+        case "--vivify" -> vivify = !"0".equals(args[++i]);
+        case "--walk" -> walk = !"0".equals(args[++i]);
+        case "--seed" -> seed = Long.parseLong(args[++i]);
+        case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
         default -> file = args[i];
       }
     }
     if (file == null) {
-      System.err.println("usage: CdclMain [-t seconds] [-q] [--drat proof-file] file.cnf[.gz]");
+      System.err.println(
+          "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
+              + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--seed n]"
+              + " [--elim-interval conflicts] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
+    solver.setChronoLimit(chrono);
+    solver.setShrink(shrink);
+    solver.setElimination(elim);
+    solver.setVivification(vivify);
+    solver.setWalk(walk);
+    solver.setSeed(seed);
+    solver.setEliminationInterval(elimInterval);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
@@ -101,6 +132,9 @@ public final class CdclMain {
           solver.propagations,
           solver.restarts,
           solver.reductions);
+      out.printf(
+          "c eliminated variables %d, walk %.2f s%n",
+          solver.eliminatedCount(), solver.walkNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

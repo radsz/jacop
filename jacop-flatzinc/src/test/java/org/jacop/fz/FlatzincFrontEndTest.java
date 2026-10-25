@@ -436,10 +436,10 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void circuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
+  void circuitPostsAlldistinctUnderDomainAnnotation() throws IOException {
     // x1 and x2 take 3 and 4 between them (a Hall set), so x5 cannot be 3 or 4. Circuit alone
-    // propagates all-different on fixed values only and needed two failed decisions on x5;
-    // the Alldistinct posted with it removes them at the root. Option -b leaves it out.
+    // propagates all-different on fixed values only and needs two failed decisions on x5; the
+    // Alldistinct posted with it under ::domain removes them at the root.
     String fzn =
         """
         var {3,4}: x1:: output_var;
@@ -448,38 +448,70 @@ class FlatzincFrontEndTest {
         var {1,2,3,5}: x4:: output_var;
         var {1,2,3,4}: x5:: output_var;
         array [1..5] of var int: x = [x1,x2,x3,x4,x5];
-        constraint jacop_circuit(x);
+        constraint jacop_circuit(x)%s;
         solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_max,complete) satisfy;
         """;
 
+    String domain = run(fzn.formatted(" :: domain"), "-s")[0];
+    assertTrue(domain.contains("x5 = 2;"), domain);
+    assertTrue(domain.contains("%%%mzn-stat: failures=0"), domain);
+    // a circuit of 5 nodes gets no Alldistinct by default
+    String plain = run(fzn.formatted(""), "-s")[0];
+    assertTrue(plain.contains("x5 = 2;"), plain);
+    assertTrue(plain.contains("%%%mzn-stat: failures=2"), plain);
+  }
+
+  @Test
+  void circuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
+    // The Hall set {x1, x2} on {3, 4} in a circuit of 30 nodes, 30 -> 2 -> 4 -> 5 -> ... -> 29
+    // -> 1 -> 3 -> 30: the Alldistinct posted by default removes 3 and 4 from x30 at the root.
+    // Option -b leaves it out.
+    String fzn = hallSetSuccessors(30) + "constraint jacop_circuit(x);\n" + hallSetSearch(30);
+
     String out = run(fzn, "-s")[0];
-    assertTrue(out.contains("x5 = 2;"), out);
+    assertTrue(out.contains("x30 = 2;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
     String bounds = run(fzn, "-s", "-b")[0];
-    assertTrue(bounds.contains("x5 = 2;"), bounds);
+    assertTrue(bounds.contains("x30 = 2;"), bounds);
     assertTrue(bounds.contains("%%%mzn-stat: failures=2"), bounds);
   }
 
   @Test
-  void subcircuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
-    // The same Hall set {x1, x2} on {3, 4}: Subcircuit alone tried x5 = 3 and x5 = 4 first.
-    String fzn =
-        """
-        var {3,4}: x1:: output_var;
-        var {3,4}: x2:: output_var;
-        var 1..5: x3:: output_var;
-        var 1..5: x4:: output_var;
-        var {3,4,5}: x5:: output_var;
-        array [1..5] of var int: x = [x1,x2,x3,x4,x5];
-        constraint jacop_subcircuit(x);
-        solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_min,complete) satisfy;
-        """;
+  void subcircuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
+    // The same Hall set: Subcircuit alone tries x30 = 4 and x30 = 3 first.
+    String fzn = hallSetSuccessors(30) + "constraint jacop_subcircuit(x);\n" + hallSetSearch(30);
 
     String out = run(fzn, "-s")[0];
-    assertTrue(out.contains("x5 = 5;"), out);
+    assertTrue(out.contains("x30 = 2;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
     String bounds = run(fzn, "-s", "-b")[0];
-    assertTrue(bounds.contains("%%%mzn-stat: failures=3"), bounds);
+    assertTrue(bounds.contains("x30 = 2;"), bounds);
+    assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+  }
+
+  /** Successors of n nodes with the Hall set {x1, x2} on {3, 4} and x_n in 1..4. */
+  private static String hallSetSuccessors(int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("var {3,4}: x1:: output_var;\n").append("var {3,4}: x2:: output_var;\n");
+    fzn.append("var {5,").append(n).append("}: x3:: output_var;\n");
+    for (int i = 4; i < n; i++) {
+      fzn.append("var {1,").append(i + 1).append("}: x").append(i).append(":: output_var;\n");
+    }
+    fzn.append("var 1..4: x").append(n).append(":: output_var;\n");
+    fzn.append("array [1..").append(n).append("] of var int: x = [");
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('x').append(i);
+    }
+    return fzn.append("];\n").toString();
+  }
+
+  /** Search on x_n first, largest value first. */
+  private static String hallSetSearch(int n) {
+    StringBuilder order = new StringBuilder();
+    for (int i = n; i >= 1; i--) {
+      order.append(i < n ? "," : "").append('x').append(i);
+    }
+    return "solve :: int_search([" + order + "],input_order,indomain_max,complete) satisfy;\n";
   }
 
   @Test
