@@ -444,11 +444,19 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   void gen_jacop_circuit(SimpleNode node) {
+    genCircuit(node, 1);
+  }
+
+  void gen_jacop_circuit_offset(SimpleNode node) {
+    genCircuit(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1)));
+  }
+
+  private void genCircuit(SimpleNode node, int offset) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // successors must all be different, so the same variable (or constant) twice is infeasible
     checkForDuplicateVariables(v);
 
-    support.pose(new Circuit(v));
+    support.pose(new Circuit(v, offset));
 
     if (support.domainConsistency
         && !support.options
