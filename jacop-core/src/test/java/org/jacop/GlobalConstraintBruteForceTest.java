@@ -135,7 +135,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class GlobalConstraintBruteForceTest {
 
-  private static final int TRIALS = 300;
+  /** Random instances per constraint; the {@code min} profile lowers it. */
+  private static final int TRIALS = Integer.getInteger("globals.bruteforce.trials", 300);
 
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
