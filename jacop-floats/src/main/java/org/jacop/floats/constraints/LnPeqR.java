@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -56,5 +57,10 @@ public class LnPeqR extends ExpPeqR {
   @Override
   public String toString() {
     return id() + " : LnPeqR(" + q + ", " + p + " )";
+  }
+
+  @Override
+  public LnPeqR copy(VarMap map) {
+    return new LnPeqR(map.get(q), map.get(p));
   }
 }

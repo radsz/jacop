@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -47,7 +49,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class CumulativeBasic extends Constraint {
+public class CumulativeBasic extends Constraint implements Copyable<CumulativeBasic> {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -234,5 +236,29 @@ public class CumulativeBasic extends Constraint {
   // Sweep algorithm for PROFILE
   private void sweepPruning(Store store) {
     sweep.prune(store, taskNormal, limit, DEBUG, DEBUG_NARR, null, null);
+  }
+
+  /**
+   * Returns the counterparts of the variables of the tasks in the order the tasks were given.
+   *
+   * @param map the counterparts of the variables of this constraint.
+   * @return the starts, the durations and the resources.
+   */
+  IntVar[][] taskVariables(VarMap map) {
+    int n = taskNormal.length;
+    IntVar[][] vars = new IntVar[3][n];
+    // the array keeps the order of the tasks; their index field is reused by propagation
+    for (int i = 0; i < n; i++) {
+      vars[0][i] = map.get(taskNormal[i].start);
+      vars[1][i] = map.get(taskNormal[i].dur);
+      vars[2][i] = map.get(taskNormal[i].res);
+    }
+    return vars;
+  }
+
+  @Override
+  public CumulativeBasic copy(VarMap map) {
+    IntVar[][] t = taskVariables(map);
+    return new CumulativeBasic(t[0], t[1], t[2], map.get(limit));
   }
 }

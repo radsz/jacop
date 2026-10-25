@@ -323,6 +323,14 @@ public class IntVar extends Var {
     return domain;
   }
 
+  @Override
+  public IntVar copyTo(Store target) {
+    if (getClass() != IntVar.class) {
+      return (IntVar) super.copyTo(target);
+    }
+    return new IntVar(target, id(), domain.cloneLight());
+  }
+
   /**
    * It checks if the domains of variables are equal.
    *

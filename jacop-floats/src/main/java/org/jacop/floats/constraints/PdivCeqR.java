@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -65,5 +66,10 @@ public class PdivCeqR extends PmulCeqR {
   public String toString() {
 
     return id() + " : PdivCeqR(" + r + ", " + c + ", " + p + " )";
+  }
+
+  @Override
+  public PdivCeqR copy(VarMap map) {
+    return new PdivCeqR(map.get(r), c, map.get(p));
   }
 }

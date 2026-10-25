@@ -31,6 +31,8 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
@@ -43,7 +45,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PneqC extends AbstractPcompC {
+public class PneqC extends AbstractPcompC implements Copyable<PneqC> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -107,5 +109,10 @@ public class PneqC extends AbstractPcompC {
    */
   public double getC() {
     return c;
+  }
+
+  @Override
+  public PneqC copy(VarMap map) {
+    return new PneqC(map.get(p), c);
   }
 }

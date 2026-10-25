@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -91,5 +92,10 @@ public class AsinPeqR extends SinPeqR {
   public String toString() {
 
     return id() + " : AsinPeqR(" + q + ", " + p + " )";
+  }
+
+  @Override
+  public AsinPeqR copy(VarMap map) {
+    return new AsinPeqR(map.get(q), map.get(p));
   }
 }

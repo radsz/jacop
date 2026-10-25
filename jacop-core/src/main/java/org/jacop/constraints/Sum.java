@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -50,7 +52,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Sum extends Constraint implements SatisfiedPresent {
+public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -256,5 +258,10 @@ public class Sum extends Constraint implements SatisfiedPresent {
     Var result = AbstractSum.computeGuideVariable(list, guideValueOut);
     guideValue = guideValueOut[0];
     return result;
+  }
+
+  @Override
+  public Sum copy(VarMap map) {
+    return new Sum(map.get(list), map.get(sum));
   }
 }

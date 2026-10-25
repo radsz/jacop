@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.List;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -41,6 +42,10 @@ import org.jacop.core.Var;
 /**
  * AlldifferentExcept constraint assures that all FDVs except those given as a set of values
  * (parameter s) have differnet values.
+ *
+ * <p>It is domain consistent: values taken by fixed variables are removed from the others, and
+ * {@link AlldifferentExceptFilter} prunes with the exception values treated as joker values that
+ * any number of variables can take.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -83,6 +88,11 @@ public class AlldifferentExcept extends Alldifferent
   // The matching check fails as soon as the variables without exception values cannot all take
   // different values. That can follow from any change of a domain, not only from fixing a variable.
   @Override
+  protected boolean keepsMatching() {
+    return false;
+  }
+
+  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
   }
@@ -95,11 +105,25 @@ public class AlldifferentExcept extends Alldifferent
     }
   }
 
+  /** Domain consistent filtering, created on first use. */
+  private AlldifferentExceptFilter filter;
+
+  // Only a change of a variable without exception values can remove a support: the other
+  // variables can always take an exception value, and their supports depend on the matching of
+  // the variables without exception values only.
   @Override
   protected void checkMatchingExcept(Store store, int groundPos) {
     if (matchingVariableChanged) {
       matchingVariableChanged = false;
-      super.checkMatchingExcept(store, groundPos);
+      if (filter == null) {
+        filter = new AlldifferentExceptFilter();
+      }
+      if (filter.filter(store, list, groundPos, this)) {
+        // The filtering reaches a fixpoint; its own pruning needs no further run.
+        matchingVariableChanged = false;
+      } else {
+        super.checkMatchingExcept(store, groundPos);
+      }
     }
   }
 
@@ -123,5 +147,10 @@ public class AlldifferentExcept extends Alldifferent
     result.append("], ").append(s).append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public AlldifferentExcept copy(VarMap map) {
+    return new AlldifferentExcept(map.get(list), s);
   }
 }

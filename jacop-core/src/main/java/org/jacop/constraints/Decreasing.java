@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 
 /**
@@ -103,5 +104,14 @@ public class Decreasing extends Increasing {
     result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Decreasing copy(VarMap map) {
+    IntVar[] reversed = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      reversed[i] = map.get(x[n - 1 - i]);
+    }
+    return new Decreasing(reversed, strict == 1);
   }
 }

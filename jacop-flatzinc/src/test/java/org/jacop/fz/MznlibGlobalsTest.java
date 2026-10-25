@@ -99,7 +99,8 @@ class MznlibGlobalsTest {
         "hook_geost_zero_size",
         "hook_diffn_k_index_base",
         "hook_geost_shared_vars",
-        "hook_circuit_offset"
+        "hook_circuit_offset",
+        "hook_soft_gcc"
       })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");

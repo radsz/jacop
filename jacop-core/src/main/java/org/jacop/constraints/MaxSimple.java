@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +47,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class MaxSimple extends Constraint implements SatisfiedPresent {
+public class MaxSimple extends Constraint implements SatisfiedPresent, Copyable<MaxSimple> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -127,5 +129,10 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
   public String toString() {
 
     return id() + " : maxSimple(" + x1 + ", " + x2 + ", " + max + ")";
+  }
+
+  @Override
+  public MaxSimple copy(VarMap map) {
+    return new MaxSimple(map.get(x1), map.get(x2), map.get(max));
   }
 }

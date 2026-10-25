@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -50,7 +52,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Max extends Constraint implements SatisfiedPresent {
+public class Max extends Constraint implements SatisfiedPresent, Copyable<Max> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -177,5 +179,10 @@ public class Max extends Constraint implements SatisfiedPresent {
     result.append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Max copy(VarMap map) {
+    return new Max(map.get(list), map.get(max));
   }
 }

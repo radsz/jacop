@@ -36,10 +36,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -78,7 +81,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class HybridTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -173,7 +176,7 @@ public class HybridTable extends Constraint
   private int queueSize;
   private boolean[] queued;
   private boolean pruning;
-  private boolean firstConsistency = true;
+  private final InitOnce init = new InitOnce();
 
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
@@ -248,6 +251,19 @@ public class HybridTable extends Constraint
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     setScope(list);
+  }
+
+  /** A copy over the counterparts of the variables; the restrictions are shared. */
+  private HybridTable(HybridTable original, VarMap map) {
+    this.arity = original.arity;
+    this.x = map.get(original.x);
+    this.expandBetweenColumns = original.expandBetweenColumns;
+    this.cells = original.cells;
+    this.tupleCount = original.tupleCount;
+    this.varMap = Var.positionMapping(x, false, this.getClass());
+    this.queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    setScope(x);
   }
 
   private void setTuples(Restriction[][] rows) {
@@ -818,20 +834,23 @@ public class HybridTable extends Constraint
     }
     queueSize = 0;
 
+    // Restrictions between columns can remove further values of the changed column itself, for
+    // example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple, and the tuples they remove may have
+    // been the only supports of other values of that column. The tuples that involve the column
+    // are looked at before the revision, which removes some of them.
+    if (onlyChanged >= 0
+        && binaryColumn[onlyChanged] != null
+        && intersects(binaryColumn[onlyChanged])) {
+      onlyChanged = -1;
+    }
+
     if (binaryAll != null) {
       reviseBinaryTuples();
     }
 
-    if (firstConsistency) {
-      firstConsistency = false;
+    if (init.begin(store)) {
       onlyChanged = -1;
       changed = arity;
-    } else if (onlyChanged >= 0
-        && binaryColumn[onlyChanged] != null
-        && intersects(binaryColumn[onlyChanged])) {
-      // Restrictions between columns can remove further values of the changed column itself,
-      // for example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple.
-      onlyChanged = -1;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
       // The valid tuples are those of the previous call, which supported every remaining value.
       return;
@@ -842,7 +861,7 @@ public class HybridTable extends Constraint
     for (int i = 0; i < arity; i++) {
       IntVar xi = x[i];
       boolean wasSingleton = xi.singleton();
-      if (i != onlyChanged && (!wasSingleton || changed > 0)) {
+      if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
         filterDomain(i);
       }
       if (!xi.singleton()) {
@@ -950,12 +969,7 @@ public class HybridTable extends Constraint
     if (useMarks) {
       for (int i = 0; i < arity; i++) {
         if (marks[i] != null) {
-          Arrays.fill(marks[i], 0L);
-          markCount[i] = 0;
-          markNeed[i] = x[i].getSize();
-          if (wordMasks) {
-            domainMask[i] = wordOf(i, x[i].dom());
-          }
+          resetMarks(i);
         }
       }
     } else {
@@ -987,19 +1001,20 @@ public class HybridTable extends Constraint
     }
   }
 
+  private void resetMarks(int i) {
+    if (wordMasks) {
+      marks[i][0] = 0L;
+      domainMask[i] = wordOf(i, x[i].dom());
+    } else {
+      Arrays.fill(marks[i], 0L);
+    }
+    markCount[i] = 0;
+    markNeed[i] = x[i].getSize();
+  }
+
   /** The values of d as a bit-set relative to markBase[i]. */
   private long wordOf(int i, IntDomain d) {
-    long m = 0L;
-    int base = markBase[i];
-    int v = d.min();
-    while (true) {
-      m |= 1L << (v - base);
-      int next = d.nextValue(v);
-      if (next == v) {
-        return m;
-      }
-      v = next;
-    }
+    return d.bitsFrom(markBase[i]);
   }
 
   /** The bit-set of the positions p with p at most bound, for 64 positions. */
@@ -1106,6 +1121,11 @@ public class HybridTable extends Constraint
 
   private boolean fullyMarked(int i) {
     return markCount[i] >= markNeed[i];
+  }
+
+  /** It tells whether the tuples with restrictions between columns support every value of x[i]. */
+  private boolean supportedByRestrictions(int i) {
+    return useMarks && binaryColumn[i] != null && fullyMarked(i);
   }
 
   /**
@@ -1553,5 +1573,10 @@ public class HybridTable extends Constraint
     }
     s.append("])");
     return s.toString();
+  }
+
+  @Override
+  public HybridTable copy(VarMap map) {
+    return new HybridTable(this, map);
   }
 }

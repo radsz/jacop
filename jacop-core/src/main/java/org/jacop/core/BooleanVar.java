@@ -121,10 +121,7 @@ public class BooleanVar extends IntVar {
     // the return code is ignored as the variable is not stored within store.vars;
     store.putVariable(this);
 
-    if (store.pointer4GroundedBooleanVariables == null) {
-      store.pointer4GroundedBooleanVariables = new TimeStamp<>(store, 0);
-      // Boolean Time stamp will be updated manually by store.
-      store.timeStamps.remove(store.pointer4GroundedBooleanVariables);
+    if (store.changeHistory4BooleanVariables == null) {
       store.changeHistory4BooleanVariables = new BooleanVar[100];
     }
   }
@@ -211,6 +208,14 @@ public class BooleanVar extends IntVar {
    */
   public BoundDomain dom() {
     return (BoundDomain) domain;
+  }
+
+  @Override
+  public BooleanVar copyTo(Store target) {
+    if (getClass() != BooleanVar.class) {
+      return (BooleanVar) super.copyTo(target);
+    }
+    return new BooleanVar(target, id(), domain.min(), domain.max());
   }
 
   /**

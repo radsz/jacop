@@ -36,8 +36,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -50,7 +52,8 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Conditional extends Constraint implements SatisfiedPresent, UsesQueueVariable {
+public class Conditional extends Constraint
+    implements SatisfiedPresent, UsesQueueVariable, Copyable<Conditional> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -195,5 +198,15 @@ public class Conditional extends Constraint implements SatisfiedPresent, UsesQue
     result.append("]").append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Conditional copy(VarMap map) {
+    return new Conditional(map.get(b), Copyable.copyOf(c, map));
+  }
+
+  @Override
+  public boolean canCopy() {
+    return Copyable.canCopyAll((Object[]) c);
   }
 }

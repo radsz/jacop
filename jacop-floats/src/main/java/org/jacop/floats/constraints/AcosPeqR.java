@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -91,5 +92,10 @@ public class AcosPeqR extends CosPeqR {
   public String toString() {
 
     return id() + " : AcosPeqR(" + q + ", " + p + " )";
+  }
+
+  @Override
+  public AcosPeqR copy(VarMap map) {
+    return new AcosPeqR(map.get(q), map.get(p));
   }
 }

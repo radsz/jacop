@@ -68,6 +68,9 @@ public final class Arc {
   /** Whether this arc is a forward arc or a residual arc. */
   public boolean forward;
 
+  /** The last pruning pass that decided this residual arc by shortest paths. */
+  public int decidedPass;
+
   /**
    * Special constructor to create artificial arcs. Should NOT be used in a model. Models should use
    * (or subclass) a NetworkBuilder instead. A NetworkBuilder provides various addArc methods to

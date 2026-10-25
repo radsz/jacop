@@ -42,9 +42,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -71,7 +73,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Knapsack extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
+    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<Knapsack> {
 
   /** It specifies if any debugging information should be printed. */
   public static final boolean DEBUG_ALL = false;
@@ -1124,5 +1126,20 @@ public class Knapsack extends Constraint
     }
 
     return true;
+  }
+
+  @Override
+  public Knapsack copy(VarMap map) {
+    int[] profits = new int[items.length];
+    int[] weights = new int[items.length];
+    IntVar[] quantity = new IntVar[items.length];
+    for (int i = 0; i < items.length; i++) {
+      profits[i] = items[i].getProfit();
+      weights[i] = items[i].getWeight();
+      quantity[i] = map.get(items[i].getQuantity());
+    }
+    return new Knapsack(
+            profits, weights, quantity, map.get(knapsackCapacity), map.get(knapsackProfit))
+        .dynamicProgramming(useDynamicProgramming);
   }
 }

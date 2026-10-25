@@ -80,6 +80,7 @@ import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
@@ -498,6 +499,43 @@ class SingleConstraintTest extends TestHelper {
     }
     IntVar[] binLoad = getIntVars(store, "binLoad", 4, 10);
     store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 6, 6, 5, 1, 2, 4, 5}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Items 6, 4, 4, 2 and 2 fill two bins of capacity 9 exactly, which even sizes cannot do. L2
+  // gives two bins; the dual feasible function f_CCM1 with lambda = 2 maps the sizes to 6, 4, 4, 2,
+  // 2 and the capacity to 8, so three bins are needed.
+  @Test
+  void testBinpackingDualFeasibleFunctionBound() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {2, 6, 4, 2, 4}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Bins 0 and 1 hold 4 and 5 and have 5 free; the three items of size 6 must go to bins 2 and 3.
+  // With capacity 10 the virtual items are 5, 5, 0 and 0 and every bound allows four bins.
+  // Reduction RMax adds 1 to the capacity and to the virtual items, which become 6, 6, 1 and 1:
+  // five items larger than half of 11 need five bins.
+  @Test
+  void testBinpackingLowerBoundReductionRMax() {
+
+    Store store = new Store();
+    int[] w = {4, 6, 1, 6, 2, 4, 5, 6};
+    IntVar[] items = getIntVars(store, "item", w.length, 4);
+    items[5] = new IntVar(store, "fixed0", 0, 0);
+    items[6] = new IntVar(store, "fixed1", 1, 1);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 9),
+      new IntVar(store, "l1", 0, 10),
+      new IntVar(store, "l2", 0, 10),
+      new IntVar(store, "l3", 0, 10)
+    };
+    store.impose(new Binpacking(items, binLoad, w, 0));
 
     assertThat(store.consistency()).isFalse();
   }
@@ -2380,6 +2418,62 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void countVarRemovesValuesWhoseCountCannotMatchTheCounter() {
+    // Only x1 can equal the value, and the counter is 1, so the value must be x1's value 0. The
+    // value variable kept 2, which no variable can take.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar counter = new IntVar(store, "c", 1, 1);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
+  void countVarRemovesListValuesThatNoValueSupports() {
+    // Two variables must equal the value. With x1 = 1 the value 1 occurs three times and the value
+    // 0 once, so x1 = 1 has no support.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar x2 = new IntVar(store, "x2", 2, 2);
+    IntVar x3 = new IntVar(store, "x3", 1, 1);
+    IntVar x4 = new IntVar(store, "x4", 0, 0);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1, x2, x3, x4}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.dom()).hasToString("{0..1}");
+  }
+
+  @Test
+  void countVarNarrowsEveryVariableToTheValueItFixes() {
+    // Both variables must equal the value. Narrowing the value by x1 leaves only 0, after x0 was
+    // already narrowed by the value domain, and x0 must still become 0.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.singleton(0)).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
   void countKeepsSupportsAndReachesFixpoint() {
     Random random = new Random(17);
     for (int run = 0; run < 2000; run++) {
@@ -3384,6 +3478,107 @@ class SingleConstraintTest extends TestHelper {
     assertThat(new ArgMin(x, first).satisfied()).isTrue();
     assertThat(new ArgMax(x, any).satisfied()).isFalse();
     assertThat(new ArgMin(x, any).satisfied()).isFalse();
+  }
+
+  @Test
+  void argMinMaxIndexKeepsOnlyPositionsThatCanHoldTheFirstExtremum() {
+    // Positions 4..6 (offset 3). Position 6 holds the first maximum only if x2 < x3 = 1, and the
+    // first minimum only if x2 > x3 = 2; the index used to be pruned only against the largest lower
+    // (smallest upper) bound, which keeps it.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 1, 2), new IntVar(store, "x3", 1, 1)
+    };
+    IntVar maxIndex = new IntVar(store, "maxIndex", 4, 6);
+    store.impose(new ArgMax(x, maxIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(maxIndex.dom().toString()).isEqualTo("{4..5}");
+
+    store = new Store();
+    IntVar[] y = {
+      new IntVar(store, "y1", 1, 3), new IntVar(store, "y2", 1, 2), new IntVar(store, "y3", 2, 2)
+    };
+    IntVar minIndex = new IntVar(store, "minIndex", 4, 6);
+    store.impose(new ArgMin(y, minIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(minIndex.dom().toString()).isEqualTo("{4..5}");
+  }
+
+  @Test
+  void argMinMaxIndexIsDomainConsistentAtFixpoint() {
+    // Without repeated variables, every index value left after propagation must be the first
+    // extremum of some tuple of the current domains, and every removed one must have none.
+    Random random = new Random(43);
+    for (int instance = 0; instance < 4000; instance++) {
+      boolean max = random.nextBoolean();
+      int n = 1 + random.nextInt(4);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, randomDomain(random, -2, 4));
+      }
+      IntVar index = new IntVar(store, "index", randomDomain(random, 0, n + 1));
+      IntDomain before = index.dom().cloneLight();
+      BitSet supportedBefore = firstExtremumPositions(x, max);
+      store.impose(max ? new ArgMax(x, index) : new ArgMin(x, index));
+      boolean consistent = store.consistency();
+
+      String context = (max ? "ArgMax " : "ArgMin ") + Arrays.toString(x) + " index " + before;
+      BitSet supported = consistent ? firstExtremumPositions(x, max) : supportedBefore;
+      for (ValueEnumeration e = before.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        assertThat(consistent && index.dom().contains(v))
+            .as(context + " value " + v)
+            .isEqualTo(supported.get(v));
+      }
+    }
+  }
+
+  /** Returns the 1-based positions that are the first maximum (minimum) of some tuple of x. */
+  private static BitSet firstExtremumPositions(IntVar[] x, boolean max) {
+    int n = x.length;
+    int[][] values = new int[n][];
+    for (int i = 0; i < n; i++) {
+      values[i] = x[i].dom().toIntArray();
+    }
+    BitSet positions = new BitSet();
+    int[] position = new int[n];
+    do {
+      int best = 0;
+      for (int i = 1; i < n; i++) {
+        int v = values[i][position[i]];
+        int b = values[best][position[best]];
+        if (max ? v > b : v < b) {
+          best = i;
+        }
+      }
+      positions.set(best + 1);
+    } while (nextTuple(position, values));
+    return positions;
+  }
+
+  private static IntDomain randomDomain(Random random, int min, int max) {
+    IntervalDomain domain = new IntervalDomain();
+    for (int v = min; v <= max; v++) {
+      if (random.nextInt(3) > 0) {
+        domain.unionAdapt(v, v);
+      }
+    }
+    if (domain.isEmpty()) {
+      int v = min + random.nextInt(max - min + 1);
+      domain.unionAdapt(v, v);
+    }
+    return domain;
+  }
+
+  private static boolean nextTuple(int[] position, int[][] values) {
+    for (int i = 0; i < position.length; i++) {
+      if (++position[i] < values[i].length) {
+        return true;
+      }
+      position[i] = 0;
+    }
+    return false;
   }
 
   @Test
@@ -4782,6 +4977,259 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cost.dom().toString()).isEqualTo("2");
   }
 
+  // The variable-based measure is the smallest number of variables that must change their value so
+  // that every count meets its soft bounds; [1, 1, 1] with each of 1 and 2 wanted once needs two
+  // changes (one 1 becomes 2, one becomes a value that is not counted), the value-based cost is 3.
+  @Test
+  void testVariableBasedSoftGccCountsVariablesToChange() {
+
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 1);
+      }
+      IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+      IntVar cost = new IntVar(store, "cost", 0, 9);
+      SoftGCC softGcc =
+          new SoftGCC(
+              x,
+              hardCounters,
+              new int[] {1, 2},
+              new int[] {1, 1},
+              new int[] {1, 1},
+              cost,
+              ViolationMeasure.VARIABLE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(cost.dom().toString()).isEqualTo("2");
+    }
+  }
+
+  // Soft counters (or soft lower bounds) that sum to more than the number of variables cannot be
+  // met by changing variables, so the variable-based measure is undefined and the constraint fails.
+  @Test
+  void testVariableBasedSoftGccFailsWhenSoftCountersExceedTheVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 1, 1)};
+    IntVar cost = new IntVar(store, "cost", 0, 9);
+    store.imposeDecomposition(
+        new SoftGCC(
+            x,
+            hardCounters,
+            new int[] {0, 1},
+            softCounters,
+            cost,
+            ViolationMeasure.VARIABLE_BASED));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testVariableBasedSoftGccRejectsAValueCountedTwice() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    assertThatThrownBy(
+            () ->
+                new SoftGCC(
+                    x,
+                    counters,
+                    new int[] {0, 0},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    cost,
+                    ViolationMeasure.VARIABLE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // The network and the primitive decomposition of the variable-based measure find exactly the
+  // solutions of its definition, computed by enumerating the counts the changed variables reach.
+  @Test
+  void testVariableBasedSoftGccMatchesItsDefinition() {
+
+    Random random = new Random(7);
+    int satisfiable = 0;
+    for (int instance = 0; instance < 60; instance++) {
+      int n = 1 + random.nextInt(3);
+      int[] values = random.nextBoolean() ? new int[] {1, 0} : new int[] {0, 2};
+      int m = values.length;
+      boolean softBounds = random.nextBoolean();
+      int[][] xDomains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        xDomains[i] = randomSubset(random, -1, 2);
+      }
+      int[] softLower = new int[m];
+      int[] softUpper = new int[m];
+      int[][] softDomains = new int[m][];
+      int[][] hardBounds = new int[m][];
+      for (int k = 0; k < m; k++) {
+        softLower[k] = random.nextInt(n + 1);
+        softUpper[k] = softLower[k] + random.nextInt(n + 1 - softLower[k]);
+        softDomains[k] = randomSubset(random, 0, n);
+        int lo = random.nextInt(n + 1);
+        hardBounds[k] = new int[] {lo, lo + random.nextInt(n + 1 - lo)};
+      }
+      int[] costBounds = {random.nextInt(2), 1 + random.nextInt(n + 1)};
+
+      int expected =
+          countVariableBasedSoftGcc(
+              xDomains,
+              values,
+              softBounds,
+              softLower,
+              softUpper,
+              softDomains,
+              hardBounds,
+              costBounds);
+
+      for (boolean network : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : xDomains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar[] hard = new IntVar[m];
+        IntVar[] soft = new IntVar[m];
+        for (int k = 0; k < m; k++) {
+          hard[k] = new IntVar(store, "h" + k, hardBounds[k][0], hardBounds[k][1]);
+          soft[k] = new IntVar(store, "s" + k);
+          for (int v : softDomains[k]) {
+            soft[k].addDom(v, v);
+          }
+        }
+        IntVar cost = new IntVar(store, "cost", costBounds[0], costBounds[1]);
+        SoftGCC softGcc =
+            softBounds
+                ? new SoftGCC(
+                    x, hard, values, softLower, softUpper, cost, ViolationMeasure.VARIABLE_BASED)
+                : new SoftGCC(x, hard, values, soft, cost, ViolationMeasure.VARIABLE_BASED);
+        if (network) {
+          store.imposeDecomposition(softGcc);
+        } else {
+          softGcc.primitiveDecomposition(store).forEach(store::impose);
+        }
+        IntVar[] vars = softBounds ? x : concat(x, soft);
+        int found =
+            store.consistency()
+                ? countSolutions(store, concat(vars, concat(hard, new IntVar[] {cost})), random)
+                : 0;
+        assertThat(found).as("instance %d, network %s", instance, network).isEqualTo(expected);
+      }
+    }
+  }
+
+  private static int[] randomSubset(Random random, int lo, int hi) {
+    List<Integer> subset = new ArrayList<>();
+    for (int v = lo; v <= hi; v++) {
+      if (random.nextInt(3) > 0) {
+        subset.add(v);
+      }
+    }
+    if (subset.isEmpty()) {
+      subset.add(lo + random.nextInt(hi - lo + 1));
+    }
+    return subset.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
+    IntVar[] result = Arrays.copyOf(a, a.length + b.length);
+    System.arraycopy(b, 0, result, a.length, b.length);
+    return result;
+  }
+
+  // Counts the assignments of x (and of the soft counters) whose counts are within the hard bounds
+  // and whose variable-based cost exists and is within the cost bounds; the counters and the cost
+  // follow from them.
+  private static int countVariableBasedSoftGcc(
+      int[][] xDomains,
+      int[] values,
+      boolean softBounds,
+      int[] softLower,
+      int[] softUpper,
+      int[][] softDomains,
+      int[][] hardBounds,
+      int[] costBounds) {
+    int n = xDomains.length;
+    int m = values.length;
+    int[][] domains = new int[n + (softBounds ? 0 : m)][];
+    System.arraycopy(xDomains, 0, domains, 0, n);
+    if (!softBounds) {
+      System.arraycopy(softDomains, 0, domains, n, m);
+    }
+    int solutions = 0;
+    int[] index = new int[domains.length];
+    while (true) {
+      int[] counts = new int[m + 1];
+      counts[m] = n;
+      for (int i = 0; i < n; i++) {
+        for (int k = 0; k < m; k++) {
+          if (xDomains[i][index[i]] == values[k]) {
+            counts[k]++;
+            counts[m]--;
+          }
+        }
+      }
+      boolean hardOk = true;
+      int[] lower = new int[m];
+      int[] upper = new int[m];
+      for (int k = 0; k < m; k++) {
+        hardOk &= counts[k] >= hardBounds[k][0] && counts[k] <= hardBounds[k][1];
+        lower[k] = softBounds ? softLower[k] : softDomains[k][index[n + k]];
+        upper[k] = softBounds ? softUpper[k] : lower[k];
+      }
+      int cost = fewestChanges(counts, lower, upper, n, 0, new int[m + 1]);
+      if (hardOk && cost >= costBounds[0] && cost <= costBounds[1]) {
+        solutions++;
+      }
+      int i = 0;
+      while (i < domains.length && ++index[i] == domains[i].length) {
+        index[i++] = 0;
+      }
+      if (i == domains.length) {
+        return solutions;
+      }
+    }
+  }
+
+  // The fewest variables to change so that each counted value reaches a count within its bounds;
+  // the last count is of the values that are not counted, which take what is left.
+  private static int fewestChanges(int[] counts, int[] lower, int[] upper, int n, int k, int[] t) {
+    int m = lower.length;
+    if (k == m) {
+      int used = 0;
+      for (int j = 0; j < m; j++) {
+        used += t[j];
+      }
+      if (used > n) {
+        return Integer.MAX_VALUE;
+      }
+      t[m] = n - used;
+      int changes = 0;
+      for (int j = 0; j <= m; j++) {
+        changes += Math.max(0, counts[j] - t[j]);
+      }
+      return changes;
+    }
+    int best = Integer.MAX_VALUE;
+    for (int v = lower[k]; v <= upper[k]; v++) {
+      t[k] = v;
+      best = Math.min(best, fewestChanges(counts, lower, upper, n, k + 1, t));
+    }
+    return best;
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 
@@ -5375,6 +5823,39 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void memberWithTheElementOnItsListIsAlwaysTrue() {
+    // e is x[0], so member holds whatever the values are. Not(Member) must fail and the reified
+    // form must set b = 1 at once, not only when e is fixed.
+    Store store = new Store();
+    IntVar e = new IntVar(store, "e", 0, 3);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    store.impose(new Not(new Member(new IntVar[] {e, a}, e)));
+    assertThat(store.consistency()).isFalse();
+
+    Store other = new Store();
+    IntVar f = new IntVar(other, "f", 0, 3);
+    IntVar c = new IntVar(other, "c", 5, 6);
+    IntVar b = new IntVar(other, "b", 0, 1);
+    other.impose(new Reified(new Member(new IntVar[] {c, f}, f), b));
+    assertThat(other.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberPrunesTheLastCandidateWhenItIsRepeated() {
+    // x = [a, a, c] with c disjoint from e: a is the only candidate and must equal e, although it
+    // takes two positions of the list.
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar c = new IntVar(store, "c", 8, 9);
+    IntVar e = new IntVar(store, "e", 2, 3);
+    store.impose(new Member(new IntVar[] {a, a, c}, e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.min()).isEqualTo(2);
+    assertThat(a.max()).isEqualTo(3);
+  }
+
+  @Test
   void memberSatisfiedIsExactEntailment() {
     // Without repeated variables, member is entailed exactly when every tuple of the domains
     // satisfies it.
@@ -5448,6 +5929,61 @@ class SingleConstraintTest extends TestHelper {
     assertThat(zero.notSatisfied()).isFalse();
     assertThat(except.satisfied()).isTrue();
     assertThat(except.notSatisfied()).isFalse();
+  }
+
+  @Test
+  void alldifferentExceptIsDomainConsistentAndKeepsAllSolutions() {
+    // Random instances with 0-3 exception values, some outside the domains, and offsets that send
+    // the values of some instances beyond the range the joker filtering handles, so the
+    // feasibility-only fallback is covered as well. After the root propagation every value left
+    // must have a support (domain consistency), and an all-solution search must find exactly the
+    // brute-force solutions.
+    Random random = new Random(15);
+    for (int run = 0; run < 1500; run++) {
+      int n = 3 + random.nextInt(4);
+      int offset = run % 7 == 0 ? 100_000 : 0;
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = randomVar(store, "x" + i, -1, Math.min(n, 4), random);
+        if (offset != 0 && random.nextBoolean()) {
+          x[i].domain.unionAdapt(offset, offset);
+        }
+      }
+      boolean zero = run % 3 == 0;
+      IntervalDomain except = new IntervalDomain();
+      if (zero) {
+        except.unionAdapt(0, 0);
+      } else {
+        for (int k = random.nextInt(4); k > 0; k--) {
+          int e = random.nextInt(n + 3) - 1;
+          except.unionAdapt(e, e);
+        }
+      }
+      Predicate<int[]> check =
+          t -> {
+            int[] kept = Arrays.stream(t).filter(v -> !except.contains(v)).toArray();
+            return Arrays.stream(kept).distinct().count() == kept.length;
+          };
+      String instance = "run " + run + " except " + except + " " + domainsOf(x);
+      List<int[]> solutions = bruteForce(x, check);
+
+      store.impose(zero ? new AlldifferentExceptZero(x) : new AlldifferentExcept(x, except));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
+      if (!consistent) {
+        continue;
+      }
+      if (offset == 0) {
+        for (int i = 0; i < n; i++) {
+          int position = i;
+          int[] supported =
+              solutions.stream().mapToInt(t -> t[position]).distinct().sorted().toArray();
+          assertThat(valuesOf(x[i])).as(instance + " " + x[i]).containsExactly(supported);
+        }
+      }
+      assertThat(countSolutions(store, x, random)).as(instance).isEqualTo(solutions.size());
+    }
   }
 
   @Test
@@ -5530,6 +6066,120 @@ class SingleConstraintTest extends TestHelper {
       store.impose(new HybridTable(x, tuples, expand));
       assertThat(noOfAllSolutionsNoRecord(store, x)).as("expand " + expand).isEqualTo(8);
     }
+  }
+
+  @Test
+  void hybridTableRefiltersTheChangedColumnWhenTheRevisionRemovesItsSupports() {
+    // The second tuple, x0 != x1 + 2 and x1 = x0 - 2, allows nothing, but arc consistency on its
+    // restrictions only finds that out once x0 has lost values. At the root it is the only support
+    // of x0 = 0; after x0 != 3 it is removed and x0 = 0 must go too, or the constraint is removed
+    // with x0 = 0, x1 = -2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", 0, 0);
+      x0.addDom(3, 4);
+      IntVar x1 = new IntVar(store, "x1", -2, -2);
+      x1.addDom(1, 1);
+      IntVar[] x = {x0, x1};
+      Restriction[][] tuples = {
+        {Restriction.eq(4), Restriction.eq(-2)},
+        {
+          Restriction.column(Restriction.Relation.NE, 1, 2),
+          Restriction.column(Restriction.Relation.EQ, 0, -2)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      x0.domain.inComplement(1, x0, 3);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x0.dom()).as("expand " + expand).hasToString("4");
+    }
+  }
+
+  @Test
+  void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
+    // The first consistency at level 1 filtered every column and was undone by the backtrack. The
+    // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
+    // the constraint was removed with x0 = 1, x1 = 0 still possible.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new HybridTable(new IntVar[] {x0, x1}, new int[][] {{0, 0}, {2, 0}}));
+    store.setLevel(1);
+    x1.domain.inComplement(1, x1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.dom()).hasToString("0");
+  }
+
+  @Test
+  void booleanDomainOperationsKeepTheHolesOfTheOtherDomain() {
+    // The domain of a BooleanVar treated {-1, 2} as its bounds -1..2: subtract gave {} and
+    // isIntersecting true, so a hybrid table with b not in {-1, 2} failed although b = 0 and b = 1
+    // are allowed, and intersecting with an empty domain threw a NullPointerException. Subtracting
+    // a disjoint interval enlarged the domain, which sent the revision of a tuple into an endless
+    // loop.
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntDomain bd = b.dom();
+    IntervalDomain holes = new IntervalDomain(-1, -1);
+    holes.unionAdapt(2, 2);
+    assertThat(bd.subtract(holes)).hasToString("{0..1}");
+    assertThat(bd.isIntersecting(holes)).isFalse();
+    assertThat(bd.intersect(holes).isEmpty()).isTrue();
+    assertThat(bd.intersect(new IntervalDomain()).isEmpty()).isTrue();
+    IntervalDomain oneAndThree = new IntervalDomain(1, 1);
+    oneAndThree.unionAdapt(3, 3);
+    assertThat(bd.subtract(oneAndThree)).hasToString("0");
+    assertThat(bd.intersect(oneAndThree)).hasToString("1");
+    // A disjoint interval made the domain grow: {0..1} minus -5..-3 gave {-2..1}.
+    assertThat(bd.subtract(new IntervalDomain(-5, -3))).hasToString("{0..1}");
+    assertThat(bd.subtract(-5, -3)).hasToString("{0..1}");
+    assertThat(bd.subtract(new IntervalDomain(4, 6))).hasToString("{0..1}");
+    assertThat(bd.subtract(4, 6)).hasToString("{0..1}");
+
+    IntervalDomain far = new IntervalDomain(0, 1);
+    far.unionAdapt(100_000, 100_000);
+    IntVar y = new IntVar(store, "y", far);
+    Restriction[][] tuples = {
+      {Restriction.notIn(-1, 2), Restriction.column(Restriction.Relation.GE, 0)},
+      {Restriction.column(Restriction.Relation.EQ, 1, 600_000_000), Restriction.any()}
+    };
+    store.impose(new HybridTable(new IntVar[] {b, y}, tuples, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b, y})).isEqualTo(5);
+  }
+
+  @Test
+  void booleanVarInADomainWithHolesKeepsOnlyItsValues() {
+    // The domain of a BooleanVar pruned by the bounds -1..1 of {-1, 1}, which removed nothing, so
+    // b in {-1, 1} accepted b = 0.
+    IntervalDomain minusOneAndOne = new IntervalDomain(-1, -1);
+    minusOneAndOne.unionAdapt(1, 1);
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("1");
+
+    // The same for a shifted domain: b + 1 in {0, 2} is b in {-1, 1}.
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.setLevel(1);
+    IntervalDomain zeroAndTwo = new IntervalDomain(0, 0);
+    zeroAndTwo.unionAdapt(2, 2);
+    b.domain.inShift(store.level, b, zeroAndTwo, -1);
+    assertThat(b.dom()).hasToString("1");
+
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b})).isEqualTo(1);
   }
 
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
@@ -6357,6 +7007,35 @@ class SingleConstraintTest extends TestHelper {
     store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testCountValuesBoundsIsNotSatisfiedWhileUnassignedVariablesCanExceedABound() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 2, 3);
+    }
+    // at most one variable equal to 3: nothing is assigned, so the occurrences of 3 counted so far
+    // (none) are within the bounds, but two or three variables can still take 3
+    CountValuesBounds c = new CountValuesBounds(x, new int[] {0}, new int[] {1}, new int[] {3});
+    store.impose(c);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  @Test
+  void testCountValuesIsNotSatisfiedWhileAnUnassignedVariableCanChangeACount() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 3, 3), new IntVar(store, "x1", 2, 3)};
+    IntVar counter = new IntVar(store, "counter", 1, 1);
+    CountValues c = new CountValues(x, new IntVar[] {counter}, new int[] {3});
+
+    // checked before propagation, which would remove 3 from x1: x1 = 3 would still give two 3s
+    assertThat(c.satisfied()).isFalse();
   }
 
   // With min = max the windows force a period of q, so Sequence posts reified memberships on q

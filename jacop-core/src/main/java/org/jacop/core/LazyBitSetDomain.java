@@ -304,6 +304,10 @@ public class LazyBitSetDomain extends IntDomain {
     trailObjects[o + 2] = searchConstraints;
     trailSize++;
     stamp = storeLevel;
+    // the saved state shares the constraint arrays, so they are copied before they grow
+    ownedModelConstraints = null;
+    ownedModelConstraintTables = null;
+    ownedModelConstraintTableSizes = null;
     // a domain object created for a new level does not own the search constraint list
     searchConstraintsCloned = false;
     v.getStore().recordChange(v);

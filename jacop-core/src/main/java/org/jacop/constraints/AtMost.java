@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -41,7 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AtMost extends AbstractAtLeastMost {
+public class AtMost extends AbstractAtLeastMost implements Copyable<AtMost> {
 
   /**
    * It constructs a AtMost constraint.
@@ -161,5 +163,10 @@ public class AtMost extends AbstractAtLeastMost {
     result.append("], ").append(counter).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public AtMost copy(VarMap map) {
+    return new AtMost(map.get(list), counter, value);
   }
 }
