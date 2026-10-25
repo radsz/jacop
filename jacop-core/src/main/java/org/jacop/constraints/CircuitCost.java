@@ -777,7 +777,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
         }
         long norm = 0;
         for (int i = 0; i < n; i++) {
-          long d = degree[i] - 2;
+          long d = (long) degree[i] - 2;
           norm += d * d;
         }
         if (norm == 0) {

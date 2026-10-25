@@ -425,7 +425,10 @@ class CircuitCostTest {
       int[][] domains = new int[n][];
       for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-          costs[i][j] = (int) Math.round(Math.hypot(xy[i][0] - xy[j][0], xy[i][1] - xy[j][1]));
+          costs[i][j] =
+              (int)
+                  Math.round(
+                      Math.hypot((double) xy[i][0] - xy[j][0], (double) xy[i][1] - xy[j][1]));
         }
         domains[i] = java.util.stream.IntStream.rangeClosed(1, n).toArray();
       }
