@@ -147,7 +147,7 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
     return p.singleton()
         && q.singleton()
         && r.singleton()
-        && r.value() - p.value() - q.value()
+        && Math.abs(r.value() - p.value() - q.value())
             < FloatDomain.epsilon(r.value() - p.value() - q.value());
   }
 

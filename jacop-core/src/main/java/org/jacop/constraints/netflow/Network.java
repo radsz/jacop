@@ -248,6 +248,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   /** Backtracks the network by restoring deleted and modified arcs to their previous state. */
   public void backtrack() {
 
+    // Arcs modified at the removed levels are no longer modified at the current level. Without
+    // this, an arc modified at a deeper level and then again at the current level (for example by
+    // a consistency call after search returned to this level) is not recorded and is not restored
+    // when the current level is removed.
+    lastModifiedArcs.clear();
+
     // restore deleted arcs
     int size = deletedSize.value();
     for (int i = deletedArcs.size() - 1; i >= size; i--) {

@@ -61,6 +61,9 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   boolean imposed;
   Store store;
 
+  /** Set when a variable changes, so consistency() repeats until no part prunes more. */
+  private boolean propagation;
+
   /**
    * It creates ifthenelse constraint.
    *
@@ -91,24 +94,28 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public void consistency(Store store) {
 
-    if (condC.satisfied()) {
-      thenC.consistency(store);
-    } else if (condC.notSatisfied()) {
-      elseC.consistency(store);
-    }
+    do {
+      propagation = false;
 
-    if (imposed) {
-
-      if (thenC.notSatisfied()) {
-        condC.notConsistency(store);
+      if (condC.satisfied()) {
+        thenC.consistency(store);
+      } else if (condC.notSatisfied()) {
         elseC.consistency(store);
       }
 
-      if (elseC.notSatisfied()) {
-        condC.consistency(store);
-        thenC.consistency(store);
+      if (imposed) {
+
+        if (thenC.notSatisfied()) {
+          condC.notConsistency(store);
+          elseC.consistency(store);
+        }
+
+        if (elseC.notSatisfied()) {
+          condC.consistency(store);
+          thenC.consistency(store);
+        }
       }
-    }
+    } while (propagation);
   }
 
   @Override
@@ -196,26 +203,11 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public void include(Store store) {
     this.store = store;
+    super.include(store);
   }
 
   @Override
   public boolean satisfied() {
-
-    if (imposed) {
-
-      if (condC.satisfied()) {
-        this.removeConstraint();
-        store.impose(thenC);
-        return false;
-      }
-
-      if (condC.notSatisfied()) {
-        this.removeConstraint();
-        store.impose(elseC);
-        return false;
-      }
-    }
-
     return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied() && elseC.satisfied());
   }
 
@@ -228,6 +220,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public void queueVariable(int level, Var variable) {
 
+    propagation = true;
     queueForward.queueForward(level, variable);
   }
 }

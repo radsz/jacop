@@ -39,13 +39,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -100,11 +98,15 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public double sum;
 
   Store store;
-  boolean reified = true;
+
+  /**
+   * Whether this constraint is imposed in the store, false while it is only used inside another
+   * constraint. IfThen and similar wrappers impose it at a search level, so it is trailed and the
+   * constraint is nested again once that level is removed.
+   */
+  TimeStamp<Boolean> imposed;
 
   Btree linearTree;
-
-  TimeStamp<Boolean> noSat;
 
   /**
    * Constructs a Linear constraint with a constant sum.
@@ -199,7 +201,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     numberId = idNumber.incrementAndGet();
     this.sum = sum;
-    noSat = new TimeStamp<>(store, false);
+    imposed = new TimeStamp<>(store, false);
 
     Map<FloatVar, Double> parameters = buildParametersMap(list, weights);
     installListAndWeights(parameters);
@@ -332,6 +334,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     // compute for original relation
     linearTree.root.rel = relationType;
 
+    resyncWhenReified();
     pruneRelation();
 
     checkStrictRelationWhenGround(relationType);
@@ -347,6 +350,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     // compute for negated original relation
     linearTree.root.rel = NEG_REL[relationType];
 
+    resyncWhenReified();
     pruneRelation();
 
     checkStrictRelationWhenGround(NEG_REL[relationType]);
@@ -359,28 +363,67 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   /**
    * Checks a strict relation exactly once all variables are fixed. The bounds of the tree are
    * rounded outward, so a weighted sum equal to sum keeps a bound on the right side of sum and a
-   * strict relation would accept it.
+   * strict relation (or disequality) would accept it.
    *
    * @param rel the relation that must hold.
    */
   private void checkStrictRelationWhenGround(byte rel) {
 
-    if (rel != LT && rel != GT) {
+    if (rel != LT && rel != GT && rel != NE) {
       return;
     }
+
+    Integer comparison = compareWhenGround();
+    if (comparison == null) {
+      return;
+    }
+    boolean holds =
+        switch (rel) {
+          case LT -> comparison < 0;
+          case GT -> comparison > 0;
+          default -> comparison != 0;
+        };
+    if (!holds) {
+      throw Store.failException;
+    }
+  }
+
+  /**
+   * Compares the weighted sum with sum exactly when all variables are fixed.
+   *
+   * @return the sign of the weighted sum minus sum, or null if a variable is not fixed.
+   */
+  private Integer compareWhenGround() {
 
     BigDecimal total = BigDecimal.ZERO;
     for (int i = 0; i < list.length; i++) {
       double value = list[i].min();
       if (value != list[i].max() || !Double.isFinite(value)) {
-        return;
+        return null;
       }
       total = total.add(exactValue(value).multiply(exactValue(weights[i])));
     }
+    return total.compareTo(exactValue(sum));
+  }
 
-    int comparison = total.compareTo(exactValue(sum));
-    if (rel == LT ? comparison >= 0 : comparison <= 0) {
-      throw Store.failException;
+  /**
+   * Under Reified, Xor, Implies and the other wrappers the tree is not kept up to date: some
+   * wrappers do not forward queueVariable, and changes queued at one level can be consumed at a
+   * deeper one and lost on backtracking. So all variables are queued again before pruning.
+   */
+  /**
+   * Tells whether the constraint is used inside another constraint (Reified, Xor, Not, Implies,
+   * IfThen, ...) rather than imposed in the store at the current level.
+   *
+   * @return true if the constraint is not imposed at the current level.
+   */
+  private boolean reified() {
+    return !imposed.value();
+  }
+
+  private void resyncWhenReified() {
+    if (reified()) {
+      variableQueue.addAll(Arrays.asList(list));
     }
   }
 
@@ -399,19 +442,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       VariableNode n = varMap.get(v);
 
       n.propagateAndPrune();
-    }
-  }
-
-  void propagate(Set<FloatVar> fdvs) {
-
-    while (!fdvs.isEmpty()) {
-
-      Iterator<FloatVar> it = fdvs.iterator();
-      FloatVar v = it.next();
-      it.remove();
-      VariableNode n = varMap.get(v);
-
-      n.propagate();
     }
   }
 
@@ -438,7 +468,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void impose(Store store) {
 
-    reified = false;
+    imposed.update(true);
     super.impose(store);
   }
 
@@ -448,80 +478,89 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   /**
-   * Checks reified constraint state and returns the entailment result.
+   * Checks entailment of a relation. Under a wrapper the tree may be stale (see {@link
+   * #resyncWhenReified()}), so the bounds of the weighted sum are computed from the domains.
    *
    * @param rel the relation type to check entailment for.
-   * @param failResult the value to return when propagation fails or was already diagnosed as not
-   *     satisfied.
-   * @return whether the constraint is satisfied/notSatisfied according to the given relation.
+   * @return whether the relation holds for all values in the domains.
    */
-  private boolean checkReifiedEntailment(byte rel, boolean failResult) {
+  private boolean checkReifiedEntailment(byte rel) {
 
-    if (reified) {
+    if (!reified()) {
+      return entailed(rel);
+    }
 
-      // check whether constraint has been already diagnosed as not satisfied at this level
-      if (noSat.stamp() < store.level) {
-        noSat.update(false);
-      } else if (noSat.stamp() == store.level && noSat.value()) {
-        return failResult;
-      }
-      // ==========
-
-      try {
-        propagate(variableQueue);
-      } catch (FailException _) {
-        noSat.update(true);
-        return failResult;
+    if (rel == LT || rel == GT || rel == NE) {
+      Integer comparison = compareWhenGround();
+      if (comparison != null) {
+        return switch (rel) {
+          case LT -> comparison < 0;
+          case GT -> comparison > 0;
+          default -> comparison != 0;
+        };
       }
     }
 
-    return entailed(rel);
+    double lb = 0;
+    double ub = 0;
+    for (int i = 0; i < list.length; i++) {
+      FloatDomain term =
+          FloatDomain.mulBounds(list[i].min(), list[i].max(), weights[i], weights[i]);
+      FloatDomain total = FloatDomain.addBounds(lb, ub, term.min(), term.max());
+      lb = total.min();
+      ub = total.max();
+    }
+    return entailed(rel, lb, ub);
   }
 
   @Override
   public boolean satisfied() {
-    return checkReifiedEntailment(relationType, false);
+    return checkReifiedEntailment(relationType);
   }
 
   @Override
   public boolean notSatisfied() {
-    return checkReifiedEntailment(NEG_REL[relationType], true);
+    return checkReifiedEntailment(NEG_REL[relationType]);
   }
 
   private boolean entailed(byte rel) {
 
     BoundsVarValue b = (BoundsVarValue) linearTree.root.bound.value();
+    return entailed(rel, b.lb, b.ub);
+  }
+
+  private boolean entailed(byte rel, double lb, double ub) {
 
     switch (rel) {
       case EQ:
-        FloatInterval rootInterval = new FloatInterval(b.lb, b.ub);
+        FloatInterval rootInterval = new FloatInterval(lb, ub);
 
-        if (rootInterval.singleton() && b.lb <= sum && sum <= b.ub) {
+        if (rootInterval.singleton() && lb <= sum && sum <= ub) {
           return true;
         }
         break;
       case LT:
-        if (b.ub < sum) {
+        if (ub < sum) {
           return true;
         }
         break;
       case LE:
-        if (b.ub <= sum) {
+        if (ub <= sum) {
           return true;
         }
         break;
       case NE:
-        if (b.lb > sum || b.ub < sum) {
+        if (lb > sum || ub < sum) {
           return true;
         }
         break;
       case GT:
-        if (b.lb > sum) {
+        if (lb > sum) {
           return true;
         }
         break;
       case GE:
-        if (b.lb >= sum) {
+        if (lb >= sum) {
           return true;
         }
         break;

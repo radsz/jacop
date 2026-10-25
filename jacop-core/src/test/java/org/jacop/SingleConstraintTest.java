@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -64,13 +65,23 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.And;
+import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
@@ -87,6 +98,8 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
@@ -99,6 +112,8 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
+import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
@@ -106,9 +121,12 @@ import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
@@ -118,6 +136,7 @@ import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -131,6 +150,9 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -141,7 +163,10 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
@@ -154,6 +179,7 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.Search;
@@ -4359,6 +4385,96 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cost.value()).isEqualTo(5);
   }
 
+  // A search that assigns its last solution runs consistency again at the level where it started,
+  // after its deeper levels marked arcs as modified. The network did not record arcs modified
+  // again at that level, so it did not restore them when the level was removed and lost solutions.
+  @Test
+  void testNetworkFlowRestoresArcsModifiedAgainAtAnEarlierLevel() {
+
+    int[] counts = new int[2];
+    for (int run = 0; run < 2; run++) {
+      Store store = new Store();
+      IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+      IntVar hard = new IntVar(store, "hard", 0, 2);
+      IntVar soft = new IntVar(store, "soft", 0, 2);
+      IntVar cost = new IntVar(store, "cost", 0, 1);
+      cost.addDom(3, 4);
+      store.imposeDecomposition(
+          new SoftGCC(
+              x,
+              new IntVar[] {hard},
+              new int[] {2},
+              new IntVar[] {soft},
+              cost,
+              ViolationMeasure.VALUE_BASED));
+      IntVar[] vars = {x[0], x[1], hard, soft, cost};
+      if (run == 1) {
+        assertThat(store.consistency()).isTrue();
+        store.setLevel(store.level + 1);
+        x[1].domain.in(store.level, x[1], 3, 3);
+        assertThat(noOfAllSolutions(store, vars)).isEqualTo(9);
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      counts[run] = noOfAllSolutions(store, vars);
+    }
+    assertThat(counts[0]).isEqualTo(38);
+    assertThat(counts[1]).isEqualTo(counts[0]);
+  }
+
+  // Without counted values SoftGCC counts the values in the domains of x when it is created. A
+  // ground x can remove one of them, and the counters were then silently paired with other values.
+  @Test
+  void testSoftGccWithoutCountedValuesRejectsCountersOfRemovedValues() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 2, 2)};
+    IntVar[] hard = {
+      new IntVar(store, "h0", 1, 1), new IntVar(store, "h1", 0, 0), new IntVar(store, "h2", 1, 1)
+    };
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    int[] lower = {0, 0, 0};
+    int[] upper = {2, 2, 2};
+
+    assertThatThrownBy(() -> new SoftGCC(x, hard, lower, upper, cost, ViolationMeasure.VALUE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    store.imposeDecomposition(
+        new SoftGCC(
+            x, hard, new int[] {0, 1, 2}, lower, upper, cost, ViolationMeasure.VALUE_BASED));
+    assertThat(noOfAllSolutions(store, x, hard, new IntVar[] {cost})).isEqualTo(1);
+    assertThat(cost.value()).isZero();
+  }
+
+  // satisfied() compared the rectangles twice in dimension 0, so rectangles side by side in
+  // dimension 1 counted as overlapping; satisfied() and notSatisfied() also ignored that rectangles
+  // of size 0 may overlap anything unless the constraint is strict.
+  @Test
+  void testNooverlapSatisfied() {
+
+    Store store = new Store();
+    // [0, 2) x [0, 1) and [1, 3) x [1, 2): overlapping in dimension 0 only
+    IntVar[][] apart = {rectangle(store, 0, 0, 2, 1), rectangle(store, 1, 1, 2, 1)};
+    assertThat(new Nooverlap(apart, true).satisfied()).isTrue();
+    assertThat(new Nooverlap(apart, true).notSatisfied()).isFalse();
+
+    // [0, 2) x [0, 2) and a rectangle of width 0 at (1, 1)
+    IntVar[][] inside = {rectangle(store, 0, 0, 2, 2), rectangle(store, 1, 1, 0, 1)};
+    assertThat(new Nooverlap(inside, false).satisfied()).isTrue();
+    assertThat(new Nooverlap(inside, false).notSatisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).satisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).notSatisfied()).isTrue();
+  }
+
+  private static IntVar[] rectangle(Store store, int x, int y, int width, int height) {
+    return new IntVar[] {
+      new IntVar(store, x, x),
+      new IntVar(store, y, y),
+      new IntVar(store, width, width),
+      new IntVar(store, height, height)
+    };
+  }
+
   // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
   // lower bound for flows that are not negative.
   @Test
@@ -4480,6 +4596,68 @@ class SingleConstraintTest extends TestHelper {
     IntVar alsoTwo = new IntVar(store, "alsoTwo", 2, 2);
     store.impose(new XneqY(two, alsoTwo));
     assertThat(store.consistency()).isFalse();
+  }
+
+  // x <= x and x >= x hold for every x, so their negations have no solution; x < x and x > x never
+  // hold, so under Xor with b = 0 (the constraint must hold) there is none either. Pruning one
+  // bound at a time on the same variable left the propagator short of its fixpoint, so search
+  // accepted a value.
+  @Test
+  void testComparisonOfAVariableWithItselfHasNoSolutionWhenItMustFail() {
+
+    assertThat(countOnSameVariable(XlteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XltY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XgtY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XltY::new, (c, b) -> new Not(c), -1)).isEqualTo(6);
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 0)).isEqualTo(6);
+  }
+
+  // x < x, x > x and x != x never hold. impose rejected them with IllegalArgumentException, which
+  // also escaped from search when IfThen imposed its then-part once the condition held.
+  @Test
+  void testComparisonOfAVariableWithItselfThatNeverHoldsFails() {
+
+    List<BiFunction<IntVar, IntVar, PrimitiveConstraint>> never =
+        List.of(XltY::new, XgtY::new, XneqY::new);
+    for (BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison : never) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 3);
+      store.impose(comparison.apply(x, x));
+      assertThat(store.consistency()).isFalse();
+
+      store = new Store();
+      x = new IntVar(store, "x", 0, 3);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      store.impose(new IfThen(new XeqC(b, 1), comparison.apply(x, x)));
+      // only b = 0 is left, with any x
+      assertThat(countSolutions(store, new IntVar[] {b, x}, new Random(1))).isEqualTo(4);
+    }
+  }
+
+  /**
+   * Solutions of wrapper(x op x, b) for x in {-3, -1, 0, 1, 2, 3}, with b fixed to bValue, or b in
+   * 0..1 (and not labelled) when bValue is negative.
+   */
+  private static int countOnSameVariable(
+      BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison,
+      BiFunction<PrimitiveConstraint, IntVar, Constraint> wrapper,
+      int bValue) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 3);
+    x.domain.inComplement(store.level, x, -2);
+    IntVar b = bValue < 0 ? new IntVar(store, "b", 0, 1) : new IntVar(store, "b", bValue, bValue);
+    store.impose(wrapper.apply(comparison.apply(x, x), b));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    // smallest value first reaches a node where the propagator itself grounds x
+    boolean found =
+        search.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    return found ? search.getSolutionListener().solutionsNo() : 0;
   }
 
   // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
@@ -4660,6 +4838,44 @@ class SingleConstraintTest extends TestHelper {
         .isEqualTo(cumulativeBruteForce(2, 2, 1, new int[] {1, 1}, 1, true));
     assertThat(cumulativeSolutions(true, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, true))
         .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, true));
+  }
+
+  @Test
+  void testCumulativeUnaryTaskAboveLimit() {
+
+    // Without the profile only unary edge finding ran, which assumes every task fits in the limit,
+    // so a task using more than the limit was accepted.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    s = new IntVar[] {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    d = new IntVar[] {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    r = new IntVar[] {new IntVar(store, 2, 2), new IntVar(store, 0, 3)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d[0].max()).isZero();
+    assertThat(r[1].max()).isEqualTo(1);
+  }
+
+  @Test
+  void testCumulativeUnaryOptionalTaskAboveLimit() {
+
+    // The same as testCumulativeUnaryTaskAboveLimit for optional tasks: a task using more than the
+    // limit is absent or has zero duration.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2), new IntVar(store, 2, 2)};
+    IntVar[] o = {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    store.impose(new CumulativeUnaryOptional(s, d, r, new IntVar(store, 1, 1), o, false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o[0].max()).isZero();
+    assertThat(d[1].max()).isZero();
   }
 
   /**
@@ -4998,7 +5214,167 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void tableWithReusedTuplesImposedDuringSearchRejectsGroundAssignmentOutsideTable() {
+    // Variables fixed at the root to a non-tuple, the table imposed at a search level: the tuples
+    // were not filtered by the constructor, and the empty word left in the bit-set kept the table
+    // from being empty, so all variables being singletons from an older level skipped the check.
+    for (boolean reuse : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -1, 3);
+      IntVar y = new IntVar(store, "y", -1, 3);
+      x.domain.in(store.level, x, 0, 0);
+      y.domain.in(store.level, y, 1, 1);
+      store.setLevel(store.level + 1);
+      store.impose(new Table(new IntVar[] {x, y}, new int[][] {{0, 2}, {1, 1}}, reuse));
+      assertThat(store.consistency()).as("reuse " + reuse).isFalse();
+    }
+  }
+
+  @Test
+  void hybridTableWithTwoRestrictionsBetweenTheSameColumnsPrunesTheChangedColumn() {
+    // x1 > x2 and x2 >= x1 - 1 in one tuple mean x1 = x2 + 1: (0, -1) and (3, 2). After x1 != 0
+    // the tuple removes 2 from x1 itself; skipping the only changed column kept it and the
+    // constraint was removed with x1 = 2, x2 = 2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", new IntervalDomain(-1, 0));
+      x0.addDom(2, 3);
+      IntVar x1 = new IntVar(store, "x1", 0, 0);
+      x1.addDom(2, 3);
+      IntVar x2 = new IntVar(store, "x2", -1, -1);
+      x2.addDom(2, 3);
+      IntVar[] x = {x0, x1, x2};
+      Restriction[][] tuples = {
+        {
+          Restriction.le(3),
+          Restriction.column(Restriction.Relation.GT, 2),
+          Restriction.column(Restriction.Relation.GE, 1, -1)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(noOfAllSolutionsNoRecord(store, x)).as("expand " + expand).isEqualTo(8);
+    }
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
+  @Test
+  void xmulYeqCNegatedWithZeroFactor() {
+    // with x = 0 the negation divided c by 0; x * y != c then holds for all y when c != 0 and for
+    // no y when c == 0
+    for (int c : new int[] {-5, 0}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 0);
+      IntVar y = new IntVar(store, "y", -2, 2);
+      store.impose(new Not(new XmulYeqC(x, y, c)));
+      IntVar[] vars = {x, y};
+      int expected = c == 0 ? 0 : 5;
+      assertThat(store.consistency() ? countSolutions(store, vars, new Random(c)) : 0)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void xmulYeqCNotSatisfiedWithNegativeBounds() {
+    // -2 * 3 = -6 is possible, but notSatisfied() compared c with min * min and max * max only
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 4);
+    XmulYeqC mul = new XmulYeqC(x, y, -6);
+    assertThat(mul.notSatisfied()).isFalse();
+
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, -6), b));
+    IntVar[] vars = {x, y, b};
+    List<int[]> expected = bruteForce(vars, t -> (t[0] * t[1] == -6) == (t[2] == 1));
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
+  @Test
+  void absXeqYWithNegativeY() {
+    // |x| = y never holds for a negative y, but satisfied() accepted x = y = -5 and the negation
+    // removed -5 and 5 from x
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -5, -5);
+    IntVar y = new IntVar(store, "y", -5, -5);
+    assertThat(new AbsXeqY(x, y).satisfied()).isFalse();
+
+    for (boolean domainConsistency : new boolean[] {false, true}) {
+      store = new Store();
+      x = new IntVar(store, "x", -5, 5);
+      y = new IntVar(store, "y", -5, -5);
+      store.impose(new Not(new AbsXeqY(x, y, domainConsistency)));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.getSize()).isEqualTo(11);
+    }
+  }
+
+  @Test
+  void distanceNegatedWithGroundVariables() {
+    // with x and y ground the negation removed y - x from x instead of z, and removed the
+    // negative x - y from z
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, -3);
+    IntVar y = new IntVar(store, "y", -2, -2);
+    IntVar z = new IntVar(store, "z", -4, 6);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().contains(1)).isFalse();
+    assertThat(z.getSize()).isEqualTo(10);
+
+    // |x - y| != z holds for every x and y when z is negative
+    store = new Store();
+    x = new IntVar(store, "x", 3, 3);
+    y = new IntVar(store, "y", 0, 6);
+    z = new IntVar(store, "z", -2, -2);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.getSize()).isEqualTo(7);
+  }
+
+  @Test
+  void xdivAndXmodYeqZSatisfiedRoundTowardsZero() {
+    // consistency() uses Java division and remainder; satisfied() rounded the quotient down
+    for (int a = -6; a <= 6; a++) {
+      for (int b = -3; b <= 3; b++) {
+        for (int c = -7; c <= 7; c++) {
+          Store store = new Store();
+          IntVar x = new IntVar(store, a, a);
+          IntVar y = new IntVar(store, b, b);
+          IntVar z = new IntVar(store, c, c);
+          assertThat(new XdivYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a / b == c);
+          assertThat(new XmodYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a % b == c);
+        }
+      }
+    }
+  }
+
+  @Test
+  void xexpYeqZWithInfiniteOrHugePowers() {
+    // satisfied() threw for 0 ^ -1 and consistency() threw when x ^ y does not fit in a long
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    IntVar y = new IntVar(store, "y", -1, -1);
+    IntVar z = new IntVar(store, "z", 0, 0);
+    assertThat(new XexpYeqZ(x, y, z).satisfied()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 10, 10);
+    y = new IntVar(store, "y", 100, 101);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 10);
+    y = new IntVar(store, "y", 2, 100);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    IntVar[] vars = {x, y, z};
+    List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
@@ -5041,6 +5417,570 @@ class SingleConstraintTest extends TestHelper {
       v.addDom(min, min);
     }
     return v;
+  }
+
+  // GCC(x, counters) reads its counted values from the domains of x, so once x was ground it could
+  // not be created; GCC(x, counters, firstValue) names the counted values instead.
+  @Test
+  void testGccWithFirstValueAndGroundedVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 2)
+    };
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 3), new IntVar(store, "c1", 0, 3), new IntVar(store, "c2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new GCC(x, counters)).isInstanceOf(IllegalArgumentException.class);
+    store.impose(new GCC(x, counters, 0));
+
+    // c0 = 0, and x2 = 1 (c1 = 3, c2 = 0) or x2 = 2 (c1 = 2, c2 = 1)
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
+  }
+
+  // GCC computed its counted values again at impose, so a variable ground between creating the
+  // constraint and imposing it made impose throw IllegalArgumentException.
+  @Test
+  void testGccWithVariablesGroundBeforeImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2), new IntVar(store, "c2", 0, 2)
+    };
+    GCC gcc = new GCC(x, counters);
+    for (IntVar v : x) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    store.impose(gcc);
+
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(1);
+    assertThat(counters[1].value()).isEqualTo(2);
+  }
+
+  // CostRegular dropped the changes queued between impose and its first consistency call, so
+  // values removed then still labelled edges and a wrong cost was accepted.
+  @Test
+  void testCostRegularWithVariablesGroundAfterImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", -3, 8);
+    int[][] delta = {{1, 0, 0}, {0, 0, 1}};
+    int[][][] costs = {{{2, -2, 3}, {1, -2, 3}}};
+    store.impose(new CostRegular(x, delta, 0, 0, new int[] {0, 1}, costs, cost));
+    x[0].domain.in(store.level, x[0], 0, 0);
+    cost.domain.in(store.level, cost, -2, -2);
+
+    // label 0 from the initial state costs 2
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isZero();
+  }
+
+  // Knapsack found the ground instance inconsistent at impose but still registered for
+  // removeLevelLate, which then threw NullPointerException on backtracking.
+  @Test
+  void testKnapsackInconsistentAtImposeBacktracks() {
+
+    Store store = new Store();
+    IntVar[] quantity = {new IntVar(store, "q0", 1, 1), new IntVar(store, "q1", 0, 2)};
+    IntVar capacity = new IntVar(store, "capacity", 1, 1);
+    IntVar profit = new IntVar(store, "profit", 2, 2);
+    store.impose(new Knapsack(new int[] {2, 1}, new int[] {2, 2}, quantity, capacity, profit));
+
+    assertThat(noOfAllSolutions(store, quantity, new IntVar[] {capacity, profit})).isZero();
+  }
+
+  /**
+   * Imposes a wrapper around And(x0 {@literal <} x1, x0 = x1) with x0 in 0..1 and x1 in 0..2 and
+   * the constants 0 and 1, and runs the root consistency. One pass of the And fixes x0 = x1 = 1, so
+   * only a second pass, started by the variable events the wrapper forwards, finds the conflict.
+   */
+  private static boolean consistentWithNestedAnd(
+      BiFunction<PrimitiveConstraint, IntVar[], Constraint> wrapper) {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 2);
+    IntVar[] zeroOne = {new IntVar(store, "zero", 0, 0), new IntVar(store, "one", 1, 1)};
+    store.impose(wrapper.apply(new And(new XltY(x0, x1), new XeqY(x0, x1)), zeroOne));
+    return store.consistency();
+  }
+
+  @Test
+  void impliesForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new And(new PrimitiveConstraint[] {and})))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
+  }
+
+  @Test
+  void negatedImpliesFixesItsVariableBeforeNegatingTheConstraint() {
+    // not(b => (b = 1 <=> b)) has no solution; the reification is decided only once b is fixed
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Not(new Implies(b, new Reified(new XeqC(b, 1), b))));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void nestedXorForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new Reified(new Xor(and, b[0]), b[1])))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Not(new Not(new Xor(and, b[0]))))).isFalse();
+  }
+
+  @Test
+  void conditionalForwardsVariableEventsToNestedConstraint() {
+    assertThat(
+            consistentWithNestedAnd(
+                (and, b) -> new Conditional(new IntVar[] {b[1]}, new PrimitiveConstraint[] {and})))
+        .isFalse();
+  }
+
+  @Test
+  void negatedIfThenReachesFixpoint() {
+    // not(x0 = 0 and x1 = 0 => x0 = x1): the condition fixes x0 = x1 = 0 after the negated
+    // consequence has run, so the negated consequence must run again and fail
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new Not(new IfThen(new And(new XeqC(x0, 0), new XeqC(x1, 0)), new XeqY(x0, x1))));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void ifThenElseReachesFixpoint() {
+    // the false branch rules out its side of the condition, then the other branch fixes the
+    // condition's variables to the side that was ruled out
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar zero = new IntVar(store, "zero", 0, 0);
+    PrimitiveConstraint both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XeqY(x0, x1), new XeqC(zero, 1), both));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x0 = new IntVar(store, "x0", 0, 1);
+    x1 = new IntVar(store, "x1", 0, 1);
+    zero = new IntVar(store, "zero", 0, 0);
+    both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XneqY(x0, x1), both, new XeqC(zero, 1)));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void imposedIfThenAndIfThenElseAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 1, 1);
+    IfThen ifThen = new IfThen(new XeqC(x, 1), new XeqC(y, 1));
+    IfThenElse ifThenElse = new IfThenElse(new XeqC(x, 1), new XeqC(y, 1), new XeqC(y, 0));
+    store.impose(ifThen);
+    store.impose(ifThenElse);
+    int constraints = store.numberConstraints();
+    assertThat(ifThen.satisfied()).isTrue();
+    assertThat(ifThenElse.satisfied()).isTrue();
+    // satisfied() only answers; it does not impose the branch
+    assertThat(ifThenElse.satisfied()).isTrue();
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+  }
+
+  @Test
+  void ifThenPropagatesWithoutImposingItsParts() {
+    // x = 1 => (y = 1 or z = 1), decided at a search level: the consequence is propagated in
+    // place, and after backtracking all solutions are found again
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    store.impose(new IfThen(new XeqC(x, 1), new Or(new XeqC(y, 1), new XeqC(z, 1))));
+    int constraints = store.numberConstraints();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(store.level, x, 1, 1);
+    z.domain.in(store.level, z, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.value()).isEqualTo(1);
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(countSolutions(store, new IntVar[] {x, y, z}, new Random(1))).isEqualTo(7);
+  }
+
+  @Test
+  void channelsAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 2);
+    IntVar[] b = {new IntVar(store, "b0", 0, 0), new IntVar(store, "b1", 1, 1)};
+    assertThat(new ChannelReif(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelReif(x, b, new int[] {2, 1}).satisfied()).isFalse();
+    assertThat(new ChannelImply(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(x, b, new int[] {2, 1}).satisfied()).isFalse();
+
+    IntVar three = new IntVar(store, "three", 3, 3);
+    IntVar[] zeros = {new IntVar(store, "z0", 0, 0), new IntVar(store, "z1", 0, 0)};
+    assertThat(new ChannelReif(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+  }
+
+  /** Counts all solutions, labelling the variables in the given order. */
+  private static int countInOrder(Store store, IntVar... vars) {
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
+  }
+
+  @Test
+  void testNegatedEqBoolKeepsAllSolutions() {
+    // not(eqBool(x, r)) holds for exactly the half of the 16 assignments where r differs from
+    // "all x are equal"; the negation used to force the wrong values
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Not(new EqBool(x, r)));
+    assertThat(countInOrder(store, x[0], x[1], x[2], r)).isEqualTo(8);
+
+    // with x0 = 0 and the result 0, the negation needs all equal: x1 = x2 = 0 only
+    Store store2 = new Store();
+    IntVar[] y = {
+      new IntVar(store2, "y0", 0, 0), new IntVar(store2, "y1", 0, 1), new IntVar(store2, "y2", 0, 1)
+    };
+    IntVar b = new IntVar(store2, "b", 0, 1);
+    IntVar r2 = new IntVar(store2, "r2", 0, 0);
+    store2.impose(new Reified(new EqBool(y, r2), b));
+    // b = 1 needs y not all equal (3 assignments), b = 0 needs all equal (1 assignment)
+    assertThat(countInOrder(store2, b, y[1], y[2])).isEqualTo(4);
+  }
+
+  @Test
+  void testEqBoolDecomposition() {
+    // the decomposition put every pair at index 0 and left a null in And
+    for (int n = 1; n <= 4; n++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      store.imposeDecomposition(new EqBool(x, r));
+      IntVar[] all = Arrays.copyOf(x, n + 1);
+      all[n] = r;
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      for (IntVar v : x) {
+        v.domain.in(store.level, v, 0, 0);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.singleton(1)).as("n = " + n).isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+      // one solution per assignment of x, with r = 1 exactly when all x are equal
+      assertThat(countInOrder(store, all)).as("n = " + n).isEqualTo(1 << n);
+    }
+  }
+
+  @Test
+  void testIfThenBoolSatisfied() {
+    // satisfied() and notSatisfied() of (x => y) <=> z on every ground assignment
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int xv = t >> 2;
+      int yv = (t >> 1) & 1;
+      int zv = t & 1;
+      IfThenBool c =
+          new IfThenBool(
+              new IntVar(store, "x", xv, xv),
+              new IntVar(store, "y", yv, yv),
+              new IntVar(store, "z", zv, zv));
+      boolean holds = (xv == 0 || yv == 1) == (zv == 1);
+      assertThat(c.satisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(!holds);
+    }
+  }
+
+  @Test
+  void testIfThenElseBoolSatisfied() {
+    // satisfied() of an imposed IfThenElseBool used to remove the constraint, impose a
+    // replacement and answer false whenever the condition was ground
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int cv = t >> 2;
+      int tv = (t >> 1) & 1;
+      int ev = t & 1;
+      BooleanVar cond = new BooleanVar(store, "c", cv, cv);
+      BooleanVar thenVar = new BooleanVar(store, "t", tv, tv);
+      BooleanVar elseVar = new BooleanVar(store, "e", ev, ev);
+      IfThenElseBool c = new IfThenElseBool(cond, thenVar, elseVar);
+      boolean holds = cv == 1 ? tv == 1 : ev == 1;
+      store.impose(c);
+      int constraints = store.numberConstraints();
+      assertThat(c.satisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(!holds);
+      assertThat(store.numberConstraints()).isEqualTo(constraints);
+      assertThat(store.consistency()).isEqualTo(holds);
+    }
+  }
+
+  @Test
+  void testBoolVectorsUnderIfThenAfterBacktracking() {
+    // IfThen imposes its consequence at a search level; that used to re-create the backtrackable
+    // position of AndBoolVector, OrBoolVector and BoolClause, which was emptied on backtracking
+    // while the consequence was still nested in IfThen (ArrayIndexOutOfBoundsException)
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.impose(new IfThen(new XeqC(b, 1), consequence));
+      // b = 0: all 16 assignments; b = 1: 8 for AndBoolVector and OrBoolVector, 15 for the clause
+      int expected = 16 + (kind == 2 ? 15 : 8);
+      assertThat(countInOrder(store, b, x[0], x[1], x[2], r))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+      // and again with b = 1 tried first, so the nested constraint is used after backtracking
+      store = new Store();
+      IntVar nb = new IntVar(store, "nb", 0, 1);
+      IntVar[] y = new IntVar[3];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, 0, 1);
+      }
+      IntVar s = new IntVar(store, "s", 0, 1);
+      consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(y, s);
+            case 1 -> new OrBoolVector(y, s);
+            default -> new BoolClause(y, new IntVar[] {s});
+          };
+      store.impose(new IfThen(new XeqC(nb, 0), consequence));
+      assertThat(countInOrder(store, nb, y[0], y[1], y[2], s))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testBoolVectorsReimposedAfterBacktrackingFromTheirFirstImpose() {
+    // the other order: first imposed at a search level, backtracked, imposed again
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint c =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.setLevel(1);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      store.removeLevel(1);
+      store.setLevel(1);
+      store.impose(c);
+      int expected = kind == 2 ? 15 : 8;
+      assertThat(countInOrder(store, x[0], x[1], x[2], r)).as("kind " + kind).isEqualTo(expected);
+    }
+  }
+
+  // NoGood watched a repeated variable as if it were two, so a no-good that can never match (one
+  // variable with two values) removed a value, and one with a repeated value threw
+  // IllegalStateException.
+  @Test
+  void testNoGoodWithRepeatedVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    store.impose(new NoGood(new IntVar[] {x, y, y}, new int[] {3, 1, 2}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(12);
+
+    store = new Store();
+    x = new IntVar(store, "x", 0, 3);
+    y = new IntVar(store, "y", 0, 3);
+    store.impose(new NoGood(new IntVar[] {x, x, y}, new int[] {1, 1, 1}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(15);
+  }
+
+  // ElementBool never restricted the value variable to 0..1, so value 2 was accepted once the
+  // value variable had 1 as its minimum.
+  @Test
+  void testElementBoolValueOutsideZeroOne() {
+
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    store.impose(new ElementBool(index, new int[] {1, 1, 0}, value, 0));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {index, value})).isEqualTo(2);
+  }
+
+  // Sum stopped propagating after changing the sum, so when the sum variable was also summed and
+  // became ground by that change the wrong value was accepted.
+  @Test
+  void testSumWithSumVariableInList() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", -2, -2);
+    IntVar b = new IntVar(store, "b", 0, 0);
+    IntVar c = new IntVar(store, "c", -2, 3);
+    // a + b + c = c needs a + b = 0
+    store.impose(new Sum(new IntVar[] {a, b, c}, c));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {a, b, c})).isZero();
+  }
+
+  // MaxSimple and MinSimple reported satisfied() when both arguments were on the right side of the
+  // result, without checking that one of them is equal to it.
+  @Test
+  void testMaxSimpleMinSimpleSatisfied() {
+
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", -2, -1);
+    IntVar m = new IntVar(store, "m", -1, -1);
+    MaxSimple max = new MaxSimple(x1, x2, m);
+    assertThat(max.satisfied()).isFalse();
+    x2.domain.in(store.level, x2, -1, -1);
+    assertThat(max.satisfied()).isTrue();
+
+    store = new Store();
+    x1 = new IntVar(store, "x1", 2, 3);
+    x2 = new IntVar(store, "x2", 2, 3);
+    m = new IntVar(store, "m", 2, 2);
+    MinSimple min = new MinSimple(x1, x2, m);
+    assertThat(min.satisfied()).isFalse();
+    x1.domain.in(store.level, x1, 2, 2);
+    assertThat(min.satisfied()).isTrue();
+  }
+
+  // CountValuesBounds.satisfied() counted only the ground variables, so it held while variables
+  // that may still take a value could exceed its upper bound.
+  @Test
+  void testCountValuesBoundsSatisfied() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 2, 2), new IntVar(store, "x1", 0, 2)};
+    CountValuesBounds count =
+        new CountValuesBounds(x, new int[] {0, 1}, new int[] {1, 1}, new int[] {0, 2});
+    // x1 = 2 counts 2 twice
+    assertThat(count.satisfied()).isFalse();
+    x[1].domain.in(store.level, x[1], 0, 0);
+    assertThat(count.satisfied()).isTrue();
+  }
+
+  // AmongVar.satisfied() threw IllegalStateException (with asserts enabled) when the constraint
+  // grounded variables itself, since its counters do not see those changes.
+  @Test
+  void testAmongVarSatisfiedAfterGroundingItsVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 2, 2)};
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar n = new IntVar(store, "n", 2, 2);
+    y.domain.in(store.level, y, new IntervalDomain(0, 0).union(2));
+    AmongVar among = new AmongVar(x, new IntVar[] {y}, n);
+    store.impose(among);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].value()).isEqualTo(2);
+    assertThat(among.satisfied()).isTrue();
+  }
+
+  // IfThen, IfThenElse and Implies did not pass include() on to their constraints, so a counting
+  // constraint nested in them under another wrapper never created its TimeStamps and threw
+  // NullPointerException from consistency() or notConsistency().
+  @Test
+  void testCountingConstraintsNestedInWrappers() {
+
+    Map<String, Function<IntVar[], PrimitiveConstraint>> constraints = new LinkedHashMap<>();
+    constraints.put("Count", x -> new Count(new IntVar[] {x[0], x[1]}, x[2], 1));
+    constraints.put("CountBounds", x -> new CountBounds(new IntVar[] {x[0], x[1], x[2]}, 1, 1, 2));
+    constraints.put("CountVar", x -> new CountVar(new IntVar[] {x[0], x[1]}, x[2], x[1]));
+    constraints.put("AtLeast", x -> new AtLeast(new IntVar[] {x[0], x[1], x[2]}, 2, 1));
+    constraints.put("AtMost", x -> new AtMost(new IntVar[] {x[0], x[1], x[2]}, 1, 1));
+    constraints.put("AllEqual", x -> new AllEqual(new IntVar[] {x[0], x[1], x[2]}));
+
+    // variables: r, b, x0, x1, x2
+    List<BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint>> models =
+        List.of(
+            (v, c) -> new Reified(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new And(new IfThen(c, new XeqC(v[1], 1)), new XeqC(v[0], 1)),
+            (v, c) -> new Or(new IfThen(new XeqC(v[1], 1), c), new XeqC(v[0], 1)),
+            (v, c) -> new Not(new IfThen(c, new XeqC(v[1], 1))),
+            (v, c) -> new Reified(new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0)), v[0]),
+            (v, c) -> new Xor(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new Reified(new Implies(v[1], c), v[0]),
+            (v, c) ->
+                new IfThen(
+                    new XeqC(v[0], 1), new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0))),
+            (v, c) ->
+                new IfThenElse(new XeqC(v[0], 1), new IfThen(new XeqC(v[1], 1), c), new Not(c)));
+
+    for (Map.Entry<String, Function<IntVar[], PrimitiveConstraint>> e : constraints.entrySet()) {
+      for (int m = 0; m < models.size(); m++) {
+        BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint> model = models.get(m);
+
+        // reference: the model posted on ground variables, one store per assignment
+        int expected = 0;
+        for (int t = 0; t < 4 * 27; t++) {
+          Store ground = new Store();
+          int[] values = {t / 54, t / 27 % 2, t / 9 % 3, t / 3 % 3, t % 3};
+          IntVar[] g = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            g[i] = new IntVar(ground, "v" + i, values[i], values[i]);
+          }
+          ground.impose(model.apply(g, e.getValue().apply(Arrays.copyOfRange(g, 2, 5))));
+          if (ground.consistency()) {
+            expected++;
+          }
+        }
+
+        for (int order = 0; order < 5; order++) {
+          Store store = new Store();
+          IntVar[] v = {
+            new IntVar(store, "r", 0, 1),
+            new IntVar(store, "b", 0, 1),
+            new IntVar(store, "x0", 0, 2),
+            new IntVar(store, "x1", 0, 2),
+            new IntVar(store, "x2", 0, 2)
+          };
+          store.impose(model.apply(v, e.getValue().apply(Arrays.copyOfRange(v, 2, 5))));
+          IntVar[] vars = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            vars[i] = v[(i + order) % 5];
+          }
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMax<>()));
+          assertThat(search.getSolutionListener().solutionsNo())
+              .as(e.getKey() + " in model " + m + " order " + order)
+              .isEqualTo(expected);
+        }
+      }
+    }
   }
 
   static class TestWatcherExtension implements BeforeEachCallback {

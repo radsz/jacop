@@ -289,6 +289,11 @@ public class Knapsack extends Constraint
   @Override
   public void removeLevelLate(int level) {
 
+    if (positionOfCriticalItem == null) {
+      // impose found the constraint inconsistent, so the tree is never updated
+      return;
+    }
+
     countRemoveLevel++;
 
     if (DEBUG_ALL) {

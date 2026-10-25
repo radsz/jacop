@@ -90,13 +90,18 @@ public class Match extends Constraint implements SatisfiedPresent {
 
     a.domain.inCardinality(store.level, a, list.length, list.length);
 
-    if (a.domain.glb().getSize() == list.length) {
-      propagateWhenGlbFull(store);
-    } else if (a.domain.lub().getSize() == list.length) {
-      propagateWhenLubFull(store);
-    } else {
-      propagateGeneralCase(store);
-    }
+    // The general case can complete the glb of a, and the store does not re-queue this
+    // constraint for its own changes, so iterate to a fixpoint.
+    do {
+      store.propagationHasOccurred = false;
+      if (a.domain.glb().getSize() == list.length) {
+        propagateWhenGlbFull(store);
+      } else if (a.domain.lub().getSize() == list.length) {
+        propagateWhenLubFull(store);
+      } else {
+        propagateGeneralCase(store);
+      }
+    } while (store.propagationHasOccurred);
   }
 
   private void propagateWhenGlbFull(Store store) {

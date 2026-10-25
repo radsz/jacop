@@ -77,6 +77,13 @@ public class XplusCneqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public void consistency(final Store store) {
+    if (x == z) {
+      // x + c != x holds for every c other than 0
+      if (c == 0) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     if (z.singleton()) {
       x.domain.inComplement(store.level, x, z.min() - c);
@@ -109,6 +116,14 @@ public class XplusCneqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public void notConsistency(final Store store) {
+    if (x == z) {
+      // x + c = x holds only for c = 0; the shifts below would not reach a fixpoint, since the
+      // constraint is not woken by its own pruning
+      if (c != 0) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     // after the two shifts z equals x shifted by c, a fixpoint unless x only keeps its bounds
     x.domain.inShift(store.level, x, z.domain, -c);
@@ -120,6 +135,9 @@ public class XplusCneqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public boolean notSatisfied() {
+    if (x == z) {
+      return c == 0;
+    }
     int xMin = x.min();
     int zMin = z.min();
     return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
@@ -127,6 +145,9 @@ public class XplusCneqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public boolean satisfied() {
+    if (x == z) {
+      return c != 0;
+    }
     return x.max() + c < z.min() || x.min() + c > z.max();
   }
 

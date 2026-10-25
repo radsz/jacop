@@ -65,12 +65,21 @@ public class EquationSystem extends Constraint {
    * @param store current store
    * @param f a variable that defines an eqation
    * @param x variables of eqation system
+   * @throws IllegalArgumentException if f and x differ in length or are empty
    */
   public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
     checkInputForNullness(new String[] {"f", "x"}, new Object[] {f, x});
     checkInputForNullness("f", f);
     checkInputForNullness("x", x);
+    if (f.length != x.length || f.length == 0) {
+      // interval Newton inverts the f by x Jacobian
+      throw new IllegalArgumentException(
+          "EquationSystem needs as many equations as variables, got "
+              + f.length
+              + " and "
+              + x.length);
+    }
 
     this.f = Arrays.copyOf(f, f.length);
     this.x = Arrays.copyOf(x, x.length);

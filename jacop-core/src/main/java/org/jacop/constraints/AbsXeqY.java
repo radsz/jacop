@@ -304,7 +304,8 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
   }
 
   private void applyNotConsistencyWhenYsingleton(Store store) {
-    if (!y.singleton()) {
+    // |x| != y holds for every x when y is negative
+    if (!y.singleton() || y.value() < 0) {
       return;
     }
     x.domain.inComplement(store.level, x, y.value());
@@ -352,7 +353,7 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
 
   @Override
   public boolean satisfied() {
-    return grounded() && (x.min() == y.min() || -x.min() == y.min());
+    return grounded() && y.min() >= 0 && (x.min() == y.min() || -x.min() == y.min());
   }
 
   @Override
