@@ -40,12 +40,12 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          file.cnf[.gz]
+ *          [--vivify 0|1] file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
- * backtracking off), {@code --shrink 0} turns all-UIP shrinking off and {@code --elim 0} turns
- * variable elimination off.
+ * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
+ * variable elimination off and {@code --vivify 0} turns vivification off.
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -72,6 +72,7 @@ public final class CdclMain {
     int chrono = 100;
     boolean shrink = true;
     boolean elim = true;
+    boolean vivify = true;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -80,19 +81,21 @@ public final class CdclMain {
         case "--chrono" -> chrono = Integer.parseInt(args[++i]);
         case "--shrink" -> shrink = !"0".equals(args[++i]);
         case "--elim" -> elim = !"0".equals(args[++i]);
+        case "--vivify" -> vivify = !"0".equals(args[++i]);
         default -> file = args[i];
       }
     }
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] file.cnf[.gz]");
+              + " [--elim 0|1] [--vivify 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
     solver.setChronoLimit(chrono);
     solver.setShrink(shrink);
     solver.setElimination(elim);
+    solver.setVivification(vivify);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }

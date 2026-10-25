@@ -80,6 +80,7 @@ public final class CdclSolver {
   private static final int LEARNT_FLAG = 1;
   private static final int DELETED = 2;
   private static final int USED = 4;
+  private static final int VIVIFIED = 32;
   private static final int TIER_SHIFT = 3;
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
@@ -169,7 +170,13 @@ public final class CdclSolver {
   private int trailQueueHead;
   private long trailQueueSum;
   private long nextReduce = 2000;
-  private static final int REDUCE_INC = 300;
+  private int reduceBase = 2000;
+  private int reduceInc = 300;
+  // vivification of learnt clauses at the next restart, after each reduction
+  private boolean vivification = true;
+  private boolean vivifyDue;
+  private long propagationsAtVivify;
+  private int[] vivifyLits = new int[16];
   private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
 
@@ -1380,7 +1387,7 @@ public final class CdclSolver {
       assertIfUnit(c, ref);
     }
     if (conflicts >= nextReduce) {
-      nextReduce = conflicts + 2000 + (long) REDUCE_INC * ++reductions;
+      nextReduce = conflicts + reduceBase + (long) reduceInc * ++reductions;
       reduceDb();
     }
     return propagateUnits();
@@ -1697,11 +1704,15 @@ public final class CdclSolver {
       }
       if (shouldRestart()) {
         restart();
+        if (vivifyDue && !vivify()) {
+          return UNSAT;
+        }
         continue;
       }
       if (conflicts >= nextReduce) {
-        nextReduce = conflicts + 2000 + (long) REDUCE_INC * ++reductions;
+        nextReduce = conflicts + reduceBase + (long) reduceInc * ++reductions;
         reduceDb();
+        vivifyDue = vivification;
       }
       if (decisionLevel == 0 && trailSize != simplifyAssigns) {
         simplifyDb();
@@ -2064,6 +2075,116 @@ public final class CdclSolver {
       addClause(c, size);
       i = start;
     }
+  }
+
+  /**
+   * Vivifies the learnt clauses of the core and middle tiers (Luo et al. 2017, as in CaDiCaL) at
+   * level 0: the negations of a clause's literals are decided one by one, and the clause is cut
+   * after a conflict or a literal of it that becomes true, and loses its literals that become
+   * false. Each clause is tried once, within a tenth of the propagations of the search since the
+   * last round.
+   *
+   * @return false when the formula is found unsatisfiable
+   */
+  private boolean vivify() {
+    vivifyDue = false;
+    if (propagate() != NO_CONFLICT) {
+      return refuted();
+    }
+    long budget = propagations + Math.max(20_000, (propagations - propagationsAtVivify) / 10);
+    boolean wasChrono = chrono;
+    chrono = false;
+    int[] candidates = new int[numLearnts];
+    int n = 0;
+    for (int i = numLearnts - 1; i >= 0; i--) {
+      int meta = mem[learnts[i] + META];
+      if ((meta & (DELETED | VIVIFIED)) == 0 && tierOf(meta) != TIER_LOCAL) {
+        candidates[n++] = learnts[i];
+      }
+    }
+    boolean result = true;
+    for (int i = 0; i < n && propagations < budget && result; i++) {
+      result = vivifyClause(candidates[i]);
+    }
+    chrono = wasChrono;
+    propagationsAtVivify = propagations;
+    purge();
+    return result;
+  }
+
+  private boolean vivifyClause(int ref) {
+    int meta = mem[ref + META];
+    mem[ref + META] = meta | VIVIFIED;
+    int size = mem[ref + SIZE];
+    int lits = ref + HEADER;
+    for (int k = 0; k < size; k++) {
+      if (vals[mem[lits + k]] > 0) {
+        return true; // satisfied at level 0: simplifyDb removes it
+      }
+    }
+    if (vivifyLits.length < 2 * size) {
+      vivifyLits = new int[4 * size];
+    }
+    // propagation reorders the clause in the arena, so its literals are copied first
+    int[] d = vivifyLits;
+    System.arraycopy(mem, lits, d, size, size);
+    int n = 0;
+    for (int k = 0; k < size; k++) {
+      int l = d[size + k];
+      if (vals[l] < 0) {
+        continue;
+      }
+      d[n++] = l;
+      if (vals[l] > 0) {
+        break;
+      }
+      newDecisionLevel();
+      assign(l ^ 1, NO_REASON);
+      if (propagate() != NO_CONFLICT) {
+        break;
+      }
+    }
+    backtrack(0);
+    if (n == size) {
+      return true;
+    }
+    if (proof != null) {
+      proof.add(d, 0, n);
+    }
+    if (n == 0) {
+      return refuted();
+    }
+    deleteClause(ref);
+    if (n == 1) {
+      assign(d[0], NO_REASON);
+      return propagate() == NO_CONFLICT || refuted();
+    }
+    if (n == 2) {
+      addBinary(d[0], d[1]);
+      return true;
+    }
+    int copy = allocate(d, n, true, Math.min(lbdOf(meta), n - 1));
+    mem[copy + META] |= VIVIFIED;
+    mem[copy + ACT] = mem[ref + ACT];
+    learnts = push(learnts, numLearnts++, copy);
+    attach(copy);
+    return true;
+  }
+
+  /** Reduces the learnt clauses after this many conflicts and then more often, for tests. */
+  void setReduceBase(int conflicts) {
+    reduceBase = conflicts;
+    reduceInc = Math.max(1, conflicts * 3 / 20);
+    nextReduce = conflicts;
+  }
+
+  /**
+   * Turns vivification of learnt clauses on or off (on by default).
+   *
+   * @param on whether to vivify
+   */
+  public void setVivification(boolean on) {
+    vivification = on;
   }
 
   /** Removes satisfied clauses at level 0. */

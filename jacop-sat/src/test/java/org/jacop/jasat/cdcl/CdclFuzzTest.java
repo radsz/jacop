@@ -160,6 +160,9 @@ class CdclFuzzTest {
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
     s.setChronoLimit(chronoLimit(seed));
+    if (seed % 2 == 0) {
+      s.setReduceBase(10);
+    }
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
@@ -181,6 +184,9 @@ class CdclFuzzTest {
       throws IOException {
     CdclSolver s = new CdclSolver();
     s.setChronoLimit(chronoLimit(seed));
+    if (seed % 2 == 0) {
+      s.setReduceBase(10);
+    }
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
     int next = 0;
