@@ -35,11 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TrailedInts;
 
 /**
  * Abstract base for Count, CountVar and CountBounds constraints. Provides shared fields (list,
- * position, equal), impose/include for TimeStamp initialization, swap, and default pruning events.
+ * position, equal), the backtrackable state behind them, swap, and default pruning events.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -49,11 +49,15 @@ public abstract class AbstractCount extends PrimitiveConstraint {
   /** The list of variables which are checked and counted if equal to specified value. */
   protected final IntVar[] list;
 
-  /** Tracks the first position of undecided variables. */
-  protected TimeStamp<Integer> position;
+  private static final int POSITION = 0;
 
-  /** Tracks the number of variables equal to the value. */
-  protected TimeStamp<Integer> equal;
+  private static final int EQUAL = 1;
+
+  /**
+   * The first position of undecided variables, the variables before it being decided, and the
+   * number of decided variables equal to the value.
+   */
+  private TrailedInts state;
 
   /**
    * Constructs the common parts of a Count constraint.
@@ -72,14 +76,12 @@ public abstract class AbstractCount extends PrimitiveConstraint {
 
     super.impose(store);
 
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
+    state = new TrailedInts(store, 2);
   }
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
+    state = new TrailedInts(store, 2);
   }
 
   @Override
@@ -108,25 +110,51 @@ public abstract class AbstractCount extends PrimitiveConstraint {
    * @param start the new position value.
    */
   protected void updateState(int numberEq, int start) {
-    equal.update(numberEq);
-    position.update(start);
+    state.set(EQUAL, numberEq);
+    state.set(POSITION, start);
   }
 
-  /** Holds the result of counting occurrences of a value in the list. */
-  protected record CountResult(int numberEq, int numberMayBe, int start) {}
+  /**
+   * Returns the first position of undecided variables; the variables before it are decided.
+   *
+   * @return the position.
+   */
+  protected int position() {
+    return state.get(POSITION);
+  }
+
+  /**
+   * Returns the number of decided variables equal to the value.
+   *
+   * @return the number of decided variables equal to the value.
+   */
+  protected int equal() {
+    return state.get(EQUAL);
+  }
+
+  /** The number of variables equal to the value, as found by the last count. */
+  protected int countEq;
+
+  /**
+   * The number of variables that may still become equal to the value, as found by the last count.
+   */
+  protected int countMayBe;
+
+  /** The new start position found by the last count. */
+  protected int countStart;
 
   /**
    * Counts how many variables are definitely equal to the given value and how many might still
-   * become equal. This method has a side effect: it swaps decided variables to the front of the
-   * list.
+   * become equal, and stores them in {@link #countEq}, {@link #countMayBe} and {@link #countStart};
+   * fields rather than a returned record, as the record is allocated on every call. This method has
+   * a side effect: it swaps decided variables to the front of the list.
    *
    * @param value the value to count.
-   * @return a record with the counts and the new start position.
    */
-  protected CountResult countOccurrences(int value) {
-    int numberEq = equal.value();
+  protected void countOccurrences(int value) {
+    int numberEq = equal();
     int numberMayBe = 0;
-    int start = position.value();
+    int start = position();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
       if (v.domain.contains(value)) {
@@ -142,7 +170,9 @@ public abstract class AbstractCount extends PrimitiveConstraint {
         start++;
       }
     }
-    return new CountResult(numberEq, numberMayBe, start);
+    countEq = numberEq;
+    countMayBe = numberMayBe;
+    countStart = start;
   }
 
   /** Holds the counts of variables that are satisfied or definitely not equal. */

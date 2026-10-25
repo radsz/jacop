@@ -93,26 +93,28 @@ public class CountVar extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
-    CountState state = countEqualAndMaybe();
+    countEqualAndMaybe();
+    int numberEq = countEq;
+    int numberMayBe = countMayBe;
+    int start = countStart;
 
-    if (state.numberMayBe == counter.min() - state.numberEq) {
-      if (applyWhenMayBeTight(store, state.start, state.numberEq, state.numberMayBe)) {
+    if (numberMayBe == counter.min() - numberEq) {
+      if (applyWhenMayBeTight(store, start, numberEq, numberMayBe)) {
         return;
       }
-    } else if (state.numberEq == counter.max()
-        && applyWhenEqMax(store, state.start, state.numberEq)) {
+    } else if (numberEq == counter.max() && applyWhenEqMax(store, start, numberEq)) {
       return;
     }
 
-    updateState(state.numberEq, state.start);
+    updateState(numberEq, start);
 
-    counter.domain.in(store.level, counter, state.numberEq, state.numberEq + state.numberMayBe);
+    counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
   }
 
-  private CountState countEqualAndMaybe() {
-    int numberEq = equal.value();
+  private void countEqualAndMaybe() {
+    int numberEq = equal();
     int numberMayBe = 0;
-    int start = position.value();
+    int start = position();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
       if (v.domain.isIntersecting(value.domain)) {
@@ -128,10 +130,10 @@ public class CountVar extends AbstractCount {
         start++;
       }
     }
-    return new CountState(numberEq, numberMayBe, start);
+    countEq = numberEq;
+    countMayBe = numberMayBe;
+    countStart = start;
   }
-
-  private record CountState(int numberEq, int numberMayBe, int start) {}
 
   /**
    * Applies pruning when numberMayBe == counter.min() - numberEq; returns true if constraint
@@ -171,9 +173,9 @@ public class CountVar extends AbstractCount {
   @Override
   public void notConsistency(final Store store) {
 
-    int numberEq = equal.value();
+    int numberEq = equal();
     int numberMayBe = 0;
-    int start = position.value();
+    int start = position();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
       if (v.domain.isIntersecting(value.domain)) {

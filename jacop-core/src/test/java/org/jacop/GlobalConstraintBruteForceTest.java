@@ -84,6 +84,8 @@ import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Stretch;
@@ -170,6 +172,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "CountValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValues),
+        Arguments.of(
+            "ReifiedCount",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::reifiedCount),
         Arguments.of("AtLeast", atLeastOrMost(true)),
         Arguments.of("AtMost", atLeastOrMost(false)),
         Arguments.of("ElementInteger", elementInteger(false)),
@@ -662,6 +667,45 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> store.impose(new CountVar(Arrays.copyOfRange(x, 0, n), x[n], x[n + 1])),
         x -> occurrences(Arrays.copyOfRange(x, 0, n), x[n + 1]) == x[n],
         "");
+  }
+
+  /** Count, CountBounds or CountVar in a Reified, which uses their notConsistency and include. */
+  private static Instance reifiedCount(Random random) {
+    int n = 1 + random.nextInt(4);
+    int kind = random.nextInt(3);
+    int value = random.nextInt(4);
+    int lb = random.nextInt(3);
+    int ub = lb + random.nextInt(3);
+    // the list, the counter, the value variable of CountVar and the Boolean
+    int[][] domains =
+        append(
+            domains(random, n, 0, 3),
+            domain(random, 0, n),
+            domain(random, 0, 3),
+            domain(random, 0, 1));
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[] list = Arrays.copyOfRange(x, 0, n);
+          PrimitiveConstraint c =
+              switch (kind) {
+                case 0 -> new Count(list, x[n], value);
+                case 1 -> new CountBounds(list, value, lb, ub);
+                default -> new CountVar(list, x[n], x[n + 1]);
+              };
+          store.impose(new Reified(c, x[n + 2]));
+        },
+        x -> {
+          int[] list = Arrays.copyOfRange(x, 0, n);
+          boolean holds =
+              switch (kind) {
+                case 0 -> occurrences(list, value) == x[n];
+                case 1 -> occurrences(list, value) >= lb && occurrences(list, value) <= ub;
+                default -> occurrences(list, x[n + 1]) == x[n];
+              };
+          return holds == (x[n + 2] == 1);
+        },
+        "kind=" + kind + " value=" + value + " count=" + lb + ".." + ub);
   }
 
   private static Instance countValues(Random random) {
