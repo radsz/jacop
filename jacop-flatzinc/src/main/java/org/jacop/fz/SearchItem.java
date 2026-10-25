@@ -243,7 +243,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         makeVectorOfSearches(body);
       }
-      case WARM_START -> handleWarmStart(ann);
+      case WARM_START, "warm_start_array" -> handleWarmStart(ann);
       case "priority_search" -> {
         prioritySearch = true;
 
@@ -291,11 +291,24 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds the hints of a warm_start annotation to preferedValues. A hint is only a preference, so a
-   * hint JaCoP cannot use (float and set values, values outside the domain) is reported and ignored
-   * instead of aborting the run.
+   * Adds the hints of a warm_start annotation, or of every warm_start in a warm_start_array, to
+   * preferedValues. A hint is only a preference, so a hint JaCoP cannot use (float and set values,
+   * values outside the domain) is reported and ignored instead of aborting the run.
    */
   private void collectWarmStart(ASTAnnotation ann, List<IntVar> vars, int[] nearMinNearMax) {
+    if ("warm_start_array".equals(ann.getAnnId())) {
+      SimpleNode body = (SimpleNode) ann.jjtGetChild(0);
+      if (Objects.equals(((ASTAnnotation) body).getAnnId(), ANN_VECTOR)) {
+        for (int i = 0; i < body.jjtGetNumChildren(); i++) {
+          collectWarmStart((ASTAnnotation) body.jjtGetChild(i), vars, nearMinNearMax);
+        }
+      }
+      return;
+    }
+    if (!WARM_START.equals(ann.getAnnId())) {
+      IO.println("% Warning: Ignored annotation " + ann.getAnnId() + " in warm_start_array");
+      return;
+    }
     int[] values = warmStartValues((SimpleNode) ann.jjtGetChild(1));
     if (values == null) {
       IO.println("% Warning: warm_start for float and set variables is not supported; ignored");

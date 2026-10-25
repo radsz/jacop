@@ -865,6 +865,26 @@ class FlatzincFrontEndTest {
     assertEquals(6, solveAll(fzn).size());
   }
 
+  @Test
+  void warmStartArrayIsUsed() throws IOException {
+    // warm_start_array, which MiniZinc makes for a set hint without set support and which users
+    // write to group hints, was ignored
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_ne(x,y);
+        constraint int_eq_imp(x,3,b);
+        solve %s satisfy;
+        """;
+    String hint =
+        ":: warm_start_array([warm_start([x,y],[3,1]),warm_start_array([warm_start([b],[true])])])";
+    String out = run(fzn.formatted(hint))[0];
+    assertTrue(out.contains("x = 3;") && out.contains("y = 1;") && out.contains("b = true;"), out);
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(hint)));
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
