@@ -77,7 +77,7 @@ public final class LcgSolver implements ExternalPropagator {
   private final CdclSolver sat = new CdclSolver();
   private final AtomicTrail trail;
   private final int baseLevel;
-  private final boolean rootFailed;
+  private boolean rootFailed;
 
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
@@ -105,6 +105,7 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] pushedReason;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
+  private Runnable onSolution;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
@@ -320,6 +321,40 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Adds a clause over 0/1 variables: one of the positive variables is 1 or one of the negative
+   * ones is 0. It goes to the SAT solver as a clause of {@code [x >= 1]} literals, so it is
+   * propagated and explained by the solver itself. Add clauses before solving.
+   *
+   * @param positive variables of which one may be 1
+   * @param negative variables of which one may be 0
+   */
+  public void addClause(IntVar[] positive, IntVar[] negative) {
+    List<Integer> clause = new ArrayList<>();
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      for (IntVar x : sign > 0 ? positive : negative) {
+        int i = trail.id(x);
+        if (root[i].min() < 0 || root[i].max() > 1) {
+          throw new IllegalArgumentException(x + " is not a 0/1 variable");
+        }
+        if (root[i].singleton()) {
+          if (root[i].min() == (sign > 0 ? 1 : 0)) {
+            return; // satisfied at the root
+          }
+          continue; // false at the root
+        }
+        clause.add(sign * geLit(i, 1));
+      }
+    }
+    if (clause.isEmpty()) {
+      rootFailed = true;
+      return;
+    }
+    if (!sat.addClause(clause.stream().mapToInt(Integer::intValue).toArray())) {
+      rootFailed = true;
+    }
+  }
+
+  /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
    * store, and a wrong one stops the solver with an {@link IllegalStateException}. The system
    * property {@code jacop.lcg.check=true} turns it on for every solver.
@@ -337,6 +372,16 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public ExplanationChecker checker() {
     return checker;
+  }
+
+  /**
+   * Sets an action run at every solution while the store's domains are fixed to it, for example to
+   * print the solution.
+   *
+   * @param action the action, or null for none
+   */
+  public void onSolution(Runnable action) {
+    onSolution = action;
   }
 
   /**
@@ -624,6 +669,9 @@ public final class LcgSolver implements ExternalPropagator {
         }
         solution[i] = vars[i].value();
       }
+    }
+    if (onSolution != null) {
+      onSolution.run();
     }
     return true;
   }
