@@ -30,8 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -125,7 +128,20 @@ public class Stretch extends DecomposedConstraint<Constraint> {
 
     fsm.resize();
 
-    return List.of(new Regular(fsm, x));
+    // Regular does not accept the same variable twice, so a repeated variable is replaced by a
+    // copy that is kept equal to it
+    List<Constraint> result = new ArrayList<>();
+    IntVar[] list = Arrays.copyOf(x, x.length);
+    Set<IntVar> seen = new HashSet<>();
+    for (int i = 0; i < list.length; i++) {
+      if (!seen.add(list[i])) {
+        IntVar copy = new IntVar(store, list[i].dom().cloneLight());
+        result.add(new XeqY(list[i], copy));
+        list[i] = copy;
+      }
+    }
+    result.add(new Regular(fsm, list));
+    return result;
   }
 
   private void buildOneStepStates(Fsm fsm, FsmState[] oneStep) {
@@ -163,7 +179,10 @@ public class Stretch extends DecomposedConstraint<Constraint> {
     for (int vk = 0; vk < this.values.length; vk++) {
       FsmState prev = oneStep[vk];
       IntDomain d = new IntervalDomain(this.values[vk], this.values[vk]);
-      for (int step = 2; step <= max[vk]; step++) {
+      // a stretch is at most as long as the list, so longer chains would only add unreachable
+      // states
+      int longest = Math.min(max[vk], x.length);
+      for (int step = 2; step <= longest; step++) {
         FsmState cur1 = new FsmState();
         prev.addTransition(new FsmTransition(d, cur1));
         fsm.allStates.add(cur1);

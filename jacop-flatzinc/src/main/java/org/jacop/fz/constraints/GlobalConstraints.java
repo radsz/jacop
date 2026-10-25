@@ -1717,12 +1717,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntervalDomain setImpl = new IntervalDomain();
     setImpl.addDom(u);
 
-    // Sequence is decomposed into Regular, which does not accept the same variable twice;
-    // repeated variables or constants (that share one variable) are replaced by copies
-    IntVar[] xx = distinctCopies(x, new HashSet<>());
-
+    // Sequence accepts repeated variables and constants (that share one variable)
     DecomposedConstraint<Constraint> c =
-        Sequence.builder().list(xx).set(setImpl).q(q).min(min).max(max).build();
+        Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
   }
 
@@ -1732,11 +1729,8 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] max = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    // Stretch is decomposed into Regular, which does not accept the same variable twice;
-    // repeated variables or constants (that share one variable) are replaced by copies
-    IntVar[] xx = distinctCopies(x, new HashSet<>());
-
-    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, xx);
+    // Stretch replaces repeated variables and constants (that share one variable) by copies
+    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, x);
     support.poseDc(c);
   }
 
