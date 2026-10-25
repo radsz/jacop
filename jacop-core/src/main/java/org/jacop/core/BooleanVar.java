@@ -213,6 +213,14 @@ public class BooleanVar extends IntVar {
     return (BoundDomain) domain;
   }
 
+  @Override
+  public BooleanVar copyTo(Store target) {
+    if (getClass() != BooleanVar.class) {
+      return (BooleanVar) super.copyTo(target);
+    }
+    return new BooleanVar(target, id(), domain.min(), domain.max());
+  }
+
   /**
    * It checks if the domains of variables are equal.
    *
