@@ -104,7 +104,6 @@ public class AmongVar extends Constraint
   private TimeStamp<Integer> lb0Ts;
   private TimeStamp<Integer> ub0Ts;
   private TimeStamp<Integer> yGrounded;
-  private TimeStamp<Integer> xGrounded;
 
   // Scratch space of consistency, kept between calls so that the counting allocates nothing.
   // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
@@ -416,6 +415,17 @@ public class AmongVar extends Constraint
     if (n.singleton()) {
       pruneYwhenNsingleton(store, yGr, k, countCoverMin, potentialCover, mayLeftToCover);
     }
+  }
+
+  // checked directly instead of counted in queueVariable, since the store calls queueVariable again
+  // for every variable when it redoes a first consistency whose level was removed
+  private boolean allXGrounded() {
+    for (IntVar x : listOfX) {
+      if (!x.singleton()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private IntDomain buildKfromGroundedX() {
@@ -1103,7 +1113,7 @@ public class AmongVar extends Constraint
         }
       }
 
-      if (xGrounded.value() == listOfX.length) {
+      if (allXGrounded()) {
         consistencyForY(store);
       } else if (lb0 == ub0) {
         consistencyWhenLb0EqUb0(store);
@@ -1238,8 +1248,6 @@ public class AmongVar extends Constraint
     lb0Ts = new TimeStamp<>(store, 0);
     ub0Ts = new TimeStamp<>(store, listOfX.length);
 
-    // super.impose() calls queueVariable() for every variable, which counts the grounded X.
-    xGrounded = new TimeStamp<>(store, 0);
     yGrounded = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
@@ -1258,12 +1266,6 @@ public class AmongVar extends Constraint
       Integer index = yIndex.get(intVar);
       if (index != null) {
         variableQueueY.add(index);
-        return;
-      }
-
-      if (intVar != this.n && intVar.singleton()) {
-        // It can be only X
-        xGrounded.update(xGrounded.value() + 1);
       }
     }
   }
