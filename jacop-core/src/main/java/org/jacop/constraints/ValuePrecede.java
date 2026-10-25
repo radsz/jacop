@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -79,7 +80,7 @@ public class ValuePrecede extends Constraint
   private int alphaValue;
   private int betaValue;
   private int gammaValue;
-  private boolean firstConsistencyCheck = true;
+  private final InitOnce init = new InitOnce();
   private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
 
   /**
@@ -143,9 +144,8 @@ public class ValuePrecede extends Constraint
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initialize();
-      firstConsistencyCheck = false;
     }
 
     alphaValue = alpha.value();
@@ -172,7 +172,7 @@ public class ValuePrecede extends Constraint
   }
 
   private void initialize() {
-    int a = alphaValue;
+    int a = alpha.value();
     while (a < n && !x[a].domain.contains(s)) {
       x[a].domain.inComplement(store.level, x[a], t);
       a++;

@@ -58,6 +58,7 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -109,6 +110,7 @@ import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -258,6 +260,38 @@ class GlobalConstraintBruteForceTest {
           .as(
               "%s trial %d domains=%s %s",
               name, trial, Arrays.deepToString(instance.domains()), instance.description())
+          .isEqualTo(expected);
+    }
+  }
+
+  /**
+   * The same comparison, but the constraint's first consistency runs at level 1 after one variable
+   * has been restricted there, and the search starts at level 0 after that level is removed. A
+   * constraint whose first consistency does one-time work must redo it or keep it valid for the
+   * wider domains below that level (presolve design, section 4.8).
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceAfterFirstConsistencyAtDeeperLevel(
+      String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 1);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, expected);
+
+      int restricted = random.nextInt(instance.domains().length);
+      int[] values = instance.domains()[restricted];
+      int kept = values[random.nextInt(values.length)];
+      assertThat(solveAll(instance, trial % 3, random.nextInt(), restricted, kept))
+          .as(
+              "%s trial %d domains=%s %s, first consistency at level 1 with x%d = %d",
+              name,
+              trial,
+              Arrays.deepToString(instance.domains()),
+              instance.description(),
+              restricted,
+              kept)
           .isEqualTo(expected);
     }
   }
@@ -1261,7 +1295,30 @@ class GlobalConstraintBruteForceTest {
   }
 
   private static Set<List<Integer>> solveAll(Instance instance, int valueOrder, int seed) {
-    Store store = new Store();
+    return solveAll(instance, valueOrder, seed, -1, 0);
+  }
+
+  /**
+   * Finds all solutions. When {@code restricted >= 0}, the first consistency runs at level 1 with
+   * variable {@code restricted} fixed to {@code kept}, and that level is removed before the search.
+   */
+  private static Set<List<Integer>> solveAll(
+      Instance instance, int valueOrder, int seed, int restricted, int kept) {
+    List<Constraint> imposed = new ArrayList<>();
+    Store store =
+        new Store() {
+          @Override
+          public void impose(Constraint c) {
+            imposed.add(c);
+            super.impose(c);
+          }
+
+          @Override
+          public void impose(Constraint c, int queueIndex) {
+            imposed.add(c);
+            super.impose(c, queueIndex);
+          }
+        };
     IntVar[] x = new IntVar[instance.domains().length];
     for (int i = 0; i < x.length; i++) {
       IntervalDomain domain = new IntervalDomain();
@@ -1271,6 +1328,23 @@ class GlobalConstraintBruteForceTest {
       x[i] = new IntVar(store, "x" + i, domain);
     }
     instance.impose().accept(store, x);
+
+    if (restricted >= 0) {
+      store.setLevel(1);
+      try {
+        x[restricted].domain.in(store.level, x[restricted], kept, kept);
+        store.consistency();
+      } catch (FailException _) {
+        // a failure at level 1 is fine; only the state left behind for level 0 matters
+      }
+      // consistency may itself raise the level (raiseLevelBeforeConsistency)
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      // level 0 was never propagated, and a failure at level 1 empties the queues
+      imposed.forEach(store::addChanged);
+    }
 
     Set<List<Integer>> found = new HashSet<>();
     if (!store.consistency()) {

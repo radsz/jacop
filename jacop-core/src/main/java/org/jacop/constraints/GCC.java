@@ -40,7 +40,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -64,7 +64,7 @@ import org.jacop.core.ValueEnumeration;
  */
 @SuppressWarnings(
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
-public class GCC extends Constraint implements Stateful, SatisfiedPresent {
+public class GCC extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -148,10 +148,10 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
 
   private final IntHeap heap;
 
-  boolean firstConsistencyCheck = true;
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   TimeStamp<Integer> stamp;
-  int firstConsistencyLevel;
   private int stampValue;
 
   /**
@@ -322,15 +322,8 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(Store store) {
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       if (zeroCounters != null) {
         for (IntVar zeroCounter : zeroCounters) {
           zeroCounter.domain.inValue(store.level, zeroCounter, 0);
@@ -341,8 +334,6 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
           v.domain.in(store.level, v, countedValues);
         }
       }
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
     // The new bounds are the bounds over the solutions of the problem in which every variable
     // ranges over its bounds, so imposing them leaves that problem with the same solutions. Only

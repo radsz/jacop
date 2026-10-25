@@ -49,6 +49,7 @@ import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -59,8 +60,8 @@ import org.jacop.core.Var;
 /**
  * Geost constraint for handling geometric placement problems.
  *
- * <p>1) DONE. FlushAndQueue function should be changed and some functionality moved to
- * firstConsistencyCheck.
+ * <p>1) DONE. FlushAndQueue function should be changed and some functionality moved to the first
+ * consistency call.
  *
  * <p>2) DONE. No propagation inside queueVariable function.
  *
@@ -327,18 +328,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   boolean changedShapeId;
 
   /**
-   * It remembers if it is the first time the consistency check is being performed. If not, then the
-   * initial consistency checks which have to be done only once will be done during the first
-   * consistency check. This flag is set back to true if the remove level function is removing the
-   * level onto which the changes caused by the initial consistency were applied to.
+   * The initial consistency checks, done once in the first consistency call and again if the level
+   * at which they were done is removed.
    */
-  boolean firstConsistencyCheck = true;
-
-  /**
-   * It remembers the level at which the consistency function was applied for the first time. If
-   * that level is being removed then the initial consistency function must be executed again.
-   */
-  int firstConsistencyLevel;
+  final InitOnce init = new InitOnce();
 
   /**
    * It stores all variables which have changed outside the consistency function of this constraint.
@@ -1042,7 +1035,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         log.debug("consistency({})", store.level);
       }
 
-      if (firstConsistencyCheck) {
+      if (init.begin(store)) {
 
         // enforce duration > 0 constraint
 
@@ -1053,9 +1046,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
             onObjectUpdate(o);
           }
         }
-
-        firstConsistencyCheck = false;
-        firstConsistencyLevel = store.level;
       }
 
       if (partialShapeSweep) {
@@ -1718,10 +1708,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     if (ASSERTS_ENABLED && inConsistency) {
       throw new IllegalStateException("Assertion failed");
-    }
-
-    if (firstConsistencyLevel == level) {
-      firstConsistencyCheck = true;
     }
 
     removeLimit = lastLevelLastVar.value();

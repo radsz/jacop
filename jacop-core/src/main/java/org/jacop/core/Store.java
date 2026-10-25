@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.util.SparseSet;
@@ -108,6 +109,16 @@ public class Store {
    * be informed about level being removed before it has actually began.
    */
   public final Set<Stateful> removeLevelListeners = new LinkedHashSet<>(10);
+
+  /** Constraints by the level of their first consistency call, in the order of the levels. */
+  private Constraint[] firstRuns = new Constraint[64];
+
+  private int firstRunsSize;
+
+  /** One-time work done so far, in the order of the levels at which it was done. */
+  private InitOnce[] initOnce = new InitOnce[16];
+
+  private int initOnceSize;
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -629,6 +640,9 @@ public class Store {
       while (currentQueue < queueNo) {
         while (!changed[currentQueue].isEmpty()) {
           currentConstraint = getFirstChanged();
+          if (currentConstraint.firstRunAt() < 0) {
+            startFirstRun(currentConstraint);
+          }
           numberConsistencyCalls++;
           currentConstraint.consistency(this);
           if (variableActivityManagement) {
@@ -1122,6 +1136,17 @@ public class Store {
       changed[currentQueue++].clear();
     }
 
+    while (firstRunsSize > 0 && firstRuns[firstRunsSize - 1].firstRunAt() >= level) {
+      firstRuns[--firstRunsSize].setFirstRunAt(Constraint.RUN_UNDONE);
+      firstRuns[firstRunsSize] = null;
+    }
+
+    // One-time work done at this level is due again; listeners below can already see it.
+    while (initOnceSize > 0 && initOnce[initOnceSize - 1].level() >= level) {
+      initOnce[--initOnceSize].rearm();
+      initOnce[initOnceSize] = null;
+    }
+
     // It has to inform listeners first, as they may use values of
     // mutables variables, just before they get deleted.
 
@@ -1179,6 +1204,36 @@ public class Store {
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
+  }
+
+  /**
+   * Records the first consistency call of a constraint at the current level. If an earlier first
+   * call was undone by removing its level, the constraint's variables are queued again, as imposing
+   * the constraint did, since the constraint dropped what it had queued with that level.
+   *
+   * @param c the constraint about to be called.
+   */
+  private void startFirstRun(Constraint c) {
+    if (c.firstRunAt() == Constraint.RUN_UNDONE && c instanceof UsesQueueVariable) {
+      c.arguments().forEach(v -> c.queueVariable(level, v));
+    }
+    c.setFirstRunAt(level);
+    if (firstRunsSize == firstRuns.length) {
+      firstRuns = Arrays.copyOf(firstRuns, firstRunsSize * 2);
+    }
+    firstRuns[firstRunsSize++] = c;
+  }
+
+  /**
+   * Records one-time work done at the current level, so that removing the level makes it due again.
+   *
+   * @param work the work just done.
+   */
+  void recordInitOnce(InitOnce work) {
+    if (initOnceSize == initOnce.length) {
+      initOnce = Arrays.copyOf(initOnce, 2 * initOnceSize);
+    }
+    initOnce[initOnceSize++] = work;
   }
 
   /**

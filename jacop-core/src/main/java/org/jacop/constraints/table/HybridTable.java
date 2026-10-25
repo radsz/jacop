@@ -40,6 +40,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -173,7 +174,7 @@ public class HybridTable extends Constraint
   private int queueSize;
   private boolean[] queued;
   private boolean pruning;
-  private boolean firstConsistency = true;
+  private final InitOnce init = new InitOnce();
 
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
@@ -822,8 +823,7 @@ public class HybridTable extends Constraint
       reviseBinaryTuples();
     }
 
-    if (firstConsistency) {
-      firstConsistency = false;
+    if (init.begin(store)) {
       onlyChanged = -1;
       changed = arity;
     } else if (onlyChanged >= 0

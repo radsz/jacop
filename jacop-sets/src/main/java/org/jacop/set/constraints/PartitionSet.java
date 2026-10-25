@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -65,7 +66,10 @@ public class PartitionSet extends Constraint {
   final HashMap<SetVar, Integer> varMap = new HashMap<>();
   AunionBeqC[] union;
   List<Constraint> constraints;
-  boolean firstConsistencyCheck = true;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
   Store store;
 
@@ -97,11 +101,10 @@ public class PartitionSet extends Constraint {
   @Override
   public void consistency(Store store) throws FailException {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       for (int i = 0; i < n; i++) {
         s[i].domain.inLub(store.level, s[i], u);
       }
-      firstConsistencyCheck = false;
     }
 
     // Pruning one set changes the bounds of the others, and the store does not re-queue this

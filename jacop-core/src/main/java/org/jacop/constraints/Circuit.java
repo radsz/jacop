@@ -36,7 +36,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.Stateful;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.MutableVar;
@@ -50,7 +50,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Circuit extends Alldiff implements Stateful {
+public class Circuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final int[] val;
@@ -59,10 +59,12 @@ public class Circuit extends Alldiff implements Stateful {
   private final int[] dfsValue;
   final Map<Var, Integer> valueIndex = new HashMap<>();
   int chainLength;
-  boolean firstConsistencyCheck = true;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   MutableVar[] graph;
   int idd;
-  int firstConsistencyLevel;
 
   /**
    * It constructs a circuit constraint.
@@ -110,13 +112,11 @@ public class Circuit extends Alldiff implements Stateful {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       for (int i = 0; i < list.length; i++) {
         list[i].domain.in(store.level, list[i], 1, list.length);
         list[i].domain.inComplement(store.level, list[i], i + 1);
       }
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     do {
@@ -295,13 +295,6 @@ public class Circuit extends Alldiff implements Stateful {
   }
 
   // --- Strongly Connected Conmponents
-
-  @Override
-  public void removeLevel(int level) {
-    if (firstConsistencyLevel == level) {
-      firstConsistencyCheck = true;
-    }
-  }
 
   void updateChains(IntVar v) {
 

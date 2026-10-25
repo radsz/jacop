@@ -32,7 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
-import org.jacop.api.Stateful;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -50,15 +50,16 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
+public class AbsXeqY extends AbstractConstraintXandY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   static final boolean DEBUG_ALL = false;
 
-  boolean firstConsistencyCheck = true;
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   boolean domainConsistent;
-  int firstConsistencyLevel;
 
   /**
    * It constructs |X| = Y constraints.
@@ -93,19 +94,10 @@ public class AbsXeqY extends AbstractConstraintXandY implements Stateful {
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(final Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       y.domain.inMin(store.level, y, 0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     if (domainConsistent) {

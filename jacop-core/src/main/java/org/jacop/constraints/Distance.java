@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.Stateful;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -44,12 +44,12 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Distance extends AbstractConstraintXandYandZ implements Stateful {
+public class Distance extends AbstractConstraintXandYandZ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   /**
    * Distance between x and y |x-y| = z.
@@ -64,19 +64,10 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(final Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       z.domain.inMin(store.level, z, 0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     do {

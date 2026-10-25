@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -75,8 +76,10 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
 
   final IntDomain indexAtZero = new IntervalDomain(5);
   final IntDomain indexAtOne = new IntervalDomain(5);
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;
 
@@ -179,12 +182,10 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
       // the list holds only 0s and 1s, so any other value of the value variable has no support
       value.domain.in(store.level, value, 0, 1);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     if (valueHasChanged && applyValueChange(store)) {

@@ -141,7 +141,7 @@ public class ElementVariableFast extends AbstractElement implements SatisfiedPre
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 

@@ -171,7 +171,7 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 
@@ -313,7 +313,7 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public boolean satisfied() {
 
-    if (isStateful()) {
+    if (indexOutsideList()) {
       // the index still has values outside the list (before the first consistency)
       return false;
     }

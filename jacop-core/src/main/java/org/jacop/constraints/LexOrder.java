@@ -37,8 +37,8 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -58,7 +58,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class LexOrder extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
+    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
   static final boolean DEBUG = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -79,8 +79,9 @@ public class LexOrder extends Constraint
   private boolean lexLt;
 
   boolean satisfied;
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   /** Positions queued for the next round, in the order they were first queued. */
   private int[] indexQueue;
@@ -205,12 +206,9 @@ public class LexOrder extends Constraint
 
     satisfied = false;
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
 
       establishGacInit();
-
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     alphaValue = alpha.value();
@@ -276,13 +274,6 @@ public class LexOrder extends Constraint
           indexQueue[indexQueueSize++] = i;
         }
       }
-    }
-  }
-
-  @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
     }
   }
 

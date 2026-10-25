@@ -141,7 +141,7 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 

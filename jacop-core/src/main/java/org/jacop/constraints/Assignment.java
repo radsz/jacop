@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -74,8 +75,10 @@ public class Assignment extends Constraint
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   IntervalDomain rangeX;
   IntervalDomain rangeD;
 
@@ -166,18 +169,13 @@ public class Assignment extends Constraint
   @Override
   public void removeLevel(int level) {
     variableQueue.clear();
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
   }
 
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initRangesAndPropagateInitial(store);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     while (!variableQueue.isEmpty()) {

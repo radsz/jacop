@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,7 +61,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ElementVariable extends AbstractElement
-    implements UsesQueueVariable, SatisfiedPresent {
+    implements UsesQueueVariable, SatisfiedPresent, Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -149,7 +150,6 @@ public class ElementVariable extends AbstractElement
 
   @Override
   public void removeLevel(int level) {
-    super.removeLevel(level);
     indexHasChanged = false;
     valueHasChanged = false;
     variableQueue.clear();
@@ -159,13 +159,13 @@ public class ElementVariable extends AbstractElement
   public void consistency(Store store) {
 
     if (index.singleton()) {
-      if (firstConsistencyCheck) {
+      if (init.begin(store)) {
         // restricts the index to the positions of the list before it is used
         doFirstConsistencyCheck(store);
       }
       enforceSingletonIndex(store);
     } else {
-      if (firstConsistencyCheck) {
+      if (init.begin(store)) {
         doFirstConsistencyCheck(store);
       }
       updateValueBounds(store);
@@ -201,8 +201,6 @@ public class ElementVariable extends AbstractElement
       valDomain.addDom(list[position].domain);
     }
     value.domain.in(store.level, value, valDomain);
-    firstConsistencyCheck = false;
-    firstConsistencyLevel = store.level;
     valueHasChanged = true;
     indexHasChanged = true;
     variableQueue.addAll(Arrays.asList(list));

@@ -142,7 +142,7 @@ public class ElementSetVariable extends AbstractElement {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 

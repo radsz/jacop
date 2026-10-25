@@ -44,6 +44,7 @@ import org.jacop.constraints.In;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -113,7 +114,8 @@ public class CostRegular extends Constraint
 
   private Map<IntVar, Integer> mapping;
 
-  private boolean firstConsistencyCheck = true;
+  /** One-time work of the first consistency call. */
+  private final InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -553,8 +555,7 @@ public class CostRegular extends Constraint
     }
 
     int levels = list.length;
-    if (firstConsistencyCheck) {
-      firstConsistencyCheck = false;
+    if (init.begin(store)) {
       pruning = true;
       try {
         for (int level = 0; level < levels; level++) {

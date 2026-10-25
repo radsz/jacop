@@ -205,7 +205,7 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 

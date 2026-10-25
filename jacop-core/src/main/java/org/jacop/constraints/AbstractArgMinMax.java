@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
@@ -56,7 +57,7 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   protected int indexOffset;
 
-  boolean firstConsistencyCheck = true;
+  final InitOnce init = new InitOnce();
 
   /**
    * Constructs an arg-min/max constraint.

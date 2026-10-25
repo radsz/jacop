@@ -97,9 +97,8 @@ public class ArgMin extends AbstractArgMinMax {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       extremeIndex.domain.in(store.level, extremeIndex, 1 + indexOffset, list.length + indexOffset);
-      firstConsistencyCheck = false;
     }
 
     do {

@@ -47,6 +47,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -87,7 +88,10 @@ public class Binpacking extends Constraint
   private final Map<IntVar, Integer> itemMap;
   private final Map<IntVar, Integer> binMap;
   boolean lbPruning = true;
-  private boolean firstConsistencyCheck = true;
+
+  /** Rule "Pack All", applied in the first consistency call. */
+  private final InitOnce packAll = new InitOnce();
+
   private int minBinNumber;
   private long sizeAllItems;
   private long alphaP;
@@ -223,7 +227,7 @@ public class Binpacking extends Constraint
 
   /** Rule "Pack All" -- applied only on first consistency check. */
   private void applyPackAllRule(Store store) {
-    if (!firstConsistencyCheck) {
+    if (!packAll.begin(store)) {
       return;
     }
     Arrays.stream(item)
@@ -232,7 +236,6 @@ public class Binpacking extends Constraint
     for (IntVar b : zeroWeightBins) {
       b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
     }
-    firstConsistencyCheck = false;
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
