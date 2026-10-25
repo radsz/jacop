@@ -244,7 +244,7 @@ public class CountVar extends AbstractCount {
   }
 
   private void countEqualAndMaybe() {
-    int numberEq = equal();
+    int numberEq = numberEqual();
     int numberMayBe = 0;
     int start = position();
     for (int i = start; i < list.length; i++) {
@@ -270,7 +270,7 @@ public class CountVar extends AbstractCount {
   @Override
   public void notConsistency(final Store store) {
 
-    int numberEq = equal();
+    int numberEq = numberEqual();
     int numberMayBe = 0;
     int start = position();
     for (int i = start; i < list.length; i++) {

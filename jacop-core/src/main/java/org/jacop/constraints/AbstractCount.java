@@ -128,7 +128,7 @@ public abstract class AbstractCount extends PrimitiveConstraint {
    *
    * @return the number of decided variables equal to the value.
    */
-  protected int equal() {
+  protected int numberEqual() {
     return state.get(EQUAL);
   }
 
@@ -152,7 +152,7 @@ public abstract class AbstractCount extends PrimitiveConstraint {
    * @param value the value to count.
    */
   protected void countOccurrences(int value) {
-    int numberEq = equal();
+    int numberEq = numberEqual();
     int numberMayBe = 0;
     int start = position();
     for (int i = start; i < list.length; i++) {
