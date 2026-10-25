@@ -94,6 +94,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -227,6 +228,10 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "SeqPrecedeChainValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChainValues),
+        Arguments.of("Sort", sort(false, false)),
+        Arguments.of("SortPermutation", sort(true, false)),
+        Arguments.of("SortRepeated", sort(false, true)),
+        Arguments.of("SortPermutationRepeated", sort(true, true)),
         Arguments.of("Member", (Function<Random, Instance>) GlobalConstraintBruteForceTest::member),
         Arguments.of("MemberRepeated", memberRepeated("plain")),
         Arguments.of("ReifiedMemberRepeated", memberRepeated("reified")),
@@ -1214,6 +1219,66 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "");
+  }
+
+  /**
+   * sort(x, y) or sort(x, y, z) over distinct variables, or with x, y and z picked from a pool of
+   * variables, so that a variable can occur several times and in more than one array.
+   */
+  private static Function<Random, Instance> sort(boolean permutation, boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(repeated ? 4 : 3);
+      int offset = random.nextInt(3) - 1;
+      int arrays = permutation ? 3 : 2;
+      int pool = repeated ? 1 + random.nextInt(arrays * n) : arrays * n;
+      int[] pick = new int[arrays * n];
+      for (int k = 0; k < pick.length; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        // permutation variables only in the non-repeated case get their own range
+        boolean isZ = !repeated && v >= 2 * n;
+        domains[v] = isZ ? domain(random, offset - 1, offset + n) : domain(random, -1, 3);
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            IntVar[] ys = new IntVar[n];
+            IntVar[] zs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+              ys[i] = v[pick[n + i]];
+              if (permutation) {
+                zs[i] = v[pick[2 * n + i]];
+              }
+            }
+            store.impose(permutation ? new Sort(xs, ys, zs, offset) : new Sort(xs, ys));
+          },
+          t -> {
+            int[] xs = new int[n];
+            int[] ys = new int[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = t[pick[i]];
+              ys[i] = t[pick[n + i]];
+            }
+            if (permutation) {
+              boolean[] used = new boolean[n];
+              for (int i = 0; i < n; i++) {
+                int j = t[pick[2 * n + i]] - offset;
+                if (j < 0 || j >= n || used[j] || ys[j] != xs[i]) {
+                  return false;
+                }
+                used[j] = true;
+              }
+            }
+            int[] s = xs.clone();
+            Arrays.sort(s);
+            return Arrays.equals(s, ys);
+          },
+          "n=" + n + " offset=" + offset + " pick=" + Arrays.toString(pick));
+    };
   }
 
   private static Instance member(Random random) {

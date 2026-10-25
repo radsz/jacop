@@ -934,6 +934,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_seq_precede_chain_int(n);
   }
 
+  /** Handles the jacop_sort FlatZinc constraint. */
+  public void jacop_sort(SimpleNode n) {
+    gc.gen_jacop_sort(n);
+  }
+
+  /** Handles the jacop_sort_permutation FlatZinc constraint. */
+  public void jacop_sort_permutation(SimpleNode n) {
+    gc.gen_jacop_sort_permutation(n);
+  }
+
   // =========== optional constraints ===========
 
   /** Handles the jacop_cumulative_optional FlatZinc constraint. */
