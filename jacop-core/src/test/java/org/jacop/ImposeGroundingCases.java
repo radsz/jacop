@@ -1871,8 +1871,8 @@ final class ImposeGroundingCases {
   }
 
   /**
-   * AmongVar(X, Y, n): X is x[0..nx-1], n is x[nx] and the Y variables are new ones or, sometimes,
-   * X variables.
+   * AmongVar(X, Y, n): X is x[0..nx-1], n is x[nx] and the Y variables follow; AmongVar rejects
+   * lists that share variables.
    */
   static Case amongVar(Random random) {
     int nx = 1 + random.nextInt(3);
@@ -1880,8 +1880,7 @@ final class ImposeGroundingCases {
     int[] ys = new int[ny];
     int vars = nx + 1;
     for (int j = 0; j < ny; j++) {
-      // AmongVar rejects a variable listed twice in Y, so only the first Y may be an X variable
-      ys[j] = j == 0 && random.nextInt(3) == 0 ? random.nextInt(nx) : vars++;
+      ys[j] = vars++;
     }
     int[][] domains = new int[vars][];
     for (int i = 0; i < vars; i++) {
