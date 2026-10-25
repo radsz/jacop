@@ -41,8 +41,10 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Max;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -290,5 +292,63 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(50);
     assertThat(unsat).isGreaterThan(50);
+  }
+
+  /** Random small scheduling problems minimising the makespan, against JaCoP's search. */
+  @Test
+  void makespanAgreesWithSearch() {
+    Random rnd = new Random(9);
+    for (int instance = 0; instance < 150; instance++) {
+      int n = 6 + rnd.nextInt(4);
+      int horizon = 25;
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(4);
+        r[i] = 1 + rnd.nextInt(3);
+      }
+      int limit = 3 + rnd.nextInt(2);
+      int np = rnd.nextInt(n);
+      int[][] prec = new int[np][];
+      for (int p = 0; p < np; p++) {
+        int a = rnd.nextInt(n - 1);
+        prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, 0, horizon - d[i]);
+          ends[i] = new IntVar(store, "e" + i, d[i], horizon);
+          store.impose(new XplusCeqZ(s[i], d[i], ends[i]));
+          durations[i] = new IntVar(store, d[i], d[i]);
+          resources[i] = new IntVar(store, r[i], r[i]);
+        }
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        store.impose(new Max(ends, makespan));
+        for (int[] p : prec) {
+          store.impose(new XplusClteqZ(s[p[0]], d[p[0]], s[p[1]]));
+        }
+        store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          assertThat(
+                  search.labeling(
+                      store, new SimpleSelect<>(s, null, new IndomainMin<>()), makespan))
+              .isTrue();
+          optimum[0] = search.getCostValue();
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
+          optimum[1] = solver.value(makespan);
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
   }
 }

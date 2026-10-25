@@ -106,6 +106,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: literals of those reasons. */
   public long reasonLiterals;
 
+  /** Statistics: solutions found by {@link #minimize}. */
+  public long solutions;
+
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
 
@@ -256,7 +259,40 @@ public final class LcgSolver implements ExternalPropagator {
       return CdclSolver.UNSAT;
     }
     solution = null;
-    return sat.solve();
+    int result = sat.solve();
+    // the solver leaves its last assignment without notifying; the store goes back to the root
+    notifyBacktrack(0);
+    return result;
+  }
+
+  /**
+   * Minimises a variable: solves, then requires a smaller value than the solution's, until no
+   * solution is left. {@link #value} then gives the best solution found.
+   *
+   * @param objective the variable to minimise
+   * @return {@link CdclSolver#SAT} when the best solution is optimal, {@link CdclSolver#UNSAT} when
+   *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
+   */
+  public int minimize(IntVar objective) {
+    int i = objective.index();
+    int[] best = null;
+    while (true) {
+      int result = solve();
+      if (result != CdclSolver.SAT) {
+        solution = best;
+        if (result == CdclSolver.UNSAT) {
+          return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+        }
+        return CdclSolver.UNKNOWN;
+      }
+      best = solution;
+      solutions++;
+      int v = best[i];
+      if (v <= root[i].min()) {
+        return CdclSolver.SAT;
+      }
+      sat.addClause(-geLit(i, v)); // objective <= v - 1
+    }
   }
 
   /**
