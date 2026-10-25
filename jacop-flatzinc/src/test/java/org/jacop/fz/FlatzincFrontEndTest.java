@@ -848,6 +848,35 @@ class FlatzincFrontEndTest {
         solveAllInOrder(fzn));
   }
 
+  @Test
+  void prioritySearchBreaksTiesWithTheTieBreakingMetric() throws IOException {
+    // most_constrained: smallest domain, ties broken by the larger number of constraints. The tie
+    // was decided by comparing the domain size of p1 (2) with the constraint count of p2 (3), so
+    // p2 was searched first although p1 has 4 constraints.
+    String fzn =
+        """
+        var 0..1: p1:: output_var;
+        var 0..1: p2:: output_var;
+        var 0..9: y1;
+        var 0..9: y2;
+        var 0..9: y3;
+        var 0..9: y4;
+        constraint int_ne(y1,p1);
+        constraint int_ne(y2,p1);
+        constraint int_ne(y3,p1);
+        constraint int_ne(y4,p1);
+        constraint int_ne(y1,p2);
+        constraint int_ne(y2,p2);
+        constraint int_ne(y3,p2);
+        solve :: priority_search([p1,p2],[int_search([p1],input_order,indomain_min,complete),\
+        int_search([p2],input_order,indomain_min,complete)],most_constrained,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("p1 = 0; p2 = 0;", "p1 = 0; p2 = 1;", "p1 = 1; p2 = 0;", "p1 = 1; p2 = 1;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");

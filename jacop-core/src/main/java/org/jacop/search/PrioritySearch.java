@@ -589,15 +589,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (comparator != null) {
       double currentMeasure = comparator.metric(priority[current]);
+      double currentTie = tieBreak == null ? 0 : tieBreak.metric(priority[current]);
       for (int i = current + 1; i < n; i++) {
         if (!visited.get(i)) {
-          if (comparator.compare(currentMeasure, priority[i]) < 0) {
+          int c = comparator.compare(currentMeasure, priority[i]);
+          if (c < 0
+              || (c == 0 && tieBreak != null && tieBreak.compare(currentTie, priority[i]) < 0)) {
             current = i;
             currentMeasure = comparator.metric(priority[current]);
-          } else if (tieBreak != null
-              && comparator.compare(currentMeasure, priority[i]) == 0
-              && tieBreak.compare(currentMeasure, priority[i]) < 0) {
-            current = i;
+            currentTie = tieBreak == null ? 0 : tieBreak.metric(priority[current]);
           }
         }
       }
