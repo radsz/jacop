@@ -236,8 +236,9 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       x.domain.inComplement(store.level, x, offset + i);
     }
 
-    boolean oneTreeDone = !useOneTree || n < 4;
-    while (true) {
+    boolean oneTreePending = useOneTree && n >= 4;
+    boolean again;
+    do {
       do {
         store.propagationHasOccurred = false;
         upperBoundFromRows(store);
@@ -259,22 +260,20 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
         }
       } while (store.propagationHasOccurred);
 
-      // the 1-tree only prunes against an upper bound of the cost tighter than the arc costs give,
-      // such as the bound of branch and bound after a first solution
-      if (oneTreeDone || cost.max() >= rowsUpperBound) {
-        break;
+      // the 1-tree runs once per call and only prunes against an upper bound of the cost tighter
+      // than the arc costs give, such as the bound of branch and bound after a first solution
+      again = false;
+      if (oneTreePending && cost.max() < rowsUpperBound) {
+        oneTreePending = false;
+        if (oneTree == null) {
+          oneTree = new OneTree(n, costs);
+        }
+        store.propagationHasOccurred = false;
+        oneTree.propagate(store, this, oneTreeIterations);
+        oneTreeIterations = ONE_TREE_NODE_ITERATIONS;
+        again = store.propagationHasOccurred;
       }
-      oneTreeDone = true;
-      if (oneTree == null) {
-        oneTree = new OneTree(n, costs);
-      }
-      store.propagationHasOccurred = false;
-      oneTree.propagate(store, this, oneTreeIterations);
-      oneTreeIterations = ONE_TREE_NODE_ITERATIONS;
-      if (!store.propagationHasOccurred) {
-        break;
-      }
-    }
+    } while (again);
 
     if (cost.singleton() && allGround()) {
       checkCircuit();
@@ -351,10 +350,10 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
     }
   }
 
-  void removeArc(Store store, int i, int j) {
-    IntVar x = list[i];
-    if (x.domain.contains(offset + j)) {
-      x.domain.inComplement(store.level, x, offset + j);
+  void removeArc(Store store, int from, int to) {
+    IntVar x = list[from];
+    if (x.domain.contains(offset + to)) {
+      x.domain.inComplement(store.level, x, offset + to);
     }
   }
 

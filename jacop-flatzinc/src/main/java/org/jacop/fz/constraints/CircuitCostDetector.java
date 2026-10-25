@@ -66,9 +66,29 @@ public class CircuitCostDetector implements ParserTreeConstants {
 
   private final List<SimpleNode> linears = new ArrayList<>();
 
-  private record Element(IntVar value, int[] array, int firstIndex) {}
+  // an element constraint value = array[index - firstIndex] with a constant array
+  private static final class Element {
+    final IntVar value;
+    final int[] array;
+    final int firstIndex;
 
-  private record Circuit(IntVar[] x, int offset) {}
+    Element(IntVar value, int[] array, int firstIndex) {
+      this.value = value;
+      this.array = array;
+      this.firstIndex = firstIndex;
+    }
+  }
+
+  // a circuit on x whose values are numbered from offset
+  private static final class Circuit {
+    final IntVar[] x;
+    final int offset;
+
+    Circuit(IntVar[] x, int offset) {
+      this.x = x;
+      this.offset = offset;
+    }
+  }
 
   /**
    * It creates a detector reading variables through the given support.
@@ -140,12 +160,13 @@ public class CircuitCostDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
+  // the values of an array of constants, or an empty array if one of them is a variable
   private int[] constants(SimpleNode node) {
     IntVar[] vars = support.getVarArray(node);
     int[] values = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (!vars[i].singleton()) {
-        return null;
+        return new int[0];
       }
       values[i] = vars[i].value();
     }
@@ -153,7 +174,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
   }
 
   private void element(ASTConstElem node, int[] array, int firstIndex) {
-    if (array == null) {
+    if (array == null || array.length == 0) {
       return;
     }
     IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
