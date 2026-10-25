@@ -229,15 +229,13 @@ public class RestartSearch<T extends Var> {
       if (!calculator.pointsExhausted()) {
         return false;
       }
-      boundCost();
-      return true;
+      return boundCost();
     }
     // no result from search
     if (calculator.pointsExhausted()) {
       // the run stopped at its fail limit, so the search space is not exhausted
       if (cost != null) {
-        boundCost();
-        return true;
+        return boundCost();
       }
       return !atLeastOneSolution;
     }
@@ -246,27 +244,41 @@ public class RestartSearch<T extends Var> {
       return false;
     }
     if (cost != null) {
-      boundCost();
+      return boundCost();
     }
     return true;
   }
 
-  void boundCost() {
+  /**
+   * Imposes that the next solution is better than the last one found, unless that bound is already
+   * imposed.
+   *
+   * @return false if no better solution exists.
+   */
+  boolean boundCost() {
 
+    Constraint bound = null;
     // a restart that found no better solution must not impose the same bound again
     if (cost instanceof IntVar v) {
       if (intCostValue < boundedIntCost) {
-        store.impose(new XltC(v, intCostValue));
+        bound = new XltC(v, intCostValue);
         boundedIntCost = intCostValue;
       }
     } else if (floatCostValue < boundedFloatCost) {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
-        Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
-        store.impose(costConstraint);
+        bound = costHandler.createCostConstraint(cost, floatCostValue);
         boundedFloatCost = floatCostValue;
       }
     }
+    if (bound == null) {
+      return true;
+    }
+    store.impose(bound);
+    // The bound prunes once, when it is imposed (it is not woken by later changes of the cost), so
+    // it must prune at this level, below the runs. Relax and reconstruct starts its runs one level
+    // higher, and the pruning would be undone with the level of the first run after the bound.
+    return store.consistency();
   }
 
   public int getIntCost() {
@@ -360,7 +372,8 @@ public class RestartSearch<T extends Var> {
     for (int i = 0; i < rarVars.length; i++) {
       IntVar v = rarVars[i];
       int rn = Store.getRandom().nextInt(101);
-      if (rn <= probability) {
+      // a value of the last solution may have been pruned by the bound on the cost
+      if (rn <= probability && v.domain.contains(values[i])) {
         v.domain.inValue(store.level, v, values[i]);
       }
     }

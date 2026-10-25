@@ -416,4 +416,43 @@ class RestartSearchTest {
     }
     assertTrue(checked > 10, "too few instances needed two restarts: " + checked);
   }
+
+  @Test
+  void relaxAndReconstructOnlyReportsImprovingSolutions() {
+    // The bound on the cost was pruned only inside the first relaxed run after it was imposed, so
+    // later runs reported solutions worse than the best one found.
+    Random rnd = new Random(53);
+    int checked = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      Model model = new Model(instance);
+      if (optimum == null || !model.store.consistency()) {
+        continue;
+      }
+      List<Integer> costs = new ArrayList<>();
+      RestartSearch<IntVar> search = model.restartSearch(new LubyCalculator(1), true);
+      search.setRelaxAndReconstruct(model.x, 60);
+      search.setRestartsLimit(30);
+      search.addReporter(
+          new CustomReport(model.x) {
+            @Override
+            public void report() {
+              int[] x = Arrays.stream(model.x).mapToInt(IntVar::value).toArray();
+              assertTrue(instance.satisfied(x), "solution of " + instance);
+              costs.add(model.cost.value());
+            }
+          });
+      assertTrue(search.labeling(), "no solution of " + instance);
+      for (int i = 1; i < costs.size(); i++) {
+        assertTrue(costs.get(i) < costs.get(i - 1), "costs " + costs + " of " + instance);
+      }
+      assertEquals(costs.getLast().intValue(), search.getIntCost());
+      assertTrue(search.getIntCost() >= optimum);
+      if (costs.size() > 2) {
+        checked++;
+      }
+    }
+    assertTrue(checked > 10, "too few instances improved more than twice: " + checked);
+  }
 }
