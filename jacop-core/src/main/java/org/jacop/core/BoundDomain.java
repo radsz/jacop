@@ -358,6 +358,20 @@ class BoundDomain extends IntDomain {
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
 
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+
+    if (domain.noIntervals() > 1) {
+      // The bounds of domain may lie in its holes, so the bounds of the values kept are used.
+      IntDomain kept = domain.intersect(this.minBound, this.maxBound);
+      if (kept.isEmpty()) {
+        throw failException;
+      }
+      in(storeLevel, v, kept.min(), kept.max());
+      return;
+    }
+
     in(storeLevel, v, domain.min(), domain.max());
   }
 
@@ -557,6 +571,20 @@ class BoundDomain extends IntDomain {
 
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
+
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+
+    if (domain.noIntervals() > 1) {
+      IntDomain kept = domain.intersect(this.minBound - shift, this.maxBound - shift);
+      if (kept.isEmpty()) {
+        throw failException;
+      }
+      in(storeLevel, v, kept.min() + shift, kept.max() + shift);
+      return;
+    }
+
     in(storeLevel, v, domain.min() + shift, domain.max() + shift);
   }
 

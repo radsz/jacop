@@ -4992,6 +4992,33 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b, y})).isEqualTo(5);
   }
 
+  @Test
+  void booleanVarInADomainWithHolesKeepsOnlyItsValues() {
+    // The domain of a BooleanVar pruned by the bounds -1..1 of {-1, 1}, which removed nothing, so
+    // b in {-1, 1} accepted b = 0.
+    IntervalDomain minusOneAndOne = new IntervalDomain(-1, -1);
+    minusOneAndOne.unionAdapt(1, 1);
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("1");
+
+    // The same for a shifted domain: b + 1 in {0, 2} is b in {-1, 1}.
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.setLevel(1);
+    IntervalDomain zeroAndTwo = new IntervalDomain(0, 0);
+    zeroAndTwo.unionAdapt(2, 2);
+    b.domain.inShift(store.level, b, zeroAndTwo, -1);
+    assertThat(b.dom()).hasToString("1");
+
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b})).isEqualTo(1);
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
   @Test
   void xmulYeqCNegatedWithZeroFactor() {
