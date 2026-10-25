@@ -410,6 +410,44 @@ class CircuitCostTest {
   }
 
   @Test
+  void oneTreeBoundIsCloseToTheOptimumOnEuclideanInstances() {
+    // the Lagrangian penalties close most of the gap of the plain 1-tree; with the penalties left
+    // at zero the bound was 10-15% below the optimum
+    Random random = new Random(41);
+    for (int t = 0; t < 10; t++) {
+      int n = 9;
+      int[][] xy = new int[n][2];
+      for (int[] p : xy) {
+        p[0] = random.nextInt(1000);
+        p[1] = random.nextInt(1000);
+      }
+      int[][] costs = new int[n][n];
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          costs[i][j] = (int) Math.round(Math.hypot(xy[i][0] - xy[j][0], xy[i][1] - xy[j][1]));
+        }
+        domains[i] = java.util.stream.IntStream.rangeClosed(1, n).toArray();
+      }
+      int best = Integer.MAX_VALUE;
+      for (int[] c : new Instance(n, 1, domains, costs, null).circuits()) {
+        best = Math.min(best, c[n]);
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, n);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, best);
+      CircuitCost c = new CircuitCost(x, costs, cost);
+      c.setFiltering(false, true);
+      store.impose(c);
+      assertTrue(store.consistency());
+      assertTrue(cost.min() >= 0.97 * best, "bound " + cost.min() + " optimum " + best);
+    }
+  }
+
+  @Test
   void costIsFixedWhenTheCircuitIs() {
     int[][] costs = {{0, 3, 5}, {2, 0, 4}, {6, 1, 0}};
     Store store = new Store();

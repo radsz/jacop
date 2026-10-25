@@ -97,6 +97,14 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
   // the last 1-tree bound, to tell a lower bound of the cost set by other constraints
   private long oneTreeBound = Long.MIN_VALUE;
 
+  // the sums of the largest and of the smallest arc cost of each row, from the last call
+  private long rowsUpperBound;
+
+  private long rowsLowerBound;
+
+  // the last minimum assignment
+  private long assignmentBound = Long.MIN_VALUE;
+
   // The 1-tree bound is optimised longer the first time, its penalties are kept between calls.
   private int oneTreeIterations = 100;
 
@@ -233,20 +241,27 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       do {
         store.propagationHasOccurred = false;
         upperBoundFromRows(store);
-        if (useAssignment) {
-          long bound = minAssignment.solve(list, offset);
-          setMin(store, bound);
+        // Every assignment costs at most the sum of the row maxima, so the minimum assignment
+        // can only prune when the cost has a smaller upper bound, and the same for the maximum
+        // assignment, which in addition only runs when the lower bound of the cost is not the
+        // one this constraint set.
+        if (useAssignment && cost.max() < rowsUpperBound) {
+          assignmentBound = minAssignment.solve(list, offset);
+          setMin(store, assignmentBound);
           minAssignment.prune(store, list, offset, cost.max());
-          // the maximum assignment only helps when the cost has a lower bound of its own
-          if (cost.min() > Math.max(bound, oneTreeBound)) {
-            long negatedBound = maxAssignment.solve(list, offset);
-            setMax(store, -negatedBound);
-            maxAssignment.prune(store, list, offset, -(long) cost.min());
-          }
+        }
+        if (useAssignment
+            && cost.min() > rowsLowerBound
+            && cost.min() > Math.max(assignmentBound, oneTreeBound)) {
+          long negatedBound = maxAssignment.solve(list, offset);
+          setMax(store, -negatedBound);
+          maxAssignment.prune(store, list, offset, -(long) cost.min());
         }
       } while (store.propagationHasOccurred);
 
-      if (oneTreeDone) {
+      // the 1-tree only prunes against an upper bound of the cost tighter than the arc costs give,
+      // such as the bound of branch and bound after a first solution
+      if (oneTreeDone || cost.max() >= rowsUpperBound) {
         break;
       }
       oneTreeDone = true;
@@ -312,6 +327,8 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       sumMax += max;
       sumMin += min;
     }
+    rowsUpperBound = sumMax;
+    rowsLowerBound = sumMin;
     setMax(store, sumMax);
     setMin(store, sumMin);
   }
@@ -747,7 +764,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
           // the graph is not connected or node 0 has fewer than two neighbours
           throw Store.failException;
         }
-        if (bound > best + tolerance(best)) {
+        if (best == Double.NEGATIVE_INFINITY || bound > best + tolerance(best)) {
           best = bound;
           System.arraycopy(pi, 0, bestPi, 0, n);
           sinceImproved = 0;
