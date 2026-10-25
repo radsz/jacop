@@ -459,7 +459,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     objectConstraints = new Set[idMax + 1];
     domainHolesConstraints = new DomainHoles[idMax + 1];
     pruneIfGrounded = new boolean[idMax + 1];
-    Arrays.fill(pruneIfGrounded, false);
+    // objects fixed already are checked once
+    Arrays.fill(pruneIfGrounded, true);
     shapeRegister = buildShapeRegisterArray(idShapeMap);
     fullyPruned = partialShapeSweep ? new boolean[idMax + 1] : null;
 
