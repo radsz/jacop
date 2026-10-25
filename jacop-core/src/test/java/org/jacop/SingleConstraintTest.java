@@ -2293,13 +2293,13 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(store.consistency()).isTrue();
     assertThat(x1.singleton(0)).isTrue();
-    assertThat(value.dom().toString()).isEqualTo("{0..1}");
+    assertThat(value.dom()).hasToString("{0..1}");
   }
 
   @Test
   void countVarNarrowsEveryVariableToTheValueItFixes() {
-    // Both variables must equal the value. x1 fixes the value to 0, after x0 was narrowed to {0, 2}
-    // only, and x0 must still become 0.
+    // Both variables must equal the value. Narrowing the value by x1 leaves only 0, after x0 was
+    // already narrowed by the value domain, and x0 must still become 0.
     Store store = new Store();
     IntVar x0 = new IntVar(store, "x0", 0, 2);
     IntVar x1 = new IntVar(store, "x1", 0, 1);

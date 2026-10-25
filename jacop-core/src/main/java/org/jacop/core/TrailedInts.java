@@ -94,8 +94,8 @@ public final class TrailedInts implements Stateful {
     if (size > 0 && trail[size - entry] == level) {
       return;
     }
-    if (size == trail.length) {
-      trail = Arrays.copyOf(trail, 2 * size);
+    if (size + entry > trail.length) {
+      trail = Arrays.copyOf(trail, Math.max(2 * trail.length, size + entry));
     }
     trail[size] = level;
     System.arraycopy(values, 0, trail, size + 1, values.length);

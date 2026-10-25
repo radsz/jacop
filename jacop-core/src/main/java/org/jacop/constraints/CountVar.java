@@ -207,39 +207,50 @@ public class CountVar extends AbstractCount {
 
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.singleton()) {
-        continue;
+      if (!v.singleton()) {
+        pruneListVariable(store, v, size);
       }
-      // the values w that meet the counter when v differs from w; two of them support every value
-      int supports = 0;
-      int support = 0;
-      for (int j = 0; j < size && supports < 2; j++) {
-        int w = values[j];
-        int max = valueEq[j] + valueMayBe[j] - (v.domain.contains(w) ? 1 : 0);
-        if (counter.domain.isIntersecting(valueEq[j], max)) {
-          supports++;
-          support = w;
-        }
+    }
+  }
+
+  /**
+   * Keeps a value of an unfixed list variable only if some remaining value w of the value variable
+   * still meets the counter with it.
+   *
+   * @param store the constraint store.
+   * @param v the list variable.
+   * @param size the number of remaining values in {@link #values}.
+   */
+  private void pruneListVariable(Store store, IntVar v, int size) {
+    // the values w that meet the counter when v differs from w; two of them support every value
+    int supports = 0;
+    int support = 0;
+    for (int j = 0; j < size && supports < 2; j++) {
+      int w = values[j];
+      int max = valueEq[j] + valueMayBe[j] - (v.domain.contains(w) ? 1 : 0);
+      if (counter.domain.isIntersecting(valueEq[j], max)) {
+        supports++;
+        support = w;
       }
-      if (supports == 2) {
-        continue;
+    }
+    if (supports == 2) {
+      return;
+    }
+    // a value a not supported that way needs w = a, with v counted
+    IntervalDomain kept = new IntervalDomain();
+    for (int j = 0; j < size; j++) {
+      int w = values[j];
+      if (v.domain.contains(w)
+          && counter.domain.isIntersecting(valueEq[j] + 1, valueEq[j] + valueMayBe[j])) {
+        kept.unionAdapt(w, w);
       }
-      // a value a not supported that way needs w = a, with v counted
-      IntervalDomain kept = new IntervalDomain();
-      for (int j = 0; j < size; j++) {
-        int w = values[j];
-        if (v.domain.contains(w)
-            && counter.domain.isIntersecting(valueEq[j] + 1, valueEq[j] + valueMayBe[j])) {
-          kept.unionAdapt(w, w);
-        }
+    }
+    if (supports == 1) {
+      if (!kept.contains(support)) {
+        v.domain.inComplement(store.level, v, support);
       }
-      if (supports == 1) {
-        if (!kept.contains(support)) {
-          v.domain.inComplement(store.level, v, support);
-        }
-      } else {
-        v.domain.in(store.level, v, kept);
-      }
+    } else {
+      v.domain.in(store.level, v, kept);
     }
   }
 
