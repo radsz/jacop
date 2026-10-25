@@ -98,7 +98,7 @@ public class TrailBacktrackableManager implements BacktrackableManager {
   }
 
   private void grow() {
-    int capacity = Math.max(64, 2 * trailSize + 1);
+    int capacity = Math.max(64, Math.addExact(Math.multiplyExact(2, trailSize), 1));
     trailIndex = Arrays.copyOf(trailIndex, capacity);
     trailLevel = Arrays.copyOf(trailLevel, capacity);
     trailPrevious = Arrays.copyOf(trailPrevious, capacity);

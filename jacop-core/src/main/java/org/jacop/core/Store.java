@@ -1037,7 +1037,7 @@ public class Store {
   }
 
   private void growBooleanChangeLevels() {
-    int capacity = Math.max(16, 2 * booleanChangeLevelsSize + 1);
+    int capacity = Math.max(16, Math.addExact(Math.multiplyExact(2, booleanChangeLevelsSize), 1));
     booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
     booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
   }
@@ -1068,7 +1068,7 @@ public class Store {
   }
 
   private void growTimeStampTrail() {
-    int capacity = Math.max(64, 2 * timeStampTrailSize + 1);
+    int capacity = Math.max(64, Math.addExact(Math.multiplyExact(2, timeStampTrailSize), 1));
     timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
     timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
   }
