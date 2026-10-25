@@ -103,7 +103,7 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
       try {
         v.domain.in(store.level, v, value, value);
         consistent = store.consistency();
-      } catch (FailException ex) {
+      } catch (FailException _) {
         consistent = false;
       }
       int bound = maximize ? objective.max() : objective.min();

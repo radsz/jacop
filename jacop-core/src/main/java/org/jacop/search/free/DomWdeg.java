@@ -327,7 +327,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     if (weighting == Weighting.CHS) {
       alpha = CHS_ALPHA;
       for (int k = 0; k < weights.length; k++) {
-        weights[k] *= Math.pow(CHS_DECAY, conflicts - lastConflict[k]);
+        weights[k] *= Math.pow(CHS_DECAY, (double) conflicts - lastConflict[k]);
       }
     }
   }

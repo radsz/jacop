@@ -331,7 +331,7 @@ public final class FreeSearch {
           positives++;
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       // a nogood emptied a domain at the root: the next run fails at once and ends the search
       store.recentlyFailedConstraint = null;
       nogoods.add(nogoodVars, nogoodValues, 0);

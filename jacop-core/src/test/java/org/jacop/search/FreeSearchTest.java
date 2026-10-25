@@ -776,7 +776,7 @@ class FreeSearchTest {
           assertEquals(Status.UNSATISFIABLE, status);
         } else {
           assertEquals(Status.OPTIMAL, status, instance.toString());
-          assertEquals(maximize ? reference[2] : reference[1], search.getCostValue());
+          assertEquals(reference[maximize ? 2 : 1], search.getCostValue());
         }
       }
     }
