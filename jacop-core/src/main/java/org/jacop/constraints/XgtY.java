@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -40,7 +42,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XgtY extends AbstractXcompY {
+public class XgtY extends AbstractXcompY implements Copyable<XgtY> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -89,5 +91,10 @@ public class XgtY extends AbstractXcompY {
   @Override
   public String toString() {
     return id() + " : XgtY(" + x + ", " + y + " )";
+  }
+
+  @Override
+  public XgtY copy(VarMap map) {
+    return new XgtY(map.get(x), map.get(y));
   }
 }

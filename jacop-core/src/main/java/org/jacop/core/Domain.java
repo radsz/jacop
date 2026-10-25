@@ -61,7 +61,8 @@ public abstract class Domain {
 
   /**
    * It specifies constraints which are attached to current domain, each array has different pruning
-   * event.
+   * event. An array can be longer than the number of its constraints; only the first
+   * modelConstraintsToEvaluate[i] entries of array i are attached.
    */
   public Constraint[][] modelConstraints;
 
@@ -313,10 +314,8 @@ public abstract class Domain {
 
     if (modelConstraints != null) {
       for (int i = 0; i < modelConstraints.length; i++) {
-        for (int j = modelConstraintsToEvaluate[i]; j >= 0; j--) {
-          if (modelConstraints[i] != null
-              && j < modelConstraints[i].length
-              && (modelConstraints[i][j] == null || !modelConstraints[i][j].isEntailed())) {
+        for (int j = modelConstraintsToEvaluate[i] - 1; j >= 0; j--) {
+          if (!modelConstraints[i][j].isEntailed()) {
             result.add(modelConstraints[i][j]);
           }
         }

@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.function.IntConsumer;
-import org.jacop.api.Stateful;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -44,7 +44,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractElement extends Constraint implements Stateful {
+public abstract class AbstractElement extends Constraint {
 
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
   protected final IntVar index;
@@ -52,8 +52,8 @@ public abstract class AbstractElement extends Constraint implements Stateful {
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   protected final int indexOffset;
 
-  protected boolean firstConsistencyCheck = true;
-  protected int firstConsistencyLevel;
+  /** Restricts the index to the positions of the list, in the first consistency call. */
+  protected final InitOnce init = new InitOnce();
 
   /**
    * Constructs the common part of an element constraint.
@@ -73,28 +73,23 @@ public abstract class AbstractElement extends Constraint implements Stateful {
    */
   protected abstract int listLength();
 
-  @Override
-  public boolean isStateful() {
+  /**
+   * Checks if the index can still take a value outside the positions of the list, as it can before
+   * the first consistency call.
+   *
+   * @return true if the index has a value outside the list.
+   */
+  protected boolean indexOutsideList() {
     return index.min() < 1 + indexOffset || index.max() > listLength() + indexOffset;
   }
 
-  @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
   /**
-   * Common impose logic: calls super.impose and disables firstConsistencyCheck if not stateful.
+   * Common impose logic of the element constraints.
    *
    * @param store the constraint store.
    */
   protected void imposeInit(Store store) {
     super.impose(store);
-    if (!isStateful()) {
-      firstConsistencyCheck = false;
-    }
   }
 
   /**
@@ -104,8 +99,6 @@ public abstract class AbstractElement extends Constraint implements Stateful {
    */
   protected void initFirstConsistencyCheck(Store store) {
     index.domain.in(store.level, index, 1 + indexOffset, listLength() + indexOffset);
-    firstConsistencyLevel = store.level;
-    firstConsistencyCheck = false;
   }
 
   /**

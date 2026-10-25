@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -44,7 +46,7 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Implies extends AbstractReifiedConstraint {
+public class Implies extends AbstractReifiedConstraint implements Copyable<Implies> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -132,5 +134,15 @@ public class Implies extends AbstractReifiedConstraint {
   @Override
   public void queueVariable(int level, Var variable) {
     queueForward.queueForward(level, variable);
+  }
+
+  @Override
+  public Implies copy(VarMap map) {
+    return new Implies(map.get(b), Copyable.copyOf(c, map));
+  }
+
+  @Override
+  public boolean canCopy() {
+    return Copyable.canCopy(c);
   }
 }

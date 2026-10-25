@@ -589,15 +589,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (comparator != null) {
       double currentMeasure = comparator.metric(priority[current]);
+      double currentTie = tieBreak == null ? 0 : tieBreak.metric(priority[current]);
       for (int i = current + 1; i < n; i++) {
         if (!visited.get(i)) {
-          if (comparator.compare(currentMeasure, priority[i]) < 0) {
+          int c = comparator.compare(currentMeasure, priority[i]);
+          if (c < 0
+              || (c == 0 && tieBreak != null && tieBreak.compare(currentTie, priority[i]) < 0)) {
             current = i;
             currentMeasure = comparator.metric(priority[current]);
-          } else if (tieBreak != null
-              && comparator.compare(currentMeasure, priority[i]) == 0
-              && tieBreak.compare(currentMeasure, priority[i]) < 0) {
-            current = i;
+            currentTie = tieBreak == null ? 0 : tieBreak.metric(priority[current]);
           }
         }
       }
@@ -617,21 +617,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     List<T> vars = new ArrayList<>();
 
     for (int i = 0; i < ps.search.size() / 2; i++) {
-      SelectChoicePoint<T> heuristic = ps.search.get(2 * i).heuristic;
-
-      if (heuristic == null) {
-        // PrioritySearch
-        List<T> vs = null;
-        for (int j = 0; j < ps.search.size() / 2; j++) {
-          vs = getVariables((PrioritySearch<T>) ps.search.get(2 * j));
+      // a sub-search is a chain of searches (seq_search) ending in the linking search
+      for (DepthFirstSearch<T> s = ps.search.get(2 * i);
+          s != null && !(s instanceof LinkingSearch);
+          s = s.childSearches == null ? null : asDfs(s.childSearches[0])) {
+        if (s instanceof PrioritySearch<T> nested) {
+          vars.addAll(getVariables(nested));
+        } else if (s.heuristic != null) {
+          Map<T, Integer> position = s.heuristic.getVariablesMapping();
+          vars.addAll(position.keySet());
         }
-
-        vars.addAll(vs);
-
-      } else {
-        Map<T, Integer> position = heuristic.getVariablesMapping();
-
-        vars.addAll(position.keySet());
       }
     }
 
@@ -729,6 +724,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     /** Last child search run in the child loop (used when no early return). */
     DepthFirstSearch<T> lastChildSearchRun;
+
+    /** Solutions the last child search run had found before this run. */
+    int lastChildSolutionsBefore;
 
     LinkingSearch(DepthFirstSearch<T> m) {
       master = m;
@@ -831,7 +829,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (earlyReturn.isPresent()) {
           return earlyReturn.get();
         }
-        noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+        noSolutions +=
+            lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
         constraineCostFromChild(lastChildSearchRun);
       } else {
         constraineCost();
@@ -850,6 +849,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         child.getSolutionListener().setParentSolutionListener(solutionListener);
         child.setCostVar(costVariable);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
         if (result) {
           break;
@@ -877,6 +877,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         child.setStore(store);
         child.getSolutionListener().setParentSolutionListener(solutionListener);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
+        lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
         if (result) {
           break;
@@ -909,7 +910,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (earlyReturn.isPresent()) {
         return earlyReturn.get();
       }
-      noSolutions += lastChildSearchRun.getSolutionListener().solutionsNo();
+      noSolutions +=
+          lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
       if (noSolutions >= solutionsLimit) {
         throw new SolutionsLimitReached();
       }

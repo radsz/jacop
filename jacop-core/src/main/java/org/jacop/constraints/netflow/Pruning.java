@@ -75,6 +75,21 @@ public class Pruning extends Network {
   private final PruningStrategy strategy;
   public int numActiveArcs;
 
+  /** Shortest paths that decide residual arcs of capacity one without probing them. */
+  private final ResidualDistances distances;
+
+  /** The arc companions whose unit arcs the current pass decides by shortest paths. */
+  private final List<ArcCompanion> companions = new ArrayList<>();
+
+  /** Residual arcs of capacity one, grouped by the node their shortest path starts or ends at. */
+  private final List<List<Arc>> unitArcs = new ArrayList<>();
+
+  /** The number of the current pruning pass. */
+  private int pass;
+
+  /** The nodes whose distances a shortest path computation needs. */
+  private Node[] targets = new Node[0];
+
   /**
    * Constructs a pruning network from the given nodes, arcs, and statistics tracker.
    *
@@ -97,6 +112,10 @@ public class Pruning extends Network {
     this.numActiveArcs = queue.size();
 
     this.statistics = statistics;
+    this.distances = new ResidualDistances(this.nodes);
+    for (int i = 0; i < 2 * this.nodes.length; i++) {
+      unitArcs.add(new ArrayList<>());
+    }
   }
 
   private void xvarInMax(ArcCompanion companion, int maxFlow) {
@@ -320,6 +339,9 @@ public class Pruning extends Network {
    */
   public void analyze(int costLimit) {
 
+    pass++;
+    analyzeUnitArcs(costLimit);
+
     ArcCompanion prev = null;
     strategy.init();
     ArcCompanion companion = strategy.next();
@@ -343,6 +365,93 @@ public class Pruning extends Network {
       recordInstrumentationMin(prev);
     }
     strategy.close();
+  }
+
+  /**
+   * Decides every residual arc of capacity one whose sister has no residual capacity, such as the
+   * arcs of a variable to its values. One unit of flow fits through such an arc (u, v) within the
+   * cost limit exactly when its reduced cost plus the shortest residual path from v back to u is at
+   * most the limit; this is the result the probe of analyzeArc computes, without pivots. Pruning an
+   * arc only removes residual arcs, so distances computed before it never exceed the current ones
+   * and an arc found too expensive stays too expensive.
+   *
+   * @param costLimit the maximum cost increase allowed
+   */
+  private void analyzeUnitArcs(int costLimit) {
+    // a failure in an earlier pass can leave arcs behind
+    for (List<Arc> arcs : unitArcs) {
+      arcs.clear();
+    }
+    // all active arcs, read without polling the queue, so that the strategy picks the arcs to
+    // probe in its own order; deciding an arc the strategy does not pick only prunes more
+    companions.clear();
+    for (ArcCompanion companion : queue) {
+      if (companion.arc.index != DELETED_ARC) {
+        companions.add(companion);
+      }
+    }
+    int[] origins = new int[2 * nodes.length];
+    for (ArcCompanion companion : companions) {
+      for (Arc arc : new Arc[] {companion.arc, companion.arc.sister}) {
+        if (isUnitArc(arc)) {
+          origins[2 * arc.head.index]++;
+          origins[2 * arc.tail().index + 1]++;
+        }
+      }
+    }
+    // a path from v to u is computed from v, or backwards from u, whichever serves more arcs
+    for (ArcCompanion companion : companions) {
+      for (Arc arc : new Arc[] {companion.arc, companion.arc.sister}) {
+        if (isUnitArc(arc)) {
+          int fromHead = 2 * arc.head.index;
+          int toTail = 2 * arc.tail().index + 1;
+          unitArcs.get(origins[fromHead] >= origins[toTail] ? fromHead : toTail).add(arc);
+        }
+      }
+    }
+    for (int key = 0; key < unitArcs.size(); key++) {
+      List<Arc> arcs = unitArcs.get(key);
+      if (arcs.isEmpty()) {
+        continue;
+      }
+      boolean reverse = (key & 1) == 1;
+      int minimumReducedCost = Integer.MAX_VALUE;
+      for (Arc arc : arcs) {
+        minimumReducedCost = Math.min(minimumReducedCost, arc.reducedCost());
+      }
+      if (ASSERTS_ENABLED && minimumReducedCost < 0) {
+        throw new IllegalStateException(
+            "Negative reduced cost "
+                + arcs
+                + " opt="
+                + org.jacop.constraints.netflow.Assert.checkOptimality(this)
+                + " key="
+                + key);
+      }
+      if (targets.length < arcs.size()) {
+        targets = new Node[2 * arcs.size()];
+      }
+      for (int i = 0; i < arcs.size(); i++) {
+        targets[i] = reverse ? arcs.get(i).head : arcs.get(i).tail();
+      }
+      distances.compute(
+          nodes[key >> 1], reverse, (long) costLimit - minimumReducedCost, targets, arcs.size());
+      for (Arc arc : arcs) {
+        arc.decidedPass = pass;
+        long distance = distances.distance(reverse ? arc.head : arc.tail());
+        if (distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit) {
+          // no unit of flow fits through the arc
+          if (arc.capacity > 0) {
+            pruneArc(arc.capacity, arc.sister.capacity, arc.forward, arc.getCompanion());
+          }
+        }
+      }
+      arcs.clear();
+    }
+  }
+
+  private boolean isUnitArc(Arc arc) {
+    return arc.capacity == 1 && arc.sister.capacity == 0 && arc.decidedPass != pass;
   }
 
   private void recordInstrumentationMax(ArcCompanion companion) {
@@ -377,7 +486,7 @@ public class Pruning extends Network {
   }
 
   private void analyzeArcHelper(Arc arc, int costLimit) {
-    if (arc.capacity == 0) {
+    if (arc.capacity == 0 || arc.decidedPass == pass) {
       return;
     }
 
@@ -419,12 +528,7 @@ public class Pruning extends Network {
     }
 
     // restore optimal flow
-    networkSimplex(999999);
-
-    long cost = cost(Long.MAX_VALUE);
-    if (ASSERTS_ENABLED && cost(Long.MAX_VALUE) != cost) {
-      throw new IllegalStateException(String.valueOf(cost(Long.MAX_VALUE) + " != " + cost));
-    }
+    reoptimize(999999);
   }
 
   private int analyzeArc(Arc arc, int costLimit) {

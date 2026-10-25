@@ -32,6 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -317,5 +318,12 @@ public class CumulativeUnary extends Cumulative {
     result.append(" ]").append(", limit = ").append(limit).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public CumulativeUnary copy(VarMap map) {
+    IntVar[][] t = taskVariables(map);
+    return withOptionsOf(
+        new CumulativeUnary(t[0], t[1], t[2], map.get(limit), doProfile, doUnaryEdgeFind));
   }
 }

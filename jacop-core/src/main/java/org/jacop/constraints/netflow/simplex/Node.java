@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.netflow.simplex;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * A node (vertex) in the network.
  *
@@ -65,11 +67,20 @@ public final class Node {
   public Node thread;
   public int depth;
 
+  /** The node i with i.thread == this. */
+  Node threadPredecessor;
+
   /** Number of connected arcs. */
   public int degree;
 
   /** Marks the cut (S,T) for dual pivot. */
   boolean marked;
+
+  /** All arcs of the network that start or end at this node, deleted ones included. */
+  public Arc[] incident = new Arc[0];
+
+  /** The position of this node in the nodes of the network. */
+  public int index;
 
   /**
    * Constructs a node with the specified name and balance.
@@ -122,30 +133,32 @@ public final class Node {
   }
 
   /**
-   * Finds the predecessor of this node on the thread. It uses the parent node as starting point of
-   * the search. (Hence, this method cannot be invoked on the root)
+   * Returns the predecessor of this node on the thread.
    *
    * @return the node i with i.thread == this
    */
   public Node predecessorOnThread() {
-    Node i = parent;
-    while (i.thread != this) {
-      i = i.thread;
+    if (ASSERTS_ENABLED && threadPredecessor.thread != this) {
+      throw new IllegalStateException(String.valueOf(this));
     }
-    return i;
+    return threadPredecessor;
   }
 
   /**
    * Sets or clears a mark on a subtree rooted at this node.
    *
    * @param setMark whether to set or clear the mark
+   * @return the number of arcs incident to the subtree, artificial arcs included
    */
-  public void markTree(boolean setMark) {
+  public int markTree(boolean setMark) {
+    int arcs = 0;
     Node i = this;
     do {
       i.marked = setMark;
+      arcs += i.incident.length + 1;
       i = i.thread;
     } while (i.depth > depth);
+    return arcs;
   }
 
   /** Recomputes the potential and depth values in the subtree rooted at this node. */

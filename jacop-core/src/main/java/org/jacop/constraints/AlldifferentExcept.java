@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.List;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -86,6 +87,11 @@ public class AlldifferentExcept extends Alldifferent
 
   // The matching check fails as soon as the variables without exception values cannot all take
   // different values. That can follow from any change of a domain, not only from fixing a variable.
+  @Override
+  protected boolean keepsMatching() {
+    return false;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
@@ -141,5 +147,10 @@ public class AlldifferentExcept extends Alldifferent
     result.append("], ").append(s).append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public AlldifferentExcept copy(VarMap map) {
+    return new AlldifferentExcept(map.get(list), s);
   }
 }

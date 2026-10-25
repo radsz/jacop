@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -44,7 +46,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusClteqZ extends AbstractConstraintXandCandZ {
+public class XplusClteqZ extends AbstractConstraintXandCandZ implements Copyable<XplusClteqZ> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -154,5 +156,10 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ {
   public String toString() {
 
     return id() + " : XplusClteqZ(" + x + ", " + c + ", " + z + " )";
+  }
+
+  @Override
+  public XplusClteqZ copy(VarMap map) {
+    return new XplusClteqZ(map.get(x), c, map.get(z));
   }
 }

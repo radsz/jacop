@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -912,30 +914,50 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
+    return new FzXeqC(x, c, b, isReified);
+  }
 
-    return new Constraint(new IntVar[] {x, b}) {
+  /** The constraint x = c, reified with b or implied by b. */
+  final class FzXeqC extends Constraint implements Copyable<FzXeqC> {
 
-      final int numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+    final IntVar x;
+    final int c;
+    final IntVar b;
+    final boolean isReified;
+    final int numberId;
 
-      @Override
-      public void consistency(final Store store) {
-        propagateFzXeqC(store, x, c, b, isReified, this::removeConstraint);
+    FzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
+      super(new IntVar[] {x, b});
+      this.x = x;
+      this.c = c;
+      this.b = b;
+      this.isReified = isReified;
+      this.numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(final Store store) {
+      propagateFzXeqC(store, x, c, b, isReified, this::removeConstraint);
+    }
+
+    @Override
+    public String toString() {
+      if (isReified) {
+        return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+      } else {
+        return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
+    }
 
-      @Override
-      public String toString() {
-        if (isReified) {
-          return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
-        } else {
-          return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
-        }
-      }
+    @Override
+    public String id() {
+      return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
+    }
 
-      @Override
-      public String id() {
-        return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
-      }
-    };
+    @Override
+    public FzXeqC copy(VarMap map) {
+      return new FzXeqC(map.get(x), c, map.get(b), isReified);
+    }
   }
 
   Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
@@ -947,30 +969,50 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXneqC(IntVar x, int c, IntVar b, boolean isReified) {
+    return new FzXneqC(x, c, b, isReified);
+  }
 
-    return new Constraint(new IntVar[] {x, b}) {
+  /** The constraint x != c, reified with b or implied by b. */
+  final class FzXneqC extends Constraint implements Copyable<FzXneqC> {
 
-      final int numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
+    final IntVar x;
+    final int c;
+    final IntVar b;
+    final boolean isReified;
+    final int numberId;
 
-      @Override
-      public void consistency(final Store store) {
-        propagateFzXneqC(store, x, c, b, isReified, this::removeConstraint);
+    FzXneqC(IntVar x, int c, IntVar b, boolean isReified) {
+      super(new IntVar[] {x, b});
+      this.x = x;
+      this.c = c;
+      this.b = b;
+      this.isReified = isReified;
+      this.numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(final Store store) {
+      propagateFzXneqC(store, x, c, b, isReified, this::removeConstraint);
+    }
+
+    @Override
+    public String toString() {
+      if (isReified) {
+        return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+      } else {
+        return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
+    }
 
-      @Override
-      public String toString() {
-        if (isReified) {
-          return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
-        } else {
-          return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
-        }
-      }
+    @Override
+    public String id() {
+      return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
+    }
 
-      @Override
-      public String id() {
-        return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
-      }
-    };
+    @Override
+    public FzXneqC copy(VarMap map) {
+      return new FzXneqC(map.get(x), c, map.get(b), isReified);
+    }
   }
 
   Constraint fzXneqCreified(IntVar x, int c, IntVar b) {
@@ -982,30 +1024,50 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
+    return new FzXeqY(x, y, b, isReified);
+  }
 
-    return new Constraint(new IntVar[] {x, y, b}) {
+  /** The constraint x = y, reified with b or implied by b. */
+  final class FzXeqY extends Constraint implements Copyable<FzXeqY> {
 
-      final int numberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
+    final IntVar x;
+    final IntVar y;
+    final IntVar b;
+    final boolean isReified;
+    final int numberId;
 
-      @Override
-      public void consistency(final Store store) {
-        propagateFzXeqY(store, x, y, b, isReified, this::removeConstraint);
+    FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
+      super(new IntVar[] {x, y, b});
+      this.x = x;
+      this.y = y;
+      this.b = b;
+      this.isReified = isReified;
+      this.numberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(final Store store) {
+      propagateFzXeqY(store, x, y, b, isReified, this::removeConstraint);
+    }
+
+    @Override
+    public String toString() {
+      if (isReified) {
+        return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
+      } else {
+        return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
       }
+    }
 
-      @Override
-      public String toString() {
-        if (isReified) {
-          return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
-        } else {
-          return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
-        }
-      }
+    @Override
+    public String id() {
+      return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
+    }
 
-      @Override
-      public String id() {
-        return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
-      }
-    };
+    @Override
+    public FzXeqY copy(VarMap map) {
+      return new FzXeqY(map.get(x), map.get(y), map.get(b), isReified);
+    }
   }
 
   Constraint fzXeqYreified(IntVar x, IntVar y, IntVar b) {
@@ -1017,37 +1079,53 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzIfThenBool(IntVar b, IntVar x) {
+    return new FzIfThenBool(b, x);
+  }
 
-    return new Constraint(new IntVar[] {b, x}) {
+  /** The constraint b implies x, for 0/1 variables. */
+  final class FzIfThenBool extends Constraint implements Copyable<FzIfThenBool> {
 
-      final int numberId = n7.incrementAndGet();
+    final IntVar b;
+    final IntVar x;
+    final int numberId;
 
-      @Override
-      public void consistency(final Store store) {
+    FzIfThenBool(IntVar b, IntVar x) {
+      super(new IntVar[] {b, x});
+      this.b = b;
+      this.x = x;
+      this.numberId = n7.incrementAndGet();
+    }
 
-        if (b.min() == 1) {
-          x.domain.inValue(store.level, x, 1);
-        }
+    @Override
+    public void consistency(final Store store) {
 
-        if (x.max() == 0) {
-          b.domain.inValue(store.level, b, 0);
-        }
+      if (b.min() == 1) {
+        x.domain.inValue(store.level, x, 1);
       }
 
-      @Override
-      public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.GROUND;
+      if (x.max() == 0) {
+        b.domain.inValue(store.level, b, 0);
       }
+    }
 
-      @Override
-      public String toString() {
-        return "fzIfThenBool" + numberId + ": IfThenBool(" + b + ", " + x + " )";
-      }
+    @Override
+    public int getDefaultConsistencyPruningEvent() {
+      return IntDomain.GROUND;
+    }
 
-      @Override
-      public String id() {
-        return "fzIfThenBool" + numberId;
-      }
-    };
+    @Override
+    public String toString() {
+      return "fzIfThenBool" + numberId + ": IfThenBool(" + b + ", " + x + " )";
+    }
+
+    @Override
+    public String id() {
+      return "fzIfThenBool" + numberId;
+    }
+
+    @Override
+    public FzIfThenBool copy(VarMap map) {
+      return new FzIfThenBool(map.get(b), map.get(x));
+    }
   }
 }

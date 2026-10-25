@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +47,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class MinSimple extends Constraint implements SatisfiedPresent {
+public class MinSimple extends Constraint implements SatisfiedPresent, Copyable<MinSimple> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -130,5 +132,10 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
   public String toString() {
 
     return id() + " : minSimple(" + x1 + ", " + x2 + ", " + min + ")";
+  }
+
+  @Override
+  public MinSimple copy(VarMap map) {
+    return new MinSimple(map.get(x1), map.get(x2), map.get(min));
   }
 }

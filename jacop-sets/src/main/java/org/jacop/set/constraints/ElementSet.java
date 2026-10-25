@@ -32,7 +32,9 @@ package org.jacop.set.constraints;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -53,7 +55,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 5.0
  */
-public class ElementSet extends Constraint implements SatisfiedPresent {
+public class ElementSet extends Constraint implements SatisfiedPresent, Copyable<ElementSet> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -195,5 +197,10 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     result.append(" ], ").append(value).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public ElementSet copy(VarMap map) {
+    return new ElementSet(map.get(index), list, map.get(value), indexOffset);
   }
 }
