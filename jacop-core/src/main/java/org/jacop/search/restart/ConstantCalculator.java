@@ -44,12 +44,12 @@ public class ConstantCalculator extends Calculator {
    * @param scale the constant fail limit value.
    */
   public ConstantCalculator(int scale) {
-    failLimit = scale;
+    startRun(scale);
   }
 
   /** Resets the fail counter to zero while keeping the same fail limit. */
   public void newLimit() {
-    numberFails = 0;
+    startRun(failLimit);
   }
 
   /**

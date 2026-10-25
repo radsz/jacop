@@ -46,10 +46,24 @@ public abstract class Calculator implements ConsistencyListener {
 
   @Getter @Setter long failLimit;
 
+  // whether the current run was stopped by its fail limit
+  boolean limitReached;
+
   ConsistencyListener child;
 
   /** It computes and sets a new fail limit for the restart strategy. */
   public abstract void newLimit();
+
+  /**
+   * Starts a new run with the given fail limit.
+   *
+   * @param limit the number of failures the run may have.
+   */
+  final void startRun(long limit) {
+    numberFails = 0;
+    limitReached = false;
+    failLimit = Math.max(0, limit);
+  }
 
   /**
    * It is executed right after consistency of the current search node. The return code specifies if
@@ -61,7 +75,9 @@ public abstract class Calculator implements ConsistencyListener {
       child.executeAfterConsistency(consistent);
     }
 
-    if (numberFails >= failLimit) {
+    if (numberFails > failLimit) {
+      // only a node that would otherwise be explored is cut by the limit
+      limitReached |= consistent;
       return false;
     } else if (!consistent) {
       numberFails++;
@@ -71,12 +87,14 @@ public abstract class Calculator implements ConsistencyListener {
   }
 
   /**
-   * Checks if the fail limit has been reached or exceeded.
+   * Checks if the current run was cut short by its fail limit. A run may have as many failures as
+   * its limit; the search is stopped at the next node after one more failure, as in Gecode. A run
+   * that explores its whole tree before that is complete.
    *
-   * @return true if the number of fails has reached or exceeded the fail limit, false otherwise.
+   * @return true if the run was stopped by the fail limit, false otherwise.
    */
   public boolean pointsExhausted() {
-    return numberFails >= failLimit;
+    return limitReached;
   }
 
   /**

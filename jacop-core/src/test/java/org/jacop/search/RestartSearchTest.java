@@ -44,6 +44,7 @@ import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.restart.Calculator;
+import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.CustomReport;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
@@ -282,5 +283,71 @@ class RestartSearchTest {
       }
     }
     assertTrue(checked > 10, "too few instances had restarts without a better solution");
+  }
+
+  /** The number of failures of a search that is not restarted, with the given cost or none. */
+  private static long failuresWithoutRestart(Instance instance, boolean optimize) {
+    Model model = new Model(instance);
+    model.store.consistency();
+    long[] failures = {0};
+    Calculator unlimited =
+        new ConstantCalculator(Integer.MAX_VALUE) {
+          @Override
+          public void newLimit() {
+            failures[0] = getNumberFails();
+            super.newLimit();
+          }
+        };
+    model.restartSearch(unlimited, optimize).labeling();
+    return failures[0];
+  }
+
+  @Test
+  void runThatEndsAtExactlyItsFailLimitCompletesTheSearch() {
+    // A run that explored its whole tree with as many failures as the fail limit was taken as cut
+    // by the limit, so a constant limit restarted the same finished search for ever.
+    Random rnd = new Random(31);
+    int checked = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      for (boolean optimize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        if (!model.store.consistency()) {
+          continue;
+        }
+        long failures = failuresWithoutRestart(instance, optimize);
+        if (failures == 0 || (!optimize && optimum != null)) {
+          continue;
+        }
+        RestartSearch<IntVar> search =
+            model.restartSearch(new ConstantCalculator((int) failures), optimize);
+        search.setRestartsLimit(5);
+        boolean found = search.labeling();
+        assertFalse(search.restartsLimitReached(), "restarted a finished search of " + instance);
+        assertEquals(0, search.restarts(), "restarts of " + instance);
+        assertEquals(optimum != null, found, "satisfiability of " + instance);
+        if (optimize && optimum != null) {
+          assertEquals(optimum.intValue(), search.getIntCost(), "optimum of " + instance);
+        }
+        checked++;
+      }
+    }
+    assertTrue(checked > 50, "too few instances checked: " + checked);
+  }
+
+  @Test
+  void runMayHaveAsManyFailuresAsItsLimit() {
+    // A limit of zero refused the root node of every run, so the search restarted for ever
+    // without exploring anything.
+    Calculator calculator = new ConstantCalculator(0);
+    assertTrue(calculator.executeAfterConsistency(true));
+    assertFalse(calculator.executeAfterConsistency(false));
+    assertFalse(calculator.pointsExhausted(), "a failed node is not cut by the limit");
+    assertFalse(calculator.executeAfterConsistency(true));
+    assertTrue(calculator.pointsExhausted());
+    calculator.newLimit();
+    assertFalse(calculator.pointsExhausted());
+    assertTrue(calculator.executeAfterConsistency(true));
   }
 }

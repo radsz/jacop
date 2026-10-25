@@ -48,7 +48,7 @@ public class LinearCalculator extends Calculator {
    */
   public LinearCalculator(int scale) {
     n = 1;
-    failLimit = scale;
+    startRun(scale);
     increment = scale;
   }
 
@@ -57,8 +57,7 @@ public class LinearCalculator extends Calculator {
    * is calculated as n * increment where n is incremented each time.
    */
   public void newLimit() {
-    numberFails = 0;
-    failLimit = ++n * increment;
+    startRun(++n * increment);
   }
 
   /**
