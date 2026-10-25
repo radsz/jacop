@@ -31,16 +31,19 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * AmongSeq is a domain consistent propagator of the Sequence (sliding among) constraint: every
@@ -53,17 +56,23 @@ import org.jacop.core.Store;
  * constraint is a simple temporal network over S_0..S_n. Each call
  *
  * <ol>
+ *   <li>updates, for the variables that changed, whether they must or can take a value from the
+ *       set, and the counts of the windows that contain them; a window with more than max sure or
+ *       fewer than min possible values fails at once;
  *   <li>finds one solution S of the network by label correcting from the solution of the previous
- *       call, or fails on a negative cycle;
+ *       call, starting from the edges of the changed variables, or fails on a negative cycle;
  *   <li>computes the strongly connected components of the tight edges, the edges u -&gt; v of
- *       weight w with S_v - S_u = w.
+ *       weight w with S_v - S_u = w. These components are the classes of the cycles of weight 0,
+ *       which do not depend on S, so only the components reached from the changed variables are
+ *       visited; the fixed variables before the first free one, and after the last, are visited as
+ *       one node each.
  * </ol>
  *
  * <p>The value of list[i] in S always has a support. The other value has one if and only if the
  * shortest path from i to i + 1 (or back) is longer than the tight path, that is, if and only if i
- * and i + 1 are in different components. The cost of a call is linear in the list length plus the
- * label-correcting steps, and does not depend on q, while the automaton of the Regular
- * decomposition grows as 2^q.
+ * and i + 1 are in different components. The memberships and the window counts are trailed, so a
+ * call costs the label-correcting steps plus the components it visits, and does not depend on q,
+ * while the automaton of the Regular decomposition grows as 2^q.
  *
  * <p>The propagator is domain consistent when the list has no repeated variables. A repeated
  * variable is allowed: the pruning stays correct and an assignment is accepted only if it satisfies
@@ -72,7 +81,8 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<AmongSeq> {
+public class AmongSeq extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<AmongSeq> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -84,6 +94,9 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
 
   private final int n;
 
+  /** The number of windows, n - q + 1, or 0 when q is larger than n. */
+  private final int windows;
+
   /** It is true when the set is one interval setMin..setMax. */
   private final boolean setIsInterval;
 
@@ -92,10 +105,38 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
   private final boolean setIsEmpty;
   private final boolean hasDuplicates;
 
+  /** The positions of each variable in the list. */
+  private final Map<IntVar, int[]> positions;
+
+  /** The same positions by store index minus firstIndex, when the indices are close together. */
+  private final int[][] positionsByIndex;
+
+  private final int firstIndex;
+
   /** Lower and upper bound of S_{i+1} - S_i, that is whether list[i] must or can be in the set. */
   private final int[] lb;
 
   private final int[] ub;
+
+  /** The number of variables of window w that must (sure) or can (possible) be in the set. */
+  private final int[] sure;
+
+  private final int[] possible;
+
+  // The trail of lb and ub: the level, the position and the old values of each change.
+  private final int[] trailLevel;
+  private final int[] trailPosition;
+  private final int[] trailLb;
+  private final int[] trailUb;
+  private int trailSize;
+
+  /** The store level at which lb, ub and the window counts were computed from scratch. */
+  private int initialLevel = -1;
+
+  // positions whose variables changed since the last call
+  private final int[] changed;
+  private final boolean[] isChanged;
+  private int changedSize;
 
   /**
    * A solution of the network found by the last call. It is not restored on backtracking: a
@@ -104,8 +145,22 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
    */
   private final int[] pot;
 
-  private final int[] savedPot;
   private boolean potFound;
+
+  // the labels changed by the current call, to restore the last solution on a failure
+  private final int[] undoNode;
+  private final int[] undoPot;
+  private int undoSize;
+
+  /**
+   * Each call numbers its shortest path tree; a node whose stamp is older is not in the tree. Such
+   * a node has no children, and its label is still an upper bound.
+   */
+  private int epoch;
+
+  private final int[] treeStamp;
+  private final int[] potStamp;
+
   private final int[] queue;
   private int queueHead;
   private int queueSize;
@@ -123,6 +178,26 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
   private final boolean[] onStack;
   private final int[] callStack;
   private final int[] nextEdge;
+  private final int[] edgeEnd;
+  private int edgeCount;
+  private final int[] visit;
+  private int visitStamp;
+
+  // the positions whose weights changed since the last call, or all when allComponents is set
+  private final int[] roots;
+  private int rootCount;
+  private boolean allComponents;
+
+  /**
+   * The tight edges of each node as a mask: bit 0 to u + 1, bit 1 to u - 1, bit 2 to u + q and bit
+   * 3 to u - q. Only the nodes in dirtyNodes are out of date.
+   */
+  private final int[] tight;
+
+  private final boolean[] dirty;
+  private final int[] dirtyNodes;
+  private int dirtySize;
+  private final int[] edges;
 
   /**
    * It creates a domain consistent Sequence constraint.
@@ -151,19 +226,54 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
     this.min = min;
     this.max = max;
     this.n = list.length;
+    this.windows = q > n ? 0 : n - q + 1;
 
     this.setIsEmpty = set.isEmpty();
     this.setIsInterval = !setIsEmpty && set.getSize() == set.max() - set.min() + 1;
     this.setMin = setIsEmpty ? 0 : set.min();
     this.setMax = setIsEmpty ? 0 : set.max();
 
-    Set<IntVar> distinct = new HashSet<>(Arrays.asList(list));
-    this.hasDuplicates = distinct.size() < n;
+    Map<IntVar, int[]> map = new HashMap<>();
+    for (int i = 0; i < n; i++) {
+      int[] old = map.get(list[i]);
+      int[] now = old == null ? new int[1] : Arrays.copyOf(old, old.length + 1);
+      now[now.length - 1] = i;
+      map.put(list[i], now);
+    }
+    this.positions = map;
+    int lowest = Integer.MAX_VALUE;
+    int highest = Integer.MIN_VALUE;
+    for (IntVar v : list) {
+      lowest = Math.min(lowest, v.index());
+      highest = Math.max(highest, v.index());
+    }
+    this.firstIndex = lowest;
+    if (n > 0 && lowest >= 0 && (long) highest - lowest < 8L * n + 64) {
+      positionsByIndex = new int[highest - lowest + 1][];
+      for (Map.Entry<IntVar, int[]> e : map.entrySet()) {
+        positionsByIndex[e.getKey().index() - firstIndex] = e.getValue();
+      }
+    } else {
+      positionsByIndex = null;
+    }
+    this.hasDuplicates = map.size() < n;
 
     lb = new int[n];
     ub = new int[n];
+    sure = new int[windows];
+    possible = new int[windows];
+    // along a branch lb only goes up and ub only goes down, once each
+    trailLevel = new int[2 * n];
+    trailPosition = new int[2 * n];
+    trailLb = new int[2 * n];
+    trailUb = new int[2 * n];
+    changed = new int[n];
+    isChanged = new boolean[n];
     pot = new int[n + 1];
-    savedPot = new int[n + 1];
+    undoNode = new int[n + 1];
+    undoPot = new int[n + 1];
+    treeStamp = new int[n + 2];
+    potStamp = new int[n + 1];
     queue = new int[n + 1];
     inQueue = new boolean[n + 1];
     scan = new boolean[n + 1];
@@ -178,53 +288,185 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
     onStack = new boolean[n + 1];
     callStack = new int[n + 1];
     nextEdge = new int[n + 1];
+    edgeEnd = new int[n + 1];
+    visit = new int[n + 1];
+    roots = new int[n];
+    tight = new int[n + 1];
+    dirty = new boolean[n + 1];
+    dirtyNodes = new int[n + 1];
+    // four edges for each node, and for each block of fixed variables the edges of q + 1 nodes
+    edges = new int[4 * (n + 1) + 8 * (Math.min(q, n) + 1)];
 
     setScope(list);
   }
 
   @Override
-  public void consistency(Store store) {
-
-    boolean changed;
-    do {
-      readBounds();
-      checkWindows();
-      findSolution();
-      changed = prune(store);
-    } while (hasDuplicates && changed);
-
-    if (entailed()) {
-      removeConstraint();
+  public void queueVariable(int level, Var v) {
+    int[] at =
+        positionsByIndex != null ? positionsByIndex[v.index() - firstIndex] : positions.get(v);
+    for (int i : at) {
+      if (!isChanged[i]) {
+        isChanged[i] = true;
+        changed[changedSize++] = i;
+      }
     }
   }
 
-  private void readBounds() {
+  @Override
+  public void removeLevel(int level) {
+    while (trailSize > 0 && trailLevel[trailSize - 1] >= level) {
+      trailSize--;
+      setBounds(trailPosition[trailSize], trailLb[trailSize], trailUb[trailSize]);
+    }
+    if (level <= initialLevel) {
+      initialLevel = -1;
+    }
+    clearChanged();
+    rootCount = 0;
+  }
+
+  private void clearChanged() {
+    for (int k = 0; k < changedSize; k++) {
+      isChanged[changed[k]] = false;
+    }
+    changedSize = 0;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (windows == 0 || min <= 0 && max >= q) {
+      // every window holds whatever values the variables take
+      removeConstraint();
+      return;
+    }
+    rootCount = 0;
+    if (initialLevel < 0) {
+      initialize(store);
+    } else {
+      updateChanged(store);
+    }
+
+    boolean pruned;
+    do {
+      findSolution();
+      clearChanged();
+      pruned = prune(store);
+      if (hasDuplicates && pruned) {
+        updateChanged(store);
+      }
+    } while (hasDuplicates && pruned);
+  }
+
+  private void initialize(Store store) {
+    trailSize = 0;
+    Arrays.fill(sure, 0);
+    Arrays.fill(possible, 0);
+    Arrays.fill(lb, 0);
+    Arrays.fill(ub, 0);
+    initialLevel = store.level;
+    potFound = false;
+    allComponents = true;
+    clearChanged();
+    // the counts are partial until every position is read, so the windows are checked after
     for (int i = 0; i < n; i++) {
-      IntDomain d = list[i].dom();
-      if (setIsEmpty) {
-        lb[i] = 0;
-        ub[i] = 0;
-      } else if (setIsInterval) {
-        int dmin = d.min();
-        int dmax = d.max();
-        if (dmin >= setMin && dmax <= setMax) {
-          lb[i] = 1;
-          ub[i] = 1;
-        } else {
-          // a bound inside the set intersects it, and a domain beside the set does not
-          lb[i] = 0;
-          ub[i] =
-              dmax >= setMin
-                      && dmin <= setMax
-                      && (dmin >= setMin || dmax <= setMax || d.isIntersecting(setMin, setMax))
-                  ? 1
-                  : 0;
-        }
-      } else {
-        lb[i] = set.contains(d) ? 1 : 0;
-        ub[i] = lb[i] == 1 || d.isIntersecting(set) ? 1 : 0;
+      int newLb = mustBeIn(list[i].dom()) ? 1 : 0;
+      int newUb = newLb == 1 || canBeIn(list[i].dom()) ? 1 : 0;
+      setBounds(i, newLb, newUb);
+    }
+    if (violatedWindow()) {
+      throw Store.failException;
+    }
+  }
+
+  private boolean violatedWindow() {
+    for (int w = 0; w < windows; w++) {
+      if (sure[w] > max || possible[w] < min) {
+        return true;
       }
     }
+    return false;
+  }
+
+  /** It reads the changed variables and fails when a window that contains one is violated. */
+  private void updateChanged(Store store) {
+    boolean fail = false;
+    for (int k = 0; k < changedSize; k++) {
+      int i = changed[k];
+      IntDomain d = list[i].dom();
+      int newLb = lb[i] == 1 || mustBeIn(d) ? 1 : 0;
+      int newUb = ub[i] == 1 && (newLb == 1 || canBeIn(d)) ? 1 : 0;
+      if (newLb != lb[i] || newUb != ub[i]) {
+        fail |= trailAndSet(store.level, i, newLb, newUb);
+        roots[rootCount++] = i;
+      }
+    }
+    if (fail) {
+      clearChanged();
+      throw Store.failException;
+    }
+  }
+
+  private boolean trailAndSet(int level, int i, int newLb, int newUb) {
+    trailLevel[trailSize] = level;
+    trailPosition[trailSize] = i;
+    trailLb[trailSize] = lb[i];
+    trailUb[trailSize] = ub[i];
+    trailSize++;
+    return setBounds(i, newLb, newUb);
+  }
+
+  /**
+   * It sets lb and ub of position i and the counts of its windows.
+   *
+   * @return true when a window of position i has more than max sure or fewer than min possible.
+   */
+  private boolean setBounds(int i, int newLb, int newUb) {
+    int dLb = newLb - lb[i];
+    int dUb = newUb - ub[i];
+    lb[i] = newLb;
+    ub[i] = newUb;
+    markDirty(i);
+    markDirty(i + 1);
+    boolean violated = false;
+    int first = Math.max(0, i - q + 1);
+    int last = Math.min(i, windows - 1);
+    if (dLb != 0) {
+      for (int w = first; w <= last; w++) {
+        violated |= (sure[w] += dLb) > max;
+      }
+    }
+    if (dUb != 0) {
+      for (int w = first; w <= last; w++) {
+        violated |= (possible[w] += dUb) < min;
+      }
+    }
+    return violated;
+  }
+
+  private boolean mustBeIn(IntDomain d) {
+    if (setIsEmpty) {
+      return false;
+    }
+    if (setIsInterval) {
+      return d.min() >= setMin && d.max() <= setMax;
+    }
+    return set.contains(d);
+  }
+
+  private boolean canBeIn(IntDomain d) {
+    if (setIsEmpty) {
+      return false;
+    }
+    if (setIsInterval) {
+      int dmin = d.min();
+      int dmax = d.max();
+      // a bound inside the set intersects it, and a domain beside the set does not
+      return dmax >= setMin
+          && dmin <= setMax
+          && (dmin >= setMin || dmax <= setMax || d.isIntersecting(setMin, setMax));
+    }
+    return d.isIntersecting(set);
   }
 
   // The edges of the network: u -> v with weight w stands for S_v - S_u <= w. Every node u has
@@ -242,94 +484,187 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
     int nodes = n + 1;
     queueHead = 0;
     queueSize = 0;
-    for (int u = 0; u < nodes; u++) {
-      // the previous solution satisfies the window edges, whose weights never change, and the
-      // edges between neighbours with the weights it was found for; weights only decrease along
-      // a branch, so only the sources of now violated neighbour edges need to be queued
-      boolean violated =
-          !potFound
-              || u < n && pot[u + 1] - pot[u] > ub[u]
-              || u > 0 && pot[u - 1] - pot[u] > -lb[u - 1];
-      scan[u] = violated;
-      inQueue[u] = violated;
-      if (violated) {
-        queue[queueSize++] = u;
+    if (!potFound) {
+      for (int u = 0; u < nodes; u++) {
+        enqueue(u);
+      }
+    } else {
+      // The previous solution satisfies the window edges, whose weights never change, and the
+      // edges between neighbours with the weights it was found for. Weights only decrease along
+      // a branch, so only the edges of the changed positions can be violated.
+      for (int k = 0; k < changedSize; k++) {
+        int i = changed[k];
+        if (pot[i + 1] - pot[i] > ub[i] && !inQueue[i]) {
+          enqueue(i);
+        }
+        if (pot[i] - pot[i + 1] > -lb[i] && !inQueue[i + 1]) {
+          enqueue(i + 1);
+        }
       }
     }
     if (queueSize == 0) {
       return;
     }
 
-    System.arraycopy(pot, 0, savedPot, 0, nodes);
-    // every node starts as a child of a virtual root, with an edge of weight pot[u]
-    int root = nodes;
-    depth[root] = 0;
-    threadNext[root] = 0;
-    threadPrev[root] = n;
-    for (int u = 0; u < nodes; u++) {
-      parent[u] = root;
-      depth[u] = 1;
-      threadNext[u] = u < n ? u + 1 : root;
-      threadPrev[u] = u > 0 ? u - 1 : root;
+    if (++epoch == Integer.MAX_VALUE) {
+      Arrays.fill(treeStamp, 0);
+      Arrays.fill(potStamp, 0);
+      epoch = 1;
     }
+    undoSize = 0;
+    int root = nodes;
+    treeStamp[root] = epoch;
+    depth[root] = 0;
+    threadNext[root] = root;
+    threadPrev[root] = root;
 
-    while (queueSize > 0) {
-      int u = queue[queueHead];
-      queueHead = queueHead + 1 == nodes ? 0 : queueHead + 1;
-      queueSize--;
-      inQueue[u] = false;
-      if (!scan[u]) {
-        continue;
+    try {
+      while (queueSize > 0) {
+        int u = queue[queueHead];
+        queueHead = queueHead + 1 == nodes ? 0 : queueHead + 1;
+        queueSize--;
+        inQueue[u] = false;
+        if (!scan[u]) {
+          continue;
+        }
+        scan[u] = false;
+        if (treeStamp[u] != epoch) {
+          // a queued node that was not relabelled yet is a child of the root
+          treeStamp[u] = epoch;
+          insertAfter(root, u);
+        }
+        int pu = pot[u];
+        if (u < n) {
+          relax(u, u + 1, pu + ub[u]);
+        }
+        if (u > 0) {
+          relax(u, u - 1, pu - lb[u - 1]);
+        }
+        if (u + q < nodes) {
+          relax(u, u + q, pu + max);
+        }
+        if (u >= q) {
+          relax(u, u - q, pu - min);
+        }
       }
-      scan[u] = false;
-      int pu = pot[u];
-      if (u < n) {
-        relax(u, u + 1, pu + ub[u]);
+    } catch (RuntimeException e) {
+      // a negative cycle: keep the last solution and leave the queue empty
+      for (int k = undoSize - 1; k >= 0; k--) {
+        pot[undoNode[k]] = undoPot[k];
       }
-      if (u > 0) {
-        relax(u, u - 1, pu - lb[u - 1]);
+      while (queueSize > 0) {
+        int u = queue[queueHead];
+        queueHead = queueHead + 1 == nodes ? 0 : queueHead + 1;
+        queueSize--;
+        inQueue[u] = false;
+        scan[u] = false;
       }
-      if (u + q < nodes) {
-        relax(u, u + q, pu + max);
-      }
-      if (u >= q) {
-        relax(u, u - q, pu - min);
-      }
+      throw e;
     }
 
     potFound = true;
-    int offset = pot[0];
-    if (offset != 0) {
+    if (pot[0] < -(1 << 29)) {
+      int offset = pot[0];
       for (int u = 0; u < nodes; u++) {
         pot[u] -= offset;
       }
     }
   }
 
+  private void enqueue(int u) {
+    scan[u] = true;
+    inQueue[u] = true;
+    int nodes = n + 1;
+    int tail = queueHead + queueSize;
+    queue[tail >= nodes ? tail - nodes : tail] = u;
+    queueSize++;
+  }
+
   private void relax(int u, int v, int label) {
     if (label < pot[v]) {
+      if (potStamp[v] != epoch) {
+        potStamp[v] = epoch;
+        undoNode[undoSize] = v;
+        undoPot[undoSize] = pot[v];
+        undoSize++;
+        markNeighboursDirty(v);
+      }
       pot[v] = label;
       relink(u, v);
-      scan[v] = true;
       if (!inQueue[v]) {
-        inQueue[v] = true;
-        int nodes = n + 1;
-        int tail = queueHead + queueSize;
-        queue[tail >= nodes ? tail - nodes : tail] = v;
-        queueSize++;
+        enqueue(v);
+      } else {
+        scan[v] = true;
       }
     }
   }
 
+  private void markDirty(int u) {
+    if (!dirty[u]) {
+      dirty[u] = true;
+      dirtyNodes[dirtySize++] = u;
+    }
+  }
+
+  /** The edges into v and out of v change their slack when the label of v changes. */
+  private void markNeighboursDirty(int v) {
+    markDirty(v);
+    if (v > 0) {
+      markDirty(v - 1);
+    }
+    if (v < n) {
+      markDirty(v + 1);
+    }
+    if (v >= q) {
+      markDirty(v - q);
+    }
+    if (v + q <= n) {
+      markDirty(v + q);
+    }
+  }
+
+  /** It recomputes the tight edges of the nodes whose edges or labels changed. */
+  private void updateTight() {
+    for (int k = 0; k < dirtySize; k++) {
+      int u = dirtyNodes[k];
+      dirty[u] = false;
+      int pu = pot[u];
+      int mask = 0;
+      if (u < n && pot[u + 1] - pu == ub[u]) {
+        mask = 1;
+      }
+      if (u > 0 && pu - pot[u - 1] == lb[u - 1]) {
+        mask |= 2;
+      }
+      if (u + q <= n && pot[u + q] - pu == max) {
+        mask |= 4;
+      }
+      if (u >= q && pu - pot[u - q] == min) {
+        mask |= 8;
+      }
+      tight[u] = mask;
+    }
+    dirtySize = 0;
+  }
+
+  private void insertAfter(int u, int v) {
+    int after = threadNext[u];
+    threadNext[u] = v;
+    threadPrev[v] = u;
+    threadNext[v] = after;
+    threadPrev[after] = v;
+    parent[v] = u;
+    depth[v] = depth[u] + 1;
+  }
+
   /** It makes v a child of u in the shortest path tree, detaching the old subtree of v. */
   private void relink(int u, int v) {
-    if (parent[v] >= 0) {
+    if (treeStamp[v] == epoch && parent[v] >= 0) {
       int dv = depth[v];
       int x = threadNext[v];
       while (depth[x] > dv) {
         if (x == u) {
           // u reaches v through the tree and the edge u -> v closes a negative cycle
-          System.arraycopy(savedPot, 0, pot, 0, n + 1);
           throw Store.failException;
         }
         // detached nodes have no children: they get them only once relabelled and scanned again
@@ -341,51 +676,36 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
       threadNext[before] = x;
       threadPrev[x] = before;
     }
-    int after = threadNext[u];
-    threadNext[u] = v;
-    threadPrev[v] = u;
-    threadNext[v] = after;
-    threadPrev[after] = v;
-    parent[v] = u;
-    depth[v] = depth[u] + 1;
+    treeStamp[v] = epoch;
+    insertAfter(u, v);
   }
 
   /**
-   * Tarjan's algorithm on the tight edges between the nodes first..last, without recursion. Edges
-   * leaving these nodes are left out, which is safe when the nodes below first and above last
-   * belong to blocks of fixed variables, see prune.
+   * Tarjan's algorithm on the tight edges, without recursion, from the given roots or from every
+   * node when roots is null. The nodes up to first are in one component, linked both ways by the
+   * fixed variables before first, and so are the nodes from last on; each of these blocks is
+   * visited as one node, first or last. A node is visited when visit[node] equals visitStamp, and
+   * the components of the visited nodes are complete.
    */
-  private void components(int first, int last) {
+  private void components(int first, int last, int[] roots, int rootCount) {
 
-    // nextEdge[u] holds the tight edges of u not yet followed: bit 0 to u + 1, bit 1 to u - 1, bit
-    // 2 to u + q and bit 3 to u - q
-    for (int u = first; u <= last; u++) {
-      index[u] = -1;
-      int pu = pot[u];
-      int mask = 0;
-      if (u < last && pot[u + 1] - pu == ub[u]) {
-        mask = 1;
-      }
-      if (u > first && pu - pot[u - 1] == lb[u - 1]) {
-        mask |= 2;
-      }
-      if (u + q <= last && pot[u + q] - pu == max) {
-        mask |= 4;
-      }
-      if (u - q >= first && pu - pot[u - q] == min) {
-        mask |= 8;
-      }
-      nextEdge[u] = mask;
+    if (++visitStamp == Integer.MAX_VALUE) {
+      Arrays.fill(visit, 0);
+      visitStamp = 1;
     }
+    edgeCount = 0;
     int counter = 0;
     int stackSize = 0;
     int componentCount = 0;
 
-    for (int root = first; root <= last; root++) {
-      if (index[root] >= 0) {
+    int rootsToTry = roots == null ? last - first + 1 : rootCount;
+    for (int r = 0; r < rootsToTry; r++) {
+      int root = roots == null ? first + r : rep(roots[r], first, last);
+      if (visit[root] == visitStamp) {
         continue;
       }
       callStack[0] = root;
+      visitNode(root, first, last);
       index[root] = low[root] = counter++;
       sccStack[stackSize++] = root;
       onStack[root] = true;
@@ -393,12 +713,10 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
 
       while (top >= 0) {
         int u = callStack[top];
-        int mask = nextEdge[u];
-        if (mask != 0) {
-          nextEdge[u] = mask & (mask - 1);
-          int e = Integer.numberOfTrailingZeros(mask);
-          int v = e == 0 ? u + 1 : e == 1 ? u - 1 : e == 2 ? u + q : u - q;
-          if (index[v] < 0) {
+        if (nextEdge[u] < edgeEnd[u]) {
+          int v = edges[nextEdge[u]++];
+          if (visit[v] != visitStamp) {
+            visitNode(v, first, last);
             index[v] = low[v] = counter++;
             sccStack[stackSize++] = v;
             onStack[v] = true;
@@ -428,6 +746,58 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
     }
   }
 
+  private static int rep(int v, int first, int last) {
+    return v < first ? first : v > last ? last : v;
+  }
+
+  /** It marks node u visited and lists its tight edges. */
+  private void visitNode(int u, int first, int last) {
+    visit[u] = visitStamp;
+    int count = edgeCount;
+    nextEdge[u] = count;
+    if (u == first) {
+      for (int w = Math.max(0, first - q); w <= first; w++) {
+        count = addTightEdges(w, first, last, first, count);
+      }
+    } else if (u == last) {
+      for (int w = last, end = Math.min(n, last + q); w <= end; w++) {
+        count = addTightEdges(w, first, last, last, count);
+      }
+    } else {
+      count = addTightEdges(u, first, last, u, count);
+    }
+    edgeEnd[u] = count;
+    edgeCount = count;
+  }
+
+  /**
+   * It adds the tight edges of node w, with their targets moved into first..last, for node self.
+   */
+  private int addTightEdges(int w, int first, int last, int self, int count) {
+    int mask = tight[w];
+    if ((mask & 1) != 0) {
+      count = addEdge(w + 1, first, last, self, count);
+    }
+    if ((mask & 2) != 0) {
+      count = addEdge(w - 1, first, last, self, count);
+    }
+    if ((mask & 4) != 0) {
+      count = addEdge(w + q, first, last, self, count);
+    }
+    if ((mask & 8) != 0) {
+      count = addEdge(w - q, first, last, self, count);
+    }
+    return count;
+  }
+
+  private int addEdge(int v, int first, int last, int self, int count) {
+    int target = rep(v, first, last);
+    if (target != self) {
+      edges[count++] = target;
+    }
+    return count;
+  }
+
   private boolean prune(Store store) {
 
     int firstFree = 0;
@@ -441,77 +811,63 @@ public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<A
     while (lb[lastFree] == ub[lastFree]) {
       lastFree--;
     }
-    // Nodes 0..firstFree are linked both ways by the fixed variables, so they are in one
-    // component, and a node below firstFree - q has edges only to nodes below firstFree. The
-    // nodes above lastFree + 1 + q are left out in the same way.
-    components(Math.max(0, firstFree - q), Math.min(n, lastFree + 1 + q));
+    updateTight();
+    // The components are the classes of the cycles of weight 0, which depend on the weights only.
+    // The last call left no free variable with both nodes in one component, so a new such pair is
+    // in the component of a position whose weights changed since.
+    components(firstFree, lastFree + 1, allComponents ? null : roots, rootCount);
+    allComponents = false;
+    rootCount = 0;
 
     boolean changed = false;
     for (int i = firstFree; i <= lastFree; i++) {
-      if (lb[i] == ub[i] || component[i] != component[i + 1]) {
+      if (lb[i] == ub[i]
+          || visit[i] != visitStamp
+          || visit[i + 1] != visitStamp
+          || component[i] != component[i + 1]) {
         continue;
       }
       IntVar x = list[i];
-      int size = x.getSize();
-      if (pot[i + 1] - pot[i] == 1) {
+      int value = pot[i + 1] - pot[i];
+      if (value == 1) {
         x.domain.in(store.level, x, set);
       } else {
         x.domain.in(store.level, x, x.dom().subtract(set));
       }
-      changed |= x.getSize() != size;
+      // the value agrees with the solution, so no window is violated
+      trailAndSet(store.level, i, value, value);
+      changed = true;
+      if (hasDuplicates) {
+        // the other positions of x are read again by the next round
+        queueVariable(store.level, x);
+      }
     }
     return changed;
   }
 
-  /**
-   * It fails when a window has more than max variables that must take a value from the set, or
-   * fewer than min that can. This catches most failures in linear time, before the network is
-   * solved.
-   */
-  private void checkWindows() {
-    if (q > n) {
-      return;
-    }
-    int sure = 0;
-    int possible = 0;
+  @Override
+  public boolean satisfied() {
+    // it reads the domains itself, since lb and ub may be behind the latest changes
+    int[] sureIn = new int[n];
+    int[] canIn = new int[n];
     for (int i = 0; i < n; i++) {
-      sure += lb[i];
-      possible += ub[i];
-      if (i >= q) {
-        sure -= lb[i - q];
-        possible -= ub[i - q];
-      }
-      if (i >= q - 1 && (sure > max || possible < min)) {
-        throw Store.failException;
-      }
+      sureIn[i] = mustBeIn(list[i].dom()) ? 1 : 0;
+      canIn[i] = sureIn[i] == 1 || canBeIn(list[i].dom()) ? 1 : 0;
     }
-  }
-
-  /** It checks whether every window holds whatever values the variables take. */
-  private boolean entailed() {
-    if (q > n) {
-      return true;
-    }
-    int sure = 0;
-    int possible = 0;
+    int s = 0;
+    int p = 0;
     for (int i = 0; i < n; i++) {
-      sure += lb[i];
-      possible += ub[i];
+      s += sureIn[i];
+      p += canIn[i];
       if (i >= q) {
-        sure -= lb[i - q];
-        possible -= ub[i - q];
+        s -= sureIn[i - q];
+        p -= canIn[i - q];
       }
-      if (i >= q - 1 && (sure < min || possible > max)) {
+      if (i >= q - 1 && (s < min || p > max)) {
         return false;
       }
     }
     return true;
-  }
-
-  @Override
-  public boolean satisfied() {
-    readBounds();
-    return entailed();
   }
 
   @Override
