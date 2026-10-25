@@ -108,6 +108,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
@@ -333,6 +334,39 @@ class SingleConstraintTest extends TestHelper {
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
     assertThat(noOfSolutions).isEqualTo(42);
+  }
+
+  // Among ignored events on the count variable, so when the count variable was also in the list
+  // its value was never counted and wrong solutions were accepted, e.g. x = [3, 3, 1] with
+  // n = x[2] and K = {1}. Such models are now rejected.
+  @Test
+  void testAmongRejectsCountVariableInList() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 1, 3), new IntVar(store, "x2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new Among(x, new IntervalDomain(1, 1), x[2]))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // AmongVar gave wrong solutions and removed supported values when x, y and n shared variables,
+  // e.g. x = [a], y = [n, b, c] removed a supported value of a. Such models are now rejected.
+  @Test
+  void testAmongVarRejectsSharedVariables() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    IntVar n = new IntVar(store, "n", 0, 3);
+
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a}, new IntVar[] {n, b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, b}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, n}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
@@ -5037,6 +5071,42 @@ class SingleConstraintTest extends TestHelper {
       assertThat(x.max()).as(c.toString()).isEqualTo(0);
       assertThat(z.singleton()).as(c.toString()).isTrue();
     }
+  }
+
+  @Test
+  void memberIncludedAgainDuringSearchSurvivesBacktracking() {
+    // A wrapper includes its nested constraints each time it is imposed, also at a search level,
+    // and calls their consistency without imposing them. include() created a new position stamp
+    // each time, so after backtracking below that level the stamp had no value and consistency
+    // threw ArrayIndexOutOfBoundsException.
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 3);
+    IntVar e = new IntVar(store, "e", 3, 3);
+    x[1].addDom(3, 3);
+    Member member = new Member(x, e);
+    member.include(store);
+    store.setLevel(1);
+    member.include(store);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    member.consistency(store);
+    assertThat(x[1].singleton(3)).isTrue();
+
+    // included first at a search level, its stamp is gone after backtracking and is replaced
+    Store other = new Store();
+    IntVar[] y = getIntVars(other, "y", 3, 3);
+    IntVar f = new IntVar(other, "f", 3, 3);
+    y[1].addDom(3, 3);
+    Member late = new Member(y, f);
+    other.setLevel(1);
+    late.include(other);
+    other.removeLevel(1);
+    other.setLevel(0);
+    late.include(other);
+
+    late.consistency(other);
+    assertThat(y[1].singleton(3)).isTrue();
   }
 
   @Test
