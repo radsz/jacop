@@ -68,6 +68,7 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
@@ -1785,6 +1786,22 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
     support.pose(new LexOrder(x, y, false));
+  }
+
+  void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = a.length / vectors;
+
+    // vector j is column j of the matrix that a lists row by row
+    IntVar[][] x = new IntVar[vectors][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < vectors; j++) {
+        x[j][i] = a[i * vectors + j];
+      }
+    }
+
+    support.pose(new LexChain(x, strict));
   }
 
   void gen_jacop_increasing(SimpleNode node, boolean strict) {

@@ -104,6 +104,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -4023,6 +4024,56 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x1, x2);
 
     assertThat(noOfSolutions).isEqualTo(188640);
+  }
+
+  @Test
+  void testLexChainSolutionCount() {
+
+    for (boolean strict : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[][] x = new IntVar[4][3];
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 3; j++) {
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+        }
+      }
+      store.impose(new LexChain(x, strict));
+
+      // chains of 4 of the 27 tuples: C(27, 4) strictly increasing, C(30, 4) non-decreasing
+      assertThat(noOfAllSolutions(store, x)).isEqualTo(strict ? 17550 : 27405);
+    }
+  }
+
+  @Test
+  void testLexChainPrunesWhatPairwiseLexMisses() {
+
+    // x0 < x1 < x2: x0 = (2, _) leaves only (2, 2) for x1 and nothing above it for x2. Each pair
+    // alone is domain consistent, so pairwise LexOrder prunes nothing here.
+    Store store = new Store();
+    IntVar[] x0 = {new IntVar(store, "a0", 0, 0), new IntVar(store, "a1", 1, 2)};
+    x0[0].addDom(2, 2);
+    IntVar[] x1 = {new IntVar(store, "b0", 0, 2), new IntVar(store, "b1", 0, 2)};
+    IntVar[] x2 = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2)};
+
+    store.impose(new LexChain(new IntVar[][] {x0, x1, x2}, true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0[0].singleton(0)).isTrue();
+    assertThat(x0[1].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x1[0].dom().toString()).isEqualTo("{0..2}");
+    assertThat(x2[0].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x2[1].dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void testLexChainRejectsVectorsOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] a = {new IntVar(store, "a", 0, 1)};
+    IntVar[] b = {new IntVar(store, "b0", 0, 1), new IntVar(store, "b1", 0, 1)};
+
+    assertThatThrownBy(() -> new LexChain(new IntVar[][] {a, b}, false))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

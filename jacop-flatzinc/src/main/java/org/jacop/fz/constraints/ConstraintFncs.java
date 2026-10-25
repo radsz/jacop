@@ -833,6 +833,26 @@ public final class ConstraintFncs {
     gc.gen_jacop_lex_lesseq_int(n);
   }
 
+  /** Handles the jacop_lex_chain_less_int FlatZinc constraint. */
+  public void jacop_lex_chain_less_int(SimpleNode n) {
+    gc.gen_jacop_lex_chain(n, true);
+  }
+
+  /** Handles the jacop_lex_chain_less_bool FlatZinc constraint. */
+  public void jacop_lex_chain_less_bool(SimpleNode n) {
+    gc.gen_jacop_lex_chain(n, true);
+  }
+
+  /** Handles the jacop_lex_chain_lesseq_int FlatZinc constraint. */
+  public void jacop_lex_chain_lesseq_int(SimpleNode n) {
+    gc.gen_jacop_lex_chain(n, false);
+  }
+
+  /** Handles the jacop_lex_chain_lesseq_bool FlatZinc constraint. */
+  public void jacop_lex_chain_lesseq_bool(SimpleNode n) {
+    gc.gen_jacop_lex_chain(n, false);
+  }
+
   /** Handles the jacop_increasing FlatZinc constraint. */
   public void jacop_increasing(SimpleNode n) {
     gc.gen_jacop_increasing(n, false);

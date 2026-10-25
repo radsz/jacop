@@ -63,6 +63,8 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -171,6 +173,8 @@ class ConsistencyChecker {
     void post(Store store) {
       if (constraint instanceof Constraint c) {
         store.impose(c);
+      } else if (constraint instanceof List<?> cs) {
+        cs.forEach(c -> store.impose((Constraint) c));
       } else {
         store.imposeDecomposition((DecomposedConstraint<Constraint>) constraint);
       }
@@ -495,6 +499,42 @@ class ConsistencyChecker {
       v.addDom(lo, lo);
     }
     return v;
+  }
+
+  /** A chain of 3 or 4 vectors as one LexChain (native) or as pairwise Lex constraints. */
+  private static Model lexChain(Store s, Random r, boolean nativeChain) {
+    boolean lt = r.nextBoolean();
+    int m = 3 + r.nextInt(2);
+    int n = 2 + r.nextInt(2);
+    IntVar[][] v = new IntVar[m][];
+    for (int i = 0; i < m; i++) {
+      v[i] = vars(s, "v" + i + "_", n, 0, 2, r);
+    }
+    Object constraint;
+    if (nativeChain) {
+      constraint = new LexChain(v, lt);
+    } else {
+      List<Constraint> pairs = new ArrayList<>();
+      for (int i = 0; i + 1 < m; i++) {
+        pairs.add(new LexOrder(v[i], v[i + 1], lt));
+      }
+      constraint = pairs;
+    }
+    return new Model(
+        constraint,
+        t -> {
+          for (int i = 0; i + 1 < m; i++) {
+            int cmp =
+                Arrays.compare(
+                    Arrays.copyOfRange(t, i * n, (i + 1) * n),
+                    Arrays.copyOfRange(t, (i + 1) * n, (i + 2) * n));
+            if (lt ? cmp >= 0 : cmp > 0) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(v));
   }
 
   /** A variable over lo..hi with a random sub-interval, so without holes. */
@@ -1075,6 +1115,9 @@ class ConsistencyChecker {
                   },
                   concat(a, b));
             }),
+        new Case("LexChain", Level.DOMAIN, (s, r) -> lexChain(s, r, true)),
+        // m - 1 pairwise lex constraints, for comparison with LexChain
+        new Case("LexChainPairwise", Level.NONE, (s, r) -> lexChain(s, r, false)),
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),

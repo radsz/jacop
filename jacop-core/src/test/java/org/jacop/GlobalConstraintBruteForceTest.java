@@ -82,6 +82,7 @@ import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -208,6 +209,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Lex", (Function<Random, Instance>) GlobalConstraintBruteForceTest::lex),
         Arguments.of(
             "LexOrder", (Function<Random, Instance>) GlobalConstraintBruteForceTest::lexOrder),
+        Arguments.of("LexChain", lexChain(false)),
+        Arguments.of("LexChainRepeated", lexChain(true)),
         Arguments.of("Values", (Function<Random, Instance>) GlobalConstraintBruteForceTest::values),
         Arguments.of(
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
@@ -623,6 +626,46 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "rows=" + rows + " strict=" + strict);
+  }
+
+  /**
+   * A LexChain over random vectors; with repeated, some positions reuse the variable of an earlier
+   * position, so the same variable occurs in several vectors or twice in one.
+   */
+  private static Function<Random, Instance> lexChain(boolean repeated) {
+    return random -> {
+      int rows = 2 + random.nextInt(3);
+      int n = 1 + random.nextInt(9 / rows);
+      boolean strict = random.nextBoolean();
+      int[] var = new int[rows * n];
+      int vars = 0;
+      for (int k = 0; k < var.length; k++) {
+        var[k] = repeated && k > 0 && random.nextInt(3) == 0 ? var[random.nextInt(k)] : vars++;
+      }
+      return new Instance(
+          domains(random, vars, 0, 2),
+          (store, x) -> {
+            IntVar[][] matrix = new IntVar[rows][n];
+            for (int k = 0; k < var.length; k++) {
+              matrix[k / n][k % n] = x[var[k]];
+            }
+            store.impose(new LexChain(matrix, strict));
+          },
+          x -> {
+            int[] t = Arrays.stream(var).map(k -> x[k]).toArray();
+            for (int i = 0; i + 1 < rows; i++) {
+              int c =
+                  Arrays.compare(
+                      Arrays.copyOfRange(t, i * n, (i + 1) * n),
+                      Arrays.copyOfRange(t, (i + 1) * n, (i + 2) * n));
+              if (strict ? c >= 0 : c > 0) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(var));
+    };
   }
 
   private static Instance lexOrder(Random random) {
