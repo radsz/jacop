@@ -50,6 +50,8 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
@@ -958,6 +960,36 @@ class ConsistencyChecker {
                   new Count(x, c, value),
                   t -> Arrays.stream(t, 0, n).filter(v -> v == value).count() == t[n],
                   concat(x, new IntVar[] {c}));
+            }),
+        new Case(
+            "CountBounds",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              int value = r.nextInt(3);
+              int lb = r.nextInt(n + 1);
+              int ub = lb + r.nextInt(n + 1 - lb);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              return new Model(
+                  new CountBounds(x, value, lb, ub),
+                  t -> {
+                    long c = Arrays.stream(t).filter(v -> v == value).count();
+                    return lb <= c && c <= ub;
+                  },
+                  x);
+            }),
+        new Case(
+            "CountVar",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              IntVar c = var(s, "c", 0, n, r);
+              IntVar y = var(s, "y", 0, 2, r);
+              return new Model(
+                  new CountVar(x, c, y),
+                  t -> Arrays.stream(t, 0, n).filter(v -> v == t[n + 1]).count() == t[n],
+                  concat(x, new IntVar[] {c, y}));
             }),
         new Case(
             "Among",
