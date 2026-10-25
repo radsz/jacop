@@ -193,6 +193,7 @@ setup to run configuration. -->
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <grounding.trials>10</grounding.trials>
+                                <layeredgraph.trials>8</layeredgraph.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -212,6 +213,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -286,6 +288,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -360,6 +363,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
@@ -434,6 +438,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
+                                <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>

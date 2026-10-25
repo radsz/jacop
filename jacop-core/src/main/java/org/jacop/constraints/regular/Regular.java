@@ -291,6 +291,8 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
 
   @Override
   public Regular copy(VarMap map) {
-    return new Regular(fsm, map.get(list));
+    Regular copy = new Regular(fsm, map.get(list));
+    copyEngineTo(copy);
+    return copy;
   }
 }

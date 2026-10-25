@@ -31,6 +31,7 @@
 package org.jacop.constraints.regular;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -257,6 +258,109 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int searchStamp;
   private int[] levelUnsupported;
   private int deepestUnsupported;
+
+  static final String ENGINE = System.getProperty("layered_graph_engine", "");
+
+  /** The propagation algorithms of the layered graph. */
+  public enum Engine {
+    /** The counters, switching to support search during the search when that is faster. */
+    AUTO,
+    /** Trailed counters of alive edges per node, as in Gecode and the reset of MDD4R. */
+    COUNTERS,
+    /** Depth first search for supports from the first level, as in mddc. */
+    SUPPORT_SEARCH
+  }
+
+  private Engine engine = Engine.AUTO;
+
+  /**
+   * It sets the propagation algorithm. It must be called before the constraint is imposed.
+   *
+   * @param engine the algorithm.
+   */
+  public void setEngine(Engine engine) {
+    this.engine = engine;
+  }
+
+  /**
+   * It returns the propagation algorithm in use. Before the constraint is imposed it is the one
+   * set; with {@link Engine#AUTO} it may change from the counters to support search during the
+   * search.
+   *
+   * @return the algorithm.
+   */
+  public Engine engine() {
+    if (state == null) {
+      return engine;
+    }
+    if (supportSearch) {
+      return Engine.SUPPORT_SEARCH;
+    }
+    return Engine.COUNTERS;
+  }
+
+  /**
+   * It decides, with {@link Engine#AUTO}, whether to switch from the counters to support search,
+   * given the time both took on the same calls.
+   *
+   * @param countersNanos the time of the counters, in nanoseconds.
+   * @param searchNanos the time of support search on the same calls, in nanoseconds.
+   * @return true to switch to support search.
+   */
+  protected boolean preferSupportSearch(long countersNanos, long searchNanos) {
+    return searchNanos < SWITCH_SHARE * countersNanos;
+  }
+
+  /**
+   * It gives a copy of this constraint the propagation algorithm set for this one.
+   *
+   * @param copy the copy, not imposed yet.
+   */
+  protected void copyEngineTo(LayeredGraphConstraint copy) {
+    copy.engine = engine;
+  }
+
+  private Engine resolveEngine() {
+    Engine chosen = engine == Engine.AUTO ? defaultEngine() : engine;
+    if (chosen == Engine.AUTO && !ENGINE.isEmpty()) {
+      chosen = Engine.valueOf(ENGINE.toUpperCase(Locale.ROOT));
+    }
+    return chosen;
+  }
+
+  // Automatic choice. Support search costs a depth first search from the first level at every
+  // call; the counters cost time proportional to the removed edges and their nodes. Which one is
+  // cheaper depends on the model as much as on the graph: on short graphs in tightly constrained
+  // models support search was up to three times faster, on loose models with sliding window
+  // automata it was up to two and a half times slower, and from about 30 levels on the counters
+  // were faster on most models measured. So the constraint starts with the counters and, for
+  // at most PROBE_CALLS calls after the first PROBE_SKIP calls, also runs support search on the
+  // propagated domains and times both. Then it switches to support search for good if that took
+  // less than SWITCH_SHARE of the time of the counters. Every PROBE_CHECK calls it decides early
+  // when support search took more than STAY_SHARE or less than SWITCH_EARLY_SHARE of the time of
+  // the counters, so a clear case pays little for the probe. Both are domain consistent, so the
+  // choice changes only the speed. The switch is one way because support search does not keep the
+  // counters up to date.
+
+  static final int PROBE_SKIP = 8;
+
+  static final int PROBE_CALLS = 1024;
+
+  static final int PROBE_CHECK = 64;
+
+  static final double STAY_SHARE = 1.2;
+
+  static final double SWITCH_EARLY_SHARE = 0.5;
+
+  static final double SWITCH_SHARE = 0.8;
+
+  private boolean probing;
+
+  private int probeCalls;
+
+  private long probeCountersTime;
+
+  private long probeSearchTime;
 
   private int[] deadNodes = new int[64];
   private int deadNodesSize;
@@ -533,6 +637,9 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
 
     emptySlots = new int[Math.max(1, slots)];
+    Engine chosen = resolveEngine();
+    supportSearch = chosen == Engine.SUPPORT_SEARCH;
+    probing = chosen == Engine.AUTO;
     residue = Arrays.copyOf(slotStart, slots);
     adjacency[0] = saveAdjacency(new Adjacency(), -1);
     adjacencyTop = 1;
@@ -1309,6 +1416,35 @@ public abstract class LayeredGraphConstraint extends Constraint
       searchSupports(store);
       return;
     }
+    if (!probing) {
+      consistencyCounters(store);
+      return;
+    }
+    if (++probeCalls <= PROBE_SKIP) {
+      consistencyCounters(store);
+      return;
+    }
+    long start = System.nanoTime();
+    consistencyCounters(store);
+    long middle = System.nanoTime();
+    // The domains are at the fixpoint of this constraint, so the search only finds supports. It
+    // runs at every call of the probe, so its nodes without support accumulate as they would if
+    // it propagated alone.
+    searchSupports(store);
+    probeCountersTime += middle - start;
+    probeSearchTime += System.nanoTime() - middle;
+    int calls = probeCalls - PROBE_SKIP;
+    if (calls == PROBE_CALLS
+        || calls >= PROBE_CHECK
+            && calls % PROBE_CHECK == 0
+            && (probeSearchTime > STAY_SHARE * probeCountersTime
+                || probeSearchTime < SWITCH_EARLY_SHARE * probeCountersTime)) {
+      probing = false;
+      supportSearch = preferSupportSearch(probeCountersTime, probeSearchTime);
+    }
+  }
+
+  private void consistencyCounters(Store store) {
     if (pendingCompaction >= 0) {
       compact(pendingCompaction);
       pendingCompaction = -1;
@@ -1379,8 +1515,8 @@ public abstract class LayeredGraphConstraint extends Constraint
   public void impose(Store store) {
 
     buildLayeredGraph();
-    supportSearch = useSupportSearch();
-    if (supportSearch) {
+
+    if (supportSearch || probing) {
       int nodes = slotBase;
       int slots = levelBase - slotBase;
       noNodes = new int[nodes];
@@ -1460,13 +1596,13 @@ public abstract class LayeredGraphConstraint extends Constraint
   }
 
   /**
-   * It decides, once the layered graph is built, whether the constraint is propagated by support
-   * search instead of the incremental counters. The default keeps the counters.
+   * It returns the propagation algorithm used when none was set, which may depend on the layered
+   * graph, built already when this is called. The default is {@link Engine#AUTO}.
    *
-   * @return true if support search is used.
+   * @return the algorithm.
    */
-  protected boolean useSupportSearch() {
-    return false;
+  protected Engine defaultEngine() {
+    return Engine.AUTO;
   }
 
   /**
