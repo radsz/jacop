@@ -805,6 +805,66 @@ class FlatzincFrontEndTest {
   }
 
   /** Runs the model with the given options and returns its stdout and stderr. */
+  @Test
+  void warmStartOnFloatAndSetVariablesIsIgnored() throws IOException {
+    // a hint is only a preference, but float and set hints aborted the run (float values) or
+    // crashed the parser (set values)
+    String sets =
+        """
+        var set of 1..4: s:: output_var;
+        var 1..4: y:: output_var;
+        array [1..1] of var set of int: hs = [s];
+        constraint set_card(s,y);
+        constraint set_in(y,s);
+        solve %s satisfy;
+        """;
+    Set<String> noHint = solveAll(sets.formatted(""));
+    assertEquals(8, noHint.size());
+    assertEquals(noHint, solveAll(sets.formatted(":: warm_start(hs,[{1,3}])")));
+
+    String floats =
+        """
+        var 0.0..10.0: f:: output_var;
+        var 2..5: y:: output_var;
+        var 2.0..5.0: yf;
+        array [1..1] of var float: hf = [f];
+        array [1..1] of var int: hy = [y];
+        constraint float_lin_le([-1.0,1.0],[f,yf],-0.5);
+        constraint int2float(y,yf);
+        solve :: warm_start(hy,[4]) :: warm_start(hf,[3.0]) minimize f;
+        """;
+    String[] out = run(floats);
+    assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
+
+  @Test
+  void emptyWarmStartIsIgnored() throws IOException {
+    // warm_start(x, [<>, <>, <>]) is flattened to warm_start([], []), which crashed the parser
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve %s satisfy;
+        """;
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(":: warm_start([],[])")));
+  }
+
+  @Test
+  void warmStartWithMoreValuesThanVariablesUsesTheCommonPart() throws IOException {
+    // the values were read up to their own length, past the end of the variables
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve :: warm_start([x],[2,3]) satisfy;
+        """;
+    String out = run(fzn)[0];
+    assertTrue(out.contains("x = 2;"), out);
+    assertEquals(6, solveAll(fzn).size());
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

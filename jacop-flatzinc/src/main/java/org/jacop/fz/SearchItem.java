@@ -33,6 +33,7 @@ package org.jacop.fz;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jacop.core.IntVar;
@@ -279,51 +280,107 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   private void handleWarmStart(ASTAnnotation ann) {
-    SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
-    searchVariables = getVarArray(expr1);
-    SimpleNode expr2 = (SimpleNode) ann.jjtGetChild(1);
-    int[] values;
-    try {
-      values = getIntArray(expr2);
-    } catch (IllegalArgumentException _) {
-      throw new IllegalArgumentException(
-          "%Not supported types of values in warm_start; compilation aborted");
-    }
-    if (searchVariables == null || values == null) {
-      throw new IllegalArgumentException(
-          "Not supported variable and/or value type in warm_start; compilation aborted.");
-    }
+    searchType = WARM_START;
     preferedValues = new HashMap<>();
-    int max = 0;
-    int min = 0;
-    for (int i = 0; i < values.length; i++) {
-      IntVar v = (IntVar) searchVariables[i];
-      int val = values[i];
-      if (v.domain.contains(val)) {
-        if (preferedValues.get(v) != null && preferedValues.get(v) != val) {
-          IO.println(
-              "% Warning: Double defintion on warm_start for variable "
-                  + v
-                  + "("
-                  + preferedValues.get(v)
-                  + ", "
-                  + val
-                  + "), the first value is used.");
-        } else {
-          if ((v.max() - val) > (val - v.min())) {
-            max++;
-          } else {
-            min++;
-          }
-          preferedValues.put(v, val);
-        }
-      } else {
+    ArrayList<IntVar> vars = new ArrayList<>();
+    int[] nearMinNearMax = new int[2];
+    collectWarmStart(ann, vars, nearMinNearMax);
+    searchVariables = vars.toArray(new IntVar[0]);
+    varSelectionHeuristic = INPUT_ORDER;
+    indomain = nearMinNearMax[0] > nearMinNearMax[1] ? INDOMAIN_MAX : INDOMAIN_MIN;
+  }
+
+  /**
+   * Adds the hints of a warm_start annotation to preferedValues. A hint is only a preference, so a
+   * hint JaCoP cannot use (float and set values, values outside the domain) is reported and ignored
+   * instead of aborting the run.
+   */
+  private void collectWarmStart(ASTAnnotation ann, List<IntVar> vars, int[] nearMinNearMax) {
+    int[] values = warmStartValues((SimpleNode) ann.jjtGetChild(1));
+    if (values == null) {
+      IO.println("% Warning: warm_start for float and set variables is not supported; ignored");
+      return;
+    }
+    if (values.length == 0) {
+      return;
+    }
+    IntVar[] hinted = getVarArray((SimpleNode) ann.jjtGetChild(0));
+    if (hinted == null) {
+      IO.println("% Warning: Not supported variables in warm_start; ignored");
+      return;
+    }
+    if (hinted.length != values.length) {
+      IO.println(
+          "% Warning: warm_start has "
+              + hinted.length
+              + " variables and "
+              + values.length
+              + " values; the extra ones are ignored");
+    }
+    for (int i = 0; i < Math.min(hinted.length, values.length); i++) {
+      addWarmStartValue(hinted[i], values[i], vars, nearMinNearMax);
+    }
+  }
+
+  private void addWarmStartValue(IntVar v, int val, List<IntVar> vars, int[] nearMinNearMax) {
+    if (!v.domain.contains(val)) {
+      IO.println("% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
+      return;
+    }
+    Integer previous = preferedValues.get(v);
+    if (previous != null) {
+      if (previous != val) {
         IO.println(
-            "% Warning: warm_start value " + val + " is not in domain of " + v + "; ignored");
+            "% Warning: Double defintion on warm_start for variable "
+                + v
+                + "("
+                + previous
+                + ", "
+                + val
+                + "), the first value is used.");
+      }
+      return;
+    }
+    if ((v.max() - val) > (val - v.min())) {
+      nearMinNearMax[0]++;
+    } else {
+      nearMinNearMax[1]++;
+    }
+    preferedValues.put(v, val);
+    vars.add(v);
+  }
+
+  /**
+   * The integer (or Boolean) values of a warm_start annotation, an empty array for an empty
+   * annotation, or null when the values are not integers (float or set hints).
+   */
+  private int[] warmStartValues(SimpleNode node) {
+    String id = ((ASTAnnotation) node).getAnnId();
+    if (ANN_VECTOR.equals(id)) {
+      int count = node.jjtGetNumChildren();
+      int[] values = new int[count];
+      for (int i = 0; i < count; i++) {
+        Node n = node.jjtGetChild(i).jjtGetChild(0).jjtGetChild(0);
+        if (!(n instanceof ASTScalarFlatExpr e) || e.getType() == 4 || e.getType() == 5) {
+          return null;
+        }
+        if (e.getType() == 2 && dictionary.checkInt(e.getIdent()) == null) {
+          return null;
+        }
+        values[i] = getInt(e);
+      }
+      return values;
+    }
+    if (ANN_EXPR.equals(id)) {
+      Node n = node.jjtGetChild(0).jjtGetChild(0);
+      if (n instanceof ASTArrayLiteral && n.jjtGetNumChildren() == 0) {
+        return new int[0];
+      }
+      if (n instanceof ASTScalarFlatExpr e && e.getType() == 2) {
+        return dictionary.getIntArray(e.getIdent());
       }
     }
-    varSelectionHeuristic = INPUT_ORDER;
-    indomain = max > min ? INDOMAIN_MAX : INDOMAIN_MIN;
+    return null;
   }
 
   private void handleRestartConstant(ASTAnnotation ann) {
