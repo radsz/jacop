@@ -37,7 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,7 +59,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class LinearBool extends Constraint implements SatisfiedPresent {
+public class LinearBool extends Constraint implements SatisfiedPresent, Copyable<LinearBool> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -184,6 +186,22 @@ public class LinearBool extends Constraint implements SatisfiedPresent {
    */
   public LinearBool(List<? extends IntVar> x, List<Integer> w, String rel, IntVar z) {
     this(x.toArray(new IntVar[0]), w.stream().mapToInt(i -> i).toArray(), rel, z);
+  }
+
+  /** A copy over the counterparts of the variables; the weights, already merged, are shared. */
+  private LinearBool(LinearBool original, VarMap map) {
+    numberId = idNumber.incrementAndGet();
+    this.relationType = original.relationType;
+    this.x = map.get(original.x);
+    this.w = original.w;
+    this.z = original.z == null ? null : map.get(original.z);
+    this.c = original.c;
+    this.queueIndex = 1;
+    if (z == null) {
+      setScope(this.x);
+    } else {
+      setScope(Stream.concat(Arrays.stream(this.x), Stream.of(z)));
+    }
   }
 
   private static byte relation(String rel) {
@@ -359,5 +377,10 @@ public class LinearBool extends Constraint implements SatisfiedPresent {
         };
     result.append("], ").append(rel).append(", ").append(z == null ? String.valueOf(c) : z);
     return result.append(" )").toString();
+  }
+
+  @Override
+  public LinearBool copy(VarMap map) {
+    return new LinearBool(this, map);
   }
 }

@@ -80,6 +80,7 @@ import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
@@ -5678,6 +5679,61 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void alldifferentExceptIsDomainConsistentAndKeepsAllSolutions() {
+    // Random instances with 0-3 exception values, some outside the domains, and offsets that send
+    // the values of some instances beyond the range the joker filtering handles, so the
+    // feasibility-only fallback is covered as well. After the root propagation every value left
+    // must have a support (domain consistency), and an all-solution search must find exactly the
+    // brute-force solutions.
+    Random random = new Random(15);
+    for (int run = 0; run < 1500; run++) {
+      int n = 3 + random.nextInt(4);
+      int offset = run % 7 == 0 ? 100_000 : 0;
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = randomVar(store, "x" + i, -1, Math.min(n, 4), random);
+        if (offset != 0 && random.nextBoolean()) {
+          x[i].domain.unionAdapt(offset, offset);
+        }
+      }
+      boolean zero = run % 3 == 0;
+      IntervalDomain except = new IntervalDomain();
+      if (zero) {
+        except.unionAdapt(0, 0);
+      } else {
+        for (int k = random.nextInt(4); k > 0; k--) {
+          int e = random.nextInt(n + 3) - 1;
+          except.unionAdapt(e, e);
+        }
+      }
+      Predicate<int[]> check =
+          t -> {
+            int[] kept = Arrays.stream(t).filter(v -> !except.contains(v)).toArray();
+            return Arrays.stream(kept).distinct().count() == kept.length;
+          };
+      String instance = "run " + run + " except " + except + " " + domainsOf(x);
+      List<int[]> solutions = bruteForce(x, check);
+
+      store.impose(zero ? new AlldifferentExceptZero(x) : new AlldifferentExcept(x, except));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
+      if (!consistent) {
+        continue;
+      }
+      if (offset == 0) {
+        for (int i = 0; i < n; i++) {
+          int position = i;
+          int[] supported =
+              solutions.stream().mapToInt(t -> t[position]).distinct().sorted().toArray();
+          assertThat(valuesOf(x[i])).as(instance + " " + x[i]).containsExactly(supported);
+        }
+      }
+      assertThat(countSolutions(store, x, random)).as(instance).isEqualTo(solutions.size());
+    }
+  }
+
+  @Test
   void linearIntWithManyVariablesHasTheSolutionCountOfBruteForce() {
     // a LinearInt with more than three variables stops reading the variables that get fixed and
     // reads them again after backtracking, which an all-solution search exercises
@@ -6698,6 +6754,35 @@ class SingleConstraintTest extends TestHelper {
     store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testCountValuesBoundsIsNotSatisfiedWhileUnassignedVariablesCanExceedABound() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 2, 3);
+    }
+    // at most one variable equal to 3: nothing is assigned, so the occurrences of 3 counted so far
+    // (none) are within the bounds, but two or three variables can still take 3
+    CountValuesBounds c = new CountValuesBounds(x, new int[] {0}, new int[] {1}, new int[] {3});
+    store.impose(c);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  @Test
+  void testCountValuesIsNotSatisfiedWhileAnUnassignedVariableCanChangeACount() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 3, 3), new IntVar(store, "x1", 2, 3)};
+    IntVar counter = new IntVar(store, "counter", 1, 1);
+    CountValues c = new CountValues(x, new IntVar[] {counter}, new int[] {3});
+
+    // checked before propagation, which would remove 3 from x1: x1 = 3 would still give two 3s
+    assertThat(c.satisfied()).isFalse();
   }
 
   // With min = max the windows force a period of q, so Sequence posts reified memberships on q

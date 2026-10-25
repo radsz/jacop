@@ -69,7 +69,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class CumulativeBruteForceTest {
 
-  private static final int TRIALS = 400;
+  /** Random instances per configuration; the {@code min} profile lowers it. */
+  private static final int TRIALS = Integer.getInteger("cumulative.bruteforce.trials", 400);
 
   private static final int MAX_TUPLES = 60_000;
 

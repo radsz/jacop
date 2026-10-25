@@ -10,12 +10,18 @@ Every pull request triggers the GitHub Actions build (`.github/workflows/ci.yml`
 `mvn spotless:check` and `mvn -B -Pcommit verify`. That suite is long, so a PR is opened only once
 the work is truly done.
 
+- Every pull request targets `develop-5.0` directly; never stack a PR on another PR's branch.
+  Extend an existing PR or open a new one against `develop-5.0`.
 - Do not open a pull request (draft or ready) until the work is complete.
 - Pushing work in progress to a remote branch is fine and encouraged; just do not open the PR yet.
 - Before opening a PR, run locally and make sure all of these pass:
   1. The regression tests for the change (a test that fails before the fix and passes after it).
   2. `mvn spotless:check`
-  3. `mvn -B -Pcommit verify`
+  3. `mvn -B -Pmin verify`
+- Do not run `-Pcommit` locally; CI runs it. The `min` profile runs every test class the `commit`
+  profile runs, with fewer random instances (`globals.bruteforce.trials`,
+  `cumulative.bruteforce.trials`, `grounding.trials`) and, instead of the whole upTo30sec FlatZinc
+  category, the sample in `jacop-benchmarks/src/test/fz/upTo30sec/list-min.txt`.
 - Build with `mvn clean ...` before trusting a local result: an incremental `mvn install` re-packs
   the previous all-in-one jar in `jacop-all`, so stale classes can hide or fake a failure.
 - Open the PR only after those pass. Do not use the PR's CI as a substitute for running them locally.
@@ -29,7 +35,10 @@ the work is truly done.
 - Every fix comes with a regression test that reproduces the bug and fails without the fix.
 - Put the regression test in a test class that the `commit` profile runs (for constraint bugs,
   `jacop-core/src/test/java/org/jacop/SingleConstraintTest.java`), or add the new test class to the
-  `commit` and `push` profile includes in the parent `pom.xml`. Otherwise CI never runs it.
+  `min`, `commit` and `push` profile includes in the parent `pom.xml`. Otherwise CI never runs it.
+  A slow new class gets a system property for its instance count, lowered in the `min` profile.
+- When a new upTo30sec FlatZinc instance uses a built-in that no upTo5sec instance uses, add its
+  fastest instance to `upTo30sec/list-min.txt`.
 - Prefer comparing solution counts against a brute-force or decomposition reference over checking
   a single expected output.
 

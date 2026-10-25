@@ -31,6 +31,8 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -44,7 +46,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class EinA extends PrimitiveConstraint {
+public class EinA extends PrimitiveConstraint implements Copyable<EinA> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -146,5 +148,10 @@ public class EinA extends PrimitiveConstraint {
   @Override
   public String toString() {
     return id() + " : EinA(" + element + ", " + a + " )";
+  }
+
+  @Override
+  public EinA copy(VarMap map) {
+    return new EinA(element, map.get(a), strict);
   }
 }

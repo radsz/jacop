@@ -44,6 +44,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -58,9 +59,11 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
@@ -82,8 +85,10 @@ import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -112,9 +117,12 @@ import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Presolver;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -138,7 +146,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class GlobalConstraintBruteForceTest {
 
-  private static final int TRIALS = 300;
+  /** Random instances per constraint; the {@code min} profile lowers it. */
+  private static final int TRIALS = Integer.getInteger("globals.bruteforce.trials", 300);
 
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
@@ -174,6 +183,9 @@ class GlobalConstraintBruteForceTest {
             "CountValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValues),
         Arguments.of(
+            "CountValuesBounds",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValuesBounds),
+        Arguments.of(
             "ReifiedCount",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::reifiedCount),
         Arguments.of("AtLeast", atLeastOrMost(true)),
@@ -200,6 +212,8 @@ class GlobalConstraintBruteForceTest {
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
         Arguments.of("Max", maxOrMin(true)),
         Arguments.of("Min", maxOrMin(false)),
+        Arguments.of("MaxSimple", maxOrMinSimple(true)),
+        Arguments.of("MinSimple", maxOrMinSimple(false)),
         Arguments.of("ArgMax", argMaxOrMin(true)),
         Arguments.of("ArgMin", argMaxOrMin(false)),
         Arguments.of("Increasing", monotonic(true)),
@@ -270,6 +284,170 @@ class GlobalConstraintBruteForceTest {
           .as(
               "%s trial %d domains=%s %s",
               name, trial, Arrays.deepToString(instance.domains()), instance.description())
+          .isEqualTo(expected);
+    }
+  }
+
+  /**
+   * The same comparison, but the constraint's first consistency runs at level 1 after one variable
+   * has been restricted there, and the search starts at level 0 after that level is removed. A
+   * constraint whose first consistency does one-time work must redo it or keep it valid for the
+   * wider domains below that level (presolve design, section 4.8).
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceAfterFirstConsistencyAtDeeperLevel(
+      String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 1);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, expected);
+
+      int restricted = random.nextInt(instance.domains().length);
+      int[] values = instance.domains()[restricted];
+      int kept = values[random.nextInt(values.length)];
+      assertThat(solveAll(instance, trial % 3, random.nextInt(), restricted, kept))
+          .as(
+              "%s trial %d domains=%s %s, first consistency at level 1 with x%d = %d",
+              name,
+              trial,
+              Arrays.deepToString(instance.domains()),
+              instance.description(),
+              restricted,
+              kept)
+          .isEqualTo(expected);
+    }
+  }
+
+  /**
+   * A constraint that reports itself satisfied is entailed: every assignment of the current domains
+   * is a solution. Callers such as presolve drop a constraint that says so, so one that says it is
+   * satisfied while some assignment still violates it lets wrong solutions through. Checked at the
+   * nodes of random dives, for instances that impose a single constraint.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void satisfiedMeansEntailed(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 3);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      Set<List<Integer>> solutions = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, solutions);
+
+      List<Constraint> model = new ArrayList<>();
+      Store store =
+          new Store() {
+            @Override
+            public void impose(Constraint c) {
+              model.add(c);
+              super.impose(c);
+            }
+
+            @Override
+            public void impose(Constraint c, int queueIndex) {
+              model.add(c);
+              super.impose(c, queueIndex);
+            }
+          };
+      IntVar[] x = variables(store, instance);
+      instance.impose().accept(store, x);
+      if (model.size() != 1 || !(model.get(0) instanceof SatisfiedPresent constraint)) {
+        continue;
+      }
+      boolean consistent = store.consistency();
+      while (consistent) {
+        if (constraint.satisfied()) {
+          int[][] box = new int[x.length][];
+          for (int i = 0; i < x.length; i++) {
+            box[i] = IntStream.of(instance.domains()[i]).filter(x[i].domain::contains).toArray();
+          }
+          Instance current = new Instance(box, instance.impose(), instance.semantics(), "");
+          Set<List<Integer>> all = new HashSet<>();
+          bruteForce(
+              new Instance(box, instance.impose(), t -> true, ""), new int[x.length], 0, all);
+          Set<List<Integer>> inBox = new HashSet<>();
+          bruteForce(current, new int[x.length], 0, inBox);
+          assertThat(inBox)
+              .as(
+                  "%s trial %d domains=%s %s: satisfied() at %s",
+                  name,
+                  trial,
+                  Arrays.deepToString(instance.domains()),
+                  instance.description(),
+                  Arrays.deepToString(box))
+              .isEqualTo(all);
+          break;
+        }
+        IntVar v = x[random.nextInt(x.length)];
+        if (v.singleton()) {
+          if (Arrays.stream(x).allMatch(IntVar::singleton)) {
+            break;
+          }
+          continue;
+        }
+        store.setLevel(store.level + 1);
+        try {
+          if (random.nextBoolean()) {
+            v.domain.inValue(store.level, v, v.min() + random.nextInt(v.max() - v.min() + 1));
+          } else {
+            v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
+          }
+          consistent = store.consistency();
+        } catch (FailException e) {
+          consistent = false;
+        }
+      }
+    }
+  }
+
+  private static IntVar[] variables(Store store, Instance instance) {
+    IntVar[] x = new IntVar[instance.domains().length];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain domain = new IntervalDomain();
+      for (int v : instance.domains()[i]) {
+        domain.unionAdapt(v, v);
+      }
+      x[i] = new IntVar(store, "x" + i, domain);
+    }
+    return x;
+  }
+
+  /**
+   * The same comparison through a presolve derivation. The derivation starts at level 0, or at
+   * level 1 after one variable has been fixed there; the child store is searched and each of its
+   * solutions is returned to the original store, whose values are the ones compared. Every other
+   * trial keeps the original constraints, which then check each returned solution.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceThroughPresolve(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 2);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int restricted = trial % 4 < 2 ? -1 : random.nextInt(instance.domains().length);
+      int kept =
+          restricted < 0
+              ? 0
+              : instance
+                  .domains()[restricted][random.nextInt(instance.domains()[restricted].length)];
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, expected);
+      if (restricted >= 0) {
+        expected.removeIf(solution -> solution.get(restricted) != kept);
+      }
+
+      assertThat(solveThroughPresolve(instance, trial % 2 == 0, restricted, kept, random.nextInt()))
+          .as(
+              "%s trial %d domains=%s %s, derived at level %d with x%d = %d, checking %b",
+              name,
+              trial,
+              Arrays.deepToString(instance.domains()),
+              instance.description(),
+              restricted < 0 ? 0 : 1,
+              restricted,
+              kept,
+              trial % 2 == 0)
           .isEqualTo(expected);
     }
   }
@@ -741,6 +919,39 @@ class GlobalConstraintBruteForceTest {
         "values=" + Arrays.toString(values));
   }
 
+  private static Instance countValuesBounds(Random random) {
+    int n = 1 + random.nextInt(4);
+    int k = 1 + random.nextInt(3);
+    int[] values = new int[k];
+    int[] lb = new int[k];
+    int[] ub = new int[k];
+    int value = random.nextInt(2);
+    for (int j = 0; j < k; j++) {
+      value += 1 + random.nextInt(2);
+      values[j] = value;
+      lb[j] = random.nextInt(2);
+      ub[j] = lb[j] + random.nextInt(n + 1);
+    }
+    return new Instance(
+        domains(random, n, 0, 5),
+        (store, x) -> store.impose(new CountValuesBounds(x, lb, ub, values)),
+        x -> {
+          for (int j = 0; j < k; j++) {
+            int c = occurrences(x, values[j]);
+            if (c < lb[j] || c > ub[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "values="
+            + Arrays.toString(values)
+            + " lb="
+            + Arrays.toString(lb)
+            + " ub="
+            + Arrays.toString(ub));
+  }
+
   private static Function<Random, Instance> atLeastOrMost(boolean atLeast) {
     return random -> {
       int n = 1 + random.nextInt(4);
@@ -885,6 +1096,17 @@ class GlobalConstraintBruteForceTest {
           },
           "");
     };
+  }
+
+  private static Function<Random, Instance> maxOrMinSimple(boolean max) {
+    return random ->
+        new Instance(
+            domains(random, 3, 0, 4),
+            (store, x) ->
+                store.impose(
+                    max ? new MaxSimple(x[0], x[1], x[2]) : new MinSimple(x[0], x[1], x[2])),
+            x -> (max ? Math.max(x[0], x[1]) : Math.min(x[0], x[1])) == x[2],
+            "");
   }
 
   private static Function<Random, Instance> argMaxOrMin(boolean max) {
@@ -1382,7 +1604,30 @@ class GlobalConstraintBruteForceTest {
   }
 
   private static Set<List<Integer>> solveAll(Instance instance, int valueOrder, int seed) {
-    Store store = new Store();
+    return solveAll(instance, valueOrder, seed, -1, 0);
+  }
+
+  /**
+   * Finds all solutions. When {@code restricted >= 0}, the first consistency runs at level 1 with
+   * variable {@code restricted} fixed to {@code kept}, and that level is removed before the search.
+   */
+  private static Set<List<Integer>> solveAll(
+      Instance instance, int valueOrder, int seed, int restricted, int kept) {
+    List<Constraint> imposed = new ArrayList<>();
+    Store store =
+        new Store() {
+          @Override
+          public void impose(Constraint c) {
+            imposed.add(c);
+            super.impose(c);
+          }
+
+          @Override
+          public void impose(Constraint c, int queueIndex) {
+            imposed.add(c);
+            super.impose(c, queueIndex);
+          }
+        };
     IntVar[] x = new IntVar[instance.domains().length];
     for (int i = 0; i < x.length; i++) {
       IntervalDomain domain = new IntervalDomain();
@@ -1392,6 +1637,23 @@ class GlobalConstraintBruteForceTest {
       x[i] = new IntVar(store, "x" + i, domain);
     }
     instance.impose().accept(store, x);
+
+    if (restricted >= 0) {
+      store.setLevel(1);
+      try {
+        x[restricted].domain.in(store.level, x[restricted], kept, kept);
+        store.consistency();
+      } catch (FailException _) {
+        // a failure at level 1 is fine; only the state left behind for level 0 matters
+      }
+      // consistency may itself raise the level (raiseLevelBeforeConsistency)
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      // level 0 was never propagated, and a failure at level 1 empties the queues
+      imposed.forEach(store::addChanged);
+    }
 
     Set<List<Integer>> found = new HashSet<>();
     if (!store.consistency()) {
@@ -1417,6 +1679,62 @@ class GlobalConstraintBruteForceTest {
           default -> new IndomainRandom<>(seed);
         };
     search.labeling(store, new SimpleSelect<>(x, null, indomain));
+    return found;
+  }
+
+  /** Finds all solutions by searching the store derived from the instance's store. */
+  private static Set<List<Integer>> solveThroughPresolve(
+      Instance instance, boolean checking, int restricted, int kept, int seed) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[instance.domains().length];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain domain = new IntervalDomain();
+      for (int v : instance.domains()[i]) {
+        domain.unionAdapt(v, v);
+      }
+      x[i] = new IntVar(store, "x" + i, domain);
+    }
+    instance.impose().accept(store, x);
+
+    Set<List<Integer>> found = new HashSet<>();
+    if (restricted >= 0) {
+      store.setLevel(1);
+      try {
+        x[restricted].domain.in(store.level, x[restricted], kept, kept);
+      } catch (FailException _) {
+        return found;
+      }
+    }
+    Derivation derivation = Presolver.of(store).keep(x).checking(checking).presolve();
+    if (derivation.outcome() == Derivation.Outcome.INFEASIBLE) {
+      return found;
+    }
+    Store child = derivation.child();
+    IntVar[] decisions = derivation.counterparts(x);
+    if (decisions.length == 0) {
+      // every variable is fixed in the original store
+      if (derivation.returnSolution()) {
+        found.add(Arrays.stream(x).map(IntVar::value).toList());
+      }
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            if (derivation.returnSolution()) {
+              found.add(Arrays.stream(x).map(IntVar::value).toList());
+            }
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(child, new SimpleSelect<>(decisions, null, new IndomainRandom<>(seed)));
+    derivation.discard();
     return found;
   }
 }

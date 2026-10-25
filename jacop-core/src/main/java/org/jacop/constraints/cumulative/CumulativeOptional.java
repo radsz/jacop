@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -177,5 +178,14 @@ public class CumulativeOptional extends Cumulative {
         .append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public CumulativeOptional copy(VarMap map) {
+    IntVar[][] t = taskVariables(map);
+    CumulativeOptional copy =
+        withOptionsOf(new CumulativeOptional(t[0], t[1], t[2], map.get(limit), map.get(opt)));
+    copy.doOptionalOverload(doOptionalOverload);
+    return copy;
   }
 }

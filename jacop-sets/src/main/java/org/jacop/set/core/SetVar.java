@@ -196,6 +196,14 @@ public class SetVar extends Var {
     return domain;
   }
 
+  @Override
+  public SetVar copyTo(Store target) {
+    if (getClass() != SetVar.class) {
+      return (SetVar) super.copyTo(target);
+    }
+    return new SetVar(target, id(), domain.cloneLight());
+  }
+
   /**
    * It checks if the domains of variables are equal.
    *

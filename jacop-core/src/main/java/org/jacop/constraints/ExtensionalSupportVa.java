@@ -34,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -55,8 +56,8 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   /** It specifies the id of the constraint. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-  int levelOfFirstConsistencyCheck;
+  /** Restricts the domains to the values of the tuples, in the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
@@ -100,10 +101,6 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   @Override
   public void removeLevel(int level) {
     variableQueue = new LinkedHashSet<>();
-
-    if (level == levelOfFirstConsistencyCheck) {
-      firstConsistencyCheck = true;
-    }
   }
 
   @Override
@@ -113,7 +110,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
       log.debug("Begin {}", this);
     }
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
 
       int i = 0;
 
@@ -131,9 +128,6 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
         i++;
       }
-
-      firstConsistencyCheck = false;
-      levelOfFirstConsistencyCheck = store.level;
     }
 
     pruneUnsupported(store);
@@ -149,7 +143,6 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
     super.impose(store);
     filterAndIndexTuples(store);
     tuplesFromConstructor = null;
-    firstConsistencyCheck = true;
     store.raiseLevelBeforeConsistency = true;
   }
 

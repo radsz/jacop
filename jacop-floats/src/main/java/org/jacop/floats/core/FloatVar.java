@@ -257,6 +257,14 @@ public class FloatVar extends Var {
     return domain;
   }
 
+  @Override
+  public FloatVar copyTo(Store target) {
+    if (getClass() != FloatVar.class) {
+      return (FloatVar) super.copyTo(target);
+    }
+    return new FloatVar(target, id(), domain.cloneLight());
+  }
+
   /**
    * It checks if the domains of variables are equal.
    *

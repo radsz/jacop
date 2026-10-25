@@ -31,7 +31,9 @@
 package org.jacop.constraints.table;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,7 +49,8 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class TableReified extends CompactGroundTable implements SatisfiedPresent {
+public class TableReified extends CompactGroundTable
+    implements SatisfiedPresent, Copyable<TableReified> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -80,6 +83,13 @@ public class TableReified extends CompactGroundTable implements SatisfiedPresent
     super(list, tuples, new IntVar[] {checkControl(list, b)});
     this.b = b;
     this.implication = implication;
+    numberId = idNumber.incrementAndGet();
+  }
+
+  private TableReified(TableReified original, VarMap map) {
+    super(original, map, new IntVar[] {map.get(original.b)});
+    this.b = map.get(original.b);
+    this.implication = original.implication;
     numberId = idNumber.incrementAndGet();
   }
 
@@ -173,5 +183,10 @@ public class TableReified extends CompactGroundTable implements SatisfiedPresent
     StringBuilder s =
         new StringBuilder(id()).append(implication ? " : tableImplied(" : " : tableReified(");
     return appendTuples(s).append(", ").append(b).append(")").toString();
+  }
+
+  @Override
+  public TableReified copy(VarMap map) {
+    return new TableReified(this, map);
   }
 }
