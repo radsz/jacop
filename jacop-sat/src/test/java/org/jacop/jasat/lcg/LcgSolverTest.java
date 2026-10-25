@@ -40,7 +40,9 @@ import java.util.Random;
 import java.util.function.Predicate;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
@@ -369,6 +371,49 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(50);
     assertThat(unsat).isGreaterThan(50);
+  }
+
+  /**
+   * CountValues prunes with an internal variable for the number of variables equal to no counted
+   * value. The variable was not among the constraint's arguments, so the generic reason left out
+   * its atoms, among them the solver's own decisions on it, and the learnt clauses cut off the
+   * optimum.
+   */
+  @Test
+  void countValuesExplainsWithItsInternalCounter() {
+    int[] optimum = new int[2];
+    for (int mode = 0; mode < 2; mode++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < 4; i++) {
+        x[i] = new IntVar(store, "x" + i, -1, 3);
+      }
+      x[2].domain.unionAdapt(4, 4);
+      x[4] = new IntVar(store, "x4", 1, 3);
+      x[5] = new IntVar(store, "x5", 1, 3);
+      IntVar objective = new IntVar(store, "obj", -30, 30);
+      store.impose(
+          new CountValues(
+              new IntVar[] {x[3], x[2], x[4], x[5]}, new IntVar[] {x[0], x[5]}, new int[] {0, 1}));
+      store.impose(new ElementVariable(x[1], new IntVar[] {x[3], x[2], x[1], x[0]}, x[0], 0));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[3], x[4], x[5], objective}, new int[] {1, -1, 1, -1}, "==", 0));
+      if (mode == 0) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(
+                search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), objective))
+            .isTrue();
+        optimum[0] = search.getCostValue();
+      } else {
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        assertThat(solver.minimize(objective)).isEqualTo(CdclSolver.SAT);
+        optimum[1] = solver.value(objective);
+      }
+    }
+    assertThat(optimum[1]).isEqualTo(optimum[0]);
   }
 
   /** Random small scheduling problems minimising the makespan, against JaCoP's search. */
