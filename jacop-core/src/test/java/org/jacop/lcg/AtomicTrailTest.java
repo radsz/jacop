@@ -209,6 +209,39 @@ class AtomicTrailTest {
             newVar(s, "a", rnd),
             newVar(s, "b", rnd),
             newVar(s, "c", rnd),
+            new IntVar(s, "limit", 1, 2),
+            new IntVar(s, "use", 1, 2)
+          };
+          int[] d = {2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)};
+          IntVar[] durations = new IntVar[3];
+          IntVar[] resources = {v[4], new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
+          for (int k = 0; k < 3; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    if (t[k] <= time && time < t[k] + d[k]) {
+                      load += k == 0 ? t[4] : 1;
+                    }
+                  }
+                  if (load > t[3]) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(Arrays.copyOf(v, 3), durations, resources, v[3]), fits, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
             new BooleanVar(s, "p"),
             new BooleanVar(s, "q"),
             new BooleanVar(s, "r")
