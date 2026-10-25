@@ -193,6 +193,11 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
   @Override
   public void consistency(Store store) {
 
+    if (!doProfile) {
+      // the profile bounds the resource use by the limit; edge finding assumes each task fits
+      fitTasksInLimit(store);
+    }
+
     do {
 
       store.propagationHasOccurred = false;
@@ -226,6 +231,32 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * A present task that occupies the resource uses at most the limit; a task that uses more than
+   * the limit is absent or has zero duration.
+   *
+   * @param store the constraint store.
+   */
+  @Override
+  void fitTasksInLimit(Store store) {
+    int limitMax = limit.max();
+    for (int i = 0; i < tvn.length; i++) {
+      TaskView t = tvn[i];
+      if (opt[i].max() == 0) {
+        continue;
+      }
+      if (t.res.min() > limitMax) {
+        if (t.dur.min() > 0) {
+          opt[i].domain.inMax(store.level, opt[i], 0);
+        } else if (opt[i].min() == 1) {
+          t.dur.domain.inMax(store.level, t.dur, 0);
+        }
+      } else if (t.dur.min() > 0 && opt[i].min() == 1) {
+        t.res.domain.inMax(store.level, t.res, limitMax);
+      }
+    }
   }
 
   @Override

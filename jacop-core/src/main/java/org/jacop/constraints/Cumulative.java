@@ -49,6 +49,12 @@ import org.jacop.core.Store;
  * Cumulative implements the cumulative/4 constraint using edge-finding algorithm and profile
  * information on the resource use.
  *
+ * <p>Every task uses at most the limit, whatever its duration. With setLimit (the default for the
+ * constructors without that argument) the limit is also pruned to the maximal possible load, so it
+ * denotes the peak resource use rather than a capacity: a constant limit above any possible load
+ * makes the constraint fail. Pass setLimit = false, or use {@link
+ * org.jacop.constraints.cumulative.Cumulative}, when the limit is a capacity.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
@@ -180,7 +186,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
    * @param doEdgeFinding true if edge finding algorithm should be used.
    * @param doProfile specifies if the profiles should be computed in order to reduce limit
    *     variable.
-   * @param setLimit specifies if limit variable will be prunded.
+   * @param setLimit specifies if limit variable will be pruned to the maximal possible load (see
+   *     the class description).
    */
   public Cumulative(
       IntVar[] starts,

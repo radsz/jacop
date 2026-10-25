@@ -112,6 +112,11 @@ public class ChannelReif extends AbstractChannel {
   }
 
   @Override
+  protected boolean itemSatisfied(boolean on, boolean equal) {
+    return on == equal;
+  }
+
+  @Override
   public String toString() {
     return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";
   }

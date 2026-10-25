@@ -117,8 +117,13 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
    */
   public boolean satisfied() {
 
-    int minVal = min.max();
-    return x1.min() >= minVal && x2.min() >= minVal;
+    if (!min.singleton()) {
+      return false;
+    }
+    int minVal = min.value();
+    return x1.min() >= minVal
+        && x2.min() >= minVal
+        && (x1.singleton(minVal) || x2.singleton(minVal));
   }
 
   @Override

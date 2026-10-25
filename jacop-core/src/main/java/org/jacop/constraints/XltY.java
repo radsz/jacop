@@ -55,26 +55,17 @@ public class XltY extends AbstractXcompY {
   }
 
   @Override
-  public void impose(Store store) {
-
-    // only the same variable twice is rejected here; other inconsistencies make consistency fail
-    if (x == y) {
-      // XltY is trivially inconsistent.
-      throw new IllegalArgumentException(
-          "Arguments to XltY are the same, the model is trivially inconsistent.");
-    }
-
-    super.impose(store);
-  }
-
-  @Override
   protected boolean readsMinOfX() {
     return true;
   }
 
   @Override
   public void consistency(final Store store) {
-
+    if (x == y) {
+      // x op x never holds; pruning one bound at a time on the same variable would not reach a
+      // fixpoint in one call
+      throw Store.failException;
+    }
     x.domain.inMax(store.level, x, y.max() - 1);
     y.domain.inMin(store.level, y, x.min() + 1);
   }

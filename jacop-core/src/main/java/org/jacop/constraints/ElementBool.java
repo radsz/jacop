@@ -181,6 +181,8 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
 
     if (firstConsistencyCheck) {
       index.domain.in(store.level, index, 1 + indexOffset, list.length + indexOffset);
+      // the list holds only 0s and 1s, so any other value of the value variable has no support
+      value.domain.in(store.level, value, 0, 1);
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
     }

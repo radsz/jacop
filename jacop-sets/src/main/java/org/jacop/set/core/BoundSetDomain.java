@@ -212,7 +212,8 @@ public class BoundSetDomain extends SetDomain {
 
     this.glbDomain = glb.cloneLight();
     this.lubDomain = lub.cloneLight();
-    this.cardDomain = cardinality.cloneLight();
+    // a value has at least the elements of glb and at most those of lub
+    this.cardDomain = cardinality.intersect(glb.getSize(), lub.getSize());
 
     initCommonFields();
   }

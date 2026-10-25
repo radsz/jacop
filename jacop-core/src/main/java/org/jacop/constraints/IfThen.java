@@ -57,6 +57,9 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   boolean imposed;
   Store store;
 
+  /** Set when a variable changes, so notConsistency() repeats until neither part prunes more. */
+  private boolean propagation;
+
   /**
    * It constructs ifthen constraint.
    *
@@ -79,23 +82,20 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void consistency(Store store) {
 
+    // Propagates in place rather than imposing thenC or not(condC) at the current level: imposing
+    // during search runs their impose() again for every node where the condition gets decided.
     if (condC.satisfied()) {
-      if (imposed) {
-        this.removeConstraint();
-        store.impose(thenC);
-        return;
-      } else {
-        thenC.consistency(store);
+      thenC.consistency(store);
+      if (imposed && thenC.satisfied()) {
+        removeConstraint();
       }
-    }
-
-    if (thenC.notSatisfied()) {
-      if (imposed) {
-        this.removeConstraint();
-        store.impose(new Not(condC));
-      } else {
-        condC.notConsistency(store);
+    } else if (thenC.notSatisfied()) {
+      condC.notConsistency(store);
+      if (imposed && condC.notSatisfied()) {
+        removeConstraint();
       }
+    } else if (imposed && condC.notSatisfied()) {
+      removeConstraint();
     }
   }
 
@@ -107,8 +107,11 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void notConsistency(Store store) {
 
-    thenC.notConsistency(store);
-    condC.consistency(store);
+    do {
+      propagation = false;
+      thenC.notConsistency(store);
+      condC.consistency(store);
+    } while (propagation);
   }
 
   @Override
@@ -148,16 +151,12 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void include(Store store) {
     this.store = store;
+    super.include(store);
   }
 
   @Override
   public boolean satisfied() {
-
-    if (imposed) {
-      return condC.notSatisfied();
-    } else {
-      return condC.satisfied() && thenC.satisfied() || condC.notSatisfied();
-    }
+    return condC.notSatisfied() || condC.satisfied() && thenC.satisfied();
   }
 
   @Override
@@ -169,6 +168,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void queueVariable(int level, Var variable) {
 
+    propagation = true;
     queueForward.queueForward(level, variable);
   }
 }

@@ -190,42 +190,24 @@ public class IfThenBool extends AbstractConstraintXandYandZ {
     propagateIfThenBool(store, true);
   }
 
-  /**
-   * Unified satisfaction check for both satisfied and notSatisfied.
-   *
-   * @param negated if true, checks the negation of the constraint.
-   * @return true if the constraint (or its negation) is satisfied.
-   */
-  private boolean checkIfThenBoolSatisfaction(boolean negated) {
-
-    if (!x.singleton() || !z.singleton()) {
-      return false;
-    }
-
-    if (negated && x.singleton(0) && z.singleton(0)) {
-      return true;
-    }
-    if (!negated && x.singleton(0) && z.singleton(1)) {
-      return true;
-    }
-
-    if (!y.singleton()) {
-      return false;
-    }
-
-    return negated
-        ? (x.singleton(1) && y.singleton(1) && z.singleton(0))
-        : (x.singleton(1) && y.singleton(1) && z.singleton(1));
-  }
-
   @Override
   public boolean notSatisfied() {
-    return checkIfThenBoolSatisfaction(true);
+    return z.max() == 0 && implicationHolds() || z.min() == 1 && implicationFails();
   }
 
   @Override
   public boolean satisfied() {
-    return checkIfThenBoolSatisfaction(false);
+    return z.min() == 1 && implicationHolds() || z.max() == 0 && implicationFails();
+  }
+
+  /** Whether x {@literal =>} y holds for all values of x and y. */
+  private boolean implicationHolds() {
+    return x.max() == 0 || y.min() == 1;
+  }
+
+  /** Whether x {@literal =>} y is false for all values of x and y. */
+  private boolean implicationFails() {
+    return x.min() == 1 && y.max() == 0;
   }
 
   @Override

@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -175,6 +176,35 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     return constraints;
   }
 
+  /**
+   * It decomposes a Sequence constraint with min = max into reified memberships channelled to q
+   * Boolean variables. Two consecutive windows share q - 1 variables and hold the same number of
+   * values from the set, so list[i] is in the set exactly when list[i + q] is. The constraint
+   * therefore holds if and only if list[i] is in the set when b[i mod q] = 1 and the sum of b
+   * equals min. The decomposition has no cycles, so it is domain consistent when the list has no
+   * repeated variables, and each change costs constant time instead of a pass of Regular.
+   *
+   * @param sequence sequence constraint with min = max, 0 &lt;= min &lt;= q and q &lt;= list
+   *     length.
+   * @param store the constraint store in which the Boolean variables are created.
+   * @return a list of constraints that are used to decompose the sequence constraint.
+   */
+  public static List<Constraint> decomposeByPeriod(Sequence sequence, Store store) {
+
+    BooleanVar[] inSet = new BooleanVar[sequence.q];
+    for (int j = 0; j < inSet.length; j++) {
+      inSet[j] = new BooleanVar(store);
+    }
+
+    List<Constraint> constraints = new ArrayList<>();
+    for (int i = 0; i < sequence.list.length; i++) {
+      constraints.add(new Reified(new In(sequence.list[i], sequence.set), inSet[i % sequence.q]));
+    }
+    constraints.add(new SumBool(inSet, "==", new IntVar(store, sequence.min, sequence.min)));
+
+    return constraints;
+  }
+
   @Override
   public void imposeDecomposition(Store store) {
 
@@ -194,6 +224,8 @@ public class Sequence extends DecomposedConstraint<Constraint> {
       if (q > list.length) {
         // no subsequence of length q, so nothing to constrain
         constraints = new ArrayList<>();
+      } else if (min == max && min >= 0 && min <= q) {
+        constraints = decomposeByPeriod(this, store);
       } else {
         constraints = decomposeByRegular(this);
       }

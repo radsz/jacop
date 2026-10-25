@@ -73,7 +73,12 @@ public class XexpYeqZ extends AbstractXopYeqZ {
       }
       return 0;
     }
-    long zl = toLong(Math.pow(xi, yi));
+    // compared as a double first, since a large power does not fit in a long
+    double zd = Math.pow(xi, yi);
+    if (zd <= zvar.min() - 1.0 || zd >= zvar.max() + 1.0) {
+      return NO_VALUE;
+    }
+    long zl = toLong(zd);
     if (zl < zvar.min() || zl > zvar.max()) {
       return NO_VALUE;
     }
@@ -126,7 +131,7 @@ public class XexpYeqZ extends AbstractXopYeqZ {
   @Override
   public boolean satisfied() {
 
-    return grounded() && toInt(Math.pow(x.min(), y.min())) == z.min();
+    return grounded() && computeZi(x.min(), y.min(), z) == z.min();
   }
 
   @Override

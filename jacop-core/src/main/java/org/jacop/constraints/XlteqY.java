@@ -78,6 +78,11 @@ public class XlteqY extends AbstractXcompY {
 
   @Override
   public void notConsistency(final Store store) {
+    if (x == y) {
+      // x op x always holds, so its negation has no solution; pruning one bound at a time on the
+      // same variable would not reach a fixpoint in one call
+      throw Store.failException;
+    }
     x.domain.inMin(store.level, x, y.min() + 1);
     y.domain.inMax(store.level, y, x.max() - 1);
   }

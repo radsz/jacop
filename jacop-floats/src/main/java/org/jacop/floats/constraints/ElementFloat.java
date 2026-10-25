@@ -313,6 +313,10 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public boolean satisfied() {
 
+    if (isStateful()) {
+      // the index still has values outside the list (before the first consistency)
+      return false;
+    }
     if (value.singleton()) {
 
       double v = value.min();

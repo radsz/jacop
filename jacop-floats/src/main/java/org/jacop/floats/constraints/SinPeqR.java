@@ -36,7 +36,6 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints sin(P) = R.
@@ -50,12 +49,6 @@ public class SinPeqR extends AbstractTrigConstraint
     implements SatisfiedPresent, FloatDerivableConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  private static final int INCREASING = 0;
-  private static final int DECREASING = 1;
-  private static final int PEAK = 2;
-  private static final int TROUGH = 3;
-  private static final int FULL_RANGE = 4;
 
   /**
    * It constructs sin(P) = Q constraints.
@@ -83,38 +76,20 @@ public class SinPeqR extends AbstractTrigConstraint
         return;
       }
 
-      double[] bounds = getNormalizedBounds();
-      double min = bounds[0];
-      double max = bounds[1];
-
-      int intervalForMin = intervalNo(min);
-      int intervalForMax = intervalNo(max);
-
-      int category = classifyBounds(intervalForMin, intervalForMax);
-      double qMin;
-      double qMax;
-      switch (category) {
-        case INCREASING:
-          qMin = FloatDomain.down(Math.sin(min));
-          qMax = FloatDomain.up(Math.sin(max));
-          break;
-        case DECREASING:
-          qMin = FloatDomain.down(Math.sin(max));
-          qMax = FloatDomain.up(Math.sin(min));
-          break;
-        case PEAK:
-          qMin = FloatDomain.down(Math.min(Math.sin(min), Math.sin(max)));
-          qMax = 1.0;
-          break;
-        case TROUGH:
-          qMin = -1.0;
-          qMax = FloatDomain.up(Math.max(Math.sin(min), Math.sin(max)));
-          break;
-        default: // FULL_RANGE
-          qMin = -1.0;
-          qMax = 1.0;
-          break;
-      }
+      // Math.sin reduces its argument exactly, so evaluate it at the bounds of p; between them
+      // sin is monotone unless the interval contains a maximum or a minimum of sin
+      double min = p.min();
+      double max = p.max();
+      double atMin = Math.sin(min);
+      double atMax = Math.sin(max);
+      double qMin =
+          min < max && mayContain(min, max, -FloatDomain.PI / 2, 2 * FloatDomain.PI)
+              ? -1.0
+              : FloatDomain.down(Math.min(atMin, atMax));
+      double qMax =
+          min < max && mayContain(min, max, FloatDomain.PI / 2, 2 * FloatDomain.PI)
+              ? 1.0
+              : FloatDomain.up(Math.max(atMin, atMax));
 
       q.domain.in(store.level, q, qMin, qMax);
 
@@ -124,47 +99,6 @@ public class SinPeqR extends AbstractTrigConstraint
           store, qMax, qMin, Math::asin, -FloatDomain.PI / 2, FloatDomain.PI / 2);
 
     } while (store.propagationHasOccurred);
-  }
-
-  int intervalNo(double d) {
-    if (d >= -2.0 * FloatDomain.PI && d <= -1.5 * FloatDomain.PI) {
-      return 1;
-    }
-    if (d >= -1.5 * FloatDomain.PI && d <= -0.5 * FloatDomain.PI) {
-      return 2;
-    }
-    if (d >= -0.5 * FloatDomain.PI && d <= 0.5 * FloatDomain.PI) {
-      return 3;
-    }
-    if (d >= 0.5 * FloatDomain.PI && d <= 1.5 * FloatDomain.PI) {
-      return 4;
-    }
-    if (d >= 1.5 * FloatDomain.PI && d <= 2.0 * FloatDomain.PI) {
-      return 5; // should not return this
-    } else {
-      return 0; // should not return this
-    }
-  }
-
-  /**
-   * Classifies the bound-computation pattern for a pair of sin intervals.
-   *
-   * <p>Odd intervals (1, 3, 5) are increasing; even intervals (2, 4) are decreasing. When min and
-   * max fall in the same interval the function is monotone. Adjacent intervals cross a peak
-   * (odd-to-even) or trough (even-to-odd). Wider spans cover the full range.
-   */
-  private static int classifyBounds(int intervalForMin, int intervalForMax) {
-    if (intervalForMax < intervalForMin) {
-      throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-    }
-    int diff = intervalForMax - intervalForMin;
-    if (diff == 0) {
-      return (intervalForMin % 2 == 1) ? INCREASING : DECREASING;
-    }
-    if (diff == 1) {
-      return (intervalForMin % 2 == 1) ? PEAK : TROUGH;
-    }
-    return FULL_RANGE;
   }
 
   @Override
