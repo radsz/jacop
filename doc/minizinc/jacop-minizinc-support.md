@@ -75,6 +75,26 @@ MZN_SOLVER_PATH=/path/to/jacop/jacop-all/target minizinc --solver org.jacop mode
 
 or copy those files into one directory and put that directory on `MZN_SOLVER_PATH`, or copy them into MiniZinc's `share/minizinc/solvers/` directory. Checked with MiniZinc 2.10.1 and 2.8.7.
 
+## Free search (`-f`)
+
+With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations as the only search and runs its free search engine, `org.jacop.search.free.FreeSearch`, which is also available to Java models through `FreeSearch.withDefaults(store, vars)`. By default it branches with dom/wdeg, last conflict (k = 1) and solution-based phase saving, restarts geometrically (100 failures, growing by 1.5), restarts after each solution, learns nogoods from restarts, and interleaves the model's annotation with free search, one restart each. For `-a` on a satisfaction model it runs one complete search without restarts and reports each assignment of the output variables once. `-n`, `-t`, `-s` and `-v` work as without `-f`; `-r` has no effect, since the engine makes no random choices.
+
+`--free-engine legacy` selects the previous implementation. `--free-config key=value,...` changes the settings of the new engine, mainly for experiments:
+
+| Key | Values | Default |
+|---|---|---|
+| `heuristic` | `domwdeg`, `cacd` (wdeg^ca.cd), `chs` (conflict history search), `afc` | `domwdeg` |
+| `lc` | last conflict size, 0 is off | 1 |
+| `phase` | solution-based phase saving, 0 or 1 | 1 |
+| `restarts`, `scale`, `base` | `geometric`, `luby` or `none`; failures of the first run; growth of geometric restarts | `geometric`, 100, 1.5 |
+| `restart-on-solution` | 0 or 1 | 1 |
+| `objective-last` | branch on the objective after the other variables, 0 or 1 | 1 |
+| `interleave` | `restart`, `solution` (annotation until the first solution) or `none` | `restart` |
+| `nogoods` | nogoods from restarts, 0 or 1 | 1 |
+| `impact`, `impact-until` | bound-impact values for optimisation on domains up to n values (0 is off); `first` or `always` | 0, `first` |
+
+`--restart` (with `--restart-scale` and `--restart-base`), when given, replaces the restart policy of the free search.
+
 ## How to reproduce
 - MiniZinc bundle: `MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz` from GitHub releases; JaCoP built with `mvn -DskipTests install -pl jacop-all -am` on JDK 25 (the pom hard-codes `<release>25</release>`, so JDK 21 cannot build develop-5.0).
 - Point `MZN_SOLVER_PATH` at `jacop-all/target` (see below).

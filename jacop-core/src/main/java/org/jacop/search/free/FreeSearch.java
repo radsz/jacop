@@ -142,6 +142,13 @@ public final class FreeSearch {
   private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
   private final Consumer<FreeSearch> solutionHandler;
+  private final boolean learnNogoods;
+  private final int maxNogoods;
+  private final int maxNogoodLength;
+  private RestartNoGoods nogoods;
+  private boolean runEndedByFailure;
+  private IntVar[] nogoodVars = new IntVar[16];
+  private int[] nogoodValues = new int[16];
 
   private final List<Frame> stack = new ArrayList<>();
   private int stackSize;
@@ -186,6 +193,9 @@ public final class FreeSearch {
     }
     monitors = List.copyOf(builder.monitors);
     solutionHandler = builder.solutionHandler;
+    learnNogoods = builder.nogoods && restarts != null;
+    maxNogoods = builder.maxNogoods;
+    maxNogoodLength = builder.maxNogoodLength;
   }
 
   /**
@@ -202,8 +212,9 @@ public final class FreeSearch {
   /**
    * Starts building a search with the default free search heuristics: dom/wdeg over the given
    * variables with last conflict, the value of the last solution or else the minimum, geometric
-   * restarts counted in failures, and a restart after each solution for optimisation. For
-   * optimisation, leave the objective out of the variables when it is defined by them.
+   * restarts counted in failures with nogoods learned at each restart, and a restart after each
+   * solution for optimisation. For optimisation, leave the objective out of the variables when it
+   * is defined by them.
    *
    * @param store the store with the model.
    * @param vars the variables to branch on.
@@ -218,7 +229,8 @@ public final class FreeSearch {
         .monitor(domWdeg)
         .monitor(lastConflict)
         .restarts(new GeometricCalculator(DEFAULT_RESTART_BASE, DEFAULT_RESTART_SCALE))
-        .restartOnSolution(true);
+        .restartOnSolution(true)
+        .nogoodsFromRestarts(true);
   }
 
   /**
@@ -235,6 +247,10 @@ public final class FreeSearch {
       // changes made at the root stay in a level of their own, removed at the end
       store.setLevel(startLevel + 1);
       rootLevel = store.level;
+      if (learnNogoods) {
+        nogoods = new RestartNoGoods(store, maxNogoods, maxNogoodLength);
+        store.impose(nogoods);
+      }
       if (!store.consistency()) {
         exhausted = true;
       } else {
@@ -245,6 +261,9 @@ public final class FreeSearch {
       }
     } finally {
       unwind();
+      if (nogoods != null) {
+        nogoods.detach();
+      }
       store.removeLevel(rootLevel);
       store.setLevel(startLevel);
     }
@@ -267,13 +286,55 @@ public final class FreeSearch {
         return false;
       }
       restartCount++;
+      int depth = stackSize;
       unwind();
+      if (nogoods != null) {
+        learnNogoods(depth);
+      }
       for (SearchMonitor m : monitors) {
         m.onRestart(this);
       }
       if (restarts != null) {
         restarts.newLimit();
       }
+    }
+  }
+
+  /**
+   * Turns the decisions of the run that just ended into reduced nld-nogoods (Lecoutre et al. 2007)
+   * and adds them at the root. Each refuted left branch {@code x = v}, the frames whose right
+   * branch was taken and the top frame when the run ended on a failure, gives the nogood made of
+   * the positive decisions above it and {@code x = v}. Constraint decisions cannot be expressed: a
+   * positive one ends the nogoods of the path, a negative one gives no nogood.
+   */
+  private void learnNogoods(int depth) {
+    int positives = 0;
+    try {
+      for (int i = 0; i < depth; i++) {
+        Frame f = stack.get(i);
+        boolean refuted = f.right || (i == depth - 1 && runEndedByFailure);
+        if (!(f.var instanceof IntVar x)) {
+          if (refuted) {
+            continue;
+          }
+          return;
+        }
+        if (positives == nogoodVars.length) {
+          nogoodVars = Arrays.copyOf(nogoodVars, 2 * positives + 16);
+          nogoodValues = Arrays.copyOf(nogoodValues, 2 * positives + 16);
+        }
+        nogoodVars[positives] = x;
+        nogoodValues[positives] = f.value;
+        if (refuted) {
+          nogoods.add(nogoodVars, nogoodValues, positives + 1);
+        } else {
+          positives++;
+        }
+      }
+    } catch (FailException _) {
+      // a nogood emptied a domain at the root: the next run fails at once and ends the search
+      store.recentlyFailedConstraint = null;
+      nogoods.add(nogoodVars, nogoodValues, 0);
     }
   }
 
@@ -287,6 +348,7 @@ public final class FreeSearch {
   }
 
   private RunEnd run() {
+    runEndedByFailure = false;
     int nextIndex = 0;
     boolean consistent = propagate();
     Frame failedFrame = null;
@@ -335,6 +397,7 @@ public final class FreeSearch {
         return RunEnd.EXHAUSTED;
       }
       if (restarts != null && runFailures >= restarts.getFailLimit()) {
+        runEndedByFailure = true;
         return RunEnd.RESTART;
       }
       failedFrame = top();
@@ -653,6 +716,16 @@ public final class FreeSearch {
   }
 
   /**
+   * Returns the number of nogoods learned from restarts, including those that pruned at the root at
+   * once.
+   *
+   * @return the number of nogoods.
+   */
+  public long getNogoods() {
+    return nogoods == null ? 0 : nogoods.getAdded();
+  }
+
+  /**
    * Returns the largest number of decisions on the stack.
    *
    * @return the peak depth.
@@ -689,6 +762,9 @@ public final class FreeSearch {
     private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
     private Consumer<FreeSearch> solutionHandler;
+    private boolean nogoods;
+    private int maxNogoods = RestartNoGoods.DEFAULT_MAX_NOGOODS;
+    private int maxNogoodLength = RestartNoGoods.DEFAULT_MAX_LENGTH;
 
     private Builder(Store store, SelectChoicePoint<? extends Var> select) {
       this.store = store;
@@ -744,6 +820,32 @@ public final class FreeSearch {
      */
     public Builder restarts(Calculator calculator) {
       this.restarts = calculator;
+      return this;
+    }
+
+    /**
+     * Learns nogoods from the decisions of each run when it restarts, so later runs do not explore
+     * the refuted parts of the search again. It needs restarts and works on decisions {@code x = v}
+     * on integer variables.
+     *
+     * @param learn true to learn nogoods.
+     * @return this builder.
+     */
+    public Builder nogoodsFromRestarts(boolean learn) {
+      this.nogoods = learn;
+      return this;
+    }
+
+    /**
+     * Sets the limits of the nogood store of {@link #nogoodsFromRestarts(boolean)}.
+     *
+     * @param max the largest number of nogoods kept; the oldest half is deleted beyond it.
+     * @param maxLength the largest number of literals of a nogood; longer ones are not kept.
+     * @return this builder.
+     */
+    public Builder nogoodLimits(int max, int maxLength) {
+      this.maxNogoods = max;
+      this.maxNogoodLength = maxLength;
       return this;
     }
 
