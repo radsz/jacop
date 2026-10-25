@@ -71,6 +71,10 @@ final class TrailedTupleSet {
   private int[] markLevel = new int[16];
   private int[] markPosition = new int[16];
   private int markTop;
+
+  /** The level of the last mark, Integer.MIN_VALUE when there is none. */
+  private int topLevel = Integer.MIN_VALUE;
+
   private int currentLevel;
 
   /**
@@ -129,13 +133,14 @@ final class TrailedTupleSet {
       return;
     }
     savedEpoch[slot] = epoch;
-    if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
+    if (topLevel != currentLevel) {
       if (markTop == markLevel.length) {
         markLevel = Arrays.copyOf(markLevel, markTop * 2);
         markPosition = Arrays.copyOf(markPosition, markTop * 2);
       }
       markLevel[markTop] = currentLevel;
       markPosition[markTop++] = trailTop;
+      topLevel = currentLevel;
     }
     if (trailTop + 2 > trail.length) {
       trail = Arrays.copyOf(trail, trail.length * 2);
@@ -153,18 +158,23 @@ final class TrailedTupleSet {
 
   /** It tells whether some record was changed at the level or later. */
   boolean changedSince(int level) {
-    return markTop > 0 && markLevel[markTop - 1] >= level;
+    return topLevel >= level;
   }
 
   /** It restores the records changed at the level or later. */
   void removeLevel(int level) {
-    while (markTop > 0 && markLevel[markTop - 1] >= level) {
+    // Most levels change no record; the stamps of the current epoch are then on no record.
+    if (topLevel < level) {
+      return;
+    }
+    do {
       int start = markPosition[--markTop];
       while (trailTop > start) {
         trailTop -= 2;
         state[(int) trail[trailTop]] = trail[trailTop + 1];
       }
-    }
+      topLevel = markTop > 0 ? markLevel[markTop - 1] : Integer.MIN_VALUE;
+    } while (topLevel >= level);
     epochLevel = -1;
   }
 

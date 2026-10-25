@@ -212,6 +212,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -284,6 +285,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -356,6 +358,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -428,6 +431,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/HybridTableTest.java</include>
+                                <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
@@ -872,6 +876,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>
+                        <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                     </includes>
                     <excludes>
