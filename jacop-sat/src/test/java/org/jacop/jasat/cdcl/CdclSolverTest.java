@@ -334,6 +334,168 @@ class CdclSolverTest {
     }
   }
 
+  /**
+   * A propagator that holds part of the formula as its theory: it propagates and adds those clauses
+   * lazily, and checks that its view of the assignment (from the notifications) matches the
+   * solver's.
+   */
+  private static final class TheoryPropagator implements ExternalPropagator {
+    final CdclSolver s;
+    final List<int[]> theory;
+    final Random rnd;
+    final int vars;
+    final int[] view;
+    final List<Integer> trail = new ArrayList<>();
+    final List<Integer> levelStart = new ArrayList<>();
+    int[] clause;
+    int calls;
+
+    TheoryPropagator(CdclSolver s, List<int[]> theory, int vars, Random rnd) {
+      this.s = s;
+      this.theory = theory;
+      this.vars = vars;
+      this.rnd = rnd;
+      view = new int[vars + 1];
+    }
+
+    private int value(int lit) {
+      return lit > 0 ? view[lit] : -view[-lit];
+    }
+
+    private void checkView() {
+      for (int v = 1; v <= vars; v++) {
+        assertEquals(s.value(v), view[v], "view of variable " + v);
+      }
+    }
+
+    @Override
+    public void notifyAssignment(int lit, boolean fixed) {
+      assertEquals(0, view[Math.abs(lit)], "variable " + lit + " notified twice");
+      view[Math.abs(lit)] = lit > 0 ? 1 : -1;
+      trail.add(lit);
+    }
+
+    @Override
+    public void notifyNewDecisionLevel() {
+      levelStart.add(trail.size());
+    }
+
+    @Override
+    public void notifyBacktrack(int level) {
+      int keep = levelStart.get(level);
+      while (trail.size() > keep) {
+        view[Math.abs(trail.remove(trail.size() - 1))] = 0;
+      }
+      levelStart.subList(level, levelStart.size()).clear();
+    }
+
+    @Override
+    public boolean checkModel(int[] model) {
+      for (int[] c : theory) {
+        boolean sat = false;
+        for (int l : c) {
+          sat |= model[Math.abs(l) - 1] == l;
+        }
+        if (!sat) {
+          clause = c;
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int decide() {
+      if (rnd.nextInt(3) != 0) {
+        return 0;
+      }
+      int v = 1 + rnd.nextInt(vars);
+      return view[v] != 0 ? 0 : rnd.nextBoolean() ? v : -v;
+    }
+
+    @Override
+    public int propagate() {
+      checkView();
+      for (int[] c : theory) {
+        int unassigned = 0;
+        int open = 0;
+        boolean sat = false;
+        for (int l : c) {
+          sat |= value(l) > 0;
+          if (value(l) == 0) {
+            unassigned = l;
+            open++;
+          }
+        }
+        if (!sat && open == 1) {
+          clause = c;
+          return unassigned;
+        }
+      }
+      return 0;
+    }
+
+    @Override
+    public int[] reason(int lit) {
+      return clause;
+    }
+
+    @Override
+    public int[] externalClause() {
+      checkView();
+      if (clause != null && calls++ % 2 == 0) {
+        // the clause of a rejected model, or the last reason given again as a plain clause
+        int[] c = clause;
+        clause = null;
+        return c;
+      }
+      for (int[] c : theory) {
+        boolean open = false;
+        for (int l : c) {
+          open |= value(l) >= 0;
+        }
+        if (!open) {
+          return c; // falsified
+        }
+      }
+      return null;
+    }
+  }
+
+  @Test
+  void externalPropagatorAgreesWithBruteForce() {
+    Random rnd = new Random(13);
+    for (int run = 0; run < 3000; run++) {
+      int vars = 3 + rnd.nextInt(10);
+      List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
+      CdclSolver s = new CdclSolver();
+      s.ensureVars(vars);
+      s.setChronoLimit(0);
+      if (run % 2 == 0) {
+        s.setReduceBase(10);
+      }
+      List<int[]> theory = new ArrayList<>();
+      for (int[] c : f) {
+        if (rnd.nextInt(2) == 0) {
+          theory.add(c);
+        } else {
+          s.addClause(c);
+        }
+      }
+      TheoryPropagator p = new TheoryPropagator(s, theory, vars, rnd);
+      s.connect(p);
+      for (int v = 1; v <= vars; v++) {
+        s.observe(v);
+      }
+      int result = s.solve();
+      boolean expected = bruteForce(f, vars, new int[0]);
+      assertEquals(expected ? CdclSolver.SAT : CdclSolver.UNSAT, result, "run " + run);
+      if (expected) {
+        assertTrue(satisfies(f, model(s, vars)), "model of run " + run);
+      }
+    }
+  }
+
   @Test
   void externalSearchAgreesWithBruteForce() {
     Random rnd = new Random(5);
