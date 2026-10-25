@@ -896,7 +896,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
       }
     } else if (vars.length > 0) {
-      DomWdeg domWdeg = new DomWdeg(vars, values);
+      DomWdeg.Weighting weighting =
+          switch (heuristic) {
+            case "cacd" -> DomWdeg.Weighting.CACD;
+            case "chs" -> DomWdeg.Weighting.CHS;
+            default -> DomWdeg.Weighting.WDEG;
+          };
+      DomWdeg domWdeg = new DomWdeg(vars, values, weighting);
       monitors.add(domWdeg);
       SelectChoicePoint<IntVar> select = domWdeg;
       if (lastConflict > 0) {

@@ -117,7 +117,7 @@ public class Options {
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
                 scale=<failures>, base=<growth of geometric restarts>,
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),

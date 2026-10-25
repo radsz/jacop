@@ -302,6 +302,17 @@ class FreeSearchTest {
           DomWdeg domWdeg = new DomWdeg(concat(m), phase);
           LastConflict lc = new LastConflict(domWdeg, phase, 2);
           return new Branching(lc, phase, domWdeg, lc);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          DomWdeg cacd = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CACD);
+          return new Branching(cacd, phase, cacd);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          DomWdeg chs = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CHS);
+          LastConflict lc = new LastConflict(chs, phase, 1);
+          return new Branching(lc, phase, chs, lc);
         });
   }
 
