@@ -175,6 +175,9 @@ public class HybridTable extends Constraint
   private boolean pruning;
   private boolean firstConsistency = true;
 
+  /** The level of the first consistency; backtracking above it undoes that full filtering. */
+  private int firstConsistencyLevel;
+
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
   private IntDomain[] binarySupport;
@@ -713,6 +716,10 @@ public class HybridTable extends Constraint
   @Override
   public void removeLevel(int level) {
     valid.removeLevel(level);
+    if (level <= firstConsistencyLevel) {
+      // The full filtering of the first consistency is undone, the next call repeats it.
+      firstConsistency = true;
+    }
     for (int p = 0; p < queueSize; p++) {
       queued[queue[p]] = false;
     }
@@ -818,20 +825,25 @@ public class HybridTable extends Constraint
     }
     queueSize = 0;
 
+    // Restrictions between columns can remove further values of the changed column itself, for
+    // example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple, and the tuples they remove may have
+    // been the only supports of other values of that column. The tuples that involve the column
+    // are looked at before the revision, which removes some of them.
+    if (onlyChanged >= 0
+        && binaryColumn[onlyChanged] != null
+        && intersects(binaryColumn[onlyChanged])) {
+      onlyChanged = -1;
+    }
+
     if (binaryAll != null) {
       reviseBinaryTuples();
     }
 
     if (firstConsistency) {
       firstConsistency = false;
+      firstConsistencyLevel = store.level;
       onlyChanged = -1;
       changed = arity;
-    } else if (onlyChanged >= 0
-        && binaryColumn[onlyChanged] != null
-        && intersects(binaryColumn[onlyChanged])) {
-      // Restrictions between columns can remove further values of the changed column itself,
-      // for example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple.
-      onlyChanged = -1;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
       // The valid tuples are those of the previous call, which supported every remaining value.
       return;

@@ -566,8 +566,25 @@ class BoundDomain extends IntDomain {
   @Override
   public IntDomain intersect(IntDomain dom) {
 
+    if (dom.isEmpty() || isEmpty()) {
+      return emptyDomain;
+    }
+
     int inputMin = dom.min();
     int inputMax = dom.max();
+
+    if (dom.noIntervals() > 1) {
+      // Holes of dom within the bounds would be lost by an intersection of bounds.
+      int low = Math.max(inputMin, this.minBound);
+      int high = Math.min(inputMax, this.maxBound);
+      if (low > high) {
+        return emptyDomain;
+      }
+      IntDomain result = dom.intersect(low, high);
+      return result.isEmpty() || result.getSize() != (long) result.max() - result.min() + 1
+          ? result
+          : new BoundDomain(result.min(), result.max());
+    }
 
     if (inputMin > this.maxBound || inputMax < this.minBound) {
       return emptyDomain;
@@ -630,8 +647,38 @@ class BoundDomain extends IntDomain {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
+    if (isEmpty()) {
+      return emptyDomain;
+    }
+
+    if (domain.isEmpty()) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    int intervals = domain.noIntervals();
+    if (intervals > 1) {
+      // Only the values of domain at the bounds can be removed, a hole of domain keeps a value.
+      long low = this.minBound;
+      long high = this.maxBound;
+      for (int k = 0; k < intervals; k++) {
+        if (domain.leftElement(k) <= low && low <= domain.rightElement(k)) {
+          low = domain.rightElement(k) + 1L;
+        }
+      }
+      for (int k = intervals - 1; k >= 0; k--) {
+        if (domain.leftElement(k) <= high && high <= domain.rightElement(k)) {
+          high = domain.leftElement(k) - 1L;
+        }
+      }
+      return low > high ? emptyDomain : new BoundDomain((int) low, (int) high);
+    }
+
     int inputMin = domain.min();
     int inputMax = domain.max();
+
+    if (inputMax < this.minBound || inputMin > this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
 
     if (inputMin <= this.minBound && inputMax >= this.maxBound) {
       return emptyDomain;
@@ -650,6 +697,10 @@ class BoundDomain extends IntDomain {
 
   @Override
   public BoundDomain subtract(int min, int max) {
+
+    if (max < this.minBound || min > this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
 
     if (min <= this.minBound && max >= this.maxBound) {
       return emptyDomain;
@@ -679,7 +730,7 @@ class BoundDomain extends IntDomain {
   @Override
   public boolean isIntersecting(IntDomain domain) {
 
-    return domain.min() <= this.maxBound && domain.max() >= this.minBound;
+    return !isEmpty() && domain.isIntersecting(this.minBound, this.maxBound);
   }
 
   @Override
