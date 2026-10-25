@@ -223,12 +223,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         }
         TaskView[] tr = filterZeroTasks(tvr);
 
-        if (!doProfile) {
-          overload(tn);
-        }
-        detectable(store, tn, tr);
-        notFirstNotLast(store, tn, tr);
-        edgeFind(store, tn, tr);
+        unaryRules(store, tn, tr, !doProfile);
       }
 
     } while (store.propagationHasOccurred);
