@@ -191,6 +191,7 @@ setup to run configuration. -->
                             <systemPropertyVariables>
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <grounding.trials>10</grounding.trials>
                             </systemPropertyVariables>
                             <includes>
@@ -219,6 +220,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -292,6 +294,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -365,6 +368,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -438,6 +442,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
