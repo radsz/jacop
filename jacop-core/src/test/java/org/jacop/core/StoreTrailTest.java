@@ -152,4 +152,29 @@ class StoreTrailTest {
     assertThat(inner.pointer4Last).isEqualTo(-1);
     assertThat(root.value()).isEqualTo(1);
   }
+
+  /** The listener array follows every way of changing the set. */
+  @Test
+  void listenerSetElementsFollowChanges() {
+    ListenerSet<Integer> set = new ListenerSet<>();
+    Random random = new Random(3);
+    for (int step = 0; step < 2000; step++) {
+      int action = random.nextInt(10);
+      Integer value = random.nextInt(20);
+      if (action < 4) {
+        set.add(value);
+      } else if (action < 6) {
+        set.remove(value);
+      } else if (action < 7) {
+        set.removeIf(x -> x % 3 == value % 3);
+      } else if (action < 8) {
+        set.removeAll(List.of(value, value + 1));
+      } else if (action < 9) {
+        set.addAll(List.of(value, value + 2));
+      } else if (random.nextInt(10) == 0) {
+        set.clear();
+      }
+      assertThat(set.elements()).containsExactly(set.toArray());
+    }
+  }
 }

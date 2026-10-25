@@ -107,7 +107,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed before it has actually began.
    */
-  public final Set<Stateful> removeLevelListeners = new LinkedHashSet<>(10);
+  public final Set<Stateful> removeLevelListeners = new ListenerSet<>();
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -115,7 +115,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed after it has been removed.
    */
-  public final Set<RemoveLevelLate> removeLevelLateListeners = new LinkedHashSet<>(10);
+  public final Set<RemoveLevelLate> removeLevelLateListeners = new ListenerSet<>();
 
   /**
    * It indicates that consistency function should immediately return fail if last inconsistency was
@@ -1175,11 +1175,8 @@ public class Store {
     // It has to inform listeners first, as they may use values of
     // mutables variables, just before they get deleted.
 
-    // The isEmpty checks spare the iterator of an empty set on every backtrack.
-    if (!removeLevelListeners.isEmpty()) {
-      for (Stateful statefulConstraint : removeLevelListeners) {
-        statefulConstraint.removeLevel(level);
-      }
+    for (Object statefulConstraint : ((ListenerSet<Stateful>) removeLevelListeners).elements()) {
+      ((Stateful) statefulConstraint).removeLevel(level);
     }
 
     if (!timeStamps.isEmpty()) {
@@ -1235,10 +1232,8 @@ public class Store {
       mutableVariables.get(i).removeLevel(level);
     }
 
-    if (!removeLevelLateListeners.isEmpty()) {
-      for (RemoveLevelLate c : removeLevelLateListeners) {
-        c.removeLevelLate(level);
-      }
+    for (Object c : ((ListenerSet<RemoveLevelLate>) removeLevelLateListeners).elements()) {
+      ((RemoveLevelLate) c).removeLevelLate(level);
     }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
