@@ -256,6 +256,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/GeostBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -314,6 +315,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/GeostBruteForceTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
