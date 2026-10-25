@@ -320,8 +320,8 @@ public final class FreeSearch {
           return;
         }
         if (positives == nogoodVars.length) {
-          nogoodVars = Arrays.copyOf(nogoodVars, 2 * positives);
-          nogoodValues = Arrays.copyOf(nogoodValues, 2 * positives);
+          nogoodVars = Arrays.copyOf(nogoodVars, 2 * positives + 16);
+          nogoodValues = Arrays.copyOf(nogoodValues, 2 * positives + 16);
         }
         nogoodVars[positives] = x;
         nogoodValues[positives] = f.value;

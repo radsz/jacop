@@ -241,7 +241,7 @@ public final class RestartNoGoods extends Constraint {
       return;
     }
     if (pendingSize == pending.length) {
-      pending = Arrays.copyOf(pending, 2 * pendingSize);
+      pending = Arrays.copyOf(pending, 2 * pendingSize + 16);
     }
     pending[pendingSize++] = i;
   }
@@ -358,7 +358,7 @@ public final class RestartNoGoods extends Constraint {
       return i;
     }
     if (varCount == vars.length) {
-      int n = 2 * varCount;
+      int n = 2 * varCount + 16;
       vars = Arrays.copyOf(vars, n);
       watches = Arrays.copyOf(watches, n);
       watchSize = Arrays.copyOf(watchSize, n);
@@ -373,7 +373,7 @@ public final class RestartNoGoods extends Constraint {
   private void addWatch(int xi, int entry) {
     int[] list = watches[xi];
     if (watchSize[xi] == list.length) {
-      list = Arrays.copyOf(list, 2 * list.length);
+      list = Arrays.copyOf(list, 2 * list.length + 4);
       watches[xi] = list;
     }
     list[watchSize[xi]++] = entry;
