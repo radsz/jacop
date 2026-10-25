@@ -419,12 +419,7 @@ public class Pruning extends Network {
     }
 
     // restore optimal flow
-    networkSimplex(999999);
-
-    long cost = cost(Long.MAX_VALUE);
-    if (ASSERTS_ENABLED && cost(Long.MAX_VALUE) != cost) {
-      throw new IllegalStateException(String.valueOf(cost(Long.MAX_VALUE) + " != " + cost));
-    }
+    reoptimize(999999);
   }
 
   private int analyzeArc(Arc arc, int costLimit) {

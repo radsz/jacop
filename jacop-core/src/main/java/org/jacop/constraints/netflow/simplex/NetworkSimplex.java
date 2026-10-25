@@ -35,13 +35,16 @@ import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkInfeasibleNodes;
 import static org.jacop.constraints.netflow.Assert.checkOptimality;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
+import static org.jacop.constraints.netflow.Assert.checkTreePotentials;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.Pruning;
@@ -79,6 +82,11 @@ public class NetworkSimplex {
   public int numArcs;
   // second 'return' value of augmentFlow method
   public Arc blocking;
+  // the number of arcs incident to all nodes, each arc counted at both ends, artificial arcs once
+  private int incidentArcs;
+  // the best entering arc found so far by a dual pivot, and its reduced cost
+  private Arc bestEntering;
+  private int bestEnteringCost;
 
   /**
    * Constructs a network simplex solver with the given nodes and arcs, initializing the spanning
@@ -105,7 +113,9 @@ public class NetworkSimplex {
 
     // create initial spanning tree structure
     Node nextOnThread = root;
-    for (Node node : nodes) {
+    for (int i = 0; i < this.nodes.length; i++) {
+      Node node = this.nodes[i];
+      node.index = i;
       node.parent = root;
       node.thread = nextOnThread;
       node.depth = 1;
@@ -133,6 +143,7 @@ public class NetworkSimplex {
       incrementDegree(arc.head, arc);
       incrementDegree(arc.tail(), arc);
     }
+    initializeIncidentArcs();
 
     if (ASSERTS_ENABLED && !checkFlow(this)) {
       throw new IllegalStateException("Assertion failed");
@@ -140,6 +151,16 @@ public class NetworkSimplex {
     if (ASSERTS_ENABLED && !checkStructure(this)) {
       throw new IllegalStateException("Assertion failed");
     }
+  }
+
+  private void initializeIncidentArcs() {
+    Map<Node, List<Arc>> incident = new IdentityHashMap<>();
+    for (Arc arc : allArcs) {
+      incident.computeIfAbsent(arc.head, k -> new ArrayList<>()).add(arc);
+      incident.computeIfAbsent(arc.tail(), k -> new ArrayList<>()).add(arc);
+    }
+    incident.forEach((node, arcs) -> node.incident = arcs.toArray(new Arc[0]));
+    incidentArcs = 2 * allArcs.size() + nodes.length;
   }
 
   private void incrementDegree(Node node, Arc myArc) {
@@ -356,6 +377,27 @@ public class NetworkSimplex {
       pivots = -2;
     }
     return pivots;
+  }
+
+  /**
+   * Restores an optimal flow after changes that keep every node balance and every arc cost, such as
+   * the analysis of one arc. The potentials are then still valid, so when no node is infeasible the
+   * primal pivots alone are enough: there are no artificial arcs to set up or clear.
+   *
+   * @param maxPivots max value of the pivot
+   * @return the number of pivots performed until optimality was reached, -1 if the maximum number
+   *     of pivots was reached, or -2 if the network is infeasible.
+   */
+  public int reoptimize(int maxPivots) {
+    for (Node node : infeasibleNodes) {
+      if (node.deltaBalance != 0) {
+        return networkSimplex(maxPivots);
+      }
+    }
+    if (ASSERTS_ENABLED && !checkTreePotentials(this)) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    return runPivotLoop(maxPivots);
   }
 
   private void initializeArtificialArcs() {
@@ -689,17 +731,22 @@ public class NetworkSimplex {
     }
 
     // find entering arc
-    Arc entering = null;
-    int minimumCost = Integer.MAX_VALUE;
-    tree.markTree(true);
-    for (int i = 0; i < numArcs; i++) {
-      Arc arc = lower[i];
-      if (arc.capacity > 0 && arc.isInCut(forward)) {
+    Arc entering;
+    int subtreeArcs = tree.markTree(true);
+    if (Math.min(subtreeArcs, incidentArcs - subtreeArcs) < numArcs) {
+      entering = enteringArcFromCut(tree, forward, subtreeArcs);
+    } else {
+      entering = null;
+      int minimumCost = Integer.MAX_VALUE;
+      for (int i = 0; i < numArcs; i++) {
+        Arc arc = lower[i];
+        if (arc.capacity > 0 && arc.isInCut(forward)) {
 
-        int reducedCost = arc.reducedCost();
-        if (minimumCost > reducedCost) {
-          minimumCost = reducedCost;
-          entering = arc;
+          int reducedCost = arc.reducedCost();
+          if (minimumCost > reducedCost) {
+            minimumCost = reducedCost;
+            entering = arc;
+          }
         }
       }
     }
@@ -712,6 +759,67 @@ public class NetworkSimplex {
 
       updateTree(leaving.sister, entering);
       return true;
+    }
+  }
+
+  /**
+   * Finds the entering arc of a dual pivot among the arcs incident to one side of the cut, the
+   * marked subtree or the rest of the tree, whichever has fewer incident arcs. This is cheaper than
+   * scanning all non-tree arcs. Of the arcs with the smallest reduced cost it picks the one with
+   * the smallest index, as the scan of all arcs does.
+   *
+   * @param tree the root of the marked subtree
+   * @param forward whether the entering arc leaves the subtree (true) or enters it (false)
+   * @param subtreeArcs the number of arcs incident to the subtree, artificial arcs included
+   * @return the entering arc, or null if there is none
+   */
+  private Arc enteringArcFromCut(Node tree, boolean forward, int subtreeArcs) {
+    bestEntering = null;
+    bestEnteringCost = Integer.MAX_VALUE;
+    Node last = tree.rightMostLeaf();
+    if (2 * subtreeArcs <= incidentArcs) {
+      for (Node node = tree; node != last.thread; node = node.thread) {
+        for (Arc arc : node.incident) {
+          considerEnteringArc(arc, node, forward, forward);
+        }
+        considerEnteringArc(node.artificial, node, forward, forward);
+      }
+    } else {
+      // the artificial arcs of the subtree are the only arcs from it to the root
+      for (Node node = tree; node != last.thread; node = node.thread) {
+        considerEnteringArc(node.artificial, node, forward, forward);
+      }
+      for (Node node = last.thread; node != tree; node = node.thread) {
+        for (Arc arc : node.incident) {
+          considerEnteringArc(arc, node, !forward, forward);
+        }
+      }
+    }
+    return bestEntering;
+  }
+
+  /**
+   * Keeps the residual direction of a non-tree arc as the entering arc if it crosses the cut in the
+   * right direction and is better than the current one.
+   *
+   * @param arc an arc incident to node
+   * @param node a node on the side of the cut that is scanned
+   * @param leaving whether the residual arc must leave node (true) or enter it (false)
+   * @param forward whether the entering arc leaves the marked subtree
+   */
+  private void considerEnteringArc(Arc arc, Node node, boolean leaving, boolean forward) {
+    if (arc.index < 0) {
+      return;
+    }
+    Arc residual = (arc.head == node) == leaving ? arc.sister : arc;
+    if (residual.capacity <= 0 || !residual.isInCut(forward)) {
+      return;
+    }
+    int reducedCost = residual.reducedCost();
+    if (reducedCost < bestEnteringCost
+        || (reducedCost == bestEnteringCost && residual.index < bestEntering.index)) {
+      bestEntering = residual;
+      bestEnteringCost = reducedCost;
     }
   }
 

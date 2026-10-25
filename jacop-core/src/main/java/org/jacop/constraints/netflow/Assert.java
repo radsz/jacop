@@ -437,6 +437,21 @@ public class Assert {
   }
 
   /**
+   * Checks that every tree arc has a reduced cost of 0, that is the potentials match the tree.
+   *
+   * @param g the network
+   * @return true if the potentials are valid
+   */
+  public static boolean checkTreePotentials(NetworkSimplex g) {
+    for (Node i = g.root.thread; i != g.root; i = i.thread) {
+      if (i.toParent.reducedCost() != 0) {
+        throw new IllegalStateException(String.valueOf("Stale potential at " + i));
+      }
+    }
+    return true;
+  }
+
+  /**
    * Checks optimality conditions by verifying reduced costs of all arcs.
    *
    * @param g the network simplex to validate.
