@@ -78,3 +78,19 @@ To check another propagator, add a `Case` to `cases()`: a name, the level it rea
 generator returning a `Model` (the constraint, the relation as a `Predicate<int[]>` on complete
 assignments, and the variables in the relation's order). Keep the instances small, since every node
 enumerates the whole box (nodes above 200,000 tuples are skipped).
+
+## Fuzzing the SAT core
+
+`jacop-sat/src/test/java/org/jacop/jasat/cdcl/CdclFuzzTest.java` fuzzes the CDCL core in process.
+Like the consistency checker it is not in any profile; run it on demand:
+
+```
+mvn -Pmin -pl jacop-sat test -Dtest=CdclFuzzTest -Dsurefire.rerunFailingTestsCount=0 \
+    -Dfuzz.runs=1000000 -Dfuzz.seed=1
+```
+
+Every answer is checked without a reference solver: a SAT answer by its model, an UNSAT answer by
+checking its DRAT proof with `RupChecker`, and an UNSAT answer under assumptions by re-solving with
+the failed assumptions as units. A failure prints the seed and, for small formulas, the CNF. Run
+it after any change to `org.jacop.jasat.cdcl`; 10⁶ runs take about 45 minutes on one core (split
+them over seeds to use more).
