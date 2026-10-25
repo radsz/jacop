@@ -223,6 +223,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -294,6 +296,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -364,6 +368,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -433,6 +439,8 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/CircuitCostTest.java</include>
+                                <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>

@@ -18,6 +18,13 @@ Version 5.0 (unreleased)
    be passed with --fzn-flags -debug. The MiniZinc IDE shows it as a
    solver option.
 
+3. New constraint CircuitCost(x, costs, cost): x is a circuit and cost is
+   the sum of its arc costs. It bounds the cost and removes arcs with the
+   assignment relaxation (incremental Hungarian method, reduced costs) and,
+   for symmetric costs, the Held-Karp 1-tree bound. The FlatZinc front end
+   posts it as a redundant constraint on circuit(x) with
+   cost = sum(i)(d[i, x[i]]); -Dorg.jacop.fz.circuitCost=false turns this off.
+
 Version 4.11
 =============
 
