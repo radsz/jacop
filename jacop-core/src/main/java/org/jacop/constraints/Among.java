@@ -93,13 +93,17 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
    *
    * @param list variables which are compared to Kset
    * @param kset set of integer values against which we check if variables are equal to.
-   * @param n number of possible variables equal to a value from Kset.
+   * @param n number of possible variables equal to a value from Kset; it must not occur in list.
    */
   public Among(IntVar[] list, IntervalDomain kset, IntVar n) {
 
     checkInputForNullness(
         new String[] {"list", "kset", "n"}, list, new Object[] {kset}, new Object[] {n});
     checkInputForDuplication("list", list);
+    if (Arrays.asList(list).contains(n)) {
+      throw new IllegalArgumentException(
+          "Constraint Among has variable n " + n + " also in list; use a copy of it");
+    }
 
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();

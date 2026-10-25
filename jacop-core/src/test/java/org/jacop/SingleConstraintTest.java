@@ -309,6 +309,39 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(42);
   }
 
+  // Among ignored events on the count variable, so when the count variable was also in the list
+  // its value was never counted and wrong solutions were accepted, e.g. x = [3, 3, 1] with
+  // n = x[2] and K = {1}. Such models are now rejected.
+  @Test
+  void testAmongRejectsCountVariableInList() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 1, 3), new IntVar(store, "x2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new Among(x, new IntervalDomain(1, 1), x[2]))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // AmongVar gave wrong solutions and removed supported values when x, y and n shared variables,
+  // e.g. x = [a], y = [n, b, c] removed a supported value of a. Such models are now rejected.
+  @Test
+  void testAmongVarRejectsSharedVariables() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    IntVar n = new IntVar(store, "n", 0, 3);
+
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a}, new IntVar[] {n, b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, b}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, n}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
   // and threw NegativeArraySizeException or IndexOutOfBoundsException.
   @Test
