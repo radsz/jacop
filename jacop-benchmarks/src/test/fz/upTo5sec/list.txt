@@ -2735,3 +2735,7 @@ member_reif_var/member_reif_var
 member_reif_var_first/member_reif_var_first
 atsp0/atsp22-1
 atsp0/atsp22-2
+lex_chain_bibd/lex_chain_bibd
+lex_chain_golfers/lex_chain_golfers
+lex_chain_codes/lex_chain_codes
+lex_chain_orbitope/lex_chain_orbitope
