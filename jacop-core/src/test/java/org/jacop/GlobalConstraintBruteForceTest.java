@@ -44,6 +44,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -62,6 +63,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Diff2;
@@ -172,6 +174,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "CountValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValues),
+        Arguments.of(
+            "CountValuesBounds",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValuesBounds),
         Arguments.of("AtLeast", atLeastOrMost(true)),
         Arguments.of("AtMost", atLeastOrMost(false)),
         Arguments.of("ElementInteger", elementInteger(false)),
@@ -294,6 +299,99 @@ class GlobalConstraintBruteForceTest {
               kept)
           .isEqualTo(expected);
     }
+  }
+
+  /**
+   * A constraint that reports itself satisfied is entailed: every assignment of the current domains
+   * is a solution. Callers such as presolve drop a constraint that says so, so one that says it is
+   * satisfied while some assignment still violates it lets wrong solutions through. Checked at the
+   * nodes of random dives, for instances that impose a single constraint.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void satisfiedMeansEntailed(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 3);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      Set<List<Integer>> solutions = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, solutions);
+
+      List<Constraint> model = new ArrayList<>();
+      Store store =
+          new Store() {
+            @Override
+            public void impose(Constraint c) {
+              model.add(c);
+              super.impose(c);
+            }
+
+            @Override
+            public void impose(Constraint c, int queueIndex) {
+              model.add(c);
+              super.impose(c, queueIndex);
+            }
+          };
+      IntVar[] x = variables(store, instance);
+      instance.impose().accept(store, x);
+      if (model.size() != 1 || !(model.get(0) instanceof SatisfiedPresent constraint)) {
+        continue;
+      }
+      boolean consistent = store.consistency();
+      while (consistent) {
+        if (constraint.satisfied()) {
+          int[][] box = new int[x.length][];
+          for (int i = 0; i < x.length; i++) {
+            box[i] = IntStream.of(instance.domains()[i]).filter(x[i].domain::contains).toArray();
+          }
+          Instance current = new Instance(box, instance.impose(), instance.semantics(), "");
+          Set<List<Integer>> all = new HashSet<>();
+          bruteForce(
+              new Instance(box, instance.impose(), t -> true, ""), new int[x.length], 0, all);
+          Set<List<Integer>> inBox = new HashSet<>();
+          bruteForce(current, new int[x.length], 0, inBox);
+          assertThat(inBox)
+              .as(
+                  "%s trial %d domains=%s %s: satisfied() at %s",
+                  name,
+                  trial,
+                  Arrays.deepToString(instance.domains()),
+                  instance.description(),
+                  Arrays.deepToString(box))
+              .isEqualTo(all);
+          break;
+        }
+        IntVar v = x[random.nextInt(x.length)];
+        if (v.singleton()) {
+          if (Arrays.stream(x).allMatch(IntVar::singleton)) {
+            break;
+          }
+          continue;
+        }
+        store.setLevel(store.level + 1);
+        try {
+          if (random.nextBoolean()) {
+            v.domain.inValue(store.level, v, v.min() + random.nextInt(v.max() - v.min() + 1));
+          } else {
+            v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
+          }
+          consistent = store.consistency();
+        } catch (FailException e) {
+          consistent = false;
+        }
+      }
+    }
+  }
+
+  private static IntVar[] variables(Store store, Instance instance) {
+    IntVar[] x = new IntVar[instance.domains().length];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain domain = new IntervalDomain();
+      for (int v : instance.domains()[i]) {
+        domain.unionAdapt(v, v);
+      }
+      x[i] = new IntVar(store, "x" + i, domain);
+    }
+    return x;
   }
 
   private static Instance regular(Random random) {
@@ -722,6 +820,39 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "values=" + Arrays.toString(values));
+  }
+
+  private static Instance countValuesBounds(Random random) {
+    int n = 1 + random.nextInt(4);
+    int k = 1 + random.nextInt(3);
+    int[] values = new int[k];
+    int[] lb = new int[k];
+    int[] ub = new int[k];
+    int value = random.nextInt(2);
+    for (int j = 0; j < k; j++) {
+      value += 1 + random.nextInt(2);
+      values[j] = value;
+      lb[j] = random.nextInt(2);
+      ub[j] = lb[j] + random.nextInt(n + 1);
+    }
+    return new Instance(
+        domains(random, n, 0, 5),
+        (store, x) -> store.impose(new CountValuesBounds(x, lb, ub, values)),
+        x -> {
+          for (int j = 0; j < k; j++) {
+            int c = occurrences(x, values[j]);
+            if (c < lb[j] || c > ub[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "values="
+            + Arrays.toString(values)
+            + " lb="
+            + Arrays.toString(lb)
+            + " ub="
+            + Arrays.toString(ub));
   }
 
   private static Function<Random, Instance> atLeastOrMost(boolean atLeast) {

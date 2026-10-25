@@ -163,16 +163,15 @@ public class CountValues extends AbstractCountValues {
    */
   public boolean satisfied() {
 
+    // entailed only if no unassigned variable can change a count
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
-      if (counter[i].singleton()) {
-        counter[i].value();
-      } else {
+      if (!counter[i].singleton()) {
         return false;
       }
 
-      int cc = countOccurrences(v);
-      if (cc != counter[i].value()) {
+      int c = counter[i].value();
+      if (countOccurrences(v) != c || countPossible(v) != c) {
         return false;
       }
     }

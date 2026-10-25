@@ -80,6 +80,7 @@ import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
@@ -5967,5 +5968,34 @@ class SingleConstraintTest extends TestHelper {
     store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testCountValuesBoundsIsNotSatisfiedWhileUnassignedVariablesCanExceedABound() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 2, 3);
+    }
+    // at most one variable equal to 3: nothing is assigned, so the occurrences of 3 counted so far
+    // (none) are within the bounds, but two or three variables can still take 3
+    CountValuesBounds c = new CountValuesBounds(x, new int[] {0}, new int[] {1}, new int[] {3});
+    store.impose(c);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  @Test
+  void testCountValuesIsNotSatisfiedWhileAnUnassignedVariableCanChangeACount() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 3, 3), new IntVar(store, "x1", 2, 3)};
+    IntVar counter = new IntVar(store, "counter", 1, 1);
+    CountValues c = new CountValues(x, new IntVar[] {counter}, new int[] {3});
+
+    // checked before propagation, which would remove 3 from x1: x1 = 3 would still give two 3s
+    assertThat(c.satisfied()).isFalse();
   }
 }

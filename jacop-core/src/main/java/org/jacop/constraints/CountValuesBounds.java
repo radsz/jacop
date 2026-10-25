@@ -174,6 +174,7 @@ public class CountValuesBounds extends AbstractCountValues {
    */
   public boolean satisfied() {
 
+    // entailed only if the bounds hold however the unassigned variables are assigned
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
 
@@ -185,16 +186,6 @@ public class CountValuesBounds extends AbstractCountValues {
     }
 
     return true;
-  }
-
-  private int countPossible(int value) {
-    int count = 0;
-    for (IntVar v : list) {
-      if (v.domain.contains(value)) {
-        count++;
-      }
-    }
-    return count;
   }
 
   @Override
