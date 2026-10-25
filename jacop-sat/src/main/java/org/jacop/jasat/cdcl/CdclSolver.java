@@ -98,12 +98,22 @@ public final class CdclSolver {
   private int[] reason = new int[0];
   private byte[] savedSign = new byte[0];
   private byte[] targetSign = new byte[0];
+  private byte[] bestSign = new byte[0];
+  private int bestAssigned;
+  private long nextRephase = REPHASE_INTERVAL;
+  private int rephases;
+  // chronological backtracking is used in this search (solve() without assumptions)
+  private boolean chrono;
+  // backtrack chronologically when a backjump would undo more levels than this; negative: never
+  private int chronoLimit = 100;
   private int targetAssigned;
   private double[] activity = new double[0];
   private byte[] seen = new byte[0];
   private final VarHeap order = new VarHeap();
 
   private int[] trail = new int[0];
+  // position of each assigned variable on the trail
+  private int[] trailPos = new int[0];
   private int trailSize;
   private int qhead;
   private int[] trailLim = new int[16];
@@ -132,6 +142,11 @@ public final class CdclSolver {
   private int toClearSize;
   private int[] levelStamp = new int[16];
   private int stamp;
+  // all-UIP shrinking (Fleury and Biere 2020): marks of one level's block, and the sort keys
+  private boolean shrink = true;
+  private int[] shrinkMark = new int[0];
+  private int shrinkStamp;
+  private long[] shrinkKeys = new long[16];
 
   // --- heuristics
   private double varInc = 1;
@@ -155,6 +170,7 @@ public final class CdclSolver {
   private long trailQueueSum;
   private long nextReduce = 2000;
   private static final int REDUCE_INC = 300;
+  private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
 
   // --- driven by an external search (the CP solver): see "External search" below
@@ -169,6 +185,14 @@ public final class CdclSolver {
   private int lastAssumedLevel;
   private int[] originalBinaries = new int[16];
   private int numOriginalBinaries;
+
+  // --- variable elimination before the first search (see Eliminator)
+  private boolean elimination = true;
+  private boolean eliminationTried;
+  private boolean externalUsed;
+  private boolean[] eliminatedVar = new boolean[0];
+  private int numEliminated;
+  private int[] extension = new int[0];
 
   // --- assumptions and model
   private int[] assumptions = new int[0];
@@ -220,16 +244,22 @@ public final class CdclSolver {
       reason = Arrays.copyOf(reason, c);
       savedSign = Arrays.copyOf(savedSign, c);
       targetSign = Arrays.copyOf(targetSign, c);
+      bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
       seen = Arrays.copyOf(seen, c);
       trail = Arrays.copyOf(trail, c);
+      trailPos = Arrays.copyOf(trailPos, c);
+      shrinkMark = Arrays.copyOf(shrinkMark, c);
+      eliminatedVar = Arrays.copyOf(eliminatedVar, c);
       watches = Arrays.copyOf(watches, 2 * c);
       watchSize = Arrays.copyOf(watchSize, 2 * c);
     }
     order.grow(n, activity);
     Arrays.fill(reason, numVars, n, NO_REASON);
-    Arrays.fill(savedSign, numVars, n, (byte) 1);
+    // initial phase true (sign 0), as in CaDiCaL
+    Arrays.fill(savedSign, numVars, n, (byte) 0);
     Arrays.fill(targetSign, numVars, n, (byte) -1);
+    Arrays.fill(bestSign, numVars, n, (byte) 0);
     // the arrays hold at least n variables here (SonarCloud does not see it)
     for (int l = 2 * numVars; l < 2 * n; l++) {
       watches[l] = new int[4]; // NOSONAR
@@ -279,6 +309,11 @@ public final class CdclSolver {
       maxVar = Math.max(maxVar, Math.abs(lits[i]));
     }
     ensureVars(maxVar);
+    for (int i = 0; i < n && numEliminated > 0; i++) {
+      if (eliminatedVar[Math.abs(lits[i]) - 1]) {
+        restoreEliminated();
+      }
+    }
     int[] c = new int[n];
     for (int i = 0; i < n; i++) {
       c[i] = toLit(lits[i]);
@@ -353,15 +388,31 @@ public final class CdclSolver {
     assumptions = new int[assumed.length];
     for (int i = 0; i < assumed.length; i++) {
       assumptions[i] = toLit(assumed[i]);
+      if (eliminatedVar[assumptions[i] >> 1]) {
+        restoreEliminated();
+      }
     }
     interrupted = false;
     backtrack(0);
-    int result = search();
+    if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
+      eliminationTried = true;
+      if (!eliminate()) {
+        return UNSAT;
+      }
+    }
+    chrono = chronoLimit >= 0 && assumptions.length == 0;
+    int result;
+    try {
+      result = search();
+    } finally {
+      chrono = false;
+    }
     if (result == SAT) {
       model = new boolean[numVars];
       for (int v = 0; v < numVars; v++) {
         model[v] = vals[2 * v] > 0;
       }
+      Eliminator.extend(extension, model);
     }
     backtrack(0);
     return result;
@@ -409,6 +460,39 @@ public final class CdclSolver {
    */
   public void setConflictLimit(long limit) {
     conflictLimit = limit;
+  }
+
+  /**
+   * Sets when {@link #solve} backtracks chronologically (one level) instead of backjumping, as in
+   * CaDiCaL. It is used only by solve calls without assumptions, never by the external-search
+   * methods, which keep every literal at the level it was assigned at.
+   *
+   * @param limit the backjump length above which search backtracks one level, 0 for always, or a
+   *     negative number for never (default 100)
+   */
+  public void setChronoLimit(int limit) {
+    chronoLimit = limit;
+  }
+
+  /**
+   * Turns all-UIP shrinking of learnt clauses on or off (on by default).
+   *
+   * @param on whether to shrink
+   */
+  public void setShrink(boolean on) {
+    shrink = on;
+  }
+
+  /**
+   * Turns bounded variable elimination and subsumption before the first search on or off (on by
+   * default). It runs in the first {@link #solve} call, never once the external-search methods are
+   * used, and keeps the variables of that call's assumptions. A clause or an assumption added later
+   * on an eliminated variable brings all removed clauses back.
+   *
+   * @param on whether to eliminate
+   */
+  public void setElimination(boolean on) {
+    elimination = on;
   }
 
   /**
@@ -515,11 +599,17 @@ public final class CdclSolver {
   // ------------------------------------------------------------------------------ assignment
 
   private void assign(int lit, int why) {
+    assignAt(lit, why, decisionLevel);
+  }
+
+  /** Assigns at a level that may be below the current one (chronological backtracking). */
+  private void assignAt(int lit, int why, int lvl) {
     int v = lit >> 1;
     vals[lit] = 1;
     vals[lit ^ 1] = -1;
-    level[v] = decisionLevel;
+    level[v] = lvl;
     reason[v] = why;
+    trailPos[v] = trailSize;
     trail[trailSize++] = lit;
   }
 
@@ -535,15 +625,22 @@ public final class CdclSolver {
       return;
     }
     int start = trailLim[target];
-    for (int i = trailSize - 1; i >= start; i--) {
+    int kept = start;
+    for (int i = start; i < trailSize; i++) {
       int lit = trail[i];
       int v = lit >> 1;
+      if (level[v] <= target) {
+        // assigned out of order below the target level (chronological backtracking): stays
+        trailPos[v] = kept;
+        trail[kept++] = lit;
+        continue;
+      }
       vals[lit] = 0;
       vals[lit ^ 1] = 0;
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
     }
-    trailSize = start;
+    trailSize = kept;
     qhead = start;
     decisionLevel = target;
     lastAssumedLevel = Math.min(lastAssumedLevel, target);
@@ -582,7 +679,11 @@ public final class CdclSolver {
             conflictLit1 = falseLit;
             break;
           }
-          assign(blocker, -2 - falseLit);
+          if (chrono) {
+            assignAt(blocker, -2 - falseLit, level[falseLit >> 1]);
+          } else {
+            assign(blocker, -2 - falseLit);
+          }
           continue;
         }
         int lits = ref + HEADER;
@@ -629,7 +730,15 @@ public final class CdclSolver {
           conflict = ref;
           break;
         }
-        assign(first, ref);
+        if (chrono) {
+          int lvl = 0;
+          for (k = 1; k < size; k++) {
+            lvl = Math.max(lvl, level[mem[lits + k] >> 1]);
+          }
+          assignAt(first, ref, lvl);
+        } else {
+          assign(first, ref);
+        }
       }
       if (conflict != NO_CONFLICT) {
         while (i < n) {
@@ -720,6 +829,64 @@ public final class CdclSolver {
   }
 
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
+  /**
+   * Under chronological backtracking the conflict clause may have no literal, or only one, at the
+   * current level. Backtracks to the conflict level; when a single literal is at that level, it
+   * backtracks one more level and asserts that literal with the conflict clause as reason. Returns
+   * true when no clause has to be learnt (conflictLit0 then holds a literal false at level 0 if the
+   * conflict is at level 0).
+   */
+  private boolean conflictNeedsNoLearning() {
+    int ref = conflictRef;
+    int size;
+    int lits;
+    if (ref == BINARY_CONFLICT) {
+      size = 2;
+      lits = -1;
+    } else {
+      size = mem[ref + SIZE];
+      lits = ref + HEADER;
+    }
+    int maxLevel = 0;
+    int count = 0;
+    int forced = -1;
+    for (int k = 0; k < size; k++) {
+      int lit = lits < 0 ? (k == 0 ? conflictLit0 : conflictLit1) : mem[lits + k];
+      int l = level[lit >> 1];
+      if (l > maxLevel) {
+        maxLevel = l;
+        count = 1;
+        forced = lit;
+      } else if (l == maxLevel) {
+        count++;
+      }
+    }
+    if (maxLevel == 0) {
+      backtrack(0);
+      conflictLit0 = lits < 0 ? conflictLit0 : mem[lits];
+      return true;
+    }
+    if (count > 1) {
+      if (maxLevel < decisionLevel) {
+        backtrack(maxLevel);
+      }
+      return false;
+    }
+    backtrack(maxLevel - 1);
+    if (lits < 0) {
+      int other = forced == conflictLit0 ? conflictLit1 : conflictLit0;
+      assignAt(forced, -2 - other, level[other >> 1]);
+    } else {
+      rewatch(ref);
+      int lvl = 0;
+      for (int k = 1; k < size; k++) {
+        lvl = Math.max(lvl, level[mem[lits + k] >> 1]);
+      }
+      assignAt(mem[lits], ref, lvl);
+    }
+    return true;
+  }
+
   private int analyze() {
     learntSize = 0;
     addLearnt(0);
@@ -743,7 +910,7 @@ public final class CdclSolver {
           pathCount += analyzeLit(mem[lits + k]);
         }
       }
-      while (seen[trail[index] >> 1] == 0) {
+      while (seen[trail[index] >> 1] == 0 || level[trail[index] >> 1] != decisionLevel) {
         index--;
       }
       p = trail[index--];
@@ -766,6 +933,9 @@ public final class CdclSolver {
       }
     }
     learntSize = j;
+    if (shrink && learntSize > 2) {
+      shrinkLearnt();
+    }
 
     for (int i = 0; i < toClearSize; i++) {
       seen[toClear[i]] = 0;
@@ -785,6 +955,100 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return level[learnt[1] >> 1];
+  }
+
+  /**
+   * Replaces the literals of each lower level of the learnt clause by a single UIP of that level
+   * when the level's implications reach it using only literals already in the clause (or implied by
+   * it) at lower levels.
+   */
+  private void shrinkLearnt() {
+    int n = learntSize - 1;
+    if (shrinkKeys.length < n) {
+      shrinkKeys = new long[2 * n];
+    }
+    for (int i = 0; i < n; i++) {
+      int lit = learnt[i + 1];
+      shrinkKeys[i] = (long) level[lit >> 1] << 32 | lit;
+    }
+    Arrays.sort(shrinkKeys, 0, n);
+    int j = 1;
+    int end = n;
+    while (end > 0) {
+      int lvl = (int) (shrinkKeys[end - 1] >>> 32);
+      int start = end - 1;
+      while (start > 0 && (int) (shrinkKeys[start - 1] >>> 32) == lvl) {
+        start--;
+      }
+      int uip = end - start > 1 ? blockUip(lvl, start, end) : -1;
+      if (uip >= 0) {
+        learnt[j++] = uip ^ 1;
+      } else {
+        for (int i = start; i < end; i++) {
+          learnt[j++] = (int) shrinkKeys[i];
+        }
+      }
+      end = start;
+    }
+    learntSize = j;
+  }
+
+  /** The trail literal that is a UIP of the block shrinkKeys[start, end) at level lvl, or -1. */
+  private int blockUip(int lvl, int start, int end) {
+    if (++shrinkStamp == Integer.MAX_VALUE) {
+      Arrays.fill(shrinkMark, 0);
+      shrinkStamp = 1;
+    }
+    int open = end - start;
+    int index = 0;
+    for (int i = start; i < end; i++) {
+      int v = (int) shrinkKeys[i] >> 1;
+      shrinkMark[v] = shrinkStamp;
+      index = Math.max(index, trailPos[v]);
+    }
+    for (; ; index--) {
+      int t = trail[index];
+      int v = t >> 1;
+      if (shrinkMark[v] != shrinkStamp || level[v] != lvl) {
+        continue;
+      }
+      if (--open == 0) {
+        return t;
+      }
+      int r = reason[v];
+      if (r == NO_REASON || r == UNIT_REASON) {
+        return -1;
+      }
+      if (r < NO_REASON) {
+        open += shrinkStep(-2 - r, lvl);
+      } else {
+        int lits = r + HEADER;
+        int size = mem[r + SIZE];
+        for (int k = 1; k < size && open >= 0; k++) {
+          open += shrinkStep(mem[lits + k], lvl);
+        }
+      }
+      if (open < 0) {
+        return -1;
+      }
+    }
+  }
+
+  /**
+   * One antecedent literal of a block implication: 1 when it is a new literal at the block's level,
+   * 0 when it is covered, and a large negative number when the block cannot be shrunk.
+   */
+  private int shrinkStep(int q, int lvl) {
+    int v = q >> 1;
+    int l = level[v];
+    if (l == lvl) {
+      if (shrinkMark[v] == shrinkStamp) {
+        return 0;
+      }
+      shrinkMark[v] = shrinkStamp;
+      return 1;
+    }
+    return l == 0 || seen[v] != 0 ? 0 : Integer.MIN_VALUE / 2;
   }
 
   /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
@@ -933,6 +1197,7 @@ public final class CdclSolver {
 
   /** Opens a new decision level. */
   public void newLevel() {
+    useExternally();
     newDecisionLevel();
   }
 
@@ -989,6 +1254,7 @@ public final class CdclSolver {
    * @return false on a conflict
    */
   public boolean propagateUnits() {
+    useExternally();
     if (!ok) {
       setPending(learnt, 0, true);
       return false;
@@ -1130,6 +1396,7 @@ public final class CdclSolver {
    * @return false when the clause is false under the current assignment
    */
   public boolean addClauseLive(int[] lits, int n) {
+    useExternally();
     if (decisionLevel == 0) {
       boolean result = addClause(lits, n);
       if (!result) {
@@ -1202,6 +1469,7 @@ public final class CdclSolver {
    * @throws java.io.IOException if writing fails
    */
   public void writeDimacs(java.io.Writer out) throws java.io.IOException {
+    restoreEliminated();
     int fixed = 0;
     for (int i = 0; i < trailSize && level[trail[i] >> 1] == 0; i++) {
       fixed++;
@@ -1399,11 +1667,22 @@ public final class CdclSolver {
           }
           return UNSAT;
         }
-        trailQueuePush(trailSize);
-        if (stable) {
-          updateTarget();
+        if (chrono && conflictNeedsNoLearning()) {
+          if (decisionLevel == 0 && vals[conflictLit0] < 0) {
+            ok = false;
+            if (proof != null) {
+              proof.add(learnt, 0, 0);
+            }
+            return UNSAT;
+          }
+          continue;
         }
+        trailQueuePush(trailSize);
+        updateTargetAndBest();
         int btLevel = analyze();
+        if (chrono && learntSize > 1 && decisionLevel - btLevel > chronoLimit) {
+          btLevel = decisionLevel - 1;
+        }
         backtrack(btLevel);
         learnClause();
         varInc /= varDecay;
@@ -1457,7 +1736,7 @@ public final class CdclSolver {
   private int pickBranch() {
     while (!order.isEmpty()) {
       int v = order.removeMax();
-      if (vals[2 * v] == 0) {
+      if (vals[2 * v] == 0 && !eliminatedVar[v]) {
         return 2 * v + (stable && targetSign[v] >= 0 ? targetSign[v] : savedSign[v]);
       }
     }
@@ -1468,14 +1747,39 @@ public final class CdclSolver {
    * Target phases (CaDiCaL): in stable mode, remember the signs of the longest conflict-free
    * assignment seen since the last restart, and prefer them in decisions.
    */
-  private void updateTarget() {
+  private void updateTargetAndBest() {
     int assigned = trailLim[decisionLevel - 1];
-    if (assigned > targetAssigned) {
+    if (stable && assigned > targetAssigned) {
       targetAssigned = assigned;
       for (int i = 0; i < assigned; i++) {
         targetSign[trail[i] >> 1] = (byte) (trail[i] & 1);
       }
     }
+    if (assigned > bestAssigned) {
+      bestAssigned = assigned;
+      for (int i = 0; i < assigned; i++) {
+        bestSign[trail[i] >> 1] = (byte) (trail[i] & 1);
+      }
+    }
+  }
+
+  /**
+   * Rephasing (CaDiCaL without random walks): every so often the saved phases are reset to the
+   * original phase (true), the inverted one, or the best assignment seen since the last rephase, in
+   * the order O, I, then B, O, B, I repeated.
+   */
+  private void rephase() {
+    rephases++;
+    nextRephase = conflicts + REPHASE_INTERVAL * rephases;
+    char kind = rephases <= 2 ? "OI".charAt(rephases - 1) : "BOBI".charAt((rephases - 3) % 4);
+    switch (kind) {
+      case 'O' -> Arrays.fill(savedSign, 0, numVars, (byte) 0);
+      case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) 1);
+      default -> System.arraycopy(bestSign, 0, savedSign, 0, numVars);
+    }
+    System.arraycopy(savedSign, 0, targetSign, 0, numVars);
+    targetAssigned = 0;
+    bestAssigned = 0;
   }
 
   private void learnClause() {
@@ -1492,7 +1796,7 @@ public final class CdclSolver {
         proof.add(learnt, 0, 2);
       }
       addBinary(learnt[0], learnt[1]);
-      assign(learnt[0], -2 - learnt[1]);
+      assignAt(learnt[0], -2 - learnt[1], level[learnt[1] >> 1]);
     } else {
       lbd = computeLbd(learnt, 0, learntSize);
       if (proof != null) {
@@ -1502,7 +1806,7 @@ public final class CdclSolver {
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
       bumpClause(ref);
-      assign(learnt[0], ref);
+      assignAt(learnt[0], ref, level[learnt[1] >> 1]);
     }
     lbdSum += lbd;
     lbdQueueSum += lbd;
@@ -1554,6 +1858,9 @@ public final class CdclSolver {
     targetAssigned = 0;
     lbdQueueSize = 0;
     lbdQueueSum = 0;
+    if (conflicts >= nextRephase) {
+      rephase();
+    }
     if (conflicts >= modeSwitchAt) {
       stable = !stable;
       modePhases++;
@@ -1611,6 +1918,152 @@ public final class CdclSolver {
       deleteClause(learnts[(int) keys[c]]);
     }
     purge();
+  }
+
+  /** The number of variables eliminated now. */
+  int eliminatedCount() {
+    return numEliminated;
+  }
+
+  /** The external-search methods keep every variable: eliminated ones are brought back. */
+  private void useExternally() {
+    externalUsed = true;
+    restoreEliminated();
+  }
+
+  /**
+   * Runs the Eliminator on the irredundant clauses at level 0 (before any conflict, so there are no
+   * learnt clauses) and replaces them by its result.
+   *
+   * @return false when the formula is unsatisfiable
+   */
+  private boolean eliminate() {
+    if (propagate() != NO_CONFLICT) {
+      return refuted();
+    }
+    boolean[] frozen = new boolean[numVars];
+    for (int a : assumptions) {
+      frozen[a >> 1] = true;
+    }
+    int[][] input = new int[numOriginals + numOriginalBinaries / 2][];
+    int n = 0;
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      int size = mem[ref + SIZE];
+      if ((mem[ref + META] & DELETED) != 0) {
+        continue;
+      }
+      int[] c = new int[size];
+      int k = 0;
+      boolean satisfied = false;
+      for (int j = 0; j < size && !satisfied; j++) {
+        int l = mem[ref + HEADER + j];
+        satisfied = vals[l] > 0;
+        if (vals[l] == 0) {
+          c[k++] = l;
+        }
+      }
+      if (satisfied) {
+        continue;
+      }
+      if (k < size) {
+        c = Arrays.copyOf(c, k);
+        if (proof != null) {
+          proof.add(c, 0, k);
+        }
+      }
+      input[n++] = c;
+    }
+    for (int i = 0; i < numOriginalBinaries; i += 2) {
+      int a = originalBinaries[i];
+      int b = originalBinaries[i + 1];
+      if (vals[a] <= 0 && vals[b] <= 0) {
+        input[n++] = new int[] {a, b};
+      }
+    }
+    Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
+    boolean sat = e.run();
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      if ((mem[ref + META] & DELETED) == 0) {
+        mem[ref + META] |= DELETED;
+        wasted += HEADER + mem[ref + SIZE];
+      }
+    }
+    for (int i = 0; i < trailSize; i++) {
+      reason[trail[i] >> 1] = NO_REASON;
+    }
+    numOriginalBinaries = 0;
+    Arrays.fill(watchSize, 0);
+    purge();
+    if (!sat) {
+      return refuted();
+    }
+    for (int[] c : e.clauses()) {
+      if (c.length == 2) {
+        addOriginalBinary(c[0], c[1]);
+      } else {
+        int ref = allocate(c, c.length, false, 0);
+        originals = push(originals, numOriginals++, ref);
+        attach(ref);
+      }
+    }
+    boolean[] gone = e.eliminated();
+    for (int v = 0; v < numVars; v++) {
+      eliminatedVar[v] = gone[v];
+    }
+    numEliminated = e.numEliminated();
+    extension = e.stack();
+    for (int u : e.units()) {
+      if (vals[u] < 0) {
+        return refuted();
+      }
+      if (vals[u] == 0) {
+        assign(u, NO_REASON);
+      }
+    }
+    if (propagate() != NO_CONFLICT) {
+      return refuted();
+    }
+    return true;
+  }
+
+  private boolean refuted() {
+    ok = false;
+    if (proof != null) {
+      proof.add(learnt, 0, 0);
+    }
+    return false;
+  }
+
+  /** Adds back every clause removed by elimination, so all variables are free again. */
+  private void restoreEliminated() {
+    if (numEliminated == 0) {
+      return;
+    }
+    int[] ext = extension;
+    extension = new int[0];
+    numEliminated = 0;
+    for (int v = 0; v < numVars; v++) {
+      if (eliminatedVar[v]) {
+        eliminatedVar[v] = false;
+        order.insert(v);
+      }
+    }
+    int i = ext.length;
+    while (i > 0 && ok) {
+      int size = ext[i - 1];
+      int start = i - 1 - size;
+      int[] c = new int[size];
+      for (int k = 0; k < size; k++) {
+        c[k] = toDimacs(ext[start + k]);
+      }
+      if (proof != null) {
+        proof.add(ext, start, size);
+      }
+      addClause(c, size);
+      i = start;
+    }
   }
 
   /** Removes satisfied clauses at level 0. */

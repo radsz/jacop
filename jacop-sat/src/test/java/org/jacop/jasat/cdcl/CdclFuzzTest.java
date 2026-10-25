@@ -147,12 +147,19 @@ class CdclFuzzTest {
     return true;
   }
 
+  /** Chronological backtracking always, by default, or never, so small formulas exercise it. */
+  private static int chronoLimit(long seed) {
+    long mode = Math.floorMod(seed, 3L);
+    return mode == 0 ? 0 : mode == 1 ? 100 : -1;
+  }
+
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
     ByteArrayOutputStream proof = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
+    s.setChronoLimit(chronoLimit(seed));
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
@@ -173,6 +180,7 @@ class CdclFuzzTest {
   private static void incremental(Random rnd, List<int[]> f, int vars, long seed)
       throws IOException {
     CdclSolver s = new CdclSolver();
+    s.setChronoLimit(chronoLimit(seed));
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
     int next = 0;
