@@ -43,10 +43,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -68,7 +71,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Binpacking extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Binpacking> {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   static long LBnumber;
@@ -87,7 +90,9 @@ public class Binpacking extends Constraint
   private final Map<IntVar, Integer> itemMap;
   private final Map<IntVar, Integer> binMap;
   boolean lbPruning = true;
-  private boolean firstConsistencyCheck = true;
+
+  /** Rule "Pack All", applied in the first consistency call. */
+  private final InitOnce packAll = new InitOnce();
 
   /** Level of the first consistency call, the root of the search. */
   private int rootLevel = -1;
@@ -237,7 +242,7 @@ public class Binpacking extends Constraint
 
   /** Rule "Pack All" -- applied only on first consistency check. */
   private void applyPackAllRule(Store store) {
-    if (!firstConsistencyCheck) {
+    if (!packAll.begin(store)) {
       return;
     }
     Arrays.stream(item)
@@ -246,7 +251,6 @@ public class Binpacking extends Constraint
     for (IntVar b : zeroWeightBins) {
       b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
     }
-    firstConsistencyCheck = false;
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
@@ -805,5 +809,22 @@ public class Binpacking extends Constraint
       noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
     }
     return N1 + N2 + noBinsN3;
+  }
+
+  @Override
+  public Binpacking copy(VarMap map) {
+    IntVar[] bins = new IntVar[item.length];
+    int[] w = new int[item.length];
+    for (int i = 0; i < item.length; i++) {
+      bins[i] = map.get(item[i].bin());
+      w[i] = item[i].weight();
+    }
+    return new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning);
+  }
+
+  /** Bins of items of weight 0 are restricted by the first consistency; they are not arguments. */
+  @Override
+  public boolean canCopy() {
+    return zeroWeightBins.length == 0 || !packAll.due();
   }
 }

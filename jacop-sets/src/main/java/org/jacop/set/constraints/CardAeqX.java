@@ -31,7 +31,9 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -46,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
-public class CardAeqX extends Constraint implements SatisfiedPresent {
+public class CardAeqX extends Constraint implements SatisfiedPresent, Copyable<CardAeqX> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -144,5 +146,10 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
     return id() + " : card(" + a + ", " + cardinality + " )";
+  }
+
+  @Override
+  public CardAeqX copy(VarMap map) {
+    return new CardAeqX(map.get(a), map.get(cardinality));
   }
 }

@@ -37,9 +37,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -56,7 +58,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class SumWeight extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
+    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<SumWeight> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -170,6 +172,20 @@ public class SumWeight extends Constraint
    */
   public SumWeight(List<? extends IntVar> variables, List<Integer> weights, IntVar sum) {
     this(variables.toArray(IntVar[]::new), weights.stream().mapToInt(i -> i).toArray(), sum);
+  }
+
+  /**
+   * A copy over the counterparts of the variables, with the weights already merged. Propagation
+   * reorders list and weights together, so the copy takes both in their current order.
+   */
+  private SumWeight(SumWeight original, VarMap map) {
+    queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    this.list = map.get(original.list);
+    this.weights = original.weights.clone();
+    this.equalTo = original.equalTo;
+    checkForOverflow();
+    setScope(Arrays.stream(this.list));
   }
 
   @Override
@@ -427,5 +443,10 @@ public class SumWeight extends Constraint
     result.append("], ").append(equalTo).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public SumWeight copy(VarMap map) {
+    return new SumWeight(this, map);
   }
 }

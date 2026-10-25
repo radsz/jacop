@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.List;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 
@@ -88,5 +89,10 @@ public class AlldifferentExceptZero extends AlldifferentExcept
     result.append("])");
 
     return result.toString();
+  }
+
+  @Override
+  public AlldifferentExceptZero copy(VarMap map) {
+    return new AlldifferentExceptZero(map.get(list));
   }
 }

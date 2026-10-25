@@ -31,7 +31,9 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -46,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XeqP extends Constraint implements SatisfiedPresent {
+public class XeqP extends Constraint implements SatisfiedPresent, Copyable<XeqP> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -117,5 +119,10 @@ public class XeqP extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
     return id() + " : XeqP(" + x + ", " + p + " )";
+  }
+
+  @Override
+  public XeqP copy(VarMap map) {
+    return new XeqP(map.get(x), map.get(p));
   }
 }

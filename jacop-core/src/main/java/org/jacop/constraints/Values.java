@@ -39,7 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -54,7 +56,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 5.0
  */
 @Slf4j
-public class Values extends Constraint implements SatisfiedPresent {
+public class Values extends Constraint implements SatisfiedPresent, Copyable<Values> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean DEBUG = false;
@@ -1052,5 +1054,10 @@ public class Values extends Constraint implements SatisfiedPresent {
     return grounded()
         && Arrays.stream(list).map(IntVar::value).collect(Collectors.toSet()).size()
             == count.value();
+  }
+
+  @Override
+  public Values copy(VarMap map) {
+    return new Values(map.get(list), map.get(count));
   }
 }

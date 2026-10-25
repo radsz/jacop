@@ -32,6 +32,8 @@ package org.jacop.floats.constraints;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -47,7 +49,8 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableConstraint {
+public class PplusQeqR extends PrimitiveConstraint
+    implements FloatDerivableConstraint, Copyable<PplusQeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -203,5 +206,10 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
     }
 
     return null;
+  }
+
+  @Override
+  public PplusQeqR copy(VarMap map) {
+    return new PplusQeqR(map.get(p), map.get(q), map.get(r));
   }
 }

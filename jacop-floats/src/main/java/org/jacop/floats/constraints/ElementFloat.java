@@ -35,8 +35,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,7 +62,8 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementFloat extends AbstractElement implements UsesQueueVariable, SatisfiedPresent {
+public class ElementFloat extends AbstractElement
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<ElementFloat> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -171,7 +174,7 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initFirstConsistencyCheck(store);
     }
 
@@ -313,7 +316,7 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public boolean satisfied() {
 
-    if (isStateful()) {
+    if (indexOutsideList()) {
       // the index still has values outside the list (before the first consistency)
       return false;
     }
@@ -351,5 +354,10 @@ public class ElementFloat extends AbstractElement implements UsesQueueVariable, 
   @Override
   public String toString() {
     return buildToString("elementFloat", list, value, true);
+  }
+
+  @Override
+  public ElementFloat copy(VarMap map) {
+    return new ElementFloat(map.get(index), list, map.get(value), indexOffset);
   }
 }

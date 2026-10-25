@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -471,5 +472,10 @@ public class Alldiff extends Alldifferent {
     // bounds of v cached for sorting
     private int min;
     private int max;
+  }
+
+  @Override
+  public Alldiff copy(VarMap map) {
+    return new Alldiff(map.get(list));
   }
 }

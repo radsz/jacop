@@ -279,6 +279,35 @@ public class Mdd {
   }
 
   /**
+   * It creates an Mdd with the same diagram over other variables, for example the copies of the
+   * variables in another store. The k-th value of a level stays the k-th value of the original
+   * variable, even if the domain of the new variable is smaller. The diagram is shared.
+   *
+   * @param vars the new variables, one for each variable of this Mdd.
+   * @return an Mdd over the new variables.
+   */
+  public Mdd copyOver(IntVar[] vars) {
+
+    if (vars.length != this.vars.length) {
+      throw new IllegalArgumentException(
+          "Mdd has " + this.vars.length + " variables, not " + vars.length);
+    }
+
+    Mdd result = new Mdd();
+
+    result.vars = Arrays.copyOf(vars, vars.length);
+    result.domainLimits = Arrays.copyOf(domainLimits, domainLimits.length);
+    result.views = new IndexDomainView[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      result.views[i] = new IndexDomainView(vars[i], views[i].indexToValue);
+    }
+    result.freePosition = freePosition;
+    result.diagram = diagram;
+
+    return result;
+  }
+
+  /**
    * If possible it will return an Mdd which reuse an array representation of the current Mdd. It
    * returns null if one of the variables supplied has a larger domain then assumed by respective
    * variable from this Mdd. In order to make reuse possible first create Mdd for largest size

@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.In;
@@ -57,7 +59,7 @@ import org.jacop.util.fsm.FsmTransition;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 5.0
  */
-public class Regular extends LayeredGraphConstraint {
+public class Regular extends LayeredGraphConstraint implements Copyable<Regular> {
 
   /** It specifies if debugging information should be printed out. */
   public static final boolean DEBUG_ALL = false;
@@ -285,5 +287,10 @@ public class Regular extends LayeredGraphConstraint {
     constraints.add(new In(q[q.length - 1], finalQ));
 
     return constraints;
+  }
+
+  @Override
+  public Regular copy(VarMap map) {
+    return new Regular(fsm, map.get(list));
   }
 }

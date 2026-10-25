@@ -35,6 +35,7 @@ import java.util.Map;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -86,7 +87,8 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   private int indexOffset;
 
-  private boolean firstConsistencyCheck = true;
+  /** Removes the values that label no edge, and in the first pass checks every level. */
+  private final InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -1289,9 +1291,8 @@ public abstract class LayeredGraphConstraint extends Constraint
         levelQueued[levelQueue[i]] = false;
       }
       levelQueueSize = 0;
-      if (firstConsistencyCheck) {
+      if (init.begin(store)) {
         // Values that label no edge are removed once; afterwards each value is a slot.
-        firstConsistencyCheck = false;
         pruning = true;
         try {
           for (int level = 0; level < list.length; level++) {
@@ -1313,7 +1314,8 @@ public abstract class LayeredGraphConstraint extends Constraint
       pendingCompaction = -1;
     }
 
-    if (firstConsistencyCheck) {
+    boolean first = init.begin(store);
+    if (first) {
       for (int i = 0; i < list.length; i++) {
         if (!levelQueued[i]) {
           levelQueued[i] = true;
@@ -1348,8 +1350,7 @@ public abstract class LayeredGraphConstraint extends Constraint
 
     pruning = true;
     try {
-      if (firstConsistencyCheck) {
-        firstConsistencyCheck = false;
+      if (first) {
         for (int level = 0; level < list.length; level++) {
           IntervalDomain supported = new IntervalDomain();
           for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {

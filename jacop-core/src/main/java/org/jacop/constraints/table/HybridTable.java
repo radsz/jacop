@@ -36,10 +36,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -78,7 +81,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class HybridTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -173,10 +176,7 @@ public class HybridTable extends Constraint
   private int queueSize;
   private boolean[] queued;
   private boolean pruning;
-  private boolean firstConsistency = true;
-
-  /** The level of the first consistency; backtracking above it undoes that full filtering. */
-  private int firstConsistencyLevel;
+  private final InitOnce init = new InitOnce();
 
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
@@ -251,6 +251,19 @@ public class HybridTable extends Constraint
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     setScope(list);
+  }
+
+  /** A copy over the counterparts of the variables; the restrictions are shared. */
+  private HybridTable(HybridTable original, VarMap map) {
+    this.arity = original.arity;
+    this.x = map.get(original.x);
+    this.expandBetweenColumns = original.expandBetweenColumns;
+    this.cells = original.cells;
+    this.tupleCount = original.tupleCount;
+    this.varMap = Var.positionMapping(x, false, this.getClass());
+    this.queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    setScope(x);
   }
 
   private void setTuples(Restriction[][] rows) {
@@ -716,10 +729,6 @@ public class HybridTable extends Constraint
   @Override
   public void removeLevel(int level) {
     valid.removeLevel(level);
-    if (level <= firstConsistencyLevel) {
-      // The full filtering of the first consistency is undone, the next call repeats it.
-      firstConsistency = true;
-    }
     for (int p = 0; p < queueSize; p++) {
       queued[queue[p]] = false;
     }
@@ -839,9 +848,7 @@ public class HybridTable extends Constraint
       reviseBinaryTuples();
     }
 
-    if (firstConsistency) {
-      firstConsistency = false;
-      firstConsistencyLevel = store.level;
+    if (init.begin(store)) {
       onlyChanged = -1;
       changed = arity;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
@@ -1566,5 +1573,10 @@ public class HybridTable extends Constraint
     }
     s.append("])");
     return s.toString();
+  }
+
+  @Override
+  public HybridTable copy(VarMap map) {
+    return new HybridTable(this, map);
   }
 }

@@ -33,8 +33,10 @@ package org.jacop.set.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -47,7 +49,8 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class AdisjointB extends Constraint
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<AdisjointB> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -184,5 +187,10 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
     if (variable == b) {
       bHasChanged = true;
     }
+  }
+
+  @Override
+  public AdisjointB copy(VarMap map) {
+    return new AdisjointB(map.get(a), map.get(b));
   }
 }

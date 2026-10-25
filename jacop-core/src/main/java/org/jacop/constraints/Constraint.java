@@ -141,6 +141,18 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level at which the constraint was marked as entailed, or NOT_ENTAILED. */
   private int entailedAt = NOT_ENTAILED;
 
+  /** The constraint has not had a consistency call since it was imposed. */
+  public static final int NOT_RUN = -1;
+
+  /**
+   * The level of the constraint's first consistency call was removed. Before the next call the
+   * store queues the constraint's variables again, as imposing it did.
+   */
+  public static final int RUN_UNDONE = -2;
+
+  /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
+  private int firstRunAt = NOT_RUN;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -463,6 +475,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final void setEntailedAt(int level) {
     entailedAt = level;
+  }
+
+  /**
+   * Returns the store level of the constraint's first consistency call.
+   *
+   * @return the level, or {@link #NOT_RUN} or {@link #RUN_UNDONE}.
+   */
+  public final int firstRunAt() {
+    return firstRunAt;
+  }
+
+  /**
+   * Sets the store level of the constraint's first consistency call; only the store calls it, when
+   * it makes the call and when it removes that level.
+   *
+   * @param level the level, or {@link #RUN_UNDONE}.
+   */
+  public final void setFirstRunAt(int level) {
+    firstRunAt = level;
   }
 
   /**

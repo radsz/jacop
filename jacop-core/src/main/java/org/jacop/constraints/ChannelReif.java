@@ -33,6 +33,8 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,7 +45,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ChannelReif extends AbstractChannel {
+public class ChannelReif extends AbstractChannel implements Copyable<ChannelReif> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -119,5 +121,10 @@ public class ChannelReif extends AbstractChannel {
   @Override
   public String toString() {
     return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";
+  }
+
+  @Override
+  public ChannelReif copy(VarMap map) {
+    return new ChannelReif(map.get(x), itemVariables(map), itemValues());
   }
 }

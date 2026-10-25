@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -43,7 +45,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class XplusYeqC extends AbstractConstraintXandY {
+public class XplusYeqC extends AbstractConstraintXandY implements Copyable<XplusYeqC> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -137,5 +139,10 @@ public class XplusYeqC extends AbstractConstraintXandY {
   public String toString() {
 
     return id() + " : XplusYeqC(" + x + ", " + y + ", " + c + " )";
+  }
+
+  @Override
+  public XplusYeqC copy(VarMap map) {
+    return new XplusYeqC(map.get(x), map.get(y), c);
   }
 }
