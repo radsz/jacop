@@ -30,8 +30,7 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import org.jacop.core.Var;
 
 /**
@@ -47,24 +46,32 @@ import org.jacop.core.Var;
  */
 public class SearchHandlerRegistry {
 
-  private static SearchHandlerRegistry instance;
+  /** The registry is created when it is first used, without a lock on every later lookup. */
+  private static final class Holder {
+    private static final SearchHandlerRegistry INSTANCE = new SearchHandlerRegistry();
+  }
 
-  private final List<CostVariableHandler> costHandlers = new ArrayList<>();
-  private final List<DomainOperationHandler> domainHandlers = new ArrayList<>();
+  // The handlers are kept in arrays that are replaced on every change, so the lookups done by the
+  // search at every node neither lock nor allocate an iterator.
+  private volatile CostVariableHandler[] costHandlers = new CostVariableHandler[0];
+  private volatile DomainOperationHandler[] domainHandlers = new DomainOperationHandler[0];
+
+  private SearchHandlerRegistry() {
+    registerDefaultHandlers();
+  }
 
   /**
    * Gets the singleton instance of the registry.
    *
    * @return the registry instance
    */
-  public static synchronized SearchHandlerRegistry getInstance() {
-    if (instance == null) {
-      instance = new SearchHandlerRegistry();
-      // Register default IntVar handlers
-      instance.registerCostHandler(new IntCostVariableHandler());
-      instance.registerDomainHandler(new IntDomainOperationHandler());
-    }
-    return instance;
+  public static SearchHandlerRegistry getInstance() {
+    return Holder.INSTANCE;
+  }
+
+  private void registerDefaultHandlers() {
+    registerCostHandler(new IntCostVariableHandler());
+    registerDomainHandler(new IntDomainOperationHandler());
   }
 
   /**
@@ -73,9 +80,11 @@ public class SearchHandlerRegistry {
    *
    * @param handler the handler to register
    */
-  public void registerCostHandler(CostVariableHandler handler) {
-    if (handler != null && !costHandlers.contains(handler)) {
-      costHandlers.add(handler);
+  public synchronized void registerCostHandler(CostVariableHandler handler) {
+    if (handler != null && !Arrays.asList(costHandlers).contains(handler)) {
+      CostVariableHandler[] handlers = Arrays.copyOf(costHandlers, costHandlers.length + 1);
+      handlers[handlers.length - 1] = handler;
+      costHandlers = handlers;
     }
   }
 
@@ -85,9 +94,11 @@ public class SearchHandlerRegistry {
    *
    * @param handler the handler to register
    */
-  public void registerDomainHandler(DomainOperationHandler handler) {
-    if (handler != null && !domainHandlers.contains(handler)) {
-      domainHandlers.add(handler);
+  public synchronized void registerDomainHandler(DomainOperationHandler handler) {
+    if (handler != null && !Arrays.asList(domainHandlers).contains(handler)) {
+      DomainOperationHandler[] handlers = Arrays.copyOf(domainHandlers, domainHandlers.length + 1);
+      handlers[handlers.length - 1] = handler;
+      domainHandlers = handlers;
     }
   }
 
@@ -123,9 +134,8 @@ public class SearchHandlerRegistry {
 
   /** Resets the registry to its default state (only IntVar handlers). Useful for testing. */
   public synchronized void reset() {
-    costHandlers.clear();
-    domainHandlers.clear();
-    registerCostHandler(new IntCostVariableHandler());
-    registerDomainHandler(new IntDomainOperationHandler());
+    costHandlers = new CostVariableHandler[0];
+    domainHandlers = new DomainOperationHandler[0];
+    registerDefaultHandlers();
   }
 }
