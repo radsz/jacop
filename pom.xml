@@ -191,6 +191,7 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
+                                <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -243,6 +244,7 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
+                                <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -311,6 +313,7 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
+                                <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -379,6 +382,7 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
+                                <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -824,6 +828,7 @@ setup to run configuration. -->
                         <include>**/IntDomainTest.java</include>
                         <include>**/CdclSolverTest.java</include>
                         <include>**/SatWrapperTest.java</include>
+                        <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
