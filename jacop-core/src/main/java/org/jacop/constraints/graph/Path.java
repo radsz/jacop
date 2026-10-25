@@ -45,10 +45,11 @@ import org.jacop.core.Var;
  * graph the edges are followed in their direction. Nodes are numbered from {@code base}, as in
  * {@link Reachable}.
  *
- * <p>It is decomposed into {@link Reachable} from s with forest pruning, the count {@code sum(es) =
- * sum(ns) - 1} and the degrees: in a directed graph one incoming selected edge for each selected
- * node other than s and one outgoing for each selected node other than t; in an undirected graph
- * two selected edges at each selected node, one less at s and one less at t.
+ * <p>It is decomposed into {@link Reachable} from s with forest pruning (and, in a directed graph,
+ * {@link Reachable} from t in the reversed graph), the count {@code sum(es) = sum(ns) - 1} and the
+ * degrees: in a directed graph one incoming selected edge for each selected node other than s and
+ * one outgoing for each selected node other than t; in an undirected graph two selected edges at
+ * each selected node, one less at s and one less at t.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -125,6 +126,10 @@ public class Path extends DecomposedConstraint<Constraint> {
   public List<Constraint> decompose(Store store) {
     List<Constraint> result = new ArrayList<>();
     result.add(new Reachable(from, to, s, ns, es, base, directed, true));
+    if (directed) {
+      // every selected node also reaches t: reachability from t in the reversed graph
+      result.add(new Reachable(to, from, t, ns, es, base, true, false));
+    }
     result.add(Tree.edgeCount(ns, es));
     int n = ns.length;
     IntVar[] isS = Tree.nodeIndicators(store, s, n, base, result, auxiliary);

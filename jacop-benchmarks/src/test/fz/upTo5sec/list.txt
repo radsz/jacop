@@ -2735,3 +2735,10 @@ member_reif_var/member_reif_var
 member_reif_var_first/member_reif_var_first
 atsp0/atsp22-1
 atsp0/atsp22-2
+graph_connected/graph_connected
+graph_dpath/graph_dpath
+graph_dreachable/graph_dreachable
+graph_path/graph_path
+graph_steiner/graph_steiner
+graph_tree/graph_tree
+graph_wst/graph_wst

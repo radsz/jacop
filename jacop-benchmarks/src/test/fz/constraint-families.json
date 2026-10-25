@@ -240,7 +240,21 @@
     "jacop_sub_graph_match",
     "jacop_sub_digraph_match",
     "jacop_clique",
-    "jacop_graph_isomorphism"
+    "jacop_graph_isomorphism",
+    "jacop_reachable",
+    "jacop_dreachable",
+    "jacop_connected",
+    "jacop_dconnected",
+    "jacop_tree",
+    "jacop_dtree",
+    "jacop_path",
+    "jacop_dpath",
+    "jacop_bounded_path",
+    "jacop_bounded_dpath",
+    "jacop_steiner",
+    "jacop_dsteiner",
+    "jacop_wst",
+    "jacop_dwst"
   ],
   "channel": [
     "jacop_channel"
