@@ -68,7 +68,7 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
 
   /** The ways in which the diagram can be propagated. */
   public enum Propagation {
-    /** The incremental counters or support search, chosen from the shape of the diagram. */
+    /** The incremental counters or support search, chosen by timing both during the search. */
     AUTO,
     /** Counters of alive edges per node, updated incrementally and trailed. */
     INCREMENTAL,
@@ -78,20 +78,8 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
 
   private Propagation propagation = Propagation.AUTO;
 
-  // Support search costs a depth first search from the root at every call, but it stops as soon
-  // as each value has a support and it never visits removed parts of the diagram again. The
-  // incremental counters cost time proportional to the removed edges and the nodes they take
-  // along. Measured on random diagrams and on diagrams built from tables, support search was up to
-  // three times faster on short diagrams and on diagrams with 16 or more nodes per level, while
-  // the counters were up to 40% faster on long diagrams with about 8 nodes per level, which is
-  // also the shape of most automata given to Regular. The share of allowed tuples among all
-  // assignments did not separate the two cases.
-
-  /** Diagrams with at most this many levels are propagated by support search. */
-  static final int SHORT_DIAGRAM = 12;
-
-  /** Diagrams with at least this many nodes per level on average are propagated by search. */
-  static final int WIDE_DIAGRAM = 16;
+  // With AUTO the diagram starts with the counters and may switch to support search once both have
+  // been timed on the same calls, see LayeredGraphConstraint.
 
   /** It specifies a multiple value decision diagram used by this constraint, or null. */
   private final Mdd mdd;
@@ -314,11 +302,11 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
   }
 
   @Override
-  protected boolean useSupportSearch() {
+  protected Engine defaultEngine() {
     return switch (propagation) {
-      case INCREMENTAL -> false;
-      case SUPPORT_SEARCH -> true;
-      case AUTO -> list.length <= SHORT_DIAGRAM || graphNodes() >= WIDE_DIAGRAM * list.length;
+      case INCREMENTAL -> Engine.COUNTERS;
+      case SUPPORT_SEARCH -> Engine.SUPPORT_SEARCH;
+      case AUTO -> Engine.AUTO;
     };
   }
 
@@ -357,6 +345,7 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
             ? new ExtensionalSupportMdd(mdd.copyOver(map.get(mdd.vars)))
             : new ExtensionalSupportMdd(map.get(list), nodeLevel, from, label, to);
     copy.propagation = propagation;
+    copyEngineTo(copy);
     return copy;
   }
 }
