@@ -35,7 +35,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * CountVar constraint implements the counting over number of occurrences of a given value in a list
@@ -93,22 +95,152 @@ public class CountVar extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
-    countEqualAndMaybe();
-    int numberEq = countEq;
-    int numberMayBe = countMayBe;
-    int start = countStart;
+    // Pruning the value, or a variable that is also the counter or the value, changes the counts,
+    // so propagate until nothing changes.
+    do {
 
-    if (numberMayBe == counter.min() - numberEq) {
-      if (applyWhenMayBeTight(store, start, numberEq, numberMayBe)) {
-        return;
+      store.propagationHasOccurred = false;
+
+      countEqualAndMaybe();
+      int numberEq = countEq;
+      int numberMayBe = countMayBe;
+      int start = countStart;
+
+      if (numberEq + numberMayBe == counter.min()) {
+        // every undecided variable equals the value: first narrow the value to all of them, then
+        // each of them to the value
+        for (int i = start; i < list.length; i++) {
+          IntVar v = list[i];
+          value.domain.in(store.level, value, v.domain);
+        }
+        for (int i = start; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.in(store.level, v, value.domain);
+        }
+        if (value.singleton()) {
+          counter.domain.inValue(store.level, counter, numberEq + numberMayBe);
+          removeConstraint();
+          return;
+        }
+      } else if (numberEq == counter.max()) {
+        // no undecided variable equals the value
+        if (value.singleton()) {
+          for (int i = start; i < list.length; i++) {
+            IntVar v = list[i];
+            v.domain.inComplement(store.level, v, value.value());
+          }
+          counter.domain.inValue(store.level, counter, numberEq);
+          removeConstraint();
+          return;
+        }
+        for (int i = start; i < list.length; i++) {
+          IntVar v = list[i];
+          if (v.singleton()) {
+            value.domain.inComplement(store.level, value, v.value());
+          }
+        }
       }
-    } else if (numberEq == counter.max() && applyWhenEqMax(store, start, numberEq)) {
-      return;
+
+      updateState(numberEq, start);
+
+      counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+
+      if (!value.singleton() && value.getSize() <= SMALL_VALUE_DOMAIN) {
+        pruneByValueCounts(store, start);
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  /** The value domains up to this size are checked value by value against the counter. */
+  private static final int SMALL_VALUE_DOMAIN = 64;
+
+  /** The values of the value variable, and for each the undecided variables fixed to it. */
+  private final int[] values = new int[SMALL_VALUE_DOMAIN];
+
+  private final int[] valueEq = new int[SMALL_VALUE_DOMAIN];
+
+  /** For each value, the undecided variables that are not fixed but contain it. */
+  private final int[] valueMayBe = new int[SMALL_VALUE_DOMAIN];
+
+  /**
+   * Prunes value by value, for a value variable that is not fixed: the value variable keeps the
+   * values w whose possible numbers of occurrences meet the counter, the counter keeps those
+   * numbers, and a variable of the list keeps a value if some w still meets the counter with it.
+   * The decided variables do not intersect the value variable, so only the undecided ones count.
+   *
+   * @param store the constraint store.
+   * @param start the first undecided variable.
+   */
+  private void pruneByValueCounts(Store store, int start) {
+    int candidates = 0;
+    for (ValueEnumeration e = value.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      values[candidates++] = e.nextElement();
     }
+    int size = 0;
+    IntervalDomain numbers = new IntervalDomain();
+    for (int k = 0; k < candidates; k++) {
+      int w = values[k];
+      int numberEq = 0;
+      int numberMayBe = 0;
+      for (int i = start; i < list.length; i++) {
+        IntVar v = list[i];
+        if (v.domain.contains(w)) {
+          if (v.singleton()) {
+            numberEq++;
+          } else {
+            numberMayBe++;
+          }
+        }
+      }
+      if (counter.domain.isIntersecting(numberEq, numberEq + numberMayBe)) {
+        values[size] = w;
+        valueEq[size] = numberEq;
+        valueMayBe[size] = numberMayBe;
+        size++;
+        numbers.unionAdapt(numberEq, numberEq + numberMayBe);
+      } else {
+        value.domain.inComplement(store.level, value, w);
+      }
+    }
+    counter.domain.in(store.level, counter, numbers);
 
-    updateState(numberEq, start);
-
-    counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+    for (int i = start; i < list.length; i++) {
+      IntVar v = list[i];
+      if (v.singleton()) {
+        continue;
+      }
+      // the values w that meet the counter when v differs from w; two of them support every value
+      int supports = 0;
+      int support = 0;
+      for (int j = 0; j < size && supports < 2; j++) {
+        int w = values[j];
+        int max = valueEq[j] + valueMayBe[j] - (v.domain.contains(w) ? 1 : 0);
+        if (counter.domain.isIntersecting(valueEq[j], max)) {
+          supports++;
+          support = w;
+        }
+      }
+      if (supports == 2) {
+        continue;
+      }
+      // a value a not supported that way needs w = a, with v counted
+      IntervalDomain kept = new IntervalDomain();
+      for (int j = 0; j < size; j++) {
+        int w = values[j];
+        if (v.domain.contains(w)
+            && counter.domain.isIntersecting(valueEq[j] + 1, valueEq[j] + valueMayBe[j])) {
+          kept.unionAdapt(w, w);
+        }
+      }
+      if (supports == 1) {
+        if (!kept.contains(support)) {
+          v.domain.inComplement(store.level, v, support);
+        }
+      } else {
+        v.domain.in(store.level, v, kept);
+      }
+    }
   }
 
   private void countEqualAndMaybe() {
@@ -133,41 +265,6 @@ public class CountVar extends AbstractCount {
     countEq = numberEq;
     countMayBe = numberMayBe;
     countStart = start;
-  }
-
-  /**
-   * Applies pruning when numberMayBe == counter.min() - numberEq; returns true if constraint
-   * removed.
-   */
-  private boolean applyWhenMayBeTight(Store store, int start, int numberEq, int numberMayBe) {
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      v.domain.in(store.level, v, value.domain);
-    }
-
-    if (value.singleton()) {
-      numberEq += numberMayBe;
-      counter.domain.inValue(store.level, counter, numberEq);
-      removeConstraint();
-      return true;
-    }
-    return false;
-  }
-
-  /** Applies pruning when numberEq == counter.max(); returns true if constraint removed. */
-  private boolean applyWhenEqMax(Store store, int start, int numberEq) {
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      if (value.singleton()) {
-        v.domain.inComplement(store.level, v, value.value());
-      }
-    }
-    if (value.singleton()) {
-      counter.domain.inValue(store.level, counter, numberEq);
-      removeConstraint();
-      return true;
-    }
-    return false;
   }
 
   @Override
