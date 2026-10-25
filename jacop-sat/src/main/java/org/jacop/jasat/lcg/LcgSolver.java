@@ -33,7 +33,6 @@ package org.jacop.jasat.lcg;
 
 import java.util.Arrays;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -270,28 +269,6 @@ public final class LcgSolver implements ExternalPropagator {
     pushed = Math.min(pushed, trail.size());
   }
 
-  @Override
-  public int[] externalClause() {
-    if (failed || numPending == 0) {
-      return null;
-    }
-    try {
-      for (int k = 0; k < numPending; k++) {
-        apply(pending[k]);
-      }
-      numPending = 0;
-      if (store.consistency()) {
-        return null;
-      }
-    } catch (FailException e) {
-      throw new IllegalStateException("a solver assignment emptied a domain", e);
-    }
-    numPending = 0;
-    failed = true;
-    constraintConflicts++;
-    return conflictClause(store.recentlyFailedConstraint);
-  }
-
   private void apply(int lit) {
     int var = Math.abs(lit);
     IntVar x = vars[litVar[var]];
@@ -310,33 +287,57 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  /**
+   * Pushes the atoms the store recorded to the solver one at a time, each with its explanation as
+   * reason; once all are in, applies the solver's new assignments to the domains and propagates the
+   * store. A failure is returned as a false literal whose reason is the conflict clause, which the
+   * solver takes as a conflict.
+   */
   @Override
   public int propagate() {
     if (failed) {
       return 0;
     }
-    while (pushed < trail.size()) {
-      int e = pushed++;
-      int lit = atomLit(e);
-      if (sat.value(lit) > 0) {
-        continue;
+    while (true) {
+      while (pushed < trail.size()) {
+        int e = pushed++;
+        int lit = atomLit(e);
+        if (sat.value(lit) > 0) {
+          continue;
+        }
+        if (trail.reason(e) == null) {
+          throw new IllegalStateException(
+              "atom " + trail.atomString(e) + " has no reason and is not set");
+        }
+        reasonEntries.clear();
+        trail.explain(e, reasonEntries);
+        int[] clause = new int[reasonEntries.size() + 1];
+        clause[0] = lit;
+        for (int k = 0; k < reasonEntries.size(); k++) {
+          clause[k + 1] = -atomLit(reasonEntries.get(k));
+        }
+        pushedReason = clause;
+        atomsPropagated++;
+        return lit;
       }
-      if (trail.reason(e) == null) {
-        throw new IllegalStateException(
-            "atom " + trail.atomString(e) + " has no reason and is not set");
+      if (numPending == 0) {
+        return 0;
       }
-      reasonEntries.clear();
-      trail.explain(e, reasonEntries);
-      int[] clause = new int[reasonEntries.size() + 1];
-      clause[0] = lit;
-      for (int k = 0; k < reasonEntries.size(); k++) {
-        clause[k + 1] = -atomLit(reasonEntries.get(k));
+      for (int k = 0; k < numPending; k++) {
+        apply(pending[k]);
       }
-      pushedReason = clause;
-      atomsPropagated++;
-      return lit;
+      numPending = 0;
+      if (!store.consistency()) {
+        failed = true;
+        constraintConflicts++;
+        int[] clause = conflictClause(store.recentlyFailedConstraint);
+        if (clause.length == 0) {
+          throw new IllegalStateException("the constraints failed on the root domains");
+        }
+        pushedReason = clause;
+        return clause[0];
+      }
     }
-    return 0;
   }
 
   @Override
