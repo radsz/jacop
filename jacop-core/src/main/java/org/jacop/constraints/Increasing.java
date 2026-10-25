@@ -32,19 +32,27 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Increasing constraint assures that all variables are in increasing order.
  *
+ * <p>After the first call, the constraint propagates only from the positions whose variables have
+ * changed since the last call, forward for the lower bounds and backward for the upper bounds, and
+ * stops as soon as a bound does not change (as Gecode's NaryLqLe and Choco's PropIncreasing).
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Increasing extends Constraint {
+public class Increasing extends Constraint implements UsesQueueVariable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final IntVar[] x;
@@ -54,6 +62,21 @@ public class Increasing extends Constraint {
   byte strict = 0;
   // true when a variable occurs more than once in x
   private final boolean hasDuplicates;
+
+  // position of each variable of x; built at impose for distinct variables only
+  private Map<Var, Integer> position;
+
+  // position of each variable of x by its index in the store, when these indexes are close
+  private int[] positionByStoreIndex;
+  private int firstStoreIndex;
+
+  // positions changed since the last call, without repetitions
+  private int[] changed;
+  private boolean[] isChanged;
+  private int changedSize;
+
+  // true until the first call, which propagates over all positions
+  private boolean propagateAll = true;
 
   /**
    * It constructs an increasing constraint.
@@ -108,7 +131,92 @@ public class Increasing extends Constraint {
   }
 
   @Override
+  public void impose(Store store) {
+    super.impose(store);
+    if (!hasDuplicates) {
+      int minIndex = Integer.MAX_VALUE;
+      int maxIndex = Integer.MIN_VALUE;
+      for (IntVar v : x) {
+        minIndex = Math.min(minIndex, v.index());
+        maxIndex = Math.max(maxIndex, v.index());
+      }
+      if (minIndex >= 0 && (long) maxIndex - minIndex < 4L * n + 64) {
+        firstStoreIndex = minIndex;
+        positionByStoreIndex = new int[maxIndex - minIndex + 1];
+        for (int i = 0; i < n; i++) {
+          positionByStoreIndex[x[i].index() - minIndex] = i;
+        }
+      } else {
+        position = new HashMap<>();
+        for (int i = 0; i < n; i++) {
+          position.put(x[i], i);
+        }
+      }
+      changed = new int[n];
+      isChanged = new boolean[n];
+    }
+    propagateAll = true;
+  }
+
+  @Override
+  public void queueVariable(int level, Var var) {
+    int i;
+    if (positionByStoreIndex != null) {
+      i = positionByStoreIndex[var.index() - firstStoreIndex];
+    } else if (position != null) {
+      i = position.get(var);
+    } else {
+      return;
+    }
+    if (!isChanged[i]) {
+      isChanged[i] = true;
+      changed[changedSize++] = i;
+    }
+  }
+
+  @Override
   public void consistency(Store store) {
+
+    if (hasDuplicates || propagateAll) {
+      propagateAllPositions(store);
+      propagateAll = false;
+      clearChanged();
+      return;
+    }
+
+    // inMin never changes a maximum and inMax never changes a minimum, so the forward and the
+    // backward propagation from each changed position are independent. A pass stops when the
+    // next bound already holds, because from there on the bounds held at the last fixpoint.
+    // Positions changed by these passes are queued too; they need no further propagation.
+    int size = changedSize;
+    for (int k = 0; k < size; k++) {
+      int p = changed[k];
+      for (int i = p + 1; i < n; i++) {
+        int lb = x[i - 1].min() + strict;
+        if (x[i].min() >= lb) {
+          break;
+        }
+        x[i].domain.inMin(store.level, x[i], lb);
+      }
+      for (int i = p; i > 0; i--) {
+        int ub = x[i].max() - strict;
+        if (x[i - 1].max() <= ub) {
+          break;
+        }
+        x[i - 1].domain.inMax(store.level, x[i - 1], ub);
+      }
+    }
+    clearChanged();
+  }
+
+  private void clearChanged() {
+    for (int k = 0; k < changedSize; k++) {
+      isChanged[changed[k]] = false;
+    }
+    changedSize = 0;
+  }
+
+  private void propagateAllPositions(Store store) {
 
     // lower bounds forward, then upper bounds backward; inMax never changes a minimum, so for
     // distinct variables the two passes reach the fixpoint. A repeated variable can be changed

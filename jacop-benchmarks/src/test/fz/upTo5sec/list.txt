@@ -614,6 +614,8 @@ imply/imply
 in_same_partition/in_same_partition
 in_set/in_set
 increasing_except_0/increasing_except_0
+increasing_target/inc_30_10
+increasing_target/inc_40_8
 int_value_precede/int_value_precede
 integer_programming1/integer_programming1
 inverse_within_range/inverse_within_range

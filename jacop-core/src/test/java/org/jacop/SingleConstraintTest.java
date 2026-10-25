@@ -3671,6 +3671,95 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void incrementalIncreasingMatchesDecompositionInDives() {
+    // Increasing and Decreasing propagate only from the changed positions; at every node of
+    // random dives with backtracking they must prune exactly as the chain of binary constraints.
+    Random random = new Random(11);
+    for (int instance = 0; instance < 300; instance++) {
+      int n = 2 + random.nextInt(12);
+      boolean strict = random.nextBoolean();
+      boolean decreasing = random.nextBoolean();
+      Store global = new Store();
+      Store chain = new Store();
+      IntVar[] x = new IntVar[n];
+      IntVar[] y = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int min = random.nextInt(10) - 3;
+        int max = min + random.nextInt(14);
+        x[i] = new IntVar(global, "x" + i, min, max);
+        y[i] = new IntVar(chain, "y" + i, min, max);
+        for (int v = min + 1; v < max; v++) {
+          if (random.nextInt(4) == 0) {
+            x[i].domain.inComplement(0, x[i], v);
+            y[i].domain.inComplement(0, y[i], v);
+          }
+        }
+      }
+      global.impose(decreasing ? new Decreasing(x, strict) : new Increasing(x, strict));
+      for (int i = 1; i < n; i++) {
+        IntVar before = decreasing ? y[i] : y[i - 1];
+        IntVar after = decreasing ? y[i - 1] : y[i];
+        chain.impose(strict ? new XltY(before, after) : new XlteqY(before, after));
+      }
+      boolean consistent = global.consistency();
+      assertThat(chain.consistency()).isEqualTo(consistent);
+
+      for (int step = 0; step < 60 && consistent; step++) {
+        if (global.level > 0 && random.nextInt(4) == 0) {
+          int level = 1 + random.nextInt(global.level);
+          while (global.level >= level) {
+            global.removeLevel(global.level);
+            global.setLevel(global.level - 1);
+            chain.removeLevel(chain.level);
+            chain.setLevel(chain.level - 1);
+          }
+        }
+        global.setLevel(global.level + 1);
+        chain.setLevel(chain.level + 1);
+        // up to three decisions before propagation, so several positions change at once
+        boolean failed = false;
+        for (int d = random.nextInt(3); d >= 0 && !failed; d--) {
+          int i = random.nextInt(n);
+          if (x[i].singleton()) {
+            continue;
+          }
+          int v = x[i].min() + random.nextInt(x[i].max() - x[i].min());
+          int decision = random.nextInt(4);
+          try {
+            applyDecision(global, x[i], decision, v);
+            applyDecision(chain, y[i], decision, v);
+          } catch (FailException e) {
+            failed = true;
+          }
+        }
+        boolean globalResult = !failed && global.consistency();
+        if (!failed) {
+          assertThat(chain.consistency()).isEqualTo(globalResult);
+        }
+        if (globalResult) {
+          for (int j = 0; j < n; j++) {
+            assertThat(x[j].dom().eq(y[j].dom())).as("%s vs %s", x[j], y[j]).isTrue();
+          }
+        } else {
+          global.removeLevel(global.level);
+          global.setLevel(global.level - 1);
+          chain.removeLevel(chain.level);
+          chain.setLevel(chain.level - 1);
+        }
+      }
+    }
+  }
+
+  private static void applyDecision(Store store, IntVar var, int decision, int v) {
+    switch (decision) {
+      case 0 -> var.domain.in(store.level, var, v, v);
+      case 1 -> var.domain.inComplement(store.level, var, v);
+      case 2 -> var.domain.inMax(store.level, var, v);
+      default -> var.domain.inMin(store.level, var, v + 1);
+    }
+  }
+
+  @Test
   void disjointConditionalProfileCountsOverlappingPairOnce() {
     // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
     // of which rectangles a profile segment holds and counted both, removing y2 = 0
