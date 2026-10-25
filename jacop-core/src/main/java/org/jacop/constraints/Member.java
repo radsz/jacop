@@ -39,6 +39,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Member constraint implements the membership of element e on list x.
@@ -266,6 +267,27 @@ public class Member extends PrimitiveConstraint {
         if (x[i].singleton() && x[i].value() == e.value()) {
           return true;
         }
+      }
+      return false;
+    }
+
+    // Entailed also when every value of e is taken by a fixed list variable. The bounds of e are
+    // checked first, as they rule out most cases cheaply.
+    if (!fixedTo(e.min()) || !fixedTo(e.max())) {
+      return false;
+    }
+    for (ValueEnumeration values = e.domain.valueEnumeration(); values.hasMoreElements(); ) {
+      if (!fixedTo(values.nextElement())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean fixedTo(int value) {
+    for (int i = 0; i < l; i++) {
+      if (x[i].singleton(value)) {
+        return true;
       }
     }
     return false;
