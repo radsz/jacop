@@ -828,21 +828,12 @@ public class AmongVar extends Constraint
       if (firstTimeWhileLoop) {
         pureUbs = (IntervalDomain) ubSdom.subtract(lbSdom);
         // later rounds of this call only look at values of this first set
-        if (!pureUbs.isEmpty()) {
-          reserveValues(pureUbs.min(), pureUbs.max());
-        }
+        reserveValues(pureUbs);
       } else {
         pureUbs = (IntervalDomain) pureUbs.intersect(ubSdom.subtract(lbSdom));
       }
 
-      if (!pureUbs.isEmpty()) {
-        for (int i = 0; i < ub0; i++) {
-          ubShared[i] = countShared(listOfX[i].domain, ubSdom, ubSharedValue, i);
-        }
-        for (int i = lb0; i < ub0; i++) {
-          lbOutside[i] = countOutside(listOfX[i].domain, lbSdom, lbOutsideValue, i);
-        }
-      }
+      countSharedAndOutside(pureUbs, ubSdom, lbSdom, lb0, ub0);
 
       Interval inv;
 
@@ -856,9 +847,8 @@ public class AmongVar extends Constraint
             weight = 0;
             ubTmp = 0;
 
-            // x intersects ub(S) \ {v} unless it shares no value with ub(S) or only v
             for (int i = 0; i < lb0; i++) {
-              if (ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v)) {
+              if (intersectsUbWithout(i, v)) {
                 ubTmp++;
               }
             }
@@ -870,11 +860,11 @@ public class AmongVar extends Constraint
                 weight++;
               }
               // b) x is within lb(S) U {v}
-              if (lbOutside[i] == 0 || (lbOutside[i] == 1 && lbOutsideValue[i] == v)) {
+              if (withinLbWith(i, v)) {
                 lbTmp++;
               }
               // c) x intersects ub(S) \ {v}
-              if (ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v)) {
+              if (intersectsUbWithout(i, v)) {
                 ubTmp++;
               }
             }
@@ -1132,15 +1122,43 @@ public class AmongVar extends Constraint
     }
   }
 
-  /** Makes the value arrays cover min..max for this call. */
-  private void reserveValues(int min, int max) {
-    int size = max - min + 1;
+  /** Makes the value arrays cover the values of pureUbs for this call. */
+  private void reserveValues(IntDomain pureUbs) {
+    if (pureUbs.isEmpty()) {
+      return;
+    }
+    int min = pureUbs.min();
+    int size = pureUbs.max() - min + 1;
     if (size > valueStamp.length) {
       lbOfValue = new int[size];
       ubOfValue = new int[size];
       valueStamp = new int[size];
     }
     valueOffset = min;
+  }
+
+  /** Counts, for each x of this round, its values shared with ub(S) and outside lb(S). */
+  private void countSharedAndOutside(
+      IntDomain pureUbs, IntDomain ubSdom, IntDomain lbSdom, int lb0, int ub0) {
+    if (pureUbs.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < ub0; i++) {
+      ubShared[i] = countShared(listOfX[i].domain, ubSdom, ubSharedValue, i);
+    }
+    for (int i = lb0; i < ub0; i++) {
+      lbOutside[i] = countOutside(listOfX[i].domain, lbSdom, lbOutsideValue, i);
+    }
+  }
+
+  /** Whether listOfX[i] intersects ub(S) \ {v}, from the counts of this round. */
+  private boolean intersectsUbWithout(int i, int v) {
+    return ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v);
+  }
+
+  /** Whether listOfX[i] is within lb(S) U {v}, from the counts of this round. */
+  private boolean withinLbWith(int i, int v) {
+    return lbOutside[i] == 0 || (lbOutside[i] == 1 && lbOutsideValue[i] == v);
   }
 
   private int lbOfValue(int v) {
