@@ -48,6 +48,10 @@ import org.jacop.search.SelectChoicePoint;
  * size to the sum of the weights of its constraints that have at least one other unfixed variable.
  * Weights are kept across restarts.
  *
+ * <p>Two refinements of the weights are available through {@link Weighting}: wdeg^ca.cd (Wattez et
+ * al. 2019), with a weight per constraint and variable, and CHS, conflict history search (Habet and
+ * Terrioux 2021), where the weight of a constraint rewards recent failures and decays.
+ *
  * <p>It is a {@link SearchMonitor}: add it to the {@link FreeSearch} it branches for, so that it
  * sees the failures. Ties go to the variable given first.
  *
@@ -56,13 +60,57 @@ import org.jacop.search.SelectChoicePoint;
  */
 public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
+  /** How the weights are updated when a constraint fails. */
+  public enum Weighting {
+    /** The weight of the failed constraint grows by one (Boussemart et al. 2004). */
+    WDEG,
+    /**
+     * Each unfixed variable of the failed constraint gets its own weight for that constraint, which
+     * grows by one divided by the number of unfixed variables of the constraint and by the domain
+     * size of the variable (wdeg^ca.cd, Wattez et al. 2019).
+     */
+    CACD,
+    /**
+     * The weight of the failed constraint moves towards a reward that is larger when the constraint
+     * failed recently; weights decay between restarts (conflict history search, Habet and Terrioux
+     * 2021).
+     */
+    CHS
+  }
+
+  private static final double CHS_ALPHA = 0.1d;
+  private static final double CHS_ALPHA_MIN = 0.06d;
+  private static final double CHS_ALPHA_STEP = 1e-6d;
+  private static final double CHS_DECAY = 0.995d;
+  private static final double CHS_DELTA = 1e-4d;
+
   private final IntVar[] vars;
   private final Indomain<IntVar> indomain;
+  private final Weighting weighting;
 
   private final Map<Constraint, Integer> constraintIndex = new IdentityHashMap<>();
   private final Var[][] scopes;
   private final double[] weights;
   private final int[][] varConstraints;
+
+  /**
+   * For wdeg^ca.cd, the weight of each constraint of a variable, in the order of varConstraints.
+   */
+  private final double[][] varWeights;
+
+  /** For wdeg^ca.cd, the positions i and j in varWeights of the variables of each constraint. */
+  private final int[][] scopePositions;
+
+  /**
+   * For CHS, the number of failures so far and the failure count when each constraint last failed.
+   */
+  private long conflicts;
+
+  private final long[] lastConflict;
+  private double alpha = CHS_ALPHA;
+
+  /** Added to the weight of every constraint; for CHS, so that the degree breaks ties at first. */
+  private final double offset;
 
   /** Whether a constraint has two unfixed variables, computed once per selection. */
   private final boolean[] future;
@@ -80,8 +128,21 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
    * @param indomain the value heuristic.
    */
   public DomWdeg(IntVar[] vars, Indomain<IntVar> indomain) {
+    this(vars, indomain, Weighting.WDEG);
+  }
+
+  /**
+   * Creates the heuristic for the given variables with the given weighting. The constraints are
+   * those attached to the variables when it is created.
+   *
+   * @param vars the variables to branch on.
+   * @param indomain the value heuristic.
+   * @param weighting how the weights are updated on failures.
+   */
+  public DomWdeg(IntVar[] vars, Indomain<IntVar> indomain, Weighting weighting) {
     this.vars = vars.clone();
     this.indomain = indomain;
+    this.weighting = weighting;
     List<Var[]> scopeList = new ArrayList<>();
     varConstraints = new int[vars.length][];
     for (int i = 0; i < vars.length; i++) {
@@ -103,9 +164,37 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     }
     scopes = scopeList.toArray(new Var[0][]);
     weights = new double[scopes.length];
-    Arrays.fill(weights, 1.0d);
+    Arrays.fill(weights, weighting == Weighting.CHS ? 0.0d : 1.0d);
+    offset = weighting == Weighting.CHS ? CHS_DELTA : 0.0d;
     future = new boolean[scopes.length];
     futureStamp = new long[scopes.length];
+    lastConflict = new long[scopes.length];
+    if (weighting == Weighting.CACD) {
+      varWeights = new double[vars.length][];
+      int[] counts = new int[scopes.length];
+      for (int i = 0; i < vars.length; i++) {
+        varWeights[i] = new double[varConstraints[i].length];
+        Arrays.fill(varWeights[i], 1.0d);
+        for (int k : varConstraints[i]) {
+          counts[k]++;
+        }
+      }
+      scopePositions = new int[scopes.length][];
+      for (int k = 0; k < scopes.length; k++) {
+        scopePositions[k] = new int[2 * counts[k]];
+        counts[k] = 0;
+      }
+      for (int i = 0; i < vars.length; i++) {
+        for (int j = 0; j < varConstraints[i].length; j++) {
+          int k = varConstraints[i][j];
+          scopePositions[k][counts[k]++] = i;
+          scopePositions[k][counts[k]++] = j;
+        }
+      }
+    } else {
+      varWeights = null;
+      scopePositions = null;
+    }
   }
 
   private static boolean contains(int[] a, int n, int k) {
@@ -140,9 +229,11 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
    */
   double weightedDegree(int i) {
     double w = 0.0d;
-    for (int k : varConstraints[i]) {
+    int[] constraints = varConstraints[i];
+    for (int j = 0; j < constraints.length; j++) {
+      int k = constraints[j];
       if (hasTwoUnfixed(k)) {
-        w += weights[k];
+        w += varWeights == null ? weights[k] + offset : varWeights[i][j];
       }
     }
     return w;
@@ -195,16 +286,54 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
   @Override
   public void onFailure(Constraint failed, Var decision) {
-    if (failed != null) {
-      Integer k = constraintIndex.get(failed);
-      if (k != null) {
-        weights[k] += 1.0d;
+    Integer k = failed == null ? null : constraintIndex.get(failed);
+    if (k != null) {
+      switch (weighting) {
+        case WDEG -> weights[k] += 1.0d;
+        case CACD -> increaseVariableWeights(k);
+        case CHS -> {
+          double reward = 1.0d / (conflicts - lastConflict[k] + 1);
+          weights[k] = (1.0d - alpha) * weights[k] + alpha * reward;
+          lastConflict[k] = conflicts;
+        }
+      }
+    }
+    conflicts++;
+    if (alpha > CHS_ALPHA_MIN) {
+      alpha -= CHS_ALPHA_STEP;
+    }
+  }
+
+  private void increaseVariableWeights(int k) {
+    int[] positions = scopePositions[k];
+    int unfixed = 0;
+    for (int p = 0; p < positions.length; p += 2) {
+      if (!vars[positions[p]].singleton()) {
+        unfixed++;
+      }
+    }
+    for (int p = 0; p < positions.length; p += 2) {
+      IntVar v = vars[positions[p]];
+      if (!v.singleton()) {
+        // the domain may be empty in the failed state
+        varWeights[positions[p]][positions[p + 1]] +=
+            1.0d / ((double) unfixed * Math.max(1, v.getSize()));
+      }
+    }
+  }
+
+  @Override
+  public void onRestart(FreeSearch search) {
+    if (weighting == Weighting.CHS) {
+      alpha = CHS_ALPHA;
+      for (int k = 0; k < weights.length; k++) {
+        weights[k] *= Math.pow(CHS_DECAY, (double) conflicts - lastConflict[k]);
       }
     }
   }
 
   @Override
   public String toString() {
-    return "DomWdeg(" + vars.length + " variables, " + indomain + ")";
+    return "DomWdeg(" + vars.length + " variables, " + weighting + ", " + indomain + ")";
   }
 }

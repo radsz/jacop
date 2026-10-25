@@ -96,10 +96,10 @@ public class CountBounds extends AbstractCount {
       throw Store.failException;
     }
 
-    CountResult cr = countOccurrences(value);
-    int numberEq = cr.numberEq();
-    int numberMayBe = cr.numberMayBe();
-    int start = cr.start();
+    countOccurrences(value);
+    int numberEq = countEq;
+    int numberMayBe = countMayBe;
+    int start = countStart;
 
     if (numberEq > ub || numberMayBe + numberEq < lb) {
       throw Store.failException;
@@ -127,10 +127,10 @@ public class CountBounds extends AbstractCount {
   @Override
   public void notConsistency(final Store store) {
 
-    CountResult cr = countOccurrences(value);
-    int numberEq = cr.numberEq();
-    int numberMayBe = cr.numberMayBe();
-    int start = cr.start();
+    countOccurrences(value);
+    int numberEq = countEq;
+    int numberMayBe = countMayBe;
+    int start = countStart;
 
     if (numberEq > ub || numberEq + numberMayBe < lb) {
       removeConstraint();
