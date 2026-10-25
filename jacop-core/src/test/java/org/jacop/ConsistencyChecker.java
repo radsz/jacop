@@ -50,6 +50,8 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
@@ -84,6 +86,10 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.geost.GeostInstance;
+import org.jacop.geost.GeostInstance.Rect;
+import org.jacop.geost.GeostInstanceGenerator;
+import org.jacop.geost.GeostInstanceGenerator.Family;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
@@ -219,6 +225,11 @@ class ConsistencyChecker {
       }
       if (notFixpoint > 0) {
         b.append(" not at fixpoint ").append(notFixpoint);
+      }
+      if (!violations.isEmpty()) {
+        // nodes that miss each level, to compare propagators that reach none on every node
+        b.append(" missing");
+        violations.forEach((l, count) -> b.append(' ').append(l).append('=').append(count));
       }
       for (Level l : Level.values()) {
         if (violations.containsKey(l)) {
@@ -921,6 +932,36 @@ class ConsistencyChecker {
                   concat(x, new IntVar[] {c}));
             }),
         new Case(
+            "CountBounds",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              int value = r.nextInt(3);
+              int lb = r.nextInt(n + 1);
+              int ub = lb + r.nextInt(n + 1 - lb);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              return new Model(
+                  new CountBounds(x, value, lb, ub),
+                  t -> {
+                    long c = Arrays.stream(t).filter(v -> v == value).count();
+                    return lb <= c && c <= ub;
+                  },
+                  x);
+            }),
+        new Case(
+            "CountVar",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              IntVar c = var(s, "c", 0, n, r);
+              IntVar y = var(s, "y", 0, 2, r);
+              return new Model(
+                  new CountVar(x, c, y),
+                  t -> Arrays.stream(t, 0, n).filter(v -> v == t[n + 1]).count() == t[n],
+                  concat(x, new IntVar[] {c, y}));
+            }),
+        new Case(
             "Among",
             Level.DOMAIN,
             (s, r) -> {
@@ -981,7 +1022,32 @@ class ConsistencyChecker {
             }),
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
-        new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)));
+        new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),
+        // Geost sweeps for the first and last feasible origin, so it reaches no level on all
+        // nodes; the counts of nodes at each level compare its strength with Diffn and Diff2
+        new Case("GeostRect2d", Level.NONE, (s, r) -> geost(s, r, Family.RECT2D, null)),
+        new Case(
+            "Diffn(rect2d)", Level.NONE, (s, r) -> geost(s, r, Family.RECT2D, Rect.DIFFN_STRICT)),
+        new Case("Diff2(rect2d)", Level.NONE, (s, r) -> geost(s, r, Family.RECT2D, Rect.DIFF2)),
+        new Case("GeostPoly2d", Level.NONE, (s, r) -> geost(s, r, Family.POLY2D, null)),
+        new Case("GeostArea", Level.NONE, (s, r) -> geost(s, r, Family.AREA, null)),
+        new Case("GeostTime", Level.NONE, (s, r) -> geost(s, r, Family.TIME, null)),
+        new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)));
+  }
+
+  /**
+   * A random instance of a Geost generator family, posted as Geost or as one of the rectangle
+   * constraints over the same variables.
+   */
+  private static Model geost(Store store, Random random, Family family, Rect rect) {
+    GeostInstance g = new GeostInstanceGenerator(random.nextLong()).generate(family, "consistency");
+    while (rect != null && !(g.diffnExpressible() && g.sameBoxCounts())) {
+      g = new GeostInstanceGenerator(random.nextLong()).generate(family, "consistency");
+    }
+    // the checker imposes the constraint itself
+    GeostInstance.Posted p =
+        rect == null ? g.postGeost(store, false, false) : g.postRectangles(store, rect, false);
+    return new Model(p.constraint(), g::check, p.vars());
   }
 
   @TestFactory

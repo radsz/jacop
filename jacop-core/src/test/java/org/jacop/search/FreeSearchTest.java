@@ -32,6 +32,7 @@
 package org.jacop.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -56,8 +57,10 @@ import org.jacop.core.Var;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.FreeSearch.Status;
+import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.RestartNoGoods;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -299,6 +302,17 @@ class FreeSearchTest {
           DomWdeg domWdeg = new DomWdeg(concat(m), phase);
           LastConflict lc = new LastConflict(domWdeg, phase, 2);
           return new Branching(lc, phase, domWdeg, lc);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          DomWdeg cacd = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CACD);
+          return new Branching(cacd, phase, cacd);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          DomWdeg chs = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CHS);
+          LastConflict lc = new LastConflict(chs, phase, 1);
+          return new Branching(lc, phase, chs, lc);
         });
   }
 
@@ -326,22 +340,26 @@ class FreeSearchTest {
       boolean sat = instance.bruteForce()[0] > 0;
       for (var branching : branchings()) {
         for (Supplier<Calculator> restarts : restartPolicies()) {
-          Model model = new Model(instance);
-          int[] found = {0};
-          FreeSearch search =
-              branching
-                  .apply(model)
-                  .builder(model.store)
-                  .restarts(restarts.get())
-                  .onSolution(
-                      s -> {
-                        model.checkSolution();
-                        found[0]++;
-                      })
-                  .build();
-          Status status = search.solve();
-          assertEquals(sat ? Status.SATISFIED : Status.UNSATISFIABLE, status, instance.toString());
-          assertEquals(sat ? 1 : 0, found[0]);
+          for (boolean nogoods : new boolean[] {false, true}) {
+            Model model = new Model(instance);
+            int[] found = {0};
+            FreeSearch search =
+                branching
+                    .apply(model)
+                    .builder(model.store)
+                    .restarts(restarts.get())
+                    .nogoodsFromRestarts(nogoods)
+                    .onSolution(
+                        s -> {
+                          model.checkSolution();
+                          found[0]++;
+                        })
+                    .build();
+            Status status = search.solve();
+            assertEquals(
+                sat ? Status.SATISFIED : Status.UNSATISFIABLE, status, instance.toString());
+            assertEquals(sat ? 1 : 0, found[0]);
+          }
         }
       }
     }
@@ -429,7 +447,9 @@ class FreeSearchTest {
       for (boolean maximize : new boolean[] {false, true}) {
         for (var branching : branchings()) {
           for (Supplier<Calculator> restarts : restartPolicies()) {
-            for (boolean restartOnSolution : new boolean[] {false, true}) {
+            for (int option = 0; option < 4; option++) {
+              boolean restartOnSolution = (option & 1) != 0;
+              boolean nogoods = (option & 2) != 0;
               Model model = new Model(instance);
               List<Integer> costs = new ArrayList<>();
               FreeSearch.Builder builder =
@@ -438,6 +458,7 @@ class FreeSearchTest {
                       .builder(model.store)
                       .restarts(restarts.get())
                       .restartOnSolution(restartOnSolution)
+                      .nogoodsFromRestarts(nogoods)
                       .record(model.x)
                       .onSolution(
                           s -> {
@@ -491,6 +512,7 @@ class FreeSearchTest {
                 .monitor(domWdeg)
                 .alternateWith(alternative, when)
                 .restarts(new LubyCalculator(1))
+                .nogoodsFromRestarts(true)
                 .restartOnSolution(true)
                 .minimize(model.cost)
                 .onSolution(s -> model.checkSolution())
@@ -590,5 +612,173 @@ class FreeSearchTest {
     thread.join();
     assertEquals(Status.SATISFIED, status[0]);
     assertEquals(n, depth[0]);
+  }
+
+  @Test
+  void restartNoGoodsPropagateAndBacktrack() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar z = new IntVar(store, "z", 0, 3);
+    store.setLevel(1);
+    RestartNoGoods nogoods = new RestartNoGoods(store, 10, 10);
+    store.impose(nogoods);
+    nogoods.add(new IntVar[] {x, y, z}, new int[] {1, 2, 3}, 3);
+    // a literal false at the root: the nogood always holds and is not kept
+    nogoods.add(new IntVar[] {x, y}, new int[] {2, 7}, 2);
+    assertEquals(1, nogoods.size());
+    assertTrue(store.consistency());
+
+    store.setLevel(2);
+    x.domain.in(store.level, x, 1, 1);
+    assertTrue(store.consistency());
+    assertTrue(z.domain.contains(3));
+    store.setLevel(3);
+    y.domain.in(store.level, y, 2, 2);
+    assertTrue(store.consistency());
+    assertFalse(z.domain.contains(3));
+    store.removeLevel(3);
+    store.setLevel(2);
+    assertTrue(z.domain.contains(3));
+    store.setLevel(3);
+    z.domain.in(store.level, z, 3, 3);
+    assertTrue(store.consistency());
+    assertFalse(y.domain.contains(2));
+    store.removeLevel(3);
+    store.setLevel(3);
+    // all literals true: the propagation fails
+    y.domain.in(store.level, y, 2, 2);
+    z.domain.in(store.level, z, 3, 3);
+    assertFalse(store.consistency());
+    store.removeLevel(3);
+    store.removeLevel(2);
+    store.setLevel(1);
+
+    // a unit nogood removes its value at once
+    nogoods.add(new IntVar[] {x}, new int[] {0}, 1);
+    assertFalse(x.domain.contains(0));
+    // a nogood whose literals all hold at the root makes the next propagation fail
+    store.setLevel(2);
+    x.domain.in(store.level, x, 2, 2);
+    assertTrue(store.consistency());
+    nogoods.add(new IntVar[] {x}, new int[] {2}, 1);
+    assertFalse(store.consistency());
+    nogoods.detach();
+  }
+
+  @Test
+  void restartNoGoodsDeleteTheOldestBeyondTheLimit() {
+    Store store = new Store();
+    IntVar[] v = new IntVar[4];
+    for (int i = 0; i < v.length; i++) {
+      v[i] = new IntVar(store, "v" + i, 0, 3);
+    }
+    store.setLevel(1);
+    RestartNoGoods nogoods = new RestartNoGoods(store, 2, 3);
+    store.impose(nogoods);
+    nogoods.add(new IntVar[] {v[0], v[1]}, new int[] {0, 0}, 2);
+    nogoods.add(new IntVar[] {v[1], v[2]}, new int[] {1, 1}, 2);
+    nogoods.add(new IntVar[] {v[2], v[3]}, new int[] {2, 2}, 2);
+    assertEquals(2, nogoods.size());
+    assertEquals(1, nogoods.getDeleted());
+    // too long to be kept
+    nogoods.add(v, new int[] {3, 3, 3, 3}, 4);
+    assertEquals(2, nogoods.size());
+
+    store.setLevel(2);
+    v[0].domain.in(store.level, v[0], 0, 0);
+    assertTrue(store.consistency());
+    // the oldest nogood is gone
+    assertTrue(v[1].domain.contains(0));
+    v[2].domain.in(store.level, v[2], 2, 2);
+    assertTrue(store.consistency());
+    assertFalse(v[3].domain.contains(2));
+    nogoods.detach();
+  }
+
+  @Test
+  void nogoodsFromRestartsProveUnsatisfiability() {
+    // seven pigeons, six holes
+    Store store = new Store();
+    IntVar[] p = new IntVar[7];
+    for (int i = 0; i < p.length; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, 5);
+    }
+    for (int i = 0; i < p.length; i++) {
+      for (int j = i + 1; j < p.length; j++) {
+        store.impose(new XneqY(p[i], p[j]));
+      }
+    }
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(p, null, new IndomainMin<>()))
+            .restarts(new LubyCalculator(2))
+            .nogoodsFromRestarts(true)
+            .build();
+    assertEquals(Status.UNSATISFIABLE, search.solve());
+    assertTrue(search.getNogoods() > 0);
+    assertTrue(search.getRestarts() > 0);
+    // the nogoods are removed with the search; the store has its domains back
+    assertEquals(6, p[0].getSize());
+    assertEquals(0, store.countWatches());
+  }
+
+  @Test
+  void boundImpactPicksTheValueWithTheBestBoundAndLeavesTheStore() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    // cost = y - 4x: x = 3 leaves the smallest bound
+    store.impose(new LinearInt(new IntVar[] {y, x, cost}, new int[] {1, -4, -1}, "==", 0));
+    assertTrue(store.consistency());
+    IndomainBoundImpact impact =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMin<>());
+    assertEquals(3, impact.indomain(x));
+    assertEquals(3, impact.getProbes());
+    assertEquals(3, x.getSize());
+    assertEquals(-12, cost.min());
+    assertEquals(
+        1, new IndomainBoundImpact(store, cost, true, 10, new IndomainMin<>()).indomain(x));
+    IndomainBoundImpact once =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMin<>()).untilFirstSolution();
+    assertEquals(3, once.indomain(x));
+    once.onSolution(null);
+    assertEquals(1, once.indomain(x));
+    // larger domains than the limit use the wrapped heuristic
+    assertEquals(
+        0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));
+  }
+
+  @Test
+  void boundImpactKeepsTheOptimum() {
+    Random rnd = new Random(7);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean maximize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        IndomainBoundImpact impact =
+            new IndomainBoundImpact(model.store, model.cost, maximize, 5, new IndomainMin<>());
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), impact);
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+        FreeSearch.Builder builder =
+            FreeSearch.builder(model.store, domWdeg)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .restarts(new LubyCalculator(2))
+                .restartOnSolution(true)
+                .nogoodsFromRestarts(true)
+                .onSolution(s -> model.checkSolution());
+        FreeSearch search =
+            (maximize ? builder.maximize(model.cost) : builder.minimize(model.cost)).build();
+        Status status = search.solve();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status);
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(reference[maximize ? 2 : 1], search.getCostValue());
+        }
+      }
+    }
   }
 }

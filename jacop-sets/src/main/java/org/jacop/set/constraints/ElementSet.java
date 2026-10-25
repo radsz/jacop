@@ -174,7 +174,11 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
 
   @Override
   public boolean satisfied() {
-    return grounded() && list[index.domain.min() - 1 - indexOffset].eq(value.domain.glb());
+    if (!grounded()) {
+      return false;
+    }
+    int position = index.value() - 1 - indexOffset;
+    return position >= 0 && position < list.length && list[position].eq(value.domain.glb());
   }
 
   @Override

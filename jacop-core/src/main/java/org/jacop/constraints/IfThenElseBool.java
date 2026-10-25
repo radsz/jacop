@@ -58,8 +58,6 @@ public class IfThenElseBool extends PrimitiveConstraint {
   // constraint
   boolean imposed;
 
-  Store store;
-
   /**
    * It creates ifthenelse constraint.
    *
@@ -143,28 +141,11 @@ public class IfThenElseBool extends PrimitiveConstraint {
 
     super.impose(store);
 
-    this.store = store;
     imposed = true;
   }
 
   @Override
   public boolean satisfied() {
-
-    if (imposed) {
-
-      if (condVar.min() == 1) {
-        this.removeConstraint();
-        store.impose(new XeqC(thenVar, 1));
-        return false;
-      }
-
-      if (condVar.max() == 0) {
-        this.removeConstraint();
-        store.impose(new XeqC(elseVar, 1));
-        return false;
-      }
-    }
-
     return (condVar.min() == 1 && thenVar.min() == 1) || (condVar.max() == 0 && elseVar.min() == 1);
   }
 

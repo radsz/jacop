@@ -20,6 +20,7 @@
   ],
   "circuit": [
     "jacop_circuit",
+    "jacop_circuit_offset",
     "jacop_subcircuit"
   ],
   "element": [
@@ -169,7 +170,9 @@
   ],
   "member": [
     "jacop_member_int",
-    "jacop_member_bool"
+    "jacop_member_bool",
+    "jacop_member_int_reif",
+    "jacop_member_bool_reif"
   ],
   "set": [
     "set_card",
@@ -246,6 +249,8 @@
     "jacop_minimum",
     "jacop_maximum",
     "jacop_minimum_arg_int",
-    "jacop_maximum_arg_int"
+    "jacop_maximum_arg_int",
+    "jacop_minimum_arg_bool",
+    "jacop_maximum_arg_bool"
   ]
 }

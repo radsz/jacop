@@ -54,6 +54,9 @@ public class Count extends AbstractCount {
    */
   private final IntVar counter;
 
+  /** Whether the counter also occurs in the list. */
+  private final boolean counterInList;
+
   /** The value to which is any variable is equal to makes the constraint count it. */
   private final int value;
 
@@ -72,6 +75,7 @@ public class Count extends AbstractCount {
 
     this.counter = counter;
     this.value = value;
+    this.counterInList = Arrays.asList(list).contains(counter);
 
     setScope(Stream.concat(Arrays.stream(this.list), Stream.of(counter)));
   }
@@ -90,24 +94,31 @@ public class Count extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
-    // Narrowing the counter can enable one of the cases below, and when the counter also occurs in
-    // the list it can change the counts themselves, so repeat until the counter bounds are stable.
     while (true) {
 
-      CountResult cr = countOccurrences(value);
-      int numberEq = cr.numberEq();
-      int numberMayBe = cr.numberMayBe();
-      int start = cr.start();
+      countOccurrences(value);
+      int numberEq = countEq;
+      int numberMayBe = countMayBe;
+      int start = countStart;
 
-      if (numberMayBe == counter.min() - numberEq) {
+      int counterMin = counter.min();
+      int counterMax = counter.max();
+
+      counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
+
+      // When the counter also occurs in the list, narrowing it can change the counts themselves,
+      // so count again until the counter bounds are stable.
+      if (counterInList && (counter.min() != counterMin || counter.max() != counterMax)) {
+        continue;
+      }
+
+      // The narrowing above fixes the counter in both cases below.
+      if (numberEq + numberMayBe == counter.min()) {
         for (int i = start; i < list.length; i++) {
           IntVar v = list[i];
           v.domain.inValue(store.level, v, value);
         }
 
-        numberEq += numberMayBe;
-
-        counter.domain.inValue(store.level, counter, numberEq);
         removeConstraint();
         return;
 
@@ -117,31 +128,22 @@ public class Count extends AbstractCount {
           v.domain.inComplement(store.level, v, value);
         }
 
-        counter.domain.inValue(store.level, counter, numberEq);
         removeConstraint();
         return;
       }
 
-      int counterMin = counter.min();
-      int counterMax = counter.max();
-
-      counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
-
       updateState(numberEq, start);
-
-      if (counter.min() == counterMin && counter.max() == counterMax) {
-        return;
-      }
+      return;
     }
   }
 
   @Override
   public void notConsistency(final Store store) {
 
-    CountResult cr = countOccurrences(value);
-    int numberEq = cr.numberEq();
-    int numberMayBe = cr.numberMayBe();
-    int start = cr.start();
+    countOccurrences(value);
+    int numberEq = countEq;
+    int numberMayBe = countMayBe;
+    int start = countStart;
 
     if (numberEq > counter.max() || numberEq + numberMayBe < counter.min()) {
       removeConstraint();

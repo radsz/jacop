@@ -105,7 +105,10 @@ public class SinA extends PrimitiveConstraint {
 
   @Override
   public boolean satisfied() {
-    return grounded() && a.domain.lub().lex(set) < 0;
+    return a.domain.glb().contains(set)
+        && (!strict
+            || a.domain.glb().getSize() > set.getSize()
+            || a.domain.card().min() > set.getSize());
   }
 
   @Override
@@ -149,7 +152,7 @@ public class SinA extends PrimitiveConstraint {
           // set contains only elements within a.domain.glb()
           // set does not have less elements a.domain.glb()
           // => a must be equal to set to make strict relation not true.
-          a.domain.inGlb(store.level, a, set);
+          a.domain.inLub(store.level, a, set);
         }
       } else {
         throw Store.failException;

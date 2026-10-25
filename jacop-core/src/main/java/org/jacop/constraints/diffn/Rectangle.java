@@ -183,6 +183,16 @@ public class Rectangle {
   }
 
   /**
+   * Checks if the rectangle has width or height zero, so that it may overlap others unless the
+   * constraint is strict.
+   *
+   * @return true if the rectangle has length zero in some dimension
+   */
+  boolean isEmpty() {
+    return length[0].max() == 0 || length[1].max() == 0;
+  }
+
+  /**
    * Checks if the rectangle exists (has positive length in both dimensions).
    *
    * @return true if the rectangle has positive length in both dimensions, false otherwise.

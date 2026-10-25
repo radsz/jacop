@@ -141,8 +141,13 @@ public class BoolClause extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    positionX = new TimeStamp<>(store, 0);
-    positionY = new TimeStamp<>(store, 0);
+    // IfThen and IfThenElse re-impose a nested constraint at a search level; new time stamps
+    // created there would be emptied on backtracking while the constraint is still nested. Stamps
+    // emptied by backtracking (first included at a search level) are made again.
+    if (positionX == null || positionX.pointer4Last < 0) {
+      positionX = new TimeStamp<>(store, 0);
+      positionY = new TimeStamp<>(store, 0);
+    }
   }
 
   /** Computes consistency for x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n */

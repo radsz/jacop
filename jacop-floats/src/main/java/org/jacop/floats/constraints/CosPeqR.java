@@ -36,7 +36,6 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints cos(P) = R.
@@ -50,12 +49,6 @@ public class CosPeqR extends AbstractTrigConstraint
     implements SatisfiedPresent, FloatDerivableConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  private static final int INCREASING = 0;
-  private static final int DECREASING = 1;
-  private static final int PEAK = 2;
-  private static final int TROUGH = 3;
-  private static final int FULL_RANGE = 4;
 
   /**
    * It constructs cos(P) = Q constraints.
@@ -83,38 +76,20 @@ public class CosPeqR extends AbstractTrigConstraint
         return;
       }
 
-      double[] bounds = getNormalizedBounds();
-      double min = bounds[0];
-      double max = bounds[1];
-
-      int intervalForMin = intervalNo(min);
-      int intervalForMax = intervalNo(max);
-
-      int category = classifyBounds(intervalForMin, intervalForMax);
-      double qMin;
-      double qMax;
-      switch (category) {
-        case INCREASING:
-          qMin = FloatDomain.down(Math.cos(min));
-          qMax = FloatDomain.up(Math.cos(max));
-          break;
-        case DECREASING:
-          qMin = FloatDomain.down(Math.cos(max));
-          qMax = FloatDomain.up(Math.cos(min));
-          break;
-        case PEAK:
-          qMin = FloatDomain.down(Math.min(Math.cos(min), Math.cos(max)));
-          qMax = 1.0;
-          break;
-        case TROUGH:
-          qMin = -1.0;
-          qMax = FloatDomain.up(Math.max(Math.cos(min), Math.cos(max)));
-          break;
-        default: // FULL_RANGE
-          qMin = -1.0;
-          qMax = 1.0;
-          break;
-      }
+      // Math.cos reduces its argument exactly, so evaluate it at the bounds of p; between them
+      // cos is monotone unless the interval contains a maximum or a minimum of cos
+      double min = p.min();
+      double max = p.max();
+      double atMin = Math.cos(min);
+      double atMax = Math.cos(max);
+      double qMin =
+          min < max && mayContain(min, max, FloatDomain.PI, 2 * FloatDomain.PI)
+              ? -1.0
+              : FloatDomain.down(Math.min(atMin, atMax));
+      double qMax =
+          min < max && mayContain(min, max, 0.0, 2 * FloatDomain.PI)
+              ? 1.0
+              : FloatDomain.up(Math.max(atMin, atMax));
 
       q.domain.in(store.level, q, qMin, qMax);
 
@@ -122,44 +97,6 @@ public class CosPeqR extends AbstractTrigConstraint
       updateFirstDomainFromSecond(store, qMin, qMax, Math::acos, 0.0, FloatDomain.PI);
 
     } while (store.propagationHasOccurred);
-  }
-
-  /**
-   * Classifies the bound-computation pattern for a pair of cos intervals.
-   *
-   * <p>Even intervals (2, 4) are increasing; odd intervals (1, 3) are decreasing. When min and max
-   * fall in the same interval the function is monotone. Adjacent intervals cross a peak
-   * (even-to-odd) or trough (odd-to-even). Wider spans cover the full range.
-   */
-  private static int classifyBounds(int intervalForMin, int intervalForMax) {
-    if (intervalForMax < intervalForMin) {
-      throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
-    }
-    int diff = intervalForMax - intervalForMin;
-    if (diff == 0) {
-      return (intervalForMin % 2 == 0) ? INCREASING : DECREASING;
-    }
-    if (diff == 1) {
-      return (intervalForMin % 2 == 0) ? PEAK : TROUGH;
-    }
-    return FULL_RANGE;
-  }
-
-  int intervalNo(double d) {
-    if (d >= -2.0 * FloatDomain.PI && d <= -FloatDomain.PI) {
-      return 1;
-    }
-    if (d >= -FloatDomain.PI && d <= 0.0) {
-      return 2;
-    }
-    if (d >= 0.0 && d <= FloatDomain.PI) {
-      return 3;
-    }
-    if (d >= FloatDomain.PI && d <= 2 * FloatDomain.PI) {
-      return 4; // should not return this
-    } else {
-      return 0; // should not return this
-    }
   }
 
   @Override

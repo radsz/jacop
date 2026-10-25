@@ -113,9 +113,14 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    int maxVal = max.min();
+    if (!max.singleton()) {
+      return false;
+    }
+    int maxVal = max.value();
 
-    return x1.max() <= maxVal && x2.max() <= maxVal;
+    return x1.max() <= maxVal
+        && x2.max() <= maxVal
+        && (x1.singleton(maxVal) || x2.singleton(maxVal));
   }
 
   @Override

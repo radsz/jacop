@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints;
 
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -56,16 +57,25 @@ public class PdivQeqR extends PmulQeqR {
 
   @Override
   public void consistency(Store store) {
-    // P / Q = R is decomposed as R * Q = P, which accepts Q = 0 with P = 0 and any R
-    if (q.singleton() && q.value() == 0) {
-      throw Store.failException;
-    }
-    super.consistency(store);
+    // P / Q = R is decomposed as R * Q = P, which accepts Q = 0 with P = 0 and any R, so 0 is
+    // removed from the bounds of Q (repeated when the product pruning moves a bound of Q to 0)
+    do {
+      if (q.singleton(0.0)) {
+        throw Store.failException;
+      }
+      if (q.min() == 0.0) {
+        q.domain.inMin(store.level, q, FloatDomain.next(0.0));
+      }
+      if (q.max() == 0.0) {
+        q.domain.inMax(store.level, q, FloatDomain.previous(0.0));
+      }
+      super.consistency(store);
+    } while (q.min() == 0.0 || q.max() == 0.0);
   }
 
   @Override
   public boolean satisfied() {
-    return !(q.singleton() && q.value() == 0) && super.satisfied();
+    return !q.domain.contains(0.0) && super.satisfied();
   }
 
   @Override

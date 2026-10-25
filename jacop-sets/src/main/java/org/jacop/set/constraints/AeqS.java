@@ -108,11 +108,10 @@ public class AeqS extends PrimitiveConstraint {
     if (sizeOfB == a.domain.glb().getSize() + 1
         && sizeOfB == a.domain.lub().getSize()
         && set.contains(a.domain.glb())) {
+      // a is glb or lub; glb is smaller than set, so a = set only if lub = set
       int value = a.domain.lub().subtract(a.domain.glb()).value();
       if (set.contains(value)) {
         a.domain.inLubComplement(store.level, a, value);
-      } else {
-        a.domain.inValue(store.level, a, a.domain.lub());
       }
     }
   }
@@ -120,7 +119,7 @@ public class AeqS extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
 
-    if (!a.domain.lub().contains(set)) {
+    if (!a.domain.lub().contains(set) || !set.contains(a.domain.glb())) {
       return true;
     }
 
