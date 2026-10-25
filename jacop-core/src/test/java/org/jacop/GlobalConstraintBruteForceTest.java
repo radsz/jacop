@@ -85,8 +85,10 @@ import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Stretch;
@@ -201,6 +203,8 @@ class GlobalConstraintBruteForceTest {
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
         Arguments.of("Max", maxOrMin(true)),
         Arguments.of("Min", maxOrMin(false)),
+        Arguments.of("MaxSimple", maxOrMinSimple(true)),
+        Arguments.of("MinSimple", maxOrMinSimple(false)),
         Arguments.of("ArgMax", argMaxOrMin(true)),
         Arguments.of("ArgMin", argMaxOrMin(false)),
         Arguments.of("Increasing", monotonic(true)),
@@ -999,6 +1003,17 @@ class GlobalConstraintBruteForceTest {
           },
           "");
     };
+  }
+
+  private static Function<Random, Instance> maxOrMinSimple(boolean max) {
+    return random ->
+        new Instance(
+            domains(random, 3, 0, 4),
+            (store, x) ->
+                store.impose(
+                    max ? new MaxSimple(x[0], x[1], x[2]) : new MinSimple(x[0], x[1], x[2])),
+            x -> (max ? Math.max(x[0], x[1]) : Math.min(x[0], x[1])) == x[2],
+            "");
   }
 
   private static Function<Random, Instance> argMaxOrMin(boolean max) {
