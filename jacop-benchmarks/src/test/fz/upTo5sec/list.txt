@@ -2726,6 +2726,8 @@ ttppv_cost_regular/rand6_1
 ttppv_cost_regular/rand6_4
 ttppv_cost_regular/rand6_12
 ttppv_cost_regular/rand8_0_unsat
+bp_load_opt/opt_n20_w10-60_c720_s5_r3
+bp_sat/sat_n50_w20-100_c150_s0_r105
 argmax_rows/argmax_rows
 argmax_bool_first/argmax_bool_first
 argmin_facility/argmin_facility

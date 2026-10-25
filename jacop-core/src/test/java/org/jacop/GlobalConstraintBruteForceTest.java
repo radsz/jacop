@@ -237,6 +237,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "Binpacking", (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpacking),
         Arguments.of(
+            "BinpackingTight",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
+        Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
         Arguments.of("CumulativeBasic", cumulative(false)),
         Arguments.of("CumulativeUnary", cumulative(true)),
@@ -1073,6 +1076,35 @@ class GlobalConstraintBruteForceTest {
     int[] weights = randomInts(random, items, 1, 3);
     return new Instance(
         append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 6)),
+        (store, x) ->
+            store.impose(
+                new Binpacking(
+                    Arrays.copyOfRange(x, 0, items),
+                    Arrays.copyOfRange(x, items, items + bins),
+                    weights.clone(),
+                    0)),
+        x -> {
+          int[] load = new int[bins];
+          for (int i = 0; i < items; i++) {
+            load[x[i]] += weights[i];
+          }
+          for (int b = 0; b < bins; b++) {
+            if (load[b] != x[items + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "weights=" + Arrays.toString(weights));
+  }
+
+  /** Larger items and tight loads, so that the bin-count bounds prune during the search. */
+  private static Instance binpackingTight(Random random) {
+    int items = 3 + random.nextInt(4);
+    int bins = 2 + random.nextInt(2);
+    int[] weights = randomInts(random, items, 1, 6);
+    return new Instance(
+        append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 7)),
         (store, x) ->
             store.impose(
                 new Binpacking(
