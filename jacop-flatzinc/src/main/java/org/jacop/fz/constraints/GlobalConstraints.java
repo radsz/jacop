@@ -80,6 +80,7 @@ import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
@@ -1885,6 +1886,28 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xs = xx.toArray(new IntVar[0]);
 
     support.pose(new SeqPrecedeChain(xs));
+  }
+
+  void gen_jacop_sort(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+    if (x.length != y.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y));
+  }
+
+  void gen_jacop_sort_permutation(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] z = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    if (x.length != y.length || x.length != z.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y, z, offset));
   }
 
   void gen_jacop_bin_packing(SimpleNode node) {

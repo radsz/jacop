@@ -73,6 +73,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -766,6 +767,34 @@ class ConsistencyChecker {
         concat(s, d, r, new IntVar[] {limit}));
   }
 
+  /** sort(x, y) or sort(x, y, z) with z numbering the positions from an offset. */
+  private static Model sort(Store store, Random random, boolean permutation) {
+    int n = 2 + random.nextInt(permutation ? 2 : 3);
+    int offset = random.nextInt(3) - 1;
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    IntVar[] y = vars(store, "y", n, 0, 4, random);
+    IntVar[] z = permutation ? vars(store, "z", n, offset, offset + n - 1, random) : new IntVar[0];
+    return new Model(
+        permutation ? new Sort(x, y, z, offset) : new Sort(x, y),
+        t -> {
+          int[] xs = Arrays.copyOfRange(t, 0, n);
+          int[] ys = Arrays.copyOfRange(t, n, 2 * n);
+          if (permutation) {
+            boolean[] used = new boolean[n];
+            for (int i = 0; i < n; i++) {
+              int j = t[2 * n + i] - offset;
+              if (used[j] || ys[j] != xs[i]) {
+                return false;
+              }
+              used[j] = true;
+            }
+          }
+          Arrays.sort(xs);
+          return Arrays.equals(xs, ys);
+        },
+        concat(x, y, z));
+  }
+
   private static Model alldiff(Store store, Random random, boolean gac) {
     int n = 3 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, 0, n, random);
@@ -1111,6 +1140,8 @@ class ConsistencyChecker {
                           .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i]),
                   x);
             }),
+        new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
+        new Case("SortPermutation", Level.BOUNDS_Z, (s, r) -> sort(s, r, true)),
         new Case(
             "Lex",
             Level.DOMAIN,
