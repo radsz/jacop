@@ -50,6 +50,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -73,6 +74,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -585,6 +587,12 @@ class ConsistencyChecker {
 
   /** sum(w[i] * b[i]) rel s over 0/1 variables b, with s a variable or a constant. */
   private static Model linearBool(Store store, Random random, String rel, boolean constant) {
+    return linearBool(store, random, rel, constant, false);
+  }
+
+  /** The same, with watched propagation forced for a constant right hand side. */
+  private static Model linearBool(
+      Store store, Random random, String rel, boolean constant, boolean watched) {
     int n = 3 + random.nextInt(4);
     int[] w = new int[n];
     IntVar[] b = new IntVar[n];
@@ -595,8 +603,12 @@ class ConsistencyChecker {
     }
     if (constant) {
       int c = random.nextInt(13) - 6;
+      LinearBool linear = new LinearBool(b, w, rel, c);
+      if (watched) {
+        linear.setWatchMinLength(0);
+      }
       return new Model(
-          new LinearBool(b, w, rel, c),
+          linear,
           t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), c),
           b,
           linearOverReals(w, c, rel));
@@ -754,6 +766,34 @@ class ConsistencyChecker {
           return true;
         },
         concat(s, d, r, new IntVar[] {limit}));
+  }
+
+  /** sort(x, y) or sort(x, y, z) with z numbering the positions from an offset. */
+  private static Model sort(Store store, Random random, boolean permutation) {
+    int n = 2 + random.nextInt(permutation ? 2 : 3);
+    int offset = random.nextInt(3) - 1;
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    IntVar[] y = vars(store, "y", n, 0, 4, random);
+    IntVar[] z = permutation ? vars(store, "z", n, offset, offset + n - 1, random) : new IntVar[0];
+    return new Model(
+        permutation ? new Sort(x, y, z, offset) : new Sort(x, y),
+        t -> {
+          int[] xs = Arrays.copyOfRange(t, 0, n);
+          int[] ys = Arrays.copyOfRange(t, n, 2 * n);
+          if (permutation) {
+            boolean[] used = new boolean[n];
+            for (int i = 0; i < n; i++) {
+              int j = t[2 * n + i] - offset;
+              if (used[j] || ys[j] != xs[i]) {
+                return false;
+              }
+              used[j] = true;
+            }
+          }
+          Arrays.sort(xs);
+          return Arrays.equals(xs, ys);
+        },
+        concat(x, y, z));
   }
 
   private static Model alldiff(Store store, Random random, boolean gac) {
@@ -974,6 +1014,10 @@ class ConsistencyChecker {
             Level.BOUNDS_R,
             (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true)),
         new Case(
+            "LinearBool watched",
+            Level.BOUNDS_R,
+            (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true, true)),
+        new Case(
             "XplusCneqZ",
             Level.DOMAIN,
             (s, r) -> {
@@ -1070,6 +1114,33 @@ class ConsistencyChecker {
                   t -> Arrays.stream(t, 0, n).filter(v -> a <= v && v <= b).count() == t[n],
                   concat(x, new IntVar[] {c}));
             }),
+        new Case(
+            "AmongSeq",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(6);
+              int q = 1 + r.nextInt(n);
+              int min = r.nextInt(q + 1);
+              int max = min + r.nextInt(q + 1 - min);
+              int a = r.nextInt(3);
+              int b = a + r.nextInt(2);
+              IntVar[] x = vars(s, "x", n, 0, 3, r);
+              return new Model(
+                  new AmongSeq(x, new IntervalDomain(a, b), q, min, max),
+                  t -> {
+                    for (int i = 0; i + q <= n; i++) {
+                      int count = 0;
+                      for (int j = i; j < i + q; j++) {
+                        count += a <= t[j] && t[j] <= b ? 1 : 0;
+                      }
+                      if (count < min || count > max) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  },
+                  x);
+            }),
         // bounds on the intervals for count.max() (hitting sets) and domain pruning from the
         // matching for count.min(); a lower bound on the domains themselves is NP-hard
         new Case(
@@ -1097,6 +1168,8 @@ class ConsistencyChecker {
                           .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i]),
                   x);
             }),
+        new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
+        new Case("SortPermutation", Level.BOUNDS_Z, (s, r) -> sort(s, r, true)),
         new Case(
             "Lex",
             Level.DOMAIN,

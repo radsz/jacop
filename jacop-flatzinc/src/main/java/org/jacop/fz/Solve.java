@@ -1101,7 +1101,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (interrupted) {
       return;
     }
-    if (isComplete && !timeoutOccurred && isSearchComplete() && relaxVars == null) {
+    if (isComplete && !timeoutOccurred && isSearchComplete() && relaxedSearchComplete()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -1110,11 +1110,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void printOptimizationResult(
       boolean interrupted, boolean timeoutOccurred, boolean isComplete) {
-    if (!interrupted && isComplete && !timeoutOccurred && isSearchComplete() && relaxVars == null) {
+    if (!interrupted
+        && isComplete
+        && !timeoutOccurred
+        && isSearchComplete()
+        && relaxedSearchComplete()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
     }
+  }
+
+  /** Relax and reconstruct is complete only when its restart search explored everything. */
+  private boolean relaxedSearchComplete() {
+    return relaxVars == null || rs == null || rs.complete();
   }
 
   private boolean isSearchComplete() {

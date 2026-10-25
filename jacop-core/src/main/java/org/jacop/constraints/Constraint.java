@@ -554,6 +554,19 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public void queueVariable(final int level, final Var v) {}
 
   /**
+   * It is called when a variable this constraint watches with {@link Store#watchValue(Var, int,
+   * Constraint, int)} gets the watched value.
+   *
+   * @param level the level of the store at which the variable got the value.
+   * @param v the variable.
+   * @param tag the tag of the watch.
+   * @return true if the constraint has to be queued for a consistency call.
+   */
+  public boolean valueWatchFired(int level, Var v, int tag) {
+    return true;
+  }
+
+  /**
    * Tells whether {@link #queueVariable(int, Var)} does anything for this constraint, that is,
    * whether its class overrides it. The store skips the call for constraints that do not.
    *

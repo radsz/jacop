@@ -566,6 +566,89 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void relaxAndReconstructPrintsImprovingSolutionsAndAProvedOptimum() throws IOException {
+    // Relaxed runs lost the bound on the cost and printed worse solutions, and the end of the
+    // search was never reported, even when a run that fixed no variable had explored everything.
+    String model =
+        """
+        array [1..6] of var 1..6: x :: output_array([1..6]);
+        var -100..100: c :: output_var;
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[1], x[3]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_ne(x[4], x[5]);
+        constraint int_ne(x[5], x[6]);
+        constraint int_ne(x[4], x[6]);
+        constraint int_ne(x[1], x[6]);
+        constraint int_lin_eq([-3,2,-1,4,-2,1,-1],[x[1],x[2],x[3],x[4],x[5],x[6],c],0);
+        solve :: int_search(x,input_order,indomain_min,complete)
+          :: restart_geometric(1.5,1) :: relax_and_reconstruct(x, 50) minimize c;
+        """;
+
+    for (String seed : List.of("1", "2", "3")) {
+      List<String> lines = run(model, "-a", "-r", seed)[0].lines().toList();
+      List<Integer> costs =
+          lines.stream()
+              .filter(l -> l.startsWith("c = "))
+              .map(l -> Integer.parseInt(l.substring(4, l.length() - 1)))
+              .toList();
+      for (int i = 1; i < costs.size(); i++) {
+        assertTrue(costs.get(i) < costs.get(i - 1), "seed " + seed + ": " + costs);
+      }
+      assertEquals(-27, costs.getLast(), "seed " + seed + ":\n" + lines);
+      assertTrue(lines.contains("=========="), "seed " + seed + ":\n" + lines);
+    }
+  }
+
+  private static List<Integer> distances(String stdout) {
+    return stdout
+        .lines()
+        .filter(l -> l.startsWith("distance = "))
+        .map(l -> Integer.parseInt(l.substring(11, l.length() - 1)))
+        .toList();
+  }
+
+  private static String annotationModel(String name) throws IOException {
+    return Files.readString(Path.of("src/test/fz/annotations", name + ".fzn"));
+  }
+
+  @Test
+  void relaxAndReconstructTspKeepsImproving() throws IOException {
+    // tsp-relax (16 cities, relax_and_reconstruct(d, 60), restart_luby(3000)) improved to 6875 and
+    // then printed worse and worse tours, up to 9257, because the bound on the distance was lost
+    // after the first relaxed restart. The optimum is 6859 (proved by tsp-restart and by Gecode).
+    String model = annotationModel("tsp-relax");
+    for (String seed : List.of("1", "4")) {
+      String out = run(model, "-a", "-r", seed, "--restart-limit", "1200")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), "seed " + seed + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), "seed " + seed + ": " + distances);
+    }
+  }
+
+  @Test
+  void restartAndWarmStartAnnotationModels() throws IOException {
+    for (String name : List.of("tsp-restart", "tsp-warm-restart")) {
+      String out = run(annotationModel(name), "-a")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), name + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), name + ": " + distances);
+      assertTrue(out.contains("=========="), name + ":\n" + out);
+    }
+    // warm_start puts its values first: all six permutations, starting with [3,2,1]
+    List<String> warm =
+        run(annotationModel("warm"), "-a")[0].lines().filter(l -> l.startsWith("x = ")).toList();
+    assertEquals(6, new TreeSet<>(warm).size(), warm.toString());
+    assertEquals(6, warm.size(), warm.toString());
+    assertTrue(warm.getFirst().contains("[3, 2, 1]"), warm.toString());
+  }
+
+  @Test
   void restartSearchReportsUnsatisfiableModels() throws IOException {
     // Restart search printed ========== without any solution for an unsatisfiable optimization
     // model, and nothing at all for an unsatisfiable satisfaction model.

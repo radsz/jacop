@@ -30,6 +30,7 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.Arrays;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearBool;
@@ -106,7 +107,12 @@ class LinearConstraints implements ParserTreeConstants {
     }
 
     if (allWeightsOne(p1)) {
-      support.pose(new SumBool(p2, "==", par3));
+      poseSumBool(p2, "==", par3);
+    } else if (p2.length >= 3 && boolSum(p2) && !Arrays.asList(p2).contains(par3)) {
+      support.pose(
+          par3.singleton()
+              ? new LinearBool(p2, p1, "==", par3.value())
+              : new LinearBool(p2, p1, "==", par3));
     } else {
       if (p2.length < 100) {
         support.pose(new LinearInt(p2, p1, "==", par3));
@@ -748,7 +754,11 @@ class LinearConstraints implements ParserTreeConstants {
     if (allWeightsOne(p1)) {
       IntVar t = support.dictionary.getConstant(p3);
       if (boolSum(p2)) {
-        support.pose(p2.length == 2 ? new XplusYlteqZ(p2[0], p2[1], t) : new SumBool(p2, "<=", t));
+        if (p2.length == 2) {
+          support.pose(new XplusYlteqZ(p2[0], p2[1], t));
+        } else {
+          poseSumBool(p2, "<=", t);
+        }
       } else {
         support.pose(p2.length == 2 ? new XplusYlteqZ(p2[0], p2[1], t) : new SumInt(p2, "<=", t));
       }
@@ -763,7 +773,7 @@ class LinearConstraints implements ParserTreeConstants {
     if (posLe > -1) {
       IntVar[] vect = createVectorExcluding(p2, posLe);
       if (boolSum(vect)) {
-        support.pose(new SumBool(vect, "<=", p2[posLe]));
+        poseSumBool(vect, "<=", p2[posLe]);
       } else if (vect.length == 2) {
         support.pose(new XplusYlteqZ(vect[0], vect[1], p2[posLe]));
       } else {
@@ -1119,7 +1129,7 @@ class LinearConstraints implements ParserTreeConstants {
    */
   private void poseSumEq(IntVar[] vars, IntVar result) {
     if (boolSum(vars)) {
-      support.pose(new SumBool(vars, "==", result));
+      poseSumBool(vars, "==", result);
     } else if (vars.length == 2) {
       support.pose(new XplusYeqZ(vars[0], vars[1], result));
     } else if (vars.length < 100) {
@@ -1156,9 +1166,45 @@ class LinearConstraints implements ParserTreeConstants {
    */
   private void poseSumBoolOrInt(IntVar[] vars, String op, IntVar result) {
     if (boolSum(vars)) {
-      support.pose(new SumBool(vars, op, result));
+      poseSumBool(vars, op, result);
     } else {
       support.pose(new SumInt(vars, op, result));
     }
+  }
+
+  /**
+   * Poses a sum of 0/1 variables. A long sum becomes a LinearBool with weights 1, which keeps the
+   * bounds of the sum incrementally, and with a constant right hand side watches only enough of the
+   * variables (see {@link LinearBool}), where SumBool visits every variable at each call.
+   */
+  private void poseSumBool(IntVar[] vars, String op, IntVar result) {
+    if (vars.length >= LinearBool.WATCH_MIN_LENGTH) {
+      if (result.singleton()) {
+        int c = result.value();
+        String rel = op;
+        if ("<".equals(op)) {
+          rel = "<=";
+          c--;
+        } else if (">".equals(op)) {
+          rel = ">=";
+          c++;
+        }
+        if ("==".equals(rel) || "<=".equals(rel) || ">=".equals(rel)) {
+          support.pose(new LinearBool(vars, ones(vars.length), rel, c));
+          return;
+        }
+      } else if (("==".equals(op) || "<=".equals(op) || ">=".equals(op))
+          && !Arrays.asList(vars).contains(result)) {
+        support.pose(new LinearBool(vars, ones(vars.length), op, result));
+        return;
+      }
+    }
+    support.pose(new SumBool(vars, op, result));
+  }
+
+  private static int[] ones(int n) {
+    int[] ones = new int[n];
+    Arrays.fill(ones, 1);
+    return ones;
   }
 }

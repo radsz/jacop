@@ -110,13 +110,7 @@ public class CumulativeUnary extends Cumulative {
    * @param limit the overall limit of resources which has to be used.
    */
   public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit) {
-    this(
-        starts,
-        durations,
-        resources,
-        limit,
-        starts.length > getEdgeFindLimit(),
-        starts.length <= getEdgeFindLimit());
+    this(starts, durations, resources, limit, false, true);
   }
 
   /**
@@ -131,18 +125,7 @@ public class CumulativeUnary extends Cumulative {
    */
   public CumulativeUnary(
       IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile) {
-    this(
-        starts,
-        durations,
-        resources,
-        limit,
-        starts.length <= getEdgeFindLimit() ? doProfile : true,
-        starts.length <= getEdgeFindLimit());
-  }
-
-  private static int getEdgeFindLimit() {
-    String s = System.getProperty("max_edge_find_size");
-    return s != null ? Integer.parseInt(s) : 100;
+    this(starts, durations, resources, limit, doProfile, true);
   }
 
   /**

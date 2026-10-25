@@ -96,6 +96,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -113,6 +114,12 @@ import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.Nooverlap;
+import org.jacop.constraints.graph.BoundedPath;
+import org.jacop.constraints.graph.Path;
+import org.jacop.constraints.graph.Reachable;
+import org.jacop.constraints.graph.Steiner;
+import org.jacop.constraints.graph.Tree;
+import org.jacop.constraints.graph.WeightedSpanningTree;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
@@ -231,6 +238,10 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "SeqPrecedeChainValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChainValues),
+        Arguments.of("Sort", sort(false, false)),
+        Arguments.of("SortPermutation", sort(true, false)),
+        Arguments.of("SortRepeated", sort(false, true)),
+        Arguments.of("SortPermutationRepeated", sort(true, true)),
         Arguments.of("Member", (Function<Random, Instance>) GlobalConstraintBruteForceTest::member),
         Arguments.of("MemberRepeated", memberRepeated("plain")),
         Arguments.of("ReifiedMemberRepeated", memberRepeated("reified")),
@@ -274,7 +285,21 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Diff2", rectangles("Diff2")),
         Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")),
         Arguments.of("Disjoint", rectangles("Disjoint")),
-        Arguments.of("DisjointConditional", rectangles("DisjointConditional")));
+        Arguments.of("DisjointConditional", rectangles("DisjointConditional")),
+        Arguments.of("Reachable", graph("Reachable", false)),
+        Arguments.of("DReachable", graph("Reachable", true)),
+        Arguments.of("Connected", graph("Connected", false)),
+        Arguments.of("DConnected", graph("Connected", true)),
+        Arguments.of("Tree", graph("Tree", false)),
+        Arguments.of("DTree", graph("Tree", true)),
+        Arguments.of("Path", graph("Path", false)),
+        Arguments.of("DPath", graph("Path", true)),
+        Arguments.of("WeightedSpanningTree", weightedGraph("WeightedSpanningTree", false)),
+        Arguments.of("DWeightedSpanningTree", weightedGraph("WeightedSpanningTree", true)),
+        Arguments.of("Steiner", weightedGraph("Steiner", false)),
+        Arguments.of("DSteiner", weightedGraph("Steiner", true)),
+        Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
+        Arguments.of("BoundedDPath", weightedGraph("BoundedPath", true)));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -1068,6 +1093,184 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  /**
+   * A graph global on a random multigraph (self-loops and parallel edges included) with up to 5
+   * nodes numbered from 0 or 1, some node and edge Booleans fixed, and root, s and t domains that
+   * may hold values outside the nodes. Variables: ns, es, then the root (or s and t).
+   */
+  private static Function<Random, Instance> graph(String kind, boolean directed) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int m = random.nextInt(7);
+      int base = random.nextInt(2);
+      int[] from = new int[m];
+      int[] to = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = random.nextInt(n);
+        to[e] = random.nextInt(n);
+      }
+      int roots =
+          switch (kind) {
+            case "Connected" -> 0;
+            case "Path" -> 2;
+            default -> 1;
+          };
+      int[][] domains = new int[n + m + roots][];
+      for (int i = 0; i < n + m; i++) {
+        int r = random.nextInt(5);
+        domains[i] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+      }
+      for (int i = 0; i < roots; i++) {
+        domains[n + m + i] = domain(random, base - 1, base + n);
+      }
+      int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+      int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+      return new Instance(
+          domains,
+          (store, x) -> {
+            IntVar[] ns = Arrays.copyOfRange(x, 0, n);
+            IntVar[] es = Arrays.copyOfRange(x, n, n + m);
+            switch (kind) {
+              case "Reachable" ->
+                  store.impose(
+                      new Reachable(fromNumber, toNumber, x[n + m], ns, es, base, directed));
+              case "Connected" ->
+                  store.impose(new Reachable(fromNumber, toNumber, null, ns, es, base, directed));
+              case "Tree" ->
+                  store.imposeDecomposition(
+                      new Tree(fromNumber, toNumber, x[n + m], ns, es, base, directed));
+              default ->
+                  store.imposeDecomposition(
+                      new Path(
+                          fromNumber, toNumber, x[n + m], x[n + m + 1], ns, es, base, directed));
+            }
+          },
+          x -> {
+            int[] ns = Arrays.copyOfRange(x, 0, n);
+            int[] es = Arrays.copyOfRange(x, n, n + m);
+            int r = roots > 0 ? x[n + m] - base : -1;
+            return switch (kind) {
+              case "Reachable" -> GraphSemantics.reachable(from, to, ns, es, r, directed);
+              case "Connected" -> GraphSemantics.connected(from, to, ns, es, directed);
+              case "Tree" ->
+                  directed
+                      ? GraphSemantics.dtree(from, to, ns, es, r)
+                      : GraphSemantics.tree(from, to, ns, es, r);
+              default ->
+                  directed
+                      ? GraphSemantics.dpath(from, to, ns, es, r, x[n + m + 1] - base)
+                      : GraphSemantics.path(from, to, ns, es, r, x[n + m + 1] - base);
+            };
+          },
+          "from=" + Arrays.toString(fromNumber) + " to=" + Arrays.toString(toNumber));
+    };
+  }
+
+  /**
+   * A weighted graph global on a random multigraph with up to 5 nodes and weights in -1..4 (bounded
+   * path sometimes all non-negative, so its shortest path bound runs). Variables: ns (not for the
+   * spanning tree, which spans every node), es, the root of a directed tree (or s and t), then the
+   * cost.
+   */
+  private static Function<Random, Instance> weightedGraph(String kind, boolean directed) {
+    return random -> {
+      int n = 1 + random.nextInt(kind.equals("WeightedSpanningTree") ? 4 : 5);
+      int m = random.nextInt(kind.equals("WeightedSpanningTree") ? 7 : 6);
+      int base = random.nextInt(2);
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] w = new int[m];
+      boolean nonNegative = random.nextBoolean();
+      for (int e = 0; e < m; e++) {
+        from[e] = random.nextInt(n);
+        to[e] = random.nextInt(n);
+        w[e] = random.nextInt(5) - (nonNegative ? 0 : 1);
+      }
+      boolean spanning = kind.equals("WeightedSpanningTree");
+      int nodeVars = spanning ? 0 : n;
+      int roots = kind.equals("BoundedPath") ? 2 : directed ? 1 : 0;
+      int[][] domains = new int[nodeVars + m + roots + 1][];
+      for (int i = 0; i < nodeVars + m; i++) {
+        int r = random.nextInt(5);
+        domains[i] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+      }
+      for (int i = 0; i < roots; i++) {
+        domains[nodeVars + m + i] = domain(random, base - 1, base + n);
+      }
+      int total = Arrays.stream(w).map(Math::abs).sum();
+      domains[nodeVars + m + roots] = domain(random, -m - 1, total + 1);
+      int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+      int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+      return new Instance(
+          domains,
+          (store, x) -> {
+            IntVar[] ns = Arrays.copyOfRange(x, 0, nodeVars);
+            IntVar[] es = Arrays.copyOfRange(x, nodeVars, nodeVars + m);
+            IntVar root = roots > 0 ? x[nodeVars + m] : null;
+            IntVar cost = x[nodeVars + m + roots];
+            switch (kind) {
+              case "WeightedSpanningTree" ->
+                  store.imposeDecomposition(
+                      new WeightedSpanningTree(
+                          n, fromNumber, toNumber, w, root, es, cost, base, directed));
+              case "Steiner" ->
+                  store.imposeDecomposition(
+                      new Steiner(fromNumber, toNumber, w, root, ns, es, cost, base, directed));
+              default ->
+                  store.imposeDecomposition(
+                      new BoundedPath(
+                          fromNumber,
+                          toNumber,
+                          w,
+                          root,
+                          x[nodeVars + m + 1],
+                          ns,
+                          es,
+                          cost,
+                          base,
+                          directed));
+            }
+          },
+          x -> {
+            int[] ns = spanning ? new int[n] : Arrays.copyOfRange(x, 0, n);
+            if (spanning) {
+              Arrays.fill(ns, 1);
+            }
+            int[] es = Arrays.copyOfRange(x, nodeVars, nodeVars + m);
+            int sum = 0;
+            for (int e = 0; e < m; e++) {
+              sum += es[e] * w[e];
+            }
+            if (sum != x[nodeVars + m + roots]) {
+              return false;
+            }
+            if (kind.equals("BoundedPath")) {
+              int s = x[nodeVars + m] - base;
+              int t = x[nodeVars + m + 1] - base;
+              return directed
+                  ? GraphSemantics.dpath(from, to, ns, es, s, t)
+                  : GraphSemantics.path(from, to, ns, es, s, t);
+            }
+            if (directed) {
+              return GraphSemantics.dtree(from, to, ns, es, x[nodeVars + m] - base);
+            }
+            // the root of an undirected tree is any selected node
+            for (int r = 0; r < n; r++) {
+              if (GraphSemantics.tree(from, to, ns, es, r)) {
+                return true;
+              }
+            }
+            return false;
+          },
+          "from="
+              + Arrays.toString(fromNumber)
+              + " to="
+              + Arrays.toString(toNumber)
+              + " w="
+              + Arrays.toString(w));
+    };
+  }
+
   private static Instance stretch(Random random) {
     int n = 2 + random.nextInt(4);
     int[] values = {1, 2};
@@ -1260,6 +1463,66 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "");
+  }
+
+  /**
+   * sort(x, y) or sort(x, y, z) over distinct variables, or with x, y and z picked from a pool of
+   * variables, so that a variable can occur several times and in more than one array.
+   */
+  private static Function<Random, Instance> sort(boolean permutation, boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(repeated ? 4 : 3);
+      int offset = random.nextInt(3) - 1;
+      int arrays = permutation ? 3 : 2;
+      int pool = repeated ? 1 + random.nextInt(arrays * n) : arrays * n;
+      int[] pick = new int[arrays * n];
+      for (int k = 0; k < pick.length; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        // permutation variables only in the non-repeated case get their own range
+        boolean isZ = !repeated && v >= 2 * n;
+        domains[v] = isZ ? domain(random, offset - 1, offset + n) : domain(random, -1, 3);
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            IntVar[] ys = new IntVar[n];
+            IntVar[] zs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+              ys[i] = v[pick[n + i]];
+              if (permutation) {
+                zs[i] = v[pick[2 * n + i]];
+              }
+            }
+            store.impose(permutation ? new Sort(xs, ys, zs, offset) : new Sort(xs, ys));
+          },
+          t -> {
+            int[] xs = new int[n];
+            int[] ys = new int[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = t[pick[i]];
+              ys[i] = t[pick[n + i]];
+            }
+            if (permutation) {
+              boolean[] used = new boolean[n];
+              for (int i = 0; i < n; i++) {
+                int j = t[pick[2 * n + i]] - offset;
+                if (j < 0 || j >= n || used[j] || ys[j] != xs[i]) {
+                  return false;
+                }
+                used[j] = true;
+              }
+            }
+            int[] s = xs.clone();
+            Arrays.sort(s);
+            return Arrays.equals(s, ys);
+          },
+          "n=" + n + " offset=" + offset + " pick=" + Arrays.toString(pick));
+    };
   }
 
   private static Instance member(Random random) {

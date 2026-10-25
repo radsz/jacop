@@ -149,11 +149,53 @@ public class DominatorTree {
     if (reached != n) {
       return false;
     }
+    computeDominators(root, reached);
+    return true;
+  }
+
+  /**
+   * Computes the dominators of the vertices reachable from the given root; the other vertices are
+   * left out of the dominator tree. Use {@link #reached(int)} before asking about a vertex.
+   *
+   * @param root the root of the graph.
+   * @return the number of vertices reachable from the root, the root included.
+   */
+  public int computeReachable(int root) {
+
+    int reached = depthFirstSearch(root);
+    computeDominators(root, reached);
+    return reached;
+  }
+
+  /**
+   * Tells whether the last computation reached a vertex from the root.
+   *
+   * @param v the vertex.
+   * @return true if v is reachable from the root.
+   */
+  public boolean reached(int v) {
+    return number[v] != NONE;
+  }
+
+  /**
+   * Returns the immediate dominator of a reached vertex; the root is its own immediate dominator.
+   *
+   * @param v a vertex reached by the last computation.
+   * @return the immediate dominator of v.
+   */
+  public int immediateDominator(int v) {
+    return idom[v];
+  }
+
+  private void computeDominators(int root, int reached) {
 
     Arrays.fill(bucketHead, NONE);
     for (int i = reached - 1; i > 0; i--) {
       int w = vertex[i];
       for (int a = inHead[w]; a != NONE; a = inNext[a]) {
+        if (number[arcFrom[a]] == NONE) {
+          continue;
+        }
         int u = eval(arcFrom[a]);
         if (semi[u] < semi[w]) {
           semi[w] = semi[u];
@@ -179,7 +221,6 @@ public class DominatorTree {
     idom[root] = root;
 
     numberDominatorTree(root);
-    return true;
   }
 
   /**
@@ -258,7 +299,7 @@ public class DominatorTree {
   private void numberDominatorTree(int root) {
     Arrays.fill(childHead, NONE);
     for (int v = 0; v < n; v++) {
-      if (v != root) {
+      if (v != root && number[v] != NONE) {
         int d = idom[v];
         childNext[v] = childHead[d];
         childHead[d] = v;

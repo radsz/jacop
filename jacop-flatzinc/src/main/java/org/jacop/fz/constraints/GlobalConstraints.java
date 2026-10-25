@@ -80,6 +80,7 @@ import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
@@ -1716,12 +1717,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntervalDomain setImpl = new IntervalDomain();
     setImpl.addDom(u);
 
-    // Sequence is decomposed into Regular, which does not accept the same variable twice;
-    // repeated variables or constants (that share one variable) are replaced by copies
-    IntVar[] xx = distinctCopies(x, new HashSet<>());
-
+    // Sequence accepts repeated variables and constants (that share one variable)
     DecomposedConstraint<Constraint> c =
-        Sequence.builder().list(xx).set(setImpl).q(q).min(min).max(max).build();
+        Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
   }
 
@@ -1731,11 +1729,8 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] max = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    // Stretch is decomposed into Regular, which does not accept the same variable twice;
-    // repeated variables or constants (that share one variable) are replaced by copies
-    IntVar[] xx = distinctCopies(x, new HashSet<>());
-
-    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, xx);
+    // Stretch replaces repeated variables and constants (that share one variable) by copies
+    DecomposedConstraint<Constraint> c = new Stretch(values, min, max, x);
     support.poseDc(c);
   }
 
@@ -1885,6 +1880,28 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xs = xx.toArray(new IntVar[0]);
 
     support.pose(new SeqPrecedeChain(xs));
+  }
+
+  void gen_jacop_sort(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+    if (x.length != y.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y));
+  }
+
+  void gen_jacop_sort_permutation(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] z = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    if (x.length != y.length || x.length != z.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y, z, offset));
   }
 
   void gen_jacop_bin_packing(SimpleNode node) {

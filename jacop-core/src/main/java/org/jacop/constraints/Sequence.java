@@ -52,6 +52,10 @@ import org.jacop.util.fsm.FsmTransition;
  * sure that each subsequence of consecutive variables from the list contains between min and max
  * values from the given set.
  *
+ * <p>It is decomposed into the domain consistent propagator {@link AmongSeq}, or, when min = max,
+ * into the period decomposition {@link #decomposeByPeriod(Sequence, Store)}. Both accept repeated
+ * variables in the list. {@link #decomposeByRegular(Sequence)} is kept for reference.
+ *
  * @author Radoslaw Szymanek and Polina Makeeva
  * @version 5.0
  */
@@ -92,7 +96,8 @@ public class Sequence extends DecomposedConstraint<Constraint> {
   }
 
   /**
-   * Preferred and default option of decomposing Sequence constraint.
+   * It decomposes Sequence into one Regular constraint. Its automaton has about 2^q states, and
+   * Regular does not accept repeated variables.
    *
    * @param sequence sequence constraint to be decomposed by regular.
    * @return a list of constraints that are used to decompose the sequence constraints.
@@ -227,7 +232,9 @@ public class Sequence extends DecomposedConstraint<Constraint> {
       } else if (min == max && min >= 0 && min <= q) {
         constraints = decomposeByPeriod(this, store);
       } else {
-        constraints = decomposeByRegular(this);
+        // domain consistent like decomposeByRegular, but its cost does not grow as 2^q
+        constraints = new ArrayList<>();
+        constraints.add(new AmongSeq(list, set, q, min, max));
       }
     }
 
