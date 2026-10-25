@@ -63,7 +63,10 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -718,6 +721,30 @@ class ConsistencyChecker {
         x);
   }
 
+  /**
+   * Member over a list that may repeat variables and contain the element itself, plain, negated or
+   * reified.
+   */
+  private static Model member(Store store, Random random, String form) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] v = vars(store, "v", n, 0, 4, random);
+    int e = n - 1;
+    int[] picks = IntStream.range(0, 1 + random.nextInt(4)).map(i -> random.nextInt(n)).toArray();
+    IntVar[] list = Arrays.stream(picks).mapToObj(i -> v[i]).toArray(IntVar[]::new);
+    Member member = new Member(list, v[e]);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Predicate<int[]> holds = t -> Arrays.stream(picks).anyMatch(i -> t[i] == t[e]);
+    return switch (form) {
+      case "reified" ->
+          new Model(
+              new Reified(member, b),
+              t -> holds.test(t) == (t[n] == 1),
+              concat(v, new IntVar[] {b}));
+      case "not" -> new Model(new Not(member), holds.negate(), v);
+      default -> new Model(member, holds, v);
+    };
+  }
+
   private static Model minMax(Store store, Random random, boolean min) {
     int n = 2 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, -3, 3, random);
@@ -909,6 +936,9 @@ class ConsistencyChecker {
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
+        new Case("Member", Level.DOMAIN, (s, r) -> member(s, r, "plain")),
+        new Case("ReifiedMember", Level.DOMAIN, (s, r) -> member(s, r, "reified")),
+        new Case("NotMember", Level.DOMAIN, (s, r) -> member(s, r, "not")),
         new Case("GCC", Level.BOUNDS_Z, ConsistencyChecker::gcc),
         new Case("ElementInteger", Level.DOMAIN, (s, r) -> element(s, r, false, false)),
         new Case("ElementIntegerFast", Level.BOUNDS_D, (s, r) -> element(s, r, false, true)),
