@@ -43,8 +43,8 @@ public interface DomainChangeRecorder {
   /**
    * The domain of a variable has changed.
    *
-   * @param var the variable, whose domain is already the new one
+   * @param x the variable, whose domain is already the new one
    * @param event the pruning event of the change
    */
-  void domainChanged(IntVar var, int event);
+  void domainChanged(IntVar x, int event);
 }

@@ -65,7 +65,7 @@ class LcgSolverTest {
 
   private record Relation(Constraint constraint, Predicate<int[]> test) {}
 
-  private static IntVar var(Store store, String name, Random rnd) {
+  private static IntVar newVar(Store store, String name, Random rnd) {
     IntVar x = new IntVar(store, name, rnd.nextInt(2) - 1, 3 + rnd.nextInt(3));
     if (rnd.nextInt(3) == 0) {
       x.domain.subtractAdapt(x.min() + 1 + rnd.nextInt(x.max() - x.min() - 1));
@@ -178,7 +178,7 @@ class LcgSolverTest {
       int n = 4 + rnd.nextInt(3);
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
-        x[i] = var(store, "x" + i, rnd);
+        x[i] = newVar(store, "x" + i, rnd);
       }
       List<Relation> relations = new ArrayList<>();
       for (int c = 2 + rnd.nextInt(4); c > 0; c--) {

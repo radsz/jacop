@@ -276,7 +276,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     if (!fixedTasks()) {
       return false;
     }
-    IntVar y = trail.var(entry);
+    IntVar y = trail.variable(entry);
     int j = -1;
     for (int i = 0; i < taskNormal.length; i++) {
       if (taskNormal[i].start == y) {
@@ -425,7 +425,8 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     for (int i = 0; i < order.length; i++) {
       order[i] = i;
     }
-    Arrays.sort(order, (a, b) -> taskNormal[b].res.value() - taskNormal[a].res.value());
+    Arrays.sort(
+        order, (a, b) -> Integer.compare(taskNormal[b].res.value(), taskNormal[a].res.value()));
     long sum = 0;
     for (int i : order) {
       TaskView task = taskNormal[i];

@@ -984,7 +984,7 @@ public class LinearInt extends PrimitiveConstraint
     if (getClass() != LinearInt.class || kind == AtomicTrail.NE || relationType == NE) {
       return false;
     }
-    IntVar y = trail.var(entry);
+    IntVar y = trail.variable(entry);
     long weight = 0;
     for (int i = 0; i < l; i++) {
       if (x[i] == y) {

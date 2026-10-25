@@ -62,7 +62,7 @@ class AtomicTrailTest {
 
   private record Model(Constraint constraint, Predicate<int[]> relation, IntVar[] vars) {}
 
-  private static IntVar var(Store store, String name, Random rnd) {
+  private static IntVar newVar(Store store, String name, Random rnd) {
     IntVar x = new IntVar(store, name, -4 + rnd.nextInt(3), 3 + rnd.nextInt(3));
     for (int k = rnd.nextInt(3); k > 0; k--) {
       int v = x.min() + 1 + rnd.nextInt(Math.max(1, x.max() - x.min() - 1));
@@ -77,40 +77,46 @@ class AtomicTrailTest {
     List<Function<Store, Model>> m = new ArrayList<>();
     m.add(
         s -> {
-          IntVar[] v = {var(s, "x", rnd), var(s, "y", rnd), var(s, "z", rnd)};
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), newVar(s, "z", rnd)};
           return new Model(new XplusYeqZ(v[0], v[1], v[2]), t -> t[0] + t[1] == t[2], v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "x", rnd), var(s, "y", rnd), var(s, "z", rnd)};
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), newVar(s, "z", rnd)};
           return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "d", rnd)};
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
+          };
           int[] w = {2, -3, 1, 1};
           return new Model(
               new LinearInt(v, w, "<=", 1), t -> 2 * t[0] - 3 * t[1] + t[2] + t[3] <= 1, v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd)};
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
           int[] w = {1, 2, -1};
           return new Model(new LinearInt(v, w, "==", 0), t -> t[0] + 2 * t[1] - t[2] == 0, v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "d", rnd)};
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
+          };
           return new Model(new Alldistinct(v), AtomicTrailTest::distinct, v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "d", rnd)};
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
+          };
           return new Model(new Alldiff(v), AtomicTrailTest::distinct, v);
         });
     m.add(
         s -> {
-          IntVar[] v = {new IntVar(s, "i", 1, 5), var(s, "v", rnd)};
+          IntVar[] v = {new IntVar(s, "i", 1, 5), newVar(s, "v", rnd)};
           int[] list = {3, -2, 0, 3, 1};
           return new Model(
               new ElementInteger(v[0], list, v[1], 0),
@@ -119,12 +125,14 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "x", rnd), var(s, "y", rnd)};
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
           return new Model(new AbsXeqY(v[0], v[1], true), t -> Math.abs(t[0]) == t[1], v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "m", rnd)};
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "m", rnd)
+          };
           return new Model(
               new Max(new IntVar[] {v[0], v[1], v[2]}, v[3]),
               t -> Math.max(t[0], Math.max(t[1], t[2])) == t[3],
@@ -132,12 +140,14 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "x", rnd), var(s, "y", rnd)};
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
           return new Model(new XneqY(v[0], v[1]), t -> t[0] != t[1], v);
         });
     m.add(
         s -> {
-          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "d", rnd)};
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
+          };
           int[] d = {
             2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)
           };
@@ -267,7 +277,7 @@ class AtomicTrailTest {
     for (int i = 0; i < vars.length; i++) {
       IntDomain d = initial[i];
       for (int e = 0; e < trail.size(); e++) {
-        if (trail.var(e) == vars[i]) {
+        if (trail.variable(e) == vars[i]) {
           d = apply(d, trail, e);
         }
       }
@@ -299,7 +309,7 @@ class AtomicTrailTest {
     IntDomain[] box = initial.clone();
     for (int k = 0; k < reason.size(); k++) {
       int r = reason.get(k);
-      int i = indexOf(model.vars, trail.var(r));
+      int i = indexOf(model.vars, trail.variable(r));
       box[i] = apply(box[i], trail, r);
     }
     assertThat(anySolution(box, 0, new int[box.length], model.relation))
@@ -329,10 +339,10 @@ class AtomicTrailTest {
       for (int k = 0; k < reason.size(); k++) {
         int r = reason.get(k);
         assertThat(r).isLessThan(e);
-        int i = indexOf(model.vars, trail.var(r));
+        int i = indexOf(model.vars, trail.variable(r));
         box[i] = apply(box[i], trail, r);
       }
-      int target = indexOf(model.vars, trail.var(e));
+      int target = indexOf(model.vars, trail.variable(e));
       int[] t = new int[box.length];
       assertThat(enumerate(box, 0, t, model.relation, trail, e, target))
           .as("reason of %s does not imply it", trail.atomString(e))

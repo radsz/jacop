@@ -76,8 +76,8 @@ public final class LcgSolver implements ExternalPropagator {
   // per store variable index: the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
-  private TreeMap<Integer, Integer>[] ge;
-  private Map<Integer, Integer>[] eq;
+  private final TreeMap<Integer, Integer>[] ge;
+  private final Map<Integer, Integer>[] eq;
 
   // per DIMACS variable: its store variable index, kind and value
   private int[] litVar = new int[16];
@@ -231,7 +231,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
   private int atomLit(int entry) {
-    int i = trail.var(entry).index();
+    int i = trail.variable(entry).index();
     int v = trail.value(entry);
     return switch (trail.kind(entry)) {
       case AtomicTrail.GE -> geLit(i, v);
@@ -357,11 +357,11 @@ public final class LcgSolver implements ExternalPropagator {
         if (sat.value(lit) > 0) {
           continue;
         }
-        int var = Math.abs(lit);
-        if (var >= propagated.length) {
-          propagated = Arrays.copyOf(propagated, Math.max(var + 1, 2 * propagated.length));
+        int dimacsVar = Math.abs(lit);
+        if (dimacsVar >= propagated.length) {
+          propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
         }
-        propagated[var] = e;
+        propagated[dimacsVar] = e;
         atomsPropagated++;
         return lit;
       }
@@ -373,7 +373,7 @@ public final class LcgSolver implements ExternalPropagator {
         int lit = pending[k];
         try {
           apply(lit);
-        } catch (FailException ex) {
+        } catch (FailException _) {
           IntVar x = vars[litVar[Math.abs(lit)]];
           EntryList atoms = new EntryList();
           trail.atomsBefore(x, trail.size(), atoms);
@@ -404,7 +404,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int explainEntry(int e, EntryList out) {
     if (trail.reason(e) == null) {
-      trail.atomsBefore(trail.var(e), e, out);
+      trail.atomsBefore(trail.variable(e), e, out);
       return cause[e];
     }
     trail.explain(e, out);
@@ -459,11 +459,11 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void apply(int lit) {
-    int var = Math.abs(lit);
-    IntVar x = vars[litVar[var]];
-    int v = litValue[var];
+    int dimacsVar = Math.abs(lit);
+    IntVar x = vars[litVar[dimacsVar]];
+    int v = litValue[dimacsVar];
     store.currentConstraint = null;
-    if (litKind[var] == GE_KIND) {
+    if (litKind[dimacsVar] == GE_KIND) {
       if (lit > 0) {
         x.domain.inMin(store.level, x, v);
       } else {
@@ -490,7 +490,7 @@ public final class LcgSolver implements ExternalPropagator {
     int e = propagated[Math.abs(lit)];
     EntryList reason = new EntryList();
     int extra = explainEntry(e, reason);
-    int[] clause = new int[reason.size() + (extra != 0 ? 2 : 1)];
+    int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;
     for (int k = 0; k < reason.size(); k++) {
       clause[k + 1] = -atomLit(reason.get(k));

@@ -70,7 +70,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private final Store store;
 
   // entries
-  private IntVar[] var = new IntVar[256];
+  private IntVar[] entryVar = new IntVar[256];
   private int[] kind = new int[256];
   private int[] value = new int[256];
   private int[] level = new int[256];
@@ -165,16 +165,16 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   private void add(IntVar x, int i, int k, int v) {
-    if (size == var.length) {
+    if (size == entryVar.length) {
       int n = 2 * size;
-      var = Arrays.copyOf(var, n);
+      entryVar = Arrays.copyOf(entryVar, n);
       kind = Arrays.copyOf(kind, n);
       value = Arrays.copyOf(value, n);
       level = Arrays.copyOf(level, n);
       reason = Arrays.copyOf(reason, n);
       previous = Arrays.copyOf(previous, n);
     }
-    var[size] = x;
+    entryVar[size] = x;
     kind[size] = k;
     value[size] = v;
     level[size] = store.level;
@@ -188,11 +188,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   public void removeLevelLate(int removedLevel) {
     while (size > 0 && level[size - 1] >= removedLevel) {
       size--;
-      IntVar x = var[size];
+      IntVar x = entryVar[size];
       int i = id(x);
       last[i] = previous[size];
       shadow[i] = x.dom().cloneLight();
-      var[size] = null;
+      entryVar[size] = null;
       reason[size] = null;
     }
   }
@@ -212,8 +212,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @param entry the entry
    * @return its variable
    */
-  public IntVar var(int entry) {
-    return var[entry];
+  public IntVar variable(int entry) {
+    return entryVar[entry];
   }
 
   /**
@@ -346,12 +346,21 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       return true;
     }
     for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
-      if (kind[f] == NE ? value[f] == v : kind[f] == GE ? value[f] > v : value[f] < v) {
+      if (removes(f, v)) {
         out.add(f);
         return true;
       }
     }
     return false;
+  }
+
+  // whether entry f removes value v from its variable's domain
+  private boolean removes(int f, int v) {
+    return switch (kind[f]) {
+      case NE -> value[f] == v;
+      case GE -> value[f] > v;
+      default -> value[f] < v;
+    };
   }
 
   /**
@@ -464,7 +473,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return for example {@code [x >= 3]}
    */
   public String atomString(int entry) {
-    String op = kind[entry] == GE ? ">=" : kind[entry] == LE ? "<=" : "!=";
-    return "[" + var[entry].id() + " " + op + " " + value[entry] + "]";
+    String op =
+        switch (kind[entry]) {
+          case GE -> ">=";
+          case LE -> "<=";
+          default -> "!=";
+        };
+    return "[" + entryVar[entry].id() + " " + op + " " + value[entry] + "]";
   }
 }
