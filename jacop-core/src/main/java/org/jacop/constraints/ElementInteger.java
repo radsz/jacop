@@ -35,8 +35,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,7 +58,8 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class ElementInteger extends AbstractElement implements UsesQueueVariable, SatisfiedPresent {
+public class ElementInteger extends AbstractElement
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<ElementInteger> {
 
   /**
    * It specifies the maximal size of index domain when the constraint will apply domain consistency
@@ -378,5 +381,10 @@ public class ElementInteger extends AbstractElement implements UsesQueueVariable
   @Override
   public String toString() {
     return buildToString("elementInteger", list, value, true);
+  }
+
+  @Override
+  public ElementInteger copy(VarMap map) {
+    return new ElementInteger(map.get(index), list, map.get(value), indexOffset, checkDuplicates);
   }
 }

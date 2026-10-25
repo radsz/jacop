@@ -118,6 +118,8 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Presolver;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -396,6 +398,45 @@ class GlobalConstraintBruteForceTest {
       x[i] = new IntVar(store, "x" + i, domain);
     }
     return x;
+  }
+
+  /**
+   * The same comparison through a presolve derivation. The derivation starts at level 0, or at
+   * level 1 after one variable has been fixed there; the child store is searched and each of its
+   * solutions is returned to the original store, whose values are the ones compared. Every other
+   * trial keeps the original constraints, which then check each returned solution.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceThroughPresolve(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 2);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int restricted = trial % 4 < 2 ? -1 : random.nextInt(instance.domains().length);
+      int kept =
+          restricted < 0
+              ? 0
+              : instance
+                  .domains()[restricted][random.nextInt(instance.domains()[restricted].length)];
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(instance, new int[instance.domains().length], 0, expected);
+      if (restricted >= 0) {
+        expected.removeIf(solution -> solution.get(restricted) != kept);
+      }
+
+      assertThat(solveThroughPresolve(instance, trial % 2 == 0, restricted, kept, random.nextInt()))
+          .as(
+              "%s trial %d domains=%s %s, derived at level %d with x%d = %d, checking %b",
+              name,
+              trial,
+              Arrays.deepToString(instance.domains()),
+              instance.description(),
+              restricted < 0 ? 0 : 1,
+              restricted,
+              kept,
+              trial % 2 == 0)
+          .isEqualTo(expected);
+    }
   }
 
   private static Instance regular(Random random) {
@@ -1516,6 +1557,62 @@ class GlobalConstraintBruteForceTest {
           default -> new IndomainRandom<>(seed);
         };
     search.labeling(store, new SimpleSelect<>(x, null, indomain));
+    return found;
+  }
+
+  /** Finds all solutions by searching the store derived from the instance's store. */
+  private static Set<List<Integer>> solveThroughPresolve(
+      Instance instance, boolean checking, int restricted, int kept, int seed) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[instance.domains().length];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain domain = new IntervalDomain();
+      for (int v : instance.domains()[i]) {
+        domain.unionAdapt(v, v);
+      }
+      x[i] = new IntVar(store, "x" + i, domain);
+    }
+    instance.impose().accept(store, x);
+
+    Set<List<Integer>> found = new HashSet<>();
+    if (restricted >= 0) {
+      store.setLevel(1);
+      try {
+        x[restricted].domain.in(store.level, x[restricted], kept, kept);
+      } catch (FailException _) {
+        return found;
+      }
+    }
+    Derivation derivation = Presolver.of(store).keep(x).checking(checking).presolve();
+    if (derivation.outcome() == Derivation.Outcome.INFEASIBLE) {
+      return found;
+    }
+    Store child = derivation.child();
+    IntVar[] decisions = derivation.counterparts(x);
+    if (decisions.length == 0) {
+      // every variable is fixed in the original store
+      if (derivation.returnSolution()) {
+        found.add(Arrays.stream(x).map(IntVar::value).toList());
+      }
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            if (derivation.returnSolution()) {
+              found.add(Arrays.stream(x).map(IntVar::value).toList());
+            }
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(child, new SimpleSelect<>(decisions, null, new IndomainRandom<>(seed)));
+    derivation.discard();
     return found;
   }
 }

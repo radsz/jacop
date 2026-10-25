@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -301,5 +302,16 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         .append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public CumulativeUnaryOptional copy(VarMap map) {
+    IntVar[][] t = taskVariables(map);
+    CumulativeUnaryOptional copy =
+        withOptionsOf(
+            new CumulativeUnaryOptional(
+                t[0], t[1], t[2], map.get(limit), map.get(opt), doProfile, doUnaryEdgeFind));
+    copy.doOptionalOverload(doOptionalOverload);
+    return copy;
   }
 }

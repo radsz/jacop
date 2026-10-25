@@ -34,6 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -44,7 +46,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Count extends AbstractCount {
+public class Count extends AbstractCount implements Copyable<Count> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -177,5 +179,10 @@ public class Count extends AbstractCount {
     result.append("], ").append(counter).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Count copy(VarMap map) {
+    return new Count(map.get(list), map.get(counter), value);
   }
 }

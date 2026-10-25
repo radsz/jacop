@@ -34,6 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -48,7 +50,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class BoolClause extends PrimitiveConstraint {
+public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClause> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -300,5 +302,10 @@ public class BoolClause extends PrimitiveConstraint {
     }
     resultString.append("])");
     return resultString.toString();
+  }
+
+  @Override
+  public BoolClause copy(VarMap map) {
+    return new BoolClause(map.get(x), map.get(y));
   }
 }

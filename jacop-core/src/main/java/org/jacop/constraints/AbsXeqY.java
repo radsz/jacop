@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -50,7 +52,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class AbsXeqY extends AbstractConstraintXandY {
+public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -352,5 +354,10 @@ public class AbsXeqY extends AbstractConstraintXandY {
   public String toString() {
 
     return id() + " : absXeqY(" + x + ", " + y + " )";
+  }
+
+  @Override
+  public AbsXeqY copy(VarMap map) {
+    return new AbsXeqY(map.get(x), map.get(y), domainConsistent);
   }
 }

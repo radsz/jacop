@@ -31,6 +31,7 @@
 package org.jacop.floats.constraints;
 
 import java.util.Set;
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
@@ -111,5 +112,10 @@ public class SqrtPeqR extends PmulQeqR {
     }
 
     return null;
+  }
+
+  @Override
+  public SqrtPeqR copy(VarMap map) {
+    return new SqrtPeqR(map.get(r), map.get(p));
   }
 }

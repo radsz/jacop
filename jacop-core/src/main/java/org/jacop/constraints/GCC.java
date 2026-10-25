@@ -39,7 +39,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -64,7 +66,7 @@ import org.jacop.core.ValueEnumeration;
  */
 @SuppressWarnings(
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
-public class GCC extends Constraint implements SatisfiedPresent {
+public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -161,7 +163,7 @@ public class GCC extends Constraint implements SatisfiedPresent {
    * @param counters variables which count the values.
    */
   public GCC(IntVar[] x, IntVar[] counters) {
-    this(x, counters, null);
+    this(x, counters, null, null);
   }
 
   /**
@@ -175,21 +177,38 @@ public class GCC extends Constraint implements SatisfiedPresent {
    * @param firstValue the value counted by counters[0].
    */
   public GCC(IntVar[] x, IntVar[] counters, int firstValue) {
-    this(x, counters, Integer.valueOf(firstValue));
+    this(x, counters, Integer.valueOf(firstValue), null);
   }
 
-  private GCC(IntVar[] x, IntVar[] counters, Integer firstValue) {
+  /**
+   * Constructs a new constraint, or a copy of an imposed one. A copy keeps the values the counters
+   * of the original count, which the domains of the copied variables, possibly smaller, no longer
+   * determine.
+   *
+   * @param x variables which values are counted.
+   * @param counters variables which count the values, without the zero counters for a copy.
+   * @param firstValue the value counted by counters[0], or null to take the values from x.
+   * @param original the constraint being copied, or null for a new constraint.
+   */
+  private GCC(IntVar[] x, IntVar[] counters, Integer firstValue, GCC original) {
 
-    checkInputForNullness(new String[] {"x", "counters"}, x, counters);
-    checkInputForDuplicationSkipSingletons("x", x);
+    if (original == null) {
+      checkInputForNullness(new String[] {"x", "counters"}, x, counters);
+      checkInputForDuplicationSkipSingletons("x", x);
+      counters =
+          firstValue == null
+              ? removeZeroCounters(x, counters)
+              : removeZeroCounters(x, counters, firstValue);
+    } else {
+      domainHash = original.domainHash;
+      countedValues = original.countedValues;
+      restrictX = original.restrictX;
+      contiguous = original.contiguous;
+      base = original.base;
+    }
 
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
-
-    counters =
-        firstValue == null
-            ? removeZeroCounters(x, counters)
-            : removeZeroCounters(x, counters, firstValue);
 
     xSize = x.length;
     ySize = counters.length;
@@ -927,5 +946,16 @@ public class GCC extends Constraint implements SatisfiedPresent {
       }
       return top;
     }
+  }
+
+  @Override
+  public GCC copy(VarMap map) {
+    return new GCC(map.get(x), map.get(counters), null, this);
+  }
+
+  /** Zero counters are fixed by the first consistency, and they are not arguments to copy. */
+  @Override
+  public boolean canCopy() {
+    return zeroCounters == null || !init.due();
   }
 }

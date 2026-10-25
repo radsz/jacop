@@ -33,7 +33,9 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
@@ -44,7 +46,7 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Or extends PrimitiveConstraint implements UsesQueueVariable {
+public class Or extends PrimitiveConstraint implements UsesQueueVariable, Copyable<Or> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   public final QueueForward<PrimitiveConstraint> queueForward;
@@ -196,5 +198,15 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
       }
     }
     return result.toString();
+  }
+
+  @Override
+  public Or copy(VarMap map) {
+    return new Or(Copyable.copyOf(listOfC, map));
+  }
+
+  @Override
+  public boolean canCopy() {
+    return Copyable.canCopyAll((Object[]) listOfC);
   }
 }

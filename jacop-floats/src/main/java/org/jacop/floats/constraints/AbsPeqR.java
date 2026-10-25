@@ -31,7 +31,9 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -46,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AbsPeqR extends Constraint implements SatisfiedPresent {
+public class AbsPeqR extends Constraint implements SatisfiedPresent, Copyable<AbsPeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -142,5 +144,10 @@ public class AbsPeqR extends Constraint implements SatisfiedPresent {
   public String toString() {
 
     return id() + " : absPeqR(" + p + ", " + q + " )";
+  }
+
+  @Override
+  public AbsPeqR copy(VarMap map) {
+    return new AbsPeqR(map.get(p), map.get(q));
   }
 }

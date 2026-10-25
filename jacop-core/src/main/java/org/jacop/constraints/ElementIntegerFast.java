@@ -33,7 +33,9 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -54,7 +56,8 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementIntegerFast extends AbstractElement implements SatisfiedPresent {
+public class ElementIntegerFast extends AbstractElement
+    implements SatisfiedPresent, Copyable<ElementIntegerFast> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -274,5 +277,10 @@ public class ElementIntegerFast extends AbstractElement implements SatisfiedPres
   @Override
   public String toString() {
     return buildToString("elementIntegerFast", list, value, false);
+  }
+
+  @Override
+  public ElementIntegerFast copy(VarMap map) {
+    return new ElementIntegerFast(map.get(index), list, map.get(value), indexOffset);
   }
 }

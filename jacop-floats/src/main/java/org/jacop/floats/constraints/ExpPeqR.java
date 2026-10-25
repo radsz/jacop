@@ -32,7 +32,9 @@ package org.jacop.floats.constraints;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
@@ -47,7 +49,8 @@ import org.jacop.floats.core.InternalException;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDerivableConstraint {
+public class ExpPeqR extends Constraint
+    implements SatisfiedPresent, FloatDerivableConstraint, Copyable<ExpPeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -183,5 +186,10 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
     }
 
     return null;
+  }
+
+  @Override
+  public ExpPeqR copy(VarMap map) {
+    return new ExpPeqR(map.get(p), map.get(q));
   }
 }

@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +47,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AllEqual extends PrimitiveConstraint {
+public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -188,5 +190,10 @@ public class AllEqual extends PrimitiveConstraint {
   @Override
   public String toString() {
     return id() + " : AllEqual(" + Arrays.asList(x) + " )";
+  }
+
+  @Override
+  public AllEqual copy(VarMap map) {
+    return new AllEqual(map.get(x));
   }
 }

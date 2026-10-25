@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -43,7 +45,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountBounds extends AbstractCount {
+public class CountBounds extends AbstractCount implements Copyable<CountBounds> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -166,5 +168,10 @@ public class CountBounds extends AbstractCount {
     result.append("], ").append(value).append(", ").append(lb).append(", ").append(ub).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public CountBounds copy(VarMap map) {
+    return new CountBounds(map.get(list), value, lb, ub);
   }
 }

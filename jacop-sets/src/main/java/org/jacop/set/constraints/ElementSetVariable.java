@@ -34,6 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -55,7 +57,7 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementSetVariable extends AbstractElement {
+public class ElementSetVariable extends AbstractElement implements Copyable<ElementSetVariable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -199,5 +201,10 @@ public class ElementSetVariable extends AbstractElement {
   @Override
   public String toString() {
     return buildToString("elementSetVariable", list, value, true);
+  }
+
+  @Override
+  public ElementSetVariable copy(VarMap map) {
+    return new ElementSetVariable(map.get(index), map.get(list), map.get(value), indexOffset);
   }
 }

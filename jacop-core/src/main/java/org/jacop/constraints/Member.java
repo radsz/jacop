@@ -34,6 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -46,7 +48,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Member extends PrimitiveConstraint {
+public class Member extends PrimitiveConstraint implements Copyable<Member> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -298,5 +300,10 @@ public class Member extends PrimitiveConstraint {
     result.append(e).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Member copy(VarMap map) {
+    return new Member(map.get(x), map.get(e));
   }
 }

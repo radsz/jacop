@@ -36,6 +36,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -304,5 +305,10 @@ public class Circuit extends Alldiff {
     graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
     graph[vMin - 1].update(
         new CircuitVarValue(((CircuitVarValue) graph[vMin - 1].value()).next, i + 1));
+  }
+
+  @Override
+  public Circuit copy(VarMap map) {
+    return new Circuit(map.get(list));
   }
 }
