@@ -617,21 +617,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     List<T> vars = new ArrayList<>();
 
     for (int i = 0; i < ps.search.size() / 2; i++) {
-      SelectChoicePoint<T> heuristic = ps.search.get(2 * i).heuristic;
-
-      if (heuristic == null) {
-        // PrioritySearch
-        List<T> vs = null;
-        for (int j = 0; j < ps.search.size() / 2; j++) {
-          vs = getVariables((PrioritySearch<T>) ps.search.get(2 * j));
+      // a sub-search is a chain of searches (seq_search) ending in the linking search
+      for (DepthFirstSearch<T> s = ps.search.get(2 * i);
+          s != null && !(s instanceof LinkingSearch);
+          s = s.childSearches == null ? null : asDfs(s.childSearches[0])) {
+        if (s instanceof PrioritySearch<T> nested) {
+          vars.addAll(getVariables(nested));
+        } else if (s.heuristic != null) {
+          Map<T, Integer> position = s.heuristic.getVariablesMapping();
+          vars.addAll(position.keySet());
         }
-
-        vars.addAll(vs);
-
-      } else {
-        Map<T, Integer> position = heuristic.getVariablesMapping();
-
-        vars.addAll(position.keySet());
       }
     }
 

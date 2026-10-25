@@ -804,6 +804,33 @@ class FlatzincFrontEndTest {
         + status;
   }
 
+  private static final String PRIORITY_WITH_SEQ_SEARCH_ROW =
+      """
+      var 1..2: a:: output_var;
+      var 1..2: b:: output_var;
+      var 1..2: c:: output_var;
+      solve :: priority_search([c,a],[int_search([c],input_order,indomain_min,complete),\
+      seq_search([int_search([a],input_order,indomain_max,complete),\
+      int_search([b],input_order,indomain_min,complete)])],input_order,complete) satisfy;
+      """;
+
+  @Test
+  void seqSearchInPrioritySearchKeepsTheHeuristicsOfItsSearches() throws IOException {
+    // The first search of a seq_search under priority_search got the heuristic of the last one, so
+    // b was labelled first and a was left to the completion search (indomain_min).
+    assertEquals(
+        List.of(
+            "a = 2; b = 1; c = 1;",
+            "a = 2; b = 2; c = 1;",
+            "a = 1; b = 1; c = 1;",
+            "a = 1; b = 2; c = 1;",
+            "a = 2; b = 1; c = 2;",
+            "a = 2; b = 2; c = 2;",
+            "a = 1; b = 1; c = 2;",
+            "a = 1; b = 2; c = 2;"),
+        solveAllInOrder(PRIORITY_WITH_SEQ_SEARCH_ROW));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
