@@ -2380,6 +2380,62 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void countVarRemovesValuesWhoseCountCannotMatchTheCounter() {
+    // Only x1 can equal the value, and the counter is 1, so the value must be x1's value 0. The
+    // value variable kept 2, which no variable can take.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar counter = new IntVar(store, "c", 1, 1);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
+  void countVarRemovesListValuesThatNoValueSupports() {
+    // Two variables must equal the value. With x1 = 1 the value 1 occurs three times and the value
+    // 0 once, so x1 = 1 has no support.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar x2 = new IntVar(store, "x2", 2, 2);
+    IntVar x3 = new IntVar(store, "x3", 1, 1);
+    IntVar x4 = new IntVar(store, "x4", 0, 0);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1, x2, x3, x4}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.dom()).hasToString("{0..1}");
+  }
+
+  @Test
+  void countVarNarrowsEveryVariableToTheValueItFixes() {
+    // Both variables must equal the value. Narrowing the value by x1 leaves only 0, after x0 was
+    // already narrowed by the value domain, and x0 must still become 0.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.singleton(0)).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
   void countKeepsSupportsAndReachesFixpoint() {
     Random random = new Random(17);
     for (int run = 0; run < 2000; run++) {
