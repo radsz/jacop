@@ -1929,6 +1929,9 @@ public final class CdclSolver {
     if (decisionLevel <= assumptions.length) {
       return false;
     }
+    if (conflicts >= modeSwitchAt || conflicts >= nextRephase) {
+      return true; // mode switches and rephasing happen at restarts, which may be rare otherwise
+    }
     if (stable) {
       return conflicts - conflictsAtRestart >= lubyLimit;
     }
