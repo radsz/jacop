@@ -148,3 +148,12 @@ solutions (`options.opt` passes `-n 100000`). Together with `circular_except_0`,
 `peacable_queens`, `pentominoes-zayenz`, `rotating-workforce` and `rotating-workforce-scheduling`
 (MiniZinc Challenge and hakank models) they cover `table_int`, `table_bool`, `not table`, `regular`
 and `mdd`. Run them alone with `-DconstraintFilter=table` or `-DconstraintFilter=regular`.
+
+Directories upTo5sec/graph_* hold small models for the MiniZinc graph globals (connected, dreachable,
+tree, path, dpath, steiner, weighted_spanning_tree), which the JaCoP MiniZinc library maps to the
+propagators in org.jacop.constraints.graph. They were added with "scripts/minizinc-crosscheck.py
+add" and cross-checked with Gecode (MiniZinc decompositions) and Chuffed (its own propagators).
+Chuffed 0.13.2 rejects tree and path with a variable root, s or t, accepts a dtree whose fixed root
+is left out of the tree, and crashes on bounded_dpath, so those cases have fixed nodes here, and
+dtree and bounded_dpath are covered by GlobalConstraintBruteForceTest instead. Run them alone with
+-DconstraintFilter=graph.
