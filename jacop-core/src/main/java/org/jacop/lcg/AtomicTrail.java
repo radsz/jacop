@@ -80,6 +80,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   // per variable (by store index): the domain the entries so far describe, and the last entry
   private IntDomain[] shadow = new IntDomain[0];
+  private IntDomain[] root = new IntDomain[0]; // the domain when recording started
   private int[] last = new int[0];
 
   /**
@@ -129,11 +130,13 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       int n = Math.max(i + 1, 2 * shadow.length);
       int old = shadow.length;
       shadow = Arrays.copyOf(shadow, n);
+      root = Arrays.copyOf(root, n);
       last = Arrays.copyOf(last, n);
       Arrays.fill(last, old, n, -1);
     }
     if (shadow[i] == null) {
       shadow[i] = x.dom().cloneLight();
+      root[i] = shadow[i];
     }
     return i;
   }
@@ -304,6 +307,54 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns a variable's minimum just before a trail position.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return its minimum then
+   */
+  public int minBefore(IntVar x, int position) {
+    int e = latest(x, position, GE);
+    return e >= 0 ? value[e] : root[slot(x)].min();
+  }
+
+  /**
+   * Returns a variable's maximum just before a trail position.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return its maximum then
+   */
+  public int maxBefore(IntVar x, int position) {
+    int e = latest(x, position, LE);
+    return e >= 0 ? value[e] : root[slot(x)].max();
+  }
+
+  /**
+   * Tells whether a value was out of a variable's domain just before a trail position, and if so
+   * adds to {@code out} the entry that removed it (none when the value was never in the domain
+   * recording started from).
+   *
+   * @param x the variable
+   * @param v the value
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param out where the entry is added
+   * @return true when v was not in the domain
+   */
+  public boolean excludedBefore(IntVar x, int v, int position, EntryList out) {
+    if (!root[slot(x)].contains(v)) {
+      return true;
+    }
+    for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
+      if (kind[f] == NE ? value[f] == v : kind[f] == GE ? value[f] > v : value[f] < v) {
+        out.add(f);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Adds to {@code out} the {@code !=} atoms that a bound entry skipped: the holes of its variable,
    * recorded before it, between the bound a propagator computed and the bound the domain moved to.
    * A propagator that prunes a bound by {@code inMin} or {@code inMax} implies only the computed
@@ -367,6 +418,26 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
     out.truncate(mark);
     genericReason(entry, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of a constraint now: its own explanation when it is
+   * {@link Explainable} and gives one, otherwise the atoms of all its variables.
+   *
+   * @param failed the constraint that failed
+   * @param out where the entries are added
+   */
+  public void explainFailure(Constraint failed, EntryList out) {
+    int mark = out.size();
+    if (failed instanceof Explainable c && c.explainFailure(this, out)) {
+      return;
+    }
+    out.truncate(mark);
+    for (Var v : failed.arguments()) {
+      if (v instanceof IntVar x) {
+        atomsBefore(x, size, out);
+      }
+    }
   }
 
   /**

@@ -50,4 +50,17 @@ public interface Explainable {
    *     is used (anything added is then dropped)
    */
   boolean explain(AtomicTrail trail, int entry, EntryList out);
+
+  /**
+   * Adds to {@code out} the reason of a failure of this constraint: entries whose atoms, with the
+   * domains at the start of recording, cannot all hold under the constraint.
+   *
+   * @param trail the trail
+   * @param out where the reason entries are added
+   * @return false when this constraint has no reason of its own, so the generic one is used
+   *     (anything added is then dropped)
+   */
+  default boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return false;
+  }
 }

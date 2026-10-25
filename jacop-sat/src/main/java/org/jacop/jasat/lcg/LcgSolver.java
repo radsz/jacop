@@ -36,7 +36,6 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.lcg.AtomicTrail;
@@ -351,16 +350,12 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * The clause of a failure: the negated atoms of the failed constraint's variables, each atom not
-   * yet in the solver replaced by its explanation.
+   * The clause of a failure: the negated atoms of the failed constraint's explanation, each atom
+   * not yet in the solver replaced by its own explanation.
    */
   private int[] conflictClause(Constraint failedConstraint) {
     EntryList atoms = new EntryList();
-    for (Var v : failedConstraint.arguments()) {
-      if (v instanceof IntVar x) {
-        trail.atomsBefore(x, trail.size(), atoms);
-      }
-    }
+    trail.explainFailure(failedConstraint, atoms);
     boolean[] seen = new boolean[trail.size()];
     EntryList out = new EntryList();
     EntryList stack = atoms;

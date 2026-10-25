@@ -47,6 +47,7 @@ import org.jacop.constraints.Max;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -134,6 +135,40 @@ class AtomicTrailTest {
           IntVar[] v = {var(s, "x", rnd), var(s, "y", rnd)};
           return new Model(new XneqY(v[0], v[1]), t -> t[0] != t[1], v);
         });
+    m.add(
+        s -> {
+          IntVar[] v = {var(s, "a", rnd), var(s, "b", rnd), var(s, "c", rnd), var(s, "d", rnd)};
+          int[] d = {
+            2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)
+          };
+          int[] r = {
+            1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2)
+          };
+          int limit = 2;
+          IntVar[] durations = new IntVar[4];
+          IntVar[] resources = new IntVar[4];
+          for (int k = 0; k < 4; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+            resources[k] = new IntVar(s, r[k], r[k]);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 4; k++) {
+                    if (t[k] <= time && time < t[k] + d[k]) {
+                      load += r[k];
+                    }
+                  }
+                  if (load > limit) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(v, durations, resources, new IntVar(s, limit, limit)), fits, v);
+        });
     return m;
   }
 
@@ -178,6 +213,10 @@ class AtomicTrailTest {
       }
       boolean ok = store.consistency();
       if (!ok) {
+        if (store.recentlyFailedConstraint == model.constraint) {
+          checkFailure(trail, model, initial);
+          checked++;
+        }
         break;
       }
       checkRebuild(trail, model.vars, initial);
@@ -252,6 +291,35 @@ class AtomicTrailTest {
       checked++;
     }
     return checked;
+  }
+
+  private static void checkFailure(AtomicTrail trail, Model model, IntDomain[] initial) {
+    EntryList reason = new EntryList();
+    trail.explainFailure(model.constraint, reason);
+    IntDomain[] box = initial.clone();
+    for (int k = 0; k < reason.size(); k++) {
+      int r = reason.get(k);
+      int i = indexOf(model.vars, trail.var(r));
+      box[i] = apply(box[i], trail, r);
+    }
+    assertThat(anySolution(box, 0, new int[box.length], model.relation))
+        .as("the failure reason of %s has a solution", model.constraint)
+        .isFalse();
+  }
+
+  private static boolean anySolution(IntDomain[] box, int i, int[] t, Predicate<int[]> relation) {
+    if (i == box.length) {
+      return relation.test(t);
+    }
+    for (int v = box[i].min(); v <= box[i].max(); v++) {
+      if (box[i].contains(v)) {
+        t[i] = v;
+        if (anySolution(box, i + 1, t, relation)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private static void checkImplied(

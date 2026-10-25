@@ -41,6 +41,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CumulativeBasic implements the cumulative constraint using time tabling algorithm.
@@ -49,7 +52,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class CumulativeBasic extends Constraint implements Copyable<CumulativeBasic> {
+public class CumulativeBasic extends Constraint implements Copyable<CumulativeBasic>, Explainable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -260,5 +263,147 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
   public CumulativeBasic copy(VarMap map) {
     IntVar[][] t = taskVariables(map);
     return new CumulativeBasic(t[0], t[1], t[2], map.get(limit));
+  }
+
+  /**
+   * Explains a bound of a start time by the time table: each start value it removed overlaps a time
+   * point where the compulsory parts of other tasks leave too little capacity. It needs fixed
+   * durations, resource uses and limit; otherwise, and for holes, the generic reason is used.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE || !fixedTasks()) {
+      return false;
+    }
+    IntVar y = trail.var(entry);
+    int j = -1;
+    for (int i = 0; i < taskNormal.length; i++) {
+      if (taskNormal[i].start == y) {
+        if (j >= 0) {
+          return false;
+        }
+        j = i;
+      }
+    }
+    if (j < 0 || taskNormal[j].dur.value() <= 0 || taskNormal[j].res.value() <= 0) {
+      return false;
+    }
+    int d = taskNormal[j].dur.value();
+    int room = limit.value() - taskNormal[j].res.value();
+    int v = trail.value(entry);
+    if (kind == AtomicTrail.GE) {
+      trail.addLowerBound(y, entry, out);
+      int u = trail.minBefore(y, entry);
+      while (u < v) {
+        if (trail.excludedBefore(y, u, entry, out)) {
+          u++;
+          continue;
+        }
+        int t = u + d - 1;
+        while (t >= u && !overloaded(trail, entry, j, t, room, null)) {
+          t--;
+        }
+        if (t < u) {
+          return false;
+        }
+        overloaded(trail, entry, j, t, room, out);
+        u = t + 1;
+      }
+    } else {
+      trail.addUpperBound(y, entry, out);
+      int u = trail.maxBefore(y, entry);
+      while (u > v) {
+        if (trail.excludedBefore(y, u, entry, out)) {
+          u--;
+          continue;
+        }
+        int t = u;
+        while (t < u + d && !overloaded(trail, entry, j, t, room, null)) {
+          t++;
+        }
+        if (t == u + d) {
+          return false;
+        }
+        overloaded(trail, entry, j, t, room, out);
+        u = t - d;
+      }
+    }
+    return true;
+  }
+
+  /** Explains a failure by a time point where the compulsory parts exceed the limit. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (!fixedTasks()) {
+      return false;
+    }
+    int position = trail.size();
+    int room = limit.value();
+    for (TaskView task : taskNormal) {
+      int from = trail.maxBefore(task.start, position);
+      int to = trail.minBefore(task.start, position) + task.dur.value();
+      for (int t = from; t < to; t++) {
+        if (overloaded(trail, position, -1, t, room, null)) {
+          overloaded(trail, position, -1, t, room, out);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private boolean fixedTasks() {
+    if (!limit.singleton() || possibleZeroTasks) {
+      return false;
+    }
+    for (TaskView task : taskNormal) {
+      if (!task.dur.singleton() || !task.res.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Tells whether the compulsory parts of the tasks other than {@code skip}, just before a trail
+   * position, use more than {@code room} at time t; with {@code out}, adds the bounds of the
+   * largest of those tasks until they exceed it.
+   */
+  private boolean overloaded(
+      AtomicTrail trail, int position, int skip, int t, int room, EntryList out) {
+    long load = 0;
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      if (i != skip && covers(trail, position, task, t)) {
+        load += task.res.value();
+      }
+    }
+    if (load <= room || out == null) {
+      return load > room;
+    }
+    Integer[] order = new Integer[taskNormal.length];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, (a, b) -> taskNormal[b].res.value() - taskNormal[a].res.value());
+    long sum = 0;
+    for (int i : order) {
+      TaskView task = taskNormal[i];
+      if (i != skip && covers(trail, position, task, t)) {
+        trail.addLowerBound(task.start, position, out);
+        trail.addUpperBound(task.start, position, out);
+        sum += task.res.value();
+        if (sum > room) {
+          break;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static boolean covers(AtomicTrail trail, int position, TaskView task, int t) {
+    return trail.maxBefore(task.start, position) <= t
+        && t < trail.minBefore(task.start, position) + task.dur.value();
   }
 }
