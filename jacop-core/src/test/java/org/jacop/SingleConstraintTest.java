@@ -4782,6 +4782,259 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cost.dom().toString()).isEqualTo("2");
   }
 
+  // The variable-based measure is the smallest number of variables that must change their value so
+  // that every count meets its soft bounds; [1, 1, 1] with each of 1 and 2 wanted once needs two
+  // changes (one 1 becomes 2, one becomes a value that is not counted), the value-based cost is 3.
+  @Test
+  void testVariableBasedSoftGccCountsVariablesToChange() {
+
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 1);
+      }
+      IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+      IntVar cost = new IntVar(store, "cost", 0, 9);
+      SoftGCC softGcc =
+          new SoftGCC(
+              x,
+              hardCounters,
+              new int[] {1, 2},
+              new int[] {1, 1},
+              new int[] {1, 1},
+              cost,
+              ViolationMeasure.VARIABLE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(cost.dom().toString()).isEqualTo("2");
+    }
+  }
+
+  // Soft counters (or soft lower bounds) that sum to more than the number of variables cannot be
+  // met by changing variables, so the variable-based measure is undefined and the constraint fails.
+  @Test
+  void testVariableBasedSoftGccFailsWhenSoftCountersExceedTheVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 1, 1)};
+    IntVar cost = new IntVar(store, "cost", 0, 9);
+    store.imposeDecomposition(
+        new SoftGCC(
+            x,
+            hardCounters,
+            new int[] {0, 1},
+            softCounters,
+            cost,
+            ViolationMeasure.VARIABLE_BASED));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testVariableBasedSoftGccRejectsAValueCountedTwice() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    assertThatThrownBy(
+            () ->
+                new SoftGCC(
+                    x,
+                    counters,
+                    new int[] {0, 0},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    cost,
+                    ViolationMeasure.VARIABLE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // The network and the primitive decomposition of the variable-based measure find exactly the
+  // solutions of its definition, computed by enumerating the counts the changed variables reach.
+  @Test
+  void testVariableBasedSoftGccMatchesItsDefinition() {
+
+    Random random = new Random(7);
+    int satisfiable = 0;
+    for (int instance = 0; instance < 60; instance++) {
+      int n = 1 + random.nextInt(3);
+      int[] values = random.nextBoolean() ? new int[] {1, 0} : new int[] {0, 2};
+      int m = values.length;
+      boolean softBounds = random.nextBoolean();
+      int[][] xDomains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        xDomains[i] = randomSubset(random, -1, 2);
+      }
+      int[] softLower = new int[m];
+      int[] softUpper = new int[m];
+      int[][] softDomains = new int[m][];
+      int[][] hardBounds = new int[m][];
+      for (int k = 0; k < m; k++) {
+        softLower[k] = random.nextInt(n + 1);
+        softUpper[k] = softLower[k] + random.nextInt(n + 1 - softLower[k]);
+        softDomains[k] = randomSubset(random, 0, n);
+        int lo = random.nextInt(n + 1);
+        hardBounds[k] = new int[] {lo, lo + random.nextInt(n + 1 - lo)};
+      }
+      int[] costBounds = {random.nextInt(2), 1 + random.nextInt(n + 1)};
+
+      int expected =
+          countVariableBasedSoftGcc(
+              xDomains,
+              values,
+              softBounds,
+              softLower,
+              softUpper,
+              softDomains,
+              hardBounds,
+              costBounds);
+
+      for (boolean network : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : xDomains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar[] hard = new IntVar[m];
+        IntVar[] soft = new IntVar[m];
+        for (int k = 0; k < m; k++) {
+          hard[k] = new IntVar(store, "h" + k, hardBounds[k][0], hardBounds[k][1]);
+          soft[k] = new IntVar(store, "s" + k);
+          for (int v : softDomains[k]) {
+            soft[k].addDom(v, v);
+          }
+        }
+        IntVar cost = new IntVar(store, "cost", costBounds[0], costBounds[1]);
+        SoftGCC softGcc =
+            softBounds
+                ? new SoftGCC(
+                    x, hard, values, softLower, softUpper, cost, ViolationMeasure.VARIABLE_BASED)
+                : new SoftGCC(x, hard, values, soft, cost, ViolationMeasure.VARIABLE_BASED);
+        if (network) {
+          store.imposeDecomposition(softGcc);
+        } else {
+          softGcc.primitiveDecomposition(store).forEach(store::impose);
+        }
+        IntVar[] vars = softBounds ? x : concat(x, soft);
+        int found =
+            store.consistency()
+                ? countSolutions(store, concat(vars, concat(hard, new IntVar[] {cost})), random)
+                : 0;
+        assertThat(found).as("instance %d, network %s", instance, network).isEqualTo(expected);
+      }
+    }
+  }
+
+  private static int[] randomSubset(Random random, int lo, int hi) {
+    List<Integer> subset = new ArrayList<>();
+    for (int v = lo; v <= hi; v++) {
+      if (random.nextInt(3) > 0) {
+        subset.add(v);
+      }
+    }
+    if (subset.isEmpty()) {
+      subset.add(lo + random.nextInt(hi - lo + 1));
+    }
+    return subset.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
+    IntVar[] result = Arrays.copyOf(a, a.length + b.length);
+    System.arraycopy(b, 0, result, a.length, b.length);
+    return result;
+  }
+
+  // Counts the assignments of x (and of the soft counters) whose counts are within the hard bounds
+  // and whose variable-based cost exists and is within the cost bounds; the counters and the cost
+  // follow from them.
+  private static int countVariableBasedSoftGcc(
+      int[][] xDomains,
+      int[] values,
+      boolean softBounds,
+      int[] softLower,
+      int[] softUpper,
+      int[][] softDomains,
+      int[][] hardBounds,
+      int[] costBounds) {
+    int n = xDomains.length;
+    int m = values.length;
+    int[][] domains = new int[n + (softBounds ? 0 : m)][];
+    System.arraycopy(xDomains, 0, domains, 0, n);
+    if (!softBounds) {
+      System.arraycopy(softDomains, 0, domains, n, m);
+    }
+    int solutions = 0;
+    int[] index = new int[domains.length];
+    while (true) {
+      int[] counts = new int[m + 1];
+      counts[m] = n;
+      for (int i = 0; i < n; i++) {
+        for (int k = 0; k < m; k++) {
+          if (xDomains[i][index[i]] == values[k]) {
+            counts[k]++;
+            counts[m]--;
+          }
+        }
+      }
+      boolean hardOk = true;
+      int[] lower = new int[m];
+      int[] upper = new int[m];
+      for (int k = 0; k < m; k++) {
+        hardOk &= counts[k] >= hardBounds[k][0] && counts[k] <= hardBounds[k][1];
+        lower[k] = softBounds ? softLower[k] : softDomains[k][index[n + k]];
+        upper[k] = softBounds ? softUpper[k] : lower[k];
+      }
+      int cost = fewestChanges(counts, lower, upper, n, 0, new int[m + 1]);
+      if (hardOk && cost >= costBounds[0] && cost <= costBounds[1]) {
+        solutions++;
+      }
+      int i = 0;
+      while (i < domains.length && ++index[i] == domains[i].length) {
+        index[i++] = 0;
+      }
+      if (i == domains.length) {
+        return solutions;
+      }
+    }
+  }
+
+  // The fewest variables to change so that each counted value reaches a count within its bounds;
+  // the last count is of the values that are not counted, which take what is left.
+  private static int fewestChanges(int[] counts, int[] lower, int[] upper, int n, int k, int[] t) {
+    int m = lower.length;
+    if (k == m) {
+      int used = 0;
+      for (int j = 0; j < m; j++) {
+        used += t[j];
+      }
+      if (used > n) {
+        return Integer.MAX_VALUE;
+      }
+      t[m] = n - used;
+      int changes = 0;
+      for (int j = 0; j <= m; j++) {
+        changes += Math.max(0, counts[j] - t[j]);
+      }
+      return changes;
+    }
+    int best = Integer.MAX_VALUE;
+    for (int v = lower[k]; v <= upper[k]; v++) {
+      t[k] = v;
+      best = Math.min(best, fewestChanges(counts, lower, upper, n, k + 1, t));
+    }
+    return best;
+  }
+
   @Test
   void testComparisonsOverInconsistentDomainsFailWithoutException() {
 
