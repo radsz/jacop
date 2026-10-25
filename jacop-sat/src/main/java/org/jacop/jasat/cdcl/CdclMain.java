@@ -40,12 +40,13 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          [--vivify 0|1] file.cnf[.gz]
+ *          [--vivify 0|1] [--walk 0|1] file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
  * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
- * variable elimination off and {@code --vivify 0} turns vivification off.
+ * variable elimination off, {@code --vivify 0} turns vivification off and {@code --walk 0} turns
+ * local search off.
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -73,6 +74,7 @@ public final class CdclMain {
     boolean shrink = true;
     boolean elim = true;
     boolean vivify = true;
+    boolean walk = true;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -82,13 +84,14 @@ public final class CdclMain {
         case "--shrink" -> shrink = !"0".equals(args[++i]);
         case "--elim" -> elim = !"0".equals(args[++i]);
         case "--vivify" -> vivify = !"0".equals(args[++i]);
+        case "--walk" -> walk = !"0".equals(args[++i]);
         default -> file = args[i];
       }
     }
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] [--vivify 0|1] file.cnf[.gz]");
+              + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -96,6 +99,7 @@ public final class CdclMain {
     solver.setShrink(shrink);
     solver.setElimination(elim);
     solver.setVivification(vivify);
+    solver.setWalk(walk);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
@@ -120,7 +124,9 @@ public final class CdclMain {
           solver.propagations,
           solver.restarts,
           solver.reductions);
-      out.printf("c eliminated variables %d%n", solver.eliminatedCount());
+      out.printf(
+          "c eliminated variables %d, walk %.2f s%n",
+          solver.eliminatedCount(), solver.walkNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

@@ -103,6 +103,11 @@ public final class CdclSolver {
   private int bestAssigned;
   private long nextRephase = REPHASE_INTERVAL;
   private int rephases;
+  // local search in the rephasing cycle (Walker)
+  private boolean walking = true;
+  private long propagationsAtWalk;
+  private int walks;
+  long walkNanos;
   // chronological backtracking is used in this search (solve() without assumptions)
   private boolean chrono;
   // backtrack chronologically when a backjump would undo more levels than this; negative: never
@@ -1782,15 +1787,85 @@ public final class CdclSolver {
   private void rephase() {
     rephases++;
     nextRephase = conflicts + REPHASE_INTERVAL * rephases;
-    char kind = rephases <= 2 ? "OI".charAt(rephases - 1) : "BOBI".charAt((rephases - 3) % 4);
+    String cycle = walking ? "BWOBWI" : "BOBI";
+    char kind =
+        rephases <= 2 ? "OI".charAt(rephases - 1) : cycle.charAt((rephases - 3) % cycle.length());
     switch (kind) {
       case 'O' -> Arrays.fill(savedSign, 0, numVars, (byte) 0);
       case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) 1);
+      case 'W' -> {
+        System.arraycopy(bestSign, 0, savedSign, 0, numVars);
+        walk();
+      }
       default -> System.arraycopy(bestSign, 0, savedSign, 0, numVars);
     }
     System.arraycopy(savedSign, 0, targetSign, 0, numVars);
     targetAssigned = 0;
     bestAssigned = 0;
+  }
+
+  /** Runs the Walker on the irredundant clauses from the saved phases and saves its best phases. */
+  private void walk() {
+    long begin = System.nanoTime();
+    int[] lits = new int[1024];
+    int[] start = new int[numOriginals + numOriginalBinaries / 2 + 1];
+    int n = 0;
+    int size = 0;
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      if ((mem[ref + META] & DELETED) != 0) {
+        continue;
+      }
+      int len = mem[ref + SIZE];
+      if (size + len > lits.length) {
+        lits = Arrays.copyOf(lits, Math.max(size + len, 2 * lits.length));
+      }
+      int from = size;
+      boolean satisfied = false;
+      for (int k = 0; k < len && !satisfied; k++) {
+        int l = mem[ref + HEADER + k];
+        satisfied = vals[l] > 0;
+        if (vals[l] == 0) {
+          lits[size++] = l;
+        }
+      }
+      if (satisfied) {
+        size = from;
+      } else {
+        start[n++] = from;
+      }
+    }
+    for (int i = 0; i < numOriginalBinaries; i += 2) {
+      int a = originalBinaries[i];
+      int b = originalBinaries[i + 1];
+      if (vals[a] == 0 && vals[b] == 0) {
+        if (size + 2 > lits.length) {
+          lits = Arrays.copyOf(lits, 2 * lits.length + 2);
+        }
+        start[n++] = size;
+        lits[size++] = a;
+        lits[size++] = b;
+      }
+    }
+    start[n] = size;
+    byte[] phases = Arrays.copyOf(savedSign, numVars);
+    for (int i = 0; i < trailSize; i++) {
+      phases[trail[i] >> 1] = (byte) (trail[i] & 1); // fixed at level 0
+    }
+    Walker walker = new Walker(numVars, lits, start, n, phases, ++walks);
+    walker.run(10_000_000L + (propagations - propagationsAtWalk) / 5);
+    propagationsAtWalk = propagations;
+    System.arraycopy(walker.best(), 0, savedSign, 0, numVars);
+    walkNanos += System.nanoTime() - begin;
+  }
+
+  /**
+   * Turns local search in the rephasing cycle on or off (on by default).
+   *
+   * @param on whether to walk
+   */
+  public void setWalk(boolean on) {
+    walking = on;
   }
 
   private void learnClause() {
