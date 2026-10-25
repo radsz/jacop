@@ -131,6 +131,11 @@ public class Alldiff extends Alldifferent {
   }
 
   @Override
+  protected boolean keepsMatching() {
+    return false;
+  }
+
+  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
   }
