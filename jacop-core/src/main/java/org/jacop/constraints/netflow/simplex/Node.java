@@ -30,6 +30,8 @@
 
 package org.jacop.constraints.netflow.simplex;
 
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
 /**
  * A node (vertex) in the network.
  *
@@ -64,6 +66,9 @@ public final class Node {
   public Node parent;
   public Node thread;
   public int depth;
+
+  /** The node i with i.thread == this. */
+  Node threadPredecessor;
 
   /** Number of connected arcs. */
   public int degree;
@@ -128,17 +133,15 @@ public final class Node {
   }
 
   /**
-   * Finds the predecessor of this node on the thread. It uses the parent node as starting point of
-   * the search. (Hence, this method cannot be invoked on the root)
+   * Returns the predecessor of this node on the thread.
    *
    * @return the node i with i.thread == this
    */
   public Node predecessorOnThread() {
-    Node i = parent;
-    while (i.thread != this) {
-      i = i.thread;
+    if (ASSERTS_ENABLED && threadPredecessor.thread != this) {
+      throw new IllegalStateException(String.valueOf(this));
     }
-    return i;
+    return threadPredecessor;
   }
 
   /**

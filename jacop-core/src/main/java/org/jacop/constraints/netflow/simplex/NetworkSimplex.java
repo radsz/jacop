@@ -118,6 +118,7 @@ public class NetworkSimplex {
       node.index = i;
       node.parent = root;
       node.thread = nextOnThread;
+      nextOnThread.threadPredecessor = node;
       node.depth = 1;
       nextOnThread = node;
 
@@ -134,6 +135,7 @@ public class NetworkSimplex {
     }
 
     root.thread = nextOnThread;
+    nextOnThread.threadPredecessor = root;
     root.potential = 0;
     root.depth = 0;
     root.computePotentials();
@@ -651,9 +653,14 @@ public class NetworkSimplex {
     Node i = b.predecessorOnThread();
     Node j = b.rightMostLeaf();
 
-    i.thread = j.thread;
-    j.thread = c.thread;
+    Node next = j.thread;
+    i.thread = next;
+    next.threadPredecessor = i;
+    next = c.thread;
+    j.thread = next;
+    next.threadPredecessor = j;
     c.thread = b;
+    b.threadPredecessor = c;
 
     b.parent = c;
   }
