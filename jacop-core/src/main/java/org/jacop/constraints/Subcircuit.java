@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -59,7 +60,7 @@ import org.jacop.util.DominatorTree;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Subcircuit extends Alldiff {
+public class Subcircuit extends Alldiff implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -479,5 +480,13 @@ public class Subcircuit extends Alldiff {
       }
     }
     return pruning;
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    // Backtracking above the first consistency undoes its pruning, so it has to be done again.
+    if (level <= firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 }

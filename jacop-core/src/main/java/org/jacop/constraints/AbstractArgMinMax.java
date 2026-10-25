@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
@@ -45,7 +46,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractArgMinMax extends Constraint implements SatisfiedPresent {
+public abstract class AbstractArgMinMax extends Constraint implements SatisfiedPresent, Stateful {
 
   /** It specifies a list of variables among which the extremum is being searched for. */
   protected final IntVar[] list;
@@ -57,6 +58,9 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
   protected int indexOffset;
 
   boolean firstConsistencyCheck = true;
+
+  /** The level of the first consistency, which restricts the index to the positions of the list. */
+  int firstConsistencyLevel;
 
   /**
    * Constructs an arg-min/max constraint.
@@ -128,6 +132,14 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
       return IntDomain.ANY;
     } else {
       return IntDomain.BOUND;
+    }
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    // Backtracking above the first consistency undoes its pruning, so it has to be done again.
+    if (level <= firstConsistencyLevel) {
+      firstConsistencyCheck = true;
     }
   }
 }

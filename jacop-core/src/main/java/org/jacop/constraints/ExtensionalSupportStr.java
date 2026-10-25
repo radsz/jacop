@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -75,6 +73,9 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   /** It specifies the tuples. */
   private int[][] tuples;
+
+  /** The tuples given to the constraint, from which its first consistency starts. */
+  private final int[][] originalTuples;
 
   /**
    * Gives the position of the first tuple (in the current list) or -1 if the current list is empty.
@@ -171,6 +172,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     views = new IndexDomainView[list.length];
 
     this.tuples = tuples;
+    this.originalTuples = tuples;
 
     numberId = idNumber.incrementAndGet();
 
@@ -247,10 +249,14 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void removeLevel(int level) {
 
-    if (ASSERTS_ENABLED && level <= firstConsistencyLevel) {
-      throw new IllegalStateException(
-          String.valueOf(
-              "Constraint has the level at which it has computed its initial state being removed."));
+    if (!firstConsistencyCheck && level <= firstConsistencyLevel) {
+      // The tuples and the views were built for the domains that backtracking restores, so the
+      // first consistency is done again.
+      firstConsistencyCheck = true;
+      backtrackOccured = false;
+      lastAssignedVariablePosition = -1;
+      Arrays.fill(domainSizeAfterConsistency, 0);
+      return;
     }
 
     //   It is called upon removing level
@@ -288,6 +294,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   /** First-time setup: filter supports, shrink tuples, build views, transform to indexes. */
   private void doFirstConsistencyCheck(Store store) {
+    // a failed first consistency may have left only some of the tuples
+    tuples = originalTuples;
     valuesInFocus = createValuesInFocus();
     boolean[] stillSupport = new boolean[tuples.length];
     int noSupports = markSupportAndCollectValuesInFocus(stillSupport);

@@ -88,6 +88,7 @@ public class Binpacking extends Constraint
   private final Map<IntVar, Integer> binMap;
   boolean lbPruning = true;
   private boolean firstConsistencyCheck = true;
+  private int firstConsistencyLevel;
   private int minBinNumber;
   private long sizeAllItems;
   private long alphaP;
@@ -233,6 +234,7 @@ public class Binpacking extends Constraint
       b.domain.in(store.level, b, minBinNumber, load.length - 1 + minBinNumber);
     }
     firstConsistencyCheck = false;
+    firstConsistencyLevel = store.level;
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
@@ -417,8 +419,12 @@ public class Binpacking extends Constraint
 
   @Override
   public void consistency(Store store) {
+    boolean first = firstConsistencyCheck;
     applyPackAllRule(store);
     todo.clear();
+    if (first) {
+      todo.set(0, load.length);
+    }
     IntervalDomain d = collectChangedDomains();
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
@@ -541,6 +547,10 @@ public class Binpacking extends Constraint
   public void removeLevel(int level) {
     itemQueue.clear();
     binQueue.clear();
+    // Backtracking above the first consistency undoes its pruning, so it has to be done again.
+    if (level <= firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override

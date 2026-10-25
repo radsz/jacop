@@ -63,15 +63,15 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   final int offsetInt;
   final int offsetSet;
 
-  boolean firstConsistencyCheck = true;
-
   /**
    * It constructs a Channel constraint.
    *
    * @param x array of integer variables.
    * @param s array of set variables.
-   * @param offsetInt offset for integer variables array.
-   * @param offsetSet offset for set variables array.
+   * @param offsetInt the index of x[0]: the sets hold the indexes offsetInt..offsetInt + x.length -
+   *     1.
+   * @param offsetSet the index of s[0]: the integer variables take the values offsetSet..offsetSet
+   *     + s.length - 1.
    */
   public ChannelIntSet(IntVar[] x, SetVar[] s, int offsetInt, int offsetSet) {
 
@@ -104,11 +104,6 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
-      doFirstConsistencyCheck(store);
-      firstConsistencyCheck = false;
-    }
-
     // The store does not re-queue this constraint for its own changes, so iterate to a fixpoint.
     do {
       store.propagationHasOccurred = false;
@@ -117,22 +112,15 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
     } while (store.propagationHasOccurred);
   }
 
-  private void doFirstConsistencyCheck(Store store) {
-    for (int i = 0; i < ni; i++) {
-      x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
-    }
-
-    for (int i = 0; i < ns; i++) {
-      s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
-    }
-  }
-
+  /** Keeps the values j of x[i] whose set s[j - offsetSet] can hold i + offsetInt. */
   private void propagateFromIntVariables(Store store) {
     for (int i = 0; i < ni; i++) {
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
         int xd = e.nextElement();
-        if (s[xd - offsetInt].dom().lub().contains(i + offsetInt)) {
+        if (xd >= offsetSet
+            && xd < ns + offsetSet
+            && s[xd - offsetSet].dom().lub().contains(i + offsetInt)) {
           vs.unionAdapt(xd);
         }
       }
@@ -140,31 +128,32 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       x[i].domain.in(store.level, x[i], vs);
 
       if (x[i].singleton()) {
-        IntDomain glb = new IntervalDomain(i + offsetInt, i + offsetInt);
-        s[x[i].value() - offsetInt].dom().inGlb(store.level, s[x[i].value() - offsetInt], glb);
+        SetVar set = s[x[i].value() - offsetSet];
+        set.domain.inGlb(store.level, set, new IntervalDomain(i + offsetInt, i + offsetInt));
       }
     }
   }
 
+  /** Keeps the elements e of s[j] whose variable x[e - offsetInt] can be j + offsetSet. */
   private void propagateFromSetVariables(Store store) {
-    for (int i = 0; i < ns; i++) {
-      IntDomain lub = s[i].dom().lub();
+    for (int j = 0; j < ns; j++) {
+      IntDomain lub = s[j].dom().lub();
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = lub.valueEnumeration(); e.hasMoreElements(); ) {
         int se = e.nextElement();
-        if (se >= offsetSet
-            && se <= ni + offsetInt
-            && x[se - offsetSet].domain.contains(i + offsetSet)) {
+        if (se >= offsetInt
+            && se < ni + offsetInt
+            && x[se - offsetInt].domain.contains(j + offsetSet)) {
           vs.unionAdapt(se);
         }
       }
 
-      s[i].domain.inLub(store.level, s[i], vs);
+      s[j].domain.inLub(store.level, s[j], vs);
 
-      IntDomain glb = s[i].dom().glb();
+      IntDomain glb = s[j].dom().glb();
       for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-        int se = e.nextElement();
-        x[se - offsetSet].domain.in(store.level, x[se - offsetSet], i + offsetSet, i + offsetSet);
+        IntVar v = x[e.nextElement() - offsetInt];
+        v.domain.in(store.level, v, j + offsetSet, j + offsetSet);
       }
     }
   }
@@ -175,20 +164,20 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
     for (int i = 0; i < ni; i++) {
       if (x[i].singleton()) {
         int v = x[i].value();
-        if (v < offsetInt
-            || v >= ns + offsetInt
-            || !s[v - offsetInt].dom().lub().contains(i + offsetSet)) {
+        if (v < offsetSet
+            || v >= ns + offsetSet
+            || !s[v - offsetSet].dom().lub().contains(i + offsetInt)) {
           return false;
         }
       }
     }
-    for (int i = 0; i < ns; i++) {
-      IntDomain glb = s[i].dom().glb();
+    for (int j = 0; j < ns; j++) {
+      IntDomain glb = s[j].dom().glb();
       for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
         int se = e.nextElement();
-        if (se < offsetSet
-            || se >= ni + offsetSet
-            || !x[se - offsetSet].domain.contains(i + offsetInt)) {
+        if (se < offsetInt
+            || se >= ni + offsetInt
+            || !x[se - offsetInt].domain.contains(j + offsetSet)) {
           return false;
         }
       }

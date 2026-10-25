@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,7 +55,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class ElementBool extends Constraint implements UsesQueueVariable {
+public class ElementBool extends Constraint implements UsesQueueVariable, Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -262,5 +263,15 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    // Backtracking above the first consistency undoes its pruning, so it has to be done again.
+    if (level <= firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+      indexHasChanged = true;
+      valueHasChanged = true;
+    }
   }
 }

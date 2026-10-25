@@ -80,6 +80,7 @@ public class ValuePrecede extends Constraint
   private int betaValue;
   private int gammaValue;
   private boolean firstConsistencyCheck = true;
+  private int firstConsistencyLevel;
   private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
 
   /**
@@ -143,14 +144,15 @@ public class ValuePrecede extends Constraint
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
-      initialize();
-      firstConsistencyCheck = false;
-    }
-
     alphaValue = alpha.value();
     betaValue = beta.value();
     gammaValue = gamma.value();
+
+    if (firstConsistencyCheck) {
+      initialize();
+      firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
+    }
 
     do {
 
@@ -284,6 +286,10 @@ public class ValuePrecede extends Constraint
   @Override
   public void removeLevel(int level) {
     varQueue.clear();
+    // Backtracking above the first consistency undoes its pruning, so it has to be done again.
+    if (level <= firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override

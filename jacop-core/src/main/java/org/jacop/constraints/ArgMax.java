@@ -100,6 +100,7 @@ public class ArgMax extends AbstractArgMinMax {
     if (firstConsistencyCheck) {
       extremeIndex.domain.in(store.level, extremeIndex, 1 + indexOffset, list.length + indexOffset);
       firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
     }
 
     do {
