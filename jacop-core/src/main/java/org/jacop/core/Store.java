@@ -1026,9 +1026,7 @@ public class Store {
     int top = booleanChangeLevelsSize - 1;
     if (top < 0 || booleanChangeLevels[top] != level) {
       if (booleanChangeLevelsSize >= booleanChangeLevels.length) {
-        int capacity = Math.max(16, 2 * booleanChangeLevelsSize + 1);
-        booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
-        booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
+        growBooleanChangeLevels();
       }
       booleanChangeLevels[booleanChangeLevelsSize] = level;
       booleanChangeSaved[booleanChangeLevelsSize] = position;
@@ -1036,6 +1034,12 @@ public class Store {
     }
 
     booleanChangePosition = position + 1;
+  }
+
+  private void growBooleanChangeLevels() {
+    int capacity = Math.max(16, 2 * booleanChangeLevelsSize + 1);
+    booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
+    booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
   }
 
   /**
@@ -1056,13 +1060,17 @@ public class Store {
    */
   void recordTimeStampLevel(TimeStamp<?> timeStamp, int stampLevel) {
     if (timeStampTrailSize >= timeStampTrail.length) {
-      int capacity = Math.max(64, 2 * timeStampTrailSize + 1);
-      timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
-      timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
+      growTimeStampTrail();
     }
     timeStampTrail[timeStampTrailSize] = timeStamp;
     timeStampTrailLevel[timeStampTrailSize] = stampLevel;
     timeStampTrailSize++;
+  }
+
+  private void growTimeStampTrail() {
+    int capacity = Math.max(64, 2 * timeStampTrailSize + 1);
+    timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
+    timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
   }
 
   /**

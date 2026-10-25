@@ -88,16 +88,20 @@ public class TrailBacktrackableManager implements BacktrackableManager {
       return;
     }
     if (trailSize >= trailIndex.length) {
-      int capacity = Math.max(64, 2 * trailSize + 1);
-      trailIndex = Arrays.copyOf(trailIndex, capacity);
-      trailLevel = Arrays.copyOf(trailLevel, capacity);
-      trailPrevious = Arrays.copyOf(trailPrevious, capacity);
+      grow();
     }
     trailIndex[trailSize] = index;
     trailLevel[trailSize] = currentLevel;
     trailPrevious[trailSize] = previous;
     trailSize++;
     recordedAt[index] = currentLevel;
+  }
+
+  private void grow() {
+    int capacity = Math.max(64, 2 * trailSize + 1);
+    trailIndex = Arrays.copyOf(trailIndex, capacity);
+    trailLevel = Arrays.copyOf(trailLevel, capacity);
+    trailPrevious = Arrays.copyOf(trailPrevious, capacity);
   }
 
   @Override
