@@ -503,6 +503,43 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  // Items 6, 4, 4, 2 and 2 fill two bins of capacity 9 exactly, which even sizes cannot do. L2
+  // gives two bins; the dual feasible function f_CCM1 with lambda = 2 maps the sizes to 6, 4, 4, 2,
+  // 2 and the capacity to 8, so three bins are needed.
+  @Test
+  void testBinpackingDualFeasibleFunctionBound() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {2, 6, 4, 2, 4}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Bins 0 and 1 hold 4 and 5 and have 5 free; the three items of size 6 must go to bins 2 and 3.
+  // With capacity 10 the virtual items are 5, 5, 0 and 0 and every bound allows four bins.
+  // Reduction RMax adds 1 to the capacity and to the virtual items, which become 6, 6, 1 and 1:
+  // five items larger than half of 11 need five bins.
+  @Test
+  void testBinpackingLowerBoundReductionRMax() {
+
+    Store store = new Store();
+    int[] w = {4, 6, 1, 6, 2, 4, 5, 6};
+    IntVar[] items = getIntVars(store, "item", w.length, 4);
+    items[5] = new IntVar(store, "fixed0", 0, 0);
+    items[6] = new IntVar(store, "fixed1", 1, 1);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 9),
+      new IntVar(store, "l1", 0, 10),
+      new IntVar(store, "l2", 0, 10),
+      new IntVar(store, "l3", 0, 10)
+    };
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 
