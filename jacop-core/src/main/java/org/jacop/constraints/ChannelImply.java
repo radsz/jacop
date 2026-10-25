@@ -111,6 +111,11 @@ public class ChannelImply extends AbstractChannel {
   }
 
   @Override
+  protected boolean itemSatisfied(boolean on, boolean equal) {
+    return !on || equal;
+  }
+
+  @Override
   public String toString() {
     return id() + " : ChannelImply(" + x + ", " + Arrays.asList(item) + " )";
   }

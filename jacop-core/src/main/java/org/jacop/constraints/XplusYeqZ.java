@@ -64,6 +64,14 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
   @Override
   public void consistency(final Store store) {
 
+    if (x == z || y == z) {
+      // x + y = x means y = 0 (and x + y = y means x = 0); the shifts below would not reach a
+      // fixpoint, since the constraint is not woken by its own pruning
+      IntVar other = x == z ? y : x;
+      other.domain.inValue(store.level, other, 0);
+      return;
+    }
+
     do {
 
       store.propagationHasOccurred = false;
@@ -124,6 +132,12 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
   @Override
   public void notConsistency(final Store store) {
 
+    if (x == z || y == z) {
+      IntVar other = x == z ? y : x;
+      other.domain.inComplement(store.level, other, 0);
+      return;
+    }
+
     do {
 
       store.propagationHasOccurred = false;
@@ -145,6 +159,9 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
 
   @Override
   public boolean notSatisfied() {
+    if (x == z || y == z) {
+      return !(x == z ? y : x).domain.contains(0);
+    }
     IntDomain xDom = x.dom();
     IntDomain yDom = y.dom();
     IntDomain zDom = z.dom();
@@ -154,6 +171,9 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ {
   @Override
   public boolean satisfied() {
 
+    if (x == z || y == z) {
+      return (x == z ? y : x).singleton(0);
+    }
     int xMin = x.min();
     int yMin = y.min();
     int zMin = z.min();

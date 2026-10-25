@@ -83,11 +83,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     boundConsistency(store);
   }
 
-  private static boolean isTanSingularityInRange(double min, double max) {
-    return (FloatDomain.PI / 2 >= min && FloatDomain.PI / 2 <= max)
-        || (-FloatDomain.PI / 2 >= min && -FloatDomain.PI / 2 <= max);
-  }
-
   void boundConsistency(Store store) {
 
     if (p.max() - p.min() >= FloatDomain.PI) {
@@ -103,83 +98,26 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
       double min = p.min();
       double max = p.max();
-      if (p.min() < -FloatDomain.PI || p.max() > FloatDomain.PI) {
-        FloatInterval normP = normalize(p);
-        min = normP.min();
-        max = normP.max();
-      }
 
-      FloatInterval minMax = new FloatInterval(min, max);
-      if (minMax.singleton() && isTanSingularityInRange(min, max)) {
-        throw Store.failException;
-      }
-
-      double[] qBounds = computeTangentBounds(min, max);
-      if (qBounds == null) {
+      // p is narrower than PI, so it contains a pole of tan iff cos changes sign over it; Math.cos
+      // reduces its argument exactly, so the signs are right far from zero too
+      double cosMin = Math.cos(min);
+      double cosMax = Math.cos(max);
+      if (cosMin == 0.0 || cosMax == 0.0 || (cosMin < 0) != (cosMax < 0)) {
+        if (new FloatInterval(min, max).singleton()) {
+          throw Store.failException;
+        }
         return;
       }
 
-      q.domain.in(store.level, q, qBounds[0], qBounds[1]);
-      updateFirstDomainFromSecond(store, qBounds[0], qBounds[1]);
+      // tan is increasing between two poles
+      double qMin = FloatDomain.down(Math.tan(min));
+      double qMax = FloatDomain.up(Math.tan(max));
+      q.domain.in(store.level, q, qMin, qMax);
+
+      updateFirstDomainFromSecond(store, qMin, qMax);
 
     } while (store.propagationHasOccurred);
-  }
-
-  /** Returns {qMin, qMax} or null if we should return from the loop. */
-  private double[] computeTangentBounds(double min, double max) {
-    int intervalForMin = intervalNo(min);
-    int intervalForMax = intervalNo(max);
-
-    switch (intervalForMin) {
-      case 1:
-        if (intervalForMax != 1) {
-          return null;
-        }
-        return boundsForIntervalOne(min, max);
-      case 2:
-        if (intervalForMax != 2) {
-          return null;
-        }
-        return boundsForIntervalTwo(min, max);
-      case 3:
-        if (intervalForMax != 3) {
-          return null;
-        }
-        return boundsForIntervalThree(min, max);
-      default:
-        return null;
-    }
-  }
-
-  private static double[] boundsForIntervalOne(double min, double max) {
-    double qMin = FloatDomain.down(Math.tan(min));
-    double qMax = FloatDomain.up(Math.tan(max));
-    if (qMax < 0) {
-      qMax = FloatDomain.MAX_FLOAT;
-    }
-    return new double[] {qMin, qMax};
-  }
-
-  private static double[] boundsForIntervalTwo(double min, double max) {
-    double qMin = FloatDomain.down(Math.tan(min));
-    double qMax = FloatDomain.up(Math.tan(max));
-    if (qMin > qMax) {
-      if (qMax > 0) {
-        qMin = -FloatDomain.MAX_FLOAT;
-      } else if (qMin < 0) {
-        qMax = FloatDomain.MAX_FLOAT;
-      }
-    }
-    return new double[] {qMin, qMax};
-  }
-
-  private static double[] boundsForIntervalThree(double min, double max) {
-    double qMin = FloatDomain.down(Math.tan(min));
-    double qMax = FloatDomain.up(Math.tan(max));
-    if (qMin > 0) {
-      qMin = -FloatDomain.MAX_FLOAT;
-    }
-    return new double[] {qMin, qMax};
   }
 
   private void updateFirstDomainFromSecond(Store store, double qminValue, double qmaxValue) {
@@ -193,44 +131,15 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
     if (Double.isNaN(pMax)) {
       pMax = FloatDomain.PI / 2;
     }
+    // k * PI is computed in doubles, so widen the shifted bounds by its error
     double k = Math.floor(p.min() / FloatDomain.PI);
-    double low = FloatDomain.down(pMin + k * FloatDomain.PI);
+    double low = pMin + k * FloatDomain.PI;
+    low = FloatDomain.down(low - AbstractTrigConstraint.reductionError(low, FloatDomain.PI));
     k = Math.ceil(p.max() / FloatDomain.PI);
-    double high = FloatDomain.up(pMax + k * FloatDomain.PI);
+    double high = pMax + k * FloatDomain.PI;
+    high = FloatDomain.up(high + AbstractTrigConstraint.reductionError(high, FloatDomain.PI));
     FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
     p.domain.in(store.level, p, pDom);
-  }
-
-  /*
-   * Normalizes argument to interval -PI..PI
-   */
-  FloatInterval normalize(FloatVar v) {
-    double min = v.min();
-    double max = v.max();
-
-    double normMin = min % FloatDomain.PI;
-    double normMax = normMin + max - min;
-
-    if (normMax >= FloatDomain.PI) {
-      normMin -= FloatDomain.PI;
-      normMax -= FloatDomain.PI;
-    }
-
-    return new FloatInterval(normMin, normMax);
-  }
-
-  int intervalNo(double d) {
-    if (d >= -FloatDomain.PI && d < -FloatDomain.PI / 2) {
-      return 1;
-    }
-    if (d >= -FloatDomain.PI / 2 && d < FloatDomain.PI / 2) {
-      return 2;
-    }
-    if (d >= FloatDomain.PI / 2 && d <= FloatDomain.PI) {
-      return 3; // undefined
-    } else {
-      return 0; // undefined
-    }
   }
 
   @Override

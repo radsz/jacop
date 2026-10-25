@@ -140,16 +140,21 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
       return false;
     }
 
+    int ones = 0;
     for (int i = 0; i < n; i++) {
       if (b[i].singleton(0) && s.dom().glb().contains(i + offset)) {
         return false;
       }
-      if (b[i].singleton(1) && !s.dom().glb().contains(i + offset)) {
-        return false;
+      if (b[i].singleton(1)) {
+        if (!s.dom().glb().contains(i + offset)) {
+          return false;
+        }
+        ones++;
       }
     }
 
-    return true;
+    // s has no element outside offset..offset+n-1
+    return s.dom().glb().getSize() == ones;
   }
 
   boolean allGround() {

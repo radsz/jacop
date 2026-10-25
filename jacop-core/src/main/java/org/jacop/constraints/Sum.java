@@ -68,6 +68,9 @@ public class Sum extends Constraint implements SatisfiedPresent {
   /** The position for the next grounded variable. */
   private TimeStamp<Integer> nextGroundedPosition;
 
+  /** True if the sum variable is also one of the summed variables. */
+  private final boolean sumInList;
+
   /**
    * It constructs sum constraint which sums all variables and makes it equal to variable sum.
    *
@@ -83,6 +86,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     this.sum = sum;
     this.list = Arrays.copyOf(list, list.length);
+    this.sumInList = Arrays.asList(list).contains(sum);
 
     setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
   }
@@ -152,7 +156,11 @@ public class Sum extends Constraint implements SatisfiedPresent {
     boolean needAdaptMax = sum.max() < upperBoundSum;
 
     sum.domain.in(store.level, sum, long2int(lowerBoundSum), long2int(upperBoundSum));
-    store.propagationHasOccurred = false;
+    // a change of the sum is already used below, unless the sum is also in the list and so
+    // changes the bounds it was computed from
+    if (!sumInList) {
+      store.propagationHasOccurred = false;
+    }
 
     if (needAdaptMin && !needAdaptMax) {
       propagateMinToVariables(store, pointer, upperBoundSum);

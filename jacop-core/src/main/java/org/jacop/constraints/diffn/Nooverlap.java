@@ -420,7 +420,9 @@ public class Nooverlap extends Constraint {
   public boolean satisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {
-        if (!rectangle[i].noOverlap(rectangle[j], 0) && !rectangle[i].noOverlap(rectangle[j], 0)) {
+        if (!rectangle[i].noOverlap(rectangle[j], 0)
+            && !rectangle[i].noOverlap(rectangle[j], 1)
+            && (strict || !(rectangle[i].isEmpty() || rectangle[j].isEmpty()))) {
           return false;
         }
       }
@@ -436,7 +438,8 @@ public class Nooverlap extends Constraint {
   public boolean notSatisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {
-        if (rectangle[i].doOverlap(rectangle[j])) {
+        if (rectangle[i].doOverlap(rectangle[j])
+            && (strict || rectangle[i].exists() && rectangle[j].exists())) {
           return true;
         }
       }

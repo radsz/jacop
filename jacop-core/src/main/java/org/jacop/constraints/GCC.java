@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -87,6 +88,12 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
 
   /** The counted values in increasing order; a value is referred to by its position here. */
   private int[] domainHash;
+
+  /** The counted values as a domain. */
+  private IntervalDomain countedValues;
+
+  /** Whether some x variable can take a value that is not counted, so x is restricted first. */
+  private boolean restrictX;
 
   /** Whether the counted values form an interval, so the position of a value is value - base. */
   private boolean contiguous;
@@ -154,6 +161,24 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
    * @param counters variables which count the values.
    */
   public GCC(IntVar[] x, IntVar[] counters) {
+    this(x, counters, null);
+  }
+
+  /**
+   * It constructs global cardinality constraint where counters[i] counts the occurrences of value
+   * firstValue + i. Unlike {@link #GCC(IntVar[], IntVar[])} it does not depend on the current
+   * domains of x, so x may contain singletons or variables that cannot take some counted value. The
+   * variables x can take only the counted values.
+   *
+   * @param x variables which values are counted.
+   * @param counters variables which count the values firstValue, firstValue + 1, ...
+   * @param firstValue the value counted by counters[0].
+   */
+  public GCC(IntVar[] x, IntVar[] counters, int firstValue) {
+    this(x, counters, Integer.valueOf(firstValue));
+  }
+
+  private GCC(IntVar[] x, IntVar[] counters, Integer firstValue) {
 
     checkInputForNullness(new String[] {"x", "counters"}, x, counters);
     checkInputForDuplicationSkipSingletons("x", x);
@@ -161,7 +186,10 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
 
-    counters = removeZeroCounters(x, counters);
+    counters =
+        firstValue == null
+            ? removeZeroCounters(x, counters)
+            : removeZeroCounters(x, counters, firstValue);
 
     xSize = x.length;
     ySize = counters.length;
@@ -228,25 +256,69 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
           "GCC failure : join domain of x variables doesn't cover all count variables");
     }
 
-    // no changes required
     if (d.getSize() == counters.length) {
-      return counters;
+      // the counters are of the values of the union, in increasing order
+      int[] values = new int[counters.length];
+      int i = 0;
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        values[i++] = e.nextElement();
+      }
+      return keepCounters(x, counters, values);
     }
 
-    // zero counters encountered.
-    IntVar[] result = new IntVar[d.getSize()];
-    zeroCounters = new HashSet<>();
+    // the counters are of every value from the minimum of the union to its maximum
+    return removeZeroCounters(x, counters, d.min());
+  }
 
-    int i = 0;
-    for (int k = d.min(); k <= d.max(); k++) {
-      if (d.contains(k)) {
-        result[i++] = counters[k - d.min()];
+  /** The counters are of the values firstValue, firstValue + 1, ... */
+  private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters, int firstValue) {
+
+    int[] values = new int[counters.length];
+    for (int k = 0; k < counters.length; k++) {
+      values[k] = firstValue + k;
+    }
+    return keepCounters(x, counters, values);
+  }
+
+  /**
+   * Keeps the counters of the values some x variable can take, records their values in domainHash
+   * and the other counters in zeroCounters.
+   *
+   * @param values values[i] is the value counted by counters[i], in increasing order.
+   */
+  private IntVar[] keepCounters(IntVar[] x, IntVar[] counters, int[] values) {
+
+    IntervalDomain d = new IntervalDomain();
+    for (IntVar aX : x) {
+      d = (IntervalDomain) d.union(aX.domain);
+    }
+
+    List<IntVar> kept = new ArrayList<>();
+    List<Integer> keptValues = new ArrayList<>();
+    for (int k = 0; k < counters.length; k++) {
+      if (d.contains(values[k])) {
+        kept.add(counters[k]);
+        keptValues.add(values[k]);
       } else {
-        zeroCounters.add(counters[k - d.min()]);
+        if (zeroCounters == null) {
+          zeroCounters = new HashSet<>();
+        }
+        zeroCounters.add(counters[k]);
       }
     }
 
-    return result;
+    domainHash = keptValues.stream().mapToInt(Integer::intValue).toArray();
+    countedValues = new IntervalDomain();
+    for (int v : domainHash) {
+      countedValues.unionAdapt(v, v);
+    }
+    restrictX = !countedValues.contains(d);
+    if (domainHash.length > 0) {
+      base = domainHash[0];
+      contiguous = domainHash[domainHash.length - 1] - base + 1 == domainHash.length;
+    }
+
+    return kept.toArray(new IntVar[0]);
   }
 
   @Override
@@ -262,6 +334,11 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
       if (zeroCounters != null) {
         for (IntVar zeroCounter : zeroCounters) {
           zeroCounter.domain.inValue(store.level, zeroCounter, 0);
+        }
+      }
+      if (restrictX) {
+        for (IntVar v : x) {
+          v.domain.in(store.level, v, countedValues);
         }
       }
       firstConsistencyCheck = false;
@@ -401,25 +478,6 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
 
     stamp = new TimeStamp<>(store, xSize);
 
-    IntervalDomain d = new IntervalDomain();
-
-    for (int i = 0; i < xSize; i++) {
-      d = (IntervalDomain) d.union(x[i].domain);
-    }
-
-    if (d.getSize() != ySize) {
-      throw new IllegalArgumentException(
-          "GCC failure : join domain of x variables doesn't cover all count variables");
-    }
-
-    domainHash = new int[ySize];
-    int i = 0;
-    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-      domainHash[i++] = e.nextElement();
-    }
-    base = domainHash[0];
-    contiguous = domainHash[ySize - 1] - base + 1 == ySize;
-
     super.impose(store);
   }
 
@@ -432,7 +490,11 @@ public class GCC extends Constraint implements Stateful, SatisfiedPresent {
 
     int[] count = new int[ySize];
     for (IntVar xVar : x) {
-      count[position(xVar.value())]++;
+      int p = position(xVar.value());
+      if (p < 0 || p >= ySize || domainHash[p] != xVar.value()) {
+        return false;
+      }
+      count[p]++;
     }
 
     for (int i = 0; i < ySize; i++) {

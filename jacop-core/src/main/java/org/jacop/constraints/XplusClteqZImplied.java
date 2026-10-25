@@ -119,7 +119,14 @@ public class XplusClteqZImplied extends PrimitiveConstraint {
   @Override
   public void consistency(final Store store) {
 
-    if (b.max() == 0) {
+    if (x == z) {
+      // b => x + c <= x is b = 0 for c > 0 and true otherwise; the bounds below would shrink by c
+      // per call, but the constraint is not woken by its own pruning
+      if (c > 0) {
+        b.domain.inValue(store.level, b, 0);
+      }
+      removeConstraint();
+    } else if (b.max() == 0) {
       removeConstraint();
     } else if (b.min() == 1) {
       x.domain.inMax(store.level, x, z.max() - c);
@@ -139,19 +146,25 @@ public class XplusClteqZImplied extends PrimitiveConstraint {
   public void notConsistency(final Store store) {
 
     // not (b => x + c <= z) is b and x + c > z.
+    if (x == z && c <= 0) {
+      throw Store.failException;
+    }
     b.domain.inValue(store.level, b, 1);
+    if (x == z) {
+      return;
+    }
     x.domain.inMin(store.level, x, z.min() - c + 1);
     z.domain.inMax(store.level, z, x.max() + c - 1);
   }
 
   @Override
   public boolean satisfied() {
-    return b.max() == 0 || x.max() + c <= z.min();
+    return b.max() == 0 || (x == z ? c <= 0 : x.max() + c <= z.min());
   }
 
   @Override
   public boolean notSatisfied() {
-    return b.min() == 1 && x.min() + c > z.max();
+    return b.min() == 1 && (x == z ? c > 0 : x.min() + c > z.max());
   }
 
   @Override

@@ -108,6 +108,14 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public void consistency(final Store store) {
+    if (x == z) {
+      // x + c <= x holds only for c <= 0; the bounds below would shrink by c per call, but the
+      // constraint is not woken by its own pruning
+      if (c > 0) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     x.domain.inMax(store.level, x, z.max() - c);
     z.domain.inMin(store.level, z, x.min() + c);
@@ -115,6 +123,12 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public void notConsistency(final Store store) {
+    if (x == z) {
+      if (c <= 0) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     x.domain.inMin(store.level, x, z.min() - c + 1);
     z.domain.inMax(store.level, z, x.max() + c - 1);
@@ -122,11 +136,17 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ {
 
   @Override
   public boolean notSatisfied() {
+    if (x == z) {
+      return c > 0;
+    }
     return x.min() + c > z.max();
   }
 
   @Override
   public boolean satisfied() {
+    if (x == z) {
+      return c <= 0;
+    }
     return x.max() + c <= z.min();
   }
 

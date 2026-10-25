@@ -140,32 +140,23 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     if (!x.singleton()) {
       return false;
     }
-    int one = findSingleActiveIndexOrMinValue();
-    return one != Integer.MIN_VALUE && x.value() == item[one].value;
+    int value = x.value();
+    for (Item i : item) {
+      if (!i.b.singleton() || !itemSatisfied(i.b.value() == 1, value == i.value)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
-   * If all items are singleton and exactly one has value 1, returns that index; otherwise
-   * Integer.MIN_VALUE.
+   * Tells whether one item holds once x and its variable b are fixed.
+   *
+   * @param on whether b is 1
+   * @param equal whether x is equal to the value of the item
+   * @return true if the item holds
    */
-  private int findSingleActiveIndexOrMinValue() {
-    int one = Integer.MIN_VALUE;
-    for (int i = 0; i < n; i++) {
-      if (!item[i].b.singleton()) {
-        return Integer.MIN_VALUE;
-      }
-      if (item[i].b.value() == 1) {
-        if (one == -1) {
-          one = i;
-        } else {
-          return Integer.MIN_VALUE;
-        }
-      } else {
-        return Integer.MIN_VALUE;
-      }
-    }
-    return one;
-  }
+  protected abstract boolean itemSatisfied(boolean on, boolean equal);
 
   @Override
   public void impose(Store store) {

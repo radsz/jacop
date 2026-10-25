@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -50,6 +52,39 @@ public class AcosPeqR extends CosPeqR {
    */
   public AcosPeqR(FloatVar p, FloatVar q) {
     super(q, p);
+  }
+
+  /**
+   * Propagates R = acos(P) on the principal branch: R is restricted to 0..PI, where cos is
+   * decreasing, so both directions are bounds of monotone functions (cos(R) = P alone also accepted
+   * R = -acos(P) + 2kPI).
+   */
+  @Override
+  protected void boundConsistency(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      if (satisfied()) {
+        return;
+      }
+
+      p.domain.in(
+          store.level,
+          p,
+          FloatDomain.down(Math.acos(Math.min(q.max(), 1.0))),
+          FloatDomain.up(Math.acos(Math.max(q.min(), -1.0))));
+      q.domain.in(
+          store.level, q, FloatDomain.down(Math.cos(p.max())), FloatDomain.up(Math.cos(p.min())));
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean satisfied() {
+    // also compare in the direction of acos, which is well conditioned where the forward
+    // function is not (tan near its poles, sin and cos near their extrema)
+    return (super.satisfied() || satisfiedWithTrigFunctionStatic(q, p, Math::acos))
+        && p.min() >= FloatDomain.down(0.0)
+        && p.max() <= FloatDomain.up(FloatDomain.PI);
   }
 
   @Override

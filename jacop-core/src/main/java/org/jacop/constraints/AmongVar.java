@@ -1167,19 +1167,39 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       int ub0 = ub0Ts.value();
 
       boolean allYsGrounded = yGrounded.value() == listOfY.length;
-      boolean allXsGrounded = xGrounded.value() == listOfX.length;
 
       if (allYsGrounded && n.value() == lb0 && lb0 == ub0) {
         return true;
       }
 
-      if (ASSERTS_ENABLED && allYsGrounded && allXsGrounded && n.value() != lb0) {
-        throw new IllegalStateException(
-            String.valueOf(
-                " Domain of N or value of timestamp LBoUTS was not maintenated properly"));
+      // the stamps lag behind the variables this constraint grounded itself, so a ground
+      // assignment is counted directly
+      if (allYsGrounded) {
+        int count = groundCount();
+        return count >= 0 && n.value() == count;
       }
     }
     return false;
+  }
+
+  /** The number of X equal to some Y if all of them are ground, otherwise -1. */
+  private int groundCount() {
+    int count = 0;
+    for (IntVar x : listOfX) {
+      if (!x.singleton()) {
+        return -1;
+      }
+      for (IntVar y : listOfY) {
+        if (!y.singleton()) {
+          return -1;
+        }
+        if (x.value() == y.value()) {
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
   }
 
   @Override

@@ -444,17 +444,24 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   void gen_jacop_circuit(SimpleNode node) {
+    genCircuit(node, 1);
+  }
+
+  void gen_jacop_circuit_offset(SimpleNode node) {
+    genCircuit(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1)));
+  }
+
+  private void genCircuit(SimpleNode node, int offset) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // successors must all be different, so the same variable (or constant) twice is infeasible
     checkForDuplicateVariables(v);
 
-    support.pose(new Circuit(v));
+    support.pose(new Circuit(v, offset));
 
-    if (support.domainConsistency
-        && !support.options
-            .getBoundConsistency()) { // we add additional implied constraint if domain consistency
-      // is
-      // required
+    // Circuit propagates all-different on values only; the implied Alldistinct (GAC
+    // all-different) is posted by default, as it cuts failures several times on circuit models
+    // at little cost. Option -b (bounds consistency) leaves it out.
+    if (!support.options.getBoundConsistency()) {
       support.parameterListForAlldistincts.add(v);
     }
   }
@@ -465,11 +472,8 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
     support.pose(new Subcircuit(v));
 
-    if (support.domainConsistency
-        && !support.options
-            .getBoundConsistency()) { // we add additional implied constraint if domain consistency
-      // is
-      // required
+    // the successors of a subcircuit are all different too (x[i] = i is unique to i)
+    if (!support.options.getBoundConsistency()) {
       support.parameterListForAlldistincts.add(v);
     }
   }
