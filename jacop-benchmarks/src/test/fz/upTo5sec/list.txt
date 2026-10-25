@@ -2729,5 +2729,7 @@ ttppv_cost_regular/rand8_0_unsat
 argmax_rows/argmax_rows
 argmax_bool_first/argmax_bool_first
 argmin_facility/argmin_facility
+member_reif_var/member_reif_var
+member_reif_var_first/member_reif_var_first
 atsp0/atsp22-1
 atsp0/atsp22-2
