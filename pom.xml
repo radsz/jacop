@@ -205,6 +205,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/LcgSolverTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -283,6 +284,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/LcgSolverTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -361,6 +363,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/LcgSolverTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -439,6 +442,7 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/LcgSolverTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>

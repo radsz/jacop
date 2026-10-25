@@ -106,8 +106,25 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     store.removeLevelLateListeners.remove(this);
   }
 
-  private int slot(IntVar x) {
+  /**
+   * Returns the number by which this trail knows a variable: its store index.
+   *
+   * @param x the variable
+   * @return its number, at least 0
+   * @throws UnsupportedOperationException for a variable without a store index (a {@link
+   *     org.jacop.core.BooleanVar}), which the trail does not record yet
+   */
+  public int id(IntVar x) {
     int i = x.index();
+    if (i < 0) {
+      throw new UnsupportedOperationException(
+          "the atomic trail does not record " + x.id() + " (no store index)");
+    }
+    return i;
+  }
+
+  private int slot(IntVar x) {
+    int i = id(x);
     if (i >= shadow.length) {
       int n = Math.max(i + 1, 2 * shadow.length);
       int old = shadow.length;
@@ -169,7 +186,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     while (size > 0 && level[size - 1] >= removedLevel) {
       size--;
       IntVar x = var[size];
-      int i = x.index();
+      int i = id(x);
       last[i] = previous[size];
       shadow[i] = x.dom().cloneLight();
       var[size] = null;
@@ -237,7 +254,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   private int lastBefore(IntVar x, int position) {
-    int i = x.index();
+    int i = id(x);
     if (i >= last.length) {
       return -1;
     }
