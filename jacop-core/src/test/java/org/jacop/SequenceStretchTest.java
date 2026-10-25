@@ -39,10 +39,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.Stretch;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -397,5 +399,85 @@ class SequenceStretchTest {
             && search.labeling(
                 store, new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMin<>()));
     assertThat(found).isFalse();
+  }
+
+  private static boolean stretchHolds(int[] word, int[] values, int[] min, int[] max) {
+    int i = 0;
+    while (i < word.length) {
+      int j = i;
+      while (j < word.length && word[j] == word[i]) {
+        j++;
+      }
+      int k = 0;
+      while (k < values.length && values[k] != word[i]) {
+        k++;
+      }
+      if (k == values.length || j - i < min[k] || j - i > max[k]) {
+        return false;
+      }
+      i = j;
+    }
+    return true;
+  }
+
+  @Test
+  void stretchMatchesBruteForceWithRepeatedVariablesAndLongMaxima() {
+    Random random = new Random(29);
+    for (int trial = 0; trial < 2000; trial++) {
+      int n = 1 + random.nextInt(7);
+      int vars = trial % 2 == 0 ? n : 1 + random.nextInt(n);
+      int[][] domains = new int[vars][];
+      for (int i = 0; i < vars; i++) {
+        domains[i] = domain(random, 1, 4);
+      }
+      int[] list = new int[n];
+      for (int j = 0; j < n; j++) {
+        list[j] = trial % 2 == 0 ? j : random.nextInt(vars);
+      }
+      int[] values = random.nextBoolean() ? new int[] {1, 2, 3} : new int[] {1, 3};
+      int[] min = new int[values.length];
+      int[] max = new int[values.length];
+      for (int k = 0; k < values.length; k++) {
+        min[k] = random.nextInt(4);
+        max[k] = random.nextInt(5) == 0 ? 1_000_000_000 : min[k] + random.nextInt(4) - 1;
+      }
+
+      Set<List<Integer>> expected = new HashSet<>();
+      enumerate(
+          domains,
+          new int[vars],
+          0,
+          values1 -> {
+            int[] word = Arrays.stream(list).map(j -> values1[j]).toArray();
+            if (stretchHolds(word, values, min, max)) {
+              expected.add(Arrays.stream(values1).boxed().toList());
+            }
+          });
+
+      Store store = new Store();
+      IntVar[] x = variables(store, domains);
+      store.imposeDecomposition(new Stretch(values, min, max, sequence(x, list)));
+      assertThat(allSolutions(store, x, random.nextInt()))
+          .as(
+              "trial %d domains=%s list=%s values=%s min=%s max=%s",
+              trial,
+              Arrays.deepToString(domains),
+              Arrays.toString(list),
+              Arrays.toString(values),
+              Arrays.toString(min),
+              Arrays.toString(max))
+          .isEqualTo(expected);
+    }
+  }
+
+  private static void enumerate(int[][] domains, int[] values, int index, Consumer<int[]> action) {
+    if (index == values.length) {
+      action.accept(values);
+      return;
+    }
+    for (int v : domains[index]) {
+      values[index] = v;
+      enumerate(domains, values, index + 1, action);
+    }
   }
 }
