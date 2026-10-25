@@ -2724,3 +2724,6 @@ ttppv_cost_regular/rand6_1
 ttppv_cost_regular/rand6_4
 ttppv_cost_regular/rand6_12
 ttppv_cost_regular/rand8_0_unsat
+argmax_rows/argmax_rows
+argmax_bool_first/argmax_bool_first
+argmin_facility/argmin_facility

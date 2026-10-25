@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "jacop_array_var_bool_element_nonshifted", "jacop_array_var_int_element_nonshifted", "jacop_minimum_arg_int"],
+  "constraintFamilies": ["boolean", "linear", "minmax"],
+  "domains": []
+}
