@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -883,6 +885,37 @@ class FlatzincFrontEndTest {
     String out = run(fzn.formatted(hint))[0];
     assertTrue(out.contains("x = 3;") && out.contains("y = 1;") && out.contains("b = true;"), out);
     assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(hint)));
+  }
+
+  @Test
+  void warmStartInSequenceSearchStopsAtTheTimeLimit() {
+    // a warm_start inside seq_search (or next to another search annotation) was not in the list of
+    // searches that get the time limit, so a long search under it ignored -t; 13 pigeons in 12
+    // holes take hours without the limit
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      fzn.append("var 1..12: x").append(i).append(";\n");
+    }
+    StringBuilder vars = new StringBuilder();
+    StringBuilder hint = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      vars.append(i == 0 ? "" : ",").append("x").append(i);
+      hint.append(i == 0 ? "" : ",").append(i % 12 + 1);
+    }
+    fzn.append("array [1..13] of var int: x = [").append(vars).append("];\n");
+    for (int i = 0; i < 13; i++) {
+      for (int j = i + 1; j < 13; j++) {
+        fzn.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+      }
+    }
+    fzn.append("solve :: seq_search([warm_start(x,[")
+        .append(hint)
+        .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
+
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+            0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
   }
 
   private String[] run(String model, String... options) throws IOException {
