@@ -392,7 +392,15 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     return false;
   }
 
+  // the explanations hold for the relation of every task present; CumulativeOptional and other
+  // subclasses with another relation use the generic reason
   private boolean fixedTasks() {
+    Class<?> type = getClass();
+    if (type != CumulativeBasic.class
+        && type != Cumulative.class
+        && type != CumulativeUnary.class) {
+      return false;
+    }
     if (!limit.singleton() || possibleZeroTasks) {
       return false;
     }
