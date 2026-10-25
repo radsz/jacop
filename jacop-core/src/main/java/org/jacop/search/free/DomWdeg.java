@@ -316,7 +316,8 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
       IntVar v = vars[positions[p]];
       if (!v.singleton()) {
         // the domain may be empty in the failed state
-        varWeights[positions[p]][positions[p + 1]] += 1.0d / (unfixed * Math.max(1, v.getSize()));
+        varWeights[positions[p]][positions[p + 1]] +=
+            1.0d / ((double) unfixed * Math.max(1, v.getSize()));
       }
     }
   }
