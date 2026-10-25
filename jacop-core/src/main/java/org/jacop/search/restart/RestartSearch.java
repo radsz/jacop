@@ -151,19 +151,14 @@ public class RestartSearch<T extends Var> {
   public boolean labeling() {
 
     store.setLevel(store.level + 1);
-    boolean result = true;
-    while (result) {
+    boolean restart = true;
+    while (restart) {
 
-      result = runOneRestartIteration();
+      boolean result = runOneRestartIteration();
 
       cleanupAfterIterationIfRar();
 
       atLeastOneSolution |= result;
-
-      if (restartsLimit > 0 && numberRestarts > restartsLimit) {
-        restartsLimitReached = true;
-        break;
-      }
 
       Optional<Boolean> exit = checkRestartExitConditions();
       if (exit.isPresent()) {
@@ -172,10 +167,15 @@ public class RestartSearch<T extends Var> {
         return exit.get();
       }
 
-      result = computeNextResult(result);
+      restart = computeNextResult(result);
+      if (restart && restartsLimit > 0 && numberRestarts >= restartsLimit) {
+        // the search is incomplete only when it would restart once more
+        restartsLimitReached = true;
+        break;
+      }
       calculator.newLimit();
 
-      if (result) {
+      if (restart) {
         numberRestarts++;
       }
     }

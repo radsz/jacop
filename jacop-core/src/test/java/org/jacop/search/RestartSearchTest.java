@@ -376,4 +376,44 @@ class RestartSearchTest {
     assertArrayEquals(new long[] {3, 3, 6, 3, 3, 6, 12, 3}, limits(new LubyCalculator(3), 8));
     assertArrayEquals(new long[] {2, 4, 6, 8}, limits(new LinearCalculator(2), 4));
   }
+
+  @Test
+  void restartLimitAllowsThatManyRestarts() {
+    // A limit of n allowed n + 1 restarts, and a search that proved the optimum in its last allowed
+    // run was reported as stopped by the limit.
+    Random rnd = new Random(41);
+    int checked = 0;
+    for (int k = 0; k < 50; k++) {
+      Instance instance = Instance.random(rnd);
+      Model unlimited = new Model(instance);
+      if (!unlimited.store.consistency()) {
+        continue;
+      }
+      RestartSearch<IntVar> reference = unlimited.restartSearch(new LubyCalculator(1), true);
+      reference.labeling();
+      int restarts = reference.restarts();
+      if (restarts < 2) {
+        continue;
+      }
+      checked++;
+
+      Model enough = new Model(instance);
+      enough.store.consistency();
+      RestartSearch<IntVar> complete = enough.restartSearch(new LubyCalculator(1), true);
+      complete.setRestartsLimit(restarts);
+      complete.labeling();
+      assertFalse(complete.restartsLimitReached(), "limit " + restarts + " on " + instance);
+      assertEquals(restarts, complete.restarts());
+      assertEquals(reference.getIntCost(), complete.getIntCost());
+
+      Model fewer = new Model(instance);
+      fewer.store.consistency();
+      RestartSearch<IntVar> limited = fewer.restartSearch(new LubyCalculator(1), true);
+      limited.setRestartsLimit(restarts - 1);
+      limited.labeling();
+      assertTrue(limited.restartsLimitReached(), "limit " + (restarts - 1) + " on " + instance);
+      assertEquals(restarts - 1, limited.restarts());
+    }
+    assertTrue(checked > 10, "too few instances needed two restarts: " + checked);
+  }
 }
