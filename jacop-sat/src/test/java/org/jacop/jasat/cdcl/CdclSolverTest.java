@@ -410,7 +410,10 @@ class CdclSolverTest {
         return 0;
       }
       int v = 1 + rnd.nextInt(vars);
-      return view[v] != 0 ? 0 : rnd.nextBoolean() ? v : -v;
+      if (view[v] != 0) {
+        return 0;
+      }
+      return rnd.nextBoolean() ? v : -v;
     }
 
     @Override

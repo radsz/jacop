@@ -31,7 +31,8 @@
 
 package org.jacop.jasat.cdcl;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -255,11 +256,11 @@ class CdclFuzzTest {
   void rupCheckerRejectsWrongProofs() {
     List<int[]> f =
         List.of(new int[] {1, 2}, new int[] {-1, 2}, new int[] {1, -2}, new int[] {-1, -2});
-    assertEquals(null, RupChecker.check(2, f, "2 0\nd 1 2 0\n0\n"));
-    assertTrue(RupChecker.check(2, f, "0\n") != null, "empty clause is not RUP here");
-    assertEquals(null, RupChecker.check(2, f, "2 0\n"), "the formula fails by propagation after 2");
+    assertNull(RupChecker.check(2, f, "2 0\nd 1 2 0\n0\n"));
+    assertNotNull(RupChecker.check(2, f, "0\n"), "empty clause is not RUP here");
+    assertNull(RupChecker.check(2, f, "2 0\n"), "the formula fails by propagation after 2");
     List<int[]> satisfiable = List.of(new int[] {1, 2}, new int[] {-1, 2});
-    assertTrue(RupChecker.check(2, satisfiable, "2 0\n") != null, "no refutation");
-    assertTrue(RupChecker.check(2, List.of(new int[] {1, 2}), "1 0\n0\n") != null, "1 is not RUP");
+    assertNotNull(RupChecker.check(2, satisfiable, "2 0\n"), "no refutation");
+    assertNotNull(RupChecker.check(2, List.of(new int[] {1, 2}), "1 0\n0\n"), "1 is not RUP");
   }
 }

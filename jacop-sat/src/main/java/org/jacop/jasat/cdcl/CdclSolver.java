@@ -32,6 +32,7 @@
 package org.jacop.jasat.cdcl;
 
 import java.util.Arrays;
+import java.util.SplittableRandom;
 
 /**
  * A CDCL SAT solver built on flat arrays.
@@ -295,9 +296,9 @@ public final class CdclSolver {
     Arrays.fill(bestSign, numVars, n, (byte) 0);
     if (seed != 0) {
       // a different initial decision order for each seed
-      java.util.SplittableRandom random = new java.util.SplittableRandom(seed + numVars);
+      SplittableRandom random = new SplittableRandom(seed + numVars);
       for (int v = numVars; v < n; v++) {
-        activity[v] = random.nextDouble() * 1e-3;
+        activity[v] = random.nextDouble() * 1e-3; // NOSONAR: activity holds n variables, see above
       }
     }
     // the arrays hold at least n variables here (SonarCloud does not see it)
@@ -880,7 +881,6 @@ public final class CdclSolver {
     mem[ref + META] = meta;
   }
 
-  /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
   /**
    * Under chronological backtracking the conflict clause may have no literal, or only one, at the
    * current level. Backtracks to the conflict level; when a single literal is at that level, it
@@ -903,7 +903,12 @@ public final class CdclSolver {
     int count = 0;
     int forced = -1;
     for (int k = 0; k < size; k++) {
-      int lit = lits < 0 ? (k == 0 ? conflictLit0 : conflictLit1) : mem[lits + k];
+      int lit;
+      if (lits >= 0) {
+        lit = mem[lits + k];
+      } else {
+        lit = k == 0 ? conflictLit0 : conflictLit1;
+      }
       int l = level[lit >> 1];
       if (l > maxLevel) {
         maxLevel = l;
@@ -939,6 +944,7 @@ public final class CdclSolver {
     return true;
   }
 
+  /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
   private int analyze() {
     learntSize = 0;
     addLearnt(0);
@@ -1432,7 +1438,7 @@ public final class CdclSolver {
       assertIfUnit(c, ref);
     }
     if (conflicts >= nextReduce) {
-      nextReduce = conflicts + reduceBase + (long) reduceInc * ++reductions;
+      nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
       reduceDb();
     }
     return propagateUnits();
@@ -1774,7 +1780,7 @@ public final class CdclSolver {
         continue;
       }
       if (conflicts >= nextReduce) {
-        nextReduce = conflicts + reduceBase + (long) reduceInc * ++reductions;
+        nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
         reduceDb();
         vivifyDue = vivification;
       }
@@ -2389,10 +2395,10 @@ public final class CdclSolver {
       eliminatedVar[v] |= gone[v];
     }
     numEliminated += e.numEliminated();
-    int[] stack = e.stack();
+    int[] removed = e.stack();
     int old = extension.length;
-    extension = Arrays.copyOf(extension, old + stack.length);
-    System.arraycopy(stack, 0, extension, old, stack.length);
+    extension = Arrays.copyOf(extension, old + removed.length);
+    System.arraycopy(removed, 0, extension, old, removed.length);
     for (int u : e.units()) {
       if (vals[u] < 0) {
         return refuted();
