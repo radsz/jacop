@@ -2287,6 +2287,113 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // The watches of a watched LinearBool are kept on backtracking, while the prefix and its slack
+  // are restored. A random walk that goes down by decisions and jumps back by several levels at a
+  // time checks that the watched constraint prunes the same domains as the counters at every node.
+  @Test
+  void testWatchedLinearBoolPrunesAsCountersAfterBacktracking() {
+
+    Random random = new Random(47);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 200; trial++) {
+      int n = 20 + random.nextInt(30);
+      int constraints = 1 + random.nextInt(3);
+      int[][] scopes = new int[constraints][];
+      int[][] weights = new int[constraints][];
+      String[] rels = new String[constraints];
+      int[] rhs = new int[constraints];
+      for (int k = 0; k < constraints; k++) {
+        int m = n / 2 + random.nextInt(n / 2 + 1);
+        scopes[k] = random.ints(m, 0, n).toArray();
+        weights[k] = new int[m];
+        long positive = 0;
+        long negative = 0;
+        for (int i = 0; i < m; i++) {
+          weights[k][i] =
+              (1 + random.nextInt(random.nextInt(4) == 0 ? 30 : 5))
+                  * (random.nextInt(4) == 0 ? -1 : 1);
+          if (weights[k][i] > 0) {
+            positive += weights[k][i];
+          } else {
+            negative += weights[k][i];
+          }
+        }
+        rels[k] = relations[random.nextInt(relations.length)];
+        // close to one end of the range, so that both sides propagate early in a dive
+        long range = positive - negative;
+        rhs[k] =
+            (int)
+                (random.nextBoolean()
+                    ? negative + random.nextInt((int) range / 3 + 1)
+                    : positive - random.nextInt((int) range / 3 + 1));
+      }
+
+      Store[] stores = new Store[2];
+      IntVar[][] x = new IntVar[2][n];
+      for (int mode = 0; mode < 2; mode++) {
+        stores[mode] = new Store();
+        for (int i = 0; i < n; i++) {
+          x[mode][i] = new BooleanVar(stores[mode], "b" + i);
+        }
+        for (int k = 0; k < constraints; k++) {
+          IntVar[] modeVars = x[mode];
+          IntVar[] vars =
+              Arrays.stream(scopes[k]).mapToObj(i -> modeVars[i]).toArray(IntVar[]::new);
+          LinearBool linear = new LinearBool(vars, weights[k], rels[k], rhs[k]);
+          linear.setWatchMinLength(mode == 0 ? 0 : Integer.MAX_VALUE);
+          stores[mode].impose(linear);
+        }
+      }
+      boolean[] consistent = {stores[0].consistency(), stores[1].consistency()};
+      assertThat(consistent[0]).as("trial " + trial + " root").isEqualTo(consistent[1]);
+      if (!consistent[0]) {
+        continue;
+      }
+      List<String> path = new ArrayList<>();
+      for (int step = 0; step < 300; step++) {
+        int level = stores[0].level;
+        boolean allFixed = Arrays.stream(x[0]).allMatch(IntVar::singleton);
+        if (level > 0 && (!consistent[0] || allFixed || random.nextInt(4) == 0)) {
+          int target = random.nextInt(level);
+          for (int mode = 0; mode < 2; mode++) {
+            while (stores[mode].level > target) {
+              stores[mode].removeLevel(stores[mode].level);
+              stores[mode].setLevel(stores[mode].level - 1);
+            }
+          }
+          path.add("back to " + target);
+          consistent[0] = true;
+          continue;
+        }
+        if (!consistent[0] || allFixed) {
+          break;
+        }
+        int i = random.nextInt(n);
+        while (x[0][i].singleton()) {
+          i = random.nextInt(n);
+        }
+        int value = random.nextInt(2);
+        path.add("b" + i + "=" + value);
+        for (int mode = 0; mode < 2; mode++) {
+          Store store = stores[mode];
+          store.setLevel(store.level + 1);
+          IntVar v = x[mode][i];
+          v.domain.in(store.level, v, value, value);
+          consistent[mode] = store.consistency();
+        }
+        String description = "trial " + trial + " path " + path;
+        assertThat(consistent[0]).as(description).isEqualTo(consistent[1]);
+        if (consistent[0]) {
+          for (int j = 0; j < n; j++) {
+            assertThat(x[0][j].dom().toString())
+                .as(description + " b" + j)
+                .isEqualTo(x[1][j].dom().toString());
+          }
+        }
+      }
+    }
+  }
+
   // A LinearBool imposed during search keeps the counter propagation, as the watches of the store
   // are not removed on backtracking.
   @Test
