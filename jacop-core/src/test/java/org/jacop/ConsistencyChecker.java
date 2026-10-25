@@ -48,6 +48,7 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
@@ -942,6 +943,33 @@ class ConsistencyChecker {
                   new Among(x, new IntervalDomain(a, b), c),
                   t -> Arrays.stream(t, 0, n).filter(v -> a <= v && v <= b).count() == t[n],
                   concat(x, new IntVar[] {c}));
+            }),
+        new Case(
+            "AmongSeq",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(6);
+              int q = 1 + r.nextInt(n);
+              int min = r.nextInt(q + 1);
+              int max = min + r.nextInt(q + 1 - min);
+              int a = r.nextInt(3);
+              int b = a + r.nextInt(2);
+              IntVar[] x = vars(s, "x", n, 0, 3, r);
+              return new Model(
+                  new AmongSeq(x, new IntervalDomain(a, b), q, min, max),
+                  t -> {
+                    for (int i = 0; i + q <= n; i++) {
+                      int count = 0;
+                      for (int j = i; j < i + q; j++) {
+                        count += a <= t[j] && t[j] <= b ? 1 : 0;
+                      }
+                      if (count < min || count > max) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  },
+                  x);
             }),
         // bounds on the intervals for count.max() (hitting sets) and domain pruning from the
         // matching for count.min(); a lower bound on the domains themselves is NP-hard

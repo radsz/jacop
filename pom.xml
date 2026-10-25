@@ -205,6 +205,7 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/SequenceStretchTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                             </includes>
@@ -259,6 +260,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
@@ -323,6 +325,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
@@ -387,6 +390,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/SequenceStretchTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
