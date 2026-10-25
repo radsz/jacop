@@ -78,6 +78,8 @@ public class RestartSearch<T extends Var> {
   IntVar[] rarVars;
   int probability;
   int[] values;
+  // the number of variables relax and reconstruct fixed in the current run
+  int fixedInRun;
   int restartsLimit; // no limit
   boolean restartsLimitReached;
 
@@ -193,10 +195,11 @@ public class RestartSearch<T extends Var> {
   }
 
   private boolean runOneRestartIteration() {
+    fixedInRun = 0;
     if (rarVars != null) {
       store.setLevel(store.level + 1);
       if (values != null) {
-        assignRelaxedVariables();
+        fixedInRun = assignRelaxedVariables();
       }
     }
 
@@ -222,31 +225,23 @@ public class RestartSearch<T extends Var> {
   }
 
   private boolean computeNextResult(boolean result) {
+    // the run explored the whole search space: it was not cut by its fail limit and relax and
+    // reconstruct fixed no variable
+    boolean exhausted = !calculator.pointsExhausted() && fixedInRun == 0;
     if (result) {
-      if (cost == null) {
-        return false; // break
-      }
-      if (!calculator.pointsExhausted()) {
+      if (cost == null || exhausted) {
         return false;
       }
       return boundCost();
     }
     // no result from search
-    if (calculator.pointsExhausted()) {
-      // the run stopped at its fail limit, so the search space is not exhausted
-      if (cost != null) {
-        return boundCost();
-      }
-      return !atLeastOneSolution;
-    }
-    // the run failed before its limit: the search space is exhausted
-    if (rarVars == null) {
+    if (exhausted) {
       return false;
     }
     if (cost != null) {
       return boundCost();
     }
-    return true;
+    return !atLeastOneSolution;
   }
 
   /**
@@ -366,17 +361,22 @@ public class RestartSearch<T extends Var> {
   /**
    * Assigns relaxed variables to their previous solution values based on the configured
    * probability.
+   *
+   * @return the number of variables fixed to their previous solution values.
    */
-  public void assignRelaxedVariables() {
+  public int assignRelaxedVariables() {
 
+    int fixed = 0;
     for (int i = 0; i < rarVars.length; i++) {
       IntVar v = rarVars[i];
       int rn = Store.getRandom().nextInt(101);
       // a value of the last solution may have been pruned by the bound on the cost
-      if (rn <= probability && v.domain.contains(values[i])) {
+      if (rn <= probability && !v.singleton() && v.domain.contains(values[i])) {
         v.domain.inValue(store.level, v, values[i]);
+        fixed++;
       }
     }
+    return fixed;
   }
 
   public int[] getLastSolution() {

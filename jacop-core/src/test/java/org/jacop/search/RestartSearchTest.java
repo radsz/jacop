@@ -423,6 +423,7 @@ class RestartSearchTest {
     // later runs reported solutions worse than the best one found.
     Random rnd = new Random(53);
     int checked = 0;
+    Store.setSeed(53);
     for (int k = 0; k < 100; k++) {
       Instance instance = Instance.random(rnd);
       Integer optimum = instance.bruteForceOptimum();
@@ -453,6 +454,41 @@ class RestartSearchTest {
         checked++;
       }
     }
+    Store.resetSeed();
     assertTrue(checked > 10, "too few instances improved more than twice: " + checked);
+  }
+
+  @Test
+  void relaxAndReconstructStopsOnlyWhenTheSearchSpaceIsExhausted() {
+    // A relaxed run that explored its whole neighbourhood ended the search as if it had explored
+    // the whole search space, and without a cost the search restarted for ever.
+    Random rnd = new Random(59);
+    int proved = 0;
+    Store.setSeed(59);
+    for (int k = 0; k < 60; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      for (boolean optimize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        if (!model.store.consistency()) {
+          continue;
+        }
+        // growing limits, so that a run that fixes no variable eventually explores everything
+        RestartSearch<IntVar> search =
+            model.restartSearch(new GeometricCalculator(1.5, 1), optimize);
+        search.setRelaxAndReconstruct(model.x, 50);
+        search.setRestartsLimit(2000);
+        boolean found = search.labeling();
+        assertEquals(optimum != null, found, "satisfiability of " + instance);
+        assertFalse(search.restartsLimitReached(), "search of " + instance + " did not stop");
+        if (optimize && optimum != null) {
+          // only a run that fixed no variable can stop the search
+          assertEquals(optimum.intValue(), search.getIntCost(), "optimum of " + instance);
+          proved++;
+        }
+      }
+    }
+    Store.resetSeed();
+    assertTrue(proved > 20, "too few optimisation instances: " + proved);
   }
 }
