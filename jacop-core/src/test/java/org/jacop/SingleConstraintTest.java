@@ -5517,6 +5517,32 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testCumulativeUnaryOverloadAboveHundredTasks() {
+
+    // With more than 100 tasks CumulativeUnary ran only the profile, so three tasks of duration 2
+    // that must all run in [0, 4) were accepted: none has a compulsory part. The unary rules now
+    // run for any number of tasks.
+    for (boolean profileArgument : new boolean[] {false, true}) {
+      Store store = new Store();
+      int n = 101;
+      IntVar[] s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] r = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = i < 3 ? new IntVar(store, 0, 2) : new IntVar(store, 100 + i, 100 + i);
+        d[i] = new IntVar(store, i < 3 ? 2 : 1, i < 3 ? 2 : 1);
+        r[i] = new IntVar(store, 1, 1);
+      }
+      IntVar limit = new IntVar(store, 1, 1);
+      store.impose(
+          profileArgument
+              ? new CumulativeUnary(s, d, r, limit, true)
+              : new CumulativeUnary(s, d, r, limit));
+      assertThat(store.consistency()).as("profile argument %s", profileArgument).isFalse();
+    }
+  }
+
+  @Test
   void testCumulativeUnaryOptionalTaskAboveLimit() {
 
     // The same as testCumulativeUnaryTaskAboveLimit for optional tasks: a task using more than the

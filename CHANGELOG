@@ -25,6 +25,14 @@ Version 5.0 (unreleased)
    posts it as a redundant constraint on circuit(x) with
    cost = sum(i)(d[i, x[i]]); -Dorg.jacop.fz.circuitCost=false turns this off.
 
+4. CumulativeUnary (MiniZinc disjunctive) runs its unary rules (detectable
+   precedences, not-first/not-last, edge finding) for any number of tasks.
+   Before, with more than 100 tasks (max_edge_find_size) it ran only the
+   time-table profile, contrary to properties.txt; a single machine with
+   400 tasks then timed out where it is now solved in 808 nodes, and job
+   shops with 150 and 200 jobs reach better makespans. max_edge_find_size
+   now applies to Cumulative only.
+
 Version 4.11
 =============
 
