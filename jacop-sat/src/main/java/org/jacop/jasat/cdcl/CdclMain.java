@@ -40,14 +40,16 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          [--vivify 0|1] [--walk 0|1] [--seed n] [--elim-interval conflicts] file.cnf[.gz]
+ *          [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
+ *          file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
  * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
  * variable elimination off, {@code --vivify 0} turns vivification off and {@code --walk 0} turns
- * local search off. {@code --seed} changes the initial decision order and {@code --elim-interval}
- * sets when elimination runs again during search (0 for never).
+ * local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow LBD
+ * averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets when
+ * elimination runs again during search (0 for never).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -75,6 +77,7 @@ public final class CdclMain {
     boolean shrink = true;
     boolean elim = true;
     boolean vivify = true;
+    boolean ema = true;
     boolean walk = true;
     long seed = 0;
     int elimInterval = 5000;
@@ -87,6 +90,7 @@ public final class CdclMain {
         case "--shrink" -> shrink = !"0".equals(args[++i]);
         case "--elim" -> elim = !"0".equals(args[++i]);
         case "--vivify" -> vivify = !"0".equals(args[++i]);
+        case "--ema" -> ema = !"0".equals(args[++i]);
         case "--walk" -> walk = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
@@ -96,7 +100,7 @@ public final class CdclMain {
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--seed n]"
+              + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
               + " [--elim-interval conflicts] file.cnf[.gz]");
       System.exit(1);
     }
@@ -105,6 +109,7 @@ public final class CdclMain {
     solver.setShrink(shrink);
     solver.setElimination(elim);
     solver.setVivification(vivify);
+    solver.setEmaRestarts(ema);
     solver.setWalk(walk);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);

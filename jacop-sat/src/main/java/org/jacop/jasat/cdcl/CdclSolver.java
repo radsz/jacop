@@ -40,14 +40,15 @@ import java.util.SplittableRandom;
  * <p>Literals are internal integers {@code 2*var + sign} (sign 1 for a negative literal); the
  * public API takes DIMACS literals (variables from 1, negative for negation). Clauses of three or
  * more literals live in one {@code int[]} arena: a header (size, flags with LBD, activity, saved
- * search position) followed by the literals. Binary clauses are kept only in the watch lists. Every
- * watch entry is a pair (blocker literal, clause reference), with {@link #BINARY} as the reference
- * of a binary clause.
+ * search position) followed by the literals. Binary clauses are kept only in their own watch lists
+ * (the other literal), which propagation visits first. Every watch entry of a longer clause is a
+ * pair (blocker literal, clause reference); {@link #BINARY} is the reference of a binary clause
+ * where a reason or a conflict needs one.
  *
  * <p>Search: first-UIP learning with recursive minimisation, LBD, EVSIDS with phase saving,
- * alternating focused mode (Glucose-style LBD restarts) and stable mode (Luby restarts), a
- * three-tier learnt clause database with periodic reduction, optional DRAT proof output, and
- * solving under assumptions.
+ * alternating focused mode (restarts when the fast LBD average exceeds the slow one) and stable
+ * mode (Luby restarts), a three-tier learnt clause database with periodic reduction, optional DRAT
+ * proof output, and solving under assumptions.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -136,6 +137,8 @@ public final class CdclSolver {
   private int numLearnts;
   private int[][] watches = new int[0][];
   private int[] watchSize = new int[0];
+  private int[][] binWatches = new int[0][];
+  private int[] binSize = new int[0];
   private boolean ok = true;
 
   // --- conflict and analysis scratch
@@ -171,6 +174,12 @@ public final class CdclSolver {
   private int lbdQueueHead;
   private long lbdQueueSum;
   private long lbdSum;
+  // exponential moving averages of the LBD (CaDiCaL), used when emaRestarts is on
+  private boolean emaRestarts = true;
+  private double emaFast;
+  private double emaSlow;
+  private double emaFastBeta = 1;
+  private double emaSlowBeta = 1;
   private final int[] trailQueue = new int[5000];
   private int trailQueueSize;
   private int trailQueueHead;
@@ -287,6 +296,8 @@ public final class CdclSolver {
       observed = Arrays.copyOf(observed, c);
       watches = Arrays.copyOf(watches, 2 * c);
       watchSize = Arrays.copyOf(watchSize, 2 * c);
+      binWatches = Arrays.copyOf(binWatches, 2 * c);
+      binSize = Arrays.copyOf(binSize, 2 * c);
     }
     order.grow(n, activity);
     Arrays.fill(reason, numVars, n, NO_REASON);
@@ -304,6 +315,7 @@ public final class CdclSolver {
     // the arrays hold at least n variables here (SonarCloud does not see it)
     for (int l = 2 * numVars; l < 2 * n; l++) {
       watches[l] = new int[4]; // NOSONAR
+      binWatches[l] = new int[2]; // NOSONAR
     }
     for (int v = numVars; v < n; v++) {
       order.insert(v);
@@ -616,8 +628,19 @@ public final class CdclSolver {
   }
 
   private void addBinary(int a, int b) {
-    addWatch(a, b, BINARY);
-    addWatch(b, a, BINARY);
+    addBinWatch(a, b);
+    addBinWatch(b, a);
+  }
+
+  private void addBinWatch(int lit, int other) {
+    int[] ws = binWatches[lit];
+    int n = binSize[lit];
+    if (n == ws.length) {
+      ws = Arrays.copyOf(ws, 2 * n + 2);
+      binWatches[lit] = ws;
+    }
+    ws[n] = other;
+    binSize[lit] = n + 1;
   }
 
   private boolean isLocked(int ref) {
@@ -709,6 +732,26 @@ public final class CdclSolver {
     while (qhead < trailSize) {
       int falseLit = trail[qhead++] ^ 1;
       propagations++;
+      int[] bs = binWatches[falseLit];
+      for (int b = binSize[falseLit] - 1; b >= 0; b--) {
+        int other = bs[b];
+        int ov = vals[other];
+        if (ov > 0) {
+          continue;
+        }
+        if (ov < 0) {
+          qhead = trailSize;
+          conflictRef = BINARY_CONFLICT;
+          conflictLit0 = other;
+          conflictLit1 = falseLit;
+          return BINARY_CONFLICT;
+        }
+        if (chrono) {
+          assignAt(other, -2 - falseLit, level[falseLit >> 1]);
+        } else {
+          assign(other, -2 - falseLit);
+        }
+      }
       int[] ws = watches[falseLit];
       int n = watchSize[falseLit];
       int i = 0;
@@ -721,22 +764,6 @@ public final class CdclSolver {
         if (bv > 0) {
           ws[j++] = blocker;
           ws[j++] = ref;
-          continue;
-        }
-        if (ref == BINARY) {
-          ws[j++] = blocker;
-          ws[j++] = ref;
-          if (bv < 0) {
-            conflict = BINARY_CONFLICT;
-            conflictLit0 = blocker;
-            conflictLit1 = falseLit;
-            break;
-          }
-          if (chrono) {
-            assignAt(blocker, -2 - falseLit, level[falseLit >> 1]);
-          } else {
-            assign(blocker, -2 - falseLit);
-          }
           continue;
         }
         int lits = ref + HEADER;
@@ -2185,6 +2212,10 @@ public final class CdclSolver {
       assignAt(learnt[0], ref, level[learnt[1] >> 1]);
     }
     lbdSum += lbd;
+    emaFastBeta *= 1 - 0.03;
+    emaSlowBeta *= 1 - 1e-5;
+    emaFast += (lbd - emaFast) * 0.03;
+    emaSlow += (lbd - emaSlow) * 1e-5;
     lbdQueueSum += lbd;
     if (lbdQueueSize == lbdQueue.length) {
       lbdQueueSum -= lbdQueue[lbdQueueHead];
@@ -2224,6 +2255,11 @@ public final class CdclSolver {
     }
     if (stable) {
       return conflicts - conflictsAtRestart >= lubyLimit;
+    }
+    if (emaRestarts) {
+      double fast = emaFast / (1 - emaFastBeta);
+      double slow = emaSlow / (1 - emaSlowBeta);
+      return conflicts - conflictsAtRestart >= 2 && fast > 1.1 * slow;
     }
     return lbdQueueSize == lbdQueue.length
         && conflicts > 0
@@ -2375,6 +2411,7 @@ public final class CdclSolver {
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
+    Arrays.fill(binSize, 0);
     if (sat) {
       keepLearnts(gone);
     }
@@ -2610,6 +2647,16 @@ public final class CdclSolver {
     vivification = on;
   }
 
+  /**
+   * Chooses the restart rule in focused mode: CaDiCaL's fast and slow moving averages of the LBD
+   * (the default) or Glucose's queue of the last 50 LBDs.
+   *
+   * @param on whether to use the moving averages
+   */
+  public void setEmaRestarts(boolean on) {
+    emaRestarts = on;
+  }
+
   /** Removes satisfied clauses at level 0. */
   private void simplifyDb() {
     for (int pass = 0; pass < 2; pass++) {
@@ -2653,7 +2700,7 @@ public final class CdclSolver {
       int j = 0;
       for (int i = 0; i < n; i += 2) {
         int ref = ws[i + 1];
-        if (ref == BINARY || (mem[ref + META] & DELETED) == 0) {
+        if ((mem[ref + META] & DELETED) == 0) {
           ws[j++] = ws[i];
           ws[j++] = ref;
         }
@@ -2706,10 +2753,7 @@ public final class CdclSolver {
       int j = 0;
       for (int i = 0; i < n; i += 2) {
         int ref = ws[i + 1];
-        if (ref == BINARY) {
-          ws[j++] = ws[i];
-          ws[j++] = ref;
-        } else if ((mem[ref + META] & DELETED) == 0) {
+        if ((mem[ref + META] & DELETED) == 0) {
           ws[j++] = ws[i];
           ws[j++] = mem[ref + ACT];
         }
