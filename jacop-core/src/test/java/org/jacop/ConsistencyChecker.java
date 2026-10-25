@@ -46,6 +46,8 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.Constraint;
@@ -718,6 +720,27 @@ class ConsistencyChecker {
         x);
   }
 
+  private static Model alldiffExcept(Store store, Random random, boolean zero) {
+    int n = 3 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, -1, n, random);
+    IntervalDomain except = new IntervalDomain();
+    if (zero) {
+      except.unionAdapt(0, 0);
+    } else {
+      for (int k = random.nextInt(3); k > 0; k--) {
+        int e = random.nextInt(n + 3) - 1;
+        except.unionAdapt(e, e);
+      }
+    }
+    return new Model(
+        zero ? new AlldifferentExceptZero(x) : new AlldifferentExcept(x, except),
+        t -> {
+          int[] kept = Arrays.stream(t).filter(v -> !except.contains(v)).toArray();
+          return Arrays.stream(kept).distinct().count() == kept.length;
+        },
+        x);
+  }
+
   private static Model minMax(Store store, Random random, boolean min) {
     int n = 2 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, -3, 3, random);
@@ -909,6 +932,8 @@ class ConsistencyChecker {
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
+        new Case("AlldifferentExcept", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, false)),
+        new Case("AlldifferentExceptZero", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, true)),
         new Case("GCC", Level.BOUNDS_Z, ConsistencyChecker::gcc),
         new Case("ElementInteger", Level.DOMAIN, (s, r) -> element(s, r, false, false)),
         new Case("ElementIntegerFast", Level.BOUNDS_D, (s, r) -> element(s, r, false, true)),
