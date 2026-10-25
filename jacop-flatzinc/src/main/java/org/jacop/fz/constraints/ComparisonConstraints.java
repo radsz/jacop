@@ -381,10 +381,10 @@ class ComparisonConstraints implements ParserTreeConstants {
     return switch (operation) {
       case Support.EQ -> intComparisonConstVarEq(v2, i1, v3, isReified);
       case Support.NE -> intComparisonConstVarNe(v2, i1, v3, isReified);
-      case Support.LT -> intComparisonConstVarLt(v2, i1, v3);
-      case Support.GT -> intComparisonConstVarGt(v2, i1, v3);
-      case Support.LE -> intComparisonConstVarLe(v2, i1, v3);
-      case Support.GE -> intComparisonConstVarGe(v2, i1, v3);
+      case Support.LT -> intComparisonConstVarLt(v2, i1, v3, isReified);
+      case Support.GT -> intComparisonConstVarGt(v2, i1, v3, isReified);
+      case Support.LE -> intComparisonConstVarLe(v2, i1, v3, isReified);
+      case Support.GE -> intComparisonConstVarGe(v2, i1, v3, isReified);
       default -> throw new RuntimeException("Internal error in " + getClass().getName());
     };
   }
@@ -398,12 +398,14 @@ class ComparisonConstraints implements ParserTreeConstants {
       v3.domain.inValue(store.level, v3, 0);
       return null;
     }
-    if (v2.min() == i1 && v2.singleton()) {
+    if (isReified && v2.min() == i1 && v2.singleton()) {
       v3.domain.inValue(store.level, v3, 1);
       return null;
     }
     if (v3.max() == 0) {
-      v2.domain.inComplement(store.level, v2, i1);
+      if (isReified) {
+        v2.domain.inComplement(store.level, v2, i1);
+      }
       return null;
     }
     if (v3.min() == 1) {
@@ -424,7 +426,9 @@ class ComparisonConstraints implements ParserTreeConstants {
   private PrimitiveConstraint intComparisonConstVarNe(
       IntVar v2, int i1, IntVar v3, boolean isReified) {
     if (v2.min() > i1 || v2.max() < i1) {
-      v3.domain.inValue(store.level, v3, 1);
+      if (isReified) {
+        v3.domain.inValue(store.level, v3, 1);
+      }
       return null;
     }
     if (v2.min() == i1 && v2.singleton()) {
@@ -442,9 +446,12 @@ class ComparisonConstraints implements ParserTreeConstants {
     return null;
   }
 
-  private PrimitiveConstraint intComparisonConstVarLt(IntVar v2, int i1, IntVar v3) {
+  private PrimitiveConstraint intComparisonConstVarLt(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
     if (i1 < v2.min()) {
-      v3.domain.inValue(store.level, v3, 1);
+      if (isReified) {
+        v3.domain.inValue(store.level, v3, 1);
+      }
       return null;
     }
     if (i1 >= v2.max()) {
@@ -454,9 +461,12 @@ class ComparisonConstraints implements ParserTreeConstants {
     return new XgtC(v2, i1);
   }
 
-  private PrimitiveConstraint intComparisonConstVarGt(IntVar v2, int i1, IntVar v3) {
+  private PrimitiveConstraint intComparisonConstVarGt(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
     if (i1 > v2.max()) {
-      v3.domain.inValue(store.level, v3, 1);
+      if (isReified) {
+        v3.domain.inValue(store.level, v3, 1);
+      }
       return null;
     }
     if (i1 <= v2.min()) {
@@ -466,9 +476,12 @@ class ComparisonConstraints implements ParserTreeConstants {
     return new XltC(v2, i1);
   }
 
-  private PrimitiveConstraint intComparisonConstVarLe(IntVar v2, int i1, IntVar v3) {
+  private PrimitiveConstraint intComparisonConstVarLe(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
     if (i1 <= v2.min()) {
-      v3.domain.inValue(store.level, v3, 1);
+      if (isReified) {
+        v3.domain.inValue(store.level, v3, 1);
+      }
       return null;
     }
     if (i1 > v2.max()) {
@@ -478,9 +491,12 @@ class ComparisonConstraints implements ParserTreeConstants {
     return new XgteqC(v2, i1);
   }
 
-  private PrimitiveConstraint intComparisonConstVarGe(IntVar v2, int i1, IntVar v3) {
+  private PrimitiveConstraint intComparisonConstVarGe(
+      IntVar v2, int i1, IntVar v3, boolean isReified) {
     if (i1 > v2.max()) {
-      v3.domain.inValue(store.level, v3, 1);
+      if (isReified) {
+        v3.domain.inValue(store.level, v3, 1);
+      }
       return null;
     }
     if (i1 < v2.min()) {
@@ -591,6 +607,9 @@ class ComparisonConstraints implements ParserTreeConstants {
       return null;
     }
     if (v3.max() == 0) {
+      if (isReified) {
+        v1.domain.inValue(store.level, v1, i2);
+      }
       return null;
     }
     if (v3.min() == 1) {
