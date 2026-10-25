@@ -831,6 +831,23 @@ class FlatzincFrontEndTest {
         solveAllInOrder(PRIORITY_WITH_SEQ_SEARCH_ROW));
   }
 
+  @Test
+  void prioritySearchSkipsASearchWithNoVariables() throws IOException {
+    // An empty search was dropped from the list of searches, so the priority variables and the
+    // searches no longer matched and the solver stopped with a RuntimeException.
+    String fzn =
+        """
+        var 1..2: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([a,b],[int_search([],input_order,indomain_min,complete),\
+        int_search([b],input_order,indomain_max,complete)],input_order,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 2;", "a = 2; b = 2;", "a = 1; b = 1;", "a = 2; b = 1;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
