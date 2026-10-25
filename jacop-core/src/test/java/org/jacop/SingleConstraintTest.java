@@ -5726,6 +5726,120 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void hybridTableRefiltersTheChangedColumnWhenTheRevisionRemovesItsSupports() {
+    // The second tuple, x0 != x1 + 2 and x1 = x0 - 2, allows nothing, but arc consistency on its
+    // restrictions only finds that out once x0 has lost values. At the root it is the only support
+    // of x0 = 0; after x0 != 3 it is removed and x0 = 0 must go too, or the constraint is removed
+    // with x0 = 0, x1 = -2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", 0, 0);
+      x0.addDom(3, 4);
+      IntVar x1 = new IntVar(store, "x1", -2, -2);
+      x1.addDom(1, 1);
+      IntVar[] x = {x0, x1};
+      Restriction[][] tuples = {
+        {Restriction.eq(4), Restriction.eq(-2)},
+        {
+          Restriction.column(Restriction.Relation.NE, 1, 2),
+          Restriction.column(Restriction.Relation.EQ, 0, -2)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      x0.domain.inComplement(1, x0, 3);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x0.dom()).as("expand " + expand).hasToString("4");
+    }
+  }
+
+  @Test
+  void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
+    // The first consistency at level 1 filtered every column and was undone by the backtrack. The
+    // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
+    // the constraint was removed with x0 = 1, x1 = 0 still possible.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new HybridTable(new IntVar[] {x0, x1}, new int[][] {{0, 0}, {2, 0}}));
+    store.setLevel(1);
+    x1.domain.inComplement(1, x1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.dom()).hasToString("0");
+  }
+
+  @Test
+  void booleanDomainOperationsKeepTheHolesOfTheOtherDomain() {
+    // The domain of a BooleanVar treated {-1, 2} as its bounds -1..2: subtract gave {} and
+    // isIntersecting true, so a hybrid table with b not in {-1, 2} failed although b = 0 and b = 1
+    // are allowed, and intersecting with an empty domain threw a NullPointerException. Subtracting
+    // a disjoint interval enlarged the domain, which sent the revision of a tuple into an endless
+    // loop.
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntDomain bd = b.dom();
+    IntervalDomain holes = new IntervalDomain(-1, -1);
+    holes.unionAdapt(2, 2);
+    assertThat(bd.subtract(holes)).hasToString("{0..1}");
+    assertThat(bd.isIntersecting(holes)).isFalse();
+    assertThat(bd.intersect(holes).isEmpty()).isTrue();
+    assertThat(bd.intersect(new IntervalDomain()).isEmpty()).isTrue();
+    IntervalDomain oneAndThree = new IntervalDomain(1, 1);
+    oneAndThree.unionAdapt(3, 3);
+    assertThat(bd.subtract(oneAndThree)).hasToString("0");
+    assertThat(bd.intersect(oneAndThree)).hasToString("1");
+    // A disjoint interval made the domain grow: {0..1} minus -5..-3 gave {-2..1}.
+    assertThat(bd.subtract(new IntervalDomain(-5, -3))).hasToString("{0..1}");
+    assertThat(bd.subtract(-5, -3)).hasToString("{0..1}");
+    assertThat(bd.subtract(new IntervalDomain(4, 6))).hasToString("{0..1}");
+    assertThat(bd.subtract(4, 6)).hasToString("{0..1}");
+
+    IntervalDomain far = new IntervalDomain(0, 1);
+    far.unionAdapt(100_000, 100_000);
+    IntVar y = new IntVar(store, "y", far);
+    Restriction[][] tuples = {
+      {Restriction.notIn(-1, 2), Restriction.column(Restriction.Relation.GE, 0)},
+      {Restriction.column(Restriction.Relation.EQ, 1, 600_000_000), Restriction.any()}
+    };
+    store.impose(new HybridTable(new IntVar[] {b, y}, tuples, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b, y})).isEqualTo(5);
+  }
+
+  @Test
+  void booleanVarInADomainWithHolesKeepsOnlyItsValues() {
+    // The domain of a BooleanVar pruned by the bounds -1..1 of {-1, 1}, which removed nothing, so
+    // b in {-1, 1} accepted b = 0.
+    IntervalDomain minusOneAndOne = new IntervalDomain(-1, -1);
+    minusOneAndOne.unionAdapt(1, 1);
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("1");
+
+    // The same for a shifted domain: b + 1 in {0, 2} is b in {-1, 1}.
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.setLevel(1);
+    IntervalDomain zeroAndTwo = new IntervalDomain(0, 0);
+    zeroAndTwo.unionAdapt(2, 2);
+    b.domain.inShift(store.level, b, zeroAndTwo, -1);
+    assertThat(b.dom()).hasToString("1");
+
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b})).isEqualTo(1);
+  }
+
   /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
   @Test
   void xmulYeqCNegatedWithZeroFactor() {
