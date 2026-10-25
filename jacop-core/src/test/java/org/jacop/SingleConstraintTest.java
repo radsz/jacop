@@ -3443,6 +3443,107 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void argMinMaxIndexKeepsOnlyPositionsThatCanHoldTheFirstExtremum() {
+    // Positions 4..6 (offset 3). Position 6 holds the first maximum only if x2 < x3 = 1, and the
+    // first minimum only if x2 > x3 = 2; the index used to be pruned only against the largest lower
+    // (smallest upper) bound, which keeps it.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 1, 2), new IntVar(store, "x3", 1, 1)
+    };
+    IntVar maxIndex = new IntVar(store, "maxIndex", 4, 6);
+    store.impose(new ArgMax(x, maxIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(maxIndex.dom().toString()).isEqualTo("{4..5}");
+
+    store = new Store();
+    IntVar[] y = {
+      new IntVar(store, "y1", 1, 3), new IntVar(store, "y2", 1, 2), new IntVar(store, "y3", 2, 2)
+    };
+    IntVar minIndex = new IntVar(store, "minIndex", 4, 6);
+    store.impose(new ArgMin(y, minIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(minIndex.dom().toString()).isEqualTo("{4..5}");
+  }
+
+  @Test
+  void argMinMaxIndexIsDomainConsistentAtFixpoint() {
+    // Without repeated variables, every index value left after propagation must be the first
+    // extremum of some tuple of the current domains, and every removed one must have none.
+    Random random = new Random(43);
+    for (int instance = 0; instance < 4000; instance++) {
+      boolean max = random.nextBoolean();
+      int n = 1 + random.nextInt(4);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, randomDomain(random, -2, 4));
+      }
+      IntVar index = new IntVar(store, "index", randomDomain(random, 0, n + 1));
+      IntDomain before = index.dom().cloneLight();
+      BitSet supportedBefore = firstExtremumPositions(x, max);
+      store.impose(max ? new ArgMax(x, index) : new ArgMin(x, index));
+      boolean consistent = store.consistency();
+
+      String context = (max ? "ArgMax " : "ArgMin ") + Arrays.toString(x) + " index " + before;
+      BitSet supported = consistent ? firstExtremumPositions(x, max) : supportedBefore;
+      for (ValueEnumeration e = before.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        assertThat(consistent && index.dom().contains(v))
+            .as(context + " value " + v)
+            .isEqualTo(supported.get(v));
+      }
+    }
+  }
+
+  /** Returns the 1-based positions that are the first maximum (minimum) of some tuple of x. */
+  private static BitSet firstExtremumPositions(IntVar[] x, boolean max) {
+    int n = x.length;
+    int[][] values = new int[n][];
+    for (int i = 0; i < n; i++) {
+      values[i] = x[i].dom().toIntArray();
+    }
+    BitSet positions = new BitSet();
+    int[] position = new int[n];
+    do {
+      int best = 0;
+      for (int i = 1; i < n; i++) {
+        int v = values[i][position[i]];
+        int b = values[best][position[best]];
+        if (max ? v > b : v < b) {
+          best = i;
+        }
+      }
+      positions.set(best + 1);
+    } while (nextTuple(position, values));
+    return positions;
+  }
+
+  private static IntDomain randomDomain(Random random, int min, int max) {
+    IntervalDomain domain = new IntervalDomain();
+    for (int v = min; v <= max; v++) {
+      if (random.nextInt(3) > 0) {
+        domain.unionAdapt(v, v);
+      }
+    }
+    if (domain.isEmpty()) {
+      int v = min + random.nextInt(max - min + 1);
+      domain.unionAdapt(v, v);
+    }
+    return domain;
+  }
+
+  private static boolean nextTuple(int[] position, int[][] values) {
+    for (int i = 0; i < position.length; i++) {
+      if (++position[i] < values[i].length) {
+        return true;
+      }
+      position[i] = 0;
+    }
+    return false;
+  }
+
+  @Test
   void testSum() {
 
     Store store = new Store();
