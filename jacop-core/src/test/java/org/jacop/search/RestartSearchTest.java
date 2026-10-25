@@ -491,4 +491,30 @@ class RestartSearchTest {
     Store.resetSeed();
     assertTrue(proved > 20, "too few optimisation instances: " + proved);
   }
+
+  @Test
+  void relaxAndReconstructWithProbabilityZeroFixesNothing() {
+    // A variable was fixed when a random number in 0..100 was at most the probability, so a
+    // probability of 0 still fixed one variable in 101.
+    Random rnd = new Random(61);
+    int checked = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Model plain = new Model(instance);
+      if (instance.bruteForceOptimum() == null || !plain.store.consistency()) {
+        continue;
+      }
+      RestartSearch<IntVar> reference = plain.restartSearch(new LubyCalculator(1), true);
+      reference.labeling();
+      Model relaxed = new Model(instance);
+      relaxed.store.consistency();
+      RestartSearch<IntVar> search = relaxed.restartSearch(new LubyCalculator(1), true);
+      search.setRelaxAndReconstruct(relaxed.x, 0);
+      search.labeling();
+      assertEquals(reference.restarts(), search.restarts(), "restarts of " + instance);
+      assertEquals(reference.getIntCost(), search.getIntCost(), "cost of " + instance);
+      checked += reference.restarts() > 0 ? 1 : 0;
+    }
+    assertTrue(checked > 20, "too few instances restarted: " + checked);
+  }
 }

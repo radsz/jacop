@@ -369,9 +369,11 @@ public class RestartSearch<T extends Var> {
     int fixed = 0;
     for (int i = 0; i < rarVars.length; i++) {
       IntVar v = rarVars[i];
-      int rn = Store.getRandom().nextInt(101);
-      // a value of the last solution may have been pruned by the bound on the cost
-      if (rn <= probability && !v.singleton() && v.domain.contains(values[i])) {
+      // fixed with a probability of probability percent; a value of the last solution may have
+      // been pruned by the bound on the cost
+      if (Store.getRandom().nextInt(100) < probability
+          && !v.singleton()
+          && v.domain.contains(values[i])) {
         v.domain.inValue(store.level, v, values[i]);
         fixed++;
       }
