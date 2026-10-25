@@ -545,6 +545,12 @@ class ConsistencyChecker {
 
   /** sum(w[i] * b[i]) rel s over 0/1 variables b, with s a variable or a constant. */
   private static Model linearBool(Store store, Random random, String rel, boolean constant) {
+    return linearBool(store, random, rel, constant, false);
+  }
+
+  /** The same, with watched propagation forced for a constant right hand side. */
+  private static Model linearBool(
+      Store store, Random random, String rel, boolean constant, boolean watched) {
     int n = 3 + random.nextInt(4);
     int[] w = new int[n];
     IntVar[] b = new IntVar[n];
@@ -555,8 +561,12 @@ class ConsistencyChecker {
     }
     if (constant) {
       int c = random.nextInt(13) - 6;
+      LinearBool linear = new LinearBool(b, w, rel, c);
+      if (watched) {
+        linear.setWatchMinLength(0);
+      }
       return new Model(
-          new LinearBool(b, w, rel, c),
+          linear,
           t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), c),
           b,
           linearOverReals(w, c, rel));
@@ -933,6 +943,10 @@ class ConsistencyChecker {
             "LinearBool constant",
             Level.BOUNDS_R,
             (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true)),
+        new Case(
+            "LinearBool watched",
+            Level.BOUNDS_R,
+            (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true, true)),
         new Case(
             "XplusCneqZ",
             Level.DOMAIN,

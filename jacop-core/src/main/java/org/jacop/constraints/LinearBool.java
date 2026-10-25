@@ -43,7 +43,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TrailedInts;
 import org.jacop.core.Var;
 
 /**
@@ -55,6 +55,27 @@ import org.jacop.core.Var;
  * does not have to visit every variable. The variables are kept in decreasing order of the absolute
  * value of their weights, so that the search for values to prune stops at the first weight that
  * fits in the slack of the relation.
+ *
+ * <p>A long constraint with a constant right hand side, imposed at level 0, uses watched
+ * propagation instead (Devriendt, Watched Propagation of 0-1 Integer Linear Constraints, CP 2020).
+ * Each side of the relation is written as a sum of literals a[i]*l[i] >= d with positive
+ * coefficients, where a literal is a variable or its negation. The constraint watches a prefix
+ * l[0..k) of the literals in the order of decreasing coefficients, with k extended until the
+ * coefficients of the non-false watched literals exceed d by at least the largest coefficient.
+ * While they do, no literal can be propagated. The variables of the prefix are watched for the
+ * value at which their literal is false ({@link Store#watchValue}), so a variable fixed to the
+ * other value, or not yet in the prefix, does not reach the constraint at all, and a watched
+ * literal that gets false only lowers the slack; the constraint is queued when the slack falls
+ * below the largest coefficient. When the prefix reaches the end, its slack is the slack of the
+ * constraint and the literals with larger coefficients are set to true.
+ *
+ * <p>The prefix length and its slack are restored on backtracking, but the watches are not, as in
+ * SAT solvers: a variable beyond the restored prefix stays watched and is ignored when its literal
+ * gets false. Since the prefix only grows along a branch, every literal of the prefix that is not
+ * false is watched at any time.
+ *
+ * <p>Watching pays off on long constraints; on short ones with large coefficients the prefix soon
+ * holds every literal, and the counters are as fast, hence {@link #WATCH_MIN_LENGTH}.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -83,16 +104,60 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
 
   final byte relationType;
 
+  /**
+   * The smallest number of variables for which a constraint with a constant right hand side uses
+   * watched propagation.
+   */
+  public static final int WATCH_MIN_LENGTH = 32;
+
+  private int watchMinLength = WATCH_MIN_LENGTH;
+
   private Map<Var, Integer> position;
 
-  /** Sum of the weights of the variables fixed to 1. */
-  private TimeStamp<Long> fixedSum;
+  /** True if the constraint uses watched propagation, decided when it is imposed. */
+  private boolean watched;
 
-  /** Sum of the positive weights of the variables not fixed yet. */
-  private TimeStamp<Long> freePositive;
+  /**
+   * The right hand sides d of the two sides, sum of a[i]*l[i] >= d; at most 0 for a side that
+   * holds.
+   */
+  private long[] degree;
 
-  /** Sum of the negative weights of the variables not fixed yet. */
-  private TimeStamp<Long> freeNegative;
+  /** The largest coefficient, |w[0]|. */
+  private long maxCoefficient;
+
+  /**
+   * For each side, the prefix length k and the slack of the prefix: the sum of the coefficients of
+   * its literals that are not false minus the right hand side, at indexes K and SLACK; null for a
+   * side that always holds. Once the prefix holds every literal, the literals before index START
+   * are fixed.
+   */
+  private TrailedInts[] prefix;
+
+  private static final int K = 0;
+
+  private static final int SLACK = 1;
+
+  private static final int START = 2;
+
+  /** For each side, the variables watched for the value at which their literal is false. */
+  private boolean[][] watching;
+
+  /**
+   * The counters: sum of the weights of the variables fixed to 1 (FIXED), sum of the positive
+   * weights of the variables not fixed yet (FREE_POSITIVE) and sum of their negative weights
+   * (FREE_NEGATIVE). They fit in an int, as the sums of the weights do. The variables before index
+   * FIXED_BEFORE are fixed.
+   */
+  private TrailedInts sums;
+
+  private static final int FIXED = 0;
+
+  private static final int FREE_POSITIVE = 1;
+
+  private static final int FREE_NEGATIVE = 2;
+
+  private static final int FIXED_BEFORE = 3;
 
   /**
    * It constructs the constraint w[0]*x[0] + ... + w[n-1]*x[n-1] rel z.
@@ -196,6 +261,7 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
     this.w = original.w;
     this.z = original.z == null ? null : map.get(original.z);
     this.c = original.c;
+    this.watchMinLength = original.watchMinLength;
     this.queueIndex = 1;
     if (z == null) {
       setScope(this.x);
@@ -218,6 +284,26 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
     };
   }
 
+  /**
+   * Sets the smallest number of variables for which watched propagation is used; the default is
+   * {@link #WATCH_MIN_LENGTH}. It takes effect when the constraint is imposed.
+   *
+   * @param minLength the smallest number of variables, 0 to always use watched propagation when the
+   *     right hand side is a constant.
+   */
+  public void setWatchMinLength(int minLength) {
+    this.watchMinLength = minLength;
+  }
+
+  /**
+   * Tells whether the constraint uses watched propagation; it is decided when it is imposed.
+   *
+   * @return true if the constraint uses watched propagation.
+   */
+  public boolean isWatched() {
+    return watched;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
@@ -225,6 +311,11 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
 
   @Override
   public void impose(Store store) {
+
+    if (canWatch(store)) {
+      imposeWatched(store);
+      return;
+    }
 
     position = new IdentityHashMap<>();
     for (int i = 0; i < x.length; i++) {
@@ -243,9 +334,10 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
         negative += w[i];
       }
     }
-    fixedSum = new TimeStamp<>(store, fixed);
-    freePositive = new TimeStamp<>(store, positive);
-    freeNegative = new TimeStamp<>(store, negative);
+    sums = new TrailedInts(store, 4);
+    sums.set(FIXED, (int) fixed);
+    sums.set(FREE_POSITIVE, (int) positive);
+    sums.set(FREE_NEGATIVE, (int) negative);
 
     super.impose(store);
   }
@@ -254,18 +346,19 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
   public void queueVariable(int level, Var v) {
     Integer i = position.get(v);
     // A 0/1 variable changes only when it gets fixed, so this is called once per variable on a
-    // path of the search, at the level of the change, where the time stamps record the new sums.
+    // path of the search, at the level of the change, where the trailed counters record the new
+    // sums.
     // The constraint does not implement UsesQueueVariable, which would also call this on imposing.
     if (i != null) {
       assert x[i].singleton() : "LinearBool expects a 0/1 variable to change only when it is fixed";
       long weight = w[i];
       if (x[i].min() == 1) {
-        fixedSum.update(fixedSum.value() + weight);
+        sums.set(FIXED, sums.get(FIXED) + (int) weight);
       }
       if (weight > 0) {
-        freePositive.update(freePositive.value() - weight);
+        sums.set(FREE_POSITIVE, sums.get(FREE_POSITIVE) - (int) weight);
       } else {
-        freeNegative.update(freeNegative.value() - weight);
+        sums.set(FREE_NEGATIVE, sums.get(FREE_NEGATIVE) - (int) weight);
       }
     }
   }
@@ -273,11 +366,16 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
   @Override
   public void consistency(final Store store) {
 
+    if (watched) {
+      consistencyWatched(store);
+      return;
+    }
+
     do {
       store.propagationHasOccurred = false;
 
-      long sumMin = fixedSum.value() + freeNegative.value();
-      long sumMax = fixedSum.value() + freePositive.value();
+      long sumMin = (long) sums.get(FIXED) + sums.get(FREE_NEGATIVE);
+      long sumMax = (long) sums.get(FIXED) + sums.get(FREE_POSITIVE);
 
       long rhsMin;
       long rhsMax;
@@ -303,7 +401,10 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
       }
       long slack = Math.min(up, down);
 
-      for (int i = 0; i < x.length && Math.abs(w[i]) > slack; i++) {
+      // The slack only falls along a branch, so the variables before start, whose weights exceeded
+      // the slack of an earlier call, are fixed.
+      int i = sums.get(FIXED_BEFORE);
+      for (; i < x.length && Math.abs(w[i]) > slack; i++) {
         IntVar v = x[i];
         if (v.singleton()) {
           continue;
@@ -324,7 +425,130 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
           }
         }
       }
+      sums.set(FIXED_BEFORE, i);
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Watched propagation needs a constant right hand side, enough variables, sums that fit in an int
+   * with room for the slack, and level 0, since the watches are kept on backtracking.
+   */
+  private boolean canWatch(Store store) {
+    if (z != null || x.length == 0 || x.length < watchMinLength || store.level != 0) {
+      return false;
+    }
+    long total = 0;
+    for (long weight : w) {
+      total += Math.abs(weight);
+    }
+    return 2 * total + Math.abs(c) < Integer.MAX_VALUE;
+  }
+
+  private void imposeWatched(Store store) {
+
+    watched = true;
+    maxCoefficient = Math.abs(w[0]);
+    // w*x is |w|*l - (w < 0 ? |w| : 0) with l = x for w > 0 and l = 1 - x otherwise, and
+    // w*x <= c is (-w)*x >= -c.
+    long positive = 0;
+    long negative = 0;
+    for (long weight : w) {
+      if (weight > 0) {
+        positive += weight;
+      } else {
+        negative -= weight;
+      }
+    }
+    degree = new long[2];
+    degree[0] = relationType == LE ? 0 : c + negative;
+    degree[1] = relationType == GE ? 0 : positive - c;
+    prefix = new TrailedInts[2];
+    for (int side = 0; side < 2; side++) {
+      // a side with d <= 0 always holds; it has no prefix and it is never propagated
+      if (degree[side] > 0) {
+        prefix[side] = new TrailedInts(store, 3);
+        prefix[side].set(SLACK, (int) -degree[side]);
+      }
+    }
+    watching = new boolean[2][x.length];
+
+    store.addChanged(this);
+    store.countConstraint();
+  }
+
+  /** The value of x[i] at which the literal of x[i] is false on the given side. */
+  private int falseValue(int side, int i) {
+    return (w[i] > 0) == (side == 0) ? 0 : 1;
+  }
+
+  @Override
+  public boolean valueWatchFired(int level, Var v, int tag) {
+    int i = tag >> 1;
+    int side = tag & 1;
+    if (i >= prefix[side].get(K)) {
+      // Beyond the prefix restored by backtracking. The watch is kept: removing it would cost a
+      // search of the watch list, and the prefix is likely to grow over the variable again.
+      return false;
+    }
+    int slack = prefix[side].get(SLACK) - (int) Math.abs(w[i]);
+    prefix[side].set(SLACK, slack);
+    return slack < maxCoefficient;
+  }
+
+  private void consistencyWatched(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+      propagateSide(store, 0);
+      propagateSide(store, 1);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagateSide(Store store, int side) {
+
+    if (degree[side] <= 0) {
+      return;
+    }
+    int slack = prefix[side].get(SLACK);
+    if (slack >= maxCoefficient) {
+      return;
+    }
+    int k = prefix[side].get(K);
+    if (k < x.length) {
+      // Extend the prefix until it has enough slack. A fixed variable needs no watch: it is not
+      // unfixed before the store backtracks to a level where the prefix ends before it.
+      while (k < x.length && slack < maxCoefficient) {
+        IntVar v = x[k];
+        if (!v.singleton()) {
+          slack += (int) Math.abs(w[k]);
+          if (!watching[side][k]) {
+            watching[side][k] = true;
+            store.watchValue(v, falseValue(side, k), this, 2 * k + side);
+          }
+        } else if (v.value() != falseValue(side, k)) {
+          slack += (int) Math.abs(w[k]);
+        }
+        k++;
+      }
+      prefix[side].set(K, k);
+      prefix[side].set(SLACK, slack);
+      if (slack >= maxCoefficient) {
+        return;
+      }
+    }
+
+    // The prefix holds every literal, so its slack is the slack of the side.
+    if (slack < 0) {
+      throw Store.failException;
+    }
+    // The literals before start have been fixed by an earlier call with a larger slack.
+    int i = prefix[side].get(START);
+    for (; i < x.length && Math.abs(w[i]) > slack; i++) {
+      IntVar v = x[i];
+      if (!v.singleton()) {
+        v.domain.inValue(store.level, v, 1 - falseValue(side, i));
+      }
+    }
+    prefix[side].set(START, i);
   }
 
   @Override

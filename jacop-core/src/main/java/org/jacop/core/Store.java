@@ -235,8 +235,11 @@ public class Store {
 
   private int booleanChangeLevelsSize;
 
-  /** The timestamps that got a value at a new level, in the order of the levels. */
-  private TimeStamp<?>[] timeStampTrail = new TimeStamp<?>[64];
+  /**
+   * The timestamps (and other trailed values) that got a value at a new level, in the order of the
+   * levels.
+   */
+  private Stateful[] timeStampTrail = new Stateful[64];
 
   /** The level of the corresponding entry of timeStampTrail. */
   private int[] timeStampTrailLevel = new int[64];
@@ -528,6 +531,47 @@ public class Store {
 
     if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
       queueWatchedConstraintsForVariable(v);
+    }
+
+    if (v.valueWatches != null && pruningEvent == IntDomain.GROUND) {
+      queueValueWatches(v);
+    }
+  }
+
+  /**
+   * Makes a constraint watch a variable for being fixed to 0 or 1. When the variable gets that
+   * value, the store calls {@link Constraint#valueWatchFired(int, Var, int)} with the tag, and
+   * queues the constraint if the call returns true. Unlike model constraints of a variable, the
+   * watches are not restored on backtracking and stay for good, so they are meant for constraints
+   * imposed at level 0 that keep track of their watches themselves, as SAT solvers do with watched
+   * literals. The constraint must not add a watch on the variable during the call.
+   *
+   * @param v the variable, with a domain within 0..1.
+   * @param value the watched value, 0 or 1.
+   * @param c the watching constraint.
+   * @param tag the tag given back to the constraint, for example the position of the variable.
+   */
+  public void watchValue(Var v, int value, Constraint c, int tag) {
+    if (v.valueWatches == null) {
+      v.valueWatches = new ValueWatches();
+    }
+    v.valueWatches.add(value, c, tag);
+  }
+
+  private void queueValueWatches(Var v) {
+    int value = ((IntVar) v).value();
+    if (value != 0 && value != 1) {
+      return;
+    }
+    ValueWatches watches = v.valueWatches;
+    for (int i = watches.size[value] - 1; i >= 0; i--) {
+      Constraint c = watches.constraints[value][i];
+      if (c.isEntailed()) {
+        continue;
+      }
+      if (c.valueWatchFired(level, v, watches.tags[value][i]) && currentConstraint != c) {
+        addChanged(c);
+      }
     }
   }
 
@@ -1094,12 +1138,13 @@ public class Store {
   }
 
   /**
-   * Records that a timestamp got a value at a new level, so the value is removed with the level.
+   * Records that a timestamp got a value at a new level, so the value is removed with the level. A
+   * {@link TrailedInts} records itself the same way; its removeLevel restores every level at once.
    *
    * @param timeStamp the timestamp.
    * @param stampLevel the level of the new value.
    */
-  void recordTimeStampLevel(TimeStamp<?> timeStamp, int stampLevel) {
+  void recordTimeStampLevel(Stateful timeStamp, int stampLevel) {
     if (timeStampTrailSize >= timeStampTrail.length) {
       growTimeStampTrail();
     }
