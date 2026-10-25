@@ -194,6 +194,7 @@ class LcgSolverTest {
         store.impose(r.constraint);
       }
       LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
       assertThat(status)
@@ -263,6 +264,7 @@ class LcgSolverTest {
         store.impose(r.constraint);
       }
       LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
       assertThat(status)
@@ -333,6 +335,7 @@ class LcgSolverTest {
           answer[0] = search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()));
         } else {
           LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
           int status = solver.solve();
           answer[1] = status == CdclSolver.SAT;
           assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
@@ -418,6 +421,7 @@ class LcgSolverTest {
           optimum[0] = search.getCostValue();
         } else {
           LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
           optimum[1] = solver.value(makespan);
         }

@@ -286,6 +286,17 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns a variable's domain when the trail started recording it: the facts its atoms are
+   * relative to.
+   *
+   * @param x the variable
+   * @return its initial domain, which must not be changed
+   */
+  public IntDomain rootDomain(IntVar x) {
+    return root[slot(x)];
+  }
+
+  /**
    * Adds to {@code out} the entry of a variable's lower bound just before trail position {@code
    * position}, unless that bound is the initial one.
    *
@@ -428,14 +439,16 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    *
    * @param entry the entry, which must have a constraint as reason
    * @param out where the entries are added
+   * @return true when the constraint explained it, false for the generic reason
    */
-  public void explain(int entry, EntryList out) {
+  public boolean explain(int entry, EntryList out) {
     int mark = out.size();
     if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
-      return;
+      return true;
     }
     out.truncate(mark);
     genericReason(entry, out);
+    return false;
   }
 
   /**
@@ -444,11 +457,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    *
    * @param failed the constraint that failed
    * @param out where the entries are added
+   * @return true when the constraint explained it, false for the generic reason
    */
-  public void explainFailure(Constraint failed, EntryList out) {
+  public boolean explainFailure(Constraint failed, EntryList out) {
     int mark = out.size();
     if (failed instanceof Explainable c && c.explainFailure(this, out)) {
-      return;
+      return true;
     }
     out.truncate(mark);
     for (Var v : failed.arguments()) {
@@ -456,6 +470,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         atomsBefore(x, size, out);
       }
     }
+    return false;
   }
 
   /**

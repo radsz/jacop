@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -48,6 +49,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 
 /**
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
@@ -103,6 +105,8 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] pushedReason;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
+  private ExplanationChecker checker;
+  private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
   /** Statistics: reasons the solver asked for. */
   public long reasons;
@@ -133,6 +137,9 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
+    if (Boolean.getBoolean("jacop.lcg.check")) {
+      checker = new ExplanationChecker(trail);
+    }
     List<IntVar> all = new ArrayList<>();
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof IntVar x) {
@@ -313,6 +320,26 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Turns the explanation checker on or off: every explanation is then derived again in a scratch
+   * store, and a wrong one stops the solver with an {@link IllegalStateException}. The system
+   * property {@code jacop.lcg.check=true} turns it on for every solver.
+   *
+   * @param on true to check explanations
+   */
+  public void setChecking(boolean on) {
+    checker = on ? new ExplanationChecker(trail) : null;
+  }
+
+  /**
+   * Returns the explanation checker, for its statistics.
+   *
+   * @return the checker, or null when checking is off
+   */
+  public ExplanationChecker checker() {
+    return checker;
+  }
+
+  /**
    * Returns the value of a variable in the last solution.
    *
    * @param x a variable of the store
@@ -407,7 +434,11 @@ public final class LcgSolver implements ExternalPropagator {
       if (!store.consistency()) {
         constraintConflicts++;
         EntryList atoms = new EntryList();
-        trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        count(store.recentlyFailedConstraint, own, atoms.size(), 3);
+        if (checker != null) {
+          verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
+        }
         return conflict(atoms, 0);
       }
     }
@@ -424,8 +455,46 @@ public final class LcgSolver implements ExternalPropagator {
       trail.atomsBefore(trail.variable(e), e, out);
       return cause[e];
     }
-    trail.explain(e, out);
+    int mark = out.size();
+    boolean own = trail.explain(e, out);
+    count(trail.reason(e), own, out.size() - mark, 0);
+    if (checker != null) {
+      EntryList reason = new EntryList();
+      for (int k = mark; k < out.size(); k++) {
+        reason.add(out.get(k));
+      }
+      verify(checker.checkReason(e, reason));
+    }
     return 0;
+  }
+
+  // per constraint class: reasons, generic reasons and atoms in them, then the same for failures
+  private void count(Constraint c, boolean own, int atoms, int at) {
+    long[] counts =
+        explanationCounts.computeIfAbsent(
+            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[6]);
+    counts[at]++;
+    if (!own) {
+      counts[at + 1]++;
+    }
+    counts[at + 2] += atoms;
+  }
+
+  /**
+   * Returns the explanation statistics per constraint class (simple name): reasons asked, those
+   * given by the generic reason, and the atoms in them; then failures explained, those explained
+   * generically, and their atoms.
+   *
+   * @return six counts per class, in the order above
+   */
+  public Map<String, long[]> explanationStatistics() {
+    return explanationCounts;
+  }
+
+  private static void verify(String problem) {
+    if (problem != null) {
+      throw new IllegalStateException("wrong explanation: " + problem);
+    }
   }
 
   /**
@@ -469,7 +538,8 @@ public final class LcgSolver implements ExternalPropagator {
     }
     clause = Arrays.stream(clause).distinct().toArray();
     if (clause.length == 0) {
-      throw new IllegalStateException("the constraints failed on the root domains");
+      throw new IllegalStateException(
+          "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
     }
     pushedReason = clause;
     return clause[0];
