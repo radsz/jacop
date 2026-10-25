@@ -28,6 +28,7 @@
 
 package org.jacop.search;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -349,5 +350,30 @@ class RestartSearchTest {
     calculator.newLimit();
     assertFalse(calculator.pointsExhausted());
     assertTrue(calculator.executeAfterConsistency(true));
+  }
+
+  private static long[] limits(Calculator calculator, int n) {
+    long[] limits = new long[n];
+    for (int i = 0; i < n; i++) {
+      limits[i] = calculator.getFailLimit();
+      calculator.newLimit();
+    }
+    return limits;
+  }
+
+  @Test
+  void geometricLimitsAreScaleTimesPowersOfTheBase() {
+    // The power of the base was rounded down before it was scaled, so restart_geometric(1.5, 100)
+    // gave 100, 100, 200, 300, 500 and a base of 1.1 kept the first limit for eight runs.
+    assertArrayEquals(
+        new long[] {100, 150, 225, 337, 506, 759}, limits(new GeometricCalculator(1.5, 100), 6));
+    assertArrayEquals(
+        new long[] {10, 11, 12, 13, 14, 16, 17, 19}, limits(new GeometricCalculator(1.1, 10), 8));
+    long[] huge = limits(new GeometricCalculator(10, 1000), 40);
+    for (int i = 1; i < huge.length; i++) {
+      assertTrue(huge[i] >= huge[i - 1], "limits must not overflow: " + Arrays.toString(huge));
+    }
+    assertArrayEquals(new long[] {3, 3, 6, 3, 3, 6, 12, 3}, limits(new LubyCalculator(3), 8));
+    assertArrayEquals(new long[] {2, 4, 6, 8}, limits(new LinearCalculator(2), 4));
   }
 }
