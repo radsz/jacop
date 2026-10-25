@@ -703,7 +703,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
         double[] row = edge[best];
         double pb = p[best];
         for (int j = 1; j < n; j++) {
-          if (!inTree[j] && row[j] != INF) {
+          if (!inTree[j] && row[j] < INF) {
             double c = row[j] + pb + p[j];
             if (c < key[j]) {
               key[j] = c;
@@ -719,7 +719,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       double c2 = INF;
       double[] row0 = edge[0];
       for (int j = 1; j < n; j++) {
-        if (row0[j] != INF) {
+        if (row0[j] < INF) {
           double c = row0[j] + p[0] + p[j];
           if (c < c1) {
             c2 = c1;
@@ -760,11 +760,11 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       int sinceImproved = 0;
       for (int it = 0; it < iterations; it++) {
         double bound = solve(pi);
-        if (bound == Double.NEGATIVE_INFINITY) {
+        if (Double.isInfinite(bound)) {
           // the graph is not connected or node 0 has fewer than two neighbours
           throw Store.failException;
         }
-        if (best == Double.NEGATIVE_INFINITY || bound > best + tolerance(best)) {
+        if (Double.isInfinite(best) || bound > best + tolerance(best)) {
           best = bound;
           System.arraycopy(pi, 0, bestPi, 0, n);
           sinceImproved = 0;
@@ -793,7 +793,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       System.arraycopy(bestPi, 0, pi, 0, n);
 
       double bound = solve(pi);
-      if (bound == Double.NEGATIVE_INFINITY) {
+      if (Double.isInfinite(bound)) {
         throw Store.failException;
       }
       long lowerBound = (long) Math.ceil(bound - tolerance(bound));
