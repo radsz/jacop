@@ -33,8 +33,11 @@ package org.jacop.set.constraints;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -52,7 +55,8 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
+public class ChannelBoolSet extends Constraint
+    implements SatisfiedPresent, Copyable<ChannelBoolSet> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -61,7 +65,8 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   SetVar s;
   int offset;
 
-  boolean firstConsistencyCheck = true;
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
 
   /**
    * It constructs a Channel constraint.
@@ -106,10 +111,8 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       s.domain.inLub(store.level, s, new IntervalDomain(offset, n - 1 + offset));
-
-      firstConsistencyCheck = false;
     }
 
     // check Boolean variables
@@ -189,5 +192,10 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   public String toString() {
 
     return id() + " : ChannelBoolSet(" + Arrays.asList(b) + ", " + s + ", " + offset + ")";
+  }
+
+  @Override
+  public ChannelBoolSet copy(VarMap map) {
+    return new ChannelBoolSet(map.get(b), map.get(s), offset);
   }
 }

@@ -32,7 +32,9 @@ package org.jacop.floats.constraints;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -46,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * @version 5.0
  */
 public class SinPeqR extends AbstractTrigConstraint
-    implements SatisfiedPresent, FloatDerivableConstraint {
+    implements SatisfiedPresent, FloatDerivableConstraint, Copyable<SinPeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -149,5 +151,10 @@ public class SinPeqR extends AbstractTrigConstraint
     }
 
     return null;
+  }
+
+  @Override
+  public SinPeqR copy(VarMap map) {
+    return new SinPeqR(map.get(p), map.get(q));
   }
 }

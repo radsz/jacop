@@ -40,8 +40,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -59,7 +61,8 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 5.0
  */
 @Slf4j
-public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class Alldifferent extends Constraint
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<Alldifferent> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -73,6 +76,28 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   // Empty set swapped with variableQueue while grounded variables are processed, so no set is
   // allocated (and grown) per call.
   private LinkedHashSet<IntVar> spareVariableQueue = new LinkedHashSet<>();
+
+  /** Values above this many per variable keep the check of the matching at fixed variables. */
+  private static final int MATCHING_VALUES_PER_VARIABLE = 64;
+
+  /*
+   * A matching of the variables to distinct values, kept across calls and repaired when a matched
+   * value is removed, so that the constraint fails as soon as the variables cannot all take
+   * different values. matchedValue is indexed like list, owner by value - minValue. Domains only
+   * grow on backtracking, so the matching stays valid without trailing; null when not kept.
+   */
+  private int[] matchedValue;
+
+  private IntVar[] owner;
+  private int minValue;
+  private int[] visited;
+  private int visitStamp;
+
+  // variables changed since the last repair, and variables left without a value
+  private IntVar[] changed = new IntVar[8];
+  private int changedSize;
+  private IntVar[] unmatched;
+  private int unmatchedSize;
 
   /** Protected constructor for subclassing purposes. */
   protected Alldifferent() {}
@@ -138,6 +163,11 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
           list[groundPos] = q;
           positionMapping.put(q, groundPos);
           positionMapping.put(list[qPos], qPos);
+          if (matchedValue != null) {
+            int value = matchedValue[qPos];
+            matchedValue[qPos] = matchedValue[groundPos];
+            matchedValue[groundPos] = value;
+          }
           groundPos++;
         } else if (qPos == groundPos) {
           groundPos++;
@@ -197,6 +227,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
    * @param groundPos the current position of the first non-grounded variable
    */
   protected void checkMatchingExcept(Store store, int groundPos) {
+    if (matchedValue != null) {
+      repairMatching();
+      return;
+    }
     ArrayList<IntVar> vars = new ArrayList<>();
     for (int i = groundPos; i < list.length; i++) {
       if (!hasExceptionValues(list[i])) {
@@ -208,9 +242,82 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     }
   }
 
+  /**
+   * Repairs the matching after domain changes: variables whose matched value was removed lose it,
+   * and every variable without a value gets one by an augmenting path. Fails when one cannot.
+   */
+  private void repairMatching() {
+    for (int k = 0; k < changedSize; k++) {
+      IntVar v = changed[k];
+      changed[k] = null;
+      int pos = positionMapping.get(v);
+      int value = matchedValue[pos];
+      if (value != Integer.MIN_VALUE && !v.domain.contains(value)) {
+        owner[value - minValue] = null;
+        matchedValue[pos] = Integer.MIN_VALUE;
+        unmatched[unmatchedSize++] = v;
+      }
+    }
+    changedSize = 0;
+
+    while (unmatchedSize > 0) {
+      visitStamp++;
+      if (!augment(unmatched[unmatchedSize - 1])) {
+        throw Store.failException;
+      }
+      unmatched[--unmatchedSize] = null;
+    }
+  }
+
+  /** Finds a value for v, moving the owners of its values along an augmenting path. */
+  private boolean augment(IntVar v) {
+    IntDomain dom = v.domain;
+    int max = dom.max();
+    // first a free value, then a path through the owners
+    for (int value = dom.min(); ; value = dom.nextValue(value)) {
+      if (owner[value - minValue] == null) {
+        match(v, value);
+        return true;
+      }
+      if (value == max) {
+        break;
+      }
+    }
+    for (int value = dom.min(); ; value = dom.nextValue(value)) {
+      int index = value - minValue;
+      if (visited[index] != visitStamp) {
+        visited[index] = visitStamp;
+        IntVar previous = owner[index];
+        if (augment(previous)) {
+          match(v, value);
+          return true;
+        }
+      }
+      if (value == max) {
+        return false;
+      }
+    }
+  }
+
+  private void match(IntVar v, int value) {
+    owner[value - minValue] = v;
+    matchedValue[positionMapping.get(v)] = value;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    // a matching that is kept is checked after any change, otherwise only at fixed variables
+    return matchedValue != null ? IntDomain.ANY : IntDomain.GROUND;
+  }
+
+  /**
+   * Whether this constraint keeps a matching of its variables to check feasibility after every
+   * domain change. Subclasses with their own matching check or propagation return false.
+   *
+   * @return true for the plain alldifferent constraint.
+   */
+  protected boolean keepsMatching() {
+    return true;
   }
 
   @Override
@@ -309,14 +416,49 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   @Override
   public void impose(Store store) {
 
-    super.impose(store);
     positionMapping = Var.positionMapping(list, false, this.getClass());
+    if (keepsMatching()) {
+      initMatching();
+    }
+    super.impose(store);
     grounded = new TimeStamp<>(store, 0);
+  }
+
+  /** Allocates the matching when the values span a range small enough for arrays. */
+  private void initMatching() {
+    if (list.length == 0) {
+      return;
+    }
+    long min = Long.MAX_VALUE;
+    long max = Long.MIN_VALUE;
+    for (IntVar v : list) {
+      min = Math.min(min, v.min());
+      max = Math.max(max, v.max());
+    }
+    long range = max - min + 1;
+    if (range > (long) MATCHING_VALUES_PER_VARIABLE * list.length + 1024) {
+      return;
+    }
+    minValue = (int) min;
+    owner = new IntVar[(int) range];
+    visited = new int[(int) range];
+    matchedValue = new int[list.length];
+    Arrays.fill(matchedValue, Integer.MIN_VALUE);
+    unmatched = Arrays.copyOf(list, list.length);
+    unmatchedSize = list.length;
   }
 
   @Override
   public void queueVariable(int level, Var v) {
-    variableQueue.add((IntVar) v);
+    if (v.singleton()) {
+      variableQueue.add((IntVar) v);
+    }
+    if (matchedValue != null) {
+      if (changedSize == changed.length) {
+        changed = Arrays.copyOf(changed, 2 * changedSize);
+      }
+      changed[changedSize++] = (IntVar) v;
+    }
   }
 
   /**
@@ -354,5 +496,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     result.append("])");
 
     return result.toString();
+  }
+
+  @Override
+  public Alldifferent copy(VarMap map) {
+    return new Alldifferent(map.get(list));
   }
 }

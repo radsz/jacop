@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -41,7 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AndBoolSimple extends AbstractBoolSimple {
+public class AndBoolSimple extends AbstractBoolSimple implements Copyable<AndBoolSimple> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -119,5 +121,10 @@ public class AndBoolSimple extends AbstractBoolSimple {
   public String toString() {
 
     return id() + " : andBoolSimple([ " + a + ", " + b + "], " + result + ")";
+  }
+
+  @Override
+  public AndBoolSimple copy(VarMap map) {
+    return new AndBoolSimple(map.get(a), map.get(b), map.get(result));
   }
 }

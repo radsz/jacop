@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -70,7 +72,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class AmongSeq extends Constraint implements SatisfiedPresent {
+public class AmongSeq extends Constraint implements SatisfiedPresent, Copyable<AmongSeq> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -531,5 +533,10 @@ public class AmongSeq extends Constraint implements SatisfiedPresent {
     result.append("], ").append(set).append(", ").append(q);
     result.append(", ").append(min).append(", ").append(max).append(")");
     return result.toString();
+  }
+
+  @Override
+  public AmongSeq copy(VarMap map) {
+    return new AmongSeq(map.get(list), set, q, min, max);
   }
 }

@@ -1,0 +1,122 @@
+/*
+ * ExternalPropagator.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.jasat.cdcl;
+
+/**
+ * A propagator that takes part in the search of {@link CdclSolver#solve}, in the style of IPASIR-UP
+ * (Fazekas et al. 2023). It sees the assignments of the variables it observes, can propagate
+ * literals with a reason clause, add clauses, suggest decisions and reject complete assignments.
+ * Literals are DIMACS literals.
+ *
+ * <p>Calls follow the solver's search: {@link #notifyNewDecisionLevel} when a level opens, {@link
+ * #notifyAssignment} for every observed variable that gets a value (once per assignment), {@link
+ * #notifyBacktrack} when levels are undone. After unit propagation reaches a fixpoint, the solver
+ * asks for {@link #externalClause} until it returns null and for {@link #propagate} until it
+ * returns 0. A literal returned by {@link #propagate} must be implied: the solver asks for its
+ * {@link #reason} at once, a clause made of the literal and literals that are false now. When the
+ * assignment is complete, {@link #checkModel} accepts it or adds a clause that it falsifies.
+ *
+ * <p>Clauses from {@link #externalClause} are kept; reason clauses are learnt clauses and may be
+ * deleted. Every clause must be implied by the formula and the propagator's theory. DRAT proofs do
+ * not cover the theory, so they cannot be checked when a propagator is connected.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public interface ExternalPropagator {
+
+  /**
+   * An observed variable got a value.
+   *
+   * @param lit the literal that became true
+   * @param fixed whether it is fixed at level 0
+   */
+  default void notifyAssignment(int lit, boolean fixed) {}
+
+  /** A new decision level opened. */
+  default void notifyNewDecisionLevel() {}
+
+  /**
+   * The levels above {@code level} were undone, with all their assignments.
+   *
+   * @param level the decision level the search is now at
+   */
+  default void notifyBacktrack(int level) {}
+
+  /**
+   * Checks a complete assignment.
+   *
+   * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}
+   * @return true to accept it; false after preparing a clause, returned by {@link #externalClause},
+   *     that the assignment falsifies
+   */
+  default boolean checkModel(int[] model) {
+    return true;
+  }
+
+  /**
+   * Suggests the next decision.
+   *
+   * @return an unassigned literal, or 0 to leave the decision to the solver
+   */
+  default int decide() {
+    return 0;
+  }
+
+  /**
+   * Returns a literal implied by the current assignment.
+   *
+   * @return the literal, or 0 when there is none
+   */
+  default int propagate() {
+    return 0;
+  }
+
+  /**
+   * Returns the reason of a literal returned by {@link #propagate}.
+   *
+   * @param lit the propagated literal
+   * @return a clause containing lit whose other literals are false now
+   */
+  default int[] reason(int lit) {
+    throw new IllegalStateException("no reason for " + lit);
+  }
+
+  /**
+   * Returns a clause to add.
+   *
+   * @return the clause, or null when there is none
+   */
+  default int[] externalClause() {
+    return null;
+  }
+}

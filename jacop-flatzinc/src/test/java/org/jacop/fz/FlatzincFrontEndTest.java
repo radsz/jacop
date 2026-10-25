@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -436,10 +438,10 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void circuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
+  void circuitPostsAlldistinctUnderDomainAnnotation() throws IOException {
     // x1 and x2 take 3 and 4 between them (a Hall set), so x5 cannot be 3 or 4. Circuit alone
-    // propagates all-different on fixed values only and needed two failed decisions on x5;
-    // the Alldistinct posted with it removes them at the root. Option -b leaves it out.
+    // propagates all-different on fixed values only and needs two failed decisions on x5; the
+    // Alldistinct posted with it under ::domain removes them at the root.
     String fzn =
         """
         var {3,4}: x1:: output_var;
@@ -448,38 +450,70 @@ class FlatzincFrontEndTest {
         var {1,2,3,5}: x4:: output_var;
         var {1,2,3,4}: x5:: output_var;
         array [1..5] of var int: x = [x1,x2,x3,x4,x5];
-        constraint jacop_circuit(x);
+        constraint jacop_circuit(x)%s;
         solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_max,complete) satisfy;
         """;
 
+    String domain = run(fzn.formatted(" :: domain"), "-s")[0];
+    assertTrue(domain.contains("x5 = 2;"), domain);
+    assertTrue(domain.contains("%%%mzn-stat: failures=0"), domain);
+    // a circuit of 5 nodes gets no Alldistinct by default
+    String plain = run(fzn.formatted(""), "-s")[0];
+    assertTrue(plain.contains("x5 = 2;"), plain);
+    assertTrue(plain.contains("%%%mzn-stat: failures=2"), plain);
+  }
+
+  @Test
+  void circuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
+    // The Hall set {x1, x2} on {3, 4} in a circuit of 30 nodes, 30 -> 2 -> 4 -> 5 -> ... -> 29
+    // -> 1 -> 3 -> 30: the Alldistinct posted by default removes 3 and 4 from x30 at the root.
+    // Option -b leaves it out.
+    String fzn = hallSetSuccessors(30) + "constraint jacop_circuit(x);\n" + hallSetSearch(30);
+
     String out = run(fzn, "-s")[0];
-    assertTrue(out.contains("x5 = 2;"), out);
+    assertTrue(out.contains("x30 = 2;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
     String bounds = run(fzn, "-s", "-b")[0];
-    assertTrue(bounds.contains("x5 = 2;"), bounds);
+    assertTrue(bounds.contains("x30 = 2;"), bounds);
     assertTrue(bounds.contains("%%%mzn-stat: failures=2"), bounds);
   }
 
   @Test
-  void subcircuitPostsAlldistinctWithoutDomainAnnotation() throws IOException {
-    // The same Hall set {x1, x2} on {3, 4}: Subcircuit alone tried x5 = 3 and x5 = 4 first.
-    String fzn =
-        """
-        var {3,4}: x1:: output_var;
-        var {3,4}: x2:: output_var;
-        var 1..5: x3:: output_var;
-        var 1..5: x4:: output_var;
-        var {3,4,5}: x5:: output_var;
-        array [1..5] of var int: x = [x1,x2,x3,x4,x5];
-        constraint jacop_subcircuit(x);
-        solve :: int_search([x5,x4,x3,x2,x1],input_order,indomain_min,complete) satisfy;
-        """;
+  void subcircuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
+    // The same Hall set: Subcircuit alone tries x30 = 4 and x30 = 3 first.
+    String fzn = hallSetSuccessors(30) + "constraint jacop_subcircuit(x);\n" + hallSetSearch(30);
 
     String out = run(fzn, "-s")[0];
-    assertTrue(out.contains("x5 = 5;"), out);
+    assertTrue(out.contains("x30 = 2;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
     String bounds = run(fzn, "-s", "-b")[0];
-    assertTrue(bounds.contains("%%%mzn-stat: failures=3"), bounds);
+    assertTrue(bounds.contains("x30 = 2;"), bounds);
+    assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+  }
+
+  /** Successors of n nodes with the Hall set {x1, x2} on {3, 4} and x_n in 1..4. */
+  private static String hallSetSuccessors(int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("var {3,4}: x1:: output_var;\n").append("var {3,4}: x2:: output_var;\n");
+    fzn.append("var {5,").append(n).append("}: x3:: output_var;\n");
+    for (int i = 4; i < n; i++) {
+      fzn.append("var {1,").append(i + 1).append("}: x").append(i).append(":: output_var;\n");
+    }
+    fzn.append("var 1..4: x").append(n).append(":: output_var;\n");
+    fzn.append("array [1..").append(n).append("] of var int: x = [");
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('x').append(i);
+    }
+    return fzn.append("];\n").toString();
+  }
+
+  /** Search on x_n first, largest value first. */
+  private static String hallSetSearch(int n) {
+    StringBuilder order = new StringBuilder();
+    for (int i = n; i >= 1; i--) {
+      order.append(i < n ? "," : "").append('x').append(i);
+    }
+    return "solve :: int_search([" + order + "],input_order,indomain_max,complete) satisfy;\n";
   }
 
   @Test
@@ -772,7 +806,219 @@ class FlatzincFrontEndTest {
         + status;
   }
 
+  private static final String PRIORITY_WITH_SEQ_SEARCH_ROW =
+      """
+      var 1..2: a:: output_var;
+      var 1..2: b:: output_var;
+      var 1..2: c:: output_var;
+      solve :: priority_search([c,a],[int_search([c],input_order,indomain_min,complete),\
+      seq_search([int_search([a],input_order,indomain_max,complete),\
+      int_search([b],input_order,indomain_min,complete)])],input_order,complete) satisfy;
+      """;
+
+  @Test
+  void seqSearchInPrioritySearchKeepsTheHeuristicsOfItsSearches() throws IOException {
+    // The first search of a seq_search under priority_search got the heuristic of the last one, so
+    // b was labelled first and a was left to the completion search (indomain_min).
+    assertEquals(
+        List.of(
+            "a = 2; b = 1; c = 1;",
+            "a = 2; b = 2; c = 1;",
+            "a = 1; b = 1; c = 1;",
+            "a = 1; b = 2; c = 1;",
+            "a = 2; b = 1; c = 2;",
+            "a = 2; b = 2; c = 2;",
+            "a = 1; b = 1; c = 2;",
+            "a = 1; b = 2; c = 2;"),
+        solveAllInOrder(PRIORITY_WITH_SEQ_SEARCH_ROW));
+  }
+
+  @Test
+  void prioritySearchStopsAtTheRequestedNumberOfSolutions() throws IOException {
+    // The priority search stopped at its own count of solutions, taken from the listeners of its
+    // child searches, which count each other's solutions: -n 3 stopped after 2 solutions and
+    // reported the search complete.
+    String out = run(PRIORITY_WITH_SEQ_SEARCH_ROW, "-n", "3")[0];
+    assertEquals(3, out.split("----------", -1).length - 1, out);
+    assertTrue(!out.contains("=========="), out);
+  }
+
+  @Test
+  void prioritySearchSkipsASearchWithNoVariables() throws IOException {
+    // An empty search was dropped from the list of searches, so the priority variables and the
+    // searches no longer matched and the solver stopped with a RuntimeException.
+    String fzn =
+        """
+        var 1..2: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([a,b],[int_search([],input_order,indomain_min,complete),\
+        int_search([b],input_order,indomain_max,complete)],input_order,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 2;", "a = 2; b = 2;", "a = 1; b = 1;", "a = 2; b = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void prioritySearchBreaksTiesWithTheTieBreakingMetric() throws IOException {
+    // most_constrained: smallest domain, ties broken by the larger number of constraints. The tie
+    // was decided by comparing the domain size of p1 (2) with the constraint count of p2 (3), so
+    // p2 was searched first although p1 has 4 constraints.
+    String fzn =
+        """
+        var 0..1: p1:: output_var;
+        var 0..1: p2:: output_var;
+        var 0..9: y1;
+        var 0..9: y2;
+        var 0..9: y3;
+        var 0..9: y4;
+        constraint int_ne(y1,p1);
+        constraint int_ne(y2,p1);
+        constraint int_ne(y3,p1);
+        constraint int_ne(y4,p1);
+        constraint int_ne(y1,p2);
+        constraint int_ne(y2,p2);
+        constraint int_ne(y3,p2);
+        solve :: priority_search([p1,p2],[int_search([p1],input_order,indomain_min,complete),\
+        int_search([p2],input_order,indomain_min,complete)],most_constrained,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("p1 = 0; p2 = 0;", "p1 = 0; p2 = 1;", "p1 = 1; p2 = 0;", "p1 = 1; p2 = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void maxRegretRanksAFixedPriorityVariableLast() throws IOException {
+    // A fixed variable has no second value; its regret was computed against MAX_INT, so the
+    // priority search chose the row of the constant 2 before the row of a (regret 2), unlike
+    // Chuffed, which gives a fixed variable regret 0.
+    String fzn =
+        """
+        var {1,3}: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([2,a],[int_search([b],input_order,indomain_min,complete),\
+        int_search([a],input_order,indomain_min,complete)],max_regret,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 1;", "a = 1; b = 2;", "a = 3; b = 1;", "a = 3; b = 2;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
+  @Test
+  void warmStartOnFloatAndSetVariablesIsIgnored() throws IOException {
+    // a hint is only a preference, but float and set hints aborted the run (float values) or
+    // crashed the parser (set values)
+    String sets =
+        """
+        var set of 1..4: s:: output_var;
+        var 1..4: y:: output_var;
+        array [1..1] of var set of int: hs = [s];
+        constraint set_card(s,y);
+        constraint set_in(y,s);
+        solve %s satisfy;
+        """;
+    Set<String> noHint = solveAll(sets.formatted(""));
+    assertEquals(8, noHint.size());
+    assertEquals(noHint, solveAll(sets.formatted(":: warm_start(hs,[{1,3}])")));
+
+    String floats =
+        """
+        var 0.0..10.0: f:: output_var;
+        var 2..5: y:: output_var;
+        var 2.0..5.0: yf;
+        array [1..1] of var float: hf = [f];
+        array [1..1] of var int: hy = [y];
+        constraint float_lin_le([-1.0,1.0],[f,yf],-0.5);
+        constraint int2float(y,yf);
+        solve :: warm_start(hy,[4]) :: warm_start(hf,[3.0]) minimize f;
+        """;
+    String[] out = run(floats);
+    assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
+
+  @Test
+  void emptyWarmStartIsIgnored() throws IOException {
+    // warm_start(x, [<>, <>, <>]) is flattened to warm_start([], []), which crashed the parser
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve %s satisfy;
+        """;
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(":: warm_start([],[])")));
+  }
+
+  @Test
+  void warmStartWithMoreValuesThanVariablesUsesTheCommonPart() throws IOException {
+    // the values were read up to their own length, past the end of the variables
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve :: warm_start([x],[2,3]) satisfy;
+        """;
+    String out = run(fzn)[0];
+    assertTrue(out.contains("x = 2;"), out);
+    assertEquals(6, solveAll(fzn).size());
+  }
+
+  @Test
+  void warmStartArrayIsUsed() throws IOException {
+    // warm_start_array, which MiniZinc makes for a set hint without set support and which users
+    // write to group hints, was ignored
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_ne(x,y);
+        constraint int_eq_imp(x,3,b);
+        solve %s satisfy;
+        """;
+    String hint =
+        ":: warm_start_array([warm_start([x,y],[3,1]),warm_start_array([warm_start([b],[true])])])";
+    String out = run(fzn.formatted(hint))[0];
+    assertTrue(out.contains("x = 3;") && out.contains("y = 1;") && out.contains("b = true;"), out);
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(hint)));
+  }
+
+  @Test
+  void warmStartInSequenceSearchStopsAtTheTimeLimit() {
+    // a warm_start inside seq_search (or next to another search annotation) was not in the list of
+    // searches that get the time limit, so a long search under it ignored -t; 13 pigeons in 12
+    // holes take hours without the limit
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      fzn.append("var 1..12: x").append(i).append(";\n");
+    }
+    StringBuilder vars = new StringBuilder();
+    StringBuilder hint = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      vars.append(i == 0 ? "" : ",").append("x").append(i);
+      hint.append(i == 0 ? "" : ",").append(i % 12 + 1);
+    }
+    fzn.append("array [1..13] of var int: x = [").append(vars).append("];\n");
+    for (int i = 0; i < 13; i++) {
+      for (int j = i + 1; j < 13; j++) {
+        fzn.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+      }
+    }
+    fzn.append("solve :: seq_search([warm_start(x,[")
+        .append(hint)
+        .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
+
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+            0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

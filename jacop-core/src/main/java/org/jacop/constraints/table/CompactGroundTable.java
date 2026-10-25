@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -107,6 +108,29 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
 
   /** Set while the constraint prunes, so that its own changes are not queued. */
   boolean pruning;
+
+  /**
+   * Constructs a copy over the counterparts of the variables; the tuples are shared.
+   *
+   * @param original the table to copy.
+   * @param map the counterparts of the variables of the original.
+   * @param extra the counterparts of the extra variables of the original, or null.
+   */
+  protected CompactGroundTable(CompactGroundTable original, VarMap map, IntVar[] extra) {
+    this.x = map.get(original.x);
+    this.arity = original.arity;
+    this.cells = original.cells;
+    this.tupleCount = original.tupleCount;
+    this.varMap = Var.positionMapping(x, false, this.getClass());
+    this.queueIndex = 1;
+    if (extra == null) {
+      setScope(x);
+    } else {
+      IntVar[] all = Arrays.copyOf(x, x.length + extra.length);
+      System.arraycopy(extra, 0, all, x.length, extra.length);
+      setScope(all);
+    }
+  }
 
   /**
    * It creates the shared part of a table over tuples of values.

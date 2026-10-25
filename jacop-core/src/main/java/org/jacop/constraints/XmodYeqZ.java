@@ -33,6 +33,8 @@ package org.jacop.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -46,7 +48,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmodYeqZ extends AbstractXopYeqZ {
+public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -269,5 +271,10 @@ public class XmodYeqZ extends AbstractXopYeqZ {
       result = null;
     }
     return result;
+  }
+
+  @Override
+  public XmodYeqZ copy(VarMap map) {
+    return new XmodYeqZ(map.get(x), map.get(y), map.get(z));
   }
 }

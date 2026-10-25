@@ -95,6 +95,9 @@ public abstract class IntDomain extends Domain {
   /** Unique identifier for a lazy bit set domain type. */
   public static final int LAZY_BIT_SET_DOMAIN_ID = 4;
 
+  /** The length from which an owned constraint array has a hash table. */
+  private static final int TABLE_THRESHOLD = 16;
+
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.
@@ -126,6 +129,22 @@ public abstract class IntDomain extends Domain {
    * and can be easily restored if necessary.
    */
   public IntDomain previousDomain;
+
+  /**
+   * The constraint arrays, per pruning event, that this domain object allocated. No earlier domain
+   * reads them, so constraints can be appended to them in place; an array that is no longer the one
+   * in modelConstraints is not appended to.
+   */
+  Constraint[][] ownedModelConstraints;
+
+  /**
+   * For each owned array of at least TABLE_THRESHOLD entries, an identity hash table holding every
+   * constraint appended to it, also the ones removed since.
+   */
+  Constraint[][] ownedModelConstraintTables;
+
+  /** The number of constraints in each table of ownedModelConstraintTables. */
+  int[] ownedModelConstraintTableSizes;
 
   /**
    * Finds the result interval for multiplication of {a..b} * {c..d}.
@@ -1302,50 +1321,107 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
-   * Adds a constraint to the specified pruning event array.
+   * Adds a constraint to the specified pruning event array. An array this domain object allocated
+   * is not shared with an earlier domain, so a constraint is appended in place while there is room.
+   * A long owned array also has a hash table of the constraints appended to it, which answers the
+   * check for a constraint imposed already. Imposing n constraints on a variable takes amortized
+   * linear time instead of quadratic.
    *
    * @param constraint the constraint to add
    * @param pruningEvent the pruning event index
    */
   private void addConstraintToPruningEvent(Constraint constraint, int pruningEvent) {
     Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+    int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+    boolean owned =
+        pruningEventConstraints != null
+            && ownedModelConstraints != null
+            && pruningEventConstraints == ownedModelConstraints[pruningEvent];
+    Constraint[] table = owned ? ownedModelConstraintTables[pruningEvent] : null;
 
-    if (pruningEventConstraints != null) {
-      boolean alreadyImposed = false;
-
-      if (modelConstraintsToEvaluate[pruningEvent] > 0) {
-        for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
-          if (pruningEventConstraints[i] == constraint) {
-            alreadyImposed = true;
-            break;
-          }
+    // the table holds every constraint of the array, so a constraint missing from it is not imposed
+    if (table == null || tableContains(table, constraint)) {
+      for (int i = pruningConstraintsToEvaluate - 1; i >= 0; i--) {
+        if (pruningEventConstraints[i] == constraint) {
+          return;
         }
       }
+    }
 
-      if (!alreadyImposed) {
-        int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
-        Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
-
+    if (owned && pruningConstraintsToEvaluate < pruningEventConstraints.length) {
+      pruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
+      if (table != null && tableAdd(table, constraint)) {
+        int tableSize = ++ownedModelConstraintTableSizes[pruningEvent];
+        // constraints removed and replaced by others fill the table, so it is then rebuilt
+        if (tableSize > table.length >> 1) {
+          setTable(pruningEvent, pruningEventConstraints, pruningConstraintsToEvaluate + 1);
+        }
+      }
+    } else {
+      Constraint[] newPruningEventConstraints =
+          new Constraint[pruningConstraintsToEvaluate + (pruningConstraintsToEvaluate >> 1) + 1];
+      if (pruningConstraintsToEvaluate > 0) {
         System.arraycopy(
             pruningEventConstraints,
             0,
             newPruningEventConstraints,
             0,
             pruningConstraintsToEvaluate);
-        newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
-
-        modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
-        modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, 1);
       }
-    } else {
-      Constraint[] newPruningEventConstraints = new Constraint[1];
-      newPruningEventConstraints[0] = constraint;
+      newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
 
       modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
-      int[] newModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
-      newModelConstraintsToEvaluate[pruningEvent] = 1;
-      modelConstraintsToEvaluate = newModelConstraintsToEvaluate;
+      if (ownedModelConstraints == null) {
+        ownedModelConstraints = new Constraint[modelConstraints.length][];
+        ownedModelConstraintTables = new Constraint[modelConstraints.length][];
+        ownedModelConstraintTableSizes = new int[modelConstraints.length];
+      }
+      ownedModelConstraints[pruningEvent] = newPruningEventConstraints;
+      if (newPruningEventConstraints.length < TABLE_THRESHOLD) {
+        ownedModelConstraintTables[pruningEvent] = null;
+      } else {
+        setTable(pruningEvent, newPruningEventConstraints, pruningConstraintsToEvaluate + 1);
+      }
     }
+    modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, 1);
+  }
+
+  /**
+   * Builds the identity hash table of the first size constraints of an owned array. The table has
+   * at least twice as many slots as the array.
+   */
+  private void setTable(int pruningEvent, Constraint[] constraints, int size) {
+    Constraint[] table = new Constraint[Integer.highestOneBit(constraints.length) << 2];
+    for (int i = 0; i < size; i++) {
+      tableAdd(table, constraints[i]);
+    }
+    ownedModelConstraintTables[pruningEvent] = table;
+    ownedModelConstraintTableSizes[pruningEvent] = size;
+  }
+
+  private static boolean tableAdd(Constraint[] table, Constraint constraint) {
+    int mask = table.length - 1;
+    int i = System.identityHashCode(constraint) & mask;
+    while (table[i] != null) {
+      if (table[i] == constraint) {
+        return false;
+      }
+      i = (i + 1) & mask;
+    }
+    table[i] = constraint;
+    return true;
+  }
+
+  private static boolean tableContains(Constraint[] table, Constraint constraint) {
+    int mask = table.length - 1;
+    int i = System.identityHashCode(constraint) & mask;
+    while (table[i] != null) {
+      if (table[i] == constraint) {
+        return true;
+      }
+      i = (i + 1) & mask;
+    }
+    return false;
   }
 
   /**

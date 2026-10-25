@@ -35,6 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,7 +58,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SeqPrecedeChain extends Constraint {
+public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeChain> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -312,5 +314,10 @@ public class SeqPrecedeChain extends Constraint {
     resultString.append(")");
 
     return resultString.toString();
+  }
+
+  @Override
+  public SeqPrecedeChain copy(VarMap map) {
+    return chain == null ? new SeqPrecedeChain(map.get(x)) : new SeqPrecedeChain(map.get(x), chain);
   }
 }

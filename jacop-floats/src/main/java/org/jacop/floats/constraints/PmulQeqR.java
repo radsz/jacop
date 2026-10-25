@@ -32,7 +32,9 @@ package org.jacop.floats.constraints;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -48,7 +50,8 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDerivableConstraint {
+public class PmulQeqR extends Constraint
+    implements SatisfiedPresent, FloatDerivableConstraint, Copyable<PmulQeqR> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -260,5 +263,10 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     }
 
     return null;
+  }
+
+  @Override
+  public PmulQeqR copy(VarMap map) {
+    return new PmulQeqR(map.get(p), map.get(q), map.get(r));
   }
 }

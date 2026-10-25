@@ -75,10 +75,10 @@ public class TimeStamp<T> implements Stateful {
    */
   public TimeStamp(Store store, T input) {
 
-    addLast(input, store.level);
-
-    index = store.putMutableVar(this);
     this.store = store;
+    index = store.registerTimeStamp();
+
+    addLast(input, store.level);
   }
 
   final void addLast(T input, int level) {
@@ -86,6 +86,7 @@ public class TimeStamp<T> implements Stateful {
     ensureCapacity(pointer4Last + 1);
     values[pointer4Last] = input;
     stamps[pointer4Last] = level;
+    store.recordTimeStampLevel(this, level);
   }
 
   /**

@@ -52,7 +52,17 @@ import org.jacop.core.ValueEnumeration;
  *
  * <p>It is soft in a sense that every violation of softLower, softUpper bound or softCounter
  * contributes to the violation cost. It is hard in a sense that it does enforce hardLower,
- * hardUpper bound or hardCounter. It uses value based violation metric.
+ * hardUpper bound or hardCounter.
+ *
+ * <p>Two violation measures are supported (van Hoeve, Pesant, Rousseau 2006). VALUE_BASED sums,
+ * over the counted values, how far each count is from its soft bounds (or from its soft counter).
+ * VARIABLE_BASED is the smallest number of variables that must change their value so that every
+ * count meets its soft bounds (or equals its soft counter). A variable may change to any value, and
+ * a value that is not counted can be taken by any number of variables, so the measure is
+ * max(shortage, excess), where shortage sums max(0, softLower - count) and excess sums max(0, count
+ * - softUpper) (with a soft counter s, both bounds are s). It is defined when the soft lower bounds
+ * (soft counters) sum to at most the number of variables; otherwise the constraint fails. A value
+ * counted twice is only supported with VALUE_BASED.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -127,7 +137,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param softLowerBound it specifies constraint what is the minimal number of occurrences.
    * @param softUpperBound it specifies constraint what is the maximal number of occurrences.
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -175,7 +185,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param countedValue it specifies values which occurrence is being counted.
    * @param softCounters it specifies the number of occurrences (soft).
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -204,7 +214,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param countedValue it specifies values which occurrence is being counted.
    * @param softCounters idNumber variables for different values being counted. (soft)
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -231,7 +241,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param softLowerBound it specifies constraint what is the minimal number of occurrences. (soft)
    * @param softUpperBound it specifies constraint what is the maximal number of occurrences. (soft)
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -259,7 +269,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
    * @param softCounters idNumber variables for different values being counted. (soft)
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -287,7 +297,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param hardCounters idNumber variables for different values being counted. (hard)
    * @param softCounters idNumber variables that may be violated.
    * @param costVar a cost variable specifying the cost of violations.
-   * @param violationMeasure it is only accepted to use Value_Based violation measure.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
    */
   public SoftGCC(
       IntVar[] xvars,
@@ -312,6 +322,13 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * so a variable that is already ground can remove a value and shift the counters.
    */
   private void checkCounterLengths() {
+    if (violationMeasure == ViolationMeasure.VARIABLE_BASED
+        && Arrays.stream(countedValue).distinct().count() < countedValue.length) {
+      throw new IllegalArgumentException(
+          "SoftGCC: a value counted twice "
+              + Arrays.toString(countedValue)
+              + " is not supported with the variable-based violation measure");
+    }
     int[][] bounds = {softLowerBound, softUpperBound, hardLowerBound, hardUpperBound};
     String[] boundNames = {"softLowerBound", "softUpperBound", "hardLowerBound", "hardUpperBound"};
     for (int i = 0; i < bounds.length; i++) {
@@ -356,6 +373,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   }
 
   private void buildValueBasedDecomposition(Store store, List<Constraint> target) {
+    if (violationMeasure == ViolationMeasure.VARIABLE_BASED) {
+      buildVariableBasedDecomposition(store, target);
+      return;
+    }
     if (violationMeasure != ViolationMeasure.VALUE_BASED) {
       throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
     }
@@ -423,6 +444,64 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         new ExtensionalSupportVa(
             new IntVar[] {hardCounter, softCounters[i], v},
             tuples.toArray(new int[tuples.size()][3])));
+  }
+
+  /**
+   * The variable-based measure is max(shortage, excess), where each counted value adds its shortage
+   * below its soft lower bound and its excess above its soft upper bound.
+   */
+  private void buildVariableBasedDecomposition(Store store, List<Constraint> target) {
+    int n = xvars.length;
+    List<IntVar> shortages = new ArrayList<>(countedValue.length);
+    List<IntVar> excesses = new ArrayList<>(countedValue.length);
+    for (int i = 0; i < countedValue.length; i++) {
+      IntVar count =
+          hardCounters != null
+              ? hardCounters[i]
+              : new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
+      target.add(new Count(xvars, count, countedValue[i]));
+      IntVar shortage = new IntVar(store, 0, n);
+      IntVar excess = new IntVar(store, 0, n);
+      shortages.add(shortage);
+      excesses.add(excess);
+      List<int[]> tuples = new ArrayList<>();
+      if (softCounters == null) {
+        for (int c = 0; c <= n; c++) {
+          tuples.add(
+              new int[] {
+                c, Math.max(0, softLowerBound[i] - c), Math.max(0, c - softUpperBound[i])
+              });
+        }
+        target.add(
+            new ExtensionalSupportVa(
+                new IntVar[] {count, shortage, excess}, tuples.toArray(new int[0][])));
+      } else {
+        for (int c = 0; c <= n; c++) {
+          for (ValueEnumeration e = softCounters[i].domain.valueEnumeration();
+              e.hasMoreElements(); ) {
+            int soft = e.nextElement();
+            tuples.add(new int[] {c, soft, Math.max(0, soft - c), Math.max(0, c - soft)});
+          }
+        }
+        target.add(
+            new ExtensionalSupportVa(
+                new IntVar[] {count, softCounters[i], shortage, excess},
+                tuples.toArray(new int[0][])));
+      }
+    }
+    // the measure is defined when the soft lower bounds (soft counters) sum to at most n
+    if (softCounters == null) {
+      if (Arrays.stream(softLowerBound).asLongStream().sum() > n) {
+        target.add(new XeqC(new IntVar(store, 0, 0), 1));
+      }
+    } else {
+      target.add(new SumInt(softCounters, "<=", new IntVar(store, n, n)));
+    }
+    IntVar shortage = new IntVar(store, 0, n);
+    IntVar excess = new IntVar(store, 0, n);
+    target.add(new SumInt(shortages, "==", shortage));
+    target.add(new SumInt(excesses, "==", excess));
+    target.add(new Max(new IntVar[] {shortage, excess}, costVar));
   }
 
   @Override
@@ -542,6 +621,10 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     private SoftGCCBuilder(IntDomain all, IntDomain[] doms, ViolationMeasure vm) {
       super(costVar);
+      if (vm == ViolationMeasure.VARIABLE_BASED) {
+        buildVariableBased(all, doms);
+        return;
+      }
       if (vm != ViolationMeasure.VALUE_BASED) {
         throw new UnsupportedOperationException("Unknown violation measure : " + vm);
       }
@@ -564,6 +647,49 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       addArc(t, s, 0, 0, n * countedValue.length);
       addValueBasedXArcs(all, doms, n, m, xNodes, valueNodes, t);
       addValueBasedCountArcs(n, s, t, countNodes, valueNodes);
+    }
+
+    /**
+     * The network of the variable-based measure: every variable sends one unit to its value, the
+     * value node to its count node over the hard counter, and the count node to the sink over the
+     * soft bounds (or soft counter). A unit can instead be moved from a count node, or from the
+     * node of the values that are not counted, to any other one through a hub, at cost 1: the cost
+     * of a flow is the number of variables that change their value.
+     */
+    private void buildVariableBased(IntDomain all, IntDomain[] doms) {
+      int n = xvars.length;
+      int m = doms.length;
+      Node[] xNodes = new Node[n];
+      Node[] valueNodes = new Node[m];
+      Node[] countNodes = new Node[m];
+      for (int i = 0; i < n; i++) {
+        xNodes[i] = addNode(xvars[i].id, 1);
+      }
+      for (int i = 0; i < m; i++) {
+        valueNodes[i] = addNode(doms[i].toString(), 0);
+        countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+      }
+      Node others = addNode("not counted", 0);
+      Node hub = addNode("hub", 0);
+      Node t = addNode("sink", -n);
+      addValueBasedXArcs(all, doms, n, m, xNodes, valueNodes, others);
+      for (int i = 0; i < m; i++) {
+        if (hardCounters != null) {
+          addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
+        } else {
+          addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+        }
+        if (softLowerBound != null) {
+          addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
+        } else {
+          addArc(countNodes[i], t, 0, softCounters[i]);
+        }
+        addArc(countNodes[i], hub, 1, 0, n);
+        addArc(hub, countNodes[i], 0, 0, n);
+      }
+      addArc(others, t, 0, 0, n);
+      addArc(others, hub, 1, 0, n);
+      addArc(hub, others, 0, 0, n);
     }
 
     private void addValueBasedXArcs(

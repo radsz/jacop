@@ -31,6 +31,8 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetVar;
@@ -41,7 +43,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AintersectBeqC extends AbstractSetOpBeqC {
+public class AintersectBeqC extends AbstractSetOpBeqC implements Copyable<AintersectBeqC> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -142,5 +144,10 @@ public class AintersectBeqC extends AbstractSetOpBeqC {
   @Override
   public String toString() {
     return id() + " : AintersectBeqC(" + a + ", " + b + ", " + c + " )";
+  }
+
+  @Override
+  public AintersectBeqC copy(VarMap map) {
+    return new AintersectBeqC(map.get(a), map.get(b), map.get(c));
   }
 }

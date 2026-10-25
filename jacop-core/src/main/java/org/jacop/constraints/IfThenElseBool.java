@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -41,7 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IfThenElseBool extends PrimitiveConstraint {
+public class IfThenElseBool extends PrimitiveConstraint implements Copyable<IfThenElseBool> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -153,5 +155,10 @@ public class IfThenElseBool extends PrimitiveConstraint {
   public String toString() {
 
     return id() + " : IfThenElseBool(" + condVar + ", " + thenVar + ", " + elseVar + " )";
+  }
+
+  @Override
+  public IfThenElseBool copy(VarMap map) {
+    return new IfThenElseBool(map.get(condVar), map.get(thenVar), map.get(elseVar));
   }
 }

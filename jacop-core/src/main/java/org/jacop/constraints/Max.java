@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +47,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Max extends AbstractMinMax {
+public class Max extends AbstractMinMax implements Copyable<Max> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -161,5 +163,10 @@ public class Max extends AbstractMinMax {
     result.append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Max copy(VarMap map) {
+    return new Max(map.get(list), map.get(max));
   }
 }

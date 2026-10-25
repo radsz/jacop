@@ -36,9 +36,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -55,7 +58,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class Assignment extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Assignment> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -74,8 +77,10 @@ public class Assignment extends Constraint
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
   IntervalDomain rangeX;
   IntervalDomain rangeD;
 
@@ -166,18 +171,13 @@ public class Assignment extends Constraint
   @Override
   public void removeLevel(int level) {
     variableQueue.clear();
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
   }
 
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       initRangesAndPropagateInitial(store);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     while (!variableQueue.isEmpty()) {
@@ -352,5 +352,10 @@ public class Assignment extends Constraint
     result.append(shiftX).append(", ").append(shiftD).append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Assignment copy(VarMap map) {
+    return new Assignment(map.get(x), map.get(d), shiftX, shiftD);
   }
 }
