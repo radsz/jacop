@@ -40,8 +40,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -348,6 +350,7 @@ class CdclSolverTest {
     final List<Integer> trail = new ArrayList<>();
     final List<Integer> levelStart = new ArrayList<>();
     int[] clause;
+    final Map<Integer, int[]> reasons = new HashMap<>();
     int calls;
 
     TheoryPropagator(CdclSolver s, List<int[]> theory, int vars, Random rnd) {
@@ -432,6 +435,7 @@ class CdclSolverTest {
         }
         if (!sat && open == 1) {
           clause = c;
+          reasons.put(unassigned, c);
           return unassigned;
         }
       }
@@ -440,7 +444,8 @@ class CdclSolverTest {
 
     @Override
     public int[] reason(int lit) {
-      return clause;
+      // asked lazily, possibly after other propagations
+      return reasons.get(lit);
     }
 
     @Override

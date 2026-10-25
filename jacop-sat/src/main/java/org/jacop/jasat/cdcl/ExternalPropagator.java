@@ -102,10 +102,12 @@ public interface ExternalPropagator {
   }
 
   /**
-   * Returns the reason of a literal returned by {@link #propagate}.
+   * Returns the reason of a literal returned by {@link #propagate}. The solver asks for it right
+   * away when the literal is false (a conflict), and otherwise only when conflict analysis needs
+   * it, at any time while the literal stays assigned.
    *
    * @param lit the propagated literal
-   * @return a clause containing lit whose other literals are false now
+   * @return a clause containing lit whose other literals were false before lit was assigned
    */
   default int[] reason(int lit) {
     throw new IllegalStateException("no reason for " + lit);

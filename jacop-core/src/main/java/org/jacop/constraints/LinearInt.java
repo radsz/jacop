@@ -47,6 +47,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * LinearInt constraint implements the weighted summation over several variables .
@@ -62,7 +65,8 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class LinearInt extends PrimitiveConstraint implements Stateful, Copyable<LinearInt> {
+public class LinearInt extends PrimitiveConstraint
+    implements Stateful, Copyable<LinearInt>, Explainable {
 
   /*
    * Defines relations
@@ -967,5 +971,61 @@ public class LinearInt extends PrimitiveConstraint implements Stateful, Copyable
     copy.copyFrom(this, map);
     copy.numberId = idNumber.incrementAndGet();
     return copy;
+  }
+
+  /**
+   * Explains a bound this constraint propagated by the bounds of the other variables that bound the
+   * sum on the side the bound comes from, and the holes the new bound skipped. Holes, {@code !=}
+   * relations and the domain-consistent subclass use the generic reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    int kind = trail.kind(entry);
+    if (getClass() != LinearInt.class || kind == AtomicTrail.NE || relationType == NE) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    long weight = 0;
+    for (int i = 0; i < l; i++) {
+      if (x[i] == y) {
+        weight = a[i];
+      }
+    }
+    if (weight == 0) {
+      return false;
+    }
+    // the side of the relation the bound comes from: sum <= b, or sum >= b
+    boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
+    boolean has =
+        upperSide
+            ? relationType == EQ || relationType == LE || relationType == LT
+            : relationType == EQ || relationType == GE || relationType == GT;
+    if (!has) {
+      return false;
+    }
+    for (Var v : arguments()) {
+      IntVar z = (IntVar) v;
+      if (z == y) {
+        continue;
+      }
+      long w = 0;
+      for (int i = 0; i < l; i++) {
+        if (x[i] == z) {
+          w = a[i];
+        }
+      }
+      if (w == 0) {
+        // folded into b as a constant when the constraint was created
+        trail.addLowerBound(z, entry, out);
+        trail.addUpperBound(z, entry, out);
+      } else if (upperSide == w > 0) {
+        trail.addLowerBound(z, entry, out);
+      } else {
+        trail.addUpperBound(z, entry, out);
+      }
+    }
+    trail.addSkippedHoles(
+        entry, kind == AtomicTrail.LE ? Integer.MAX_VALUE : Integer.MIN_VALUE, out);
+    return true;
   }
 }

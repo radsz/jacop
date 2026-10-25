@@ -70,6 +70,8 @@ public final class CdclSolver {
   private static final int NO_REASON = -1;
   // reason of a unit clause asserted above level 0: true in every model, so analysis skips it
   private static final int UNIT_REASON = Integer.MIN_VALUE;
+  // reason of a literal the external propagator implied, asked for only when analysis needs it
+  private static final int EXTERNAL_REASON = Integer.MIN_VALUE + 1;
 
   // clause header
   private static final int SIZE = 0;
@@ -261,6 +263,9 @@ public final class CdclSolver {
 
   /** Number of learnt clause database reductions so far. */
   public long reductions;
+
+  /** Statistics: literals of the learnt clauses, after minimisation. */
+  public long learntLiterals;
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -971,6 +976,58 @@ public final class CdclSolver {
     return true;
   }
 
+  /**
+   * Returns the reason of an assigned variable, first asking the external propagator for it when
+   * the variable was implied by it: the clause is then kept as a learnt one.
+   */
+  private int reasonRef(int v) {
+    int r = reason[v];
+    if (r != EXTERNAL_REASON) {
+      return r;
+    }
+    int lit = vals[2 * v] > 0 ? 2 * v : 2 * v + 1;
+    int[] dimacs = external.reason(toDimacs(lit));
+    int[] c = new int[dimacs.length];
+    int size = 0;
+    boolean found = false;
+    for (int d : dimacs) {
+      int l = toLit(d);
+      if (l == lit) {
+        found = true;
+      } else if (vals[l] >= 0 || trailPos[l >> 1] > trailPos[v]) {
+        throw new IllegalStateException(
+            "reason of " + toDimacs(lit) + " has " + d + " not false before it");
+      }
+      c[size++] = l;
+    }
+    if (!found) {
+      throw new IllegalStateException("reason does not contain " + toDimacs(lit));
+    }
+    Arrays.sort(c, 0, size);
+    int n = 0;
+    for (int i = 0; i < size; i++) {
+      if (n == 0 || c[n - 1] != c[i]) {
+        c[n++] = c[i];
+      }
+    }
+    c = Arrays.copyOf(c, n);
+    if (n == 1) {
+      r = UNIT_REASON;
+    } else {
+      orderForWatches(c);
+      if (n == 2) {
+        addLearntBinary(c[0], c[1]);
+        r = -2 - c[1];
+      } else {
+        r = allocate(c, n, true, n);
+        learnts = push(learnts, numLearnts++, r);
+        attach(r);
+      }
+    }
+    reason[v] = r;
+    return r;
+  }
+
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
   private int analyze() {
     learntSize = 0;
@@ -981,7 +1038,9 @@ public final class CdclSolver {
     int index = trailSize - 1;
     int ref = conflictRef;
     do {
-      if (p == -1 && ref == BINARY_CONFLICT) {
+      if (ref == UNIT_REASON) {
+        // an external reason without other literals: p holds in every model
+      } else if (p == -1 && ref == BINARY_CONFLICT) {
         pathCount += analyzeLit(conflictLit0) + analyzeLit(conflictLit1);
       } else if (ref < NO_REASON) {
         pathCount += analyzeLit(-2 - ref);
@@ -999,7 +1058,7 @@ public final class CdclSolver {
         index--;
       }
       p = trail[index--];
-      ref = reason[p >> 1];
+      ref = reasonRef(p >> 1);
       seen[p >> 1] = 0;
       pathCount--;
     } while (pathCount > 0);
@@ -1026,6 +1085,7 @@ public final class CdclSolver {
       seen[toClear[i]] = 0;
     }
     seen[learnt[0] >> 1] = 0;
+    learntLiterals += learntSize;
 
     if (learntSize == 1) {
       return 0;
@@ -1100,7 +1160,7 @@ public final class CdclSolver {
       if (--open == 0) {
         return t;
       }
-      int r = reason[v];
+      int r = reasonRef(v);
       if (r == NO_REASON || r == UNIT_REASON) {
         return -1;
       }
@@ -1159,7 +1219,10 @@ public final class CdclSolver {
     stack = push(stack, sp++, p);
     while (sp > 0) {
       int v = stack[--sp] >> 1;
-      int r = reason[v];
+      int r = reasonRef(v);
+      if (r == UNIT_REASON) {
+        continue;
+      }
       if (r < NO_REASON) {
         int q = -2 - r;
         if (!redundantStep(q, abstractLevels)) {
@@ -1222,7 +1285,7 @@ public final class CdclSolver {
       if (seen[x] == 0) {
         continue;
       }
-      int r = reason[x];
+      int r = reasonRef(x);
       if (r == UNIT_REASON) {
         seen[x] = 0;
         continue;
@@ -1909,6 +1972,10 @@ public final class CdclSolver {
           return NO_CONFLICT;
         }
         implied = toLit(lit);
+        if (vals[implied] == 0) {
+          assign(implied, EXTERNAL_REASON);
+          continue;
+        }
         c = external.reason(lit);
       }
       confl = addExternal(c, implied);
