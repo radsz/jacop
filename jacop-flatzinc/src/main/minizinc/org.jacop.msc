@@ -25,6 +25,8 @@
         ["--restart", "Restart search type", "opt:none:constant:linear:luby:geometric", "none"],
         ["--restart-base", "Base for geometric restart search", "float", "1.5"],
         ["--restart-scale", "Scale factor for restart search", "int", "250"],
-        ["--restart-limit", "limits number of restarts in restart search.", "int", "0"]
+        ["--restart-limit", "limits number of restarts in restart search.", "int", "0"],
+        ["--free-engine", "engine for free search (-f)", "opt:new:legacy", "new"],
+        ["--free-config", "settings of the new free search engine as key=value,...; see fzn-jacop -h", "string", ""]
     ]
 }

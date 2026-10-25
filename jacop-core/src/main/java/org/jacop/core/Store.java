@@ -108,7 +108,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed before it has actually began.
    */
-  public final Set<Stateful> removeLevelListeners = new LinkedHashSet<>(10);
+  public final Set<Stateful> removeLevelListeners = new ListenerSet<>();
 
   /** Constraints by the level of their first consistency call, in the order of the levels. */
   private Constraint[] firstRuns = new Constraint[64];
@@ -126,7 +126,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed after it has been removed.
    */
-  public final Set<RemoveLevelLate> removeLevelLateListeners = new LinkedHashSet<>(10);
+  public final Set<RemoveLevelLate> removeLevelLateListeners = new ListenerSet<>();
 
   /**
    * It indicates that consistency function should immediately return fail if last inconsistency was
@@ -155,10 +155,9 @@ public class Store {
   protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
 
   /**
-   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
-   * search items are push onto the stack. If the search backtracks then the old values can be
-   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
-   * data types.
+   * The stateful objects registered with {@link #putMutableVar(Stateful)}. Each one is informed of
+   * every removed level. Timestamps are not kept here: the store restores only the timestamps that
+   * changed at the removed level.
    */
   protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
@@ -215,11 +214,26 @@ public class Store {
    */
   public boolean propagationHasOccurred;
 
-  /**
-   * It specifies the current pointer to put next changed boolean variable. It has to be maintained
-   * manually (within removeLevel function).
-   */
-  public TimeStamp<Integer> pointer4GroundedBooleanVariables;
+  /** The position in changeHistory4BooleanVariables where the next changed variable is put. */
+  private int booleanChangePosition;
+
+  /** The levels at which booleanChangePosition was saved, most recent last. */
+  private int[] booleanChangeLevels = new int[16];
+
+  /** The value of booleanChangePosition saved at the corresponding level. */
+  private int[] booleanChangeSaved = new int[16];
+
+  private int booleanChangeLevelsSize;
+
+  /** The timestamps that got a value at a new level, in the order of the levels. */
+  private TimeStamp<?>[] timeStampTrail = new TimeStamp<?>[64];
+
+  /** The level of the corresponding entry of timeStampTrail. */
+  private int[] timeStampTrailLevel = new int[64];
+
+  private int timeStampTrailSize;
+
+  private int timeStampCount;
 
   /**
    * It stores number of queues used in this store. It has to be at least 1. No constraint can be
@@ -323,8 +337,7 @@ public class Store {
       changed[i] = new ConstraintQueue(this, i);
     }
 
-    trailManager =
-        new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
+    trailManager = new TrailBacktrackableManager(vars, this.size);
   }
 
   /**
@@ -944,12 +957,12 @@ public class Store {
   }
 
   /**
-   * Any entity (for example constraints) may have their own mutable variables (timestamps) which
-   * can be register at store and then store will be responsible for calling appropriate functions
-   * from TimeStamp class to keep the variables consistent with the search.
+   * Any entity (for example constraints) may have their own stateful objects which can be register
+   * at store and then store will call their removeLevel function for every removed level. A {@link
+   * TimeStamp} registers itself and does not need to be registered.
    *
-   * @param value timestamp to be added and maintained by a store.
-   * @return the position of timestamp at which it is being stored.
+   * @param value stateful object to be added and maintained by a store.
+   * @return the position of the object at which it is being stored.
    */
   public int putMutableVar(Stateful value) {
     timeStamps.add(value);
@@ -1013,7 +1026,7 @@ public class Store {
    */
   public void recordBooleanChange(BooleanVar recordedVariable) {
 
-    int position = pointer4GroundedBooleanVariables.value();
+    int position = booleanChangePosition;
 
     if (position >= changeHistory4BooleanVariables.length) {
 
@@ -1024,7 +1037,64 @@ public class Store {
 
     changeHistory4BooleanVariables[position] = recordedVariable;
 
-    pointer4GroundedBooleanVariables.update(position + 1);
+    int top = booleanChangeLevelsSize - 1;
+    if (top < 0 || booleanChangeLevels[top] != level) {
+      if (booleanChangeLevelsSize >= booleanChangeLevels.length) {
+        growBooleanChangeLevels();
+      }
+      booleanChangeLevels[booleanChangeLevelsSize] = level;
+      booleanChangeSaved[booleanChangeLevelsSize] = position;
+      booleanChangeLevelsSize++;
+    }
+
+    booleanChangePosition = position + 1;
+  }
+
+  private void growBooleanChangeLevels() {
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // booleanChangeLevelsSize.
+    if (booleanChangeLevelsSize > (Integer.MAX_VALUE - 16) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * booleanChangeLevelsSize + 16;
+    booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
+    booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
+  }
+
+  /**
+   * Registers a timestamp. The store restores the timestamps that changed at a level when the level
+   * is removed, see {@link #recordTimeStampLevel(TimeStamp, int)}.
+   *
+   * @return the index of the timestamp among the timestamps of this store.
+   */
+  int registerTimeStamp() {
+    return timeStampCount++;
+  }
+
+  /**
+   * Records that a timestamp got a value at a new level, so the value is removed with the level.
+   *
+   * @param timeStamp the timestamp.
+   * @param stampLevel the level of the new value.
+   */
+  void recordTimeStampLevel(TimeStamp<?> timeStamp, int stampLevel) {
+    if (timeStampTrailSize >= timeStampTrail.length) {
+      growTimeStampTrail();
+    }
+    timeStampTrail[timeStampTrailSize] = timeStamp;
+    timeStampTrailLevel[timeStampTrailSize] = stampLevel;
+    timeStampTrailSize++;
+  }
+
+  private void growTimeStampTrail() {
+    // An explicit bound instead of Math.max, so the new capacity is provably above
+    // timeStampTrailSize.
+    if (timeStampTrailSize > (Integer.MAX_VALUE - 64) / 2) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int capacity = 2 * timeStampTrailSize + 64;
+    timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
+    timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
   }
 
   /**
@@ -1150,24 +1220,34 @@ public class Store {
     // It has to inform listeners first, as they may use values of
     // mutables variables, just before they get deleted.
 
-    for (Stateful statefulConstraint : removeLevelListeners) {
-      statefulConstraint.removeLevel(level);
+    for (Object statefulConstraint : ((ListenerSet<Stateful>) removeLevelListeners).elements()) {
+      ((Stateful) statefulConstraint).removeLevel(level);
     }
 
-    // It needs to be before as there is a timestamp for number of boolean variables.
-    for (Stateful v : timeStamps) {
-      v.removeLevel(level);
+    if (!timeStamps.isEmpty()) {
+      for (Stateful v : timeStamps) {
+        v.removeLevel(level);
+      }
+    }
+
+    while (timeStampTrailSize > 0 && timeStampTrailLevel[timeStampTrailSize - 1] >= level) {
+      timeStampTrailSize--;
+      timeStampTrail[timeStampTrailSize].removeLevel(level);
+      timeStampTrail[timeStampTrailSize] = null;
     }
 
     // Boolean Variables.
 
     if (changeHistory4BooleanVariables != null) {
 
-      int previousPosition = pointer4GroundedBooleanVariables.value();
+      int previousPosition = booleanChangePosition;
 
-      pointer4GroundedBooleanVariables.removeLevel(level);
+      while (booleanChangeLevelsSize > 0
+          && booleanChangeLevels[booleanChangeLevelsSize - 1] >= level) {
+        booleanChangePosition = booleanChangeSaved[--booleanChangeLevelsSize];
+      }
 
-      int currentPosition = pointer4GroundedBooleanVariables.value();
+      int currentPosition = booleanChangePosition;
 
       for (int i = currentPosition; i < previousPosition; i++) {
 
@@ -1197,8 +1277,8 @@ public class Store {
       mutableVariables.get(i).removeLevel(level);
     }
 
-    for (RemoveLevelLate c : removeLevelLateListeners) {
-      c.removeLevelLate(level);
+    for (Object c : ((ListenerSet<RemoveLevelLate>) removeLevelLateListeners).elements()) {
+      ((RemoveLevelLate) c).removeLevelLate(level);
     }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {

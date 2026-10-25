@@ -81,6 +81,7 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
+import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
@@ -733,13 +734,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5).
+   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5) with nogoods
+   * learned at each restart.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
+    boolean nogoods = "1".equals(options.freeConfig("nogoods", "1"));
     Calculator restarts = restartCalculator;
     if (!options.restartGiven()) {
       int scale = Integer.parseInt(options.freeConfig("scale", "100"));
@@ -804,6 +807,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         FreeSearch.builder(store, free)
             .restarts(restarts)
             .restartOnSolution(restartOnSolution)
+            .nogoodsFromRestarts(nogoods)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
     if (shown != null) {
@@ -869,6 +873,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     IntVar[] vars = intAndBool.toArray(new IntVar[0]);
     Indomain<IntVar> values = new IndomainMin<>();
+    int impact = Integer.parseInt(options.freeConfig("impact", "0"));
+    if (impact > 0 && costVariable instanceof IntVar cost) {
+      // costVariable is minimised; for maximisation it is the negated objective
+      IndomainBoundImpact boundImpact = new IndomainBoundImpact(store, cost, false, impact, values);
+      if ("first".equals(options.freeConfig("impact-until", "first"))) {
+        boundImpact.untilFirstSolution();
+      }
+      monitors.add(boundImpact);
+      values = boundImpact;
+    }
     if (phase) {
       IndomainLastSolution saving = new IndomainLastSolution(vars, values);
       monitors.add(saving);
@@ -882,7 +896,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
       }
     } else if (vars.length > 0) {
-      DomWdeg domWdeg = new DomWdeg(vars, values);
+      DomWdeg.Weighting weighting =
+          switch (heuristic) {
+            case "cacd" -> DomWdeg.Weighting.CACD;
+            case "chs" -> DomWdeg.Weighting.CHS;
+            default -> DomWdeg.Weighting.WDEG;
+          };
+      DomWdeg domWdeg = new DomWdeg(vars, values, weighting);
       monitors.add(domWdeg);
       SelectChoicePoint<IntVar> select = domWdeg;
       if (lastConflict > 0) {
@@ -1703,6 +1723,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(depth)
             + "\n%%%mzn-stat: solutions="
             + nf.format(solutions)
+            + (freeSearch != null && freeSearch.getNogoods() > 0
+                ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
+                : "")
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {
