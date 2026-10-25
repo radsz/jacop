@@ -299,7 +299,12 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
           return true;
         }
       }
-      return false;
+      int[] window = overloadedWindow(trail, entry, j, v);
+      if (window == null) {
+        return false;
+      }
+      addWindowReason(trail, entry, j, window, out);
+      return true;
     } else if (kind == AtomicTrail.GE) {
       trail.addLowerBound(y, entry, out);
       int u = trail.minBefore(y, entry);
@@ -312,11 +317,20 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
         while (t >= u && !overloaded(trail, entry, j, t, room, null)) {
           t--;
         }
-        if (t < u) {
+        if (t >= u) {
+          overloaded(trail, entry, j, t, room, out);
+          u = t + 1;
+          continue;
+        }
+        int[] window = overloadedWindow(trail, entry, j, u);
+        if (window == null) {
           return false;
         }
-        overloaded(trail, entry, j, t, room, out);
-        u = t + 1;
+        addWindowReason(trail, entry, j, window, out);
+        u++;
+        while (u < v && windowExcess(trail, entry, j, u, window[0], window[1]) > 0) {
+          u++;
+        }
       }
     } else {
       trail.addUpperBound(y, entry, out);
@@ -330,17 +344,29 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
         while (t < u + d && !overloaded(trail, entry, j, t, room, null)) {
           t++;
         }
-        if (t == u + d) {
+        if (t < u + d) {
+          overloaded(trail, entry, j, t, room, out);
+          u = t - d;
+          continue;
+        }
+        int[] window = overloadedWindow(trail, entry, j, u);
+        if (window == null) {
           return false;
         }
-        overloaded(trail, entry, j, t, room, out);
-        u = t - d;
+        addWindowReason(trail, entry, j, window, out);
+        u--;
+        while (u > v && windowExcess(trail, entry, j, u, window[0], window[1]) > 0) {
+          u--;
+        }
       }
     }
     return true;
   }
 
-  /** Explains a failure by a time point where the compulsory parts exceed the limit. */
+  /**
+   * Explains a failure by a time point where the compulsory parts exceed the limit, or else by a
+   * time window where the tasks need more energy than the limit gives.
+   */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     if (!fixedTasks()) {
@@ -357,6 +383,11 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
           return true;
         }
       }
+    }
+    int[] window = overloadedWindow(trail, position, -1, 0);
+    if (window != null) {
+      addWindowReason(trail, position, -1, window, out);
+      return true;
     }
     return false;
   }
@@ -408,6 +439,89 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       }
     }
     return true;
+  }
+
+  /**
+   * Finds a time window [a, b) where the tasks other than j, with task j started at u (when j is
+   * not -1), need more energy than the limit gives over the window, just before a trail position:
+   * each task needs at least its smallest overlap with the window over its start range. Returns the
+   * window of the largest excess, or null.
+   */
+  private int[] overloadedWindow(AtomicTrail trail, int position, int j, int u) {
+    int n = taskNormal.length;
+    int[] from = new int[n + 1];
+    int[] to = new int[2 * n + 1];
+    int nf = 0;
+    int nt = 0;
+    for (int i = 0; i < n; i++) {
+      if (i == j) {
+        continue;
+      }
+      TaskView task = taskNormal[i];
+      int est = trail.minBefore(task.start, position);
+      int lst = trail.maxBefore(task.start, position);
+      from[nf++] = est;
+      to[nt++] = est + task.dur.value();
+      to[nt++] = lst + task.dur.value();
+    }
+    if (j >= 0) {
+      from[nf++] = u;
+      to[nt++] = u + taskNormal[j].dur.value();
+    }
+    int[] best = null;
+    long bestExcess = 0;
+    for (int f = 0; f < nf; f++) {
+      for (int t = 0; t < nt; t++) {
+        if (to[t] > from[f]) {
+          long excess = windowExcess(trail, position, j, u, from[f], to[t]);
+          if (excess > bestExcess) {
+            bestExcess = excess;
+            best = new int[] {from[f], to[t]};
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  /** The energy the tasks need in [a, b) beyond what the limit gives (see overloadedWindow). */
+  private long windowExcess(AtomicTrail trail, int position, int j, int u, int a, int b) {
+    long need = 0;
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      int d = task.dur.value();
+      if (i == j) {
+        need += (long) task.res.value() * overlap(u, d, a, b);
+      } else {
+        int est = trail.minBefore(task.start, position);
+        int lst = trail.maxBefore(task.start, position);
+        need += (long) task.res.value() * Math.min(overlap(est, d, a, b), overlap(lst, d, a, b));
+      }
+    }
+    return need - (long) limit.value() * (b - a);
+  }
+
+  private static int overlap(int start, int d, int a, int b) {
+    return Math.max(0, Math.min(start + d, b) - Math.max(start, a));
+  }
+
+  /** Adds the bounds of the tasks other than j that need energy in the window. */
+  private void addWindowReason(
+      AtomicTrail trail, int position, int j, int[] window, EntryList out) {
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      if (i == j) {
+        continue;
+      }
+      int d = task.dur.value();
+      int est = trail.minBefore(task.start, position);
+      int lst = trail.maxBefore(task.start, position);
+      if (Math.min(overlap(est, d, window[0], window[1]), overlap(lst, d, window[0], window[1]))
+          > 0) {
+        trail.addLowerBound(task.start, position, out);
+        trail.addUpperBound(task.start, position, out);
+      }
+    }
   }
 
   private static boolean covers(AtomicTrail trail, int position, TaskView task, int t) {
