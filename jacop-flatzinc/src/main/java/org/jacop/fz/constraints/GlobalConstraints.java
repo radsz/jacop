@@ -458,11 +458,10 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.pose(new Circuit(v, offset));
 
-    if (support.domainConsistency
-        && !support.options
-            .getBoundConsistency()) { // we add additional implied constraint if domain consistency
-      // is
-      // required
+    // Circuit propagates all-different on values only; the implied Alldistinct (GAC
+    // all-different) is posted by default, as it cuts failures several times on circuit models
+    // at little cost. Option -b (bounds consistency) leaves it out.
+    if (!support.options.getBoundConsistency()) {
       support.parameterListForAlldistincts.add(v);
     }
   }
@@ -473,11 +472,8 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
     support.pose(new Subcircuit(v));
 
-    if (support.domainConsistency
-        && !support.options
-            .getBoundConsistency()) { // we add additional implied constraint if domain consistency
-      // is
-      // required
+    // the successors of a subcircuit are all different too (x[i] = i is unique to i)
+    if (!support.options.getBoundConsistency()) {
       support.parameterListForAlldistincts.add(v);
     }
   }
