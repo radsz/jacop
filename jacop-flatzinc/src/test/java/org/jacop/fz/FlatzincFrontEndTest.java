@@ -564,6 +564,42 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void relaxAndReconstructPrintsImprovingSolutionsAndAProvedOptimum() throws IOException {
+    // Relaxed runs lost the bound on the cost and printed worse solutions, and the end of the
+    // search was never reported, even when a run that fixed no variable had explored everything.
+    String model =
+        """
+        array [1..6] of var 1..6: x :: output_array([1..6]);
+        var -100..100: c :: output_var;
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[1], x[3]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_ne(x[4], x[5]);
+        constraint int_ne(x[5], x[6]);
+        constraint int_ne(x[4], x[6]);
+        constraint int_ne(x[1], x[6]);
+        constraint int_lin_eq([-3,2,-1,4,-2,1,-1],[x[1],x[2],x[3],x[4],x[5],x[6],c],0);
+        solve :: int_search(x,input_order,indomain_min,complete)
+          :: restart_geometric(1.5,1) :: relax_and_reconstruct(x, 50) minimize c;
+        """;
+
+    for (String seed : List.of("1", "2", "3")) {
+      List<String> lines = run(model, "-a", "-r", seed)[0].lines().toList();
+      List<Integer> costs =
+          lines.stream()
+              .filter(l -> l.startsWith("c = "))
+              .map(l -> Integer.parseInt(l.substring(4, l.length() - 1)))
+              .toList();
+      for (int i = 1; i < costs.size(); i++) {
+        assertTrue(costs.get(i) < costs.get(i - 1), "seed " + seed + ": " + costs);
+      }
+      assertEquals(-27, costs.getLast(), "seed " + seed + ":\n" + lines);
+      assertTrue(lines.contains("=========="), "seed " + seed + ":\n" + lines);
+    }
+  }
+
+  @Test
   void restartSearchReportsUnsatisfiableModels() throws IOException {
     // Restart search printed ========== without any solution for an unsatisfiable optimization
     // model, and nothing at all for an unsatisfiable satisfaction model.

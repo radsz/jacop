@@ -82,6 +82,8 @@ public class RestartSearch<T extends Var> {
   int fixedInRun;
   int restartsLimit; // no limit
   boolean restartsLimitReached;
+  // whether the search stopped because there is nothing more to search
+  boolean complete;
 
   /**
    * Constructs a restart search with the given parameters.
@@ -170,6 +172,7 @@ public class RestartSearch<T extends Var> {
       }
 
       restart = computeNextResult(result);
+      complete = !restart;
       if (restart && restartsLimit > 0 && numberRestarts >= restartsLimit) {
         // the search is incomplete only when it would restart once more
         restartsLimitReached = true;
@@ -405,6 +408,18 @@ public class RestartSearch<T extends Var> {
    */
   public boolean restartsLimitReached() {
     return restartsLimitReached;
+  }
+
+  /**
+   * Returns whether the search stopped because there was nothing more to search: a solution of a
+   * satisfaction problem was found, or the whole search space was explored, so the last solution is
+   * optimal or there is none. With relax and reconstruct this needs a run that fixed no variable
+   * and explored its whole tree, or a bound on the cost that fails without any variable fixed.
+   *
+   * @return true if the search is complete.
+   */
+  public boolean complete() {
+    return complete;
   }
 
   /**
