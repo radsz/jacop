@@ -88,6 +88,13 @@ public class Binpacking extends Constraint
   private final Map<IntVar, Integer> binMap;
   boolean lbPruning = true;
   private boolean firstConsistencyCheck = true;
+
+  /** Level of the first consistency call, the root of the search. */
+  private int rootLevel = -1;
+
+  /** True if the bin-count bound also uses f_CCM1 and reduction RMax. */
+  private boolean strongBinCountBound;
+
   private int minBinNumber;
   private long sizeAllItems;
   private long alphaP;
@@ -442,6 +449,12 @@ public class Binpacking extends Constraint
       applyLoadAndSizeCoherence(store);
     } while (!todo.isEmpty());
     if (lbPruning) {
+      if (rootLevel < 0) {
+        rootLevel = store.level;
+      }
+      // f_CCM1 and RMax pay at the root, where they can prove infeasibility before any search;
+      // during search they saved few failures for 10-30% more time per node.
+      strongBinCountBound = store.level == rootLevel;
       lbNumberBins();
     }
   }
@@ -507,7 +520,7 @@ public class Binpacking extends Constraint
     }
     // RMax: every virtual item becomes larger than half the capacity.
     long deltaMax = (long) maxCapacity - 2L * minVirtual + 1;
-    if (deltaMax != 0 && maxCapacity + deltaMax <= IntDomain.MAX_INT) {
+    if (strongBinCountBound && deltaMax != 0 && maxCapacity + deltaMax <= IntDomain.MAX_INT) {
       lbBins(unpacked, unpackedLength, virtual, (int) deltaMax, (int) (maxCapacity + deltaMax), nb);
     }
   }
@@ -551,7 +564,9 @@ public class Binpacking extends Constraint
       throw Store.failException; // an item fits in no bin
     }
     lbBins(x, capacity, nb);
-    ccm1Check(x, capacity, nb);
+    if (strongBinCountBound) {
+      ccm1Check(x, capacity, nb);
+    }
   }
 
   /**
