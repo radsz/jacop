@@ -6083,4 +6083,55 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(store.consistency()).isFalse();
   }
+
+  // With min = max the windows force a period of q, so Sequence posts reified memberships on q
+  // Booleans and one sum instead of Regular. It must keep the solutions and the domain
+  // consistency of the Regular automaton.
+  @Test
+  void testSequenceWithEqualBoundsMatchesRegular() {
+
+    Random random = new Random(7);
+    for (int instance = 0; instance < 300; instance++) {
+      int n = 2 + random.nextInt(6);
+      int q = 1 + random.nextInt(n);
+      int count = random.nextInt(q + 1);
+      int[][] values = new int[n][];
+      for (int i = 0; i < n; i++) {
+        values[i] = random.ints(1 + random.nextInt(3), 0, 4).toArray();
+      }
+      IntervalDomain set = new IntervalDomain(1, 1 + random.nextInt(2));
+
+      Store periodStore = new Store();
+      IntVar[] x = sequenceVariables(periodStore, values);
+      Sequence periodic = new Sequence(x, set, q, count, count);
+      assertThat(periodic.decompose(periodStore)).noneMatch(c -> c instanceof Regular);
+      periodStore.imposeDecomposition(periodic);
+
+      Store regularStore = new Store();
+      IntVar[] y = sequenceVariables(regularStore, values);
+      for (Constraint c : Sequence.decomposeByRegular(new Sequence(y, set, q, count, count))) {
+        regularStore.impose(c);
+      }
+
+      boolean consistent = regularStore.consistency();
+      assertThat(periodStore.consistency()).isEqualTo(consistent);
+      if (consistent) {
+        for (int i = 0; i < n; i++) {
+          assertThat(x[i].dom().toString()).isEqualTo(y[i].dom().toString());
+        }
+        assertThat(noOfAllSolutions(periodStore, x)).isEqualTo(noOfAllSolutions(regularStore, y));
+      }
+    }
+  }
+
+  private static IntVar[] sequenceVariables(Store store, int[][] values) {
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i);
+      for (int v : values[i]) {
+        x[i].addDom(v, v);
+      }
+    }
+    return x;
+  }
 }
