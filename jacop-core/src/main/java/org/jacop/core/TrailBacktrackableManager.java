@@ -87,8 +87,8 @@ public class TrailBacktrackableManager implements BacktrackableManager {
     if (previous == currentLevel) {
       return;
     }
-    if (trailSize == trailIndex.length) {
-      int capacity = trailSize * 2;
+    if (trailSize >= trailIndex.length) {
+      int capacity = Math.max(64, 2 * trailSize + 1);
       trailIndex = Arrays.copyOf(trailIndex, capacity);
       trailLevel = Arrays.copyOf(trailLevel, capacity);
       trailPrevious = Arrays.copyOf(trailPrevious, capacity);

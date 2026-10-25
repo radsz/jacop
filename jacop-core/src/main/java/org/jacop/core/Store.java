@@ -1025,9 +1025,10 @@ public class Store {
 
     int top = booleanChangeLevelsSize - 1;
     if (top < 0 || booleanChangeLevels[top] != level) {
-      if (booleanChangeLevelsSize == booleanChangeLevels.length) {
-        booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, booleanChangeLevelsSize * 2);
-        booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, booleanChangeLevelsSize * 2);
+      if (booleanChangeLevelsSize >= booleanChangeLevels.length) {
+        int capacity = Math.max(16, 2 * booleanChangeLevelsSize + 1);
+        booleanChangeLevels = Arrays.copyOf(booleanChangeLevels, capacity);
+        booleanChangeSaved = Arrays.copyOf(booleanChangeSaved, capacity);
       }
       booleanChangeLevels[booleanChangeLevelsSize] = level;
       booleanChangeSaved[booleanChangeLevelsSize] = position;
@@ -1054,9 +1055,10 @@ public class Store {
    * @param stampLevel the level of the new value.
    */
   void recordTimeStampLevel(TimeStamp<?> timeStamp, int stampLevel) {
-    if (timeStampTrailSize == timeStampTrail.length) {
-      timeStampTrail = Arrays.copyOf(timeStampTrail, timeStampTrailSize * 2);
-      timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, timeStampTrailSize * 2);
+    if (timeStampTrailSize >= timeStampTrail.length) {
+      int capacity = Math.max(64, 2 * timeStampTrailSize + 1);
+      timeStampTrail = Arrays.copyOf(timeStampTrail, capacity);
+      timeStampTrailLevel = Arrays.copyOf(timeStampTrailLevel, capacity);
     }
     timeStampTrail[timeStampTrailSize] = timeStamp;
     timeStampTrailLevel[timeStampTrailSize] = stampLevel;
