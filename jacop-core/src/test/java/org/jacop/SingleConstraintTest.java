@@ -5360,6 +5360,75 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reifiedMemberIsEntailedWhenFixedListValuesCoverTheElement() {
+    // e in {0, 1}, x = [1, 0, {0, 1}]: both values of e are taken by fixed list variables, so
+    // member holds whatever e and x3 become and b must be 1. satisfied() checked only a fixed e.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 0, 0), new IntVar(store, "x3", 0, 1)
+    };
+    IntVar e = new IntVar(store, "e", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Member(x, e), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberSatisfiedIsExactEntailment() {
+    // Without repeated variables, member is entailed exactly when every tuple of the domains
+    // satisfies it.
+    Random random = new Random(47);
+    for (int instance = 0; instance < 5000; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(4);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int min = random.nextInt(4);
+        x[i] =
+            new IntVar(store, "x" + i, min, random.nextInt(3) == 0 ? min : min + random.nextInt(3));
+      }
+      IntVar e = new IntVar(store, "e");
+      for (int v = 0; v < 5; v++) {
+        if (random.nextInt(3) == 0) {
+          e.addDom(v, v);
+        }
+      }
+      if (e.dom().isEmpty()) {
+        e.addDom(2, 2);
+      }
+      boolean entailed = true;
+      int[] tuple = new int[n];
+      for (ValueEnumeration ev = e.dom().valueEnumeration(); ev.hasMoreElements(); ) {
+        int value = ev.nextElement();
+        for (int i = 0; i < n; i++) {
+          tuple[i] = x[i].min();
+        }
+        do {
+          boolean found = false;
+          for (int i = 0; i < n; i++) {
+            found |= tuple[i] == value;
+          }
+          entailed &= found;
+        } while (nextBoxTuple(tuple, x));
+      }
+      Member member = new Member(x, e);
+      assertThat(member.satisfied()).as(member.toString()).isEqualTo(entailed);
+    }
+  }
+
+  private static boolean nextBoxTuple(int[] tuple, IntVar[] x) {
+    for (int i = 0; i < tuple.length; i++) {
+      if (tuple[i] < x[i].max()) {
+        tuple[i]++;
+        return true;
+      }
+      tuple[i] = x[i].min();
+    }
+    return false;
+  }
+
+  @Test
   void alldifferentExceptAcceptsRepeatedExceptionValues() {
     // [0, 0, 1] and [4, 4, 1] satisfy the constraints: exception values may repeat
     Store store = new Store();
