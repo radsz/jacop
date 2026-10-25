@@ -74,6 +74,15 @@ public final class EntryList {
     return size;
   }
 
+  /**
+   * Keeps only the first entries.
+   *
+   * @param newSize the number of entries kept, at most {@link #size()}
+   */
+  public void truncate(int newSize) {
+    size = newSize;
+  }
+
   /** Removes all entries. */
   public void clear() {
     size = 0;

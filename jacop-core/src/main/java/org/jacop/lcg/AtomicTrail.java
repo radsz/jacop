@@ -236,6 +236,79 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return reason[entry];
   }
 
+  private int lastBefore(IntVar x, int position) {
+    int i = x.index();
+    if (i >= last.length) {
+      return -1;
+    }
+    int e = last[i];
+    while (e >= position) {
+      e = previous[e];
+    }
+    return e;
+  }
+
+  private int latest(IntVar x, int position, int k) {
+    int e = lastBefore(x, position);
+    while (e >= 0 && kind[e] != k) {
+      e = previous[e];
+    }
+    return e;
+  }
+
+  /**
+   * Adds to {@code out} the entry of a variable's lower bound just before trail position {@code
+   * position}, unless that bound is the initial one.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param out where the entry is added
+   */
+  public void addLowerBound(IntVar x, int position, EntryList out) {
+    int e = latest(x, position, GE);
+    if (e >= 0) {
+      out.add(e);
+    }
+  }
+
+  /**
+   * Adds to {@code out} the entry of a variable's upper bound just before trail position {@code
+   * position}, unless that bound is the initial one.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param out where the entry is added
+   */
+  public void addUpperBound(IntVar x, int position, EntryList out) {
+    int e = latest(x, position, LE);
+    if (e >= 0) {
+      out.add(e);
+    }
+  }
+
+  /**
+   * Adds to {@code out} the {@code !=} atoms that a bound entry skipped: the holes of its variable,
+   * recorded before it, between the bound a propagator computed and the bound the domain moved to.
+   * A propagator that prunes a bound by {@code inMin} or {@code inMax} implies only the computed
+   * bound, so its explanation adds these to reach the recorded one.
+   *
+   * @param entry a {@link #GE} or {@link #LE} entry
+   * @param bound the bound the propagator computed: at most the value of a {@link #GE} entry, at
+   *     least the value of a {@link #LE} entry; when it is not known, {@link Integer#MIN_VALUE} or
+   *     {@link Integer#MAX_VALUE} adds every hole recorded beyond the recorded bound
+   * @param out where the entries are added
+   */
+  public void addSkippedHoles(int entry, int bound, EntryList out) {
+    int v = value[entry];
+    boolean ge = kind[entry] == GE;
+    for (int f = previous[entry]; f >= 0; f = previous[f]) {
+      if (kind[f] == NE
+          && (ge ? value[f] >= bound && value[f] < v : value[f] <= bound && value[f] > v)) {
+        out.add(f);
+      }
+    }
+  }
+
   /**
    * Adds to {@code out} the entries that describe a variable's domain just before trail position
    * {@code position}: its strongest {@code >=} and {@code <=} atoms and its {@code !=} atoms inside
@@ -246,23 +319,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @param out where the entries are added
    */
   public void atomsBefore(IntVar x, int position, EntryList out) {
-    int i = x.index();
-    if (i >= last.length) {
-      return;
-    }
-    int e = last[i];
-    while (e >= position) {
-      e = previous[e];
-    }
-    int ge = -1;
-    int le = -1;
-    for (int f = e; f >= 0; f = previous[f]) {
-      if (kind[f] == GE && ge < 0) {
-        ge = f;
-      } else if (kind[f] == LE && le < 0) {
-        le = f;
-      }
-    }
+    int ge = latest(x, position, GE);
+    int le = latest(x, position, LE);
     int lo = ge >= 0 ? value[ge] : Integer.MIN_VALUE;
     int hi = le >= 0 ? value[le] : Integer.MAX_VALUE;
     if (ge >= 0) {
@@ -271,11 +329,27 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (le >= 0) {
       out.add(le);
     }
-    for (int f = e; f >= 0; f = previous[f]) {
+    for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
       if (kind[f] == NE && value[f] > lo && value[f] < hi) {
         out.add(f);
       }
     }
+  }
+
+  /**
+   * Adds to {@code out} the reason of an entry: the constraint's own explanation when it is {@link
+   * Explainable} and gives one, otherwise the generic reason.
+   *
+   * @param entry the entry, which must have a constraint as reason
+   * @param out where the entries are added
+   */
+  public void explain(int entry, EntryList out) {
+    int mark = out.size();
+    if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
+      return;
+    }
+    out.truncate(mark);
+    genericReason(entry, out);
   }
 
   /**

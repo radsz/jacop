@@ -54,8 +54,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests the atomic trail: after every propagation the atoms rebuild every current domain from the
- * initial one, and the generic reason of every propagated atom implies it under the constraint's
- * relation (checked by enumerating the box the reason allows).
+ * initial one, and both the generic and the explained reason of every propagated atom imply it
+ * under the constraint's relation (checked by enumerating the box the reason allows).
  */
 class AtomicTrailTest {
 
@@ -149,7 +149,7 @@ class AtomicTrailTest {
   }
 
   @Test
-  void atomsRebuildDomainsAndGenericReasonsAreSound() {
+  void atomsRebuildDomainsAndReasonsAreSound() {
     Random rnd = new Random(7);
     int checked = 0;
     for (int instance = 0; instance < 300; instance++) {
@@ -245,6 +245,18 @@ class AtomicTrailTest {
       }
       reason.clear();
       trail.genericReason(e, reason);
+      checkImplied(trail, model, initial, e, reason);
+      reason.clear();
+      trail.explain(e, reason);
+      checkImplied(trail, model, initial, e, reason);
+      checked++;
+    }
+    return checked;
+  }
+
+  private static void checkImplied(
+      AtomicTrail trail, Model model, IntDomain[] initial, int e, EntryList reason) {
+    {
       IntDomain[] box = initial.clone();
       for (int k = 0; k < reason.size(); k++) {
         int r = reason.get(k);
@@ -257,9 +269,7 @@ class AtomicTrailTest {
       assertThat(enumerate(box, 0, t, model.relation, trail, e, target))
           .as("reason of %s does not imply it", trail.atomString(e))
           .isTrue();
-      checked++;
     }
-    return checked;
   }
 
   private static boolean enumerate(
