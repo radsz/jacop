@@ -3405,6 +3405,91 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementIntegerIsDomainConsistentForLargeIndex() {
+    // With 100 or more index values the value domain was only pruned to the bounds of the
+    // supported values, here 3..360 instead of the multiples of 3.
+    Store store = new Store();
+    int[] list = IntStream.rangeClosed(1, 120).map(i -> 3 * i).toArray();
+    IntVar index = new IntVar(store, "index", 1, 120);
+    IntVar value = new IntVar(store, "value", 0, 400);
+    store.impose(new ElementInteger(index, list, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.getSize()).isEqualTo(120);
+    assertThat(value.domain.contains(4)).isFalse();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 60);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(180)).isFalse();
+    assertThat(value.getSize()).isEqualTo(119);
+
+    // Values repeated more than ten times are grouped as duplicates.
+    store = new Store();
+    int[] repeated = IntStream.range(0, 150).map(i -> i % 2 == 0 ? 0 : 10).toArray();
+    index = new IntVar(store, "index", 1, 150);
+    value = new IntVar(store, "value", 0, 20);
+    store.impose(new ElementInteger(index, repeated, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{0, 10}");
+  }
+
+  @Test
+  void elementIntegerWithLargeIndexMatchesBruteForce() {
+    // Long lists against the supports computed directly, at every node of random dives.
+    Random random = new Random(7);
+    for (int instance = 0; instance < 200; instance++) {
+      Store store = new Store();
+      int length = 100 + random.nextInt(150);
+      int spread = 1 + random.nextInt(400);
+      int[] list = new int[length];
+      for (int i = 0; i < length; i++) {
+        list[i] = random.nextInt(spread) - spread / 3;
+      }
+      int offset = random.nextInt(3) - 1;
+      IntVar index = new IntVar(store, "index", offset - 2, length + offset + 2);
+      IntVar value = new IntVar(store, "value", -spread, spread);
+      store.impose(new ElementInteger(index, list, value, offset, random.nextBoolean()));
+
+      for (int step = 0; step < 30; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = random.nextBoolean() ? index : value;
+        int v = x.min() + random.nextInt(x.max() - x.min() + 1);
+        try {
+          if (random.nextInt(4) == 0) {
+            x.domain.in(
+                store.level,
+                x,
+                random.nextBoolean() ? x.min() : v,
+                random.nextBoolean() ? v : x.max());
+          } else if (x.domain.contains(v) && !x.singleton()) {
+            x.domain.inComplement(store.level, x, v);
+          }
+        } catch (FailException e) {
+          break;
+        }
+        if (!store.consistency()) {
+          break;
+        }
+        IntervalDomain expectedValue = new IntervalDomain();
+        IntervalDomain expectedIndex = new IntervalDomain();
+        for (int i = 1 + offset; i <= length + offset; i++) {
+          int val = list[i - 1 - offset];
+          if (index.domain.contains(i) && value.domain.contains(val)) {
+            expectedIndex.unionAdapt(i);
+            expectedValue.unionAdapt(val);
+          }
+        }
+        assertThat(value.dom().eq(expectedValue))
+            .as("value %s, expected %s", value.dom(), expectedValue)
+            .isTrue();
+        assertThat(index.dom().eq(expectedIndex))
+            .as("index %s, expected %s", index.dom(), expectedIndex)
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
   void elementVariableLooksForSupportsWithinIndex() {
     // A value that lost its support was given a new support at a position the index can no
     // longer take, so it stayed in the value domain.
