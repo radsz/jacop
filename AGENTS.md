@@ -100,6 +100,8 @@ Understanding these concepts is essential for working with JaCoP:
   - `mvn -Pcommit test`
   - `mvn -Ppush test`
   - `mvn -Prelease test`
+- `min` runs every kind of check `commit` runs at lower volume; test locally with `min` and leave
+  `commit` to CI.
 
 ## Writing tests
 - Use JUnit 5 (`@Test`, `@BeforeEach`, `@ParameterizedTest`).

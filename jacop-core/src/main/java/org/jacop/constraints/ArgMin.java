@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 
@@ -118,11 +117,7 @@ public class ArgMin extends AbstractArgMinMax {
       extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
     }
 
-    IntervalDomain idxDomain = buildIdxDomainForMin(ub);
-    if (idxDomain.isEmpty()) {
-      throw Store.failException;
-    }
-    extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
+    pruneIndexToFirstExtremum(store, false);
 
     int[] lbPos = findLbPosForMin();
     int lb2 = lbPos[0];
@@ -155,21 +150,6 @@ public class ArgMin extends AbstractArgMinMax {
       }
     }
     return new int[] {lb, ub, pos};
-  }
-
-  private IntervalDomain buildIdxDomainForMin(int ub) {
-    IntervalDomain idxDomain = new IntervalDomain();
-    for (int i = 0; i < list.length; i++) {
-      int cp = i + 1 + indexOffset;
-      if (list[i].min() <= ub) {
-        if (idxDomain.getSize() == 0) {
-          idxDomain.unionAdapt(cp, cp);
-        } else {
-          idxDomain.addLastElement(cp);
-        }
-      }
-    }
-    return idxDomain;
   }
 
   private int[] findLbPosForMin() {

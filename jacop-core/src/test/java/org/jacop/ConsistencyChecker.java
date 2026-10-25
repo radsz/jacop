@@ -46,10 +46,14 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
@@ -718,6 +722,27 @@ class ConsistencyChecker {
         x);
   }
 
+  private static Model alldiffExcept(Store store, Random random, boolean zero) {
+    int n = 3 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, -1, n, random);
+    IntervalDomain except = new IntervalDomain();
+    if (zero) {
+      except.unionAdapt(0, 0);
+    } else {
+      for (int k = random.nextInt(3); k > 0; k--) {
+        int e = random.nextInt(n + 3) - 1;
+        except.unionAdapt(e, e);
+      }
+    }
+    return new Model(
+        zero ? new AlldifferentExceptZero(x) : new AlldifferentExcept(x, except),
+        t -> {
+          int[] kept = Arrays.stream(t).filter(v -> !except.contains(v)).toArray();
+          return Arrays.stream(kept).distinct().count() == kept.length;
+        },
+        x);
+  }
+
   private static Model minMax(Store store, Random random, boolean min) {
     int n = 2 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, -3, 3, random);
@@ -909,6 +934,8 @@ class ConsistencyChecker {
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
+        new Case("AlldifferentExcept", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, false)),
+        new Case("AlldifferentExceptZero", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, true)),
         new Case("GCC", Level.BOUNDS_Z, ConsistencyChecker::gcc),
         new Case("ElementInteger", Level.DOMAIN, (s, r) -> element(s, r, false, false)),
         new Case("ElementIntegerFast", Level.BOUNDS_D, (s, r) -> element(s, r, false, true)),
@@ -928,6 +955,36 @@ class ConsistencyChecker {
                   new Count(x, c, value),
                   t -> Arrays.stream(t, 0, n).filter(v -> v == value).count() == t[n],
                   concat(x, new IntVar[] {c}));
+            }),
+        new Case(
+            "CountBounds",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              int value = r.nextInt(3);
+              int lb = r.nextInt(n + 1);
+              int ub = lb + r.nextInt(n + 1 - lb);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              return new Model(
+                  new CountBounds(x, value, lb, ub),
+                  t -> {
+                    long c = Arrays.stream(t).filter(v -> v == value).count();
+                    return lb <= c && c <= ub;
+                  },
+                  x);
+            }),
+        new Case(
+            "CountVar",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              IntVar[] x = vars(s, "x", n, 0, 2, r);
+              IntVar c = var(s, "c", 0, n, r);
+              IntVar y = var(s, "y", 0, 2, r);
+              return new Model(
+                  new CountVar(x, c, y),
+                  t -> Arrays.stream(t, 0, n).filter(v -> v == t[n + 1]).count() == t[n],
+                  concat(x, new IntVar[] {c, y}));
             }),
         new Case(
             "Among",

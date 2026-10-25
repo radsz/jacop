@@ -85,6 +85,8 @@ import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Stretch;
@@ -136,7 +138,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class GlobalConstraintBruteForceTest {
 
-  private static final int TRIALS = 300;
+  /** Random instances per constraint; the {@code min} profile lowers it. */
+  private static final int TRIALS = Integer.getInteger("globals.bruteforce.trials", 300);
 
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
@@ -171,6 +174,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "CountValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::countValues),
+        Arguments.of(
+            "ReifiedCount",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::reifiedCount),
         Arguments.of("AtLeast", atLeastOrMost(true)),
         Arguments.of("AtMost", atLeastOrMost(false)),
         Arguments.of("ElementInteger", elementInteger(false)),
@@ -234,6 +240,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("ExtensionalConflictVa", table("ExtensionalConflictVa")),
         Arguments.of(
             "Binpacking", (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpacking),
+        Arguments.of(
+            "BinpackingTight",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
         Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
         Arguments.of("CumulativeBasic", cumulative(false)),
@@ -667,6 +676,45 @@ class GlobalConstraintBruteForceTest {
         "");
   }
 
+  /** Count, CountBounds or CountVar in a Reified, which uses their notConsistency and include. */
+  private static Instance reifiedCount(Random random) {
+    int n = 1 + random.nextInt(4);
+    int kind = random.nextInt(3);
+    int value = random.nextInt(4);
+    int lb = random.nextInt(3);
+    int ub = lb + random.nextInt(3);
+    // the list, the counter, the value variable of CountVar and the Boolean
+    int[][] domains =
+        append(
+            domains(random, n, 0, 3),
+            domain(random, 0, n),
+            domain(random, 0, 3),
+            domain(random, 0, 1));
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[] list = Arrays.copyOfRange(x, 0, n);
+          PrimitiveConstraint c =
+              switch (kind) {
+                case 0 -> new Count(list, x[n], value);
+                case 1 -> new CountBounds(list, value, lb, ub);
+                default -> new CountVar(list, x[n], x[n + 1]);
+              };
+          store.impose(new Reified(c, x[n + 2]));
+        },
+        x -> {
+          int[] list = Arrays.copyOfRange(x, 0, n);
+          boolean holds =
+              switch (kind) {
+                case 0 -> occurrences(list, value) == x[n];
+                case 1 -> occurrences(list, value) >= lb && occurrences(list, value) <= ub;
+                default -> occurrences(list, x[n + 1]) == x[n];
+              };
+          return holds == (x[n + 2] == 1);
+        },
+        "kind=" + kind + " value=" + value + " count=" + lb + ".." + ub);
+  }
+
   private static Instance countValues(Random random) {
     int n = 1 + random.nextInt(4);
     int k = 1 + random.nextInt(3);
@@ -1058,6 +1106,35 @@ class GlobalConstraintBruteForceTest {
     int[] weights = randomInts(random, items, 1, 3);
     return new Instance(
         append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 6)),
+        (store, x) ->
+            store.impose(
+                new Binpacking(
+                    Arrays.copyOfRange(x, 0, items),
+                    Arrays.copyOfRange(x, items, items + bins),
+                    weights.clone(),
+                    0)),
+        x -> {
+          int[] load = new int[bins];
+          for (int i = 0; i < items; i++) {
+            load[x[i]] += weights[i];
+          }
+          for (int b = 0; b < bins; b++) {
+            if (load[b] != x[items + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "weights=" + Arrays.toString(weights));
+  }
+
+  /** Larger items and tight loads, so that the bin-count bounds prune during the search. */
+  private static Instance binpackingTight(Random random) {
+    int items = 3 + random.nextInt(4);
+    int bins = 2 + random.nextInt(2);
+    int[] weights = randomInts(random, items, 1, 6);
+    return new Instance(
+        append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 7)),
         (store, x) ->
             store.impose(
                 new Binpacking(
