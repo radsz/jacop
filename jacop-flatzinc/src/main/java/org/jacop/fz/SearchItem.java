@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -251,7 +252,18 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         searchVariables = getVarArray(expr1);
 
         SimpleNode searches = (SimpleNode) ann.jjtGetChild(1);
-        makeVectorOfSearches(searches);
+        boolean[] kept = makeVectorOfSearches(searches);
+        if (kept.length != searchVariables.length) {
+          throw new IllegalArgumentException(
+              "Error: priority_search needs one search annotation for each priority variable;"
+                  + " execution aborted");
+        }
+        // a search with nothing to search is never selected, so its priority variable goes too
+        searchVariables =
+            IntStream.range(0, kept.length)
+                .filter(i -> kept[i])
+                .mapToObj(i -> (IntVar) searchVariables[i])
+                .toArray(IntVar[]::new);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(2);
         varSelectionHeuristic = getVarSelectHeuristic(expr2);
@@ -426,12 +438,15 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * Creates a vector of search items from a parse tree node.
    *
    * @param body the parse tree node containing the search vector
+   * @return for each annotation of the vector, whether it was kept (searches with nothing to search
+   *     are left out)
    */
-  void makeVectorOfSearches(SimpleNode body) {
+  boolean[] makeVectorOfSearches(SimpleNode body) {
 
     if (Objects.equals(((ASTAnnotation) body).getAnnId(), ANN_VECTOR)) {
 
       int count = body.jjtGetNumChildren();
+      boolean[] kept = new boolean[count];
 
       for (int i = 0; i < count; i++) {
         SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
@@ -445,14 +460,17 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
           // a seq_search made only of ignored annotations has nothing to search
           if (!subSearch.getSearchItems().isEmpty()) {
             searchSeq.add(subSearch);
+            kept[i] = true;
           }
           continue;
         }
 
         if (subSearch.searchVariables != null && subSearch.searchVariables.length > 0) {
           searchSeq.add(subSearch);
+          kept[i] = true;
         }
       }
+      return kept;
     } else {
       throw new RuntimeException(
           "Error: Non vector definitionion in seq_search; execution aborted");

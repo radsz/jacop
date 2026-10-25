@@ -806,6 +806,107 @@ class FlatzincFrontEndTest {
         + status;
   }
 
+  private static final String PRIORITY_WITH_SEQ_SEARCH_ROW =
+      """
+      var 1..2: a:: output_var;
+      var 1..2: b:: output_var;
+      var 1..2: c:: output_var;
+      solve :: priority_search([c,a],[int_search([c],input_order,indomain_min,complete),\
+      seq_search([int_search([a],input_order,indomain_max,complete),\
+      int_search([b],input_order,indomain_min,complete)])],input_order,complete) satisfy;
+      """;
+
+  @Test
+  void seqSearchInPrioritySearchKeepsTheHeuristicsOfItsSearches() throws IOException {
+    // The first search of a seq_search under priority_search got the heuristic of the last one, so
+    // b was labelled first and a was left to the completion search (indomain_min).
+    assertEquals(
+        List.of(
+            "a = 2; b = 1; c = 1;",
+            "a = 2; b = 2; c = 1;",
+            "a = 1; b = 1; c = 1;",
+            "a = 1; b = 2; c = 1;",
+            "a = 2; b = 1; c = 2;",
+            "a = 2; b = 2; c = 2;",
+            "a = 1; b = 1; c = 2;",
+            "a = 1; b = 2; c = 2;"),
+        solveAllInOrder(PRIORITY_WITH_SEQ_SEARCH_ROW));
+  }
+
+  @Test
+  void prioritySearchStopsAtTheRequestedNumberOfSolutions() throws IOException {
+    // The priority search stopped at its own count of solutions, taken from the listeners of its
+    // child searches, which count each other's solutions: -n 3 stopped after 2 solutions and
+    // reported the search complete.
+    String out = run(PRIORITY_WITH_SEQ_SEARCH_ROW, "-n", "3")[0];
+    assertEquals(3, out.split("----------", -1).length - 1, out);
+    assertTrue(!out.contains("=========="), out);
+  }
+
+  @Test
+  void prioritySearchSkipsASearchWithNoVariables() throws IOException {
+    // An empty search was dropped from the list of searches, so the priority variables and the
+    // searches no longer matched and the solver stopped with a RuntimeException.
+    String fzn =
+        """
+        var 1..2: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([a,b],[int_search([],input_order,indomain_min,complete),\
+        int_search([b],input_order,indomain_max,complete)],input_order,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 2;", "a = 2; b = 2;", "a = 1; b = 1;", "a = 2; b = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void prioritySearchBreaksTiesWithTheTieBreakingMetric() throws IOException {
+    // most_constrained: smallest domain, ties broken by the larger number of constraints. The tie
+    // was decided by comparing the domain size of p1 (2) with the constraint count of p2 (3), so
+    // p2 was searched first although p1 has 4 constraints.
+    String fzn =
+        """
+        var 0..1: p1:: output_var;
+        var 0..1: p2:: output_var;
+        var 0..9: y1;
+        var 0..9: y2;
+        var 0..9: y3;
+        var 0..9: y4;
+        constraint int_ne(y1,p1);
+        constraint int_ne(y2,p1);
+        constraint int_ne(y3,p1);
+        constraint int_ne(y4,p1);
+        constraint int_ne(y1,p2);
+        constraint int_ne(y2,p2);
+        constraint int_ne(y3,p2);
+        solve :: priority_search([p1,p2],[int_search([p1],input_order,indomain_min,complete),\
+        int_search([p2],input_order,indomain_min,complete)],most_constrained,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("p1 = 0; p2 = 0;", "p1 = 0; p2 = 1;", "p1 = 1; p2 = 0;", "p1 = 1; p2 = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void maxRegretRanksAFixedPriorityVariableLast() throws IOException {
+    // A fixed variable has no second value; its regret was computed against MAX_INT, so the
+    // priority search chose the row of the constant 2 before the row of a (regret 2), unlike
+    // Chuffed, which gives a fixed variable regret 0.
+    String fzn =
+        """
+        var {1,3}: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([2,a],[int_search([b],input_order,indomain_min,complete),\
+        int_search([a],input_order,indomain_min,complete)],max_regret,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 1;", "a = 1; b = 2;", "a = 3; b = 1;", "a = 3; b = 2;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   @Test
   void warmStartOnFloatAndSetVariablesIsIgnored() throws IOException {

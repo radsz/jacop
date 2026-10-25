@@ -1927,9 +1927,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> createPrioritySubSearch(SearchItem<T> s) {
     return switch (s.searchType) {
-      case INT_SEARCH, BOOL_SEARCH -> int_search(s);
-      case SET_SEARCH -> set_search(s);
-      case FLOAT_SEARCH -> float_search(s);
+      case INT_SEARCH, BOOL_SEARCH -> withSelect(int_search(s));
+      case SET_SEARCH -> withSelect(set_search(s));
+      case FLOAT_SEARCH -> withSelect(float_search(s));
+      // a seq_search or a priority_search already has the heuristics of its own sub-searches
       case SEQ_SEARCH -> {
         DepthFirstSearch<T> sub = sub_search(s, null, false);
         DepthFirstSearch<T> ns = sub;
@@ -1946,6 +1947,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   + s.searchType
                   + "in priority_search; execution aborted");
     };
+  }
+
+  private DepthFirstSearch<T> withSelect(DepthFirstSearch<T> label) {
+    label.setSelectChoicePoint(variableSelection);
+    return label;
   }
 
   @SuppressWarnings("unchecked")
@@ -1972,7 +1978,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int i = 0;
     for (SearchItem<T> s : items) {
       DepthFirstSearch<T> subSearch = createPrioritySubSearch(s);
-      subSearch.setSelectChoicePoint(variableSelection);
       subSearch.setPrintInfo(false);
       searches[i++] = subSearch;
     }
@@ -1991,7 +1996,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     if (options.getNumberSolutions() > 0) {
-      label.setSolutionLimit(options.getNumberSolutions());
+      // printSolution stops the search at the requested number of solutions; the priority search
+      // cannot count them itself, since its child searches' listeners count each other's solutions
+      label.setSolutionLimit(Integer.MAX_VALUE);
     }
   }
 
