@@ -83,9 +83,14 @@ class MinizincBasedTestsHelper {
   }
 
   protected static Collection<String> fileReader(String timeCategory) throws IOException {
+    return fileReader(timeCategory, LIST_FILE_NAME);
+  }
+
+  protected static Collection<String> fileReader(String timeCategory, String listFileName)
+      throws IOException {
 
     log.info("timeCategory" + timeCategory);
-    try (FileReader file = new FileReader(RELATIVE_PATH + timeCategory + LIST_FILE_NAME);
+    try (FileReader file = new FileReader(RELATIVE_PATH + timeCategory + listFileName);
         BufferedReader br = new BufferedReader(file)) {
 
       String line = "";
