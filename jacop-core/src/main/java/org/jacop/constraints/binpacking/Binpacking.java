@@ -93,6 +93,11 @@ public class Binpacking extends Constraint
   private long alphaP;
   private long betaP;
 
+  /** Distinct sizes and their multiplicities of the items given to the bin-count bounds. */
+  private final int[] sizes;
+
+  private final int[] counts;
+
   /**
    * It constructs the binpacking constraint for the supplied variable.
    *
@@ -171,6 +176,8 @@ public class Binpacking extends Constraint
     }
 
     this.load = Arrays.copyOf(load, load.length);
+    this.sizes = new int[item.length + load.length];
+    this.counts = new int[item.length + load.length];
 
     binMap = Var.positionMapping(load, false, this.getClass());
 
@@ -468,38 +475,133 @@ public class Binpacking extends Constraint
     int last = Math.min(load.length - 1, lastBin - minBinNumber);
     int nb = last - first + 1;
 
-    // Free space of every bin that items can still use; the items already packed and the
-    // capacity a bin lacks compared to the largest one become one virtual item per bin.
-    int[] free = new int[nb];
+    // Reduction R0 (Shaw 2004): the capacity is the largest bin capacity and every bin that items
+    // can still use gets one virtual item made of the items already packed in it and the capacity
+    // it lacks compared to the largest bin.
     int maxCapacity = 0;
-    int maxFree = 0;
     for (int i = first; i <= last; i++) {
-      free[i - first] = load[i].max() - a[i];
       maxCapacity = Math.max(maxCapacity, load[i].max());
-      maxFree = Math.max(maxFree, free[i - first]);
     }
-
     if (maxCapacity <= 0) {
       throw Store.failException; // unpacked items of positive weight and no capacity
     }
+    int[] virtual = new int[nb];
+    for (int i = first; i <= last; i++) {
+      virtual[i - first] = maxCapacity - (load[i].max() - a[i]);
+    }
+    Arrays.sort(virtual);
+    int minVirtual = virtual[0];
 
-    // Reduction R0 (Shaw 2004): capacity is the largest bin capacity.
-    lbBins(withVirtualItems(unpacked, unpackedLength, free, maxCapacity), maxCapacity, nb);
-    // Reduction RMin (Dupuis, Schaus and Deville 2010): capacity and virtual items lowered by
-    // the smallest virtual item, i.e. capacity is the largest free space. Neither dominates.
-    if (maxFree > 0 && maxFree < maxCapacity) {
-      lbBins(withVirtualItems(unpacked, unpackedLength, free, maxFree), maxFree, nb);
+    // A packing found by first fit decreasing shows that no bound can exceed nb.
+    if (fitsFirstFitDecreasing(unpacked, unpackedLength, virtual, maxCapacity)) {
+      return;
+    }
+
+    // Any reduction R(delta) that adds delta to the capacity and to every virtual item keeps the
+    // packings feasible (every bin holds exactly one virtual item), so each gives a valid bound
+    // (Dupuis, Schaus and Deville 2010). Neither of R0, RMin and RMax dominates the others.
+    lbBins(unpacked, unpackedLength, virtual, 0, maxCapacity, nb);
+    // RMin: the smallest virtual item becomes empty, i.e. the capacity is the largest free space.
+    if (minVirtual > 0 && minVirtual < maxCapacity) {
+      lbBins(unpacked, unpackedLength, virtual, -minVirtual, maxCapacity - minVirtual, nb);
+    }
+    // RMax: every virtual item becomes larger than half the capacity.
+    long deltaMax = (long) maxCapacity - 2L * minVirtual + 1;
+    if (deltaMax != 0 && maxCapacity + deltaMax <= IntDomain.MAX_INT) {
+      lbBins(unpacked, unpackedLength, virtual, (int) deltaMax, (int) (maxCapacity + deltaMax), nb);
     }
   }
 
-  /** Unpacked items and one virtual item per bin (capacity - free space), in descending order. */
-  private int[] withVirtualItems(int[] unpacked, int unpackedLength, int[] free, int capacity) {
-    int[] v = new int[free.length];
+  /**
+   * Returns true if first fit packs the unpacked items (in descending order) into the free space of
+   * the bins, capacity minus their virtual item.
+   */
+  private static boolean fitsFirstFitDecreasing(
+      int[] unpacked, int unpackedLength, int[] virtual, int capacity) {
+    int[] free = new int[virtual.length];
     for (int i = 0; i < free.length; i++) {
-      v[i] = capacity - free[i];
+      free[i] = capacity - virtual[i];
     }
-    Arrays.sort(v); // ascending, merge reads it backwards
-    return merge(unpacked, unpackedLength, v);
+    for (int k = 0; k < unpackedLength; k++) {
+      int w = unpacked[k];
+      int b = 0;
+      while (b < free.length && free[b] < w) {
+        b++;
+      }
+      if (b == free.length) {
+        return false;
+      }
+      free[b] -= w;
+    }
+    return true;
+  }
+
+  /**
+   * Checks the bin-count bounds on the unpacked items plus the virtual items (ascending) shifted by
+   * delta, with the given capacity.
+   */
+  private void lbBins(
+      int[] unpacked, int unpackedLength, int[] virtual, int delta, int capacity, int nb) {
+    int[] v = new int[virtual.length];
+    for (int i = 0; i < v.length; i++) {
+      v[i] = virtual[i] + delta;
+    }
+    int[] x = merge(unpacked, unpackedLength, v);
+    if (x[0] > capacity) {
+      throw Store.failException; // an item fits in no bin
+    }
+    lbBins(x, capacity, nb);
+    ccm1Check(x, capacity, nb);
+  }
+
+  /**
+   * Fails when the dual feasible function f_CCM1 of Carlier, Clautiaux and Moukrim (2007) shows
+   * that the items x (in descending order) need more than nb bins of the given capacity. A dual
+   * feasible function maps the sizes so that items fitting together in a bin still fit after the
+   * mapping, so ceil(sum f(x) / f(capacity)) is a lower bound. Its parameter lambda (1 to capacity
+   * / 2) is tried at the distinct item sizes, as for L2.
+   */
+  private void ccm1Check(int[] x, int capacity, int nb) {
+    int half = capacity / 2;
+    if (half == 0) {
+      return;
+    }
+    // distinct sizes with their multiplicities
+    int d = 0;
+    for (int i = 0; i < x.length; i++) {
+      if (d > 0 && sizes[d - 1] == x[i]) {
+        counts[d - 1]++;
+      } else {
+        sizes[d] = x[i];
+        counts[d] = 1;
+        d++;
+      }
+    }
+    for (int j = d - 1; j >= 0 && sizes[j] <= half; j--) {
+      int lambda = sizes[j];
+      if (lambda == 0) {
+        continue;
+      }
+      long capacityLambda = capacity / lambda;
+      long sum = 0;
+      // sizes below lambda map to 0
+      for (int i = 0; i < d && sizes[i] >= lambda; i++) {
+        int w = sizes[i];
+        long f;
+        if (w > capacity - w) {
+          f = 2 * (capacityLambda - (capacity - w) / lambda);
+        } else if (w == capacity - w) {
+          f = capacityLambda;
+        } else {
+          f = 2L * (w / lambda);
+        }
+        sum += f * counts[i];
+      }
+      // ceil(sum / f(capacity)) > nb, with f(capacity) = 2 * capacityLambda
+      if (sum > 2 * capacityLambda * nb) {
+        throw Store.failException;
+      }
+    }
   }
 
   private int[] merge(int[] a, int arrLength, int[] b) {
