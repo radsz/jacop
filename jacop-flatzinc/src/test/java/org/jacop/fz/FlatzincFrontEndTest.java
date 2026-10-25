@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -564,6 +566,89 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void relaxAndReconstructPrintsImprovingSolutionsAndAProvedOptimum() throws IOException {
+    // Relaxed runs lost the bound on the cost and printed worse solutions, and the end of the
+    // search was never reported, even when a run that fixed no variable had explored everything.
+    String model =
+        """
+        array [1..6] of var 1..6: x :: output_array([1..6]);
+        var -100..100: c :: output_var;
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[1], x[3]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_ne(x[4], x[5]);
+        constraint int_ne(x[5], x[6]);
+        constraint int_ne(x[4], x[6]);
+        constraint int_ne(x[1], x[6]);
+        constraint int_lin_eq([-3,2,-1,4,-2,1,-1],[x[1],x[2],x[3],x[4],x[5],x[6],c],0);
+        solve :: int_search(x,input_order,indomain_min,complete)
+          :: restart_geometric(1.5,1) :: relax_and_reconstruct(x, 50) minimize c;
+        """;
+
+    for (String seed : List.of("1", "2", "3")) {
+      List<String> lines = run(model, "-a", "-r", seed)[0].lines().toList();
+      List<Integer> costs =
+          lines.stream()
+              .filter(l -> l.startsWith("c = "))
+              .map(l -> Integer.parseInt(l.substring(4, l.length() - 1)))
+              .toList();
+      for (int i = 1; i < costs.size(); i++) {
+        assertTrue(costs.get(i) < costs.get(i - 1), "seed " + seed + ": " + costs);
+      }
+      assertEquals(-27, costs.getLast(), "seed " + seed + ":\n" + lines);
+      assertTrue(lines.contains("=========="), "seed " + seed + ":\n" + lines);
+    }
+  }
+
+  private static List<Integer> distances(String stdout) {
+    return stdout
+        .lines()
+        .filter(l -> l.startsWith("distance = "))
+        .map(l -> Integer.parseInt(l.substring(11, l.length() - 1)))
+        .toList();
+  }
+
+  private static String annotationModel(String name) throws IOException {
+    return Files.readString(Path.of("src/test/fz/annotations", name + ".fzn"));
+  }
+
+  @Test
+  void relaxAndReconstructTspKeepsImproving() throws IOException {
+    // tsp-relax (16 cities, relax_and_reconstruct(d, 60), restart_luby(3000)) improved to 6875 and
+    // then printed worse and worse tours, up to 9257, because the bound on the distance was lost
+    // after the first relaxed restart. The optimum is 6859 (proved by tsp-restart and by Gecode).
+    String model = annotationModel("tsp-relax");
+    for (String seed : List.of("1", "4")) {
+      String out = run(model, "-a", "-r", seed, "--restart-limit", "1200")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), "seed " + seed + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), "seed " + seed + ": " + distances);
+    }
+  }
+
+  @Test
+  void restartAndWarmStartAnnotationModels() throws IOException {
+    for (String name : List.of("tsp-restart", "tsp-warm-restart")) {
+      String out = run(annotationModel(name), "-a")[0];
+      List<Integer> distances = distances(out);
+      for (int i = 1; i < distances.size(); i++) {
+        assertTrue(distances.get(i) < distances.get(i - 1), name + ": " + distances);
+      }
+      assertEquals(6859, distances.getLast(), name + ": " + distances);
+      assertTrue(out.contains("=========="), name + ":\n" + out);
+    }
+    // warm_start puts its values first: all six permutations, starting with [3,2,1]
+    List<String> warm =
+        run(annotationModel("warm"), "-a")[0].lines().filter(l -> l.startsWith("x = ")).toList();
+    assertEquals(6, new TreeSet<>(warm).size(), warm.toString());
+    assertEquals(6, warm.size(), warm.toString());
+    assertTrue(warm.getFirst().contains("[3, 2, 1]"), warm.toString());
+  }
+
+  @Test
   void restartSearchReportsUnsatisfiableModels() throws IOException {
     // Restart search printed ========== without any solution for an unsatisfiable optimization
     // model, and nothing at all for an unsatisfiable satisfaction model.
@@ -804,7 +889,219 @@ class FlatzincFrontEndTest {
         + status;
   }
 
+  private static final String PRIORITY_WITH_SEQ_SEARCH_ROW =
+      """
+      var 1..2: a:: output_var;
+      var 1..2: b:: output_var;
+      var 1..2: c:: output_var;
+      solve :: priority_search([c,a],[int_search([c],input_order,indomain_min,complete),\
+      seq_search([int_search([a],input_order,indomain_max,complete),\
+      int_search([b],input_order,indomain_min,complete)])],input_order,complete) satisfy;
+      """;
+
+  @Test
+  void seqSearchInPrioritySearchKeepsTheHeuristicsOfItsSearches() throws IOException {
+    // The first search of a seq_search under priority_search got the heuristic of the last one, so
+    // b was labelled first and a was left to the completion search (indomain_min).
+    assertEquals(
+        List.of(
+            "a = 2; b = 1; c = 1;",
+            "a = 2; b = 2; c = 1;",
+            "a = 1; b = 1; c = 1;",
+            "a = 1; b = 2; c = 1;",
+            "a = 2; b = 1; c = 2;",
+            "a = 2; b = 2; c = 2;",
+            "a = 1; b = 1; c = 2;",
+            "a = 1; b = 2; c = 2;"),
+        solveAllInOrder(PRIORITY_WITH_SEQ_SEARCH_ROW));
+  }
+
+  @Test
+  void prioritySearchStopsAtTheRequestedNumberOfSolutions() throws IOException {
+    // The priority search stopped at its own count of solutions, taken from the listeners of its
+    // child searches, which count each other's solutions: -n 3 stopped after 2 solutions and
+    // reported the search complete.
+    String out = run(PRIORITY_WITH_SEQ_SEARCH_ROW, "-n", "3")[0];
+    assertEquals(3, out.split("----------", -1).length - 1, out);
+    assertTrue(!out.contains("=========="), out);
+  }
+
+  @Test
+  void prioritySearchSkipsASearchWithNoVariables() throws IOException {
+    // An empty search was dropped from the list of searches, so the priority variables and the
+    // searches no longer matched and the solver stopped with a RuntimeException.
+    String fzn =
+        """
+        var 1..2: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([a,b],[int_search([],input_order,indomain_min,complete),\
+        int_search([b],input_order,indomain_max,complete)],input_order,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 2;", "a = 2; b = 2;", "a = 1; b = 1;", "a = 2; b = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void prioritySearchBreaksTiesWithTheTieBreakingMetric() throws IOException {
+    // most_constrained: smallest domain, ties broken by the larger number of constraints. The tie
+    // was decided by comparing the domain size of p1 (2) with the constraint count of p2 (3), so
+    // p2 was searched first although p1 has 4 constraints.
+    String fzn =
+        """
+        var 0..1: p1:: output_var;
+        var 0..1: p2:: output_var;
+        var 0..9: y1;
+        var 0..9: y2;
+        var 0..9: y3;
+        var 0..9: y4;
+        constraint int_ne(y1,p1);
+        constraint int_ne(y2,p1);
+        constraint int_ne(y3,p1);
+        constraint int_ne(y4,p1);
+        constraint int_ne(y1,p2);
+        constraint int_ne(y2,p2);
+        constraint int_ne(y3,p2);
+        solve :: priority_search([p1,p2],[int_search([p1],input_order,indomain_min,complete),\
+        int_search([p2],input_order,indomain_min,complete)],most_constrained,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("p1 = 0; p2 = 0;", "p1 = 0; p2 = 1;", "p1 = 1; p2 = 0;", "p1 = 1; p2 = 1;"),
+        solveAllInOrder(fzn));
+  }
+
+  @Test
+  void maxRegretRanksAFixedPriorityVariableLast() throws IOException {
+    // A fixed variable has no second value; its regret was computed against MAX_INT, so the
+    // priority search chose the row of the constant 2 before the row of a (regret 2), unlike
+    // Chuffed, which gives a fixed variable regret 0.
+    String fzn =
+        """
+        var {1,3}: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([2,a],[int_search([b],input_order,indomain_min,complete),\
+        int_search([a],input_order,indomain_min,complete)],max_regret,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 1;", "a = 1; b = 2;", "a = 3; b = 1;", "a = 3; b = 2;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
+  @Test
+  void warmStartOnFloatAndSetVariablesIsIgnored() throws IOException {
+    // a hint is only a preference, but float and set hints aborted the run (float values) or
+    // crashed the parser (set values)
+    String sets =
+        """
+        var set of 1..4: s:: output_var;
+        var 1..4: y:: output_var;
+        array [1..1] of var set of int: hs = [s];
+        constraint set_card(s,y);
+        constraint set_in(y,s);
+        solve %s satisfy;
+        """;
+    Set<String> noHint = solveAll(sets.formatted(""));
+    assertEquals(8, noHint.size());
+    assertEquals(noHint, solveAll(sets.formatted(":: warm_start(hs,[{1,3}])")));
+
+    String floats =
+        """
+        var 0.0..10.0: f:: output_var;
+        var 2..5: y:: output_var;
+        var 2.0..5.0: yf;
+        array [1..1] of var float: hf = [f];
+        array [1..1] of var int: hy = [y];
+        constraint float_lin_le([-1.0,1.0],[f,yf],-0.5);
+        constraint int2float(y,yf);
+        solve :: warm_start(hy,[4]) :: warm_start(hf,[3.0]) minimize f;
+        """;
+    String[] out = run(floats);
+    assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
+
+  @Test
+  void emptyWarmStartIsIgnored() throws IOException {
+    // warm_start(x, [<>, <>, <>]) is flattened to warm_start([], []), which crashed the parser
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve %s satisfy;
+        """;
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(":: warm_start([],[])")));
+  }
+
+  @Test
+  void warmStartWithMoreValuesThanVariablesUsesTheCommonPart() throws IOException {
+    // the values were read up to their own length, past the end of the variables
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve :: warm_start([x],[2,3]) satisfy;
+        """;
+    String out = run(fzn)[0];
+    assertTrue(out.contains("x = 2;"), out);
+    assertEquals(6, solveAll(fzn).size());
+  }
+
+  @Test
+  void warmStartArrayIsUsed() throws IOException {
+    // warm_start_array, which MiniZinc makes for a set hint without set support and which users
+    // write to group hints, was ignored
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_ne(x,y);
+        constraint int_eq_imp(x,3,b);
+        solve %s satisfy;
+        """;
+    String hint =
+        ":: warm_start_array([warm_start([x,y],[3,1]),warm_start_array([warm_start([b],[true])])])";
+    String out = run(fzn.formatted(hint))[0];
+    assertTrue(out.contains("x = 3;") && out.contains("y = 1;") && out.contains("b = true;"), out);
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(hint)));
+  }
+
+  @Test
+  void warmStartInSequenceSearchStopsAtTheTimeLimit() {
+    // a warm_start inside seq_search (or next to another search annotation) was not in the list of
+    // searches that get the time limit, so a long search under it ignored -t; 13 pigeons in 12
+    // holes take hours without the limit
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      fzn.append("var 1..12: x").append(i).append(";\n");
+    }
+    StringBuilder vars = new StringBuilder();
+    StringBuilder hint = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      vars.append(i == 0 ? "" : ",").append("x").append(i);
+      hint.append(i == 0 ? "" : ",").append(i % 12 + 1);
+    }
+    fzn.append("array [1..13] of var int: x = [").append(vars).append("];\n");
+    for (int i = 0; i < 13; i++) {
+      for (int j = i + 1; j < 13; j++) {
+        fzn.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+      }
+    }
+    fzn.append("solve :: seq_search([warm_start(x,[")
+        .append(hint)
+        .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
+
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+            0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

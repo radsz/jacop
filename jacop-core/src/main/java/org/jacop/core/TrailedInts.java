@@ -36,7 +36,7 @@ import org.jacop.api.Stateful;
 /**
  * A fixed number of int values that are restored when the store backtracks. The first change at a
  * level saves all values once, so a constraint keeps several counters with one entry per level and
- * one call per removed level, without boxing them as {@link TimeStamp} does.
+ * one call per level at which they changed, without boxing them as {@link TimeStamp} does.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -53,7 +53,7 @@ public final class TrailedInts implements Stateful {
   private int size;
 
   /**
-   * Creates the values, all zero, and registers them in the store.
+   * Creates the values, all zero. The store restores them through its trail of timestamps.
    *
    * @param store the store whose levels the values follow.
    * @param n the number of values.
@@ -62,7 +62,6 @@ public final class TrailedInts implements Stateful {
     this.store = store;
     this.values = new int[n];
     this.trail = new int[8 * (n + 1)];
-    store.putMutableVar(this);
   }
 
   /**
@@ -100,6 +99,8 @@ public final class TrailedInts implements Stateful {
     trail[size] = level;
     System.arraycopy(values, 0, trail, size + 1, values.length);
     size += entry;
+    // like a timestamp, the values are restored only when a level at which they changed is removed
+    store.recordTimeStampLevel(this, level);
   }
 
   @Override

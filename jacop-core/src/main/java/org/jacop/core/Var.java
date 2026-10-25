@@ -66,6 +66,9 @@ public abstract class Var implements Backtrackable {
   /** Pruning activity of this variable. */
   double pruningActivity = 1.0d;
 
+  /** The constraints watching this variable for a value, see {@link Store#watchValue}. */
+  ValueWatches valueWatches;
+
   /**
    * Creates an empty position mapping.
    *

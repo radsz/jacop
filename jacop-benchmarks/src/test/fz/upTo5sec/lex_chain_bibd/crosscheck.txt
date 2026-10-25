@@ -1,0 +1,3 @@
+source: radsz/osolpro benchmarks/lex-chain (BIBD (9,12,4,3,1) with double lex on the 0/1 incidence matrix)
+mode: all (satisfaction)
+verified: JaCoP with LexChain, JaCoP with pairwise lex and Gecode 6.3.0 all find 8 solutions

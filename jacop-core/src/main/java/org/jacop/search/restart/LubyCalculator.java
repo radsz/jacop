@@ -49,13 +49,12 @@ public class LubyCalculator extends Calculator {
   public LubyCalculator(int scale) {
     n = 1;
     this.scale = scale;
-    failLimit = this.scale * getLuby(n);
+    startRun(this.scale * getLuby(n));
   }
 
   /** Resets the fail counter and computes the next fail limit using the Luby sequence. */
   public void newLimit() {
-    numberFails = 0;
-    failLimit = scale * getLuby(++n);
+    startRun(scale * getLuby(++n));
   }
 
   /** {@inheritDoc} */

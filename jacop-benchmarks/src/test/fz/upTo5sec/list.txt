@@ -2742,3 +2742,7 @@ graph_path/graph_path
 graph_steiner/graph_steiner
 graph_tree/graph_tree
 graph_wst/graph_wst
+lex_chain_bibd/lex_chain_bibd
+lex_chain_golfers/lex_chain_golfers
+lex_chain_codes/lex_chain_codes
+lex_chain_orbitope/lex_chain_orbitope

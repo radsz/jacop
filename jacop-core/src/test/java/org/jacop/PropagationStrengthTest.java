@@ -33,7 +33,10 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
+import java.util.Random;
 import java.util.function.BiFunction;
+import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
@@ -41,6 +44,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.ViolationMeasure;
@@ -53,6 +57,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -195,6 +200,100 @@ class PropagationStrengthTest {
   }
 
   @Test
+  void testAlldifferentChecksMatchingWhenAVariableLosesAValue() {
+
+    // Three variables end up over {1, 5} and cannot all differ. Neither change fixes a variable,
+    // so the matching check must run on other domain changes.
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 1, 5), variable(store, "x1", 1, 5), variable(store, "x2", 1, 4, 5, 6)
+    };
+    store.impose(new Alldifferent(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, x[2], 6)).isTrue();
+    assertThat(removeValues(store, x[2], 4)).isFalse();
+  }
+
+  @Test
+  void testAlldifferentFailsAtEveryInfeasibleNode() {
+
+    // Random dives with backtracking that remove values and narrow bounds without fixing
+    // variables: Alldifferent must fail exactly when its variables cannot all take different
+    // values, at every node, also after its matching was repaired on deeper levels.
+    Random random = new Random(11);
+    int infeasible = 0;
+    for (int instance = 0; instance < 3000; instance++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(5);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i);
+        for (int v = 0; v <= n + 1; v++) {
+          if (random.nextInt(3) > 0) {
+            x[i].addDom(v, v);
+          }
+        }
+        if (x[i].getSize() == 0) {
+          x[i].addDom(0, 0);
+        }
+      }
+      store.impose(new Alldifferent(x));
+      boolean ok = store.consistency();
+      assertThat(ok).as(Arrays.toString(x)).isEqualTo(hasDistinctAssignment(x, 0, new int[n]));
+      for (int step = 0; ok && step < 3 * n; step++) {
+        if (random.nextInt(4) == 0 && store.level > 0) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          continue;
+        }
+        IntVar v = x[random.nextInt(n)];
+        if (v.singleton()) {
+          continue;
+        }
+        String before = Arrays.toString(x);
+        store.setLevel(store.level + 1);
+        int value = v.min() + random.nextInt(v.max() - v.min() + 1);
+        switch (random.nextInt(3)) {
+          case 0 -> v.domain.inComplement(store.level, v, value);
+          case 1 -> v.domain.inMax(store.level, v, Math.max(value, v.min()));
+          default -> v.domain.inMin(store.level, v, Math.min(value, v.max()));
+        }
+        boolean consistent = store.consistency();
+        boolean feasible = consistent && hasDistinctAssignment(x, 0, new int[n]);
+        if (!consistent) {
+          infeasible++;
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        } else {
+          assertThat(feasible).as(before + " then " + v + " gives " + Arrays.toString(x)).isTrue();
+        }
+      }
+    }
+    assertThat(infeasible).isPositive();
+  }
+
+  private static boolean hasDistinctAssignment(IntVar[] x, int i, int[] values) {
+    if (i == x.length) {
+      return true;
+    }
+    for (ValueEnumeration e = x[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int value = e.nextElement();
+      boolean used = false;
+      for (int j = 0; j < i; j++) {
+        used |= values[j] == value;
+      }
+      if (!used) {
+        values[i] = value;
+        if (hasDistinctAssignment(x, i + 1, values)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Test
   void testNetworkFlowWakesOnRemovedValue() {
 
     // The flows around a cycle of three nodes are equal; removing 3 from inside one of them must
@@ -269,6 +368,77 @@ class PropagationStrengthTest {
 
     assertThat(x[0].dom().toString()).isEqualTo("1");
     assertThat(x[1].dom().toString()).isEqualTo("2");
+  }
+
+  @Test
+  void testSortBoundsYFromBothMatchings() {
+
+    // y2 is the largest value, at least x2 = 3, and the hole moves it to 4, which some other x
+    // must take; x2 then sits at y0 or y1, so y1 >= 3. The sorted minima of x alone give y1 >= 1.
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 1, 2, 4), new IntVar(store, "x1", 0, 4), new IntVar(store, "x2", 3, 3)
+    };
+    IntVar[] y = {
+      new IntVar(store, "y0", 0, 3),
+      new IntVar(store, "y1", 0, 4),
+      variable(store, "y2", 0, 1, 2, 4)
+    };
+    store.impose(new Sort(x, y));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(y[2].dom().toString()).isEqualTo("4");
+    assertThat(y[1].dom().toString()).isEqualTo("{3..4}");
+    assertThat(y[0].dom().toString()).isEqualTo("{0..3}");
+  }
+
+  @Test
+  void testSortNarrowsXToThePositionsOfItsComponent() {
+
+    // y = [0, 5, 5] and x0 can only be 0, so x1 and x2 take the two 5s
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 9), new IntVar(store, "x2", 0, 9)
+    };
+    IntVar[] y = {
+      new IntVar(store, "y0", 0, 0), new IntVar(store, "y1", 5, 5), new IntVar(store, "y2", 5, 5)
+    };
+    store.impose(new Sort(x, y));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x[0].dom().toString()).isEqualTo("0");
+    assertThat(x[1].dom().toString()).isEqualTo("5");
+    assertThat(x[2].dom().toString()).isEqualTo("5");
+  }
+
+  @Test
+  void testSortPermutationBoundsYByForcedPositions() {
+
+    // z1 in 1..2 puts x1 >= 3 at position 1 or 2 (numbered from 1), so y1 and y2 are at least 3
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 4), new IntVar(store, "x1", 3, 4), new IntVar(store, "x2", 0, 4)
+    };
+    IntVar[] y = {
+      new IntVar(store, "y0", 0, 4), new IntVar(store, "y1", 0, 4), new IntVar(store, "y2", 0, 4)
+    };
+    IntVar[] z = {
+      new IntVar(store, "z0", 1, 3), new IntVar(store, "z1", 1, 2), new IntVar(store, "z2", 1, 3)
+    };
+    store.impose(new Sort(x, y, z, 1));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(y[0].dom().toString()).isEqualTo("{0..4}");
+    assertThat(y[1].dom().toString()).isEqualTo("{3..4}");
+    assertThat(y[2].dom().toString()).isEqualTo("{3..4}");
+
+    // fixing z1 = 1 makes x1 the smallest value
+    store.setLevel(store.level + 1);
+    z[1].domain.in(store.level, z[1], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y[0].dom().toString()).isEqualTo("{3..4}");
+    assertThat(x[0].dom().toString()).isEqualTo("{3..4}");
+    assertThat(x[2].dom().toString()).isEqualTo("{3..4}");
   }
 
   @Test

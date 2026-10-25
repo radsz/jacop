@@ -53,6 +53,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -81,6 +82,7 @@ import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -94,6 +96,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -213,6 +216,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Lex", (Function<Random, Instance>) GlobalConstraintBruteForceTest::lex),
         Arguments.of(
             "LexOrder", (Function<Random, Instance>) GlobalConstraintBruteForceTest::lexOrder),
+        Arguments.of("LexChain", lexChain(false)),
+        Arguments.of("LexChainRepeated", lexChain(true)),
         Arguments.of("Values", (Function<Random, Instance>) GlobalConstraintBruteForceTest::values),
         Arguments.of(
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
@@ -233,10 +238,16 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "SeqPrecedeChainValues",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::seqPrecedeChainValues),
+        Arguments.of("Sort", sort(false, false)),
+        Arguments.of("SortPermutation", sort(true, false)),
+        Arguments.of("SortRepeated", sort(false, true)),
+        Arguments.of("SortPermutationRepeated", sort(true, true)),
         Arguments.of("Member", (Function<Random, Instance>) GlobalConstraintBruteForceTest::member),
         Arguments.of("MemberRepeated", memberRepeated("plain")),
         Arguments.of("ReifiedMemberRepeated", memberRepeated("reified")),
         Arguments.of("NotMemberRepeated", memberRepeated("not")),
+        Arguments.of(
+            "AmongVar", (Function<Random, Instance>) GlobalConstraintBruteForceTest::amongVar),
         Arguments.of(
             "Distance", (Function<Random, Instance>) GlobalConstraintBruteForceTest::distance),
         Arguments.of("XmulYeqZ", arithmetic("XmulYeqZ")),
@@ -640,6 +651,46 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "rows=" + rows + " strict=" + strict);
+  }
+
+  /**
+   * A LexChain over random vectors; with repeated, some positions reuse the variable of an earlier
+   * position, so the same variable occurs in several vectors or twice in one.
+   */
+  private static Function<Random, Instance> lexChain(boolean repeated) {
+    return random -> {
+      int rows = 2 + random.nextInt(3);
+      int n = 1 + random.nextInt(9 / rows);
+      boolean strict = random.nextBoolean();
+      int[] var = new int[rows * n];
+      int vars = 0;
+      for (int k = 0; k < var.length; k++) {
+        var[k] = repeated && k > 0 && random.nextInt(3) == 0 ? var[random.nextInt(k)] : vars++;
+      }
+      return new Instance(
+          domains(random, vars, 0, 2),
+          (store, x) -> {
+            IntVar[][] matrix = new IntVar[rows][n];
+            for (int k = 0; k < var.length; k++) {
+              matrix[k / n][k % n] = x[var[k]];
+            }
+            store.impose(new LexChain(matrix, strict));
+          },
+          x -> {
+            int[] t = Arrays.stream(var).map(k -> x[k]).toArray();
+            for (int i = 0; i + 1 < rows; i++) {
+              int c =
+                  Arrays.compare(
+                      Arrays.copyOfRange(t, i * n, (i + 1) * n),
+                      Arrays.copyOfRange(t, (i + 1) * n, (i + 2) * n));
+              if (strict ? c >= 0 : c > 0) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(var));
+    };
   }
 
   private static Instance lexOrder(Random random) {
@@ -1414,6 +1465,66 @@ class GlobalConstraintBruteForceTest {
         "");
   }
 
+  /**
+   * sort(x, y) or sort(x, y, z) over distinct variables, or with x, y and z picked from a pool of
+   * variables, so that a variable can occur several times and in more than one array.
+   */
+  private static Function<Random, Instance> sort(boolean permutation, boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(repeated ? 4 : 3);
+      int offset = random.nextInt(3) - 1;
+      int arrays = permutation ? 3 : 2;
+      int pool = repeated ? 1 + random.nextInt(arrays * n) : arrays * n;
+      int[] pick = new int[arrays * n];
+      for (int k = 0; k < pick.length; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        // permutation variables only in the non-repeated case get their own range
+        boolean isZ = !repeated && v >= 2 * n;
+        domains[v] = isZ ? domain(random, offset - 1, offset + n) : domain(random, -1, 3);
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            IntVar[] ys = new IntVar[n];
+            IntVar[] zs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+              ys[i] = v[pick[n + i]];
+              if (permutation) {
+                zs[i] = v[pick[2 * n + i]];
+              }
+            }
+            store.impose(permutation ? new Sort(xs, ys, zs, offset) : new Sort(xs, ys));
+          },
+          t -> {
+            int[] xs = new int[n];
+            int[] ys = new int[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = t[pick[i]];
+              ys[i] = t[pick[n + i]];
+            }
+            if (permutation) {
+              boolean[] used = new boolean[n];
+              for (int i = 0; i < n; i++) {
+                int j = t[pick[2 * n + i]] - offset;
+                if (j < 0 || j >= n || used[j] || ys[j] != xs[i]) {
+                  return false;
+                }
+                used[j] = true;
+              }
+            }
+            int[] s = xs.clone();
+            Arrays.sort(s);
+            return Arrays.equals(s, ys);
+          },
+          "n=" + n + " offset=" + offset + " pick=" + Arrays.toString(pick));
+    };
+  }
+
   private static Instance member(Random random) {
     int n = 1 + random.nextInt(4);
     return new Instance(
@@ -1421,6 +1532,32 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> store.impose(new Member(Arrays.copyOfRange(x, 0, n), x[n])),
         x -> occurrences(Arrays.copyOfRange(x, 0, n), x[n]) > 0,
         "");
+  }
+
+  /** AmongVar(x, y, n): x is the first nx variables, y the next ny and n the last one. */
+  private static Instance amongVar(Random random) {
+    int nx = 1 + random.nextInt(4);
+    int ny = 1 + random.nextInt(3);
+    int[][] domains = domains(random, nx + ny + 1, 0, 4);
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.impose(
+                new AmongVar(
+                    Arrays.copyOfRange(x, 0, nx), Arrays.copyOfRange(x, nx, nx + ny), x[nx + ny])),
+        x -> {
+          int count = 0;
+          for (int i = 0; i < nx; i++) {
+            for (int j = nx; j < nx + ny; j++) {
+              if (x[i] == x[j]) {
+                count++;
+                break;
+              }
+            }
+          }
+          return count == x[nx + ny];
+        },
+        "nx=" + nx + " ny=" + ny);
   }
 
   /**

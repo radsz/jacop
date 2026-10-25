@@ -68,6 +68,7 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
@@ -79,6 +80,7 @@ import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
@@ -1787,6 +1789,22 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new LexOrder(x, y, false));
   }
 
+  void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = a.length / vectors;
+
+    // vector j is column j of the matrix that a lists row by row
+    IntVar[][] x = new IntVar[vectors][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < vectors; j++) {
+        x[j][i] = a[i * vectors + j];
+      }
+    }
+
+    support.pose(new LexChain(x, strict));
+  }
+
   void gen_jacop_increasing(SimpleNode node, boolean strict) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
@@ -1868,6 +1886,28 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xs = xx.toArray(new IntVar[0]);
 
     support.pose(new SeqPrecedeChain(xs));
+  }
+
+  void gen_jacop_sort(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+    if (x.length != y.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y));
+  }
+
+  void gen_jacop_sort_permutation(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] z = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    if (x.length != y.length || x.length != z.length) {
+      throw Store.failException;
+    }
+    support.pose(new Sort(x, y, z, offset));
   }
 
   void gen_jacop_bin_packing(SimpleNode node) {

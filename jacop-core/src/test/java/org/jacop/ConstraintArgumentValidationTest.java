@@ -75,6 +75,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Rectangle;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
@@ -365,6 +366,23 @@ public class ConstraintArgumentValidationTest {
   public void assignmentRejectsListsOfDifferentLengths() {
     assertRejected(
         (s, v) -> new Assignment(new IntVar[] {v[0], v[1]}, new IntVar[] {v[2]}), BOOL, BOOL, BOOL);
+  }
+
+  @Test
+  public void sortRejectsListsOfDifferentLengths() {
+    assertRejected(
+        (s, v) -> new Sort(new IntVar[] {v[0], v[1]}, new IntVar[] {v[2]}), BOOL, BOOL, BOOL);
+    assertRejected(
+        (s, v) -> new Sort(new IntVar[] {v[0]}, new IntVar[] {v[1]}, new IntVar[] {v[2], v[3]}, 0),
+        BOOL,
+        BOOL,
+        BOOL,
+        BOOL);
+  }
+
+  @Test
+  public void sortOfEmptyLists() {
+    assertSolutions((s, v) -> new Sort(new IntVar[] {}, new IntVar[] {}), a -> true, range(0, 2));
   }
 
   @Test

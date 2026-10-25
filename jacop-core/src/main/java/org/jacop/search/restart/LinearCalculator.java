@@ -48,7 +48,7 @@ public class LinearCalculator extends Calculator {
    */
   public LinearCalculator(int scale) {
     n = 1;
-    failLimit = scale;
+    startRun(scale);
     increment = scale;
   }
 
@@ -57,17 +57,16 @@ public class LinearCalculator extends Calculator {
    * is calculated as n * increment where n is incremented each time.
    */
   public void newLimit() {
-    numberFails = 0;
-    failLimit = ++n * increment;
+    startRun(++n * increment);
   }
 
   /**
    * Returns a string representation of this linear calculator.
    *
-   * @return a string describing the calculator with current fails and fail limit.
+   * @return a string describing the calculator and its increment.
    */
   @Override
   public String toString() {
-    return "constantCalculator: " + numberFails + "(" + failLimit + ")";
+    return "linearCalculator(" + increment + ")";
   }
 }

@@ -50,7 +50,7 @@ public class GeometricCalculator extends Calculator {
    */
   public GeometricCalculator(double base, int scale) {
     n = 0;
-    failLimit = scale;
+    startRun(scale);
     this.base = base;
     this.scale = scale;
   }
@@ -60,9 +60,8 @@ public class GeometricCalculator extends Calculator {
    * limit is calculated as base^n * scale where n is incremented each time.
    */
   public void newLimit() {
-    numberFails = 0;
-    double p = Math.pow(base, ++n);
-    failLimit = (long) p * scale;
+    // scale * base^n rounded down, as in Gecode; the cast saturates at Long.MAX_VALUE
+    startRun((long) (scale * Math.pow(base, ++n)));
   }
 
   /**

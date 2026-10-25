@@ -63,6 +63,8 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -71,6 +73,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -171,6 +174,8 @@ class ConsistencyChecker {
     void post(Store store) {
       if (constraint instanceof Constraint c) {
         store.impose(c);
+      } else if (constraint instanceof List<?> cs) {
+        cs.forEach(c -> store.impose((Constraint) c));
       } else {
         store.imposeDecomposition((DecomposedConstraint<Constraint>) constraint);
       }
@@ -497,6 +502,42 @@ class ConsistencyChecker {
     return v;
   }
 
+  /** A chain of 3 or 4 vectors as one LexChain (native) or as pairwise Lex constraints. */
+  private static Model lexChain(Store s, Random r, boolean nativeChain) {
+    boolean lt = r.nextBoolean();
+    int m = 3 + r.nextInt(2);
+    int n = 2 + r.nextInt(2);
+    IntVar[][] v = new IntVar[m][];
+    for (int i = 0; i < m; i++) {
+      v[i] = vars(s, "v" + i + "_", n, 0, 2, r);
+    }
+    Object constraint;
+    if (nativeChain) {
+      constraint = new LexChain(v, lt);
+    } else {
+      List<Constraint> pairs = new ArrayList<>();
+      for (int i = 0; i + 1 < m; i++) {
+        pairs.add(new LexOrder(v[i], v[i + 1], lt));
+      }
+      constraint = pairs;
+    }
+    return new Model(
+        constraint,
+        t -> {
+          for (int i = 0; i + 1 < m; i++) {
+            int cmp =
+                Arrays.compare(
+                    Arrays.copyOfRange(t, i * n, (i + 1) * n),
+                    Arrays.copyOfRange(t, (i + 1) * n, (i + 2) * n));
+            if (lt ? cmp >= 0 : cmp > 0) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(v));
+  }
+
   /** A variable over lo..hi with a random sub-interval, so without holes. */
   private static IntVar interval(Store store, String name, int lo, int hi, Random random) {
     int a = lo + random.nextInt(hi - lo + 1);
@@ -545,6 +586,12 @@ class ConsistencyChecker {
 
   /** sum(w[i] * b[i]) rel s over 0/1 variables b, with s a variable or a constant. */
   private static Model linearBool(Store store, Random random, String rel, boolean constant) {
+    return linearBool(store, random, rel, constant, false);
+  }
+
+  /** The same, with watched propagation forced for a constant right hand side. */
+  private static Model linearBool(
+      Store store, Random random, String rel, boolean constant, boolean watched) {
     int n = 3 + random.nextInt(4);
     int[] w = new int[n];
     IntVar[] b = new IntVar[n];
@@ -555,8 +602,12 @@ class ConsistencyChecker {
     }
     if (constant) {
       int c = random.nextInt(13) - 6;
+      LinearBool linear = new LinearBool(b, w, rel, c);
+      if (watched) {
+        linear.setWatchMinLength(0);
+      }
       return new Model(
-          new LinearBool(b, w, rel, c),
+          linear,
           t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), c),
           b,
           linearOverReals(w, c, rel));
@@ -714,6 +765,34 @@ class ConsistencyChecker {
           return true;
         },
         concat(s, d, r, new IntVar[] {limit}));
+  }
+
+  /** sort(x, y) or sort(x, y, z) with z numbering the positions from an offset. */
+  private static Model sort(Store store, Random random, boolean permutation) {
+    int n = 2 + random.nextInt(permutation ? 2 : 3);
+    int offset = random.nextInt(3) - 1;
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    IntVar[] y = vars(store, "y", n, 0, 4, random);
+    IntVar[] z = permutation ? vars(store, "z", n, offset, offset + n - 1, random) : new IntVar[0];
+    return new Model(
+        permutation ? new Sort(x, y, z, offset) : new Sort(x, y),
+        t -> {
+          int[] xs = Arrays.copyOfRange(t, 0, n);
+          int[] ys = Arrays.copyOfRange(t, n, 2 * n);
+          if (permutation) {
+            boolean[] used = new boolean[n];
+            for (int i = 0; i < n; i++) {
+              int j = t[2 * n + i] - offset;
+              if (used[j] || ys[j] != xs[i]) {
+                return false;
+              }
+              used[j] = true;
+            }
+          }
+          Arrays.sort(xs);
+          return Arrays.equals(xs, ys);
+        },
+        concat(x, y, z));
   }
 
   private static Model alldiff(Store store, Random random, boolean gac) {
@@ -934,6 +1013,10 @@ class ConsistencyChecker {
             Level.BOUNDS_R,
             (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true)),
         new Case(
+            "LinearBool watched",
+            Level.BOUNDS_R,
+            (s, r) -> linearBool(s, r, new String[] {"==", "<=", ">="}[r.nextInt(3)], true, true)),
+        new Case(
             "XplusCneqZ",
             Level.DOMAIN,
             (s, r) -> {
@@ -1057,6 +1140,8 @@ class ConsistencyChecker {
                           .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i]),
                   x);
             }),
+        new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
+        new Case("SortPermutation", Level.BOUNDS_Z, (s, r) -> sort(s, r, true)),
         new Case(
             "Lex",
             Level.DOMAIN,
@@ -1075,6 +1160,9 @@ class ConsistencyChecker {
                   },
                   concat(a, b));
             }),
+        new Case("LexChain", Level.DOMAIN, (s, r) -> lexChain(s, r, true)),
+        // m - 1 pairwise lex constraints, for comparison with LexChain
+        new Case("LexChainPairwise", Level.NONE, (s, r) -> lexChain(s, r, false)),
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),

@@ -104,6 +104,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -1806,6 +1807,153 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // Alldistinct keeps its graph in bit sets over value offsets when the union of initial domains
+  // spans at most 512 values, in bit sets over value indexes when it has at most 512 values, and in
+  // adjacency lists otherwise. In each representation, with domains spread over several words and
+  // mixed domain types, the remaining values after every propagation of a dive must be exactly the
+  // values that take part in a matching (domain consistency), and backtracking must restore them.
+  @Test
+  void testAlldistinctIsDomainConsistentInEveryRepresentation() {
+
+    Random random = new Random(31);
+    for (int trial = 0; trial < 1600; trial++) {
+      int kind = trial % 4;
+      int n = 2 + random.nextInt(7);
+      int m = n + random.nextInt(4);
+      // kind 0: one word, 1: offsets over several words, 2: sparse indexes, 3: adjacency lists
+      int span = kind == 0 ? 64 : kind == 1 ? 65 + random.nextInt(448) : 1_000_000;
+      int origin = random.nextInt(201) - 100;
+      int[] pool = random.ints(origin, origin + span).distinct().limit(m).sorted().toArray();
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = new IntervalDomain();
+        for (int value : pool) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(value, value);
+          }
+        }
+        if (kind == 3 && i < 2) {
+          // wide variables make the union larger than 512 values
+          random.ints(origin, origin + 3000).limit(600).forEach(v -> dom.unionAdapt(v, v));
+        }
+        if (dom.isEmpty()) {
+          int value = pool[random.nextInt(m)];
+          dom.unionAdapt(value, value);
+        }
+        if (dom.max() - dom.min() < 64 && random.nextBoolean()) {
+          SmallDenseDomain small = new SmallDenseDomain();
+          small.unionAdapt(dom);
+          x[i] = new IntVar(store, "x" + i, small);
+        } else {
+          x[i] = new IntVar(store, "x" + i, dom);
+        }
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldistinct(x));
+
+      Map<Integer, String> domainsAtLevel = new HashMap<>();
+      boolean consistent = store.consistency();
+      assertAlldistinctDomainConsistent(x, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.put(store.level, Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(3); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          switch (random.nextInt(4)) {
+            case 0 -> v.domain.in(store.level, v, value, value);
+            case 1 -> v.domain.in(store.level, v, value, v.max());
+            default -> v.domain.inComplement(store.level, v, value);
+          }
+        }
+        consistent = store.consistency();
+        assertAlldistinctDomainConsistent(x, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (domainsAtLevel.containsKey(store.level)) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  // The values of each variable which take part in a matching of all variables to distinct values
+  // (computed by augmenting paths, so domains may be large), or null if there is no such matching.
+  private static int[][] alldistinctSupports(IntVar[] x) {
+    int n = x.length;
+    int[][] domains = new int[n][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = valuesOf(x[i]);
+    }
+    int[][] supports = new int[n][];
+    for (int i = 0; i < n; i++) {
+      int variable = i;
+      supports[i] =
+          Arrays.stream(domains[i]).filter(v -> matchingExists(domains, variable, v)).toArray();
+      if (supports[i].length == 0) {
+        return null;
+      }
+    }
+    return supports;
+  }
+
+  private static boolean matchingExists(int[][] domains, int fixed, int fixedValue) {
+    Map<Integer, Integer> holder = new HashMap<>();
+    holder.put(fixedValue, fixed);
+    for (int i = 0; i < domains.length; i++) {
+      if (i != fixed && !augmentMatching(domains, i, fixed, fixedValue, holder, new HashSet<>())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean augmentMatching(
+      int[][] domains,
+      int i,
+      int fixed,
+      int fixedValue,
+      Map<Integer, Integer> holder,
+      Set<Integer> visited) {
+    for (int v : domains[i]) {
+      if (v != fixedValue && visited.add(v)) {
+        Integer j = holder.get(v);
+        if (j == null || augmentMatching(domains, j, fixed, fixedValue, holder, visited)) {
+          holder.put(v, i);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static void assertAlldistinctDomainConsistent(
+      IntVar[] x, boolean consistent, String instance) {
+    if (!consistent) {
+      assertThat(alldistinctSupports(x)).as(instance + " failed with solutions").isNull();
+      return;
+    }
+    int[][] supports = alldistinctSupports(x);
+    assertThat(supports).as(instance + " no solution " + Arrays.toString(x)).isNotNull();
+    for (int i = 0; i < x.length; i++) {
+      assertThat(valuesOf(x[i]))
+          .as(instance + " " + Arrays.toString(x))
+          .containsExactly(supports[i]);
+    }
+  }
+
   // Alldiff must be bounds(Z) consistent: after propagation the minimum and the maximum of every
   // variable take part in an all different assignment where every variable ranges over the interval
   // between its bounds. It must also never remove a solution, along random dives and after
@@ -1937,7 +2085,8 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
-  // LinearBool keeps the bounds of the sum in time stamps updated when a 0/1 variable is fixed, so
+  // LinearBool keeps the bounds of the sum in trailed counters updated when a 0/1 variable is
+  // fixed, so
   // counting all solutions by search checks that the sums are restored on backtracking; repeated
   // variables, variables fixed before imposing and both kinds of right hand side are covered.
   @Test
@@ -1997,13 +2146,164 @@ class SingleConstraintTest extends TestHelper {
           };
       int expected = bruteForce(all, holds).size();
 
-      store.impose(constant ? new LinearBool(b, w, rel, c) : new LinearBool(b, w, rel, z));
+      LinearBool linear = constant ? new LinearBool(b, w, rel, c) : new LinearBool(b, w, rel, z);
+      // half of the constraints with a constant use watched propagation, despite their length
+      boolean watched = constant && random.nextBoolean();
+      if (watched) {
+        linear.setWatchMinLength(0);
+      }
+      store.impose(linear);
+      assertThat(linear.isWatched()).isEqualTo(watched);
       List<IntVar> order = new ArrayList<>(Arrays.asList(all));
       Collections.shuffle(order, random);
       assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
           .as("trial %d: %s %s %s", trial, Arrays.toString(w), rel, constant ? c : z)
           .isEqualTo(expected);
     }
+  }
+
+  // Several overlapping LinearBool constraints with constant right hand sides, all using watched
+  // propagation, against brute force. Counting all solutions backtracks over every watch move; a
+  // second run with the counter propagation and the same search must visit the same number of
+  // nodes, since both reach the same bounds consistent fixpoint.
+  @Test
+  void testWatchedLinearBoolSystemsMatchBruteForce() {
+
+    Random random = new Random(43);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 600; trial++) {
+      int n = 5 + random.nextInt(9);
+      int constraints = 1 + random.nextInt(4);
+      int[][] scopes = new int[constraints][];
+      int[][] weights = new int[constraints][];
+      String[] rels = new String[constraints];
+      int[] rhs = new int[constraints];
+      for (int k = 0; k < constraints; k++) {
+        int m = 3 + random.nextInt(n + 2);
+        scopes[k] = new int[m];
+        weights[k] = new int[m];
+        int big = random.nextInt(3) == 0 ? 20 : 4;
+        long positive = 0;
+        long negative = 0;
+        for (int i = 0; i < m; i++) {
+          scopes[k][i] = random.nextInt(n);
+          weights[k][i] =
+              (1 + random.nextInt(random.nextInt(4) == 0 ? big : 4))
+                  * (random.nextInt(4) == 0 ? -1 : 1);
+          if (weights[k][i] > 0) {
+            positive += weights[k][i];
+          } else {
+            negative += weights[k][i];
+          }
+        }
+        rels[k] = relations[random.nextInt(relations.length)];
+        rhs[k] = (int) (negative + random.nextInt((int) (positive - negative) + 1));
+      }
+      // most equalities hold for some assignment, so that the search goes deep on both sides
+      int[] witness = random.ints(n, 0, 2).toArray();
+      for (int k = 0; k < constraints; k++) {
+        if (rels[k].equals("==") && random.nextInt(4) > 0) {
+          rhs[k] = 0;
+          for (int i = 0; i < scopes[k].length; i++) {
+            rhs[k] += weights[k][i] * witness[scopes[k][i]];
+          }
+        }
+      }
+      int[] fixedBefore = new int[n];
+      for (int i = 0; i < n; i++) {
+        fixedBefore[i] = random.nextInt(8) == 0 ? random.nextInt(2) : -1;
+      }
+      int seed = random.nextInt();
+
+      long[] nodes = new long[2];
+      int[] counts = new int[2];
+      int expected = -1;
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = i % 2 == 0 ? new BooleanVar(store, "b" + i) : new IntVar(store, "b" + i, 0, 1);
+          if (fixedBefore[i] >= 0) {
+            x[i].domain.in(store.level, x[i], fixedBefore[i], fixedBefore[i]);
+          }
+        }
+        if (mode == 0) {
+          expected =
+              bruteForce(
+                      x,
+                      a -> {
+                        for (int k = 0; k < constraints; k++) {
+                          long sum = 0;
+                          for (int i = 0; i < scopes[k].length; i++) {
+                            sum += (long) weights[k][i] * a[scopes[k][i]];
+                          }
+                          boolean holds =
+                              switch (rels[k]) {
+                                case "==" -> sum == rhs[k];
+                                case "<=" -> sum <= rhs[k];
+                                default -> sum >= rhs[k];
+                              };
+                          if (!holds) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      })
+                  .size();
+        }
+        for (int k = 0; k < constraints; k++) {
+          IntVar[] scope = Arrays.stream(scopes[k]).mapToObj(i -> x[i]).toArray(IntVar[]::new);
+          LinearBool linear = new LinearBool(scope, weights[k], rels[k], rhs[k]);
+          linear.setWatchMinLength(mode == 0 ? 0 : Integer.MAX_VALUE);
+          store.impose(linear);
+          assertThat(linear.isWatched()).isEqualTo(mode == 0);
+        }
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found =
+            search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(seed)));
+        counts[mode] = found ? search.getSolutionListener().solutionsNo() : 0;
+        nodes[mode] = search.getNodes();
+      }
+      String description =
+          "trial "
+              + trial
+              + ": "
+              + IntStream.range(0, constraints)
+                  .mapToObj(
+                      k ->
+                          Arrays.toString(scopes[k])
+                              + Arrays.toString(weights[k])
+                              + rels[k]
+                              + rhs[k])
+                  .collect(Collectors.joining(", "))
+              + " fixed "
+              + Arrays.toString(fixedBefore);
+      assertThat(counts[0]).as(description).isEqualTo(expected);
+      assertThat(counts[1]).as(description).isEqualTo(expected);
+      assertThat(nodes[0]).as(description).isEqualTo(nodes[1]);
+    }
+  }
+
+  // A LinearBool imposed during search keeps the counter propagation, as the watches of the store
+  // are not removed on backtracking.
+  @Test
+  void testLinearBoolImposedDuringSearchIsNotWatched() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "b" + i);
+    }
+    int[] w = new int[x.length];
+    Arrays.fill(w, 1);
+    store.setLevel(1);
+    LinearBool linear = new LinearBool(x, w, "<=", 2);
+    linear.setWatchMinLength(0);
+    store.impose(linear);
+    assertThat(linear.isWatched()).isFalse();
+    assertThat(store.consistency()).isTrue();
   }
 
   @Test
@@ -3879,6 +4179,56 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testLexChainSolutionCount() {
+
+    for (boolean strict : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[][] x = new IntVar[4][3];
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 3; j++) {
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+        }
+      }
+      store.impose(new LexChain(x, strict));
+
+      // chains of 4 of the 27 tuples: C(27, 4) strictly increasing, C(30, 4) non-decreasing
+      assertThat(noOfAllSolutions(store, x)).isEqualTo(strict ? 17550 : 27405);
+    }
+  }
+
+  @Test
+  void testLexChainPrunesWhatPairwiseLexMisses() {
+
+    // x0 < x1 < x2: x0 = (2, _) leaves only (2, 2) for x1 and nothing above it for x2. Each pair
+    // alone is domain consistent, so pairwise LexOrder prunes nothing here.
+    Store store = new Store();
+    IntVar[] x0 = {new IntVar(store, "a0", 0, 0), new IntVar(store, "a1", 1, 2)};
+    x0[0].addDom(2, 2);
+    IntVar[] x1 = {new IntVar(store, "b0", 0, 2), new IntVar(store, "b1", 0, 2)};
+    IntVar[] x2 = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2)};
+
+    store.impose(new LexChain(new IntVar[][] {x0, x1, x2}, true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0[0].singleton(0)).isTrue();
+    assertThat(x0[1].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x1[0].dom().toString()).isEqualTo("{0..2}");
+    assertThat(x2[0].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x2[1].dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void testLexChainRejectsVectorsOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] a = {new IntVar(store, "a", 0, 1)};
+    IntVar[] b = {new IntVar(store, "b0", 0, 1), new IntVar(store, "b1", 0, 1)};
+
+    assertThatThrownBy(() -> new LexChain(new IntVar[][] {a, b}, false))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void testGCC() {
 
     Store store = new Store();
@@ -5514,6 +5864,32 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(d[0].max()).isZero();
     assertThat(r[1].max()).isEqualTo(1);
+  }
+
+  @Test
+  void testCumulativeUnaryOverloadAboveHundredTasks() {
+
+    // With more than 100 tasks CumulativeUnary ran only the profile, so three tasks of duration 2
+    // that must all run in [0, 4) were accepted: none has a compulsory part. The unary rules now
+    // run for any number of tasks.
+    for (boolean profileArgument : new boolean[] {false, true}) {
+      Store store = new Store();
+      int n = 101;
+      IntVar[] s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] r = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = i < 3 ? new IntVar(store, 0, 2) : new IntVar(store, 100 + i, 100 + i);
+        d[i] = new IntVar(store, i < 3 ? 2 : 1, i < 3 ? 2 : 1);
+        r[i] = new IntVar(store, 1, 1);
+      }
+      IntVar limit = new IntVar(store, 1, 1);
+      store.impose(
+          profileArgument
+              ? new CumulativeUnary(s, d, r, limit, true)
+              : new CumulativeUnary(s, d, r, limit));
+      assertThat(store.consistency()).as("profile argument %s", profileArgument).isFalse();
+    }
   }
 
   @Test
