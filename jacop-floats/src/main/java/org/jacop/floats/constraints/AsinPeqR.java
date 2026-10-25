@@ -30,6 +30,8 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -50,6 +52,39 @@ public class AsinPeqR extends SinPeqR {
    */
   public AsinPeqR(FloatVar p, FloatVar q) {
     super(q, p);
+  }
+
+  /**
+   * Propagates R = asin(P) on the principal branch: R is restricted to -PI/2..PI/2, where sin is
+   * increasing, so both directions are bounds of monotone functions (sin(R) = P alone also accepted
+   * R = PI - asin(P) + 2kPI).
+   */
+  @Override
+  protected void boundConsistency(Store store) {
+    do {
+      store.propagationHasOccurred = false;
+
+      if (satisfied()) {
+        return;
+      }
+
+      p.domain.in(
+          store.level,
+          p,
+          FloatDomain.down(Math.asin(Math.max(q.min(), -1.0))),
+          FloatDomain.up(Math.asin(Math.min(q.max(), 1.0))));
+      q.domain.in(
+          store.level, q, FloatDomain.down(Math.sin(p.min())), FloatDomain.up(Math.sin(p.max())));
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean satisfied() {
+    // also compare in the direction of asin, which is well conditioned where the forward
+    // function is not (tan near its poles, sin and cos near their extrema)
+    return (super.satisfied() || satisfiedWithTrigFunctionStatic(q, p, Math::asin))
+        && p.min() >= FloatDomain.down(-FloatDomain.PI / 2)
+        && p.max() <= FloatDomain.up(FloatDomain.PI / 2);
   }
 
   @Override

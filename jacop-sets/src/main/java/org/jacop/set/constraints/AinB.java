@@ -116,19 +116,28 @@ public class AinB extends PrimitiveConstraint {
   public void notConsistency(Store store) {
 
     if (b.domain.glb().contains(a.domain.lub())) {
-      throw Store.failException;
+      if (!strict || !a.domain.lub().eq(b.domain.glb())) {
+        throw Store.failException;
+      }
+      // a is a subset of b, so the strict inclusion is violated only by a = b = a.lub = b.glb
+      a.domain.inValue(store.level, a, a.domain.lub());
+      b.domain.inValue(store.level, b, b.domain.glb());
     }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    return a.singleton() && b.singleton() && !a.domain.subtract(b.domain).isEmpty();
+    return a.singleton()
+        && b.singleton()
+        && (!a.domain.subtract(b.domain).isEmpty() || strict && a.domain.eq(b.domain));
   }
 
   @Override
   public boolean satisfied() {
-    return grounded() && b.domain.contains(a.domain);
+    return grounded()
+        && b.domain.contains(a.domain)
+        && (!strict || b.domain.glb().getSize() > a.domain.glb().getSize());
   }
 
   @Override

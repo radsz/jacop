@@ -135,13 +135,20 @@ public class XeqA extends PrimitiveConstraint {
       if (a.domain.singleton()) {
         x.domain.inComplement(store.level, x, a.domain.glb().min());
       }
+    } else if (x.singleton()
+        && a.domain.glb().getSize() == 1
+        && a.domain.glb().min() == x.value()) {
+      // a contains x, so a differs from {x} only if it has another element
+      a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
+    } else if (a.domain.singleton() && a.domain.glb().getSize() == 1) {
+      x.domain.inComplement(store.level, x, a.domain.glb().min());
     }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    if (!a.domain.card().contains(1)) {
+    if (!a.domain.card().contains(1) || a.domain.glb().getSize() > 1) {
       return true;
     }
 
@@ -150,7 +157,7 @@ public class XeqA extends PrimitiveConstraint {
 
   @Override
   public boolean satisfied() {
-    return grounded() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value();
+    return grounded() && a.domain.glb().getSize() == 1 && a.domain.glb().min() == x.value();
   }
 
   @Override

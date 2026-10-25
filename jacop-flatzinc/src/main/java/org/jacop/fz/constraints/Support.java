@@ -32,7 +32,9 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -711,7 +713,12 @@ public class Support implements ParserTreeConstants {
   }
 
   void poseAlldistinctConstraints() {
+    // the same array can be collected twice, e.g. from circuit and from all_different
+    Set<List<IntVar>> posted = new HashSet<>();
     for (IntVar[] v : parameterListForAlldistincts) {
+      if (!posted.add(List.of(v))) {
+        continue;
+      }
       Alldistinct ad = new Alldistinct(v);
       store.impose(ad);
       if (options.debug()) {

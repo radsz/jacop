@@ -142,7 +142,7 @@ class GlobalConstraintBruteForceTest {
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
   /** One random instance: the variable domains, the constraint and its intended semantics. */
-  private record Instance(
+  record Instance(
       int[][] domains,
       BiConsumer<Store, IntVar[]> impose,
       Predicate<int[]> semantics,

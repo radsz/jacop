@@ -295,8 +295,14 @@ public class ObstacleObject extends ObstacleObjectFrame {
       Dbox bb = geost.getShape(shapeId).boundingBox;
 
       for (int i = 0; i < obstacle.dimension; i++) {
-        upperAbsInsfeasible[i] = obstacle.coords[i].min() + bb.origin[i] + bb.length[i];
-        lowerAbsInsfeasible[i] = obstacle.coords[i].max() + bb.origin[i];
+        if (selected[i]) {
+          upperAbsInsfeasible[i] = obstacle.coords[i].min() + bb.origin[i] + bb.length[i];
+          lowerAbsInsfeasible[i] = obstacle.coords[i].max() + bb.origin[i];
+        } else {
+          // the obstacle forbids the whole extent of a dimension that is not selected
+          upperAbsInsfeasible[i] = IntDomain.MAX_INT;
+          lowerAbsInsfeasible[i] = IntDomain.MIN_INT;
+        }
       }
 
       upperAbsInsfeasible[obstacle.dimension] = IntDomain.MAX_INT;

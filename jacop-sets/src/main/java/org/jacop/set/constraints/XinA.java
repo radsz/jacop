@@ -150,6 +150,12 @@ public class XinA extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
+    if (strict && a.domain.glb().getSize() <= 1 && a.domain.card().min() <= 1) {
+      // a may still be {x}, which violates the strict inclusion
+      notConsistencyStrict(store);
+      return;
+    }
+
     if (x.singleton()) {
       a.domain.inLubComplement(store.level, a, x.value());
     }
@@ -163,10 +169,33 @@ public class XinA extends PrimitiveConstraint {
     x.domain.in(store.level, x, xDom);
   }
 
+  /**
+   * The negation of the strict inclusion, x not in a or a = {x}, while a has at most one element in
+   * its glb and may have one element.
+   */
+  private void notConsistencyStrict(Store store) {
+
+    if (a.domain.glb().isEmpty()) {
+      return;
+    }
+    int g = a.domain.glb().min();
+    if (!x.singleton()) {
+      return;
+    }
+    if (x.value() == g) {
+      // x is in a, so a must be {x}
+      a.domain.inLub(store.level, a, a.domain.glb());
+    } else {
+      // a contains g, so it is not {x}
+      a.domain.inLubComplement(store.level, a, x.value());
+    }
+  }
+
   @Override
   public boolean notSatisfied() {
 
-    return !a.domain.lub().isIntersecting(x.domain);
+    return !a.domain.lub().isIntersecting(x.domain)
+        || strict && (a.domain.card().max() <= 1 || a.domain.lub().getSize() <= 1);
   }
 
   @Override

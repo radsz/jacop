@@ -137,23 +137,6 @@ public class FloatIntervalDomain extends FloatDomain {
    * @param counter the interval index where the change occurred
    * @param isLow true if the change is at the low end of the interval (min was removed)
    */
-  private static void notifyComplementEvent(
-      FloatIntervalDomain result, Var v, int counter, boolean isLow) {
-    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-    }
-    if (result.singleton()) {
-      v.domainHasChanged(IntDomain.GROUND);
-      return;
-    }
-    int boundaryIndex = isLow ? 0 : result.size - 1;
-    if (counter == boundaryIndex) {
-      v.domainHasChanged(IntDomain.BOUND);
-    } else {
-      v.domainHasChanged(IntDomain.ANY);
-    }
-  }
-
   /**
    * Computes the propagation event for a narrowed domain.
    *
@@ -2496,17 +2479,6 @@ public class FloatIntervalDomain extends FloatDomain {
     return intervals[position];
   }
 
-  private void notifyInComplementEvent(
-      Var v, boolean minEquals, boolean maxEquals, int originalCounter) {
-    if (minEquals && !maxEquals) {
-      v.domainHasChanged(originalCounter == 0 ? IntDomain.BOUND : IntDomain.ANY);
-    } else if (maxEquals) {
-      v.domainHasChanged(originalCounter == size - 1 ? IntDomain.BOUND : IntDomain.ANY);
-    } else {
-      v.domainHasChanged(IntDomain.ANY);
-    }
-  }
-
   /**
    * It updates the domain to not contain the value complement. It informs the variable of a change
    * if it occurred.
@@ -2524,30 +2496,32 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
+    double oldMin = intervals[0].min();
+    double oldMax = intervals[size - 1].max();
+    FloatIntervalDomain changed;
+
     if (storeLevel == stamp) {
 
-      boolean wasSingleton = singleton(complement);
-      boolean minEquals = intervals[counter].min() == complement;
-      boolean maxEquals = intervals[counter].max() == complement;
-      int originalCounter = counter;
-
-      if (minEquals && maxEquals && wasSingleton) {
+      if (intervals[counter].min() == complement
+          && intervals[counter].max() == complement
+          && singleton(complement)) {
         throw failException;
       }
 
       removeValueFromIntervals(counter, complement);
-
-      if (singleton()) {
-        v.domainHasChanged(IntDomain.GROUND);
-        return;
-      }
-
-      notifyInComplementEvent(v, minEquals, maxEquals, originalCounter);
+      changed = this;
 
     } else {
-      inComplementToNewDomain(storeLevel, v, complement, counter);
+      changed = inComplementToNewDomain(storeLevel, v, complement, counter);
     }
-    v.domainHasChanged(IntDomain.ANY);
+
+    if (changed.singleton()) {
+      v.domainHasChanged(IntDomain.GROUND);
+    } else if (changed.min() != oldMin || changed.max() != oldMax) {
+      v.domainHasChanged(IntDomain.BOUND);
+    } else {
+      v.domainHasChanged(IntDomain.ANY);
+    }
   }
 
   @Override
@@ -2586,7 +2560,8 @@ public class FloatIntervalDomain extends FloatDomain {
    * Handles inComplement when storeLevel != stamp: installs a new result domain and removes the
    * complement value.
    */
-  private void inComplementToNewDomain(int storeLevel, Var v, double complement, int counter) {
+  private FloatIntervalDomain inComplementToNewDomain(
+      int storeLevel, Var v, double complement, int counter) {
     if (singleton(complement)) {
       throw failException;
     }
@@ -2604,14 +2579,12 @@ public class FloatIntervalDomain extends FloatDomain {
         if (ASSERTS_ENABLED && checkInvariants() != null) {
           throw new IllegalStateException(String.valueOf(checkInvariants()));
         }
-        notifyComplementEvent(result, v, counter, true);
       } else {
         System.arraycopy(intervals, 0, result.intervals, 0, counter);
         System.arraycopy(intervals, counter + 1, result.intervals, counter, size - counter - 1);
         result.size = size - 1;
-        notifyComplementEvent(result, v, counter, true);
       }
-      return;
+      return result;
     }
     if (intervals[counter].max() == complement) {
       System.arraycopy(intervals, 0, result.intervals, 0, size);
@@ -2621,8 +2594,7 @@ public class FloatIntervalDomain extends FloatDomain {
       if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
-      notifyComplementEvent(result, v, counter, false);
-      return;
+      return result;
     }
     if (size != 1) {
       System.arraycopy(intervals, 0, result.intervals, 0, counter + 1);
@@ -2632,6 +2604,7 @@ public class FloatIntervalDomain extends FloatDomain {
     result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
     result.intervals[counter + 1] = new FloatInterval(next(complement), max);
     result.size = size + 1;
+    return result;
   }
 
   private void notifyInComplementRangeEvent(Var v, boolean isSingleton, boolean boundChange) {

@@ -59,20 +59,11 @@ public class XneqY extends AbstractConstraintXandY {
   }
 
   @Override
-  public void impose(Store store) {
-
-    // only the same variable twice is rejected here; other inconsistencies make consistency fail
-    if (x == y) {
-      // XneqY is trivially inconsistent.
-      throw new IllegalArgumentException(
-          "Arguments to XneqY are the same, the model is trivially inconsistent.");
-    }
-
-    super.impose(store);
-  }
-
-  @Override
   public void consistency(final Store store) {
+    if (x == y) {
+      // x != x never holds
+      throw Store.failException;
+    }
 
     if (y.singleton()) {
       x.domain.inComplement(store.level, x, y.min());

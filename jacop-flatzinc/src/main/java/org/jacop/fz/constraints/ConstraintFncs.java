@@ -498,6 +498,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_circuit(n);
   }
 
+  /** Handles the jacop_circuit_offset FlatZinc constraint. */
+  public void jacop_circuit_offset(SimpleNode n) {
+    gc.gen_jacop_circuit_offset(n);
+  }
+
   /** Handles the jacop_subcircuit FlatZinc constraint. */
   public void jacop_subcircuit(SimpleNode n) {
     gc.gen_jacop_subcircuit(n);

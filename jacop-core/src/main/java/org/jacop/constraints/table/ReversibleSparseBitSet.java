@@ -82,14 +82,21 @@ public class ReversibleSparseBitSet {
   void init(Store store, long[] w) {
     int n = w.length;
 
-    limit = new TimeStamp<>(store, n - 1);
+    // The non-zero words come first, so that a set without tuples is empty (limit -1).
+    index = new int[n];
+    int front = 0;
+    int back = n - 1;
+    for (int i = 0; i < n; i++) {
+      if (w[i] != 0L) {
+        index[front++] = i;
+      } else {
+        index[back--] = i;
+      }
+    }
+
+    limit = new TimeStamp<>(store, front - 1);
 
     words = new TimeStamp<>(store, w);
-
-    index = new int[n];
-    for (int i = 0; i < n; i++) {
-      index[i] = i;
-    }
 
     mask = new long[n];
   }

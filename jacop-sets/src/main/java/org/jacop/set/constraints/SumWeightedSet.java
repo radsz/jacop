@@ -325,7 +325,12 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     ValueEnumeration enumer = a.domain.glb().valueEnumeration();
     int sum = 0;
     while (enumer.hasMoreElements()) {
-      sum += elementWeights.get(enumer.nextElement());
+      Integer weight = elementWeights.get(enumer.nextElement());
+      if (weight == null) {
+        // an element without a weight is not allowed in the set
+        return false;
+      }
+      sum += weight;
     }
     return totalWeight.value() == sum;
   }

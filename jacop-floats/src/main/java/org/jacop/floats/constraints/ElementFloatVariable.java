@@ -191,6 +191,10 @@ public class ElementFloatVariable extends AbstractElement implements SatisfiedPr
 
   @Override
   public boolean satisfied() {
+    if (isStateful()) {
+      // the index still has values outside the list (before the first consistency)
+      return false;
+    }
     boolean sat = value.singleton();
     if (sat) {
       double v = value.min();
