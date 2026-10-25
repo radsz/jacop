@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 
@@ -58,26 +57,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
    * @return positive if ldiff has higher priority, negative if v has higher priority, 0 if equal.
    */
   public int compare(double ldiff, T v) {
-
-    ValueEnumeration rEnum = v.domain.valueEnumeration();
-
-    int rmin = rEnum.nextElement();
-    int rminNext;
-    if (rEnum.hasMoreElements()) {
-      rminNext = rEnum.nextElement();
-    } else {
-      rminNext = IntDomain.MAX_INT;
-    }
-
-    int rdiff = rminNext - rmin;
-
-    if (ldiff > rdiff) {
-      return 1;
-    }
-    if (ldiff < rdiff) {
-      return -1;
-    }
-    return 0;
+    return Double.compare(ldiff, regret(v));
   }
 
   /**
@@ -90,32 +70,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
    *     equal.
    */
   public int compare(T left, T right) {
-
-    ValueEnumeration lEnum = left.domain.valueEnumeration();
-
-    int lmin = lEnum.nextElement();
-    int lminNext;
-    if (lEnum.hasMoreElements()) {
-      lminNext = lEnum.nextElement();
-    } else {
-      lminNext = IntDomain.MAX_INT;
-    }
-
-    int ldiff = lminNext - lmin;
-
-    ValueEnumeration rEnum = right.domain.valueEnumeration();
-
-    int rmin = rEnum.nextElement();
-    int rminNext;
-    if (rEnum.hasMoreElements()) {
-      rminNext = rEnum.nextElement();
-    } else {
-      rminNext = IntDomain.MAX_INT;
-    }
-
-    int rdiff = rminNext - rmin;
-
-    return Integer.compare(ldiff, rdiff);
+    return Long.compare(regret(left), regret(right));
   }
 
   /**
@@ -126,17 +81,16 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
    * @return the regret value for the variable.
    */
   public double metric(T o) {
+    return regret(o);
+  }
 
-    ValueEnumeration oEnum = o.domain.valueEnumeration();
-
-    int omin = oEnum.nextElement();
-    int ominNext;
-    if (oEnum.hasMoreElements()) {
-      ominNext = oEnum.nextElement();
-    } else {
-      ominNext = IntDomain.MAX_INT;
-    }
-
-    return (double) ominNext - omin;
+  /**
+   * The regret of a fixed variable is 0: it has no second value. Variable selection skips fixed
+   * variables, but priority search ranks fixed priority variables too.
+   */
+  private static long regret(IntVar v) {
+    ValueEnumeration e = v.domain.valueEnumeration();
+    int min = e.nextElement();
+    return e.hasMoreElements() ? (long) e.nextElement() - min : 0;
   }
 }

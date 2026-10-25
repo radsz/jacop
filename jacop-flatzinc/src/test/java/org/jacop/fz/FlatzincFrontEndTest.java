@@ -877,6 +877,24 @@ class FlatzincFrontEndTest {
         solveAllInOrder(fzn));
   }
 
+  @Test
+  void maxRegretRanksAFixedPriorityVariableLast() throws IOException {
+    // A fixed variable has no second value; its regret was computed against MAX_INT, so the
+    // priority search chose the row of the constant 2 before the row of a (regret 2), unlike
+    // Chuffed, which gives a fixed variable regret 0.
+    String fzn =
+        """
+        var {1,3}: a:: output_var;
+        var 1..2: b:: output_var;
+        solve :: priority_search([2,a],[int_search([b],input_order,indomain_min,complete),\
+        int_search([a],input_order,indomain_min,complete)],max_regret,complete) satisfy;
+        """;
+
+    assertEquals(
+        List.of("a = 1; b = 1;", "a = 1; b = 2;", "a = 3; b = 1;", "a = 3; b = 2;"),
+        solveAllInOrder(fzn));
+  }
+
   /** Runs the model with the given options and returns its stdout and stderr. */
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
