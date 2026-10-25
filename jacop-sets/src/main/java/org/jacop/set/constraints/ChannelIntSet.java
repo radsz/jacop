@@ -33,7 +33,9 @@ package org.jacop.set.constraints;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -55,7 +57,7 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ChannelIntSet extends Constraint implements SatisfiedPresent {
+public class ChannelIntSet extends Constraint implements SatisfiedPresent, Copyable<ChannelIntSet> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -248,5 +250,10 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
         + ", "
         + offsetSet
         + ")";
+  }
+
+  @Override
+  public ChannelIntSet copy(VarMap map) {
+    return new ChannelIntSet(map.get(x), map.get(s), offsetInt, offsetSet);
   }
 }

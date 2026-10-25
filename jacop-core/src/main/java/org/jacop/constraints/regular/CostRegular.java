@@ -36,9 +36,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.In;
 import org.jacop.constraints.SumInt;
@@ -83,7 +85,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class CostRegular extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<CostRegular> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -914,5 +916,11 @@ public class CostRegular extends Constraint
     result.append(", finalStates=").append(Arrays.toString(finalStates));
     result.append(", cost=").append(cost.id()).append(")");
     return result.toString();
+  }
+
+  @Override
+  public CostRegular copy(VarMap map) {
+    return new CostRegular(
+        map.get(list), transition, firstValue, initialState, finalStates, costs, map.get(cost));
   }
 }

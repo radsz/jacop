@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -462,5 +463,14 @@ public class Subcircuit extends Alldiff {
       }
     }
     return pruning;
+  }
+
+  @Override
+  public Subcircuit copy(VarMap map) {
+    Subcircuit copy = new Subcircuit(map.get(list));
+    copy.useScc = useScc;
+    copy.useDominance = useDominance;
+    copy.maxDominanceSkip = maxDominanceSkip;
+    return copy;
   }
 }

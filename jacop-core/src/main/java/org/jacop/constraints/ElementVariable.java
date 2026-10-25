@@ -38,9 +38,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -61,7 +63,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ElementVariable extends AbstractElement
-    implements UsesQueueVariable, SatisfiedPresent, Stateful {
+    implements UsesQueueVariable, SatisfiedPresent, Stateful, Copyable<ElementVariable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -381,5 +383,10 @@ public class ElementVariable extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementVariable", list, value, false);
+  }
+
+  @Override
+  public ElementVariable copy(VarMap map) {
+    return new ElementVariable(map.get(index), map.get(list), map.get(value), indexOffset);
   }
 }

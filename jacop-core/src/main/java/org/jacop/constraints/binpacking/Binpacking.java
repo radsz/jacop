@@ -43,9 +43,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -69,7 +71,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Binpacking extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Binpacking> {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   static long LBnumber;
@@ -691,5 +693,22 @@ public class Binpacking extends Constraint
       noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
     }
     return N1 + N2 + noBinsN3;
+  }
+
+  @Override
+  public Binpacking copy(VarMap map) {
+    IntVar[] bins = new IntVar[item.length];
+    int[] w = new int[item.length];
+    for (int i = 0; i < item.length; i++) {
+      bins[i] = map.get(item[i].bin());
+      w[i] = item[i].weight();
+    }
+    return new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning);
+  }
+
+  /** Bins of items of weight 0 are restricted by the first consistency; they are not arguments. */
+  @Override
+  public boolean canCopy() {
+    return zeroWeightBins.length == 0 || !packAll.due();
   }
 }

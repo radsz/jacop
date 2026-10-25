@@ -32,6 +32,8 @@ package org.jacop.constraints;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ArgMax extends AbstractArgMinMax {
+public class ArgMax extends AbstractArgMinMax implements Copyable<ArgMax> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -212,5 +214,10 @@ public class ArgMax extends AbstractArgMinMax {
     result.append(", ").append(indexOffset).append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public ArgMax copy(VarMap map) {
+    return new ArgMax(map.get(list), map.get(extremeIndex), indexOffset);
   }
 }

@@ -36,9 +36,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -79,7 +81,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class HybridTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -249,6 +251,19 @@ public class HybridTable extends Constraint
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     setScope(list);
+  }
+
+  /** A copy over the counterparts of the variables; the restrictions are shared. */
+  private HybridTable(HybridTable original, VarMap map) {
+    this.arity = original.arity;
+    this.x = map.get(original.x);
+    this.expandBetweenColumns = original.expandBetweenColumns;
+    this.cells = original.cells;
+    this.tupleCount = original.tupleCount;
+    this.varMap = Var.positionMapping(x, false, this.getClass());
+    this.queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    setScope(x);
   }
 
   private void setTuples(Restriction[][] rows) {
@@ -1553,5 +1568,10 @@ public class HybridTable extends Constraint
     }
     s.append("])");
     return s.toString();
+  }
+
+  @Override
+  public HybridTable copy(VarMap map) {
+    return new HybridTable(this, map);
   }
 }

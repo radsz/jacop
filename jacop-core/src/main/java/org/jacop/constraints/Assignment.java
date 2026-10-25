@@ -36,9 +36,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,7 +58,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class Assignment extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Assignment> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -350,5 +352,10 @@ public class Assignment extends Constraint
     result.append(shiftX).append(", ").append(shiftD).append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public Assignment copy(VarMap map) {
+    return new Assignment(map.get(x), map.get(d), shiftX, shiftD);
   }
 }

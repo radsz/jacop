@@ -38,9 +38,11 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -59,7 +61,8 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class Among extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Among> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean DEBUG_ALL = false;
@@ -295,5 +298,10 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     result.append(n).append(")\n");
 
     return result.toString();
+  }
+
+  @Override
+  public Among copy(VarMap map) {
+    return new Among(map.get(list), kSet, map.get(n));
   }
 }

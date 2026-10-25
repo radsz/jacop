@@ -35,9 +35,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,7 +59,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ValuePrecede extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<ValuePrecede> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -302,5 +304,10 @@ public class ValuePrecede extends Constraint
     resultString.append("])");
 
     return resultString.toString();
+  }
+
+  @Override
+  public ValuePrecede copy(VarMap map) {
+    return new ValuePrecede(s, t, map.get(x));
   }
 }

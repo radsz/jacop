@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,7 +58,8 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ElementFloatVariable extends AbstractElement implements SatisfiedPresent {
+public class ElementFloatVariable extends AbstractElement
+    implements SatisfiedPresent, Copyable<ElementFloatVariable> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -210,5 +213,10 @@ public class ElementFloatVariable extends AbstractElement implements SatisfiedPr
   @Override
   public String toString() {
     return buildToString("elementFloatVariable", list, value, true);
+  }
+
+  @Override
+  public ElementFloatVariable copy(VarMap map) {
+    return new ElementFloatVariable(map.get(index), map.get(list), map.get(value), indexOffset);
   }
 }

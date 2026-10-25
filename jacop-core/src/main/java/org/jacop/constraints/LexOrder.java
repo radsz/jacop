@@ -35,9 +35,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -58,7 +60,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class LexOrder extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
+    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<LexOrder> {
 
   static final boolean DEBUG = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -510,5 +512,10 @@ public class LexOrder extends Constraint
 
     x[i].domain.inMax(store.level, x[i], y[i].max());
     y[i].domain.inMin(store.level, y[i], x[i].min());
+  }
+
+  @Override
+  public LexOrder copy(VarMap map) {
+    return new LexOrder(map.get(x), map.get(y), originalLexLt);
   }
 }

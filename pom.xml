@@ -266,8 +266,10 @@ setup to run configuration. -->
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
+                                <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
@@ -332,8 +334,10 @@ setup to run configuration. -->
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
+                                <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
@@ -397,6 +401,7 @@ setup to run configuration. -->
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
