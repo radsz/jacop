@@ -854,7 +854,7 @@ public class HybridTable extends Constraint
     for (int i = 0; i < arity; i++) {
       IntVar xi = x[i];
       boolean wasSingleton = xi.singleton();
-      if (i != onlyChanged && (!wasSingleton || changed > 0)) {
+      if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
         filterDomain(i);
       }
       if (!xi.singleton()) {
@@ -962,14 +962,7 @@ public class HybridTable extends Constraint
     if (useMarks) {
       for (int i = 0; i < arity; i++) {
         if (marks[i] != null) {
-          if (wordMasks) {
-            marks[i][0] = 0L;
-            domainMask[i] = wordOf(i, x[i].dom());
-          } else {
-            Arrays.fill(marks[i], 0L);
-          }
-          markCount[i] = 0;
-          markNeed[i] = x[i].getSize();
+          resetMarks(i);
         }
       }
     } else {
@@ -999,6 +992,17 @@ public class HybridTable extends Constraint
     if (limit() < 0) {
       throw Store.failException;
     }
+  }
+
+  private void resetMarks(int i) {
+    if (wordMasks) {
+      marks[i][0] = 0L;
+      domainMask[i] = wordOf(i, x[i].dom());
+    } else {
+      Arrays.fill(marks[i], 0L);
+    }
+    markCount[i] = 0;
+    markNeed[i] = x[i].getSize();
   }
 
   /** The values of d as a bit-set relative to markBase[i]. */
@@ -1110,6 +1114,11 @@ public class HybridTable extends Constraint
 
   private boolean fullyMarked(int i) {
     return markCount[i] >= markNeed[i];
+  }
+
+  /** It tells whether the tuples with restrictions between columns support every value of x[i]. */
+  private boolean supportedByRestrictions(int i) {
+    return useMarks && binaryColumn[i] != null && fullyMarked(i);
   }
 
   /**
@@ -1431,9 +1440,6 @@ public class HybridTable extends Constraint
     if (excluded != null) {
       if (!intersects(excluded)) {
         excluded = null;
-      } else if (useMarks && fullyMarked(i)) {
-        // the tuples with restrictions between columns support every value of x[i]
-        return;
       } else if (!useMarks) {
         extra = binarySupport[i] == null ? new IntervalDomain() : binarySupport[i];
       }
