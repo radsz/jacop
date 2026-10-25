@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -50,7 +52,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class SumBool extends AbstractSum {
+public class SumBool extends AbstractSum implements Copyable<SumBool> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -274,5 +276,10 @@ public class SumBool extends AbstractSum {
   @Override
   public String toString() {
     return toStringHelper("SumBool");
+  }
+
+  @Override
+  public SumBool copy(VarMap map) {
+    return new SumBool(map.get(x), rel2String(), map.get(sum));
   }
 }

@@ -31,6 +31,8 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
@@ -42,7 +44,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class FloorPeqX extends AbstractRoundPeqX {
+public class FloorPeqX extends AbstractRoundPeqX implements Copyable<FloorPeqX> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -79,5 +81,10 @@ public class FloorPeqX extends AbstractRoundPeqX {
   @Override
   public String toString() {
     return id() + " : FloorPeqX(" + p + ", " + x + " )";
+  }
+
+  @Override
+  public FloorPeqX copy(VarMap map) {
+    return new FloorPeqX(map.get(p), map.get(x));
   }
 }

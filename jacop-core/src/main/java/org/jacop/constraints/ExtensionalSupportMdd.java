@@ -32,7 +32,9 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,7 +58,8 @@ import org.jacop.util.Mdd;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class ExtensionalSupportMdd extends LayeredGraphConstraint implements SatisfiedPresent {
+public class ExtensionalSupportMdd extends LayeredGraphConstraint
+    implements SatisfiedPresent, Copyable<ExtensionalSupportMdd> {
 
   /** It specifies if the debugging information is printed. */
   public static final boolean DEBUG_ALL = false;
@@ -345,5 +348,15 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint implements Sat
     result.append(")\n");
 
     return result.toString();
+  }
+
+  @Override
+  public ExtensionalSupportMdd copy(VarMap map) {
+    ExtensionalSupportMdd copy =
+        mdd != null
+            ? new ExtensionalSupportMdd(mdd.copyOver(map.get(mdd.vars)))
+            : new ExtensionalSupportMdd(map.get(list), nodeLevel, from, label, to);
+    copy.propagation = propagation;
+    return copy;
   }
 }

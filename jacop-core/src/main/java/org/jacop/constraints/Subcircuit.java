@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -67,10 +69,9 @@ public class Subcircuit extends Alldiff {
   final DominatorTree graphDominance;
   // a fixed seed keeps propagation, and so the search tree, the same on every run
   final Random random = new Random(0); // NOSONAR not used for security
-  boolean firstConsistencyCheck = true;
+  final InitOnce init = new InitOnce();
   boolean useScc = true;
   boolean useDominance = true;
-  int firstConsistencyLevel;
   // the largest number of consecutive calls that skip the dominator pruning
   int maxDominanceSkip = 32;
 
@@ -169,13 +170,10 @@ public class Subcircuit extends Alldiff {
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       for (IntVar intVar : list) {
         intVar.domain.in(store.level, intVar, 1, list.length);
       }
-
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     do {
@@ -227,16 +225,6 @@ public class Subcircuit extends Alldiff {
     return IntDomain.ANY;
   }
 
-  boolean needsListPruning() {
-
-    for (IntVar el : list) {
-      if (el.min() < 1 || el.max() > list.length) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   // registers the constraint in the constraint store
   @Override
   public void impose(Store store) {
@@ -244,10 +232,6 @@ public class Subcircuit extends Alldiff {
     this.store = store;
 
     super.impose(store);
-
-    if (!needsListPruning()) {
-      firstConsistencyCheck = false;
-    }
   }
 
   @Override
@@ -479,5 +463,14 @@ public class Subcircuit extends Alldiff {
       }
     }
     return pruning;
+  }
+
+  @Override
+  public Subcircuit copy(VarMap map) {
+    Subcircuit copy = new Subcircuit(map.get(list));
+    copy.useScc = useScc;
+    copy.useDominance = useDominance;
+    copy.maxDominanceSkip = maxDominanceSkip;
+    return copy;
   }
 }

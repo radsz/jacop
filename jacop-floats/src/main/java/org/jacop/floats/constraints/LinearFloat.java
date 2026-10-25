@@ -32,7 +32,9 @@ package org.jacop.floats.constraints;
 
 import java.util.List;
 import java.util.Set;
+import org.jacop.api.Copyable;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.linear.Linear;
@@ -48,7 +50,8 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class LinearFloat extends Linear implements UsesQueueVariable, FloatDerivableConstraint {
+public class LinearFloat extends Linear
+    implements UsesQueueVariable, FloatDerivableConstraint, Copyable<LinearFloat> {
 
   // =================== constructors ========================
 
@@ -139,5 +142,10 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
           "Constraint LinearFloat with a constant sum needs a non-empty list of variables.");
     }
     return list[0].getStore();
+  }
+
+  @Override
+  public LinearFloat copy(VarMap map) {
+    return new LinearFloat(map.get(list), weights, rel2String(), sum);
   }
 }

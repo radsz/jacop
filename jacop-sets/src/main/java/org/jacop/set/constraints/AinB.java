@@ -31,6 +31,8 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
@@ -43,7 +45,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AinB extends PrimitiveConstraint {
+public class AinB extends PrimitiveConstraint implements Copyable<AinB> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -163,5 +165,10 @@ public class AinB extends PrimitiveConstraint {
   @Override
   public String toString() {
     return id() + " : AinB(" + a + ", " + b + " )";
+  }
+
+  @Override
+  public AinB copy(VarMap map) {
+    return new AinB(map.get(a), map.get(b), strict);
   }
 }

@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -82,5 +83,10 @@ public class PdivQeqR extends PmulQeqR {
   public String toString() {
 
     return id() + " : PdivQeqR(" + r + ", " + q + ", " + p + " )";
+  }
+
+  @Override
+  public PdivQeqR copy(VarMap map) {
+    return new PdivQeqR(map.get(r), map.get(q), map.get(p));
   }
 }

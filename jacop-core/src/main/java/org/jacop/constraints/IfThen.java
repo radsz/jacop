@@ -32,7 +32,9 @@ package org.jacop.constraints;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
@@ -43,7 +45,7 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
+public class IfThen extends PrimitiveConstraint implements UsesQueueVariable, Copyable<IfThen> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   public final QueueForward<PrimitiveConstraint> queueForward;
@@ -170,5 +172,15 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
     propagation = true;
     queueForward.queueForward(level, variable);
+  }
+
+  @Override
+  public IfThen copy(VarMap map) {
+    return new IfThen(Copyable.copyOf(condC, map), Copyable.copyOf(thenC, map));
+  }
+
+  @Override
+  public boolean canCopy() {
+    return Copyable.canCopyAll(condC, thenC);
   }
 }

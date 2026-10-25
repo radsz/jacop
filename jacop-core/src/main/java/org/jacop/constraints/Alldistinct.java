@@ -34,9 +34,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -66,7 +68,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class Alldistinct extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Alldistinct> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1045,5 +1047,10 @@ public class Alldistinct extends Constraint
   // The number of values still available equals the number of not grounded variables.
   private boolean isPermutation() {
     return activeValues().size() == notGrounded.value();
+  }
+
+  @Override
+  public Alldistinct copy(VarMap map) {
+    return new Alldistinct(map.get(list));
   }
 }

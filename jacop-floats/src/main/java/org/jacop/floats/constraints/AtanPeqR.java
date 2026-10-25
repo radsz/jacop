@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -94,5 +95,10 @@ public class AtanPeqR extends TanPeqR {
   public String toString() {
 
     return id() + " : AtanPeqR(" + q + ", " + p + " )";
+  }
+
+  @Override
+  public AtanPeqR copy(VarMap map) {
+    return new AtanPeqR(map.get(q), map.get(p));
   }
 }

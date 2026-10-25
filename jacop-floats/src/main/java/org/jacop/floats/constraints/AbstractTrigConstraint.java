@@ -31,8 +31,8 @@
 package org.jacop.floats.constraints;
 
 import java.util.function.DoubleUnaryOperator;
-import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
@@ -48,7 +48,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractTrigConstraint extends Constraint implements Stateful {
+public abstract class AbstractTrigConstraint extends Constraint {
 
   /** It contains variable p. */
   protected final FloatVar p;
@@ -56,11 +56,8 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
   /** It contains variable q. */
   protected final FloatVar q;
 
-  /** Flag indicating if this is the first consistency check. */
-  protected boolean firstConsistencyCheck = true;
-
-  /** The backtracking level at which first consistency check occurred. */
-  protected int firstConsistencyLevel;
+  /** One-time work of the first consistency call. */
+  protected final InitOnce init = new InitOnce();
 
   /**
    * It constructs a trigonometric constraint trig(P) = Q.
@@ -80,19 +77,10 @@ public abstract class AbstractTrigConstraint extends Constraint implements State
   }
 
   @Override
-  public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) {
-      firstConsistencyCheck = true;
-    }
-  }
-
-  @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       q.domain.in(store.level, q, -1.0, 1.0);
-      firstConsistencyCheck = false;
-      firstConsistencyLevel = store.level;
     }
 
     boundConsistency(store);

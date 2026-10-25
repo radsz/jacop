@@ -36,14 +36,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.In;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -82,7 +85,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class CostRegular extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<CostRegular> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -113,7 +116,8 @@ public class CostRegular extends Constraint
 
   private Map<IntVar, Integer> mapping;
 
-  private boolean firstConsistencyCheck = true;
+  /** One-time work of the first consistency call. */
+  private final InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -553,8 +557,7 @@ public class CostRegular extends Constraint
     }
 
     int levels = list.length;
-    if (firstConsistencyCheck) {
-      firstConsistencyCheck = false;
+    if (init.begin(store)) {
       pruning = true;
       try {
         for (int level = 0; level < levels; level++) {
@@ -913,5 +916,11 @@ public class CostRegular extends Constraint
     result.append(", finalStates=").append(Arrays.toString(finalStates));
     result.append(", cost=").append(cost.id()).append(")");
     return result.toString();
+  }
+
+  @Override
+  public CostRegular copy(VarMap map) {
+    return new CostRegular(
+        map.get(list), transition, firstValue, initialState, finalStates, costs, map.get(cost));
   }
 }

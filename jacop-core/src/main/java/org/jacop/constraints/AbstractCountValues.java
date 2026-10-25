@@ -274,6 +274,22 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   }
 
   /**
+   * Counts the variables whose domain contains a value.
+   *
+   * @param value the value.
+   * @return the number of variables that can take the value.
+   */
+  protected int countPossible(int value) {
+    int count = 0;
+    for (int j = 0; j < n; j++) {
+      if (list[j].domain.contains(value)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Shared consistency propagation logic for CountValues and CountValuesBounds.
    *
    * @param store the store for propagation.

@@ -40,8 +40,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -59,7 +61,8 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 5.0
  */
 @Slf4j
-public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class Alldifferent extends Constraint
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<Alldifferent> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -354,5 +357,10 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     result.append("])");
 
     return result.toString();
+  }
+
+  @Override
+  public Alldifferent copy(VarMap map) {
+    return new Alldifferent(map.get(list));
   }
 }

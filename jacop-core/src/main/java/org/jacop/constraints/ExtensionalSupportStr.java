@@ -30,14 +30,13 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -73,7 +72,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   final IndexDomainView[] views;
 
-  /** It specifies the tuples. */
+  /** The tuples as given to the constructor; the first consistency call starts from them. */
+  private final int[][] originalTuples;
+
+  /** The tuples still supported at the first consistency call, as indexes of the views. */
   private int[][] tuples;
 
   /**
@@ -133,8 +135,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   /** It specifies the position of the last assigned variable. */
   private int lastAssignedVariablePosition = -1;
 
-  /** It specifies if there was no first consistency check yet. */
-  private boolean firstConsistencyCheck = true;
+  /** Filters the tuples, builds the views and rewrites the tuples as indexes. */
+  private final InitOnce init = new InitOnce();
 
   /**
    * It specifies if there was a backtrack and no yet consistency function execution after
@@ -146,7 +148,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   // for each variable computes the domain as given by all tuples.
   IntervalDomain[] valuesInFocus;
   int[] domainSizeAfterConsistency;
-  int firstConsistencyLevel;
 
   /**
    * It constructs an extensional constraint.
@@ -170,6 +171,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
     views = new IndexDomainView[list.length];
 
+    this.originalTuples = tuples;
     this.tuples = tuples;
 
     numberId = idNumber.incrementAndGet();
@@ -247,10 +249,9 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void removeLevel(int level) {
 
-    if (ASSERTS_ENABLED && level <= firstConsistencyLevel) {
-      throw new IllegalStateException(
-          String.valueOf(
-              "Constraint has the level at which it has computed its initial state being removed."));
+    if (init.due()) {
+      // the level of the first consistency call is removed; the next call rebuilds everything
+      return;
     }
 
     //   It is called upon removing level
@@ -288,6 +289,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
   /** First-time setup: filter supports, shrink tuples, build views, transform to indexes. */
   private void doFirstConsistencyCheck(Store store) {
+    tuples = originalTuples;
+    Arrays.fill(domainSizeAfterConsistency, 0);
+    backtrackOccured = false;
+    lastAssignedVariablePosition = -1;
     valuesInFocus = createValuesInFocus();
     boolean[] stillSupport = new boolean[tuples.length];
     int noSupports = markSupportAndCollectValuesInFocus(stillSupport);
@@ -299,8 +304,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     initFirstAndNexts();
     restrictDomainsAndCreateViews(store);
     transformTuplesToIndexes();
-    firstConsistencyCheck = false;
-    firstConsistencyLevel = store.level;
   }
 
   private IntervalDomain[] createValuesInFocus() {
@@ -493,7 +496,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void consistency(Store store) {
 
-    if (firstConsistencyCheck) {
+    if (init.begin(store)) {
       doFirstConsistencyCheck(store);
     }
 
@@ -585,8 +588,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
     }
     tupleString.append(", ");
     if (tuples != null) {
-      sortTuplesForDisplay(tuples);
-      appendTuplesTo(tupleString, tuples);
+      // a copy, since before the first consistency call these are the caller's tuples
+      int[][] shown = tuples.clone();
+      sortTuplesForDisplay(shown);
+      appendTuplesTo(tupleString, shown);
       tupleString.append(")");
     }
     return tupleString.toString();
