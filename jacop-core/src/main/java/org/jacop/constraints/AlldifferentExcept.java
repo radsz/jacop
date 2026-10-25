@@ -83,6 +83,11 @@ public class AlldifferentExcept extends Alldifferent
   // The matching check fails as soon as the variables without exception values cannot all take
   // different values. That can follow from any change of a domain, not only from fixing a variable.
   @Override
+  protected boolean keepsMatching() {
+    return false;
+  }
+
+  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
   }

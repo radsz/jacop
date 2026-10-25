@@ -33,7 +33,10 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
+import java.util.Random;
 import java.util.function.BiFunction;
+import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
@@ -53,6 +56,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -153,6 +157,100 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, x[2], 6)).isTrue();
     assertThat(removeValues(store, x[2], 4)).isFalse();
+  }
+
+  @Test
+  void testAlldifferentChecksMatchingWhenAVariableLosesAValue() {
+
+    // Three variables end up over {1, 5} and cannot all differ. Neither change fixes a variable,
+    // so the matching check must run on other domain changes.
+    Store store = new Store();
+    IntVar[] x = {
+      variable(store, "x0", 1, 5), variable(store, "x1", 1, 5), variable(store, "x2", 1, 4, 5, 6)
+    };
+    store.impose(new Alldifferent(x));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, x[2], 6)).isTrue();
+    assertThat(removeValues(store, x[2], 4)).isFalse();
+  }
+
+  @Test
+  void testAlldifferentFailsAtEveryInfeasibleNode() {
+
+    // Random dives with backtracking that remove values and narrow bounds without fixing
+    // variables: Alldifferent must fail exactly when its variables cannot all take different
+    // values, at every node, also after its matching was repaired on deeper levels.
+    Random random = new Random(11);
+    int infeasible = 0;
+    for (int instance = 0; instance < 3000; instance++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(5);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i);
+        for (int v = 0; v <= n + 1; v++) {
+          if (random.nextInt(3) > 0) {
+            x[i].addDom(v, v);
+          }
+        }
+        if (x[i].getSize() == 0) {
+          x[i].addDom(0, 0);
+        }
+      }
+      store.impose(new Alldifferent(x));
+      boolean ok = store.consistency();
+      assertThat(ok).as(Arrays.toString(x)).isEqualTo(hasDistinctAssignment(x, 0, new int[n]));
+      for (int step = 0; ok && step < 3 * n; step++) {
+        if (random.nextInt(4) == 0 && store.level > 0) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          continue;
+        }
+        IntVar v = x[random.nextInt(n)];
+        if (v.singleton()) {
+          continue;
+        }
+        String before = Arrays.toString(x);
+        store.setLevel(store.level + 1);
+        int value = v.min() + random.nextInt(v.max() - v.min() + 1);
+        switch (random.nextInt(3)) {
+          case 0 -> v.domain.inComplement(store.level, v, value);
+          case 1 -> v.domain.inMax(store.level, v, Math.max(value, v.min()));
+          default -> v.domain.inMin(store.level, v, Math.min(value, v.max()));
+        }
+        boolean consistent = store.consistency();
+        boolean feasible = consistent && hasDistinctAssignment(x, 0, new int[n]);
+        if (!consistent) {
+          infeasible++;
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        } else {
+          assertThat(feasible).as(before + " then " + v + " gives " + Arrays.toString(x)).isTrue();
+        }
+      }
+    }
+    assertThat(infeasible).isPositive();
+  }
+
+  private static boolean hasDistinctAssignment(IntVar[] x, int i, int[] values) {
+    if (i == x.length) {
+      return true;
+    }
+    for (ValueEnumeration e = x[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int value = e.nextElement();
+      boolean used = false;
+      for (int j = 0; j < i; j++) {
+        used |= values[j] == value;
+      }
+      if (!used) {
+        values[i] = value;
+        if (hasDistinctAssignment(x, i + 1, values)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Test
