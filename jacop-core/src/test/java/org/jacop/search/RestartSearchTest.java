@@ -28,6 +28,7 @@
 
 package org.jacop.search;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -44,6 +45,7 @@ import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.restart.Calculator;
+import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.CustomReport;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
@@ -282,5 +284,239 @@ class RestartSearchTest {
       }
     }
     assertTrue(checked > 10, "too few instances had restarts without a better solution");
+  }
+
+  /** The number of failures of a search that is not restarted, with the given cost or none. */
+  private static long failuresWithoutRestart(Instance instance, boolean optimize) {
+    Model model = new Model(instance);
+    model.store.consistency();
+    long[] failures = {0};
+    Calculator unlimited =
+        new ConstantCalculator(Integer.MAX_VALUE) {
+          @Override
+          public void newLimit() {
+            failures[0] = getNumberFails();
+            super.newLimit();
+          }
+        };
+    model.restartSearch(unlimited, optimize).labeling();
+    return failures[0];
+  }
+
+  @Test
+  void runThatEndsAtExactlyItsFailLimitCompletesTheSearch() {
+    // A run that explored its whole tree with as many failures as the fail limit was taken as cut
+    // by the limit, so a constant limit restarted the same finished search for ever.
+    Random rnd = new Random(31);
+    int checked = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      for (boolean optimize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        if (!model.store.consistency()) {
+          continue;
+        }
+        long failures = failuresWithoutRestart(instance, optimize);
+        if (failures == 0 || (!optimize && optimum != null)) {
+          continue;
+        }
+        RestartSearch<IntVar> search =
+            model.restartSearch(new ConstantCalculator((int) failures), optimize);
+        search.setRestartsLimit(5);
+        boolean found = search.labeling();
+        assertFalse(search.restartsLimitReached(), "restarted a finished search of " + instance);
+        assertEquals(0, search.restarts(), "restarts of " + instance);
+        assertEquals(optimum != null, found, "satisfiability of " + instance);
+        if (optimize && optimum != null) {
+          assertEquals(optimum.intValue(), search.getIntCost(), "optimum of " + instance);
+        }
+        checked++;
+      }
+    }
+    assertTrue(checked > 50, "too few instances checked: " + checked);
+  }
+
+  @Test
+  void runMayHaveAsManyFailuresAsItsLimit() {
+    // A limit of zero refused the root node of every run, so the search restarted for ever
+    // without exploring anything.
+    Calculator calculator = new ConstantCalculator(0);
+    assertTrue(calculator.executeAfterConsistency(true));
+    assertFalse(calculator.executeAfterConsistency(false));
+    assertFalse(calculator.pointsExhausted(), "a failed node is not cut by the limit");
+    assertFalse(calculator.executeAfterConsistency(true));
+    assertTrue(calculator.pointsExhausted());
+    calculator.newLimit();
+    assertFalse(calculator.pointsExhausted());
+    assertTrue(calculator.executeAfterConsistency(true));
+  }
+
+  private static long[] limits(Calculator calculator, int n) {
+    long[] limits = new long[n];
+    for (int i = 0; i < n; i++) {
+      limits[i] = calculator.getFailLimit();
+      calculator.newLimit();
+    }
+    return limits;
+  }
+
+  @Test
+  void geometricLimitsAreScaleTimesPowersOfTheBase() {
+    // The power of the base was rounded down before it was scaled, so restart_geometric(1.5, 100)
+    // gave 100, 100, 200, 300, 500 and a base of 1.1 kept the first limit for eight runs.
+    assertArrayEquals(
+        new long[] {100, 150, 225, 337, 506, 759}, limits(new GeometricCalculator(1.5, 100), 6));
+    assertArrayEquals(
+        new long[] {10, 11, 12, 13, 14, 16, 17, 19}, limits(new GeometricCalculator(1.1, 10), 8));
+    long[] huge = limits(new GeometricCalculator(10, 1000), 40);
+    for (int i = 1; i < huge.length; i++) {
+      assertTrue(huge[i] >= huge[i - 1], "limits must not overflow: " + Arrays.toString(huge));
+    }
+    assertArrayEquals(new long[] {3, 3, 6, 3, 3, 6, 12, 3}, limits(new LubyCalculator(3), 8));
+    assertArrayEquals(new long[] {2, 4, 6, 8}, limits(new LinearCalculator(2), 4));
+    // the restart strategy printed with -d named a linear calculator constant
+    assertEquals("linearCalculator(2)", new LinearCalculator(2).toString());
+  }
+
+  @Test
+  void restartLimitAllowsThatManyRestarts() {
+    // A limit of n allowed n + 1 restarts, and a search that proved the optimum in its last allowed
+    // run was reported as stopped by the limit.
+    Random rnd = new Random(41);
+    int checked = 0;
+    for (int k = 0; k < 50; k++) {
+      Instance instance = Instance.random(rnd);
+      Model unlimited = new Model(instance);
+      if (!unlimited.store.consistency()) {
+        continue;
+      }
+      RestartSearch<IntVar> reference = unlimited.restartSearch(new LubyCalculator(1), true);
+      reference.labeling();
+      int restarts = reference.restarts();
+      if (restarts < 2) {
+        continue;
+      }
+      checked++;
+
+      Model enough = new Model(instance);
+      enough.store.consistency();
+      RestartSearch<IntVar> complete = enough.restartSearch(new LubyCalculator(1), true);
+      complete.setRestartsLimit(restarts);
+      complete.labeling();
+      assertFalse(complete.restartsLimitReached(), "limit " + restarts + " on " + instance);
+      assertEquals(restarts, complete.restarts());
+      assertEquals(reference.getIntCost(), complete.getIntCost());
+
+      Model fewer = new Model(instance);
+      fewer.store.consistency();
+      RestartSearch<IntVar> limited = fewer.restartSearch(new LubyCalculator(1), true);
+      limited.setRestartsLimit(restarts - 1);
+      limited.labeling();
+      assertTrue(limited.restartsLimitReached(), "limit " + (restarts - 1) + " on " + instance);
+      assertEquals(restarts - 1, limited.restarts());
+    }
+    assertTrue(checked > 10, "too few instances needed two restarts: " + checked);
+  }
+
+  @Test
+  void relaxAndReconstructOnlyReportsImprovingSolutions() {
+    // The bound on the cost was pruned only inside the first relaxed run after it was imposed, so
+    // later runs reported solutions worse than the best one found.
+    Random rnd = new Random(53);
+    int checked = 0;
+    Store.setSeed(53);
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      Model model = new Model(instance);
+      if (optimum == null || !model.store.consistency()) {
+        continue;
+      }
+      List<Integer> costs = new ArrayList<>();
+      RestartSearch<IntVar> search = model.restartSearch(new LubyCalculator(1), true);
+      search.setRelaxAndReconstruct(model.x, 60);
+      search.setRestartsLimit(30);
+      search.addReporter(
+          new CustomReport(model.x) {
+            @Override
+            public void report() {
+              int[] x = Arrays.stream(model.x).mapToInt(IntVar::value).toArray();
+              assertTrue(instance.satisfied(x), "solution of " + instance);
+              costs.add(model.cost.value());
+            }
+          });
+      assertTrue(search.labeling(), "no solution of " + instance);
+      for (int i = 1; i < costs.size(); i++) {
+        assertTrue(costs.get(i) < costs.get(i - 1), "costs " + costs + " of " + instance);
+      }
+      assertEquals(costs.getLast().intValue(), search.getIntCost());
+      assertTrue(search.getIntCost() >= optimum);
+      if (costs.size() > 2) {
+        checked++;
+      }
+    }
+    Store.resetSeed();
+    assertTrue(checked > 10, "too few instances improved more than twice: " + checked);
+  }
+
+  @Test
+  void relaxAndReconstructStopsOnlyWhenTheSearchSpaceIsExhausted() {
+    // A relaxed run that explored its whole neighbourhood ended the search as if it had explored
+    // the whole search space, and without a cost the search restarted for ever.
+    Random rnd = new Random(59);
+    int proved = 0;
+    Store.setSeed(59);
+    for (int k = 0; k < 60; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      for (boolean optimize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        if (!model.store.consistency()) {
+          continue;
+        }
+        // growing limits, so that a run that fixes no variable eventually explores everything
+        RestartSearch<IntVar> search =
+            model.restartSearch(new GeometricCalculator(1.5, 1), optimize);
+        search.setRelaxAndReconstruct(model.x, 50);
+        search.setRestartsLimit(2000);
+        boolean found = search.labeling();
+        assertEquals(optimum != null, found, "satisfiability of " + instance);
+        assertFalse(search.restartsLimitReached(), "search of " + instance + " did not stop");
+        if (optimize && optimum != null) {
+          // only a run that fixed no variable can stop the search
+          assertEquals(optimum.intValue(), search.getIntCost(), "optimum of " + instance);
+          proved++;
+        }
+      }
+    }
+    Store.resetSeed();
+    assertTrue(proved > 20, "too few optimisation instances: " + proved);
+  }
+
+  @Test
+  void relaxAndReconstructWithProbabilityZeroFixesNothing() {
+    // A variable was fixed when a random number in 0..100 was at most the probability, so a
+    // probability of 0 still fixed one variable in 101.
+    Random rnd = new Random(61);
+    int checked = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Model plain = new Model(instance);
+      if (instance.bruteForceOptimum() == null || !plain.store.consistency()) {
+        continue;
+      }
+      RestartSearch<IntVar> reference = plain.restartSearch(new LubyCalculator(1), true);
+      reference.labeling();
+      Model relaxed = new Model(instance);
+      relaxed.store.consistency();
+      RestartSearch<IntVar> search = relaxed.restartSearch(new LubyCalculator(1), true);
+      search.setRelaxAndReconstruct(relaxed.x, 0);
+      search.labeling();
+      assertEquals(reference.restarts(), search.restarts(), "restarts of " + instance);
+      assertEquals(reference.getIntCost(), search.getIntCost(), "cost of " + instance);
+      checked += reference.restarts() > 0 ? 1 : 0;
+    }
+    assertTrue(checked > 20, "too few instances restarted: " + checked);
   }
 }

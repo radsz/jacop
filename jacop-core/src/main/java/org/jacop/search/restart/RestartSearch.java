@@ -78,8 +78,12 @@ public class RestartSearch<T extends Var> {
   IntVar[] rarVars;
   int probability;
   int[] values;
+  // the number of variables relax and reconstruct fixed in the current run
+  int fixedInRun;
   int restartsLimit; // no limit
   boolean restartsLimitReached;
+  // whether the search stopped because there is nothing more to search
+  boolean complete;
 
   /**
    * Constructs a restart search with the given parameters.
@@ -151,19 +155,14 @@ public class RestartSearch<T extends Var> {
   public boolean labeling() {
 
     store.setLevel(store.level + 1);
-    boolean result = true;
-    while (result) {
+    boolean restart = true;
+    while (restart) {
 
-      result = runOneRestartIteration();
+      boolean result = runOneRestartIteration();
 
       cleanupAfterIterationIfRar();
 
       atLeastOneSolution |= result;
-
-      if (restartsLimit > 0 && numberRestarts > restartsLimit) {
-        restartsLimitReached = true;
-        break;
-      }
 
       Optional<Boolean> exit = checkRestartExitConditions();
       if (exit.isPresent()) {
@@ -172,10 +171,16 @@ public class RestartSearch<T extends Var> {
         return exit.get();
       }
 
-      result = computeNextResult(result);
+      restart = computeNextResult(result);
+      complete = !restart;
+      if (restart && restartsLimit > 0 && numberRestarts >= restartsLimit) {
+        // the search is incomplete only when it would restart once more
+        restartsLimitReached = true;
+        break;
+      }
       calculator.newLimit();
 
-      if (result) {
+      if (restart) {
         numberRestarts++;
       }
     }
@@ -193,10 +198,11 @@ public class RestartSearch<T extends Var> {
   }
 
   private boolean runOneRestartIteration() {
+    fixedInRun = 0;
     if (rarVars != null) {
       store.setLevel(store.level + 1);
       if (values != null) {
-        assignRelaxedVariables();
+        fixedInRun = assignRelaxedVariables();
       }
     }
 
@@ -222,51 +228,55 @@ public class RestartSearch<T extends Var> {
   }
 
   private boolean computeNextResult(boolean result) {
+    // the run explored the whole search space: it was not cut by its fail limit and relax and
+    // reconstruct fixed no variable
+    boolean exhausted = !calculator.pointsExhausted() && fixedInRun == 0;
     if (result) {
-      if (cost == null) {
-        return false; // break
-      }
-      if (!calculator.pointsExhausted()) {
+      if (cost == null || exhausted) {
         return false;
       }
-      boundCost();
-      return true;
+      return boundCost();
     }
     // no result from search
-    if (calculator.pointsExhausted()) {
-      // the run stopped at its fail limit, so the search space is not exhausted
-      if (cost != null) {
-        boundCost();
-        return true;
-      }
-      return !atLeastOneSolution;
-    }
-    // the run failed before its limit: the search space is exhausted
-    if (rarVars == null) {
+    if (exhausted) {
       return false;
     }
     if (cost != null) {
-      boundCost();
+      return boundCost();
     }
-    return true;
+    return !atLeastOneSolution;
   }
 
-  void boundCost() {
+  /**
+   * Imposes that the next solution is better than the last one found, unless that bound is already
+   * imposed.
+   *
+   * @return false if no better solution exists.
+   */
+  boolean boundCost() {
 
+    Constraint bound = null;
     // a restart that found no better solution must not impose the same bound again
     if (cost instanceof IntVar v) {
       if (intCostValue < boundedIntCost) {
-        store.impose(new XltC(v, intCostValue));
+        bound = new XltC(v, intCostValue);
         boundedIntCost = intCostValue;
       }
     } else if (floatCostValue < boundedFloatCost) {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
-        Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
-        store.impose(costConstraint);
+        bound = costHandler.createCostConstraint(cost, floatCostValue);
         boundedFloatCost = floatCostValue;
       }
     }
+    if (bound == null) {
+      return true;
+    }
+    store.impose(bound);
+    // The bound prunes once, when it is imposed (it is not woken by later changes of the cost), so
+    // it must prune at this level, below the runs. Relax and reconstruct starts its runs one level
+    // higher, and the pruning would be undone with the level of the first run after the bound.
+    return store.consistency();
   }
 
   public int getIntCost() {
@@ -354,16 +364,24 @@ public class RestartSearch<T extends Var> {
   /**
    * Assigns relaxed variables to their previous solution values based on the configured
    * probability.
+   *
+   * @return the number of variables fixed to their previous solution values.
    */
-  public void assignRelaxedVariables() {
+  public int assignRelaxedVariables() {
 
+    int fixed = 0;
     for (int i = 0; i < rarVars.length; i++) {
       IntVar v = rarVars[i];
-      int rn = Store.getRandom().nextInt(101);
-      if (rn <= probability) {
+      // fixed with a probability of probability percent; a value of the last solution may have
+      // been pruned by the bound on the cost
+      if (Store.getRandom().nextInt(100) < probability
+          && !v.singleton()
+          && v.domain.contains(values[i])) {
         v.domain.inValue(store.level, v, values[i]);
+        fixed++;
       }
     }
+    return fixed;
   }
 
   public int[] getLastSolution() {
@@ -390,6 +408,18 @@ public class RestartSearch<T extends Var> {
    */
   public boolean restartsLimitReached() {
     return restartsLimitReached;
+  }
+
+  /**
+   * Returns whether the search stopped because there was nothing more to search: a solution of a
+   * satisfaction problem was found, or the whole search space was explored, so the last solution is
+   * optimal or there is none. With relax and reconstruct this needs a run that fixed no variable
+   * and explored its whole tree, or a bound on the cost that fails without any variable fixed.
+   *
+   * @return true if the search is complete.
+   */
+  public boolean complete() {
+    return complete;
   }
 
   /**

@@ -1,0 +1,8 @@
+predicate jacop_alldiff(array [int] of var int: x);
+array [1..3] of int: X_INTRODUCED_3_ = [3,2,1];
+var 1..3: X_INTRODUCED_0_;
+var 1..3: X_INTRODUCED_1_;
+var 1..3: X_INTRODUCED_2_;
+array [1..3] of var int: x:: output_array([1..3]) = [X_INTRODUCED_0_,X_INTRODUCED_1_,X_INTRODUCED_2_];
+constraint jacop_alldiff(x);
+solve :: int_search(x,input_order,indomain_min,complete):: warm_start(x,X_INTRODUCED_3_) satisfy;
