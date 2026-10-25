@@ -4044,6 +4044,34 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void geostPrunesWithObjectsFreeInDimensionNotSelected() {
+    // NonOverlapping over dimension 0 only: object 0 occupies x = 0 whatever its y, so object 1
+    // (x1 in 0..1) must move to x1 = 1. The frame of object 0 also required a compulsory part in
+    // the dimension that is not selected (y in 0..5), found none and pruned nothing.
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar[][] coords = {
+      {new IntVar(store, 0, 0), new IntVar(store, 0, 5)}, {x1, new IntVar(store, 0, 0)}
+    };
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              coords[i],
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    store.impose(new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0})), shapes));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.min()).isEqualTo(1);
+  }
+
   // Regression test for https://github.com/radsz/jacop/issues/46
   @Test
   void testAmongVarWithGroundedX() {
