@@ -2724,3 +2724,5 @@ ttppv_cost_regular/rand6_1
 ttppv_cost_regular/rand6_4
 ttppv_cost_regular/rand6_12
 ttppv_cost_regular/rand8_0_unsat
+atsp0/atsp22-1
+atsp0/atsp22-2

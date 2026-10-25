@@ -1031,6 +1031,67 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  @Test
+  void circuitWithOffsetMatchesBruteForceAndShiftedCircuit() {
+    // Circuit numbered from an offset must have the solutions of the 1-based circuit on values
+    // shifted by 1 - offset, and prune the same at the root.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 500; trial++) {
+      int n = 2 + random.nextInt(5);
+      int offset = random.nextInt(7) - 3;
+      int[][] domains = new int[n][]; // 1-based, with values outside 1..n
+      for (int i = 0; i < n; i++) {
+        domains[i] =
+            random.ints(0, n + 2).limit(1 + random.nextInt(n)).distinct().sorted().toArray();
+      }
+      int[][] inRange = new int[n][];
+      for (int i = 0; i < n; i++) {
+        inRange[i] = Arrays.stream(domains[i]).filter(v -> v >= 1 && v <= n).toArray();
+      }
+      int expected = circuitSolutions(inRange, new int[n], 0, false);
+      String[] pruned = new String[2];
+      for (int shifted = 0; shifted < 2; shifted++) {
+        int base = shifted == 0 ? offset : 1;
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v - 1 + base, v - 1 + base);
+          }
+        }
+        store.impose(shifted == 0 ? new Circuit(x, offset) : new Circuit(x));
+        boolean consistent = store.consistency();
+        // root domains in the 1-based numbering
+        StringBuilder after = new StringBuilder();
+        for (IntVar v : x) {
+          after.append(consistent ? shift(v.dom(), 1 - base) : "fail").append(' ');
+        }
+        pruned[shifted] = after.toString();
+        int actual = consistent ? noOfAllSolutions(store, x) : 0;
+        assertThat(actual)
+            .as("trial %d, offset %d, domains %s", trial, base, Arrays.deepToString(domains))
+            .isEqualTo(expected);
+      }
+      assertThat(pruned[0])
+          .as("trial %d, offset %d, domains %s", trial, offset, Arrays.deepToString(domains))
+          .isEqualTo(pruned[1]);
+    }
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Circuit(x, IntDomain.MAX_INT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private static String shift(IntDomain dom, int by) {
+    IntervalDomain result = new IntervalDomain();
+    for (ValueEnumeration e = dom.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement() + by;
+      result.unionAdapt(v, v);
+    }
+    return result.toString();
+  }
+
   private static int circuitSolutions(int[][] domains, int[] values, int i, boolean sub) {
     int n = values.length;
     if (i == n) {
