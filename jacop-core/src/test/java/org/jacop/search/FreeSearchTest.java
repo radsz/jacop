@@ -728,6 +728,11 @@ class FreeSearchTest {
     assertEquals(-12, cost.min());
     assertEquals(
         1, new IndomainBoundImpact(store, cost, true, 10, new IndomainMin<>()).indomain(x));
+    IndomainBoundImpact once =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMin<>()).untilFirstSolution();
+    assertEquals(3, once.indomain(x));
+    once.onSolution(null);
+    assertEquals(1, once.indomain(x));
     // larger domains than the limit use the wrapped heuristic
     assertEquals(
         0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));

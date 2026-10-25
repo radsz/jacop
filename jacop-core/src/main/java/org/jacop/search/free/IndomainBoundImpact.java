@@ -45,12 +45,13 @@ import org.jacop.search.Indomain;
  *
  * <p>Each probe raises the store level and removes it again, so the store is left as it was. It is
  * meant to find a good first solution; wrapped in {@link IndomainLastSolution} it is used only for
- * variables without a value from the last solution.
+ * variables without a value from the last solution, and {@link #untilFirstSolution()} stops it
+ * after the first solution.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class IndomainBoundImpact implements Indomain<IntVar> {
+public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
 
   /** The default largest domain whose values are all tried. */
   public static final int DEFAULT_MAX_DOMAIN = 64;
@@ -61,6 +62,8 @@ public class IndomainBoundImpact implements Indomain<IntVar> {
   private final int maxDomain;
   private final Indomain<IntVar> fallback;
   private long probes;
+  private boolean untilFirstSolution;
+  private boolean solved;
 
   /**
    * Creates the heuristic.
@@ -82,7 +85,10 @@ public class IndomainBoundImpact implements Indomain<IntVar> {
 
   @Override
   public int indomain(IntVar v) {
-    if (v == objective || v.getSize() > maxDomain || v.singleton()) {
+    if ((untilFirstSolution && solved)
+        || v == objective
+        || v.getSize() > maxDomain
+        || v.singleton()) {
       return fallback.indomain(v);
     }
     int level = store.level;
@@ -112,6 +118,22 @@ public class IndomainBoundImpact implements Indomain<IntVar> {
     // the probes are not failures of the search
     store.recentlyFailedConstraint = null;
     return found ? bestValue : fallback.indomain(v);
+  }
+
+  /**
+   * Uses the wrapped heuristic once a solution is found; the probes then only slow down the search
+   * for a better one. Add the heuristic as a monitor of the search to see the solutions.
+   *
+   * @return this heuristic.
+   */
+  public IndomainBoundImpact untilFirstSolution() {
+    this.untilFirstSolution = true;
+    return this;
+  }
+
+  @Override
+  public void onSolution(FreeSearch search) {
+    solved = true;
   }
 
   /**

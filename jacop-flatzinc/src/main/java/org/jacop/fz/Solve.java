@@ -876,7 +876,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int impact = Integer.parseInt(options.freeConfig("impact", "0"));
     if (impact > 0 && costVariable instanceof IntVar cost) {
       // costVariable is minimised; for maximisation it is the negated objective
-      values = new IndomainBoundImpact(store, cost, false, impact, values);
+      IndomainBoundImpact boundImpact = new IndomainBoundImpact(store, cost, false, impact, values);
+      if ("first".equals(options.freeConfig("impact-until", "first"))) {
+        boundImpact.untilFirstSolution();
+      }
+      monitors.add(boundImpact);
+      values = boundImpact;
     }
     if (phase) {
       IndomainLastSolution saving = new IndomainLastSolution(vars, values);
