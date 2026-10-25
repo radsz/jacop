@@ -254,6 +254,11 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
 
       store.propagationHasOccurred = false;
 
+      if (z.singleton() && z.value() < 0) {
+        // |X - Y| != Z holds for all X and Y
+        return;
+      }
+
       if (x.singleton()) {
 
         if (z.singleton()) {
@@ -267,8 +272,7 @@ public class Distance extends AbstractConstraintXandYandZ implements Stateful {
 
         } else if (y.singleton()) {
 
-          z.domain.inComplement(store.level, z, x.value() - y.value());
-          z.domain.inComplement(store.level, x, y.value() - x.value());
+          z.domain.inComplement(store.level, z, Math.abs(x.value() - y.value()));
         }
 
       } else if (z.singleton() && y.singleton()) {

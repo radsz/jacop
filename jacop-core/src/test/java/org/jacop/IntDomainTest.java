@@ -42,12 +42,14 @@ import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeSet;
+import org.jacop.constraints.XneqC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
+import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -900,6 +902,34 @@ class IntDomainTest {
     }
 
     return result;
+  }
+
+  @Test
+  void addDomBeyondTheSpanOfABitSetDomainChangesTheRepresentation() {
+    // IntVar(store, min, max) gives a SmallDenseDomain for at most 64 values, and adding a value
+    // further away threw IllegalArgumentException instead of choosing a wider representation.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    x.addDom(100, 100);
+    assertThat(x.dom()).hasToString("{0..10, 100}");
+    assertThat(x.dom().domainId()).isEqualTo(IntDomain.LAZY_BIT_SET_DOMAIN_ID);
+
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntervalDomain far = new IntervalDomain(70, 71);
+    far.unionAdapt(200_000, 200_000);
+    y.addDom(far);
+    assertThat(y.dom()).hasToString("{0..3, 70..71, 200000}");
+    assertThat(y.dom().domainId()).isEqualTo(IntDomain.INTERVAL_DOMAIN_ID);
+
+    // a LazyBitSetDomain is not grown to a span of a million values either
+    IntVar z = new IntVar(store, "z", 0, 100);
+    z.addDom(-1_000_000, -1_000_000);
+    assertThat(z.dom()).hasToString("{-1000000, 0..100}");
+    assertThat(z.dom().domainId()).isEqualTo(IntDomain.INTERVAL_DOMAIN_ID);
+
+    store.impose(new XneqC(x, 100));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom()).hasToString("{0..10}");
   }
 
   @Test

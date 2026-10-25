@@ -567,10 +567,14 @@ public class CostRegular extends Constraint
       } finally {
         pruning = false;
       }
-      for (int i = 0; i < levelQueueSize; i++) {
-        levelQueued[levelQueue[i]] = false;
+      // the graph was built at impose; values removed since then (also before this call, while
+      // the queue was not yet read) must be checked on every level
+      for (int level = 0; level < levels; level++) {
+        if (!levelQueued[level]) {
+          levelQueued[level] = true;
+          levelQueue[levelQueueSize++] = level;
+        }
       }
-      levelQueueSize = 0;
     }
 
     if (levelNodeStart[1] == 0) {

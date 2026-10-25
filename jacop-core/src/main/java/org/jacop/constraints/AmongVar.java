@@ -114,7 +114,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    *
    * @param listOfX the list of variables whose equality to other set of variables we count
    * @param listOfY the list of variable to which equality is counted.
-   * @param n how many variables from list x are equal to at least one variable from list y.
+   * @param n how many variables from list x are equal to at least one variable from list y. The
+   *     lists and n must not share variables.
    */
   public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
@@ -122,6 +123,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         new String[] {"listOfX", "listOfY", "n"}, listOfX, listOfY, new Object[] {n});
     checkInputForDuplication("listOfX", listOfX);
     checkInputForDuplication("listOfY", listOfY);
+    checkInputForDuplication(
+        "listOfX, listOfY and n",
+        Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n))
+            .toArray());
 
     this.queueIndex = 1;
 
@@ -1162,19 +1167,39 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       int ub0 = ub0Ts.value();
 
       boolean allYsGrounded = yGrounded.value() == listOfY.length;
-      boolean allXsGrounded = xGrounded.value() == listOfX.length;
 
       if (allYsGrounded && n.value() == lb0 && lb0 == ub0) {
         return true;
       }
 
-      if (ASSERTS_ENABLED && allYsGrounded && allXsGrounded && n.value() != lb0) {
-        throw new IllegalStateException(
-            String.valueOf(
-                " Domain of N or value of timestamp LBoUTS was not maintenated properly"));
+      // the stamps lag behind the variables this constraint grounded itself, so a ground
+      // assignment is counted directly
+      if (allYsGrounded) {
+        int count = groundCount();
+        return count >= 0 && n.value() == count;
       }
     }
     return false;
+  }
+
+  /** The number of X equal to some Y if all of them are ground, otherwise -1. */
+  private int groundCount() {
+    int count = 0;
+    for (IntVar x : listOfX) {
+      if (!x.singleton()) {
+        return -1;
+      }
+      for (IntVar y : listOfY) {
+        if (!y.singleton()) {
+          return -1;
+        }
+        if (x.value() == y.value()) {
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
   }
 
   @Override

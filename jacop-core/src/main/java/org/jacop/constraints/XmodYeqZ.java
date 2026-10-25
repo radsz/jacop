@@ -235,7 +235,8 @@ public class XmodYeqZ extends AbstractXopYeqZ {
 
   @Override
   public boolean satisfied() {
-    return grounded() && z.min() == mod(x.min(), y.min());
+    // the remainder has the sign of x, as in consistency()
+    return grounded() && y.min() != 0 && z.min() == x.min() % y.min();
   }
 
   @Override
@@ -268,13 +269,5 @@ public class XmodYeqZ extends AbstractXopYeqZ {
       result = null;
     }
     return result;
-  }
-
-  private int div(int a, int b) {
-    return (int) Math.floor((float) a / (float) b);
-  }
-
-  private int mod(int a, int b) {
-    return a - div(a, b) * b;
   }
 }

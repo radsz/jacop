@@ -120,20 +120,13 @@ public class XdivYeqZ extends AbstractXopYeqZ {
 
   @Override
   public boolean satisfied() {
-    return grounded() && z.min() == div(x.min(), y.min());
+    // integer division rounds towards zero, as in consistency()
+    return grounded() && y.min() != 0 && z.min() == x.min() / y.min();
   }
 
   @Override
   public String toString() {
 
     return id() + " : XdivYeqZ(" + x + ", " + y + ", " + z + " )";
-  }
-
-  int div(int a, int b) {
-    return (int) Math.floor((float) a / (float) b);
-  }
-
-  int mod(int a, int b) {
-    return a - (int) Math.floor((float) a / (float) b) * b;
   }
 }

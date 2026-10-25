@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -44,7 +45,7 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Xor extends PrimitiveConstraint {
+public class Xor extends PrimitiveConstraint implements UsesQueueVariable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

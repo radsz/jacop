@@ -177,13 +177,24 @@ public class CountValuesBounds extends AbstractCountValues {
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
 
-      int cc = countOccurrences(v);
-      if (cc < counter[i].lb || cc > counter[i].ub) {
+      // the singletons equal to v must reach the lower bound, and the variables that may still
+      // take v must stay within the upper bound
+      if (countOccurrences(v) < lb[i] || countPossible(v) > ub[i]) {
         return false;
       }
     }
 
     return true;
+  }
+
+  private int countPossible(int value) {
+    int count = 0;
+    for (IntVar v : list) {
+      if (v.domain.contains(value)) {
+        count++;
+      }
+    }
+    return count;
   }
 
   @Override

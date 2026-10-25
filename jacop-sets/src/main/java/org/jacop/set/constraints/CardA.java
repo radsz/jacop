@@ -108,14 +108,16 @@ public class CardA extends Constraint implements SatisfiedPresent {
 
     SetDomain aDom = a.domain;
 
-    int min = Math.max(aDom.glb().getSize(), cardinality.min());
-    int max = Math.min(aDom.lub().getSize(), cardinality.max());
+    // the cardinality domain may have holes, so the allowed sizes are an intersection, not just
+    // the bounds; otherwise a ground set with a size in a hole would be accepted
+    IntDomain allowed =
+        cardinality.intersect(aDom.glb().getSize(), aDom.lub().getSize()).intersect(aDom.card());
 
-    if (min > max) {
+    if (allowed.isEmpty()) {
       throw Store.failException;
     }
 
-    a.domain.inCardinality(store.level, a, min, max);
+    a.domain.inCardinality(store.level, a, allowed.min(), allowed.max());
   }
 
   @Override

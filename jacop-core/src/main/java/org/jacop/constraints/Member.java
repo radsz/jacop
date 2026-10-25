@@ -39,6 +39,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Member constraint implements the membership of element e on list x.
@@ -103,15 +104,14 @@ public class Member extends PrimitiveConstraint {
 
     int start = position.value();
 
+    if (e.singleton()) {
+      consistencyGround(store, start, e.value());
+      return;
+    }
+
     IntDomain d = new IntervalDomain();
-    boolean eGround = e.singleton();
     int numberGround = 0;
     for (int i = start; i < l; i++) {
-
-      if (eGround && x[i].singleton() && x[i].value() == e.value()) {
-        removeConstraint();
-        return;
-      }
 
       if (!x[i].domain.isIntersecting(e.domain)) {
         swap(start, i);
@@ -133,6 +133,27 @@ public class Member extends PrimitiveConstraint {
     if (l - start == numberGround && !e.singleton()) {
       removeConstraint();
       return;
+    }
+
+    handleSingleRemainingVariable(store, start);
+
+    position.update(start);
+  }
+
+  /** Consistency for a fixed e: the same rules as the general case without building the union. */
+  private void consistencyGround(Store store, int start, int value) {
+    for (int i = start; i < l; i++) {
+      if (!x[i].domain.contains(value)) {
+        swap(start, i);
+        start++;
+      } else if (x[i].singleton()) {
+        removeConstraint();
+        return;
+      }
+    }
+
+    if (start == l) {
+      throw Store.failException;
     }
 
     handleSingleRemainingVariable(store, start);
@@ -218,7 +239,12 @@ public class Member extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+    // Wrappers include their nested constraints again whenever they are imposed, also during
+    // search. Keep a stamp that still has a value, as one created at a search level loses it on
+    // backtracking while the constraint may still be used below that level.
+    if (position == null || position.pointer4Last < 0) {
+      position = new TimeStamp<>(store, 0);
+    }
   }
 
   @Override
@@ -241,6 +267,27 @@ public class Member extends PrimitiveConstraint {
         if (x[i].singleton() && x[i].value() == e.value()) {
           return true;
         }
+      }
+      return false;
+    }
+
+    // Entailed also when every value of e is taken by a fixed list variable. The bounds of e are
+    // checked first, as they rule out most cases cheaply.
+    if (!fixedTo(e.min()) || !fixedTo(e.max())) {
+      return false;
+    }
+    for (ValueEnumeration values = e.domain.valueEnumeration(); values.hasMoreElements(); ) {
+      if (!fixedTo(values.nextElement())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean fixedTo(int value) {
+    for (int i = 0; i < l; i++) {
+      if (x[i].singleton(value)) {
+        return true;
       }
     }
     return false;
