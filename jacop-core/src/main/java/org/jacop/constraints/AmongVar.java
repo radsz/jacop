@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +104,21 @@ public class AmongVar extends Constraint
   private TimeStamp<Integer> lb0Ts;
   private TimeStamp<Integer> ub0Ts;
   private TimeStamp<Integer> yGrounded;
-  private TimeStamp<Integer> xGrounded;
+
+  // Scratch space of consistency, kept between calls so that the counting allocates nothing.
+  // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
+  // the stamp of the current call.
+  private int[] lbOfValue = new int[0];
+  private int[] ubOfValue = new int[0];
+  private int[] valueStamp = new int[0];
+  private int valueOffset;
+  private int callStamp;
+  // per position of listOfX: how many values the x shares with ub(S) and has outside lb(S),
+  // 0, 1 or 2 for two or more, and the value when there is exactly one
+  private int[] ubShared;
+  private int[] ubSharedValue;
+  private int[] lbOutside;
+  private int[] lbOutsideValue;
 
   private static final String DEBUG_LEVEL = "--LEVEL : {}";
   private static final String DEBUG_SEPARATOR = "------------";
@@ -404,6 +417,17 @@ public class AmongVar extends Constraint
     }
   }
 
+  // checked directly instead of counted in queueVariable, since the store calls queueVariable again
+  // for every variable when it redoes a first consistency whose level was removed
+  private boolean allXGrounded() {
+    for (IntVar x : listOfX) {
+      if (!x.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private IntDomain buildKfromGroundedX() {
     IntDomain k = new IntervalDomain();
     for (IntVar x : listOfX) {
@@ -574,8 +598,7 @@ public class AmongVar extends Constraint
     // pureUbs ubs usually equals to ubs \ lbs and is used upon calculating
     // the lbV and ubV hashtables
     IntervalDomain pureUbs = new IntervalDomain();
-    HashMap<Integer, Integer> lbV = new HashMap<>();
-    HashMap<Integer, Integer> ubV = new HashMap<>();
+    callStamp++;
 
     // Take the lbs domain computed on the previous level
     // it contain the Y values that will be or must be present in S domain
@@ -804,9 +827,13 @@ public class AmongVar extends Constraint
       int ubMax = Integer.MIN_VALUE;
       if (firstTimeWhileLoop) {
         pureUbs = (IntervalDomain) ubSdom.subtract(lbSdom);
+        // later rounds of this call only look at values of this first set
+        reserveValues(pureUbs);
       } else {
         pureUbs = (IntervalDomain) pureUbs.intersect(ubSdom.subtract(lbSdom));
       }
+
+      countSharedAndOutside(pureUbs, ubSdom, lbSdom, lb0, ub0);
 
       Interval inv;
 
@@ -821,8 +848,7 @@ public class AmongVar extends Constraint
             ubTmp = 0;
 
             for (int i = 0; i < lb0; i++) {
-              x = listOfX[i];
-              if (ubSdom.subtract(v, v).isIntersecting(x.domain)) {
+              if (intersectsUbWithout(i, v)) {
                 ubTmp++;
               }
             }
@@ -833,12 +859,12 @@ public class AmongVar extends Constraint
               if (firstTimeWhileLoop && x.domain.contains(v)) {
                 weight++;
               }
-              // b)count the relation with lbS
-              if (lbSdom.union(v).contains(x.domain)) {
+              // b) x is within lb(S) U {v}
+              if (withinLbWith(i, v)) {
                 lbTmp++;
               }
-              // c)count the relation with ubs
-              if (ubSdom.subtract(v, v).isIntersecting(x.domain)) {
+              // c) x intersects ub(S) \ {v}
+              if (intersectsUbWithout(i, v)) {
                 ubTmp++;
               }
             }
@@ -848,8 +874,10 @@ public class AmongVar extends Constraint
             if (DEBUG_ALL) {
               log.debug("--- ub[{}] = {}", v, ubTmp);
             }
-            lbV.put(v, lbTmp);
-            ubV.put(v, ubTmp);
+            int index = v - valueOffset;
+            lbOfValue[index] = lbTmp;
+            ubOfValue[index] = ubTmp;
+            valueStamp[index] = callStamp;
             if (ubTmp > ubMax) {
               ubMax = ubTmp;
             }
@@ -912,7 +940,7 @@ public class AmongVar extends Constraint
             if (DEBUG_ALL) {
               log.debug(">>>>>>>>>>>>>>>>>>>{}", v);
             }
-            if (ubV.get(v) < n.min()) {
+            if (ubOfValue(v) < n.min()) {
               if (DEBUG_ALL) {
                 log.debug("{} must be be present in S", v);
               }
@@ -956,7 +984,7 @@ public class AmongVar extends Constraint
               }
             }
 
-            if (lbV.get(v) > n.max()) {
+            if (lbOfValue(v) > n.max()) {
               ubSdom = ubSdom.subtract(v, v);
               recalculateUb0 = true;
 
@@ -1075,7 +1103,7 @@ public class AmongVar extends Constraint
         }
       }
 
-      if (xGrounded.value() == listOfX.length) {
+      if (allXGrounded()) {
         consistencyForY(store);
       } else if (lb0 == ub0) {
         consistencyWhenLb0EqUb0(store);
@@ -1091,6 +1119,108 @@ public class AmongVar extends Constraint
       }
 
       firstTimeWhileLoop = false;
+    }
+  }
+
+  /** Makes the value arrays cover the values of pureUbs for this call. */
+  private void reserveValues(IntDomain pureUbs) {
+    if (pureUbs.isEmpty()) {
+      return;
+    }
+    int min = pureUbs.min();
+    int size = pureUbs.max() - min + 1;
+    if (size > valueStamp.length) {
+      lbOfValue = new int[size];
+      ubOfValue = new int[size];
+      valueStamp = new int[size];
+    }
+    valueOffset = min;
+  }
+
+  /** Counts, for each x of this round, its values shared with ub(S) and outside lb(S). */
+  private void countSharedAndOutside(
+      IntDomain pureUbs, IntDomain ubSdom, IntDomain lbSdom, int lb0, int ub0) {
+    if (pureUbs.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < ub0; i++) {
+      ubShared[i] = countShared(listOfX[i].domain, ubSdom, ubSharedValue, i);
+    }
+    for (int i = lb0; i < ub0; i++) {
+      lbOutside[i] = countOutside(listOfX[i].domain, lbSdom, lbOutsideValue, i);
+    }
+  }
+
+  /** Whether listOfX[i] intersects ub(S) \ {v}, from the counts of this round. */
+  private boolean intersectsUbWithout(int i, int v) {
+    return ubShared[i] == 2 || (ubShared[i] == 1 && ubSharedValue[i] != v);
+  }
+
+  /** Whether listOfX[i] is within lb(S) U {v}, from the counts of this round. */
+  private boolean withinLbWith(int i, int v) {
+    return lbOutside[i] == 0 || (lbOutside[i] == 1 && lbOutsideValue[i] == v);
+  }
+
+  private int lbOfValue(int v) {
+    checkValueComputed(v);
+    return lbOfValue[v - valueOffset];
+  }
+
+  private int ubOfValue(int v) {
+    checkValueComputed(v);
+    return ubOfValue[v - valueOffset];
+  }
+
+  private void checkValueComputed(int v) {
+    int index = v - valueOffset;
+    if (index < 0 || index >= valueStamp.length || valueStamp[index] != callStamp) {
+      throw new IllegalStateException("lb[" + v + "] and ub[" + v + "] were not computed");
+    }
+  }
+
+  /**
+   * The number of values d shares with s, 0, 1 or 2 for two or more; with exactly one it is stored
+   * in value[i]. It enumerates the smaller of the two domains.
+   */
+  private static int countShared(IntDomain d, IntDomain s, int[] value, int i) {
+    if (s.isEmpty() || !d.isIntersecting(s)) {
+      return 0;
+    }
+    IntDomain small = d.getSize() <= s.getSize() ? d : s;
+    IntDomain large = small == d ? s : d;
+    int count = 0;
+    for (int w = small.min(); ; w = small.nextValue(w)) {
+      if (large.contains(w)) {
+        if (++count == 2) {
+          return 2;
+        }
+        value[i] = w;
+      }
+      if (w == small.max()) {
+        return count;
+      }
+    }
+  }
+
+  /**
+   * The number of values of d outside s, 0, 1 or 2 for two or more; with exactly one it is stored
+   * in value[i].
+   */
+  private static int countOutside(IntDomain d, IntDomain s, int[] value, int i) {
+    if (d.getSize() > s.getSize() + 1) {
+      return 2;
+    }
+    int count = 0;
+    for (int w = d.min(); ; w = d.nextValue(w)) {
+      if (!s.contains(w)) {
+        if (++count == 2) {
+          return 2;
+        }
+        value[i] = w;
+      }
+      if (w == d.max()) {
+        return count;
+      }
     }
   }
 
@@ -1128,11 +1258,14 @@ public class AmongVar extends Constraint
     lbS = new MutableDomain(store);
     futureLbS = new MutableDomain(store);
 
+    ubShared = new int[listOfX.length];
+    ubSharedValue = new int[listOfX.length];
+    lbOutside = new int[listOfX.length];
+    lbOutsideValue = new int[listOfX.length];
+
     lb0Ts = new TimeStamp<>(store, 0);
     ub0Ts = new TimeStamp<>(store, listOfX.length);
 
-    // super.impose() calls queueVariable() for every variable, which counts the grounded X.
-    xGrounded = new TimeStamp<>(store, 0);
     yGrounded = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
@@ -1151,12 +1284,6 @@ public class AmongVar extends Constraint
       Integer index = yIndex.get(intVar);
       if (index != null) {
         variableQueueY.add(index);
-        return;
-      }
-
-      if (intVar != this.n && intVar.singleton()) {
-        // It can be only X
-        xGrounded.update(xGrounded.value() + 1);
       }
     }
   }

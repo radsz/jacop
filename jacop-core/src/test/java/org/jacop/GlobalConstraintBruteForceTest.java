@@ -53,6 +53,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -231,6 +232,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("MemberRepeated", memberRepeated("plain")),
         Arguments.of("ReifiedMemberRepeated", memberRepeated("reified")),
         Arguments.of("NotMemberRepeated", memberRepeated("not")),
+        Arguments.of(
+            "AmongVar", (Function<Random, Instance>) GlobalConstraintBruteForceTest::amongVar),
         Arguments.of(
             "Distance", (Function<Random, Instance>) GlobalConstraintBruteForceTest::distance),
         Arguments.of("XmulYeqZ", arithmetic("XmulYeqZ")),
@@ -1223,6 +1226,32 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> store.impose(new Member(Arrays.copyOfRange(x, 0, n), x[n])),
         x -> occurrences(Arrays.copyOfRange(x, 0, n), x[n]) > 0,
         "");
+  }
+
+  /** AmongVar(x, y, n): x is the first nx variables, y the next ny and n the last one. */
+  private static Instance amongVar(Random random) {
+    int nx = 1 + random.nextInt(4);
+    int ny = 1 + random.nextInt(3);
+    int[][] domains = domains(random, nx + ny + 1, 0, 4);
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.impose(
+                new AmongVar(
+                    Arrays.copyOfRange(x, 0, nx), Arrays.copyOfRange(x, nx, nx + ny), x[nx + ny])),
+        x -> {
+          int count = 0;
+          for (int i = 0; i < nx; i++) {
+            for (int j = nx; j < nx + ny; j++) {
+              if (x[i] == x[j]) {
+                count++;
+                break;
+              }
+            }
+          }
+          return count == x[nx + ny];
+        },
+        "nx=" + nx + " ny=" + ny);
   }
 
   /**
