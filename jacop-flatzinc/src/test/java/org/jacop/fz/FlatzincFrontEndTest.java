@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -805,6 +807,117 @@ class FlatzincFrontEndTest {
   }
 
   /** Runs the model with the given options and returns its stdout and stderr. */
+  @Test
+  void warmStartOnFloatAndSetVariablesIsIgnored() throws IOException {
+    // a hint is only a preference, but float and set hints aborted the run (float values) or
+    // crashed the parser (set values)
+    String sets =
+        """
+        var set of 1..4: s:: output_var;
+        var 1..4: y:: output_var;
+        array [1..1] of var set of int: hs = [s];
+        constraint set_card(s,y);
+        constraint set_in(y,s);
+        solve %s satisfy;
+        """;
+    Set<String> noHint = solveAll(sets.formatted(""));
+    assertEquals(8, noHint.size());
+    assertEquals(noHint, solveAll(sets.formatted(":: warm_start(hs,[{1,3}])")));
+
+    String floats =
+        """
+        var 0.0..10.0: f:: output_var;
+        var 2..5: y:: output_var;
+        var 2.0..5.0: yf;
+        array [1..1] of var float: hf = [f];
+        array [1..1] of var int: hy = [y];
+        constraint float_lin_le([-1.0,1.0],[f,yf],-0.5);
+        constraint int2float(y,yf);
+        solve :: warm_start(hy,[4]) :: warm_start(hf,[3.0]) minimize f;
+        """;
+    String[] out = run(floats);
+    assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
+
+  @Test
+  void emptyWarmStartIsIgnored() throws IOException {
+    // warm_start(x, [<>, <>, <>]) is flattened to warm_start([], []), which crashed the parser
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve %s satisfy;
+        """;
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(":: warm_start([],[])")));
+  }
+
+  @Test
+  void warmStartWithMoreValuesThanVariablesUsesTheCommonPart() throws IOException {
+    // the values were read up to their own length, past the end of the variables
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        constraint int_ne(x,y);
+        solve :: warm_start([x],[2,3]) satisfy;
+        """;
+    String out = run(fzn)[0];
+    assertTrue(out.contains("x = 2;"), out);
+    assertEquals(6, solveAll(fzn).size());
+  }
+
+  @Test
+  void warmStartArrayIsUsed() throws IOException {
+    // warm_start_array, which MiniZinc makes for a set hint without set support and which users
+    // write to group hints, was ignored
+    String fzn =
+        """
+        var 1..3: x:: output_var;
+        var 1..3: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_ne(x,y);
+        constraint int_eq_imp(x,3,b);
+        solve %s satisfy;
+        """;
+    String hint =
+        ":: warm_start_array([warm_start([x,y],[3,1]),warm_start_array([warm_start([b],[true])])])";
+    String out = run(fzn.formatted(hint))[0];
+    assertTrue(out.contains("x = 3;") && out.contains("y = 1;") && out.contains("b = true;"), out);
+    assertEquals(solveAll(fzn.formatted("")), solveAll(fzn.formatted(hint)));
+  }
+
+  @Test
+  void warmStartInSequenceSearchStopsAtTheTimeLimit() {
+    // a warm_start inside seq_search (or next to another search annotation) was not in the list of
+    // searches that get the time limit, so a long search under it ignored -t; 13 pigeons in 12
+    // holes take hours without the limit
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      fzn.append("var 1..12: x").append(i).append(";\n");
+    }
+    StringBuilder vars = new StringBuilder();
+    StringBuilder hint = new StringBuilder();
+    for (int i = 0; i < 13; i++) {
+      vars.append(i == 0 ? "" : ",").append("x").append(i);
+      hint.append(i == 0 ? "" : ",").append(i % 12 + 1);
+    }
+    fzn.append("array [1..13] of var int: x = [").append(vars).append("];\n");
+    for (int i = 0; i < 13; i++) {
+      for (int j = i + 1; j < 13; j++) {
+        fzn.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+      }
+    }
+    fzn.append("solve :: seq_search([warm_start(x,[")
+        .append(hint)
+        .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
+
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+            0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

@@ -1816,6 +1816,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!master) {
       label.setSelectChoicePoint(variableSelection);
     }
+    listSeqSearches.add(label);
     return label;
   }
 
