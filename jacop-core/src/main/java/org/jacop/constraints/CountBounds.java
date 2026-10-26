@@ -36,6 +36,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CountBounds constraint implements the counting over number of occurrences of a given value in a
@@ -45,7 +48,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountBounds extends AbstractCount implements Copyable<CountBounds> {
+public class CountBounds extends AbstractCount implements Copyable<CountBounds>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -168,6 +171,18 @@ public class CountBounds extends AbstractCount implements Copyable<CountBounds> 
     result.append("], ").append(value).append(", ").append(lb).append(", ").append(ub).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == CountBounds.class
+        && new CountExplanation(trail, list, value, null, lb, ub, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == CountBounds.class
+        && new CountExplanation(trail, list, value, null, lb, ub, trail.size()).explainFailure(out);
   }
 
   @Override

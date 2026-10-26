@@ -59,6 +59,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
@@ -356,7 +357,12 @@ class LcgFuzzTest {
         case 17 ->
             new ElementInteger(one(), new int[] {value(), value(), value(), value()}, one(), 0);
         case 18 -> new ElementVariable(one(), q, one(), 0);
-        case 19 -> new Count(q, one(), value());
+        case 19 -> {
+          int lb = rnd.nextInt(2);
+          yield rnd.nextBoolean()
+              ? new Count(q, one(), value())
+              : new CountBounds(q, value(), lb, lb + rnd.nextInt(2));
+        }
         case 20 -> new CountValues(q, pick(x, 2), new int[] {0, 1});
         case 21 -> new GCC(chain("g", 3, 0, 2), chain("c", 3, 0, 3));
         case 22 -> new Among(q, new IntervalDomain(0, 1), one());
