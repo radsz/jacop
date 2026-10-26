@@ -1183,6 +1183,21 @@ public abstract class IntDomain extends Domain {
   public abstract void inComplement(int storeLevel, Var v, int min, int max);
 
   /**
+   * It updates the domain so it does not contain the values of the supplied domain, with one change
+   * of the variable instead of one per interval.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param complement the values which are removed from the domain.
+   */
+  public void inComplement(int storeLevel, Var v, IntDomain complement) {
+    if (complement.isEmpty() || !isIntersecting(complement)) {
+      return;
+    }
+    in(storeLevel, v, subtract(complement));
+  }
+
+  /**
    * It returns number of intervals required to represent this domain.
    *
    * @return the number of intervals in the domain.
