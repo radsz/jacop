@@ -619,17 +619,32 @@ public class Store {
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
       for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
-        Constraint c = addedConstraints[i];
-        if (c.isEntailed()) {
-          continue;
-        }
-        if (c.overridesQueueVariable()) {
-          c.queueVariable(level, v);
-        }
-        if (currentConstraint != c) {
-          addChanged(c);
-        }
+        queueModelConstraint(vdomain, v, addedConstraints[i]);
       }
+    }
+  }
+
+  /** It wakes one model constraint of a changed variable. */
+  private void queueModelConstraint(Domain vdomain, Var v, Constraint c) {
+    if (c.isEntailed()) {
+      // the domain was saved at this level by the change being reported, so the constraint can be
+      // detached without a copy; backtracking below this level attaches it again
+      if (vdomain.stamp == level) {
+        vdomain.removeModelConstraint(level, v, c);
+      }
+      return;
+    }
+    if (c.overridesQueueVariable()) {
+      c.queueVariable(level, v);
+    }
+    // the constraint whose pruning wakes the variable is told about the change but not queued again
+    if (c != currentConstraint) {
+      // addChanged(c) without setting propagationHasOccurred, which addChanged(Var...) did
+      int queueIndex = c.getQueueIndex();
+      if (queueIndex < currentQueue) {
+        currentQueue = queueIndex;
+      }
+      changed[queueIndex].add(c);
     }
   }
 
