@@ -34,6 +34,7 @@ package org.jacop.jasat.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
@@ -42,12 +43,16 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -209,6 +214,75 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+  }
+
+  private static Relation booleanRelation(IntVar[] x, int ints, Random rnd) {
+    int i = pick(rnd, ints);
+    int j = pick(rnd, ints, i);
+    int b = ints + pick(rnd, x.length - ints);
+    int c = ints + pick(rnd, x.length - ints, b - ints);
+    BooleanVar bv = (BooleanVar) x[b];
+    return switch (rnd.nextInt(4)) {
+      case 0 ->
+          new Relation(new Reified(new XlteqY(x[i], x[j]), bv), t -> (t[i] <= t[j]) == (t[b] == 1));
+      case 1 -> {
+        int v = rnd.nextInt(4);
+        yield new Relation(new Reified(new XeqC(x[i], v), bv), t -> (t[i] == v) == (t[b] == 1));
+      }
+      case 2 ->
+          new Relation(
+              new LinearInt(new IntVar[] {x[b], x[c], x[i]}, new int[] {2, 1, -1}, "==", 0),
+              t -> 2 * t[b] + t[c] == t[i]);
+      default -> new Relation(new XneqY(x[b], x[c]), t -> t[b] != t[c]);
+    };
+  }
+
+  /** Models mixing integer and boolean variables (BooleanVar, which has no store index). */
+  @Test
+  void booleanModelsAgreeWithBruteForce() {
+    Random rnd = new Random(13);
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 1000; instance++) {
+      Store store = new Store();
+      int ints = 3 + rnd.nextInt(2);
+      int n = ints + 2 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = i < ints ? newVar(store, "x" + i, rnd) : new BooleanVar(store, "b" + i);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(Arrays.copyOf(x, ints), rnd));
+      }
+      for (int c = 2 + rnd.nextInt(4); c > 0; c--) {
+        relations.add(booleanRelation(x, ints, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.sat().setSeed(instance);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
   }
 
   /**

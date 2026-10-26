@@ -31,8 +31,11 @@
 package org.jacop.lcg;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.DomainChangeRecorder;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -78,10 +81,13 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int[] previous = new int[256]; // the variable's previous entry, or -1
   private int size;
 
-  // per variable (by store index): the domain the entries so far describe, and the last entry
+  // per variable (by id): the domain the entries so far describe, and the last entry
   private IntDomain[] shadow = new IntDomain[0];
   private IntDomain[] root = new IntDomain[0]; // the domain when recording started
   private int[] last = new int[0];
+
+  // boolean variables, which have no store index, by the order they were first seen
+  private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
 
   /**
    * Creates the trail and starts recording the changes of every integer variable of the store. The
@@ -97,6 +103,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         slot(x);
       }
     }
+    store.variablesHashMap.values().stream()
+        .filter(BooleanVar.class::isInstance)
+        .map(BooleanVar.class::cast)
+        .sorted((a, b) -> a.id().compareTo(b.id()))
+        .forEach(this::slot);
     store.domainChangeRecorder = this;
     store.registerRemoveLevelLateListener(this);
   }
@@ -108,20 +119,18 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
-   * Returns the number by which this trail knows a variable: its store index.
+   * Returns the number by which this trail knows a variable: twice its store index, or for a {@link
+   * BooleanVar}, which has no store index, an odd number given when the trail first sees it.
    *
    * @param x the variable
    * @return its number, at least 0
-   * @throws UnsupportedOperationException for a variable without a store index (a {@link
-   *     org.jacop.core.BooleanVar}), which the trail does not record yet
    */
   public int id(IntVar x) {
     int i = x.index();
-    if (i < 0) {
-      throw new UnsupportedOperationException(
-          "the atomic trail does not record " + x.id() + " (no store index)");
+    if (i >= 0) {
+      return 2 * i;
     }
-    return i;
+    return 2 * booleanIds.computeIfAbsent(x, b -> booleanIds.size()) + 1;
   }
 
   private int slot(IntVar x) {
