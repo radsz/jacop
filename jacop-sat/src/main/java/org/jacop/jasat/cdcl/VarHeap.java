@@ -41,7 +41,7 @@ import java.util.Arrays;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class VarHeap {
+public final class VarHeap {
 
   private int[] heap = new int[16];
   private int size;
@@ -50,8 +50,11 @@ final class VarHeap {
 
   /**
    * Makes room for variables 0..n-1 and points the heap at the (possibly reallocated) activities.
+   *
+   * @param n the number of variables
+   * @param activity the activity of each variable
    */
-  void grow(int n, double[] activity) {
+  public void grow(int n, double[] activity) {
     this.activity = activity;
     if (index.length < n) {
       int old = index.length;
@@ -63,15 +66,31 @@ final class VarHeap {
     }
   }
 
-  boolean contains(int v) {
+  /**
+   * Tells whether a variable is in the heap.
+   *
+   * @param v the variable
+   * @return true when it is in the heap
+   */
+  public boolean contains(int v) {
     return index[v] >= 0;
   }
 
-  boolean isEmpty() {
+  /**
+   * Tells whether the heap is empty.
+   *
+   * @return true when no variable is in the heap
+   */
+  public boolean isEmpty() {
     return size == 0;
   }
 
-  void insert(int v) {
+  /**
+   * Adds a variable, unless it is in the heap already.
+   *
+   * @param v the variable
+   */
+  public void insert(int v) {
     if (index[v] >= 0) {
       return;
     }
@@ -80,14 +99,32 @@ final class VarHeap {
     up(index[v]);
   }
 
-  /** Restores the heap order after the activity of v increased. */
-  void increased(int v) {
+  /**
+   * Restores the heap order after the activity of v increased.
+   *
+   * @param v the variable
+   */
+  public void increased(int v) {
     if (index[v] >= 0) {
       up(index[v]);
     }
   }
 
-  int removeMax() {
+  /**
+   * Returns the variable of highest activity, leaving it in the heap.
+   *
+   * @return the variable; the heap must not be empty
+   */
+  public int max() {
+    return heap[0];
+  }
+
+  /**
+   * Removes the variable of highest activity.
+   *
+   * @return the variable; the heap must not be empty
+   */
+  public int removeMax() {
     int v = heap[0];
     int last = heap[--size];
     index[v] = -1;
