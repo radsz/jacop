@@ -33,6 +33,7 @@ package org.jacop.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -50,9 +51,11 @@ import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.LazyBitSetDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
@@ -201,6 +204,81 @@ class AtomicTrailTest {
           return new Model(
               new Cumulative(v, durations, resources, new IntVar(s, limit, limit)), fits, v);
         });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new IntVar(s, "limit", 1, 2),
+            new IntVar(s, "use", 1, 2)
+          };
+          int[] d = {2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)};
+          IntVar[] durations = new IntVar[3];
+          IntVar[] resources = {v[4], new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
+          for (int k = 0; k < 3; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    if (t[k] <= time && time < t[k] + d[k]) {
+                      load += k == 0 ? t[4] : 1;
+                    }
+                  }
+                  if (load > t[3]) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(Arrays.copyOf(v, 3), durations, resources, v[3]), fits, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new BooleanVar(s, "p"),
+            new BooleanVar(s, "q"),
+            new BooleanVar(s, "r")
+          };
+          int[] d = {2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)};
+          IntVar[] durations = new IntVar[3];
+          IntVar[] resources = new IntVar[3];
+          for (int k = 0; k < 3; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+            resources[k] = new IntVar(s, 1, 1);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    if (t[3 + k] == 1 && t[k] <= time && time < t[k] + d[k]) {
+                      load++;
+                    }
+                  }
+                  if (load > 1) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new CumulativeOptional(
+                  Arrays.copyOf(v, 3),
+                  durations,
+                  resources,
+                  new IntVar(s, 1, 1),
+                  Arrays.copyOfRange(v, 3, 6)),
+              fits,
+              v);
+        });
     return m;
   }
 
@@ -225,6 +303,82 @@ class AtomicTrailTest {
       }
     }
     assertThat(checked).isGreaterThan(1000);
+  }
+
+  @Test
+  void holesAreRecordedOnceForEveryDomainClass() {
+    Random rnd = new Random(11);
+    int[] spans = {40, 600, LazyBitSetDomain.MAX_SPAN + 10};
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      int span = spans[run % spans.length];
+      IntVar[] vars = new IntVar[2];
+      IntDomain[] initial = new IntDomain[2];
+      for (int i = 0; i < 2; i++) {
+        vars[i] = new IntVar(store, "x" + i, -5, span - 5);
+        for (int k = rnd.nextInt(4); k > 0; k--) {
+          int lo = rnd.nextInt(span) - 5;
+          vars[i].domain.inComplement(store.level, vars[i], lo, lo + rnd.nextInt(5));
+        }
+        initial[i] = vars[i].dom().cloneLight();
+      }
+      AtomicTrail trail = new AtomicTrail(store);
+      for (int step = 0; step < 60; step++) {
+        if (store.level > 0 && rnd.nextInt(4) == 0) {
+          int target = rnd.nextInt(store.level);
+          while (store.level > target) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        } else {
+          store.setLevel(store.level + 1);
+          IntVar x = vars[rnd.nextInt(2)];
+          if (x.getSize() > 1) {
+            prune(x, store, rnd);
+          }
+        }
+        checkRebuildOnce(trail, vars, initial);
+      }
+      trail.detach();
+    }
+  }
+
+  // removes a value, a range or values outside a set, or raises a bound, at the current level
+  private static void prune(IntVar x, Store store, Random rnd) {
+    int a = x.min() + rnd.nextInt(Math.min(x.max() - x.min() + 1, 700));
+    int b = a + rnd.nextInt(6);
+    switch (rnd.nextInt(5)) {
+      case 0 -> x.domain.inComplement(store.level, x, x.dom().nextValue(a));
+      case 1 -> {
+        if (x.min() < a || b < x.max()) {
+          x.domain.inComplement(store.level, x, a, b);
+        }
+      }
+      case 2 -> {
+        IntDomain keep = x.dom().subtract(a, b);
+        keep = keep.subtract(a + 20, b + 20);
+        if (!keep.isEmpty()) {
+          x.domain.in(store.level, x, keep);
+        }
+      }
+      case 3 -> x.domain.inMin(store.level, x, Math.min(x.dom().nextValue(a), x.max()));
+      default -> x.domain.inMax(store.level, x, Math.max(x.min(), b - 30));
+    }
+  }
+
+  // rebuilds the domains from the entries, each of which must remove a value
+  private static void checkRebuildOnce(AtomicTrail trail, IntVar[] vars, IntDomain[] initial) {
+    for (int i = 0; i < vars.length; i++) {
+      IntDomain d = initial[i];
+      for (int e = 0; e < trail.size(); e++) {
+        if (trail.variable(e) == vars[i]) {
+          IntDomain next = apply(d, trail, e);
+          assertThat(next.getSize()).as("entry %s", trail.atomString(e)).isLessThan(d.getSize());
+          d = next;
+        }
+      }
+      assertThat(d.eq(vars[i].dom())).as("%s rebuilt %s", vars[i], d).isTrue();
+    }
   }
 
   private static int dive(Function<Store, Model> generator, Random rnd) {

@@ -273,7 +273,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     int kind = trail.kind(entry);
-    if (!fixedTasks()) {
+    if (!fixedTasks(trail)) {
       return false;
     }
     IntVar y = trail.variable(entry);
@@ -369,7 +369,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
    */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    if (!fixedTasks()) {
+    if (!fixedTasks(trail)) {
       return false;
     }
     int position = trail.size();
@@ -392,16 +392,29 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     return false;
   }
 
-  private boolean fixedTasks() {
-    if (!limit.singleton() || possibleZeroTasks) {
+  // the explanations hold for the relation of every task present, with durations, resource uses
+  // and limit fixed before the trail started (they add no atoms); CumulativeOptional and other
+  // subclasses with another relation use the generic reason
+  private boolean fixedTasks(AtomicTrail trail) {
+    Class<?> type = getClass();
+    if (type != CumulativeBasic.class
+        && type != Cumulative.class
+        && type != CumulativeUnary.class) {
+      return false;
+    }
+    if (!fixedAtRoot(trail, limit) || possibleZeroTasks) {
       return false;
     }
     for (TaskView task : taskNormal) {
-      if (!task.dur.singleton() || !task.res.singleton()) {
+      if (!fixedAtRoot(trail, task.dur) || !fixedAtRoot(trail, task.res)) {
         return false;
       }
     }
     return true;
+  }
+
+  private static boolean fixedAtRoot(AtomicTrail trail, IntVar x) {
+    return trail.minBefore(x, 0) == trail.maxBefore(x, 0);
   }
 
   /**

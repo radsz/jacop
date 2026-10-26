@@ -30,9 +30,12 @@
 
 package org.jacop.fz;
 
+import java.util.Set;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -89,6 +92,10 @@ public class Constraints implements ParserTreeConstants {
   void setOptions(Options options) {
     support.options = options;
     debug = options.debug();
+    if (options.lcg()) {
+      // Boolean constraints become clauses of the LCG solver; Solve posts them
+      sat.collectClauses();
+    }
   }
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
@@ -109,6 +116,14 @@ public class Constraints implements ParserTreeConstants {
 
     sat.setDebug(debug);
 
+    // disequalities that are part of a detected all-different constraint
+    Set<SimpleNode> replaced = Set.of();
+    if (AlldifferentDetector.enabled()) {
+      AlldifferentDetector alldifferent = new AlldifferentDetector(support);
+      alldifferent.detect(astTree);
+      replaced = alldifferent.replaced();
+    }
+
     int n = astTree.jjtGetNumChildren();
 
     for (int i = 0; i < n; i++) {
@@ -118,8 +133,13 @@ public class Constraints implements ParserTreeConstants {
 
         int k = node.jjtGetNumChildren();
         for (int j = 0; j < k; j++) {
+          if (support.options.timeOutPassed()) {
+            throw new ModelTimeOut();
+          }
           SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
-          generateConstraint(snode);
+          if (!replaced.contains(snode.jjtGetChild(0))) {
+            generateConstraint(snode);
+          }
         }
       }
     }
@@ -130,6 +150,10 @@ public class Constraints implements ParserTreeConstants {
 
     if (DisjunctiveCliqueDetector.enabled()) {
       new DisjunctiveCliqueDetector(support).detect(astTree);
+    }
+
+    if (CardinalityDetector.enabled()) {
+      new CardinalityDetector(support).detect(astTree);
     }
 
     if (IncreasingSumDetector.enabled()) {

@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetVar;
@@ -80,26 +79,9 @@ public class AltB extends AbstractAleqB implements Copyable<AltB> {
 
   @Override
   public void consistency(Store store) {
-
+    // b is larger than some set, so it is not empty
     b.domain.inCardinality(store.level, b, 1, IntDomain.MAX_INT);
-
-    if (a.domain.card().min() > 0) {
-      b.domain.inLub(
-          store.level,
-          b,
-          new IntervalDomain(
-              a.domain.lub().min(),
-              IntDomain.MAX_INT)); // any b with cardinalirty > 0 is fine since a = {}
-    } else {
-      return; // any b with cardinalirty > 0 is fine since a = {}
-    }
-    if (a.domain.singleton()
-        && b.domain.singleton()
-        && !setLexCompare(a.domain.glb(), b.domain.glb())) {
-      throw Store.failException;
-    }
-
-    checkOrderPossible(store);
+    propagateOrder(store, true);
   }
 
   @Override

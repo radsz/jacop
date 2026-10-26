@@ -32,7 +32,6 @@ mapping/mesh2x2_mpeg
 mario/mario_n_medium_2
 market_split/s5-02
 market_split/s5-04
-mceverywhere/mceverywhere
 mqueens2/n12
 mspsp/medium_05
 nmseq/176
