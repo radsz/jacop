@@ -141,6 +141,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XplusCeqZ;
@@ -7051,6 +7052,92 @@ class SingleConstraintTest extends TestHelper {
     assertThat(consistentWithNestedAnd((and, b) -> new And(new PrimitiveConstraint[] {and})))
         .isFalse();
     assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
+  }
+
+  // Implies(b, x != y) woke on every domain change of x and y, since its satisfied() check uses
+  // the events that decide x != y, while its propagation and the check that sets b = 0 only need
+  // x or y fixed. On crossword models with thousands of such constraints per letter this was most
+  // of the search time.
+  @Test
+  void impliesWakesOnlyOnTheEventsOfItsPropagation() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 1, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Implies implies = new Implies(b, new XneqY(x, y));
+    assertThat(implies.getConsistencyPruningEvent(x)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(y)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(b)).isEqualTo(IntDomain.GROUND);
+    assertThat(new Implies(b, new XltY(x, y)).getConsistencyPruningEvent(x))
+        .isEqualTo(IntDomain.BOUND);
+    store.impose(implies);
+    assertThat(store.consistency()).isTrue();
+    store.impose(new XeqC(x, 3));
+    store.impose(new XeqC(y, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+  }
+
+  @Test
+  void impliesOfPrimitiveConstraintsMatchesBruteForce() {
+    Random random = new Random(47);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        int min = random.nextInt(4);
+        x[i] = new IntVar(store, "x" + i, min, min + 1 + random.nextInt(3));
+        if (random.nextBoolean()) {
+          x[i].domain.inComplement(store.level, x[i], min + 1);
+        }
+      }
+      IntVar[] b = new IntVar[3];
+      List<Predicate<int[]>> parts = new ArrayList<>();
+      for (int k = 0; k < b.length; k++) {
+        b[k] = new IntVar(store, "b" + k, 0, 1);
+        int i = random.nextInt(4);
+        int j = (i + 1 + random.nextInt(3)) % 4;
+        int c = random.nextInt(5);
+        int bi = 4 + k;
+        PrimitiveConstraint nested;
+        Predicate<int[]> holds;
+        switch (random.nextInt(6)) {
+          case 0 -> {
+            nested = new XneqY(x[i], x[j]);
+            holds = a -> a[i] != a[j];
+          }
+          case 1 -> {
+            nested = new XeqY(x[i], x[j]);
+            holds = a -> a[i] == a[j];
+          }
+          case 2 -> {
+            nested = new XltY(x[i], x[j]);
+            holds = a -> a[i] < a[j];
+          }
+          case 3 -> {
+            nested = new XplusCeqZ(x[i], c - 2, x[j]);
+            holds = a -> a[i] + c - 2 == a[j];
+          }
+          case 4 -> {
+            nested = new XneqC(x[i], c);
+            holds = a -> a[i] != c;
+          }
+          default -> {
+            nested = new LinearInt(new IntVar[] {x[i], x[j]}, new int[] {1, 2}, "!=", c + 3);
+            holds = a -> a[i] + 2 * a[j] != c + 3;
+          }
+        }
+        store.impose(new Implies(b[k], nested));
+        parts.add(a -> a[bi] == 0 || holds.test(a));
+      }
+      IntVar[] all = Stream.concat(Arrays.stream(x), Arrays.stream(b)).toArray(IntVar[]::new);
+      int expected = bruteForce(all, a -> parts.stream().allMatch(p -> p.test(a))).size();
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d", trial)
+          .isEqualTo(expected);
+    }
   }
 
   @Test
