@@ -85,7 +85,7 @@ public class Options {
     if (args.length == 0) {
       IO.println("fz2jacop: no model file specified");
       IO.println("fz2jacop: use --help for more information.");
-      System.exit(0);
+      System.exit(1);
     } else if (args.length == 1) {
       parseSingleArg(args[0]);
     } else {
@@ -376,7 +376,7 @@ public class Options {
       file = new FileInputStream(fileName);
     } catch (FileNotFoundException _) {
       IO.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
-      System.exit(0);
+      System.exit(1);
     }
 
     return file;

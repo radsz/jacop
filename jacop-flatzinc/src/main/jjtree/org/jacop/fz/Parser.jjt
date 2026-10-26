@@ -71,6 +71,18 @@ public class Parser {
     Tables getTables() {
 	return dict;
     }
+
+    // JaCoP integer variables and parameters are 32-bit, so a wider literal is rejected here
+    // with a message that names it, instead of a bare NumberFormatException.
+    static int intLiteral(Token t) throws ParseException {
+	try {
+	    return Integer.parseInt(t.image);
+	} catch (NumberFormatException e) {
+	    throw new ParseException("integer literal " + t.image + " at line " + t.beginLine
+				     + ", column " + t.beginColumn
+				     + " is outside the 32-bit integer range supported by JaCoP");
+	}
+    }
 }
 PARSER_END(Parser)
 
@@ -305,7 +317,7 @@ void var_decl_item() #VarDeclItem:
 	 }
 
    | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
-	  {   jjtThis.setIndexes(Integer.parseInt(t1.image), Integer.parseInt(t2.image)); 
+	  {   jjtThis.setIndexes(intLiteral(t1), intLiteral(t2)); 
 	      cg.generateArray(jjtThis, dict, store);
 	      // jjtThis.removeChildren();
 	  }
@@ -558,7 +570,7 @@ void int_ti_expr_tail() #IntTiExprTail:
     | t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> 
 	  {
 	      jjtThis.setType(1); 
-	      jjtThis.setLowHigh(Integer.parseInt(t1.image), Integer.parseInt(t2.image));
+	      jjtThis.setLowHigh(intLiteral(t1), intLiteral(t2));
 	  }
     | <LB> int_literals() <RB> 
 	   {jjtThis.setType(2);}
@@ -708,7 +720,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	  int val = Boolean.parseBoolean(t.image)==true?1:0;
 	  jjtThis.setInt(val);
 	} 
-    | t = <INT_LITERAL> { jjtThis.setType(0); jjtThis.setInt(Integer.parseInt(t.image)); } 
+    | t = <INT_LITERAL> { jjtThis.setType(0); jjtThis.setInt(intLiteral(t)); } 
     | t = <FLOAT_LITERAL> { jjtThis.setType(5); jjtThis.setFloat(Double.parseDouble(t.image));} 
     | t = <STRING_LITERAL> { jjtThis.setType(4); jjtThis.setString(t.image);}
 }
@@ -734,7 +746,7 @@ void int_flat_expr() #IntFlatExpr:
 	 else 
 	     System.err.println("Cannot find value for "+aa); System.exit(0);
 	}
-     | t=<INT_LITERAL> {jjtThis.setInt(Integer.parseInt(t.image));}
+     | t=<INT_LITERAL> {jjtThis.setInt(intLiteral(t));}
 }
 
 // variable_expr:
@@ -798,7 +810,7 @@ int int_index_expr() :
 	  return i;
 	}
 	| 
-	( t=<INT_LITERAL> {i = Integer.parseInt(t.image) - 1; /* -1 since java starts arrays from 0 not 1 */})
+	( t=<INT_LITERAL> {i = intLiteral(t) - 1; /* -1 since java starts arrays from 0 not 1 */})
 
 //  	{System.out.println("index = " + i);}
 	{return i;}
@@ -829,8 +841,8 @@ ArrayList<Integer> l = new ArrayList<Integer>();
 
 {
     (
-     t=<INT_LITERAL> {l.add(Integer.parseInt(t.image)); } 
-        ( <COMMA> t=<INT_LITERAL> {l.add(Integer.parseInt(t.image));})*
+     t=<INT_LITERAL> {l.add(intLiteral(t)); } 
+        ( <COMMA> t=<INT_LITERAL> {l.add(intLiteral(t));})*
      )
 
 	{jjtThis.setList(l);}
