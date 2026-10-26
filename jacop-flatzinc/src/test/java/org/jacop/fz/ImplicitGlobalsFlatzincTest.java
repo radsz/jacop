@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -338,10 +339,6 @@ class ImplicitGlobalsFlatzincTest {
 
   // n-queens with the rows and both diagonals written as pairwise disequalities
   private static String queens(int n) {
-    return queens(n, "solve satisfy;\n");
-  }
-
-  private static String queens(int n, String solve) {
     StringBuilder fzn = new StringBuilder();
     for (int i = 0; i < n; i++) {
       fzn.append("var 1..").append(n).append(": q").append(i).append(";\n");
@@ -372,7 +369,7 @@ class ImplicitGlobalsFlatzincTest {
             .append(");\n");
       }
     }
-    fzn.append(solve);
+    fzn.append("solve satisfy;\n");
     return fzn.toString();
   }
 
@@ -384,22 +381,31 @@ class ImplicitGlobalsFlatzincTest {
     assertEquals(92, solutions(out).size());
   }
 
-  // most_constrained breaks ties by the number of constraints on a variable, so replacing the
-  // disequalities would change the search (eyedrop_optimize2: 0.5 s became 7 s)
+  private static String nodes(String out) {
+    return out.lines().filter(l -> l.startsWith("%%%mzn-stat: nodes=")).findFirst().orElse(out);
+  }
+
+  // the all-different counts as the disequalities it replaces in the static degree, so the
+  // most_constrained search of eyedrop_optimize2 is the one with them kept (without the degrees it
+  // took 795,270 nodes instead of 4,373)
   @Test
-  void disequalitiesAreKeptWhenTheSearchCountsConstraints() throws IOException {
-    for (String heuristic : List.of("most_constrained", "occurrence")) {
-      String solve = "solve :: int_search(q," + heuristic + ",indomain_min,complete) satisfy;\n";
-      String out = run(queens(8, solve), "-a", "-debug");
-      assertEquals(3, out.split("% alldifferent on 8 variables", -1).length - 1, heuristic);
-      assertTrue(out.contains(" 0 disequalities replaced"), out);
-      assertEquals(92, solutions(out).size(), heuristic);
+  void replacedDisequalitiesKeepTheSearchThatCountsConstraints() throws IOException {
+    String model =
+        Files.readString(
+            Path.of("../jacop-benchmarks/src/test/fz/upTo5sec/eyedrop_optimize2")
+                .resolve("eyedrop_optimize2.fzn"));
+    String out = run(model, "-s", "-debug");
+    assertTrue(out.contains(" 15 disequalities replaced"), out);
+    System.setProperty("org.jacop.fz.alldifferent", "redundant");
+    String kept;
+    try {
+      kept = run(model, "-s", "-debug");
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
     }
-    String out =
-        run(
-            queens(8, "solve :: int_search(q,first_fail,indomain_min,complete) satisfy;\n"),
-            "-debug");
-    assertTrue(out.contains(" 84 disequalities replaced"), out);
+    assertTrue(kept.contains(" 0 disequalities replaced"), kept);
+    assertEquals(solutions(kept), solutions(out));
+    assertEquals(nodes(kept), nodes(out));
   }
 
   @Test

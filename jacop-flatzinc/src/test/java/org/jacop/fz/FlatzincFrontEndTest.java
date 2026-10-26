@@ -1338,21 +1338,28 @@ class FlatzincFrontEndTest {
       for (int k = 0; k < 12; k++) {
         holes.append(k == 0 ? "" : ", ").append("p[%d]".formatted(i * 12 + k + 1));
       }
-      model.append("constraint bool_clause([%s], []);%n".formatted(holes));
+      model.append("constraint bool_clause([%s], []);\n".formatted(holes));
     }
     for (int k = 0; k < 12; k++) {
       for (int i = 0; i < 13; i++) {
         for (int j = i + 1; j < 13; j++) {
           model.append(
-              "constraint bool_clause([], [p[%d], p[%d]]);%n"
+              "constraint bool_clause([], [p[%d], p[%d]]);\n"
                   .formatted(i * 12 + k + 1, j * 12 + k + 1));
         }
       }
     }
     model.append("solve satisfy;\n");
-    String out = run(model.toString(), "--lcg", "-t", "100")[0];
-    assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
-    assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    // the disequalities would become an all-different, with which LCG may prove at once that the
+    // pigeons do not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out = run(model.toString(), "--lcg", "-t", "100")[0];
+      assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
+      assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
   }
 
   @Test
