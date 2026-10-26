@@ -64,6 +64,14 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
    * @param counter number of variables equal to a value.
    */
   public CountValues(IntVar[] list, IntVar[] counter, int[] values) {
+    this(list, counter, values, null);
+  }
+
+  /**
+   * It constructs a CountValues constraint with the given variable for the number of variables not
+   * equal to any value, or a new one when it is null.
+   */
+  private CountValues(IntVar[] list, IntVar[] counter, int[] values, IntVar rest) {
 
     super(idNumber, list, values);
 
@@ -83,13 +91,18 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
 
     this.counter = Arrays.copyOf(counter, counter.length);
     Store store = counter.length > 0 ? counter[0].getStore() : list[0].getStore();
-    this.counterRest = new IntVar(store, 0, n);
+    this.counterRest = rest != null ? rest : new IntVar(store, 0, n);
 
     extendedCounter = new IntVar[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
-    extendedCounter[counter.length] = counterRest;
+    extendedCounter[counter.length] = this.counterRest;
 
-    setScope(Stream.concat(Arrays.stream(this.list), Arrays.stream(counter)));
+    // counterRest is in the scope: the constraint prunes with its domain, so an explanation made of
+    // the constraint's arguments must cover it
+    setScope(
+        Stream.concat(
+            Stream.concat(Arrays.stream(this.list), Arrays.stream(counter)),
+            Stream.of(this.counterRest)));
   }
 
   /**
@@ -195,6 +208,6 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
 
   @Override
   public CountValues copy(VarMap map) {
-    return new CountValues(map.get(list), map.get(counter), values);
+    return new CountValues(map.get(list), map.get(counter), values, map.get(counterRest));
   }
 }

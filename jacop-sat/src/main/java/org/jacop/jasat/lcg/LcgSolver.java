@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -48,6 +49,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 
 /**
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
@@ -75,7 +77,7 @@ public final class LcgSolver implements ExternalPropagator {
   private final CdclSolver sat = new CdclSolver();
   private final AtomicTrail trail;
   private final int baseLevel;
-  private final boolean rootFailed;
+  private boolean rootFailed;
 
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
@@ -103,6 +105,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] pushedReason;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
+  private Runnable onSolution;
+  private ExplanationChecker checker;
+  private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
   /** Statistics: reasons the solver asked for. */
   public long reasons;
@@ -115,6 +120,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
+
+  /** Statistics: distinct literals pushed as atoms. */
+  public long atomLiterals;
+
+  /** Statistics: distinct literals pushed as atoms that occur in a learnt clause. */
+  public long atomLiteralsLearnt;
+
+  // per DIMACS variable: 1 once pushed as an atom, 2 once it also occurred in a learnt clause
+  private byte[] atomUse = new byte[16];
 
   /** Statistics: failures of the constraints turned into conflict clauses. */
   public long constraintConflicts;
@@ -133,6 +147,9 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
+    if (Boolean.getBoolean("jacop.lcg.check")) {
+      checker = new ExplanationChecker(trail);
+    }
     List<IntVar> all = new ArrayList<>();
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof IntVar x) {
@@ -313,6 +330,70 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Adds a clause over 0/1 variables: one of the positive variables is 1 or one of the negative
+   * ones is 0. It goes to the SAT solver as a clause of {@code [x >= 1]} literals, so it is
+   * propagated and explained by the solver itself. Add clauses before solving.
+   *
+   * @param positive variables of which one may be 1
+   * @param negative variables of which one may be 0
+   */
+  public void addClause(IntVar[] positive, IntVar[] negative) {
+    List<Integer> clause = new ArrayList<>();
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      for (IntVar x : sign > 0 ? positive : negative) {
+        int i = trail.id(x);
+        if (root[i].min() < 0 || root[i].max() > 1) {
+          throw new IllegalArgumentException(x + " is not a 0/1 variable");
+        }
+        if (root[i].singleton()) {
+          if (root[i].min() == (sign > 0 ? 1 : 0)) {
+            return; // satisfied at the root
+          }
+          continue; // false at the root
+        }
+        clause.add(sign * geLit(i, 1));
+      }
+    }
+    if (clause.isEmpty()) {
+      rootFailed = true;
+      return;
+    }
+    if (!sat.addClause(clause.stream().mapToInt(Integer::intValue).toArray())) {
+      rootFailed = true;
+    }
+  }
+
+  /**
+   * Turns the explanation checker on or off: every explanation is then derived again in a scratch
+   * store, and a wrong one stops the solver with an {@link IllegalStateException}. The system
+   * property {@code jacop.lcg.check=true} turns it on for every solver.
+   *
+   * @param on true to check explanations
+   */
+  public void setChecking(boolean on) {
+    checker = on ? new ExplanationChecker(trail) : null;
+  }
+
+  /**
+   * Returns the explanation checker, for its statistics.
+   *
+   * @return the checker, or null when checking is off
+   */
+  public ExplanationChecker checker() {
+    return checker;
+  }
+
+  /**
+   * Sets an action run at every solution while the store's domains are fixed to it, for example to
+   * print the solution.
+   *
+   * @param action the action, or null for none
+   */
+  public void onSolution(Runnable action) {
+    onSolution = action;
+  }
+
+  /**
    * Returns the value of a variable in the last solution.
    *
    * @param x a variable of the store
@@ -326,6 +407,15 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   // ------------------------------------------------------------------ the external propagator
+
+  @Override
+  public void notifyLearntLiteral(int lit) {
+    int dimacsVar = Math.abs(lit);
+    if (dimacsVar < atomUse.length && atomUse[dimacsVar] == 1) {
+      atomUse[dimacsVar] = 2;
+      atomLiteralsLearnt++;
+    }
+  }
 
   @Override
   public void notifyAssignment(int lit, boolean fixed) {
@@ -379,6 +469,13 @@ public final class LcgSolver implements ExternalPropagator {
           propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
         }
         propagated[dimacsVar] = e;
+        if (dimacsVar >= atomUse.length) {
+          atomUse = Arrays.copyOf(atomUse, propagated.length);
+        }
+        if (atomUse[dimacsVar] == 0) {
+          atomUse[dimacsVar] = 1;
+          atomLiterals++;
+        }
         atomsPropagated++;
         return lit;
       }
@@ -407,7 +504,11 @@ public final class LcgSolver implements ExternalPropagator {
       if (!store.consistency()) {
         constraintConflicts++;
         EntryList atoms = new EntryList();
-        trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        count(store.recentlyFailedConstraint, own, atoms.size(), 3);
+        if (checker != null) {
+          verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
+        }
         return conflict(atoms, 0);
       }
     }
@@ -424,8 +525,46 @@ public final class LcgSolver implements ExternalPropagator {
       trail.atomsBefore(trail.variable(e), e, out);
       return cause[e];
     }
-    trail.explain(e, out);
+    int mark = out.size();
+    boolean own = trail.explain(e, out);
+    count(trail.reason(e), own, out.size() - mark, 0);
+    if (checker != null) {
+      EntryList reason = new EntryList();
+      for (int k = mark; k < out.size(); k++) {
+        reason.add(out.get(k));
+      }
+      verify(checker.checkReason(e, reason));
+    }
     return 0;
+  }
+
+  // per constraint class: reasons, generic reasons and atoms in them, then the same for failures
+  private void count(Constraint c, boolean own, int atoms, int at) {
+    long[] counts =
+        explanationCounts.computeIfAbsent(
+            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[6]);
+    counts[at]++;
+    if (!own) {
+      counts[at + 1]++;
+    }
+    counts[at + 2] += atoms;
+  }
+
+  /**
+   * Returns the explanation statistics per constraint class (simple name): reasons asked, those
+   * given by the generic reason, and the atoms in them; then failures explained, those explained
+   * generically, and their atoms.
+   *
+   * @return six counts per class, in the order above
+   */
+  public Map<String, long[]> explanationStatistics() {
+    return explanationCounts;
+  }
+
+  private static void verify(String problem) {
+    if (problem != null) {
+      throw new IllegalStateException("wrong explanation: " + problem);
+    }
   }
 
   /**
@@ -469,7 +608,8 @@ public final class LcgSolver implements ExternalPropagator {
     }
     clause = Arrays.stream(clause).distinct().toArray();
     if (clause.length == 0) {
-      throw new IllegalStateException("the constraints failed on the root domains");
+      throw new IllegalStateException(
+          "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
     }
     pushedReason = clause;
     return clause[0];
@@ -554,6 +694,9 @@ public final class LcgSolver implements ExternalPropagator {
         }
         solution[i] = vars[i].value();
       }
+    }
+    if (onSolution != null) {
+      onSolution.run();
     }
     return true;
   }

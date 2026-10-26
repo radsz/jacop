@@ -65,6 +65,7 @@ public class Options {
   boolean boundConsistency;
   boolean runSearch = true;
   boolean useSat;
+  boolean lcg;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -128,6 +129,8 @@ public class Options {
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
+            --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
+                the SAT core); search annotations are ignored.
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -165,6 +168,7 @@ public class Options {
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
       case "-sat" -> i = handleSat(i);
+      case "--lcg" -> i = handleLcg(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -239,6 +243,11 @@ public class Options {
 
   private int handleSat(int i) {
     useSat = true;
+    return i + 1;
+  }
+
+  private int handleLcg(int i) {
+    lcg = true;
     return i + 1;
   }
 
@@ -487,12 +496,22 @@ public class Options {
   }
 
   /**
-   * It defines whether sat is used.
+   * It defines whether Boolean constraints are translated to clauses: for the SAT solver (-sat) or
+   * for the LCG solver (--lcg).
    *
    * @return true sat is used, false otherwise
    */
   public boolean useSat() {
-    return useSat;
+    return useSat || lcg;
+  }
+
+  /**
+   * It defines whether the model is solved with lazy clause generation.
+   *
+   * @return true when --lcg was given
+   */
+  public boolean lcg() {
+    return lcg;
   }
 
   /** Sat is used. */

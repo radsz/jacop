@@ -1172,6 +1172,81 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
+  void lcgSolvesOptimisationWithClauses() throws IOException {
+    // --lcg: bool_clause and array_bool_or go to JaSAT as clauses, the rest propagates as
+    // constraints; every improving solution is printed, then the optimum.
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        var bool: c;
+        constraint bool_clause([a, b], []);
+        constraint array_bool_or([a, c], b);
+        constraint int_le_reif(x, 2, a);
+        constraint int_le_reif(y, 1, b);
+        constraint int_lin_le([1, 1], [x, y], 7);
+        constraint int_ne(x, y);
+        solve maximize x;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    assertTrue(out.contains("x = 5;"), out);
+    assertTrue(out.strip().contains("=========="), out);
+    assertTrue(out.contains("lcgExplanations"), out);
+    String last = out.substring(out.lastIndexOf("x = "));
+    assertTrue(last.startsWith("x = 5;") && last.contains("b = true;"), last);
+  }
+
+  @Test
+  void lcgReportsUnsatisfiable() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        var bool: a;
+        constraint bool_clause([a], []);
+        constraint int_eq_reif(x, y, a);
+        constraint int_ne(x, y);
+        solve satisfy;
+        """;
+    String out = run(model, "--lcg")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void lcgTimeOutIsNotReportedComplete() throws IOException {
+    // 13 pigeons in 12 holes is far beyond 100 ms of LCG; an interrupted LCG search printed
+    // ========== or =====UNSATISFIABLE===== on the sequence-search path.
+    StringBuilder model =
+        new StringBuilder("array [1..13] of var 1..12: p :: output_array([1..13]);\n");
+    for (int i = 1; i <= 13; i++) {
+      for (int j = i + 1; j <= 13; j++) {
+        model.append("constraint int_ne(p[%d], p[%d]);\n".formatted(i, j));
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "-t", "100")[0];
+    assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
+    assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+  }
+
+  @Test
+  void lcgFallsBackToSearchForFloatModels() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 0.0..3.0: f :: output_var;
+        constraint int_le(2, x);
+        constraint float_le(1.5, f);
+        solve satisfy;
+        """;
+    String out = run(model, "--lcg")[0];
+    assertTrue(out.contains("--lcg ignored"), out);
+    assertTrue(out.contains("x = 2;"), out);
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

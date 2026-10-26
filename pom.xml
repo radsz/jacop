@@ -195,6 +195,7 @@ setup to run configuration. -->
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
+                                <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                             </systemPropertyVariables>
                             <includes>
@@ -208,6 +209,7 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
+                                <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -290,6 +292,7 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
+                                <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -372,6 +375,7 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
+                                <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -454,6 +458,7 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
+                                <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>

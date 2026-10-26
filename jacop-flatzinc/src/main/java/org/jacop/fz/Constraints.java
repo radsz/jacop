@@ -92,6 +92,10 @@ public class Constraints implements ParserTreeConstants {
   void setOptions(Options options) {
     support.options = options;
     debug = options.debug();
+    if (options.lcg()) {
+      // Boolean constraints become clauses of the LCG solver; Solve posts them
+      sat.collectClauses();
+    }
   }
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {

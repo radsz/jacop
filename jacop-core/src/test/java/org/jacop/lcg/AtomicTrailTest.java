@@ -33,6 +33,7 @@ package org.jacop.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -50,6 +51,7 @@ import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -200,6 +202,81 @@ class AtomicTrailTest {
               };
           return new Model(
               new Cumulative(v, durations, resources, new IntVar(s, limit, limit)), fits, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new IntVar(s, "limit", 1, 2),
+            new IntVar(s, "use", 1, 2)
+          };
+          int[] d = {2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)};
+          IntVar[] durations = new IntVar[3];
+          IntVar[] resources = {v[4], new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
+          for (int k = 0; k < 3; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    if (t[k] <= time && time < t[k] + d[k]) {
+                      load += k == 0 ? t[4] : 1;
+                    }
+                  }
+                  if (load > t[3]) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(Arrays.copyOf(v, 3), durations, resources, v[3]), fits, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new BooleanVar(s, "p"),
+            new BooleanVar(s, "q"),
+            new BooleanVar(s, "r")
+          };
+          int[] d = {2 + rnd.nextInt(3), 2 + rnd.nextInt(3), 2 + rnd.nextInt(3)};
+          IntVar[] durations = new IntVar[3];
+          IntVar[] resources = new IntVar[3];
+          for (int k = 0; k < 3; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+            resources[k] = new IntVar(s, 1, 1);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    if (t[3 + k] == 1 && t[k] <= time && time < t[k] + d[k]) {
+                      load++;
+                    }
+                  }
+                  if (load > 1) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new CumulativeOptional(
+                  Arrays.copyOf(v, 3),
+                  durations,
+                  resources,
+                  new IntVar(s, 1, 1),
+                  Arrays.copyOfRange(v, 3, 6)),
+              fits,
+              v);
         });
     return m;
   }

@@ -103,3 +103,25 @@ checking its DRAT proof with `RupChecker`, and an UNSAT answer under assumptions
 the failed assumptions as units. A failure prints the seed and, for small formulas, the CNF. Run
 it after any change to `org.jacop.jasat.cdcl`; 10⁶ runs take about 45 minutes on one core (split
 them over seeds to use more).
+
+## Checking lazy clause generation
+
+`LcgSolver` checks every explanation when `jacop.lcg.check=true` (the LCG tests switch it on with
+`setChecking(true)`): the constraint is copied into a scratch store over the root domains, the
+reason is imposed with the negated atom, and propagation or a bounded search must find no solution.
+A wrong explanation throws `IllegalStateException("wrong explanation: ...")` with a counterexample.
+
+`jacop-sat/src/test/java/org/jacop/jasat/lcg/LcgFuzzTest.java` solves random small models over a
+broad pool of constraints with LCG (checker on) and with depth-first search, and fails on any
+difference in satisfiability or optimum, or on an LCG solution that is not one. It is in the build
+(`lcg.fuzz.runs`, 300 in `min`, 2000 otherwise); run it at volume after a change to `LcgSolver`,
+`AtomicTrail` or an explanation:
+
+```
+mvn -Pmin -pl jacop-sat test -Dtest=LcgFuzzTest -Dsurefire.rerunFailingTestsCount=0 \
+    -Dlcg.fuzz.runs=100000 -Dlcg.fuzz.seed=1000000
+```
+
+A failure names the seed; the model of a seed is rebuilt with `-Dlcg.fuzz.runs=1 -Dlcg.fuzz.seed=N`.
+A constraint whose pruning depends on a variable that is not among its arguments (such as an
+internal counter) needs that variable in its scope, or the generic reason is unsound.

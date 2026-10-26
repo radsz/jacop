@@ -43,9 +43,11 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
@@ -59,6 +61,8 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -132,6 +136,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // free search with the FreeSearch engine
   FreeSearch freeSearch;
   FreeSearch.Status freeSearchStatus;
+  LcgSolver lcg;
+  int lcgStatus;
   // the search annotation of the model, interleaved with free search
   SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
@@ -709,6 +715,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     try {
+      if (useLcg(costVar)) {
+        return executeLcgSearch(costVar);
+      }
       if (useFreeSearchEngine(costVar)) {
         return executeFreeSearch(costVar);
       }
@@ -719,6 +728,123 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } catch (NumberSolutionsReached _) {
       return numberSolutions > 0;
     }
+  }
+
+  private boolean useLcg(Var costVar) {
+    if (!options.lcg()) {
+      return false;
+    }
+    String unsupported = lcgUnsupported(costVar);
+    if (unsupported != null) {
+      IO.println("%% --lcg ignored: " + unsupported);
+      postCollectedClauses();
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Imposes the clauses kept for the LCG solver as constraints, when the model is solved without
+   * it.
+   */
+  private void postCollectedClauses() {
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      store.impose(new BoolClause(clause[0], clause[1]));
+    }
+    sat.collectedClauses().clear();
+  }
+
+  private String lcgUnsupported(Var costVar) {
+    if (options.getAll() && costVar == null) {
+      return "all solutions are not supported";
+    }
+    if (costVar != null && !(costVar instanceof IntVar)) {
+      return "the objective is not an integer variable";
+    }
+    for (int i = 0; i < store.size(); i++) {
+      if (!(store.vars[i] instanceof IntVar)) {
+        return "the model has float or set variables";
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
+   * explain their prunings. Solutions are printed when found, with the domains fixed to them.
+   */
+  private boolean executeLcgSearch(Var costVar) {
+    lcg = new LcgSolver(store);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      lcg.addClause(clause[0], clause[1]);
+    }
+    lcg.onSolution(this::printSolution);
+    if (options.getTimeOut() > 0) {
+      lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
+    }
+    lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    return numberSolutions > 0;
+  }
+
+  private void printLcgStatistics(boolean interrupted) {
+    boolean complete = lcgStatus != CdclSolver.UNKNOWN;
+    printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
+    if (options.getStatistics()) {
+      printStatisticsOutput(
+          (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
+      printLcgExplanationStatistics();
+    }
+  }
+
+  /**
+   * Prints the LCG counts: atoms given to the SAT solver, reasons it asked for, and per constraint
+   * class the reasons and failures explained, the share given by the generic reason and the average
+   * number of atoms.
+   */
+  private void printLcgExplanationStatistics() {
+    long reasons = 0;
+    long generic = 0;
+    long atoms = 0;
+    StringBuilder perClass = new StringBuilder();
+    for (Map.Entry<String, long[]> e : lcg.explanationStatistics().entrySet()) {
+      long[] n = e.getValue();
+      reasons += n[0] + n[3];
+      generic += n[1] + n[4];
+      atoms += n[2] + n[5];
+      perClass
+          .append("%% lcg ")
+          .append(e.getKey())
+          .append(": reasons=")
+          .append(n[0])
+          .append(" generic=")
+          .append(n[1])
+          .append(" avgAtoms=")
+          .append(nf.format(n[0] == 0 ? 0 : (double) n[2] / n[0]))
+          .append(" failures=")
+          .append(n[3])
+          .append(" generic=")
+          .append(n[4])
+          .append(" avgAtoms=")
+          .append(nf.format(n[3] == 0 ? 0 : (double) n[5] / n[3]))
+          .append('\n');
+    }
+    IO.print(
+        "%%%mzn-stat: lcgAtoms="
+            + lcg.atomsPropagated
+            + "\n%%%mzn-stat: lcgAtomLiterals="
+            + lcg.atomLiterals
+            + "\n%%%mzn-stat: lcgAtomLiteralsLearnt="
+            + lcg.atomLiteralsLearnt
+            + "\n%%%mzn-stat: lcgExplanations="
+            + reasons
+            + "\n%%%mzn-stat: lcgGenericShare="
+            + nf.format(reasons == 0 ? 0 : (double) generic / reasons)
+            + "\n%%%mzn-stat: lcgAvgExplanation="
+            + nf.format(reasons == 0 ? 0 : (double) atoms / reasons)
+            + "\n%%%mzn-stat: lcgLearntAvg="
+            + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
+            + "\n%%%mzn-stat-end\n"
+            + perClass);
   }
 
   private boolean useFreeSearchEngine(Var costVar) {
@@ -1154,6 +1280,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
 
+    if (lcg != null) {
+      printLcgStatistics(interrupted);
+      return;
+    }
+
     if (freeSearch != null) {
       boolean complete =
           freeSearchStatus == FreeSearch.Status.OPTIMAL
@@ -1461,6 +1592,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void handleTrivialSolution() {
+    if (!sat.collectedClauses().isEmpty()) {
+      postCollectedClauses();
+      if (!store.consistency()) {
+        IO.println("=====UNSATISFIABLE=====");
+        throw new TrivialSolution();
+      }
+    }
     printSolution();
 
     if (lastSolution != null) {
@@ -1659,6 +1797,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
+
+    if (lcg != null) {
+      printLcgStatistics(interrupted);
+      return;
+    }
 
     if (listSeqSearches == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");

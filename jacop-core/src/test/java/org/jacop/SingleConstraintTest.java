@@ -4129,6 +4129,24 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementIntegerWithTheSameVariableAsIndexAndValue() {
+    // x = list[x] with x in 1..3: pruning the value side to {2, 3} and then the index side to
+    // {3} changed the shared variable after each step, and the constraint stopped at x = 3
+    // although list[3] = 2. Only positions that hold their own index are solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    store.impose(new ElementInteger(x, new int[] {3, -1, 2, 1}, x, 0));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", -1, 6);
+    store.impose(new ElementInteger(x, new int[] {0, 5, 2, 3, 1}, x, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{0, 2..3}");
+    assertThat(noOfAllSolutions(store, new IntVar[] {x})).isEqualTo(3);
+  }
+
+  @Test
   void elementIntegerIsDomainConsistentForLargeIndex() {
     // With 100 or more index values the value domain was only pruned to the bounds of the
     // supported values, here 3..360 instead of the multiples of 3.
