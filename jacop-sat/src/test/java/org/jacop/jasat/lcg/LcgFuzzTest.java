@@ -344,8 +344,15 @@ class LcgFuzzTest {
                 : new AlldifferentExceptZero(q);
         case 13 -> new Max(q, one());
         case 14 -> new Min(q, one());
-        case 15 -> new ArgMin(q, intVar("i", 1, q.length));
-        case 16 -> new ArgMax(q, intVar("i", 1, q.length));
+        case 15 ->
+            rnd.nextBoolean()
+                ? new ArgMin(q, intVar("i", 1, q.length))
+                // indexes from 0, index domain wider than the indexes
+                : new ArgMin(q, intVar("i", -1, q.length), -1);
+        case 16 ->
+            rnd.nextBoolean()
+                ? new ArgMax(q, intVar("i", 1, q.length))
+                : new ArgMax(q, intVar("i", -1, q.length), -1);
         case 17 ->
             new ElementInteger(one(), new int[] {value(), value(), value(), value()}, one(), 0);
         case 18 -> new ElementVariable(one(), q, one(), 0);
