@@ -49,6 +49,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
@@ -61,6 +62,7 @@ import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
@@ -71,6 +73,9 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.SimpleSelect;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -469,6 +474,136 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(1000);
+  }
+
+  @Test
+  void layeredGraphsAgreeWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(rnd.nextBoolean() ? regularRelation(x, rnd) : mddRelation(x, rnd));
+      }
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"Regular", "ExtensionalSupportMdd"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "layered graphs: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(300);
+  }
+
+  /** An automaton of three states, its transitions on small ranges, over 3 or 4 variables. */
+  private static Relation regularRelation(IntVar[] x, Random rnd) {
+    int[] at = new int[3 + rnd.nextInt(2)];
+    for (int k = 0; k < at.length; k++) {
+      at[k] = pick(rnd, x.length, Arrays.copyOf(at, k));
+    }
+    int states = 3;
+    // next[s][v + 1] is the state after reading v in state s, or -1
+    int[][] next = new int[states][7];
+    boolean[] accepting = new boolean[states];
+    FsmState[] state = new FsmState[states];
+    Fsm fsm = new Fsm();
+    for (int s = 0; s < states; s++) {
+      state[s] = new FsmState();
+      fsm.allStates.add(state[s]);
+      Arrays.fill(next[s], -1);
+    }
+    fsm.initState = state[0];
+    for (int s = 0; s < states; s++) {
+      accepting[s] = rnd.nextInt(3) > 0;
+      if (accepting[s]) {
+        fsm.finalStates.add(state[s]);
+      }
+      for (int v = -1; v <= 5; v++) {
+        if (rnd.nextInt(3) > 0) {
+          int t = rnd.nextInt(states);
+          next[s][v + 1] = t;
+          state[s].addTransition(new FsmTransition(new IntervalDomain(v, v), state[t]));
+        }
+      }
+    }
+    IntVar[] vars = new IntVar[at.length];
+    for (int k = 0; k < at.length; k++) {
+      vars[k] = x[at[k]];
+    }
+    return new Relation(
+        new Regular(fsm, vars),
+        t -> {
+          int s = 0;
+          for (int k : at) {
+            s = next[s][t[k] + 1];
+            if (s < 0) {
+              return false;
+            }
+          }
+          return accepting[s];
+        });
+  }
+
+  /** A table of random tuples on 3 variables, as a decision diagram. */
+  private static Relation mddRelation(IntVar[] x, Random rnd) {
+    int[] at = {pick(rnd, x.length), 0, 0};
+    at[1] = pick(rnd, x.length, at[0]);
+    at[2] = pick(rnd, x.length, at[0], at[1]);
+    int[][] tuples = new int[4 + rnd.nextInt(12)][3];
+    for (int[] t : tuples) {
+      for (int k = 0; k < 3; k++) {
+        t[k] = rnd.nextInt(6) - 1;
+      }
+    }
+    return new Relation(
+        new ExtensionalSupportMdd(new IntVar[] {x[at[0]], x[at[1]], x[at[2]]}, tuples),
+        t -> {
+          for (int[] tuple : tuples) {
+            if (tuple[0] == t[at[0]] && tuple[1] == t[at[1]] && tuple[2] == t[at[2]]) {
+              return true;
+            }
+          }
+          return false;
+        });
   }
 
   /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */

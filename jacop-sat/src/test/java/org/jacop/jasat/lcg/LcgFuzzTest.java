@@ -68,6 +68,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -122,6 +123,7 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
@@ -140,6 +142,9 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -264,6 +269,34 @@ class LcgFuzzTest {
     }
 
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
+    /** An automaton of three states over values -1 to 3 on 3 or 4 of the variables. */
+    private Regular regular() {
+      FsmState[] state = {new FsmState(), new FsmState(), new FsmState()};
+      Fsm fsm = new Fsm();
+      fsm.initState = state[0];
+      for (FsmState s : state) {
+        fsm.allStates.add(s);
+        for (int t = 1 + rnd.nextInt(2); t > 0; t--) {
+          int v = rnd.nextInt(5) - 1;
+          fsm.finalStates.add(state[rnd.nextInt(3)]);
+          s.addTransition(
+              new FsmTransition(new IntervalDomain(v, v + rnd.nextInt(2)), state[rnd.nextInt(3)]));
+        }
+      }
+      return new Regular(fsm, pick(x, 3 + rnd.nextInt(2)));
+    }
+
+    /** A table of 3 to 6 random tuples on 3 of the variables, as a decision diagram. */
+    private ExtensionalSupportMdd mdd() {
+      int[][] tuples = new int[3 + rnd.nextInt(4)][3];
+      for (int[] t : tuples) {
+        for (int k = 0; k < t.length; k++) {
+          t[k] = rnd.nextInt(5) - 1;
+        }
+      }
+      return new ExtensionalSupportMdd(pick(x, 3), tuples);
+    }
+
     private HybridTable hybridTable() {
       IntVar[] v = pick(x, 2 + rnd.nextInt(2));
       Restriction[][] tuples = new Restriction[2 + rnd.nextInt(6)][v.length];
@@ -325,7 +358,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(66)) {
+      return switch (rnd.nextInt(68)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -443,6 +476,8 @@ class LcgFuzzTest {
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
         case 64 -> hybridTable();
+        case 65 -> regular();
+        case 66 -> mdd();
         case 63 ->
             new LinearIntDom(
                 p,
