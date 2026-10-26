@@ -45,6 +45,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ElementExplanation;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * ElementInteger constraint defines a relation list[index - indexOffset] = value.
@@ -59,7 +63,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ElementInteger extends AbstractElement
-    implements UsesQueueVariable, SatisfiedPresent, Copyable<ElementInteger> {
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<ElementInteger>, Explainable {
 
   /**
    * It specifies the size of index domain from which the values supported by the index are
@@ -502,5 +506,19 @@ public class ElementInteger extends AbstractElement
   @Override
   public ElementInteger copy(VarMap map) {
     return new ElementInteger(map.get(index), list, map.get(value), indexOffset, checkDuplicates);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == ElementInteger.class
+        && index != value
+        && ElementExplanation.explain(trail, entry, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == ElementInteger.class
+        && index != value
+        && ElementExplanation.explainFailure(trail, index, list, value, indexOffset, out);
   }
 }
