@@ -103,6 +103,7 @@ import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
@@ -4544,6 +4545,37 @@ class SingleConstraintTest extends TestHelper {
     IntVar z = new IntVar(store2, "z", 0, 2);
     store2.impose(new Decreasing(new IntVar[] {z, z}, true));
     assertThat(store2.consistency()).isFalse();
+  }
+
+  @Test
+  void increasingSumBoundsUseOrderAndSumTogether() {
+    // the sum and the order posted apart prune nothing here
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    store.impose(new IncreasingSum(x, new IntVar(store, "s", 6, 6)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("{0..2}");
+    assertThat(x[1].dom().toString()).isEqualTo("{0..3}");
+    assertThat(x[2].dom().toString()).isEqualTo("{2..6}");
+
+    // strictly increasing: the solutions are (0, 1, 5), (0, 2, 4) and (1, 2, 3)
+    Store store2 = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      y[i] = new IntVar(store2, "y" + i, 0, 10);
+    }
+    IntVar t = new IntVar(store2, "t", 0, 6);
+    store2.impose(new IncreasingSum(y, t, true));
+    assertThat(store2.consistency()).isTrue();
+    assertThat(t.dom().toString()).isEqualTo("{3..6}");
+    t.domain.in(store2.level, t, 6, 6);
+    assertThat(store2.consistency()).isTrue();
+    assertThat(y[0].dom().toString()).isEqualTo("{0..1}");
+    assertThat(y[1].dom().toString()).isEqualTo("{1..2}");
+    assertThat(y[2].dom().toString()).isEqualTo("{3..5}");
   }
 
   @Test
