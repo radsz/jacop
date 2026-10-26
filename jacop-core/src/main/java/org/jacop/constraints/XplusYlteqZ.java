@@ -37,10 +37,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.lcg.AtomicTrail;
-import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
-import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraint X + Y{@literal =<} Z.
@@ -51,7 +49,7 @@ import org.jacop.lcg.LinearExplanation;
  * @version 5.0
  */
 public class XplusYlteqZ extends AbstractConstraintXandYandZ
-    implements Copyable<XplusYlteqZ>, Explainable {
+    implements Copyable<XplusYlteqZ>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -164,20 +162,9 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ
   }
 
   @Override
-  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == XplusYlteqZ.class
-        && x != z
-        && y != z
-        && LinearExplanation.explain(
-            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, true, false, out);
-  }
-
-  @Override
-  public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == XplusYlteqZ.class
-        && x != z
-        && y != z
-        && LinearExplanation.explainFailure(
-            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, false, out);
+  public LinearForm linearForm() {
+    return getClass() == XplusYlteqZ.class && x != z && y != z
+        ? new LinearForm(new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, LinearForm.LE)
+        : null;
   }
 }

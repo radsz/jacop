@@ -51,6 +51,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
 
 /**
  * LinearInt constraint implements the weighted summation over several variables .
@@ -1062,6 +1063,54 @@ public class LinearInt extends PrimitiveConstraint
       addFolded(trail, trail.size(), out);
     }
     return explained;
+  }
+
+  // the relation over the variables left after folding, for entailment and negation
+  private LinearForm form() {
+    if (getClass() != LinearInt.class) {
+      return null;
+    }
+    IntVar[] vars = Arrays.copyOf(x, l);
+    long[] weights = Arrays.copyOf(a, l);
+    return switch (relationType) {
+      case EQ -> new LinearForm(vars, weights, b, LinearForm.EQ);
+      case LE -> new LinearForm(vars, weights, b, LinearForm.LE);
+      case LT -> new LinearForm(vars, weights, b - 1, LinearForm.LE);
+      case GE -> new LinearForm(vars, weights, b, LinearForm.GE);
+      case GT -> new LinearForm(vars, weights, b + 1, LinearForm.GE);
+      default -> new LinearForm(vars, weights, b, LinearForm.NE);
+    };
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = form();
+    if (f != null && (entailed ? f : f.negated()).explainEntailed(trail, position, out)) {
+      addFolded(trail, position, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explain(trail, entry, out)) {
+      addFolded(trail, entry, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explainFailure(trail, out)) {
+      addFolded(trail, trail.size(), out);
+      return true;
+    }
+    return false;
   }
 
   // the bounds of the variables fixed when the constraint was created and folded into b

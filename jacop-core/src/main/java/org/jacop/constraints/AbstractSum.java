@@ -35,9 +35,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.lcg.AtomicTrail;
-import org.jacop.lcg.EntryList;
-import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Abstract base class for SumInt and SumBool constraints. Provides shared relation constants,
@@ -266,64 +264,31 @@ public abstract class AbstractSum extends PrimitiveConstraint {
     return IntDomain.BOUND;
   }
 
-  // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
-  private IntVar[] lcgVars;
-  private long[] lcgWeights;
-
-  private void lcgModel() {
-    if (lcgVars != null) {
-      return;
-    }
-    lcgVars = Arrays.copyOf(x, l + 1);
-    lcgVars[l] = sum;
-    lcgWeights = new long[l + 1];
-    Arrays.fill(lcgWeights, 1);
-    lcgWeights[l] = -1;
-  }
+  // the relation as a linear form for lazy clause generation, built once
+  private LinearForm lcgForm;
 
   /**
-   * Adds to {@code out} the reason of a trail entry this sum made, from the bounds of the other
-   * variables, or for {@code !=} from the other variables being fixed.
+   * Returns this sum as a linear form: the variables and the sum, weighted 1 and -1.
    *
-   * @param trail the trail
-   * @param entry the entry
-   * @param out where the reason entries are added
-   * @return false when there is no such reason
+   * @return the linear form
    */
-  protected boolean explainSum(AtomicTrail trail, int entry, EntryList out) {
-    lcgModel();
-    if (relationType == NE) {
-      return LinearExplanation.explainNotEqual(trail, entry, lcgVars, out);
+  protected LinearForm sumForm() {
+    if (lcgForm == null) {
+      IntVar[] vars = Arrays.copyOf(x, l + 1);
+      vars[l] = sum;
+      long[] weights = new long[l + 1];
+      Arrays.fill(weights, 1);
+      weights[l] = -1;
+      lcgForm =
+          switch (relationType) {
+            case EQ -> new LinearForm(vars, weights, 0, LinearForm.EQ);
+            case LE -> new LinearForm(vars, weights, 0, LinearForm.LE);
+            case LT -> new LinearForm(vars, weights, -1, LinearForm.LE);
+            case GE -> new LinearForm(vars, weights, 0, LinearForm.GE);
+            case GT -> new LinearForm(vars, weights, 1, LinearForm.GE);
+            default -> new LinearForm(vars, weights, 0, LinearForm.NE);
+          };
     }
-    return LinearExplanation.explain(
-        trail,
-        entry,
-        lcgVars,
-        lcgWeights,
-        relationType == EQ || relationType == LE || relationType == LT,
-        relationType == EQ || relationType == GE || relationType == GT,
-        out);
-  }
-
-  /**
-   * Adds to {@code out} the reason of a failure of this sum now.
-   *
-   * @param trail the trail
-   * @param out where the reason entries are added
-   * @return false when there is no such reason
-   */
-  protected boolean explainSumFailure(AtomicTrail trail, EntryList out) {
-    lcgModel();
-    if (relationType == NE) {
-      return LinearExplanation.explainNotEqualFailure(trail, lcgVars, out);
-    }
-    return LinearExplanation.explainFailure(
-        trail,
-        lcgVars,
-        lcgWeights,
-        relationType == LT ? -1 : relationType == GT ? 1 : 0,
-        relationType == EQ || relationType == LE || relationType == LT,
-        relationType == EQ || relationType == GE || relationType == GT,
-        out);
+    return lcgForm;
   }
 }

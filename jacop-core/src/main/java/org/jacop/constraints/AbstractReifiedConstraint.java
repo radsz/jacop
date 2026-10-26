@@ -34,6 +34,9 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Abstract base class for constraints with a boolean variable and nested constraint (e.g., Reified,
@@ -43,7 +46,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public abstract class AbstractReifiedConstraint extends PrimitiveConstraint
-    implements UsesQueueVariable {
+    implements UsesQueueVariable, Explainable {
 
   /**
    * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1
@@ -125,5 +128,69 @@ public abstract class AbstractReifiedConstraint extends PrimitiveConstraint
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
     return getNotConsistencyPruningEventForReified(v, b, c);
+  }
+
+  // the nested constraint's explanations, for Reified and Implies over a constraint without b
+  private Explainable nested() {
+    if ((getClass() != Reified.class && getClass() != Implies.class)
+        || !(c instanceof Explainable e)) {
+      return null;
+    }
+    for (Var v : c.arguments()) {
+      if (v == b) {
+        return null;
+      }
+    }
+    return e;
+  }
+
+  /**
+   * Explains b by the entailment or disentailment of c, and an atom of c's variables by c's own
+   * explanation (or that of its negation) and the value of b.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    Explainable e = nested();
+    if (e == null) {
+      return false;
+    }
+    if (trail.variable(entry) == b) {
+      int kind = trail.kind(entry);
+      boolean one = kind == AtomicTrail.GE || kind == AtomicTrail.NE && trail.value(entry) == 0;
+      return e.explainEntailment(trail, entry, one, out);
+    }
+    if (trail.minBefore(b, entry) >= 1) {
+      trail.addLowerBound(b, entry, out);
+      return e.explain(trail, entry, out);
+    }
+    if (trail.maxBefore(b, entry) <= 0 && getClass() == Reified.class) {
+      trail.addUpperBound(b, entry, out);
+      return e.explainNegated(trail, entry, out);
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    Explainable e = nested();
+    if (e == null) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    if (trail.minBefore(b, now) >= 1) {
+      trail.addLowerBound(b, now, out);
+      if (e.explainFailure(trail, out) || e.explainEntailment(trail, now, false, out)) {
+        return true;
+      }
+    } else if (trail.maxBefore(b, now) <= 0) {
+      trail.addUpperBound(b, now, out);
+      if (getClass() == Reified.class
+          && (e.explainNegatedFailure(trail, out) || e.explainEntailment(trail, now, true, out))) {
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
   }
 }

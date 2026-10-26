@@ -35,10 +35,8 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.lcg.AtomicTrail;
-import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
-import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraint X {@literal >} Y.
@@ -46,7 +44,7 @@ import org.jacop.lcg.LinearExplanation;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XgtY extends AbstractXcompY implements Copyable<XgtY>, Explainable {
+public class XgtY extends AbstractXcompY implements Copyable<XgtY>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -103,18 +101,9 @@ public class XgtY extends AbstractXcompY implements Copyable<XgtY>, Explainable 
   }
 
   @Override
-  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == XgtY.class
-        && x != y
-        && LinearExplanation.explain(
-            trail, entry, new IntVar[] {x, y}, new long[] {1, -1}, false, true, out);
-  }
-
-  @Override
-  public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == XgtY.class
-        && x != y
-        && LinearExplanation.explainFailure(
-            trail, new IntVar[] {x, y}, new long[] {1, -1}, 1, false, true, out);
+  public LinearForm linearForm() {
+    return getClass() == XgtY.class && x != y
+        ? new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 1, LinearForm.GE)
+        : null;
   }
 }

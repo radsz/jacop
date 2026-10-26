@@ -39,6 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.ShiftExplanation;
 
 /**
@@ -169,5 +170,37 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
     return getClass() == XplusCeqZ.class
         && x != z
         && ShiftExplanation.explainFailure(trail, z, x, c, out);
+  }
+
+  // the equality as a linear form, for entailment and negation
+  private LinearForm equality() {
+    return getClass() == XplusCeqZ.class && x != z
+        ? new LinearForm(new IntVar[] {x, z}, new long[] {1, -1}, -(long) c, LinearForm.EQ)
+        : null;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = equality();
+    if (f == null) {
+      return false;
+    }
+    if (entailed) {
+      return f.explainEntailed(trail, position, out);
+    }
+    return ShiftExplanation.disjointBefore(trail, position, z, x, c, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explainFailure(trail, out);
   }
 }

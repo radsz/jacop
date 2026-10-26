@@ -44,9 +44,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.lcg.AtomicTrail;
-import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * SumInt constraint implements the summation over several variables.
@@ -62,7 +61,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 @Slf4j
-public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable {
+public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -491,12 +490,7 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
   }
 
   @Override
-  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == SumInt.class && explainSum(trail, entry, out);
-  }
-
-  @Override
-  public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == SumInt.class && explainSumFailure(trail, out);
+  public LinearForm linearForm() {
+    return getClass() == SumInt.class ? sumForm() : null;
   }
 }
