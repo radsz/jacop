@@ -51,6 +51,9 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.util.BipartiteGraphMatching;
 
 /**
@@ -62,7 +65,7 @@ import org.jacop.util.BipartiteGraphMatching;
  */
 @Slf4j
 public class Alldifferent extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, Copyable<Alldifferent> {
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<Alldifferent>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -496,6 +499,24 @@ public class Alldifferent extends Constraint
     result.append("])");
 
     return result.toString();
+  }
+
+  /** The values the variables may share, for explanations; null when not explained here. */
+  IntDomain explainedExceptions() {
+    Class<?> type = getClass();
+    return type == Alldifferent.class || type == Alldiff.class ? new IntervalDomain() : null;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntDomain except = explainedExceptions();
+    return except != null && AlldiffExplanation.explain(trail, entry, list, except, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    IntDomain except = explainedExceptions();
+    return except != null && AlldiffExplanation.explainFailure(trail, list, except, out);
   }
 
   @Override

@@ -379,6 +379,37 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns the smallest value an entry's atom removes, within its variable's root bounds: the root
+   * minimum for {@link #GE}, the atom's value + 1 for {@link #LE} and the value for {@link #NE}.
+   *
+   * @param entry the entry
+   * @return the smallest removed value
+   */
+  public int removedMin(int entry) {
+    return switch (kind[entry]) {
+      case GE -> rootDomain(variable(entry)).min();
+      case LE -> value[entry] + 1;
+      default -> value[entry];
+    };
+  }
+
+  /**
+   * Returns the largest value an entry's atom removes, within its variable's root bounds: the
+   * atom's value - 1 for {@link #GE}, the root maximum for {@link #LE} and the value for {@link
+   * #NE}.
+   *
+   * @param entry the entry
+   * @return the largest removed value
+   */
+  public int removedMax(int entry) {
+    return switch (kind[entry]) {
+      case GE -> value[entry] - 1;
+      case LE -> rootDomain(variable(entry)).max();
+      default -> value[entry];
+    };
+  }
+
+  /**
    * Returns the value of an entry's atom.
    *
    * @param entry the entry

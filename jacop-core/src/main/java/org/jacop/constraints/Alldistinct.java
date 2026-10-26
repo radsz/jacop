@@ -48,6 +48,9 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.
@@ -78,7 +81,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class Alldistinct extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Alldistinct> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Alldistinct>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1451,6 +1454,18 @@ public class Alldistinct extends Constraint
   // The number of values still available equals the number of not grounded variables.
   private boolean isPermutation() {
     return activeValues().size() == notGrounded.value();
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == Alldistinct.class
+        && AlldiffExplanation.explain(trail, entry, list, new IntervalDomain(), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == Alldistinct.class
+        && AlldiffExplanation.explainFailure(trail, list, new IntervalDomain(), out);
   }
 
   @Override

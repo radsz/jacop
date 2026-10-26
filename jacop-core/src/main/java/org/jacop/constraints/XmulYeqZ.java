@@ -39,6 +39,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Constraint X * Y #= Z.
@@ -48,7 +51,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ> {
+public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -200,6 +203,18 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ> {
   public String toString() {
 
     return id() + " : XmulYeqZ(" + x + ", " + y + ", " + z + " )";
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == XmulYeqZ.class
+        && new MulExplanation(trail, x, y, z, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XmulYeqZ.class
+        && new MulExplanation(trail, x, y, z, trail.size()).explainFailure(out);
   }
 
   @Override

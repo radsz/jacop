@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.ShiftExplanation;
 
@@ -50,7 +50,7 @@ import org.jacop.lcg.ShiftExplanation;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Explainable {
+public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -148,8 +148,9 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Exp
         && ShiftExplanation.explainFailure(trail, y, x, 0, out);
   }
 
-  // the equality as a linear form, for entailment and negation
-  private LinearForm equality() {
+  // the equality, for entailment and negation
+  @Override
+  public LinearForm linearForm() {
     return getClass() == XeqY.class && x != y
         ? new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 0, LinearForm.EQ)
         : null;
@@ -158,7 +159,7 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Exp
   @Override
   public boolean explainEntailment(
       AtomicTrail trail, int position, boolean entailed, EntryList out) {
-    LinearForm f = equality();
+    LinearForm f = linearForm();
     if (f == null) {
       return false;
     }
@@ -166,22 +167,5 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Exp
       return f.explainEntailed(trail, position, out);
     }
     return ShiftExplanation.disjointBefore(trail, position, y, x, 0, out);
-  }
-
-  @Override
-  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
-    LinearForm f = equality();
-    return f != null && f.negated().explain(trail, entry, out);
-  }
-
-  @Override
-  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
-    LinearForm f = equality();
-    return f != null && f.negated().explainFailure(trail, out);
-  }
-
-  @Override
-  public boolean checksReasons() {
-    return true;
   }
 }

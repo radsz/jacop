@@ -41,6 +41,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Abstract base for ArgMax and ArgMin constraints. Provides shared fields, constructor logic,
@@ -49,7 +52,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractArgMinMax extends Constraint implements SatisfiedPresent {
+public abstract class AbstractArgMinMax extends Constraint
+    implements SatisfiedPresent, Explainable {
 
   /** It specifies a list of variables among which the extremum is being searched for. */
   protected final IntVar[] list;
@@ -181,6 +185,28 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
 
   private int worst(int i, boolean max) {
     return max ? list[i].min() : -list[i].max();
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    ArgExtremumExplanation e = explanation(trail, entry);
+    return e != null && e.explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    ArgExtremumExplanation e = explanation(trail, trail.size());
+    return e != null && e.explainFailure(out);
+  }
+
+  // only the classes explained here, as a subclass may prune by other rules
+  private ArgExtremumExplanation explanation(AtomicTrail trail, int position) {
+    Class<?> type = getClass();
+    if (type != ArgMax.class && type != ArgMin.class) {
+      return null;
+    }
+    return new ArgExtremumExplanation(
+        trail, list, extremeIndex, indexOffset, type == ArgMax.class, position);
   }
 
   @Override

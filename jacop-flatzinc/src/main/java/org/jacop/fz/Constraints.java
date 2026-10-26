@@ -144,6 +144,8 @@ public class Constraints implements ParserTreeConstants {
       }
     }
 
+    cf.poseCounts();
+
     if (CircuitCostDetector.enabled()) {
       new CircuitCostDetector(support).detect(astTree);
     }

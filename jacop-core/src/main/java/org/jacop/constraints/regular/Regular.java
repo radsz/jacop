@@ -212,6 +212,11 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
   }
 
   @Override
+  protected boolean explainedByPaths() {
+    return getClass() == Regular.class;
+  }
+
+  @Override
   public String toString() {
 
     StringBuilder result = new StringBuilder(id());
