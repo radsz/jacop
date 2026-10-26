@@ -35,8 +35,11 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + C {@literal !=} Z.
@@ -172,5 +175,23 @@ public class XplusCneqZ extends AbstractConstraintXandCandZ
     return getClass() == XplusCneqZ.class && x != z
         ? new LinearForm(new IntVar[] {x, z}, new long[] {1, -1}, -(long) c, LinearForm.NE)
         : null;
+  }
+
+  // the negation x + c = z propagates on domains
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XplusCneqZ.class || x == z) {
+      return false;
+    }
+    return trail.variable(entry) == z
+        ? ShiftExplanation.explain(trail, entry, z, x, c, out)
+        : ShiftExplanation.explain(trail, entry, x, z, -(long) c, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XplusCneqZ.class
+        && x != z
+        && ShiftExplanation.explainFailure(trail, z, x, c, out);
   }
 }

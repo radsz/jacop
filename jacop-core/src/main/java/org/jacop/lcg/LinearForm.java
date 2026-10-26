@@ -72,7 +72,9 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
   }
 
   /**
-   * Adds to {@code out} the reason of an entry this constraint propagated.
+   * Adds to {@code out} the reason of an entry this constraint propagated, for an inequality or
+   * equality only when the bounds of the other variables imply it (a propagator on domains may
+   * prune further).
    *
    * @param trail the trail
    * @param entry the entry
@@ -82,8 +84,8 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     return relation == NE
         ? LinearExplanation.explainNotEqual(trail, entry, vars, out)
-        : LinearExplanation.explain(
-            trail, entry, vars, weights, relation != GE, relation != LE, out);
+        : LinearExplanation.explainChecked(
+            trail, entry, vars, weights, c, relation != GE, relation != LE, out);
   }
 
   /**

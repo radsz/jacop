@@ -36,8 +36,11 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraints X #\= Y.
@@ -137,5 +140,23 @@ public class XneqY extends AbstractConstraintXandY implements Copyable<XneqY>, L
     return getClass() == XneqY.class && x != y
         ? new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 0, LinearForm.NE)
         : null;
+  }
+
+  // the negation x = y propagates on domains
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XneqY.class || x == y) {
+      return false;
+    }
+    return trail.variable(entry) == x
+        ? ShiftExplanation.explain(trail, entry, x, y, 0, out)
+        : ShiftExplanation.explain(trail, entry, y, x, 0, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XneqY.class
+        && x != y
+        && ShiftExplanation.explainFailure(trail, x, y, 0, out);
   }
 }

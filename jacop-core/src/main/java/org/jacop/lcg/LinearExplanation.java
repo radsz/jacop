@@ -136,10 +136,11 @@ public final class LinearExplanation {
       return false;
     }
     IntVar y = trail.variable(entry);
+    // the occurrence of y the bound comes from; other occurrences count as other variables
     int own = -1;
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == y && weights[i] != 0) {
-        if (own >= 0) {
+        if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
           return false;
         }
         own = i;
