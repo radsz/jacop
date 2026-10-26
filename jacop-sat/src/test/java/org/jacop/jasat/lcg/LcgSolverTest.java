@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -414,6 +415,29 @@ class LcgSolverTest {
       }
     }
     assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  /** The literal map against a TreeMap, under random insertions and lookups. */
+  @Test
+  void literalMapAgreesWithTreeMap() {
+    Random rnd = new Random(3);
+    for (int instance = 0; instance < 200; instance++) {
+      LiteralMap map = new LiteralMap();
+      TreeMap<Integer, Integer> reference = new TreeMap<>();
+      for (int step = 0; step < 100; step++) {
+        int v = rnd.nextInt(60) - 30;
+        if (rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
+          map.put(v, step + 1);
+          reference.put(v, step + 1);
+        }
+        Integer lower = reference.lowerKey(v);
+        Integer higher = reference.higherKey(v);
+        assertThat(map.get(v)).isEqualTo(reference.getOrDefault(v, LiteralMap.NONE));
+        assertThat(map.lower(v)).isEqualTo(lower == null ? LiteralMap.NONE : reference.get(lower));
+        assertThat(map.higher(v))
+            .isEqualTo(higher == null ? LiteralMap.NONE : reference.get(higher));
+      }
+    }
   }
 
   /** Random small scheduling problems minimising the makespan, against JaCoP's search. */

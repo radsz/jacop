@@ -34,7 +34,6 @@ package org.jacop.jasat.lcg;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -82,8 +81,8 @@ public final class LcgSolver implements ExternalPropagator {
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
-  private final TreeMap<Integer, Integer>[] ge;
-  private final Map<Integer, Integer>[] eq;
+  private final LiteralMap[] ge;
+  private final LiteralMap[] eq;
 
   // per DIMACS variable: its variable's trail id, kind and value
   private int[] litVar = new int[16];
@@ -147,6 +146,7 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
+    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 2));
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
     }
@@ -167,26 +167,16 @@ public final class LcgSolver implements ExternalPropagator {
     }
     vars = new IntVar[n];
     root = new IntDomain[n];
-    ge = newTreeMaps(n);
-    eq = newHashMaps(n);
+    ge = new LiteralMap[n];
+    eq = new LiteralMap[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
       root[i] = x.dom().cloneLight();
-      ge[i] = new TreeMap<>();
-      eq[i] = new HashMap<>();
+      ge[i] = new LiteralMap();
+      eq[i] = new LiteralMap();
     }
     sat.connect(this);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static TreeMap<Integer, Integer>[] newTreeMaps(int n) {
-    return new TreeMap[n];
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Map<Integer, Integer>[] newHashMaps(int n) {
-    return new Map[n];
   }
 
   // ------------------------------------------------------------------------------- literals
@@ -208,18 +198,18 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The variable of [x >= v] for v in (root min, root max], created when missing. */
   private int geVar(int i, int v) {
-    Integer d = ge[i].get(v);
-    if (d != null) {
+    int d = ge[i].get(v);
+    if (d != LiteralMap.NONE) {
       return d;
     }
     int lit = newLiteral(i, GE_KIND, v);
-    Map.Entry<Integer, Integer> below = ge[i].lowerEntry(v);
-    Map.Entry<Integer, Integer> above = ge[i].higherEntry(v);
-    if (below != null) {
-      structural.add(new int[] {-lit, below.getValue()}); // [x >= v] -> [x >= below]
+    int below = ge[i].lower(v);
+    int above = ge[i].higher(v);
+    if (below != LiteralMap.NONE) {
+      structural.add(new int[] {-lit, below}); // [x >= v] -> [x >= below]
     }
-    if (above != null) {
-      structural.add(new int[] {-above.getValue(), lit}); // [x >= above] -> [x >= v]
+    if (above != LiteralMap.NONE) {
+      structural.add(new int[] {-above, lit}); // [x >= above] -> [x >= v]
     }
     ge[i].put(v, lit);
     return lit;
@@ -235,8 +225,8 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The variable of [x = v] for v in the root domain, created when missing. */
   private int eqVar(int i, int v) {
-    Integer d = eq[i].get(v);
-    if (d != null) {
+    int d = eq[i].get(v);
+    if (d != LiteralMap.NONE) {
       return d;
     }
     int lit = newLiteral(i, EQ_KIND, v);

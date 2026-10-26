@@ -2910,6 +2910,7 @@ public class IntervalDomain extends IntDomain {
     if (counter == -1) {
       return;
     }
+    ((IntVar) v).removingValue(complement);
 
     // a removed bound leaves the other one unchanged, as the domain does not become empty
     int boundEvent = complement == intervals[0].min() ? MIN_EVENT : MAX_EVENT;

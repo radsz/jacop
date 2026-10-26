@@ -55,6 +55,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.LazyBitSetDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
@@ -302,6 +303,82 @@ class AtomicTrailTest {
       }
     }
     assertThat(checked).isGreaterThan(1000);
+  }
+
+  @Test
+  void holesAreRecordedOnceForEveryDomainClass() {
+    Random rnd = new Random(11);
+    int[] spans = {40, 600, LazyBitSetDomain.MAX_SPAN + 10};
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      int span = spans[run % spans.length];
+      IntVar[] vars = new IntVar[2];
+      IntDomain[] initial = new IntDomain[2];
+      for (int i = 0; i < 2; i++) {
+        vars[i] = new IntVar(store, "x" + i, -5, span - 5);
+        for (int k = rnd.nextInt(4); k > 0; k--) {
+          int lo = rnd.nextInt(span) - 5;
+          vars[i].domain.inComplement(store.level, vars[i], lo, lo + rnd.nextInt(5));
+        }
+        initial[i] = vars[i].dom().cloneLight();
+      }
+      AtomicTrail trail = new AtomicTrail(store);
+      for (int step = 0; step < 60; step++) {
+        if (store.level > 0 && rnd.nextInt(4) == 0) {
+          int target = rnd.nextInt(store.level);
+          while (store.level > target) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        } else {
+          store.setLevel(store.level + 1);
+          IntVar x = vars[rnd.nextInt(2)];
+          if (x.getSize() > 1) {
+            prune(x, store, rnd);
+          }
+        }
+        checkRebuildOnce(trail, vars, initial);
+      }
+      trail.detach();
+    }
+  }
+
+  // removes a value, a range or values outside a set, or raises a bound, at the current level
+  private static void prune(IntVar x, Store store, Random rnd) {
+    int a = x.min() + rnd.nextInt(Math.min(x.max() - x.min() + 1, 700));
+    int b = a + rnd.nextInt(6);
+    switch (rnd.nextInt(5)) {
+      case 0 -> x.domain.inComplement(store.level, x, x.dom().nextValue(a));
+      case 1 -> {
+        if (x.min() < a || b < x.max()) {
+          x.domain.inComplement(store.level, x, a, b);
+        }
+      }
+      case 2 -> {
+        IntDomain keep = x.dom().subtract(a, b);
+        keep = keep.subtract(a + 20, b + 20);
+        if (!keep.isEmpty()) {
+          x.domain.in(store.level, x, keep);
+        }
+      }
+      case 3 -> x.domain.inMin(store.level, x, Math.min(x.dom().nextValue(a), x.max()));
+      default -> x.domain.inMax(store.level, x, Math.max(x.min(), b - 30));
+    }
+  }
+
+  // rebuilds the domains from the entries, each of which must remove a value
+  private static void checkRebuildOnce(AtomicTrail trail, IntVar[] vars, IntDomain[] initial) {
+    for (int i = 0; i < vars.length; i++) {
+      IntDomain d = initial[i];
+      for (int e = 0; e < trail.size(); e++) {
+        if (trail.variable(e) == vars[i]) {
+          IntDomain next = apply(d, trail, e);
+          assertThat(next.getSize()).as("entry %s", trail.atomString(e)).isLessThan(d.getSize());
+          d = next;
+        }
+      }
+      assertThat(d.eq(vars[i].dom())).as("%s rebuilt %s", vars[i], d).isTrue();
+    }
   }
 
   private static int dive(Function<Store, Model> generator, Random rnd) {
