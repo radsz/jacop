@@ -430,8 +430,12 @@ class LcgFuzzTest {
             switch (rnd.nextInt(3)) {
               case 0 -> {
                 IntVar[] s = pick(x, 3);
-                yield new Cumulative(
-                    s, constants(3, 1, 3), constants(3, 1, 2), constant(2 + rnd.nextInt(2)));
+                yield rnd.nextBoolean()
+                    ? new Cumulative(
+                        s, constants(3, 1, 3), constants(3, 1, 2), constant(2 + rnd.nextInt(2)))
+                    // durations, uses and limit as variables, durations possibly zero
+                    : new Cumulative(
+                        s, chain("d", 3, 0, 3), chain("r", 3, 1, 2), chain("c", 1, 1, 4)[0]);
               }
               case 1 ->
                   new Binpacking(
