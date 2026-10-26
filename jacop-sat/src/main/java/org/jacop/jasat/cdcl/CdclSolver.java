@@ -180,6 +180,7 @@ public final class CdclSolver {
   private long lbdSum;
   // exponential moving averages of the LBD (CaDiCaL), used when emaRestarts is on
   private boolean emaRestarts = true;
+  private boolean restartsOn = true;
   private double emaFast;
   private double emaSlow;
   private double emaFastBeta = 1;
@@ -2347,7 +2348,7 @@ public final class CdclSolver {
   }
 
   private boolean shouldRestart() {
-    if (decisionLevel <= assumptions.length) {
+    if (!restartsOn || decisionLevel <= assumptions.length) {
       return false;
     }
     if (conflicts >= modeSwitchAt || conflicts >= nextRephase) {
@@ -2369,6 +2370,9 @@ public final class CdclSolver {
   private void restart() {
     restarts++;
     backtrack(0);
+    if (external != null) {
+      external.notifyRestart();
+    }
     conflictsAtRestart = conflicts;
     targetAssigned = 0;
     lbdQueueSize = 0;
@@ -2755,6 +2759,16 @@ public final class CdclSolver {
    */
   public void setEmaRestarts(boolean on) {
     emaRestarts = on;
+  }
+
+  /**
+   * Turns restarts on or off (on by default). Without restarts the search only backjumps, so
+   * decisions given by an external propagator are kept in their order down each branch.
+   *
+   * @param on false to never restart
+   */
+  public void setRestarts(boolean on) {
+    restartsOn = on;
   }
 
   /** Removes satisfied clauses at level 0. */

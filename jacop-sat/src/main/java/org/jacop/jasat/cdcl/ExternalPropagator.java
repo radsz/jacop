@@ -72,6 +72,9 @@ public interface ExternalPropagator {
    */
   default void notifyBacktrack(int level) {}
 
+  /** The solver restarted; {@link #notifyBacktrack} to level 0 came just before. */
+  default void notifyRestart() {}
+
   /**
    * A literal of a clause just learnt by conflict analysis, for statistics. Called once per literal
    * of each learnt clause.
