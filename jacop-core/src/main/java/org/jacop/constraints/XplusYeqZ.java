@@ -82,16 +82,16 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ implements Copyable<X
       // unless the first variable shifted only keeps its bounds
       if (x.singleton()) {
 
-        y.domain.inShift(store.level, y, z.domain, -x.value());
-        z.domain.inShift(store.level, z, y.domain, x.value());
+        y.domain.inShiftFast(store.level, y, z.domain, -x.value());
+        z.domain.inShiftFast(store.level, z, y.domain, x.value());
         if (y.domain.domainId() != IntDomain.BOUND_DOMAIN_ID) {
           return;
         }
 
       } else if (y.singleton()) {
 
-        x.domain.inShift(store.level, x, z.domain, -y.value());
-        z.domain.inShift(store.level, z, x.dom(), y.value());
+        x.domain.inShiftFast(store.level, x, z.domain, -y.value());
+        z.domain.inShiftFast(store.level, z, x.dom(), y.value());
         if (x.domain.domainId() != IntDomain.BOUND_DOMAIN_ID) {
           return;
         }

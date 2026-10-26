@@ -3442,15 +3442,6 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
 
-    // a domain without holes shifts to one interval, which needs neither a walk nor a new domain
-    // when nothing changes (x + y = z with a fixed x shifts such domains on every call)
-    if (domain.domainId() == INTERVAL_DOMAIN_ID
-        ? ((IntervalDomain) domain).size == 1
-        : !domain.isEmpty() && domain.getSize() == (long) domain.max() - domain.min() + 1) {
-      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
-      return;
-    }
-
     if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
       inRuns(storeLevel, v, domain, shift);
       return;
