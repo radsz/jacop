@@ -123,14 +123,17 @@ public class Options {
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),
                 impact=<n> (bound-impact values for optimisation, on domains up to n values; 0 = off),
-                impact-until=first|always
+                impact-until=first|always,
+                lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
+                conflict of branch and bound, default 0.5; 0 = off)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
-                the SAT core); search annotations are ignored.
+                the SAT core); the search annotation is followed without restarts, or with -f
+                alternated per restart with branching on the most active variables.
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables

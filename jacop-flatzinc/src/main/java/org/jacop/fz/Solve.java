@@ -788,7 +788,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg.setAnnotation(annotated, free);
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
-      lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0")), 1000);
+      lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
     }
     if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
       // the annotation is followed down each branch, as without learning

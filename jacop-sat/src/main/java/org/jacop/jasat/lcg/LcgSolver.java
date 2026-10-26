@@ -149,7 +149,7 @@ public final class LcgSolver implements ExternalPropagator {
   // branching on integer variables by activity: bumped for the literals of learnt clauses
   private final boolean activityBranching =
       !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
-  private final String valueChoice = System.getProperty("jacop.lcg.value", "min");
+  private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
   private double[] activity;
   private final VarHeap heap = new VarHeap();
   private double activityInc = 1;
@@ -784,9 +784,10 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Decides on the model's annotation in its runs while it has unfixed variables; otherwise, with
    * activity branching, on the most active unfixed variable: its value in the last solution when
-   * still possible, else its smallest value. Without activity branching, leaves the decision to the
-   * solver's VSIDS until every literal is assigned, then branches on {@code [x <= min]} of the
-   * unfixed variable with the smallest domain.
+   * still possible, else the lower half of its domain (the system property {@code jacop.lcg.value}
+   * = {@code min} or {@code max} picks its smallest or largest value instead). Without activity
+   * branching, leaves the decision to the solver's VSIDS until every literal is assigned, then
+   * branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
    */
   @Override
   public int decide() {
