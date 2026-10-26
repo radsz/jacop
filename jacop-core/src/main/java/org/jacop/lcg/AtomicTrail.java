@@ -292,6 +292,35 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return reason[entry];
   }
 
+  /**
+   * Returns the first entry whose atom implies {@code [x k v]}, or -1 when no entry does.
+   *
+   * @param x the variable
+   * @param k the atom's kind, {@link #GE}, {@link #LE} or {@link #NE}
+   * @param v the atom's value
+   * @return the earliest entry implying the atom, or -1
+   */
+  public int firstImplying(IntVar x, int k, int v) {
+    int first = -1;
+    for (int e = lastBefore(x, size); e >= 0; e = previous[e]) {
+      if (k == GE && kind[e] == GE) {
+        if (value[e] < v) {
+          break; // lower bounds only grow
+        }
+        first = e;
+      } else if (k == LE && kind[e] == LE) {
+        if (value[e] > v) {
+          break;
+        }
+        first = e;
+      } else if (k == NE
+          && (kind[e] == NE ? value[e] == v : kind[e] == GE ? value[e] > v : value[e] < v)) {
+        first = e;
+      }
+    }
+    return first;
+  }
+
   private int lastBefore(IntVar x, int position) {
     int i = id(x);
     if (i >= last.length) {

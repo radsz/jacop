@@ -831,6 +831,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     IO.print(
         "%%%mzn-stat: lcgAtoms="
             + lcg.atomsPropagated
+            + "\n%%%mzn-stat: lcgAtomsSkipped="
+            + lcg.atomsSkipped
+            + "\n%%%mzn-stat: lcgAtomsLate="
+            + lcg.atomsLate
             + "\n%%%mzn-stat: lcgAtomLiterals="
             + lcg.atomLiterals
             + "\n%%%mzn-stat: lcgAtomLiteralsLearnt="

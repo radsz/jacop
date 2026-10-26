@@ -103,6 +103,19 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean failed;
   private int[] pushedReason;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
+  private boolean lazyAtoms = !Boolean.getBoolean("jacop.lcg.eagerAtoms");
+  // literals created after an entry implying them: pushed out of order, and again after a
+  // backtrack while the solver level is above the entry's
+  private int[] lateLit = new int[16];
+  private int[] lateEntry = new int[16];
+  private int numLate;
+  private int lateNext;
+  // atoms a reason needed and had no literal for, as (variable, kind, value): created next
+  private int[] wanted = new int[48];
+  private int numWanted;
+  private boolean[] explained; // per variable: an atom of it was in a reason; its atoms are eager
+  private int[] seen = new int[64]; // per entry: the stamp of the last expansion that met it
+  private int stamp;
   private int[] solution;
   private Runnable onSolution;
   private ExplanationChecker checker;
@@ -116,6 +129,12 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: solutions found by {@link #minimize}. */
   public long solutions;
+
+  /** Statistics: entries no literal stood for, so not pushed. */
+  public long atomsSkipped;
+
+  /** Statistics: literals pushed after the entries that implied them, once they were created. */
+  public long atomsLate;
 
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
@@ -169,6 +188,7 @@ public final class LcgSolver implements ExternalPropagator {
     root = new IntDomain[n];
     ge = new LiteralMap[n];
     eq = new LiteralMap[n];
+    explained = new boolean[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
@@ -193,7 +213,37 @@ public final class LcgSolver implements ExternalPropagator {
     litVar[d] = i;
     litKind[d] = (byte) kind;
     litValue[d] = value;
+    if (lazyAtoms) {
+      queueIfImplied(d);
+    }
     return d;
+  }
+
+  /** Queues a new literal for a push when an entry implies it or its negation. */
+  private void queueIfImplied(int d) {
+    IntVar x = vars[litVar[d]];
+    int v = litValue[d];
+    int lit = -d;
+    int e;
+    if (litKind[d] == GE_KIND) {
+      e = trail.firstImplying(x, AtomicTrail.GE, v);
+      if (e >= 0) {
+        lit = d;
+      } else {
+        e = trail.firstImplying(x, AtomicTrail.LE, v - 1);
+      }
+    } else {
+      e = trail.firstImplying(x, AtomicTrail.NE, v);
+    }
+    if (e < 0) {
+      return;
+    }
+    if (numLate == lateLit.length) {
+      lateLit = Arrays.copyOf(lateLit, 2 * numLate);
+      lateEntry = Arrays.copyOf(lateEntry, 2 * numLate);
+    }
+    lateLit[numLate] = lit;
+    lateEntry[numLate++] = e;
   }
 
   /** The variable of [x >= v] for v in (root min, root max], created when missing. */
@@ -262,6 +312,105 @@ public final class LcgSolver implements ExternalPropagator {
       case AtomicTrail.LE -> -geLit(i, v + 1);
       default -> -eqVar(i, v);
     };
+  }
+
+  /** The literal of an entry's own atom, or 0 when it has none. */
+  private int existingAtomLit(int entry) {
+    int i = trail.id(trail.variable(entry));
+    int v = trail.value(entry);
+    return switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> ge[i].get(v);
+      case AtomicTrail.LE -> -ge[i].get(v + 1);
+      default -> -eq[i].get(v);
+    };
+  }
+
+  /** The literal of the strongest atom with a literal that an entry implies, or 0. */
+  private int impliedLit(int entry) {
+    int i = trail.id(trail.variable(entry));
+    int v = trail.value(entry);
+    int d;
+    switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> {
+        d = ge[i].get(v);
+        return d != LiteralMap.NONE ? d : ge[i].lower(v);
+      }
+      case AtomicTrail.LE -> {
+        d = ge[i].get(v + 1);
+        return -(d != LiteralMap.NONE ? d : ge[i].higher(v + 1));
+      }
+      default -> {
+        return -eq[i].get(v);
+      }
+    }
+  }
+
+  /** Notes that an entry's atom needs a literal, created at the next {@link #propagate}. */
+  private void want(int entry) {
+    if (numWanted + 3 > wanted.length) {
+      wanted = Arrays.copyOf(wanted, 2 * wanted.length);
+    }
+    int i = trail.id(trail.variable(entry));
+    explained[i] = true;
+    wanted[numWanted++] = i;
+    wanted[numWanted++] = trail.kind(entry);
+    wanted[numWanted++] = trail.value(entry);
+  }
+
+  private void createWanted() {
+    while (numWanted > 0) {
+      numWanted -= 3;
+      int i = wanted[numWanted];
+      int v = wanted[numWanted + 2];
+      switch (wanted[numWanted + 1]) {
+        case AtomicTrail.GE -> geVar(i, v);
+        case AtomicTrail.LE -> geVar(i, v + 1);
+        default -> eqVar(i, v);
+      }
+    }
+  }
+
+  /**
+   * Returns the next queued literal, created after an entry that implies it, that is not true yet,
+   * or 0. A literal pushed at a level not above its entry's stays true while the entry stays, so it
+   * leaves the queue; the others are pushed again after a backtrack.
+   */
+  private int nextLate() {
+    while (lateNext < numLate) {
+      int k = lateNext;
+      int lit = lateLit[k];
+      int e = lateEntry[k];
+      if (store.level <= trail.level(e)) {
+        numLate--;
+        lateLit[k] = lateLit[numLate];
+        lateEntry[k] = lateEntry[numLate];
+      } else {
+        lateNext++;
+      }
+      if (sat.value(lit) <= 0) {
+        atomsLate++;
+        pushedAs(lit, e);
+        return lit;
+      }
+    }
+    return 0;
+  }
+
+  /** Records that a literal is pushed for an entry. */
+  private void pushedAs(int lit, int e) {
+    int dimacsVar = Math.abs(lit);
+    if (dimacsVar >= propagated.length) {
+      propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
+    }
+    propagated[dimacsVar] = e;
+    if (dimacsVar >= atomUse.length) {
+      atomUse = Arrays.copyOf(atomUse, propagated.length);
+    }
+    if (atomUse[dimacsVar] == 0) {
+      atomUse[dimacsVar] = 1;
+      atomLiterals++;
+    }
+    atomsPropagated++;
   }
 
   /**
@@ -365,6 +514,19 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Chooses how atoms reach the solver. Lazily (the default), an entry is pushed as the strongest
+   * atom it implies that has a literal, and is skipped when there is none; an atom of a reason gets
+   * a literal when it has none, and is replaced by its own reason meanwhile. Eagerly, every entry
+   * is pushed as its own atom, with a literal created for it; the system property {@code
+   * jacop.lcg.eagerAtoms=true} chooses that for every solver.
+   *
+   * @param on true for lazy atoms
+   */
+  public void setLazyAtoms(boolean on) {
+    lazyAtoms = on;
+  }
+
+  /**
    * Returns the explanation checker, for its statistics.
    *
    * @return the checker, or null when checking is off
@@ -429,6 +591,15 @@ public final class LcgSolver implements ExternalPropagator {
     numPending = 0;
     failed = false;
     pushed = Math.min(pushed, trail.size());
+    int kept = 0;
+    for (int k = 0; k < numLate; k++) {
+      if (lateEntry[k] < trail.size()) {
+        lateLit[kept] = lateLit[k];
+        lateEntry[kept++] = lateEntry[k];
+      }
+    }
+    numLate = kept;
+    lateNext = 0;
   }
 
   @Override
@@ -448,25 +619,23 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     while (true) {
+      createWanted();
+      int late = nextLate();
+      if (late != 0) {
+        return late;
+      }
       while (pushed < trail.size()) {
         int e = pushed++;
-        int lit = atomLit(e);
+        int lit =
+            lazyAtoms && !explained[trail.id(trail.variable(e))] ? impliedLit(e) : atomLit(e);
+        if (lit == 0) {
+          atomsSkipped++;
+          continue;
+        }
         if (sat.value(lit) > 0) {
           continue;
         }
-        int dimacsVar = Math.abs(lit);
-        if (dimacsVar >= propagated.length) {
-          propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
-        }
-        propagated[dimacsVar] = e;
-        if (dimacsVar >= atomUse.length) {
-          atomUse = Arrays.copyOf(atomUse, propagated.length);
-        }
-        if (atomUse[dimacsVar] == 0) {
-          atomUse[dimacsVar] = 1;
-          atomLiterals++;
-        }
-        atomsPropagated++;
+        pushedAs(lit, e);
         return lit;
       }
       if (numPending == 0) {
@@ -565,36 +734,14 @@ public final class LcgSolver implements ExternalPropagator {
   private int conflict(EntryList atoms, int extra) {
     numPending = 0;
     failed = true;
-    boolean[] seen = new boolean[trail.size()];
-    EntryList inSolver = new EntryList();
     EntryList lits = new EntryList();
     if (extra != 0) {
       lits.add(-extra);
     }
-    EntryList stack = atoms;
-    while (stack.size() > 0) {
-      int e = stack.get(stack.size() - 1);
-      stack.truncate(stack.size() - 1);
-      if (seen[e]) {
-        continue;
-      }
-      seen[e] = true;
-      int lit = atomLit(e);
-      if (sat.value(lit) > 0) {
-        inSolver.add(e);
-      } else {
-        int more = explainEntry(e, stack);
-        if (more != 0) {
-          lits.add(-more);
-        }
-      }
-    }
-    int[] clause = new int[inSolver.size() + lits.size()];
-    for (int k = 0; k < inSolver.size(); k++) {
-      clause[k] = -atomLit(inSolver.get(k));
-    }
+    negatedAtoms(atoms, Integer.MAX_VALUE, lits);
+    int[] clause = new int[lits.size()];
     for (int k = 0; k < lits.size(); k++) {
-      clause[inSolver.size() + k] = lits.get(k);
+      clause[k] = lits.get(k);
     }
     clause = Arrays.stream(clause).distinct().toArray();
     if (clause.length == 0) {
@@ -603,6 +750,46 @@ public final class LcgSolver implements ExternalPropagator {
     }
     pushedReason = clause;
     return clause[0];
+  }
+
+  /**
+   * Adds to {@code lits} the negations of atoms: of each atom whose literal was made true in the
+   * solver before trail position {@code limit}; any other atom is replaced by its explanation. The
+   * atoms given that have no literal get one for the next time, but not the atoms of their
+   * explanations. Uses {@code atoms} as a stack.
+   */
+  private void negatedAtoms(EntryList atoms, int limit, EntryList lits) {
+    if (seen.length < trail.size()) {
+      seen = new int[Math.max(trail.size(), 2 * seen.length)];
+    }
+    if (++stamp == 0) {
+      Arrays.fill(seen, 0);
+      stamp = 1;
+    }
+    if (lazyAtoms) {
+      for (int k = 0; k < atoms.size(); k++) {
+        if (existingAtomLit(atoms.get(k)) == 0) {
+          want(atoms.get(k));
+        }
+      }
+    }
+    while (atoms.size() > 0) {
+      int e = atoms.get(atoms.size() - 1);
+      atoms.truncate(atoms.size() - 1);
+      if (seen[e] == stamp) {
+        continue;
+      }
+      seen[e] = stamp;
+      int lit = lazyAtoms ? existingAtomLit(e) : atomLit(e);
+      if (lit != 0 && sat.value(lit) > 0 && sat.trailPosition(lit) < limit) {
+        lits.add(-lit);
+        continue;
+      }
+      int more = explainEntry(e, atoms);
+      if (more != 0) {
+        lits.add(-more);
+      }
+    }
   }
 
   private void apply(int lit) {
@@ -635,15 +822,17 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
-    EntryList reason = new EntryList();
-    int extra = explainEntry(e, reason);
-    int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
-    clause[0] = lit;
-    for (int k = 0; k < reason.size(); k++) {
-      clause[k + 1] = -atomLit(reason.get(k));
-    }
+    EntryList atoms = new EntryList();
+    EntryList lits = new EntryList();
+    lits.add(lit);
+    int extra = explainEntry(e, atoms);
     if (extra != 0) {
-      clause[clause.length - 1] = -extra;
+      lits.add(-extra);
+    }
+    negatedAtoms(atoms, sat.trailPosition(lit), lits);
+    int[] clause = new int[lits.size()];
+    for (int k = 0; k < lits.size(); k++) {
+      clause[k] = lits.get(k);
     }
     reasons++;
     reasonLiterals += clause.length;

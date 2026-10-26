@@ -437,6 +437,8 @@ class LcgFuzzTest {
     int sat = 0;
     int unsat = 0;
     long checked = 0;
+    long late = 0;
+    long skipped = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected = reference(new Model(seed));
@@ -447,8 +449,13 @@ class LcgFuzzTest {
       try {
         LcgSolver solver = new LcgSolver(model.store);
         solver.setChecking(true);
+        // one seed in four pushes every atom; reasons of up to 1 to 3 literals stay as clauses
+        solver.setLazyAtoms(seed % 4 != 3);
+        solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
         checked += solver.checker().checked;
+        late += solver.atomsLate;
+        skipped += solver.atomsSkipped;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -478,8 +485,9 @@ class LcgFuzzTest {
     }
     if (RUNS >= 1000) {
       System.out.printf(
-          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked%n",
-          RUNS, sat, unsat, checked);
+          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
+              + " %d atoms skipped, %d pushed late%n",
+          RUNS, sat, unsat, checked, skipped, late);
       statistics.forEach(
           (k, v) ->
               System.out.printf(

@@ -1417,6 +1417,16 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the position at which a literal's variable was assigned.
+   *
+   * @param lit a DIMACS literal whose variable is assigned
+   * @return its position in assignment order, below {@link #trailSize()}
+   */
+  public int trailPosition(int lit) {
+    return trailPos[toLit(lit) >> 1];
+  }
+
+  /**
    * Returns an assigned literal in assignment order.
    *
    * @param i a position below {@link #trailSize()}
