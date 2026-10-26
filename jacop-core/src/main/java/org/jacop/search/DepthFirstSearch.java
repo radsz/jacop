@@ -115,6 +115,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It specifies that the time-out has occured. */
   public boolean timeOutOccured;
 
+  /**
+   * It specifies that a child search stopped at its time-out (or other exit limit), so this search
+   * stops as well instead of exploring further and reporting an incomplete search as complete.
+   */
+  private boolean childSearchTimedOut;
+
   /** It specifies the id of the search. */
   public String searchId;
 
@@ -293,6 +299,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   private boolean setupLabeling(Store store, SelectChoicePoint<T> select) {
     this.store = store;
+    childSearchTimedOut = false;
 
     if (store.raiseLevelBeforeConsistency) {
       store.raiseLevelBeforeConsistency = false;
@@ -601,6 +608,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       int currentChildSolutionNo =
           childSearches[currentChildSearch].getSolutionListener().solutionsNo();
       childResult = childSearches[currentChildSearch].labeling();
+      if (childSearches[currentChildSearch] instanceof DepthFirstSearch<?> child
+          && child.timeOutOccured) {
+        // the child search was cut short, so the subtree below this node is not exhausted
+        childSearchTimedOut = true;
+        if (!timeOutOccured) {
+          markTimeOutOccurred();
+        }
+        break;
+      }
       if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
           > currentChildSolutionNo) {
         childFoundSolution = true;
@@ -786,7 +802,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
 
-    if (!checkExitConditions()) {
+    if (childSearchTimedOut || !checkExitConditions()) {
       return false;
     }
     if (!applyOptimizationCostRestriction()) {
@@ -877,6 +893,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public boolean labeling() {
 
     boolean raisedLevel = false;
+    childSearchTimedOut = false;
 
     if (store.raiseLevelBeforeConsistency) {
       store.raiseLevelBeforeConsistency = false;

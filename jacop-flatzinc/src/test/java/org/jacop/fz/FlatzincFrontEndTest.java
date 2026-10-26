@@ -426,6 +426,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
+    // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
+    // assignment of the other variables timed out below its only node. The annotated search had no
+    // node left to see the time-out, so =====UNSATISFIABLE===== was printed.
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ys = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 0; i < 24; i++) {
+      fzn.append("var 0..1: y").append(i).append(";\n");
+      ys.append("y").append(i).append(',');
+      weights.append("2,");
+    }
+    fzn.append("var 0..0: x :: output_var;\n")
+        .append("constraint int_lin_eq([")
+        .append(weights)
+        .append("2],[")
+        .append(ys)
+        .append("x],25);\n")
+        .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
+
+    String out = run(fzn.toString(), "-t", "300")[0];
+    assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
+  @Test
   void allSolutionsOptionPrintsImprovingSolutionsOfRestartSearch() throws IOException {
     // For optimization -a asks for the intermediate solutions; it was rejected together with
     // restart search, where it is only meaningless for satisfaction problems.

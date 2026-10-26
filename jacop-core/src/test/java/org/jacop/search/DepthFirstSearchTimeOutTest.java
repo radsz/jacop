@@ -32,6 +32,7 @@ package org.jacop.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -63,6 +64,46 @@ class DepthFirstSearchTimeOutTest {
 
     assertThat(result).isFalse();
     assertThat(child.timeOutOccured).isTrue();
+    assertThat(master.timeOutOccured).isTrue();
+    assertThat(store.level).isEqualTo(level);
+  }
+
+  @Test
+  void childSearchTimingOutMakesTheMasterSearchIncomplete() {
+    // The master search labels x, which has a single value, and hands the 2^24 assignments of y
+    // to the child search. None is a solution (an even sum cannot be 25), so the child times out.
+    // The master had no node left to check its own time-out, so it ended with no solution and no
+    // time-out, and Fz2jacop printed =====UNSATISFIABLE===== (hakank's farmer_and_cows).
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    IntVar[] y = new IntVar[24];
+    int[] weights = new int[y.length + 1];
+    IntVar[] all = new IntVar[y.length + 1];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+      weights[i] = 2;
+      all[i] = y[i];
+    }
+    weights[y.length] = 1;
+    all[y.length] = x;
+    store.impose(new LinearInt(all, weights, "==", 25));
+
+    DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+    DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+    master.setPrintInfo(false);
+    child.setPrintInfo(false);
+    child.setSelectChoicePoint(new SimpleSelect<>(y, null, new IndomainMin<>()));
+    master.setTimeOutMilliseconds(200);
+    child.setTimeOutMilliseconds(200);
+    master.addChildSearch(child);
+    int level = store.level;
+
+    boolean result =
+        master.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+
+    assertThat(result).isFalse();
+    assertThat(child.timeOutOccured).isTrue();
+    assertThat(master.timeOutOccured).isTrue();
     assertThat(store.level).isEqualTo(level);
   }
 }
