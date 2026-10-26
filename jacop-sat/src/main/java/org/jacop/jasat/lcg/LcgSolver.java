@@ -153,6 +153,12 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean activityBranching =
       !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
+  // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
+  private final boolean lastConflict =
+      !"false".equals(System.getProperty("jacop.lcg.lastConflict"));
+  private int decisionVar = -1; // the variable of the last activity decision
+  private int conflictVar = -1; // the variable to branch on next, after a conflict
+  private long backtrackConflicts;
   // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
   private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
   private double[] activity;
@@ -547,6 +553,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyBacktrack(int level) {
+    if (sat.conflicts != backtrackConflicts) {
+      // a conflict led here: its last decision was on decisionVar
+      backtrackConflicts = sat.conflicts;
+      conflictVar = decisionVar;
+    }
     while (store.level > baseLevel + level) {
       store.removeLevel(store.level);
       store.setLevel(store.level - 1);
@@ -924,6 +935,11 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     int i = heap.max();
+    if (lastConflict && conflictVar >= 0 && !vars[conflictVar].singleton()) {
+      i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
+    }
+    conflictVar = -1;
+    decisionVar = i;
     IntVar x = vars[i];
     searchDecisions++;
     if (phase != null && x.domain.contains(phase[i])) {
