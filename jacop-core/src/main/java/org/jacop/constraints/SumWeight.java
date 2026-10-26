@@ -461,7 +461,6 @@ public class SumWeight extends Constraint
   // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
   private IntVar[] lcgVars;
   private long[] lcgWeights;
-  private boolean lcgDistinct;
 
   private void lcgModel() {
     if (lcgVars != null) {
@@ -469,7 +468,6 @@ public class SumWeight extends Constraint
     }
     lcgVars = list;
     lcgWeights = weights;
-    lcgDistinct = LinearExplanation.distinct(lcgVars);
   }
 
   @Override
@@ -478,8 +476,7 @@ public class SumWeight extends Constraint
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explain(trail, entry, lcgVars, lcgWeights, true, true, out);
+    return LinearExplanation.explain(trail, entry, lcgVars, lcgWeights, true, true, out);
   }
 
   @Override
@@ -488,7 +485,6 @@ public class SumWeight extends Constraint
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explainFailure(trail, lcgVars, lcgWeights, equalTo, true, true, out);
+    return LinearExplanation.explainFailure(trail, lcgVars, lcgWeights, equalTo, true, true, out);
   }
 }

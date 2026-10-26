@@ -494,7 +494,6 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
   // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
   private IntVar[] lcgVars;
   private long[] lcgWeights;
-  private boolean lcgDistinct;
 
   private void lcgModel() {
     if (lcgVars != null) {
@@ -505,7 +504,6 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
     lcgWeights = new long[l + 1];
     Arrays.fill(lcgWeights, 1);
     lcgWeights[l] = -1;
-    lcgDistinct = LinearExplanation.distinct(lcgVars);
   }
 
   @Override
@@ -514,15 +512,17 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explain(
-            trail,
-            entry,
-            lcgVars,
-            lcgWeights,
-            relationType == EQ || relationType == LE || relationType == LT,
-            relationType == EQ || relationType == GE || relationType == GT,
-            out);
+    if (relationType == NE) {
+      return LinearExplanation.explainNotEqual(trail, entry, lcgVars, out);
+    }
+    return LinearExplanation.explain(
+        trail,
+        entry,
+        lcgVars,
+        lcgWeights,
+        relationType == EQ || relationType == LE || relationType == LT,
+        relationType == EQ || relationType == GE || relationType == GT,
+        out);
   }
 
   @Override
@@ -531,14 +531,16 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explainFailure(
-            trail,
-            lcgVars,
-            lcgWeights,
-            relationType == LT ? -1 : relationType == GT ? 1 : 0,
-            relationType == EQ || relationType == LE || relationType == LT,
-            relationType == EQ || relationType == GE || relationType == GT,
-            out);
+    if (relationType == NE) {
+      return LinearExplanation.explainNotEqualFailure(trail, lcgVars, out);
+    }
+    return LinearExplanation.explainFailure(
+        trail,
+        lcgVars,
+        lcgWeights,
+        relationType == LT ? -1 : relationType == GT ? 1 : 0,
+        relationType == EQ || relationType == LE || relationType == LT,
+        relationType == EQ || relationType == GE || relationType == GT,
+        out);
   }
 }

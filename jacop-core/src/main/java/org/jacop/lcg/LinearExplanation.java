@@ -30,13 +30,13 @@
 
 package org.jacop.lcg;
 
-import java.util.IdentityHashMap;
 import org.jacop.core.IntVar;
 
 /**
- * Explanations of a linear relation {@code sum w[i] * x[i] <= c}, {@code >= c} or both, over
- * distinct variables, from the bounds of the other variables: the reasoning of bounds propagation.
- * Sums, weighted sums and pseudo-Boolean constraints share it.
+ * Explanations of a linear relation {@code sum w[i] * x[i] <= c}, {@code >= c} or both, from the
+ * bounds of the other variables: the reasoning of bounds propagation. Sums, weighted sums and
+ * pseudo-Boolean constraints share it. A variable may occur more than once; each occurrence is
+ * treated as a variable of its own, as the propagators do, which gives weaker but sound reasons.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -46,33 +46,18 @@ public final class LinearExplanation {
   private LinearExplanation() {}
 
   /**
-   * Tells whether no variable occurs twice; the explanations need distinct variables.
-   *
-   * @param vars the variables
-   * @return true when they are distinct
-   */
-  public static boolean distinct(IntVar[] vars) {
-    IdentityHashMap<IntVar, Boolean> seen = new IdentityHashMap<>();
-    for (IntVar v : vars) {
-      if (seen.put(v, Boolean.TRUE) != null) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
    * Adds to {@code out} the reason of a bound entry: the bounds of the other variables that, with
    * the side of the relation the bound comes from, imply it.
    *
    * @param trail the trail
    * @param entry a bound entry of one of the variables
-   * @param vars the variables, distinct
+   * @param vars the variables
    * @param weights their weights
    * @param lessOrEqual whether the relation contains {@code sum <= c}
    * @param greaterOrEqual whether the relation contains {@code sum >= c}
    * @param out where the reason entries are added
-   * @return false when there is no such reason (a {@code !=} entry, or a side the relation lacks)
+   * @return false when there is no such reason (a {@code !=} entry, a side the relation lacks, or a
+   *     variable that occurs with weights of both signs)
    */
   public static boolean explain(
       AtomicTrail trail,
@@ -87,22 +72,27 @@ public final class LinearExplanation {
       return false;
     }
     IntVar y = trail.variable(entry);
-    long weight = 0;
+    // the occurrence of y the bound comes from; with weights of both signs it is not known
+    int own = -1;
     for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == y) {
-        weight = weights[i];
+      if (vars[i] == y && weights[i] != 0) {
+        if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
+          return false;
+        }
+        own = i;
       }
     }
-    if (weight == 0) {
+    if (own < 0) {
       return false;
     }
+    long weight = weights[own];
     // the side of the relation the bound comes from: sum <= c, or sum >= c
     boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
     if (upperSide ? !lessOrEqual : !greaterOrEqual) {
       return false;
     }
     for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == y || weights[i] == 0) {
+      if (i == own || weights[i] == 0) {
         continue;
       }
       if (upperSide == weights[i] > 0) {
@@ -121,7 +111,7 @@ public final class LinearExplanation {
    * the largest one fall below it, now.
    *
    * @param trail the trail
-   * @param vars the variables, distinct
+   * @param vars the variables
    * @param weights their weights
    * @param c the right-hand side
    * @param lessOrEqual whether the relation contains {@code sum <= c}
@@ -165,5 +155,78 @@ public final class LinearExplanation {
       }
     }
     return true;
+  }
+
+  /**
+   * Adds to {@code out} the reason of an entry made by {@code sum w[i] * x[i] != c}: the other
+   * occurrences fixed, which forbid one value of the entry's variable, and for a bound entry the
+   * bound before it and the holes it skipped.
+   *
+   * @param trail the trail
+   * @param entry an entry of one of the variables
+   * @param vars the variables
+   * @param out where the reason entries are added
+   * @return false when an other occurrence was not fixed before the entry
+   */
+  public static boolean explainNotEqual(
+      AtomicTrail trail, int entry, IntVar[] vars, EntryList out) {
+    IntVar y = trail.variable(entry);
+    int own = -1;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y) {
+        own = i;
+        break;
+      }
+    }
+    if (own < 0 || !fixedBefore(trail, vars, own, entry)) {
+      return false;
+    }
+    addFixed(trail, vars, own, entry, out);
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.GE) {
+      trail.addLowerBound(y, entry, out);
+      trail.addSkippedHoles(entry, Integer.MIN_VALUE, out);
+    } else if (kind == AtomicTrail.LE) {
+      trail.addUpperBound(y, entry, out);
+      trail.addSkippedHoles(entry, Integer.MAX_VALUE, out);
+    }
+    return true;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of {@code sum w[i] * x[i] != c}: every variable
+   * fixed now.
+   *
+   * @param trail the trail
+   * @param vars the variables
+   * @param out where the reason entries are added
+   * @return false when a variable is not fixed
+   */
+  public static boolean explainNotEqualFailure(AtomicTrail trail, IntVar[] vars, EntryList out) {
+    int now = trail.size();
+    if (!fixedBefore(trail, vars, -1, now)) {
+      return false;
+    }
+    addFixed(trail, vars, -1, now, out);
+    return true;
+  }
+
+  private static boolean fixedBefore(AtomicTrail trail, IntVar[] vars, int skip, int position) {
+    for (int i = 0; i < vars.length; i++) {
+      if (i != skip && trail.minBefore(vars[i], position) != trail.maxBefore(vars[i], position)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static void addFixed(
+      AtomicTrail trail, IntVar[] vars, int skip, int position, EntryList out) {
+    for (int i = 0; i < vars.length; i++) {
+      if (i != skip) {
+        trail.addLowerBound(vars[i], position, out);
+        trail.addUpperBound(vars[i], position, out);
+      }
+    }
   }
 }

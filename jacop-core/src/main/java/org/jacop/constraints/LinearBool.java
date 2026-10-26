@@ -616,7 +616,6 @@ public class LinearBool extends Constraint
   // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
   private IntVar[] lcgVars;
   private long[] lcgWeights;
-  private boolean lcgDistinct;
 
   private void lcgModel() {
     if (lcgVars != null) {
@@ -629,7 +628,6 @@ public class LinearBool extends Constraint
       lcgVars[n] = z;
       lcgWeights[n] = -1;
     }
-    lcgDistinct = LinearExplanation.distinct(lcgVars);
   }
 
   @Override
@@ -638,9 +636,8 @@ public class LinearBool extends Constraint
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explain(
-            trail, entry, lcgVars, lcgWeights, relationType != GE, relationType != LE, out);
+    return LinearExplanation.explain(
+        trail, entry, lcgVars, lcgWeights, relationType != GE, relationType != LE, out);
   }
 
   @Override
@@ -649,14 +646,7 @@ public class LinearBool extends Constraint
       return false;
     }
     lcgModel();
-    return lcgDistinct
-        && LinearExplanation.explainFailure(
-            trail,
-            lcgVars,
-            lcgWeights,
-            z == null ? c : 0,
-            relationType != GE,
-            relationType != LE,
-            out);
+    return LinearExplanation.explainFailure(
+        trail, lcgVars, lcgWeights, z == null ? c : 0, relationType != GE, relationType != LE, out);
   }
 }
