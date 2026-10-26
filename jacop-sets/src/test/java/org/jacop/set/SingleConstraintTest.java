@@ -619,6 +619,65 @@ class SingleConstraintTest {
     }
   }
 
+  @Test
+  void testLexOrderPrunesEveryElementWithoutSupport() {
+
+    // AleB and AltB enforce bounds consistency: after propagation every element of a lub that is
+    // not in the glb belongs to some ordered pair and is missing from another, and with a
+    // restricted cardinality both cardinality bounds are reached by ordered pairs. The old
+    // propagator only removed the elements of lub(b) below min(lub(a)).
+    Random random = new Random(11);
+    for (int trial = 0; trial < 3000; trial++) {
+      boolean strict = random.nextBoolean();
+      Store store = new Store();
+      SetVar a = randomSetVar(store, random, "a", 5);
+      SetVar b = randomSetVar(store, random, "b", 5);
+      String before = (strict ? "AltB " : "AleB ") + a + " " + b;
+      boolean cardA = restrictsCardinality(a);
+      boolean cardB = restrictsCardinality(b);
+      store.impose(strict ? new AltB(a, b) : new AleB(a, b));
+      if (!store.consistency()) {
+        continue;
+      }
+      List<IntDomain[]> solutions = new ArrayList<>();
+      for (IntDomain x : subsets(a)) {
+        for (IntDomain y : subsets(b)) {
+          int order = lexCompare(x.toIntArray(), y.toIntArray());
+          if (strict ? order < 0 : order <= 0) {
+            solutions.add(new IntDomain[] {x, y});
+          }
+        }
+      }
+      String context = before + " -> " + a + " " + b;
+      assertThat(solutions).as("consistent without a solution: %s", context).isNotEmpty();
+      SetVar[] vars = {a, b};
+      for (int k = 0; k < 2; k++) {
+        SetVar s = vars[k];
+        int index = k;
+        for (int v : s.domain.lub().subtract(s.domain.glb()).toIntArray()) {
+          assertThat(solutions.stream().anyMatch(p -> p[index].contains(v)))
+              .as("%d kept in %s: %s", v, s.id(), context)
+              .isTrue();
+          assertThat(solutions.stream().anyMatch(p -> !p[index].contains(v)))
+              .as("%d kept out of the glb of %s: %s", v, s.id(), context)
+              .isTrue();
+        }
+        if (k == 0 ? cardA : cardB) {
+          for (int c : new int[] {s.domain.card().min(), s.domain.card().max()}) {
+            assertThat(solutions.stream().anyMatch(p -> p[index].getSize() == c))
+                .as("cardinality %d of %s: %s", c, s.id(), context)
+                .isTrue();
+          }
+        }
+      }
+    }
+  }
+
+  private static boolean restrictsCardinality(SetVar s) {
+    return s.domain.card().min() > s.domain.glb().getSize()
+        || s.domain.card().max() < s.domain.lub().getSize();
+  }
+
   /** Compares two sorted sets in the lexicographic order of their elements; a prefix is smaller. */
   private static int lexCompare(int[] x, int[] y) {
     for (int i = 0; i < Math.min(x.length, y.length); i++) {
