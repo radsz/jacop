@@ -364,7 +364,11 @@ class LcgFuzzTest {
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
         case 2 -> new LinearInt(p, new int[] {1, 1, -1}, "==", value());
         case 3 -> new XplusYeqZ(p[0], p[1], p[2]);
-        case 4 -> new XmulYeqZ(p[0], p[1], p[2]);
+        case 4 ->
+            rnd.nextBoolean()
+                ? new XmulYeqZ(p[0], p[1], p[2])
+                // a square, or the product equal to a factor
+                : new XmulYeqZ(p[0], rnd.nextBoolean() ? p[0] : p[1], p[rnd.nextInt(2) * 2]);
         case 5 -> new XmulCeqZ(p[0], 2 - rnd.nextInt(4), p[1]);
         case 6 -> new AbsXeqY(p[0], p[1]);
         case 7 -> new Distance(p[0], p[1], p[2]);
