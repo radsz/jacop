@@ -74,8 +74,10 @@ import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
@@ -284,7 +286,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(60)) {
+      return switch (rnd.nextInt(61)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -369,6 +371,8 @@ class LcgFuzzTest {
         case 56 -> new XplusClteqZ(p[0], value(), p[1]);
         case 57 -> primitive(0);
         case 58 -> new ElementVariableFast(one(), q, one(), -rnd.nextInt(2));
+        case 59 ->
+            rnd.nextBoolean() ? new MaxSimple(p[0], p[1], one()) : new MinSimple(p[0], p[1], one());
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
