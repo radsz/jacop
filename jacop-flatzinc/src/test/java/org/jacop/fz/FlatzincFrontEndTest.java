@@ -1350,9 +1350,16 @@ class FlatzincFrontEndTest {
       }
     }
     model.append("solve satisfy;\n");
-    String out = run(model.toString(), "--lcg", "-t", "100")[0];
-    assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
-    assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    // the disequalities would become an all-different, with which LCG may prove at once that the
+    // pigeons do not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out = run(model.toString(), "--lcg", "-t", "100")[0];
+      assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
+      assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
   }
 
   @Test
