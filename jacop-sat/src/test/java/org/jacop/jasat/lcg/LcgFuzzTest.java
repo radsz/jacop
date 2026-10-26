@@ -91,6 +91,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
@@ -391,8 +392,11 @@ class LcgFuzzTest {
           store.impose(new XeqY(xs[0], p[0]));
           yield new Assignment(xs, ds, 0, 0);
         }
-        case 51 -> new SumInt(q, relation(), one());
-        case 52 -> new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one());
+        case 51 -> rnd.nextBoolean() ? new SumInt(q, relation(), one()) : new Sum(q, one());
+        case 52 ->
+            rnd.nextBoolean()
+                ? new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one())
+                : new Sum(new IntVar[] {q[0], q[0], q[1]}, one());
         case 53 -> {
           String rel = new String[] {"==", "<=", ">="}[rnd.nextInt(3)];
           int[] w = {2, -1, 1};
