@@ -244,19 +244,18 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
 
         y.domain.in(store.level, y, -x.max(), -x.min());
       } else { // x.min() < 0 && x.max() >= 0
-        IntervalDomain xBound;
-        if (y.min() == 0) {
-          xBound = new IntervalDomain(-y.max(), y.max());
-        } else {
-          xBound = new IntervalDomain(-y.max(), -y.min());
-          xBound.unionAdapt(new Interval(y.min(), y.max()));
-        }
+        int yMin = y.min();
+        int yMax = y.max();
 
         // y gets only its upper bound here, so a change of x must start another iteration: x may
         // no longer contain negative values, and then y needs the bounds of the first case.
         store.propagationHasOccurred = false;
 
-        x.domain.in(store.level, x, xBound);
+        // x in -yMax..-yMin \/ yMin..yMax, as the bounds and the gap, without building the domain
+        x.domain.in(store.level, x, -yMax, yMax);
+        if (yMin > 0) {
+          x.domain.inComplement(store.level, x, 1 - yMin, yMin - 1);
+        }
 
         y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));
       }

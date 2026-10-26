@@ -63,6 +63,13 @@ public abstract class Var implements Backtrackable {
    */
   @Getter public Store store;
 
+  /**
+   * What {@link #sizeConstraintsOriginal()} adds to the number of constraints attached to the
+   * original domain: constraints that a reformulation removed, and the degree weights of attached
+   * constraints that differ from 1.
+   */
+  private int degreeAdjustment;
+
   /** Pruning activity of this variable. */
   double pruningActivity = 1.0d;
 
@@ -232,7 +239,9 @@ public abstract class Var implements Backtrackable {
     if (pruningEvent == Domain.NONE) {
       return;
     }
+    int before = originalDegreeBefore(c);
     dom().putModelConstraint(store.level, this, c, pruningEvent);
+    weighDegree(c, before);
     store.recordChange(this);
   }
 
@@ -269,9 +278,36 @@ public abstract class Var implements Backtrackable {
       }
     }
     if (i == -1) {
+      int before = originalDegreeBefore(c);
       d.removeModelConstraint(store.level, this, c);
+      weighDegree(c, before);
     }
     store.recordChange(this);
+  }
+
+  /**
+   * Returns the number of constraints attached to the original domain before a constraint with a
+   * degree weight other than 1 is attached or detached, for {@link #weighDegree}.
+   *
+   * @param c the constraint being attached or detached.
+   * @return the number of constraints, or 0 if the degree weight of the constraint is 1.
+   */
+  protected final int originalDegreeBefore(Constraint c) {
+    return c.degreeWeight() == 1 ? 0 : dom().sizeConstraintsOriginal();
+  }
+
+  /**
+   * Counts a constraint just attached to or detached from the original domain as its degree weight
+   * in {@link #sizeConstraintsOriginal()}. Attaching at a later level leaves the original domain,
+   * and so the static degree, unchanged.
+   *
+   * @param c the constraint attached or detached.
+   * @param before the result of {@link #originalDegreeBefore} before attaching or detaching it.
+   */
+  protected final void weighDegree(Constraint c, int before) {
+    if (c.degreeWeight() != 1) {
+      degreeAdjustment += (c.degreeWeight() - 1) * (dom().sizeConstraintsOriginal() - before);
+    }
   }
 
   /**
@@ -292,13 +328,27 @@ public abstract class Var implements Backtrackable {
   }
 
   /**
-   * It returns all constraints which are associated with variable, even the ones which are already
-   * satisfied.
+   * It returns the static degree of the variable: the number of constraints attached at the
+   * earliest level of the variable, even the ones which are already satisfied. Each constraint
+   * counts as its {@link Constraint#degreeWeight()}, and constraints that a reformulation removed
+   * count as well (see {@link #adjustDegree(int)}), so the degree is the one of the model.
    *
-   * @return number of constraints attached at the earliest level of the variable.
+   * @return the static degree of the variable.
    */
   public int sizeConstraintsOriginal() {
-    return dom().sizeConstraintsOriginal();
+    return dom().sizeConstraintsOriginal() + degreeAdjustment;
+  }
+
+  /**
+   * It adds to the static degree of the variable, {@link #sizeConstraintsOriginal()}. A
+   * reformulation that removes constraints of the model, or replaces them, calls it with the number
+   * of removed constraints on this variable, so that degree-based variable selections (for example
+   * {@link org.jacop.search.MostConstrainedStatic}) choose as they would in the model.
+   *
+   * @param delta the number of constraints to add, negative to subtract.
+   */
+  public void adjustDegree(int delta) {
+    degreeAdjustment += delta;
   }
 
   /**

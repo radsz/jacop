@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -84,6 +85,25 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
     } else if (b.min() == 1) {
       c.consistency(store);
     }
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    if (v != b
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))
+        && isSimpleNestedConstraintOver(v)) {
+      // consistency() needs c.notSatisfied() before b is fixed and c.consistency() after, and c's
+      // own consistency event covers both. c.satisfied() only removes the constraint early, so it
+      // does not need c's events for satisfaction, which can be ANY where c's are GROUND (XneqY).
+      return Math.max(IntDomain.GROUND, c.getConsistencyPruningEvent(v));
+    }
+    return super.getConsistencyPruningEvent(v);
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var v, boolean mode) {
+    // nested in Not or Reified, notConsistency() and satisfied() decide the outer constraint
+    return super.getConsistencyPruningEvent(v);
   }
 
   @Override

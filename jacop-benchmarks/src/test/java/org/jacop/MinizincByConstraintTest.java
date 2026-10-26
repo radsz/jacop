@@ -164,12 +164,19 @@ class MinizincByConstraintTest {
         }
         fz2jacop.callMain(
             new String[] {
-              options.getFirst(), options.get(1), "--outputfile", outputFilename, fznPath
+              options.getFirst(),
+              options.get(1),
+              "--default-search",
+              "input",
+              "--outputfile",
+              outputFilename,
+              fznPath
             });
         FloatDomain.setFormat(Double.MAX_VALUE);
       }
     } else {
-      fz2jacop.callMain(new String[] {"--outputfile", outputFilename, fznPath});
+      fz2jacop.callMain(
+          new String[] {"--default-search", "input", "--outputfile", outputFilename, fznPath});
     }
 
     List<String> expectedResult = Files.readAllLines(Path.of(expectedPath), StandardCharsets.UTF_8);

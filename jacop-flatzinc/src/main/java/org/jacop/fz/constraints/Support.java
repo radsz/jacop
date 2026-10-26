@@ -44,6 +44,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqC;
@@ -102,6 +103,7 @@ public class Support implements ParserTreeConstants {
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
@@ -740,6 +742,16 @@ public class Support implements ParserTreeConstants {
     reif.pose();
     // generate channeling constraints instead of implied constraints
     imply.pose();
+  }
+
+  /**
+   * Finds presence handles of the non-strict k-dimensional diffn constraints by probing; the store
+   * must be at a fixpoint.
+   *
+   * @return false if probing proved the model inconsistent.
+   */
+  public boolean probeDiffnKHandles() {
+    return nonStrictDiffnK.isEmpty() || new DiffnKHandleProbing(store).probe(nonStrictDiffnK);
   }
 
   void poseAlldistinctConstraints() {

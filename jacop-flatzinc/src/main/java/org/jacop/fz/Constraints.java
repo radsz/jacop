@@ -133,6 +133,9 @@ public class Constraints implements ParserTreeConstants {
 
         int k = node.jjtGetNumChildren();
         for (int j = 0; j < k; j++) {
+          if (support.options.timeOutPassed()) {
+            throw new ModelTimeOut();
+          }
           SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
           if (!replaced.contains(snode.jjtGetChild(0))) {
             generateConstraint(snode);
@@ -163,6 +166,10 @@ public class Constraints implements ParserTreeConstants {
     // model is consistent; it can happen that search will not
     // find out inconsistency if all variables are ground
     if (!store.consistency()) {
+      throw Store.failException;
+    }
+
+    if (!support.probeDiffnKHandles()) {
       throw Store.failException;
     }
   }

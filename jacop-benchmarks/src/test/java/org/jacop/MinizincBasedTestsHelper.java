@@ -127,6 +127,8 @@ class MinizincBasedTestsHelper {
         RELATIVE_PATH + filename + ".out"; // outputFilename contains path to *.out file.
     String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
 
+    // The expected outputs of models without search annotation were recorded with the input order
+    // search, so it is kept with --default-search input.
     // If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
     if (Files.exists(Path.of(foo + "/options.opt"))) {
       try (BufferedReader reader =
@@ -141,6 +143,8 @@ class MinizincBasedTestsHelper {
             new String[] {
               options.getFirst(),
               options.get(1),
+              "--default-search",
+              "input",
               "--outputfile",
               outputFilename,
               RELATIVE_PATH + filename
@@ -149,7 +153,10 @@ class MinizincBasedTestsHelper {
       }
     } else {
       // fz2jacop compute result
-      fz2jacop.callMain(new String[] {"--outputfile", outputFilename, RELATIVE_PATH + filename});
+      fz2jacop.callMain(
+          new String[] {
+            "--default-search", "input", "--outputfile", outputFilename, RELATIVE_PATH + filename
+          });
     }
 
     String result = new String(Files.readAllBytes(Path.of(outputFilename)));

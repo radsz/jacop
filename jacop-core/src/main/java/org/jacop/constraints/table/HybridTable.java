@@ -76,6 +76,11 @@ import org.jacop.lcg.Explainable;
  * are also kept in the bit-set, and in addition are checked one by one, as in tabular reduction, by
  * arc consistency on their restrictions.
  *
+ * <p>Large tables often have a key column with thousands of values, each in a few tuples. The
+ * supports of such values are kept as lists of their non-zero words rather than full bit-sets, a
+ * column of equalities is filtered by one pass over the valid tuples when there are fewer of them
+ * than live classes, and the values a filtering removes go in one domain change.
+ *
  * <p>The constraint achieves generalized arc consistency when the restrictions between columns of
  * each tuple form a forest, which includes all tables without such restrictions. Otherwise it
  * enforces arc consistency on each tuple and is weaker, but still correct.
@@ -154,6 +159,34 @@ public class HybridTable extends Constraint
   private IntDomain[][] setDomains;
 
   private int[][] residues;
+
+  /**
+   * The class of the restriction of each tuple on column i, when every restriction of the column is
+   * an equality, else null. Columns with many classes and few valid tuples are filtered from it.
+   */
+  private int[][] tupleClass;
+
+  /** The classes of column i met by a valid tuple are those whose seen[i][c] is seenStamp. */
+  private int[][] seen;
+
+  private int seenStamp;
+
+  /** Work space of the classes a filtering removes. */
+  private int[] removedClasses;
+
+  /** Work space to order the removed classes, all zero between calls. */
+  private long[] classMarks;
+
+  // Supports of the classes without a full bit-set, by column: the non-zero words of class c are
+  // sparseWord[i][k] with bits sparseBits[i][k], for k from sparseStart[i][c] to
+  // sparseStart[i][c + 1] - 1. The residue of such a class is a position k.
+  private int[][] sparseStart;
+  private int[][] sparseWord;
+  private long[][] sparseBits;
+
+  // The columns filtered from the valid tuples in the current call.
+  private boolean[] scanColumn;
+  private int[] scanned;
 
   /** The classes of each column that may still intersect its domain, first liveSize of them. */
   private int[][] live;
@@ -461,7 +494,7 @@ public class HybridTable extends Constraint
       state[liveRecord + i] = size;
       valid.clearMask();
       for (int p = 0; p < size; p++) {
-        addToMask(supports[i][l[p]]);
+        addClassToMask(i, l[p]);
       }
       for (int w = 0; w < words; w++) {
         state[w] &= mask[w];
@@ -599,24 +632,34 @@ public class HybridTable extends Constraint
     setAccept = new long[arity][][];
     binaryColumn = new long[arity][];
     residues = new int[arity][];
+    tupleClass = new int[arity][];
+    seen = new int[arity][];
     binaryColumns = new int[n][];
     binarySources = new int[n][];
     setDomains = new IntDomain[n][];
 
+    sparseStart = new int[arity][];
+    sparseWord = new int[arity][];
+    sparseBits = new long[arity][];
+
     for (int i = 0; i < arity; i++) {
       int classes = classMin[i].length;
+      residues[i] = new int[classes];
+      upperAccept[i] = new long[classes][];
+      lowerAccept[i] = new long[classes][];
+      setAccept[i] = new long[classes][];
+      if (onlyEquality(i)) {
+        buildEqualitySupports(i);
+        continue;
+      }
       long[][] sup = new long[classes][];
       long[][] eq = new long[classes][];
       long[][] ne = new long[classes][];
       long[][] upper = new long[classes][];
       long[][] lower = new long[classes][];
       long[][] set = new long[classes][];
-      boolean onlyEquality = true;
       for (int t = 0; t < n; t++) {
         Restriction r = cells[t * arity + i];
-        if (r.kind != Restriction.Kind.EQ) {
-          onlyEquality = false;
-        }
         switch (r.kind) {
           case EQ -> {
             int c = classOf(i, r.value);
@@ -668,18 +711,10 @@ public class HybridTable extends Constraint
           }
         }
       }
-      // The equality tuples of a class are its supports when every restriction is an equality.
-      for (int c = 0; c < classes; c++) {
-        if (onlyEquality) {
-          eq[c] = sup[c];
-        }
-      }
-      if (!onlyEquality) {
-        for (int t = 0; t < n; t++) {
-          Restriction r = cells[t * arity + i];
-          if (r.kind == Restriction.Kind.EQ) {
-            setBit(eq, classOf(i, r.value), t, words);
-          }
+      for (int t = 0; t < n; t++) {
+        Restriction r = cells[t * arity + i];
+        if (r.kind == Restriction.Kind.EQ) {
+          setBit(eq, classOf(i, r.value), t, words);
         }
       }
       supports[i] = sup;
@@ -688,8 +723,15 @@ public class HybridTable extends Constraint
       upperAccept[i] = upper;
       lowerAccept[i] = lower;
       setAccept[i] = set;
-      residues[i] = new int[classes];
     }
+    int maxClasses = 0;
+    for (int i = 0; i < arity; i++) {
+      maxClasses = Math.max(maxClasses, classMin[i].length);
+    }
+    removedClasses = new int[maxClasses];
+    classMarks = new long[(maxClasses + 63) >> 6];
+    scanColumn = new boolean[arity];
+    scanned = new int[arity];
 
     for (int t = 0; t < n; t++) {
       boolean[] involved = new boolean[arity];
@@ -726,6 +768,161 @@ public class HybridTable extends Constraint
     }
   }
 
+  private boolean onlyEquality(int i) {
+    for (int t = 0; t < tupleCount; t++) {
+      if (cells[t * arity + i].kind != Restriction.Kind.EQ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * A class keeps its supports as a list of its non-zero words when at most one word in
+   * SPARSE_RATIO is non-zero, as for the many values of a key column of a large table.
+   */
+  private static final int SPARSE_RATIO = 8;
+
+  /**
+   * It builds the supports of a column whose restrictions are all equalities, from the tuples
+   * sorted by class, without a full bit-set for the classes with few tuples.
+   */
+  private void buildEqualitySupports(int i) {
+    int n = tupleCount;
+    int classes = classMin[i].length;
+    int[] tc = new int[n];
+    int[] start = new int[classes + 1];
+    for (int t = 0; t < n; t++) {
+      tc[t] = classOf(i, cells[t * arity + i].value);
+      start[tc[t] + 1]++;
+    }
+    for (int c = 0; c < classes; c++) {
+      start[c + 1] += start[c];
+    }
+    // The tuples by class, in increasing order within a class.
+    int[] order = new int[n];
+    int[] next = Arrays.copyOf(start, classes);
+    for (int t = 0; t < n; t++) {
+      order[next[tc[t]]++] = t;
+    }
+    long[][] sup = new long[classes][];
+    int entries = 0;
+    for (int c = 0; c < classes; c++) {
+      int count = 0;
+      int lastWord = -1;
+      for (int k = start[c]; k < start[c + 1]; k++) {
+        int w = order[k] >> 6;
+        if (w != lastWord) {
+          count++;
+          lastWord = w;
+        }
+      }
+      if (count > 0 && (long) count * SPARSE_RATIO > words) {
+        sup[c] = new long[words];
+        for (int k = start[c]; k < start[c + 1]; k++) {
+          sup[c][order[k] >> 6] |= 1L << order[k];
+        }
+      } else {
+        entries += count;
+      }
+    }
+    if (entries > 0) {
+      int[] sStart = new int[classes + 1];
+      int[] sWord = new int[entries];
+      long[] sBits = new long[entries];
+      int e = 0;
+      for (int c = 0; c < classes; c++) {
+        sStart[c] = e;
+        if (sup[c] == null) {
+          for (int k = start[c]; k < start[c + 1]; k++) {
+            int t = order[k];
+            if (e == sStart[c] || sWord[e - 1] != t >> 6) {
+              sWord[e++] = t >> 6;
+            }
+            sBits[e - 1] |= 1L << t;
+          }
+        }
+      }
+      sStart[classes] = e;
+      sparseStart[i] = sStart;
+      sparseWord[i] = sWord;
+      sparseBits[i] = sBits;
+    }
+    supports[i] = sup;
+    equalSupports[i] = sup;
+    tupleClass[i] = tc;
+    seen[i] = new int[classes];
+  }
+
+  /** It adds to the mask the tuples whose restriction on column i accepts class c. */
+  private void addClassToMask(int i, int c) {
+    long[] set = supports[i][c];
+    if (set != null) {
+      valid.addToMask(set);
+      return;
+    }
+    int[] start = sparseStart[i];
+    if (start != null) {
+      // Words that are not valid may be set too; the mask is only read on the valid words.
+      int[] ws = sparseWord[i];
+      long[] bs = sparseBits[i];
+      for (int k = start[c]; k < start[c + 1]; k++) {
+        mask[ws[k]] |= bs[k];
+      }
+    }
+  }
+
+  /** It adds to the mask the tuples whose restriction on column i is the constant of class c. */
+  private void addEqualToMask(int i, int c) {
+    if (equalSupports[i] == supports[i]) {
+      addClassToMask(i, c);
+    } else {
+      addToMask(equalSupports[i][c]);
+    }
+  }
+
+  /**
+   * It checks whether a valid tuple, not among the excluded ones, has a restriction on column i
+   * that accepts class c.
+   */
+  private boolean supported(int i, int c, long[] excluded) {
+    long[] set = supports[i][c];
+    if (set != null) {
+      return intersects(i, c, set, excluded);
+    }
+    int[] start = sparseStart[i];
+    if (start == null) {
+      return false;
+    }
+    int from = start[c];
+    int to = start[c + 1];
+    int[] ws = sparseWord[i];
+    long[] bs = sparseBits[i];
+    int[] res = residues[i];
+    int r = res[c];
+    if (r >= from && r < to) {
+      long word = state[ws[r]] & bs[r];
+      if (excluded != null) {
+        word &= ~excluded[ws[r]];
+      }
+      if (word != 0L) {
+        return true;
+      }
+    }
+    // A word that is not valid is zero in state.
+    for (int k = from; k < to; k++) {
+      long word = state[ws[k]] & bs[k];
+      if (excluded != null) {
+        word &= ~excluded[ws[k]];
+      }
+      if (word != 0L) {
+        res[c] = k;
+        return true;
+      }
+    }
+    return false;
+  }
+
   // ---------------------------------------------------------------------------------------------
   // Trailing.
 
@@ -744,7 +941,7 @@ public class HybridTable extends Constraint
     if (pruning) {
       return;
     }
-    int p = TrailedTupleSet.column(v, positionByIndex, indexOffset, varMap);
+    int p = TrailedTupleSet.column(v, x, positionByIndex, indexOffset, varMap);
     if (p >= 0 && !queued[p]) {
       queued[p] = true;
       queue[queueSize++] = p;
@@ -860,12 +1057,13 @@ public class HybridTable extends Constraint
     }
 
     pruning = true;
+    boolean anyScanned = scanValidTuples(onlyChanged);
     int notGround = 0;
     for (int i = 0; i < arity; i++) {
       IntVar xi = x[i];
       boolean wasSingleton = xi.singleton();
       if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
-        filterDomain(i);
+        filterDomain(i, anyScanned && scanColumn[i]);
       }
       if (!xi.singleton()) {
         notGround++;
@@ -914,15 +1112,13 @@ public class HybridTable extends Constraint
     setLiveSize(i, s);
 
     valid.clearMask();
-    long[][] sup = supports[i];
     if (s <= size - s) {
       for (int k = 0; k < s; k++) {
-        addToMask(sup[l[k]]);
+        addClassToMask(i, l[k]);
       }
     } else {
-      long[][] eq = equalSupports[i];
       for (int k = s; k < size; k++) {
-        addToMask(eq[l[k]]);
+        addEqualToMask(i, l[k]);
       }
       if (notEqualSupports[i] != null && d.singleton()) {
         addToMask(notEqualSupports[i][classOf(i, d.value())]);
@@ -1436,15 +1632,82 @@ public class HybridTable extends Constraint
     return result;
   }
 
-  /** It removes the values of variable i that no valid tuple supports. */
-  private void filterDomain(int i) {
+  /**
+   * A column whose restrictions are all equalities is filtered from the valid tuples, rather than
+   * by looking for a support of each live class, when it has more than SCAN_RATIO live classes per
+   * valid tuple.
+   */
+  private static final int SCAN_RATIO = 1;
+
+  /**
+   * It marks, for the columns that are cheaper to filter from the valid tuples, the classes these
+   * tuples meet; it tells whether there are such columns, which scanColumn then gives.
+   */
+  private boolean scanValidTuples(int onlyChanged) {
+    int limit = limit();
+    int count = 0;
+    boolean any = false;
+    for (int i = 0; i < arity; i++) {
+      scanColumn[i] = false;
+      if (i == onlyChanged || tupleClass[i] == null || binaryColumn[i] != null) {
+        continue;
+      }
+      if (!any) {
+        for (int p = 0; p <= limit; p++) {
+          count += Long.bitCount(state[index[p]]);
+        }
+        any = true;
+      }
+      scanColumn[i] = !x[i].singleton() && (long) count * SCAN_RATIO < liveSize(i);
+    }
+    int columns = 0;
+    for (int i = 0; i < arity; i++) {
+      if (scanColumn[i]) {
+        scanned[columns++] = i;
+      }
+    }
+    if (columns == 0) {
+      return false;
+    }
+    if (seenStamp == Integer.MAX_VALUE) {
+      for (int[] stamps : seen) {
+        if (stamps != null) {
+          Arrays.fill(stamps, 0);
+        }
+      }
+      seenStamp = 0;
+    }
+    int stamp = ++seenStamp;
+    for (int p = 0; p <= limit; p++) {
+      int w = index[p];
+      long bits = state[w];
+      while (bits != 0L) {
+        int t = (w << 6) + Long.numberOfTrailingZeros(bits);
+        bits &= bits - 1;
+        for (int k = 0; k < columns; k++) {
+          int i = scanned[k];
+          int c = tupleClass[i][t];
+          seen[i][c] = stamp;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * It removes the values of variable i that no valid tuple supports.
+   *
+   * @param i the column.
+   * @param fromScan true when the classes the valid tuples meet are marked in seen[i].
+   */
+  private void filterDomain(int i, boolean fromScan) {
 
     IntVar xi = x[i];
     int[] l = live[i];
     int size = liveSize(i);
     int[] cMin = classMin[i];
     int[] cMax = classMax[i];
-    long[][] sup = supports[i];
+    int[] stamps = seen[i];
     long[] excluded = binaryColumn[i];
     IntDomain extra = null;
     if (excluded != null) {
@@ -1454,27 +1717,31 @@ public class HybridTable extends Constraint
         extra = binarySupport[i] == null ? new IntervalDomain() : binarySupport[i];
       }
     }
+    // Without restrictions between columns whole classes go, and they are removed at the end.
+    int removed = 0;
+    IntDomain d = xi.dom();
     int s = size;
     int p = 0;
     while (p < s) {
       int c = l[p];
-      IntDomain d = xi.dom();
       int lo = cMin[c];
       int hi = cMax[c];
       boolean alive = lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi);
-      if (alive && (sup[c] == null || !intersects(i, c, sup[c], excluded))) {
-        if (excluded != null && useMarks) {
-          removeUnmarked(i, xi, lo, hi);
-          alive = xi.dom().isIntersecting(lo, hi);
-        } else if (extra == null) {
-          removeClass(xi, cMin[c], cMax[c]);
+      if (alive && (fromScan ? stamps[c] != seenStamp : !supported(i, c, excluded))) {
+        if (excluded == null) {
+          removedClasses[removed++] = c;
           alive = false;
+        } else if (useMarks) {
+          removeUnmarked(i, xi, lo, hi);
+          d = xi.dom();
+          alive = d.isIntersecting(lo, hi);
         } else {
-          IntDomain unsupported = d.intersect(cMin[c], cMax[c]).subtract(extra);
+          IntDomain unsupported = d.intersect(lo, hi).subtract(extra);
           for (int k = 0; k < unsupported.noIntervals(); k++) {
             removeClass(xi, unsupported.leftElement(k), unsupported.rightElement(k));
           }
-          alive = xi.dom().isIntersecting(cMin[c], cMax[c]);
+          d = xi.dom();
+          alive = d.isIntersecting(lo, hi);
         }
       }
       if (alive) {
@@ -1488,6 +1755,47 @@ public class HybridTable extends Constraint
     if (s != size) {
       setLiveSize(i, s);
     }
+    if (removed > 0) {
+      removeClasses(i, removed);
+    }
+  }
+
+  /** Below this many classes, the classes a filtering removes are removed one by one. */
+  private static final int BATCH_REMOVAL = 4;
+
+  /** It removes from x[i] the values of the classes removedClasses[0..count - 1]. */
+  private void removeClasses(int i, int count) {
+    IntVar xi = x[i];
+    if (count < BATCH_REMOVAL) {
+      for (int k = 0; k < count; k++) {
+        int c = removedClasses[k];
+        removeClass(xi, classMin[i][c], classMax[i][c]);
+      }
+      return;
+    }
+    // One domain change instead of one per class. The classes are ordered as their values, so
+    // they are put in order through a bit-set.
+    int first = Integer.MAX_VALUE;
+    int last = 0;
+    for (int k = 0; k < count; k++) {
+      int c = removedClasses[k];
+      classMarks[c >> 6] |= 1L << c;
+      first = Math.min(first, c >> 6);
+      last = Math.max(last, c >> 6);
+    }
+    IntervalDomain unsupported = new IntervalDomain(count + 1);
+    int[] cMin = classMin[i];
+    int[] cMax = classMax[i];
+    for (int w = first; w <= last; w++) {
+      long bits = classMarks[w];
+      classMarks[w] = 0L;
+      while (bits != 0L) {
+        int c = (w << 6) + Long.numberOfTrailingZeros(bits);
+        bits &= bits - 1;
+        unsupported.unionAdapt(cMin[c], cMax[c]);
+      }
+    }
+    xi.domain.inComplement(store.level, xi, unsupported);
   }
 
   /** It removes the values of x[i] between min and max that no tuple marked as supported. */

@@ -301,6 +301,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountOne(ASTSolveItem node) {
+    if (options.freeSearchWithoutAnnotation() && !options.complementarySearch()) {
+      // nothing to follow: the model is solved as with -f
+      options.freeSearch = true;
+    }
     ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(0);
     solveKind = getKind(kind.getKind());
     run_single_search(solveKind, kind, null);
@@ -657,14 +661,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param search the search to set timeout on
    */
   void setSearchTimeout(Search<T> search) {
-    int to = options.getTimeOut();
+    int to = options.getRemainingTimeOut();
     if (to > 0) {
       search.setTimeOutMilliseconds(to);
     }
   }
 
   void setSearchTimeout(RestartSearch<T> search) {
-    int to = options.getTimeOut();
+    int to = options.getRemainingTimeOut();
     if (to > 0) {
       search.setTimeOutMilliseconds(to);
     }
@@ -676,7 +680,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param searches the list of searches to set timeout on
    */
   void setSearchTimeout(ArrayList<Search<T>> searches) {
-    int to = options.getTimeOut();
+    int to = options.getRemainingTimeOut();
     if (to > 0) {
       for (Search<T> s : searches) {
         s.setTimeOutMilliseconds(to);
@@ -982,7 +986,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               : FreeSearch.Alternation.EVERY_RESTART);
     }
     if (options.getTimeOut() > 0) {
-      builder.timeLimit(Duration.ofMillis(options.getTimeOut()));
+      builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
@@ -1511,7 +1515,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
 
       // time-out option
-      int to = options.getTimeOut();
+      int to = options.getRemainingTimeOut();
       if (to > 0) {
         boolSearch.setTimeOutMilliseconds(to);
       }
@@ -2167,7 +2171,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       label.setConsistencyListener(failStatistics);
     }
     setSearchTimeout(label);
-    int to = options.getTimeOut();
+    int to = options.getRemainingTimeOut();
     if (to > 0) {
       for (DepthFirstSearch<T> s : searches) {
         s.setTimeOutMilliseconds(to);

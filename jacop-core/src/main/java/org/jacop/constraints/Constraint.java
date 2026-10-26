@@ -113,6 +113,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** How many constraints this one counts as in the static degree of each of its variables. */
+  private int degreeWeight = 1;
+
   /** For each constraint class, whether it overrides {@link #queueVariable(int, Var)}. */
   private static final ClassValue<Boolean> OVERRIDES_QUEUE_VARIABLE =
       new ClassValue<>() {
@@ -783,6 +786,35 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public void scaleAfc(double factor) {
     afcWeight *= factor;
+  }
+
+  /**
+   * Returns how many constraints this one counts as in the static degree of each variable it is
+   * attached to, {@link Var#sizeConstraintsOriginal()}. It is 1 unless set otherwise.
+   *
+   * @return the degree weight.
+   */
+  public int degreeWeight() {
+    return degreeWeight;
+  }
+
+  /**
+   * Sets how many constraints this one counts as in the static degree of each variable it is
+   * attached to, {@link Var#sizeConstraintsOriginal()}, which degree-based variable selections such
+   * as {@link org.jacop.search.MostConstrainedStatic} read. A constraint that a reformulation adds
+   * in place of others can keep the degrees of the model: a redundant constraint gets 0, and so
+   * does a replacement whose variables are credited for the constraints it replaced with {@link
+   * Var#adjustDegree(int)}. It must be set before the constraint is imposed.
+   *
+   * @param weight the degree weight, 0 or more.
+   * @return this constraint.
+   */
+  public Constraint setDegreeWeight(int weight) {
+    if (weight < 0) {
+      throw new IllegalArgumentException("A degree weight is 0 or more, not " + weight);
+    }
+    degreeWeight = weight;
+    return this;
   }
 
   /** It is executed after the constraint has failed. It allows to clean some data structures. */

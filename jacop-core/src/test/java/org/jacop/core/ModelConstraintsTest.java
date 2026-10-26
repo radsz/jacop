@@ -31,6 +31,7 @@
 package org.jacop.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -41,8 +42,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
+import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -157,6 +160,49 @@ class ModelConstraintsTest {
       assertThat(new HashSet<>(x.dom().constraints()))
           .isEqualTo(new HashSet<>(Arrays.asList(constraints)));
     }
+  }
+
+  /**
+   * The static degree counts each constraint as its degree weight and the removed constraints a
+   * reformulation credits; attaching at a later level, or detaching there, leaves it unchanged.
+   */
+  @Test
+  void staticDegreeCountsDegreeWeights() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar z = new IntVar(store, "z", 0, 9);
+    BooleanVar b = new BooleanVar(store, "b");
+    BooleanVar c = new BooleanVar(store, "c");
+
+    store.impose(new XneqY(x, y));
+    Constraint alldiff = new Alldiff(new IntVar[] {x, y, z}).setDegreeWeight(2);
+    store.impose(alldiff);
+    Constraint redundant = new XneqY(x, z).setDegreeWeight(0);
+    store.impose(redundant);
+    store.impose(new XneqY(b, c).setDegreeWeight(3));
+    z.adjustDegree(1);
+    assertThat(new int[] {x.sizeConstraintsOriginal(), y.sizeConstraintsOriginal()})
+        .containsExactly(3, 3);
+    assertThat(z.sizeConstraintsOriginal()).isEqualTo(3);
+    assertThat(b.sizeConstraintsOriginal()).isEqualTo(3);
+
+    store.setLevel(1);
+    store.impose(new XneqY(x, z).setDegreeWeight(5));
+    x.removeConstraint(alldiff);
+    assertThat(x.sizeConstraintsOriginal()).isEqualTo(3);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    // detaching at level 0 changes the original domain
+    x.removeConstraint(alldiff);
+    x.removeConstraint(redundant);
+    assertThat(x.sizeConstraintsOriginal()).isEqualTo(1);
+    z.removeConstraint(redundant);
+    assertThat(z.sizeConstraintsOriginal()).isEqualTo(3);
+
+    assertThatThrownBy(() -> new XneqY(x, y).setDegreeWeight(-1))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   private static void check(IntDomain dom, List<Set<Constraint>> expected, String context) {
