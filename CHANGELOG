@@ -80,6 +80,15 @@ Version 5.0 (unreleased)
    below min(lub(a)) and checked fixed sets. On steiner-triples from the
    MiniZinc benchmarks the search tree shrinks up to 4x.
 
+10. The FlatZinc front end posts the jacop_count constraints (MiniZinc
+    count with a fixed value) over the same list as one CountValues
+    instead of one Count per value. As Count constraints each of them was
+    queued on every change of a list variable and scanned the list, so
+    magicseq with n = 300 found no solution in 60 s; it is now solved in
+    0.2 s, and n = 500 in 0.7 s. CountValues also uses that the counts and
+    the variables taking no counted value add up to the list length, so
+    search trees can be smaller.
+
 Version 4.11
 =============
 

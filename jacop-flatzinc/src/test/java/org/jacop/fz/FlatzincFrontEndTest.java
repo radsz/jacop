@@ -1326,13 +1326,27 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgTimeOutIsNotReportedComplete() throws IOException {
-    // 13 pigeons in 12 holes is far beyond 100 ms of LCG; an interrupted LCG search printed
-    // ========== or =====UNSATISFIABLE===== on the sequence-search path.
+    // 13 pigeons in 12 holes, as clauses, is far beyond 100 ms of LCG: resolution proofs of the
+    // pigeonhole principle are exponential, and no global constraint is detected in clauses (the
+    // disequalities of the first version became an alldifferent, whose Hall set explanations
+    // prove it at once); an interrupted LCG search printed ========== or =====UNSATISFIABLE=====
+    // on the sequence-search path.
     StringBuilder model =
-        new StringBuilder("array [1..13] of var 1..12: p :: output_array([1..13]);\n");
-    for (int i = 1; i <= 13; i++) {
-      for (int j = i + 1; j <= 13; j++) {
-        model.append("constraint int_ne(p[%d], p[%d]);\n".formatted(i, j));
+        new StringBuilder("array [1..156] of var bool: p :: output_array([1..13, 1..12]);\n");
+    for (int i = 0; i < 13; i++) {
+      StringBuilder holes = new StringBuilder();
+      for (int k = 0; k < 12; k++) {
+        holes.append(k == 0 ? "" : ", ").append("p[%d]".formatted(i * 12 + k + 1));
+      }
+      model.append("constraint bool_clause([%s], []);\n".formatted(holes));
+    }
+    for (int k = 0; k < 12; k++) {
+      for (int i = 0; i < 13; i++) {
+        for (int j = i + 1; j < 13; j++) {
+          model.append(
+              "constraint bool_clause([], [p[%d], p[%d]]);\n"
+                  .formatted(i * 12 + k + 1, j * 12 + k + 1));
+        }
       }
     }
     model.append("solve satisfy;\n");
