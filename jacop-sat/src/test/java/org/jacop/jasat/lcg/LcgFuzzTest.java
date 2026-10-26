@@ -122,6 +122,7 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -574,8 +575,11 @@ class LcgFuzzTest {
     if (vars.length == 0) {
       return;
     }
+    // IndomainMiddle does not take the bound domains of BooleanVars
+    boolean bounds =
+        Arrays.stream(vars).anyMatch(x -> x.dom().domainId() == IntDomain.BOUND_DOMAIN_ID);
     SelectChoicePoint<IntVar> select =
-        switch (random.nextInt(4)) {
+        switch (random.nextInt(bounds ? 2 : 4)) {
           case 0 -> new SimpleSelect<>(vars, null, new IndomainMin<>());
           case 1 -> new SimpleSelect<>(vars, new SmallestDomain<>(), new IndomainMax<>());
           case 2 -> new SimpleSelect<>(vars, null, new IndomainMiddle<>());
