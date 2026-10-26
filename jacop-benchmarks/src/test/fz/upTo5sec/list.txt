@@ -822,6 +822,7 @@ maximum-dag/15_05
 maximum_density_still_life/maximum_density_still_life
 maximum_modulo/maximum_modulo
 maximum_subarray/maximum_subarray
+mceverywhere/mceverywhere
 mdd_random/mdd_a10
 mdd_random/mdd_a8
 message_sending/message_sending

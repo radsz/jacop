@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
@@ -54,6 +55,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTAnnExpr;
 import org.jacop.fz.ASTAnnotation;
+import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTIntFlatExpr;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ASTSetLiteral;
@@ -690,6 +692,26 @@ public class Support implements ParserTreeConstants {
       return getInt(e);
     } else {
       throw new IllegalArgumentException("Wrong definition od \"priority\" annotation" + node);
+    }
+  }
+
+  /**
+   * Calls the action on every constraint of a parsed model, in the order of the model.
+   *
+   * @param astTree the root of the parsed model.
+   * @param action what is done with each constraint.
+   */
+  static void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTCONSTRAINTITEMS) {
+        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          if (item.getId() == JJTCONSTELEM) {
+            action.accept((ASTConstElem) item);
+          }
+        }
+      }
     }
   }
 

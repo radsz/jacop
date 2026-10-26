@@ -50,6 +50,7 @@ public class SatTranslation {
   final Store store;
   private boolean debug;
   long numberClauses;
+  private List<IntVar[][]> collected;
 
   /**
    * Sets the debug flag.
@@ -58,6 +59,27 @@ public class SatTranslation {
    */
   public void setDebug(boolean debug) {
     this.debug = debug;
+  }
+
+  /**
+   * Keeps the clauses instead of giving them to the SAT solver this translation imposes, for a
+   * solver that takes them itself (lazy clause generation). Only clauses generated afterwards are
+   * kept.
+   */
+  public void collectClauses() {
+    if (collected == null) {
+      collected = new ArrayList<>();
+    }
+  }
+
+  /**
+   * Returns the clauses kept since {@link #collectClauses}, each as its positive and its negative
+   * variables; a variable stands for its value 1.
+   *
+   * @return the clauses, or an empty list when clauses are not collected
+   */
+  public List<IntVar[][]> collectedClauses() {
+    return collected == null ? List.of() : collected;
   }
 
   private int[] toBoolVarArray(List<IntVar> vars) {
@@ -110,6 +132,13 @@ public class SatTranslation {
     }
     if (debug) {
       log.info("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
+    }
+
+    if (collected != null) {
+      collected.add(
+          new IntVar[][] {a1reduced.toArray(new IntVar[0]), a2reduced.toArray(new IntVar[0])});
+      numberClauses++;
+      return;
     }
 
     for (IntVar v : a1reduced) {

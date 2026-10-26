@@ -229,6 +229,11 @@ public class ElementInteger extends AbstractElement
       initFirstConsistencyCheck(store);
     }
 
+    if (index == value) {
+      propagateSameVariable(store);
+      return;
+    }
+
     boolean copyOfValueHasChanged = valueHasChanged;
 
     if (indexHasChanged) {
@@ -242,6 +247,23 @@ public class ElementInteger extends AbstractElement
     if (value.singleton() && !index.singleton()) {
       removeConstraint();
     }
+  }
+
+  /**
+   * With the same variable as index and value, a pruning of one side changes the other, which the
+   * store does not report back to this constraint, so the two-sided propagation stopped before its
+   * fixpoint. The variable can take exactly the positions that hold their own index.
+   */
+  private void propagateSameVariable(Store store) {
+    IntervalDomain positions = new IntervalDomain();
+    for (int pos = 0; pos < list.length; pos++) {
+      int position = pos + 1 + indexOffset;
+      if (list[pos] == position) {
+        positions.unionAdapt(position, position);
+      }
+    }
+    index.domain.in(store.level, index, positions);
+    removeConstraint();
   }
 
   private void propagateIndexChanged(Store store) {

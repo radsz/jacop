@@ -73,6 +73,14 @@ public interface ExternalPropagator {
   default void notifyBacktrack(int level) {}
 
   /**
+   * A literal of a clause just learnt by conflict analysis, for statistics. Called once per literal
+   * of each learnt clause.
+   *
+   * @param lit the literal
+   */
+  default void notifyLearntLiteral(int lit) {}
+
+  /**
    * Checks a complete assignment.
    *
    * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}

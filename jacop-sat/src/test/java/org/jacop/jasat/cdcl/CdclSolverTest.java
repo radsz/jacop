@@ -234,6 +234,37 @@ class CdclSolverTest {
   }
 
   @Test
+  void deadlineStopsTheSearchOnExternalDecisions() {
+    // The deadline was checked only on conflicts and on the solver's own decisions, so a search
+    // driven by the external propagator's decisions ran past it.
+    CdclSolver s = new CdclSolver();
+    int vars = 5000;
+    s.ensureVars(vars);
+    s.connect(
+        new ExternalPropagator() {
+          private int next = 1;
+
+          @Override
+          public void notifyBacktrack(int level) {
+            next = 1;
+          }
+
+          @Override
+          public int decide() {
+            while (next <= vars && s.value(next) != 0) {
+              next++;
+            }
+            return next <= vars ? next : 0;
+          }
+        });
+    for (int v = 1; v <= vars; v++) {
+      s.observe(v);
+    }
+    s.setDeadline(System.nanoTime() - 1);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+  }
+
+  @Test
   void lubySequence() {
     long[] expected = {1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8};
     for (int i = 0; i < expected.length; i++) {
@@ -482,6 +513,8 @@ class CdclSolverTest {
       if (run % 2 == 0) {
         s.setReduceBase(10);
       }
+      // reasons above this size are temporary: deleted on backtracking, moved by compaction
+      s.setExternalReasonKeep(run % 3 == 0 ? Integer.MAX_VALUE : 2 + run % 3);
       List<int[]> theory = new ArrayList<>();
       for (int[] c : f) {
         if (rnd.nextInt(2) == 0) {

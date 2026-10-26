@@ -37,10 +37,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
@@ -194,6 +197,7 @@ class LcgSolverTest {
         store.impose(r.constraint);
       }
       LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
       assertThat(status)
@@ -263,6 +267,7 @@ class LcgSolverTest {
         store.impose(r.constraint);
       }
       LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
       assertThat(status)
@@ -333,6 +338,7 @@ class LcgSolverTest {
           answer[0] = search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()));
         } else {
           LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
           int status = solver.solve();
           answer[1] = status == CdclSolver.SAT;
           assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
@@ -368,10 +374,78 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(50);
   }
 
+  /**
+   * CountValues prunes with an internal variable for the number of variables equal to no counted
+   * value. The variable was not among the constraint's arguments, so the generic reason left out
+   * its atoms, among them the solver's own decisions on it, and the learnt clauses cut off the
+   * optimum.
+   */
+  @Test
+  void countValuesExplainsWithItsInternalCounter() {
+    int[] optimum = new int[2];
+    for (int mode = 0; mode < 2; mode++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < 4; i++) {
+        x[i] = new IntVar(store, "x" + i, -1, 3);
+      }
+      x[2].domain.unionAdapt(4, 4);
+      x[4] = new IntVar(store, "x4", 1, 3);
+      x[5] = new IntVar(store, "x5", 1, 3);
+      IntVar objective = new IntVar(store, "obj", -30, 30);
+      store.impose(
+          new CountValues(
+              new IntVar[] {x[3], x[2], x[4], x[5]}, new IntVar[] {x[0], x[5]}, new int[] {0, 1}));
+      store.impose(new ElementVariable(x[1], new IntVar[] {x[3], x[2], x[1], x[0]}, x[0], 0));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[3], x[4], x[5], objective}, new int[] {1, -1, 1, -1}, "==", 0));
+      if (mode == 0) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(
+                search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), objective))
+            .isTrue();
+        optimum[0] = search.getCostValue();
+      } else {
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        assertThat(solver.minimize(objective)).isEqualTo(CdclSolver.SAT);
+        optimum[1] = solver.value(objective);
+      }
+    }
+    assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  /** The literal map against a TreeMap, under random insertions and lookups. */
+  @Test
+  void literalMapAgreesWithTreeMap() {
+    Random rnd = new Random(3);
+    for (int instance = 0; instance < 200; instance++) {
+      LiteralMap map = new LiteralMap();
+      TreeMap<Integer, Integer> reference = new TreeMap<>();
+      for (int step = 0; step < 100; step++) {
+        int v = rnd.nextInt(60) - 30;
+        if (rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
+          map.put(v, step + 1);
+          reference.put(v, step + 1);
+        }
+        Integer lower = reference.lowerKey(v);
+        Integer higher = reference.higherKey(v);
+        assertThat(map.get(v)).isEqualTo(reference.getOrDefault(v, LiteralMap.NONE));
+        assertThat(map.lower(v)).isEqualTo(lower == null ? LiteralMap.NONE : reference.get(lower));
+        assertThat(map.higher(v))
+            .isEqualTo(higher == null ? LiteralMap.NONE : reference.get(higher));
+      }
+    }
+  }
+
   /** Random small scheduling problems minimising the makespan, against JaCoP's search. */
   @Test
   void makespanAgreesWithSearch() {
     Random rnd = new Random(9);
+    long atomLiterals = 0;
+    long atomLiteralsLearnt = 0;
     for (int instance = 0; instance < 150; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
@@ -418,11 +492,17 @@ class LcgSolverTest {
           optimum[0] = search.getCostValue();
         } else {
           LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
           optimum[1] = solver.value(makespan);
+          assertThat(solver.atomLiteralsLearnt).isLessThanOrEqualTo(solver.atomLiterals);
+          atomLiterals += solver.atomLiterals;
+          atomLiteralsLearnt += solver.atomLiteralsLearnt;
         }
       }
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
+    // the learnt clauses use some of the atoms pushed, not all
+    assertThat(atomLiteralsLearnt).isPositive().isLessThan(atomLiterals);
   }
 }

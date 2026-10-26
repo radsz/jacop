@@ -141,6 +141,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XplusCeqZ;
@@ -4129,6 +4130,24 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void elementIntegerWithTheSameVariableAsIndexAndValue() {
+    // x = list[x] with x in 1..3: pruning the value side to {2, 3} and then the index side to
+    // {3} changed the shared variable after each step, and the constraint stopped at x = 3
+    // although list[3] = 2. Only positions that hold their own index are solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    store.impose(new ElementInteger(x, new int[] {3, -1, 2, 1}, x, 0));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", -1, 6);
+    store.impose(new ElementInteger(x, new int[] {0, 5, 2, 3, 1}, x, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{0, 2..3}");
+    assertThat(noOfAllSolutions(store, new IntVar[] {x})).isEqualTo(3);
+  }
+
+  @Test
   void elementIntegerIsDomainConsistentForLargeIndex() {
     // With 100 or more index values the value domain was only pruned to the bounds of the
     // supported values, here 3..360 instead of the multiples of 3.
@@ -6815,6 +6834,88 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
   }
 
+  @Test
+  void xexpYeqZFixedExponentIsDomainConsistent() {
+    // a fixed exponent n > 0 with x^n increasing on x (n odd, or x >= 0) has its own propagator;
+    // at every fixpoint x and z must hold exactly the values that occur in solutions
+    Random random = new Random(7);
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(5);
+      int xLo = random.nextBoolean() ? 0 : -8;
+      IntVar x = randomVar(store, "x", xLo, 8, random);
+      IntVar y = new IntVar(store, "y", n, n);
+      int zRange = random.nextInt(3) == 0 ? 40 : 700;
+      IntVar z = randomVar(store, "z", -zRange, zRange, random);
+      IntVar[] vars = {x, y, z};
+      List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+
+      store.impose(new XexpYeqZ(x, y, z));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as("instance %d", instance).isEqualTo(!expected.isEmpty());
+      if (consistent && ((n & 1) == 1 || xLo >= 0)) {
+        assertThat(valuesOf(x))
+            .as("x, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[0]).distinct().sorted().toArray());
+        assertThat(valuesOf(z))
+            .as("z, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[2]).distinct().sorted().toArray());
+      }
+      if (consistent) {
+        assertThat(countSolutions(store, vars, random))
+            .as("instance %d", instance)
+            .isEqualTo(expected.size());
+      }
+    }
+  }
+
+  @Test
+  void xexpYeqZFixedExponentNearIntLimits() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2000);
+    IntVar y = new IntVar(store, "y", 3, 3);
+    IntVar z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    long r = x.max();
+    assertThat(r * r * r).isLessThanOrEqualTo(IntDomain.MAX_INT);
+    assertThat((r + 1) * (r + 1) * (r + 1)).isGreaterThan(IntDomain.MAX_INT);
+    assertThat(z.max()).isEqualTo((int) (r * r * r));
+    assertThat(z.getSize()).isEqualTo(x.getSize());
+
+    store = new Store();
+    x = new IntVar(store, "x", -2000, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", -1000000, 1000000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-100..100}");
+    assertThat(z.getSize()).isEqualTo(201);
+    assertThat(z.min()).isEqualTo(-1000000);
+
+    store = new Store();
+    x = new IntVar(store, "x", 813, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 0, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    // z holds no cube between the cubes of the bounds of x
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 12, 12);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 40, 40);
+    z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
@@ -6951,6 +7052,92 @@ class SingleConstraintTest extends TestHelper {
     assertThat(consistentWithNestedAnd((and, b) -> new And(new PrimitiveConstraint[] {and})))
         .isFalse();
     assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
+  }
+
+  // Implies(b, x != y) woke on every domain change of x and y, since its satisfied() check uses
+  // the events that decide x != y, while its propagation and the check that sets b = 0 only need
+  // x or y fixed. On crossword models with thousands of such constraints per letter this was most
+  // of the search time.
+  @Test
+  void impliesWakesOnlyOnTheEventsOfItsPropagation() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 1, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Implies implies = new Implies(b, new XneqY(x, y));
+    assertThat(implies.getConsistencyPruningEvent(x)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(y)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(b)).isEqualTo(IntDomain.GROUND);
+    assertThat(new Implies(b, new XltY(x, y)).getConsistencyPruningEvent(x))
+        .isEqualTo(IntDomain.BOUND);
+    store.impose(implies);
+    assertThat(store.consistency()).isTrue();
+    store.impose(new XeqC(x, 3));
+    store.impose(new XeqC(y, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+  }
+
+  @Test
+  void impliesOfPrimitiveConstraintsMatchesBruteForce() {
+    Random random = new Random(47);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        int min = random.nextInt(4);
+        x[i] = new IntVar(store, "x" + i, min, min + 1 + random.nextInt(3));
+        if (random.nextBoolean()) {
+          x[i].domain.inComplement(store.level, x[i], min + 1);
+        }
+      }
+      IntVar[] b = new IntVar[3];
+      List<Predicate<int[]>> parts = new ArrayList<>();
+      for (int k = 0; k < b.length; k++) {
+        b[k] = new IntVar(store, "b" + k, 0, 1);
+        int i = random.nextInt(4);
+        int j = (i + 1 + random.nextInt(3)) % 4;
+        int c = random.nextInt(5);
+        int bi = 4 + k;
+        PrimitiveConstraint nested;
+        Predicate<int[]> holds;
+        switch (random.nextInt(6)) {
+          case 0 -> {
+            nested = new XneqY(x[i], x[j]);
+            holds = a -> a[i] != a[j];
+          }
+          case 1 -> {
+            nested = new XeqY(x[i], x[j]);
+            holds = a -> a[i] == a[j];
+          }
+          case 2 -> {
+            nested = new XltY(x[i], x[j]);
+            holds = a -> a[i] < a[j];
+          }
+          case 3 -> {
+            nested = new XplusCeqZ(x[i], c - 2, x[j]);
+            holds = a -> a[i] + c - 2 == a[j];
+          }
+          case 4 -> {
+            nested = new XneqC(x[i], c);
+            holds = a -> a[i] != c;
+          }
+          default -> {
+            nested = new LinearInt(new IntVar[] {x[i], x[j]}, new int[] {1, 2}, "!=", c + 3);
+            holds = a -> a[i] + 2 * a[j] != c + 3;
+          }
+        }
+        store.impose(new Implies(b[k], nested));
+        parts.add(a -> a[bi] == 0 || holds.test(a));
+      }
+      IntVar[] all = Stream.concat(Arrays.stream(x), Arrays.stream(b)).toArray(IntVar[]::new);
+      int expected = bruteForce(all, a -> parts.stream().allMatch(p -> p.test(a))).size();
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d", trial)
+          .isEqualTo(expected);
+    }
   }
 
   @Test

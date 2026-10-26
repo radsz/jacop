@@ -293,8 +293,13 @@ class LazyBitSetDomainTest {
     int b = min - 3 + random.nextInt(width + 6);
     int lo = Math.min(a, b);
     int hi = Math.max(a, b);
-    int kind = random.nextInt(17);
+    int kind = random.nextInt(18);
     return switch (kind) {
+      case 17 -> {
+        IntervalDomain d = randomDomain(random, min - 2, max + 2);
+        yield named(
+            "inComplement " + d, s -> s.x.domain.inComplement(s.store.level, s.x, (IntDomain) d));
+      }
       case 0 -> named("inMin " + a, s -> s.x.domain.inMin(s.store.level, s.x, a));
       case 1 -> named("inMax " + a, s -> s.x.domain.inMax(s.store.level, s.x, a));
       case 2 -> named("in " + lo + ".." + hi, s -> s.x.domain.in(s.store.level, s.x, lo, hi));

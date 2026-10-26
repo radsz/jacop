@@ -1142,10 +1142,155 @@ class FlatzincFrontEndTest {
         .append(hint)
         .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
 
-    String out =
-        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
-            0];
-    assertTrue(out.contains("=====UNKNOWN====="), out);
+    // the disequalities would become an all-different, which proves at once that the pigeons do
+    // not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+              0];
+      assertTrue(out.contains("=====UNKNOWN====="), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
+  }
+
+  @Test
+  void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
+    // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
+    // comparisons with the constant first (int_eq_imp(c, x, b), int_lt_imp(c, x, b), ...) set b
+    // when the comparison held or removed x = c when b was false, which loses solutions.
+    // Every comparison, argument order, Boolean (false, true, free) and domain is checked
+    // against enumeration.
+    String[] ops = {"eq", "ne", "lt", "le"};
+    int c = 2;
+    int[][] domains = {{0, 3}, {2, 2}, {0, 1}, {3, 5}, {1, 2}, {2, 3}};
+    for (String op : ops) {
+      for (String kind : new String[] {"reif", "imp"}) {
+        for (boolean constantFirst : new boolean[] {false, true}) {
+          for (String b : new String[] {"false", "true", "free"}) {
+            for (int[] d : domains) {
+              String args = constantFirst ? c + ",x" : "x," + c;
+              String fzn =
+                  "var "
+                      + d[0]
+                      + ".."
+                      + d[1]
+                      + ": x:: output_var;\n"
+                      + ("free".equals(b)
+                          ? "var bool: b:: output_var;\n"
+                          : "var bool: b = " + b + ";\n")
+                      + "constraint int_"
+                      + op
+                      + "_"
+                      + kind
+                      + "("
+                      + args
+                      + ",b);\nsolve satisfy;\n";
+              Set<String> expected = new TreeSet<>();
+              for (int x = d[0]; x <= d[1]; x++) {
+                int l = constantFirst ? c : x;
+                int r = constantFirst ? x : c;
+                boolean holds =
+                    switch (op) {
+                      case "eq" -> l == r;
+                      case "ne" -> l != r;
+                      case "lt" -> l < r;
+                      default -> l <= r;
+                    };
+                for (boolean bv : new boolean[] {false, true}) {
+                  if (!"free".equals(b) && bv != "true".equals(b)) {
+                    continue;
+                  }
+                  if ("reif".equals(kind) ? holds == bv : !bv || holds) {
+                    expected.add(
+                        "free".equals(b) ? "b = " + bv + "; x = " + x + ";" : "x = " + x + ";");
+                  }
+                }
+              }
+              Set<String> actual = solveAll(fzn);
+              actual.remove("=====UNSATISFIABLE=====");
+              assertEquals(expected, actual, fzn);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void lcgSolvesOptimisationWithClauses() throws IOException {
+    // --lcg: bool_clause and array_bool_or go to JaSAT as clauses, the rest propagates as
+    // constraints; every improving solution is printed, then the optimum.
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        var bool: c;
+        constraint bool_clause([a, b], []);
+        constraint array_bool_or([a, c], b);
+        constraint int_le_reif(x, 2, a);
+        constraint int_le_reif(y, 1, b);
+        constraint int_lin_le([1, 1], [x, y], 7);
+        constraint int_ne(x, y);
+        solve maximize x;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    assertTrue(out.contains("x = 5;"), out);
+    assertTrue(out.strip().contains("=========="), out);
+    assertTrue(out.contains("lcgExplanations"), out);
+    String last = out.substring(out.lastIndexOf("x = "));
+    assertTrue(last.startsWith("x = 5;") && last.contains("b = true;"), last);
+  }
+
+  @Test
+  void lcgReportsUnsatisfiable() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        var bool: a;
+        constraint bool_clause([a], []);
+        constraint int_eq_reif(x, y, a);
+        constraint int_ne(x, y);
+        solve satisfy;
+        """;
+    String out = run(model, "--lcg")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void lcgTimeOutIsNotReportedComplete() throws IOException {
+    // 13 pigeons in 12 holes is far beyond 100 ms of LCG; an interrupted LCG search printed
+    // ========== or =====UNSATISFIABLE===== on the sequence-search path.
+    StringBuilder model =
+        new StringBuilder("array [1..13] of var 1..12: p :: output_array([1..13]);\n");
+    for (int i = 1; i <= 13; i++) {
+      for (int j = i + 1; j <= 13; j++) {
+        model.append("constraint int_ne(p[%d], p[%d]);\n".formatted(i, j));
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "-t", "100")[0];
+    assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
+    assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+  }
+
+  @Test
+  void lcgFallsBackToSearchForFloatModels() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 0.0..3.0: f :: output_var;
+        constraint int_le(2, x);
+        constraint float_le(1.5, f);
+        solve satisfy;
+        """;
+    String out = run(model, "--lcg")[0];
+    assertTrue(out.contains("--lcg ignored"), out);
+    assertTrue(out.contains("x = 2;"), out);
   }
 
   private String[] run(String model, String... options) throws IOException {

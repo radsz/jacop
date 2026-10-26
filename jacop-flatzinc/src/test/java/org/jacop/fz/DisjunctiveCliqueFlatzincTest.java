@@ -33,11 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -415,34 +411,10 @@ class DisjunctiveCliqueFlatzincTest {
   }
 
   private String run(String model, String... options) throws IOException {
-    Path fzn = tmp.resolve("model.fzn");
-    Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    PrintStream originalOut = System.out;
-    String[] args = Arrays.copyOf(options, options.length + 1);
-    args[options.length] = fzn.toString();
-    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
-      System.setOut(capture);
-      new Fz2jacop().callMain(args);
-    } finally {
-      System.setOut(originalOut);
-    }
-    return buffer.toString(StandardCharsets.UTF_8);
+    return FlatzincTestRunner.run(tmp, model, options);
   }
 
   private static Set<String> solutions(String out) {
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(out.split("----------"))
-        .map(
-            s ->
-                String.join(
-                    " ",
-                    new TreeSet<>(
-                        Arrays.stream(s.strip().split("\\R"))
-                            .filter(l -> !l.isBlank() && !l.startsWith("%"))
-                            .toList())))
-        .filter(s -> !s.isEmpty() && !s.startsWith("==========") && !s.contains("UNSATISFIABLE"))
-        .forEach(solutions::add);
-    return solutions;
+    return FlatzincTestRunner.solutions(out);
   }
 }
