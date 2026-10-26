@@ -426,6 +426,129 @@ class HybridTableTest {
     }
   }
 
+  /**
+   * The values of each variable that belong to a tuple of a ground table within the domains, or
+   * null if there is none.
+   */
+  private static int[][] supportedByGround(IntVar[] x, int[][] tuples) {
+    List<Set<Integer>> sets = new ArrayList<>();
+    for (int i = 0; i < x.length; i++) {
+      sets.add(new TreeSet<>());
+    }
+    boolean any = false;
+    for (int[] tuple : tuples) {
+      boolean allowed = true;
+      for (int i = 0; i < x.length && allowed; i++) {
+        allowed = x[i].domain.contains(tuple[i]);
+      }
+      if (allowed) {
+        any = true;
+        for (int i = 0; i < x.length; i++) {
+          sets.get(i).add(tuple[i]);
+        }
+      }
+    }
+    return any
+        ? sets.stream()
+            .map(set -> set.stream().mapToInt(Integer::intValue).toArray())
+            .toArray(int[][]::new)
+        : null;
+  }
+
+  /**
+   * Large ground tables with a key column of many values, as MiniZinc writes for lookups: the
+   * supports of such a column are kept sparse, the column is filtered from the valid tuples when
+   * they are few, and many values go in one domain change. GAC is checked along random dives with
+   * backtracking, on interval, bit-set and small dense domains.
+   */
+  @Test
+  void largeTablesWithKeyColumnsReachGac() {
+    Random random = new Random(6);
+    for (int trial = 0; trial < 30; trial++) {
+      int arity = 2 + random.nextInt(3);
+      int keys = 70 + random.nextInt(600);
+      int[] spans = new int[arity];
+      spans[0] = keys;
+      for (int i = 1; i < arity; i++) {
+        spans[i] = random.nextBoolean() ? 2 + random.nextInt(8) : 70 + random.nextInt(200);
+      }
+      Set<List<Integer>> rows = new HashSet<>();
+      int count = 500 + random.nextInt(2500);
+      for (int k = 0; k < count; k++) {
+        List<Integer> row = new ArrayList<>();
+        for (int i = 0; i < arity; i++) {
+          // A few rows per key, as in a lookup table; offsets on the other columns.
+          row.add(i == 0 ? random.nextInt(keys) : random.nextInt(spans[i]) - 3);
+        }
+        rows.add(row);
+      }
+      int[][] tuples =
+          rows.stream()
+              .map(r -> r.stream().mapToInt(Integer::intValue).toArray())
+              .sorted(Arrays::compare)
+              .toArray(int[][]::new);
+      Store store = new Store();
+      IntVar[] x = new IntVar[arity];
+      for (int i = 0; i < arity; i++) {
+        int lo = i == 0 ? 0 : -3;
+        int hi = lo + spans[i] - 1 + random.nextInt(3);
+        x[i] =
+            random.nextInt(4) == 0
+                ? new IntVar(store, "x" + i, new IntervalDomain(lo, hi))
+                : new IntVar(store, "x" + i, lo, hi);
+      }
+      store.impose(new HybridTable(x, tuples));
+      for (int dive = 0; dive < 6; dive++) {
+        dive(store, x, tuples, random, "trial " + trial);
+      }
+    }
+  }
+
+  /** It goes down a random branch, checking GAC and the restoration of the domains. */
+  private static void dive(Store store, IntVar[] x, int[][] tuples, Random random, String what) {
+    int[][] expected = supportedByGround(x, tuples);
+    boolean consistent = store.consistency();
+    if (expected == null) {
+      assertThat(consistent).as("fails %s", what).isFalse();
+      return;
+    }
+    assertThat(consistent).as("consistent %s", what).isTrue();
+    int[][] after = current(x);
+    assertThat(after).as("GAC %s", what).isDeepEqualTo(expected);
+    List<Integer> open = new ArrayList<>();
+    for (int i = 0; i < x.length; i++) {
+      if (!x[i].singleton()) {
+        open.add(i);
+      }
+    }
+    if (open.isEmpty()) {
+      return;
+    }
+    int pick = open.get(random.nextInt(open.size()));
+    int[] values = after[pick];
+    int level = store.level;
+    store.setLevel(level + 1);
+    switch (random.nextInt(3)) {
+      case 0 -> {
+        int v = values[random.nextInt(values.length)];
+        x[pick].domain.in(store.level, x[pick], v, v);
+      }
+      case 1 -> x[pick].domain.inComplement(store.level, x[pick], values[0]);
+      default -> {
+        // Many values at once, so that many tuples go and many classes lose their supports.
+        int a = random.nextInt(values.length);
+        int b = random.nextInt(values.length);
+        int from = Math.min(a, b);
+        int to = Math.min(Math.max(a, b), from == 0 ? values.length - 2 : values.length - 1);
+        x[pick].domain.inComplement(store.level, x[pick], values[from], values[to]);
+      }
+    }
+    dive(store, x, tuples, random, what);
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    assertThat(current(x)).as("restored %s", what).isDeepEqualTo(after);
+  }
+
   @Test
   void shortTableWithAHugeDomain() {
     Store store = new Store();

@@ -473,15 +473,37 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public void inComplement(int storeLevel, Var v, int lo, int hi) {
+    int oldMin = min;
+    int oldMax = max;
+    int oldSize = size;
+    removeRange(storeLevel, v, lo, hi);
+    if (size != oldSize) {
+      changed(v, oldMin, oldMax);
+    }
+  }
+
+  @Override
+  public void inComplement(int storeLevel, Var v, IntDomain complement) {
+    int oldMin = min;
+    int oldMax = max;
+    int oldSize = size;
+    int intervals = complement.noIntervals();
+    for (int k = 0; k < intervals; k++) {
+      removeRange(storeLevel, v, complement.leftElement(k), complement.rightElement(k));
+    }
+    if (size != oldSize) {
+      changed(v, oldMin, oldMax);
+    }
+  }
+
+  /** It removes the values lo..hi without informing the variable. */
+  private void removeRange(int storeLevel, Var v, int lo, int hi) {
     if (lo > hi || hi < min || lo > max) {
       return;
     }
     if (lo <= min && hi >= max) {
       throw failException;
     }
-    int oldMin = min;
-    int oldMax = max;
-    int oldSize = size;
     if (lo <= min) {
       int value = nextPresent(hi + 1);
       saveLevel(storeLevel, v);
@@ -498,9 +520,6 @@ public class LazyBitSetDomain extends IntDomain {
       }
       saveLevel(storeLevel, v);
       clear(storeLevel, lo, hi);
-    }
-    if (size != oldSize) {
-      changed(v, oldMin, oldMax);
     }
   }
 
