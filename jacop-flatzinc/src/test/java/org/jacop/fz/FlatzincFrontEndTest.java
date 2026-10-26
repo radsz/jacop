@@ -452,6 +452,18 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void timeOutCountsFromTheStartOfTheRun() throws InterruptedException {
+    // find_missing_number_1000_380 spent minutes building the model; the time-out counted from the
+    // start of the search only, so -t did not stop it.
+    Options opt = new Options(new String[] {"-t", "50", "model.fzn"});
+    assertTrue(!opt.timeOutPassed());
+    Thread.sleep(100);
+    assertTrue(opt.timeOutPassed());
+    assertEquals(1, opt.getRemainingTimeOut());
+    assertEquals(0, new Options(new String[] {"-s", "model.fzn"}).getRemainingTimeOut());
+  }
+
+  @Test
   void allSolutionsOptionPrintsImprovingSolutionsOfRestartSearch() throws IOException {
     // For optimization -a asks for the intermediate solutions; it was rejected together with
     // restart search, where it is only meaningless for satisfaction problems.

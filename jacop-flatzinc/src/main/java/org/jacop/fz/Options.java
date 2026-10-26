@@ -57,6 +57,10 @@ public class Options {
   final Map<String, String> freeConfig = new HashMap<>();
   boolean restartGiven;
   int timeOut;
+
+  /** The time the options were read; the time-out counts from it. */
+  private final long startTime = System.currentTimeMillis();
+
   int numberSolutions = -1;
   boolean interval;
   boolean precisionDefined;
@@ -425,6 +429,28 @@ public class Options {
    */
   public int getTimeOut() {
     return timeOut;
+  }
+
+  /**
+   * It returns the part of the time-out that is left. The time-out covers the whole run, building
+   * the model included, so it counts from the time the options were read.
+   *
+   * @return the time left in milliseconds, at least 1; 0 if no time-out was set.
+   */
+  public int getRemainingTimeOut() {
+    if (timeOut <= 0) {
+      return 0;
+    }
+    return (int) Math.max(1, timeOut - (System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   * It checks whether the time-out has passed.
+   *
+   * @return true if a time-out was set and it has passed.
+   */
+  public boolean timeOutPassed() {
+    return timeOut > 0 && System.currentTimeMillis() - startTime > timeOut;
   }
 
   /**

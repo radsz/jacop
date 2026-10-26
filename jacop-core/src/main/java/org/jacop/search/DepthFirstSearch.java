@@ -469,6 +469,32 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut);
   }
 
+  /**
+   * Makes the store stop propagation at the time-out of this search, so that one long propagation
+   * cannot overrun it.
+   *
+   * @return the deadline of the store before this search, to be restored when it ends
+   */
+  private long enterConsistencyDeadline(Store store) {
+    long previous = store.getConsistencyDeadline();
+    if (timeOutCheck && (previous == 0 || timeOut < previous)) {
+      store.setConsistencyDeadline(timeOut);
+    }
+    return previous;
+  }
+
+  private void exitConsistencyDeadline(Store store, long previous) {
+    if (store.getConsistencyDeadline() == previous) {
+      // the deadline belongs to an enclosing search
+      return;
+    }
+    // a propagation cut by the deadline is not a failure, so the search was not complete
+    if (store.isConsistencyDeadlinePassed() && !timeOutOccured) {
+      markTimeOutOccurred();
+    }
+    store.setConsistencyDeadline(previous);
+  }
+
   /** Marks timeout as occurred and notifies listener. */
   private void markTimeOutOccurred() {
     timeOutOccured = true;
@@ -971,13 +997,19 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = setupLabeling(store, select);
+    long previousDeadline = enterConsistencyDeadline(store);
+    boolean result;
+    try {
+      result = setupLabeling(store, select);
 
-    if (result) {
-      result = label(0);
-      if (printInfo) {
-        log.info("Labeling has finished with return value of {}", result);
+      if (result) {
+        result = label(0);
+        if (printInfo) {
+          log.info("Labeling has finished with return value of {}", result);
+        }
       }
+    } finally {
+      exitConsistencyDeadline(store, previousDeadline);
     }
     teardownLabeling(store, solutionNoBeforeSearch);
 
@@ -1035,13 +1067,19 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = setupLabeling(store, select);
+    long previousDeadline = enterConsistencyDeadline(store);
+    boolean result;
+    try {
+      result = setupLabeling(store, select);
 
-    if (result) {
-      result = label(0);
-      if (printInfo) {
-        log.info("Labeling has finished with return value of {}", result);
+      if (result) {
+        result = label(0);
+        if (printInfo) {
+          log.info("Labeling has finished with return value of {}", result);
+        }
       }
+    } finally {
+      exitConsistencyDeadline(store, previousDeadline);
     }
     teardownLabeling(store, solutionNoBeforeSearch);
 

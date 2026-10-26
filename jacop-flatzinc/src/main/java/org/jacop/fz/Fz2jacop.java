@@ -124,6 +124,10 @@ public class Fz2jacop {
     } catch (TrivialSolution _) {
       Runtime.getRuntime().removeShutdownHook(t);
       status = 0;
+    } catch (ModelTimeOut _) {
+      IO.println("=====UNKNOWN=====");
+      IO.println("%% =====TIME-OUT=====");
+      status = 0;
     }
 
     if (opt.getStatistics()) {

@@ -33,6 +33,7 @@ package org.jacop.search;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -105,5 +106,33 @@ class DepthFirstSearchTimeOutTest {
     assertThat(child.timeOutOccured).isTrue();
     assertThat(master.timeOutOccured).isTrue();
     assertThat(store.level).isEqualTo(level);
+  }
+
+  @Test
+  void longPropagationStopsAtTheTimeOut() {
+    // x < y and y < x lower the maximum of one variable by 1 per propagator call, so proving the
+    // failure takes 2 * 10^8 calls. The time-out was checked between search nodes only, so the
+    // search ran far past it (hakank's ages, where float bounds converge as slowly) and then
+    // reported the failure as a complete search.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100_000_000);
+    IntVar y = new IntVar(store, "y", 0, 100_000_000);
+    store.impose(new XltY(x, y));
+    store.impose(new XltY(y, x));
+
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setTimeOutMilliseconds(100);
+    int level = store.level;
+    long start = System.currentTimeMillis();
+
+    boolean result =
+        search.labeling(store, new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMin<>()));
+
+    assertThat(result).isFalse();
+    assertThat(search.timeOutOccured).isTrue();
+    assertThat(System.currentTimeMillis() - start).isLessThan(10_000);
+    assertThat(store.level).isEqualTo(level);
+    assertThat(store.getConsistencyDeadline()).isZero();
   }
 }
