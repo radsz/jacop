@@ -453,13 +453,29 @@ public class Assignment extends Constraint
       trail.addUpperBound(v, position, out);
       hi = max;
     }
+    // a variable of the other list fixed to this index leaves v only its own index
+    int forced = -1;
+    for (int j = 0; j < other.length && forced < 0; j++) {
+      if (trail.minBefore(other[j], position) == channel
+          && trail.maxBefore(other[j], position) == channel) {
+        forced = j;
+      }
+    }
+    boolean forcedUsed = false;
     IntDomain root = trail.rootDomain(v);
     for (int w = lo; w <= hi; w++) {
-      if (root.contains(w)
-          && !trail.excludedBefore(v, w, position, out)
-          && !trail.excludedBefore(other[w - shiftOther], channel, position, out)) {
+      if (!root.contains(w) || trail.excludedBefore(v, w, position, out)) {
+        continue;
+      }
+      if (forced >= 0 && w != forced + shiftOther) {
+        forcedUsed = true;
+      } else if (!trail.excludedBefore(other[w - shiftOther], channel, position, out)) {
         return false;
       }
+    }
+    if (forcedUsed) {
+      trail.addLowerBound(other[forced], position, out);
+      trail.addUpperBound(other[forced], position, out);
     }
     return true;
   }
