@@ -121,6 +121,15 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
 
+  /** Statistics: distinct literals pushed as atoms. */
+  public long atomLiterals;
+
+  /** Statistics: distinct literals pushed as atoms that occur in a learnt clause. */
+  public long atomLiteralsLearnt;
+
+  // per DIMACS variable: 1 once pushed as an atom, 2 once it also occurred in a learnt clause
+  private byte[] atomUse = new byte[16];
+
   /** Statistics: failures of the constraints turned into conflict clauses. */
   public long constraintConflicts;
 
@@ -400,6 +409,15 @@ public final class LcgSolver implements ExternalPropagator {
   // ------------------------------------------------------------------ the external propagator
 
   @Override
+  public void notifyLearntLiteral(int lit) {
+    int dimacsVar = Math.abs(lit);
+    if (dimacsVar < atomUse.length && atomUse[dimacsVar] == 1) {
+      atomUse[dimacsVar] = 2;
+      atomLiteralsLearnt++;
+    }
+  }
+
+  @Override
   public void notifyAssignment(int lit, boolean fixed) {
     if (numPending == pending.length) {
       pending = Arrays.copyOf(pending, 2 * numPending);
@@ -451,6 +469,13 @@ public final class LcgSolver implements ExternalPropagator {
           propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
         }
         propagated[dimacsVar] = e;
+        if (dimacsVar >= atomUse.length) {
+          atomUse = Arrays.copyOf(atomUse, propagated.length);
+        }
+        if (atomUse[dimacsVar] == 0) {
+          atomUse[dimacsVar] = 1;
+          atomLiterals++;
+        }
         atomsPropagated++;
         return lit;
       }

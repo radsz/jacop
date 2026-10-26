@@ -1086,6 +1086,11 @@ public final class CdclSolver {
     }
     seen[learnt[0] >> 1] = 0;
     learntLiterals += learntSize;
+    if (notifying) {
+      for (int i = 0; i < learntSize; i++) {
+        external.notifyLearntLiteral(toDimacs(learnt[i]));
+      }
+    }
 
     if (learntSize == 1) {
       return 0;

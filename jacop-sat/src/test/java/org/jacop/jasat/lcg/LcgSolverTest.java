@@ -420,6 +420,8 @@ class LcgSolverTest {
   @Test
   void makespanAgreesWithSearch() {
     Random rnd = new Random(9);
+    long atomLiterals = 0;
+    long atomLiteralsLearnt = 0;
     for (int instance = 0; instance < 150; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
@@ -469,9 +471,14 @@ class LcgSolverTest {
           solver.setChecking(true);
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
           optimum[1] = solver.value(makespan);
+          assertThat(solver.atomLiteralsLearnt).isLessThanOrEqualTo(solver.atomLiterals);
+          atomLiterals += solver.atomLiterals;
+          atomLiteralsLearnt += solver.atomLiteralsLearnt;
         }
       }
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
+    // the learnt clauses use some of the atoms pushed, not all
+    assertThat(atomLiteralsLearnt).isPositive().isLessThan(atomLiterals);
   }
 }
