@@ -42,6 +42,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Generalized arc consistency for a layered graph: a directed acyclic graph with one layer of edges
@@ -72,7 +75,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public abstract class LayeredGraphConstraint extends Constraint
-    implements UsesQueueVariable, Stateful {
+    implements UsesQueueVariable, Stateful, Explainable {
 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
@@ -90,6 +93,12 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   /** Removes the values that label no edge, and in the first pass checks every level. */
   private final InitOnce init = new InitOnce();
+
+  /** The graph as described, kept for explanations. */
+  private LayeredGraphDescription description;
+
+  /** The described graph ordered by level, built at the first explanation. */
+  private LayeredGraphExplanation.Graph explanationGraph;
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -464,6 +473,40 @@ public abstract class LayeredGraphConstraint extends Constraint
   protected abstract void describeGraph(LayeredGraphDescription graph);
 
   /**
+   * Tells whether the paths of the graph are exactly the solutions, so that explanations by cuts of
+   * the graph hold. A subclass that prunes by more than the paths returns false.
+   *
+   * @return true when this constraint is explained by its graph
+   */
+  protected boolean explainedByPaths() {
+    return false;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    LayeredGraphExplanation.Graph graph = explanationGraph();
+    return graph != null
+        && new LayeredGraphExplanation(trail, list, graph, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    LayeredGraphExplanation.Graph graph = explanationGraph();
+    return graph != null
+        && new LayeredGraphExplanation(trail, list, graph, trail.size()).explainFailure(out);
+  }
+
+  private LayeredGraphExplanation.Graph explanationGraph() {
+    if (!explainedByPaths() || description == null) {
+      return null;
+    }
+    if (explanationGraph == null) {
+      explanationGraph = new LayeredGraphExplanation.Graph(description);
+    }
+    return explanationGraph;
+  }
+
+  /**
    * It builds the layered graph from its description. Edges with values outside the domains are
    * dropped, a forward and a backward pass keep the nodes on a path from level 0 to the last level,
    * and the static adjacency arrays are created. All work is proportional to the size of the
@@ -473,6 +516,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     int levels = list.length;
     LayeredGraphDescription description = new LayeredGraphDescription(levels);
     describeGraph(description);
+    this.description = description;
     final int[] edge = description.edges;
     final int described = description.size;
 

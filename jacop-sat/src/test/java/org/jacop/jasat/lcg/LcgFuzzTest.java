@@ -42,6 +42,7 @@ import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
@@ -58,6 +59,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
@@ -66,6 +68,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -90,6 +93,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
@@ -119,6 +123,9 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
@@ -135,6 +142,9 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -258,6 +268,58 @@ class LcgFuzzTest {
       return rnd.nextInt(5) - 1;
     }
 
+    /** An automaton of three states over values -1 to 3 on 3 or 4 of the variables. */
+    private Regular regular() {
+      FsmState[] state = {new FsmState(), new FsmState(), new FsmState()};
+      Fsm fsm = new Fsm();
+      fsm.initState = state[0];
+      for (FsmState s : state) {
+        fsm.allStates.add(s);
+        for (int t = 1 + rnd.nextInt(2); t > 0; t--) {
+          int v = rnd.nextInt(5) - 1;
+          fsm.finalStates.add(state[rnd.nextInt(3)]);
+          s.addTransition(
+              new FsmTransition(new IntervalDomain(v, v + rnd.nextInt(2)), state[rnd.nextInt(3)]));
+        }
+      }
+      return new Regular(fsm, pick(x, 3 + rnd.nextInt(2)));
+    }
+
+    /** A table of 3 to 6 random tuples on 3 of the variables, as a decision diagram. */
+    private ExtensionalSupportMdd mdd() {
+      int[][] tuples = new int[3 + rnd.nextInt(4)][3];
+      for (int[] t : tuples) {
+        for (int k = 0; k < t.length; k++) {
+          t[k] = rnd.nextInt(5) - 1;
+        }
+      }
+      return new ExtensionalSupportMdd(pick(x, 3), tuples);
+    }
+
+    /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
+    private HybridTable hybridTable() {
+      IntVar[] v = pick(x, 2 + rnd.nextInt(2));
+      Restriction[][] tuples = new Restriction[2 + rnd.nextInt(6)][v.length];
+      for (Restriction[] tuple : tuples) {
+        for (int i = 0; i < v.length; i++) {
+          tuple[i] =
+              switch (rnd.nextInt(10)) {
+                case 0 -> Restriction.any();
+                case 1 -> Restriction.ne(value());
+                case 2 -> Restriction.le(value());
+                case 3 -> Restriction.ge(value());
+                case 4 -> Restriction.in(value(), value(), value());
+                case 5 -> Restriction.notIn(value(), value());
+                case 6 ->
+                    Restriction.column(
+                        Restriction.Relation.LE, (i + 1) % v.length, rnd.nextInt(3) - 1);
+                default -> Restriction.eq(value());
+              };
+        }
+      }
+      return new HybridTable(v, tuples, rnd.nextBoolean());
+    }
+
     private IntVar[] chain(String name, int k, int min, int max) {
       IntVar[] y = new IntVar[k];
       for (int i = 0; i < k; i++) {
@@ -296,13 +358,17 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(65)) {
+      return switch (rnd.nextInt(68)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
         case 2 -> new LinearInt(p, new int[] {1, 1, -1}, "==", value());
         case 3 -> new XplusYeqZ(p[0], p[1], p[2]);
-        case 4 -> new XmulYeqZ(p[0], p[1], p[2]);
+        case 4 ->
+            rnd.nextBoolean()
+                ? new XmulYeqZ(p[0], p[1], p[2])
+                // a square, or the product equal to a factor
+                : new XmulYeqZ(p[0], rnd.nextBoolean() ? p[0] : p[1], p[rnd.nextInt(2) * 2]);
         case 5 -> new XmulCeqZ(p[0], 2 - rnd.nextInt(4), p[1]);
         case 6 -> new AbsXeqY(p[0], p[1]);
         case 7 -> new Distance(p[0], p[1], p[2]);
@@ -310,15 +376,30 @@ class LcgFuzzTest {
         case 9 -> new Alldistinct(q);
         case 10 -> new Alldifferent(q);
         case 11 -> new Alldiff(q);
-        case 12 -> new AlldifferentExcept(q, new IntervalDomain(0, 0));
+        case 12 ->
+            rnd.nextBoolean()
+                ? new AlldifferentExcept(q, new IntervalDomain(0, 0))
+                : new AlldifferentExceptZero(q);
         case 13 -> new Max(q, one());
         case 14 -> new Min(q, one());
-        case 15 -> new ArgMin(q, intVar("i", 1, q.length));
-        case 16 -> new ArgMax(q, intVar("i", 1, q.length));
+        case 15 ->
+            rnd.nextBoolean()
+                ? new ArgMin(q, intVar("i", 1, q.length))
+                // indexes from 0, index domain wider than the indexes
+                : new ArgMin(q, intVar("i", -1, q.length), -1);
+        case 16 ->
+            rnd.nextBoolean()
+                ? new ArgMax(q, intVar("i", 1, q.length))
+                : new ArgMax(q, intVar("i", -1, q.length), -1);
         case 17 ->
             new ElementInteger(one(), new int[] {value(), value(), value(), value()}, one(), 0);
         case 18 -> new ElementVariable(one(), q, one(), 0);
-        case 19 -> new Count(q, one(), value());
+        case 19 -> {
+          int lb = rnd.nextInt(2);
+          yield rnd.nextBoolean()
+              ? new Count(q, one(), value())
+              : new CountBounds(q, value(), lb, lb + rnd.nextInt(2));
+        }
         case 20 -> new CountValues(q, pick(x, 2), new int[] {0, 1});
         case 21 -> new GCC(chain("g", 3, 0, 2), chain("c", 3, 0, 3));
         case 22 -> new Among(q, new IntervalDomain(0, 1), one());
@@ -359,14 +440,19 @@ class LcgFuzzTest {
           yield rnd.nextBoolean() ? new Circuit(next) : new Subcircuit(next);
         }
         case 50 -> {
-          IntVar[] xs = chain("a", 3, 0, 2);
-          IntVar[] ds = chain("d", 3, 0, 2);
+          // indexes from 0 or 1, domains a little wider than the indexes, possibly one list twice
+          int shift = rnd.nextInt(2);
+          IntVar[] xs = chain("a", 3, shift - 1, shift + 2);
+          IntVar[] ds = rnd.nextInt(4) == 0 ? xs : chain("d", 3, shift, shift + 3);
           posted.add("link " + xs[0].id() + " = " + p[0].id());
           store.impose(new XeqY(xs[0], p[0]));
-          yield new Assignment(xs, ds, 0, 0);
+          yield new Assignment(xs, ds, shift, shift);
         }
-        case 51 -> new SumInt(q, relation(), one());
-        case 52 -> new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one());
+        case 51 -> rnd.nextBoolean() ? new SumInt(q, relation(), one()) : new Sum(q, one());
+        case 52 ->
+            rnd.nextBoolean()
+                ? new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one())
+                : new Sum(new IntVar[] {q[0], q[0], q[1]}, one());
         case 53 -> {
           String rel = new String[] {"==", "<=", ">="}[rnd.nextInt(3)];
           int[] w = {2, -1, 1};
@@ -393,6 +479,9 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
+        case 64 -> hybridTable();
+        case 65 -> regular();
+        case 66 -> mdd();
         case 63 ->
             new LinearIntDom(
                 p,
@@ -403,8 +492,12 @@ class LcgFuzzTest {
             switch (rnd.nextInt(3)) {
               case 0 -> {
                 IntVar[] s = pick(x, 3);
-                yield new Cumulative(
-                    s, constants(3, 1, 3), constants(3, 1, 2), constant(2 + rnd.nextInt(2)));
+                yield rnd.nextBoolean()
+                    ? new Cumulative(
+                        s, constants(3, 1, 3), constants(3, 1, 2), constant(2 + rnd.nextInt(2)))
+                    // durations, uses and limit as variables, durations possibly zero
+                    : new Cumulative(
+                        s, chain("d", 3, 0, 3), chain("r", 3, 1, 2), chain("c", 1, 1, 4)[0]);
               }
               case 1 ->
                   new Binpacking(
@@ -412,7 +505,10 @@ class LcgFuzzTest {
               default -> {
                 IntVar[] o = pick(x, 3);
                 IntVar[] o2 = pick(x, 3);
-                yield new Diffn(o, o2, constants(3, 1, 2), constants(3, 1, 2));
+                yield rnd.nextBoolean()
+                    ? new Diffn(o, o2, constants(3, 1, 2), constants(3, 1, 2))
+                    // sizes as variables, possibly zero
+                    : new Diffn(o, o2, chain("w", 3, 0, 2), chain("h", 3, 0, 2), rnd.nextBoolean());
               }
             };
       };

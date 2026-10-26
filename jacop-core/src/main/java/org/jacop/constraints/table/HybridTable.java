@@ -51,6 +51,9 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * HybridTable is a table constraint whose tuples may contain restrictions instead of values: the
@@ -86,7 +89,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class HybridTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1886,5 +1889,15 @@ public class HybridTable extends Constraint
   @Override
   public HybridTable copy(VarMap map) {
     return new HybridTable(this, map);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return TableExplanation.explain(trail, entry, x, cells, tupleCount, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return TableExplanation.explainFailure(trail, x, cells, tupleCount, out);
   }
 }

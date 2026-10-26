@@ -71,17 +71,7 @@ public final class LinearExplanation {
     if (kind == AtomicTrail.NE) {
       return false;
     }
-    IntVar y = trail.variable(entry);
-    // the occurrence of y the bound comes from; with weights of both signs it is not known
-    int own = -1;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == y && weights[i] != 0) {
-        if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
-          return false;
-        }
-        own = i;
-      }
-    }
+    int own = ownOccurrence(vars, weights, trail.variable(entry));
     if (own < 0) {
       return false;
     }
@@ -91,16 +81,7 @@ public final class LinearExplanation {
     if (upperSide ? !lessOrEqual : !greaterOrEqual) {
       return false;
     }
-    for (int i = 0; i < vars.length; i++) {
-      if (i == own || weights[i] == 0) {
-        continue;
-      }
-      if (upperSide == weights[i] > 0) {
-        trail.addLowerBound(vars[i], entry, out);
-      } else {
-        trail.addUpperBound(vars[i], entry, out);
-      }
-    }
+    addOtherBounds(trail, entry, vars, weights, own, upperSide, out);
     trail.addSkippedHoles(
         entry, kind == AtomicTrail.LE ? Integer.MAX_VALUE : Integer.MIN_VALUE, out);
     return true;
@@ -136,16 +117,7 @@ public final class LinearExplanation {
       return false;
     }
     IntVar y = trail.variable(entry);
-    // the occurrence of y the bound comes from; other occurrences count as other variables
-    int own = -1;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == y && weights[i] != 0) {
-        if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
-          return false;
-        }
-        own = i;
-      }
-    }
+    int own = ownOccurrence(vars, weights, y);
     if (own < 0) {
       return false;
     }
@@ -182,16 +154,7 @@ public final class LinearExplanation {
         }
       }
     }
-    for (int i = 0; i < vars.length; i++) {
-      if (i == own || weights[i] == 0) {
-        continue;
-      }
-      if (upperSide == weights[i] > 0) {
-        trail.addLowerBound(vars[i], entry, out);
-      } else {
-        trail.addUpperBound(vars[i], entry, out);
-      }
-    }
+    addOtherBounds(trail, entry, vars, weights, own, upperSide, out);
     return true;
   }
 
@@ -357,6 +320,44 @@ public final class LinearExplanation {
       if (i != skip) {
         trail.addLowerBound(vars[i], position, out);
         trail.addUpperBound(vars[i], position, out);
+      }
+    }
+  }
+
+  /**
+   * Returns the occurrence of y with a nonzero weight the bound of y comes from, or -1 when y has
+   * none or occurs with weights of both signs.
+   */
+  private static int ownOccurrence(IntVar[] vars, long[] weights, IntVar y) {
+    int own = -1;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y && weights[i] != 0) {
+        if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
+          return -1;
+        }
+        own = i;
+      }
+    }
+    return own;
+  }
+
+  // the bounds of the other occurrences that bound the side of the relation the entry comes from
+  private static void addOtherBounds(
+      AtomicTrail trail,
+      int entry,
+      IntVar[] vars,
+      long[] weights,
+      int own,
+      boolean upperSide,
+      EntryList out) {
+    for (int i = 0; i < vars.length; i++) {
+      if (i == own || weights[i] == 0) {
+        continue;
+      }
+      if (upperSide == weights[i] > 0) {
+        trail.addLowerBound(vars[i], entry, out);
+      } else {
+        trail.addUpperBound(vars[i], entry, out);
       }
     }
   }

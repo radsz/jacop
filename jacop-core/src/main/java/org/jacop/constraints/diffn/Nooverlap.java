@@ -34,6 +34,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Nooverlap constraint assures that any two rectangles from a vector of rectangles does not overlap
@@ -43,7 +46,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Nooverlap extends Constraint implements Copyable<Nooverlap> {
+public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable {
 
   static final boolean TRACE_ON = false;
   static final boolean TRACE_NARR_ON = false;
@@ -483,6 +486,22 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap> {
           };
     }
     return vars;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explainable() && DiffnExplanation.explain(trail, entry, rectangle, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explainable() && DiffnExplanation.explainFailure(trail, rectangle, out);
+  }
+
+  // a subclass may prune by other rules, so only the classes explained here give reasons
+  private boolean explainable() {
+    Class<?> type = getClass();
+    return type == Nooverlap.class || type == Diffn.class;
   }
 
   @Override

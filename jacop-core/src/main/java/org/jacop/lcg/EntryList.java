@@ -83,6 +83,25 @@ public final class EntryList {
     size = newSize;
   }
 
+  /**
+   * Sorts the entries from a position on and removes the repeated ones among them.
+   *
+   * @param from the first position sorted
+   */
+  public void sortUnique(int from) {
+    if (size - from < 2) {
+      return;
+    }
+    Arrays.sort(entries, from, size);
+    int kept = from + 1;
+    for (int k = from + 1; k < size; k++) {
+      if (entries[k] != entries[kept - 1]) {
+        entries[kept++] = entries[k];
+      }
+    }
+    size = kept;
+  }
+
   /** Removes all entries. */
   public void clear() {
     size = 0;
