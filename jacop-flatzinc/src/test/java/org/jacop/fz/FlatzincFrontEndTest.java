@@ -1096,10 +1096,17 @@ class FlatzincFrontEndTest {
         .append(hint)
         .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
 
-    String out =
-        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
-            0];
-    assertTrue(out.contains("=====UNKNOWN====="), out);
+    // the disequalities would become an all-different, which proves at once that the pigeons do
+    // not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+              0];
+      assertTrue(out.contains("=====UNKNOWN====="), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
   }
 
   private String[] run(String model, String... options) throws IOException {
