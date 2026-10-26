@@ -368,24 +368,8 @@ public class Assignment extends Constraint
       return false;
     }
     IntVar v = trail.variable(entry);
-    int a = trail.value(entry);
-    IntDomain root = trail.rootDomain(v);
-    int lo;
-    int hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     int mark = out.size();
     Integer position = xs.get(v);
     if (position != null

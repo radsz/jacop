@@ -157,28 +157,12 @@ final class LayeredGraphExplanation {
    */
   boolean explain(int entry, EntryList out) {
     IntVar y = trail.variable(entry);
-    IntDomain root = trail.rootDomain(y);
-    int a = trail.value(entry);
-    int lo;
-    int hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     int mark = out.size();
     for (int i = 0; i < list.length; i++) {
       if (list[i] == y && explainAt(i, y, lo, hi, out)) {
-        unique(out, mark);
+        out.sortUnique(mark);
         return true;
       }
       out.truncate(mark);
@@ -239,7 +223,7 @@ final class LayeredGraphExplanation {
     }
     int mark = out.size();
     addForwardCut(forward, graph.levels, out);
-    unique(out, mark);
+    out.sortUnique(mark);
     return true;
   }
 
@@ -301,25 +285,6 @@ final class LayeredGraphExplanation {
         if (!reached[l][graph.source[k]] && reached[l + 1][graph.target[k]]) {
           d.addRemoval(graph.value[k], out);
         }
-      }
-    }
-  }
-
-  // sorts the entries from mark on and removes repeated ones
-  private static void unique(EntryList out, int mark) {
-    int n = out.size() - mark;
-    if (n < 2) {
-      return;
-    }
-    int[] e = new int[n];
-    for (int k = 0; k < n; k++) {
-      e[k] = out.get(mark + k);
-    }
-    Arrays.sort(e);
-    out.truncate(mark);
-    for (int k = 0; k < n; k++) {
-      if (k == 0 || e[k] != e[k - 1]) {
-        out.add(e[k]);
       }
     }
   }

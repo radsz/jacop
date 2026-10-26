@@ -79,25 +79,9 @@ final class TableExplanation {
     if (i < 0) {
       return false;
     }
-    IntDomain root = trail.rootDomain(y);
-    int a = trail.value(entry);
     // the values the atom removes, as a range [lo, hi], with a hole at a for a != atom
-    int lo;
-    int hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     int arity = x.length;
     int mark = out.size();
     EntryList scratch = new EntryList();
@@ -119,7 +103,7 @@ final class TableExplanation {
         return false;
       }
     }
-    unique(out, mark);
+    out.sortUnique(mark);
     return true;
   }
 
@@ -148,7 +132,7 @@ final class TableExplanation {
       }
       last = killer;
     }
-    unique(out, mark);
+    out.sortUnique(mark);
     return true;
   }
 
@@ -329,24 +313,5 @@ final class TableExplanation {
       }
       default -> true;
     };
-  }
-
-  // sorts the entries from mark on and removes repeated ones
-  private static void unique(EntryList out, int mark) {
-    int n = out.size() - mark;
-    if (n < 2) {
-      return;
-    }
-    int[] e = new int[n];
-    for (int k = 0; k < n; k++) {
-      e[k] = out.get(mark + k);
-    }
-    Arrays.sort(e);
-    out.truncate(mark);
-    for (int k = 0; k < n; k++) {
-      if (k == 0 || e[k] != e[k - 1]) {
-        out.add(e[k]);
-      }
-    }
   }
 }

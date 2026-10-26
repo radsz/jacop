@@ -31,7 +31,6 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -115,23 +114,8 @@ final class CountExplanation {
     if (occurrences != 1) {
       return false;
     }
-    IntDomain root = trail.rootDomain(y);
-    int lo;
-    int hi;
-    switch (kind) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     int mark = out.size();
     // values beyond the bounds y had were removed by those bounds' entries
     int min = trail.minBefore(y, entry);

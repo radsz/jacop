@@ -82,23 +82,8 @@ final class MulExplanation {
   boolean explain(int entry, EntryList out) {
     IntVar v = trail.variable(entry);
     IntDomain root = trail.rootDomain(v);
-    int a = trail.value(entry);
-    long lo;
-    long hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = (long) a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = (long) a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    long lo = trail.removedMin(entry);
+    long hi = trail.removedMax(entry);
     int mark = out.size();
     int min = trail.minBefore(v, position);
     if (lo < min) {

@@ -31,8 +31,6 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.Arrays;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -96,24 +94,8 @@ final class DiffnExplanation {
    */
   static boolean explain(AtomicTrail trail, int entry, Rectangle[] rectangle, EntryList out) {
     IntVar y = trail.variable(entry);
-    IntDomain root = trail.rootDomain(y);
-    int a = trail.value(entry);
-    int lo;
-    int hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     DiffnExplanation explanation = null;
     int mark = out.size();
     for (int i = 0; i < rectangle.length; i++) {
@@ -133,7 +115,7 @@ final class DiffnExplanation {
           trail.addUpperBound(y, entry, out);
         }
         if (explanation.cover(i, d, from, to, out)) {
-          unique(out, mark);
+          out.sortUnique(mark);
           return true;
         }
         out.truncate(mark);
@@ -161,7 +143,7 @@ final class DiffnExplanation {
         trail.addUpperBound(y, now, out);
         if (explanation.cover(
             i, d, explanation.originMin[d][i], explanation.originMax[d][i], out)) {
-          unique(out, mark);
+          out.sortUnique(mark);
           return true;
         }
         out.truncate(mark);
@@ -258,25 +240,6 @@ final class DiffnExplanation {
       trail.addLowerBound(r.origin[d], position, out);
       trail.addUpperBound(r.origin[d], position, out);
       trail.addLowerBound(r.length[d], position, out);
-    }
-  }
-
-  // sorts the entries from mark on and removes repeated ones
-  private static void unique(EntryList out, int mark) {
-    int n = out.size() - mark;
-    if (n < 2) {
-      return;
-    }
-    int[] e = new int[n];
-    for (int k = 0; k < n; k++) {
-      e[k] = out.get(mark + k);
-    }
-    Arrays.sort(e);
-    out.truncate(mark);
-    for (int k = 0; k < n; k++) {
-      if (k == 0 || e[k] != e[k - 1]) {
-        out.add(e[k]);
-      }
     }
   }
 }

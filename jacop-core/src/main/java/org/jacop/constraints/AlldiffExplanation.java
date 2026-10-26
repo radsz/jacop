@@ -103,23 +103,8 @@ final class AlldiffExplanation {
       AtomicTrail trail, int entry, IntVar[] list, IntDomain except, EntryList out) {
     IntVar y = trail.variable(entry);
     IntDomain root = trail.rootDomain(y);
-    int a = trail.value(entry);
-    int lo;
-    int hi;
-    switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> {
-        lo = root.min();
-        hi = a - 1;
-      }
-      case AtomicTrail.LE -> {
-        lo = a + 1;
-        hi = root.max();
-      }
-      default -> {
-        lo = a;
-        hi = a;
-      }
-    }
+    int lo = trail.removedMin(entry);
+    int hi = trail.removedMax(entry);
     int mark = out.size();
     int min = trail.minBefore(y, entry);
     if (lo < min) {
@@ -149,7 +134,7 @@ final class AlldiffExplanation {
       out.truncate(mark);
       e.violatedSet(unmatched);
       e.addReason(out);
-      unique(out, mark);
+      out.sortUnique(mark);
       return true;
     }
     for (int w = lo; w <= hi; w++) {
@@ -162,7 +147,7 @@ final class AlldiffExplanation {
       }
     }
     e.addReason(out);
-    unique(out, mark);
+    out.sortUnique(mark);
     return true;
   }
 
@@ -188,7 +173,7 @@ final class AlldiffExplanation {
     int mark = out.size();
     e.violatedSet(unmatched);
     e.addReason(out);
-    unique(out, mark);
+    out.sortUnique(mark);
     return true;
   }
 
@@ -465,24 +450,5 @@ final class AlldiffExplanation {
       }
     }
     return false;
-  }
-
-  // sorts the entries from mark on and removes repeated ones
-  private static void unique(EntryList out, int mark) {
-    int n = out.size() - mark;
-    if (n < 2) {
-      return;
-    }
-    int[] e = new int[n];
-    for (int k = 0; k < n; k++) {
-      e[k] = out.get(mark + k);
-    }
-    Arrays.sort(e);
-    out.truncate(mark);
-    for (int k = 0; k < n; k++) {
-      if (k == 0 || e[k] != e[k - 1]) {
-        out.add(e[k]);
-      }
-    }
   }
 }

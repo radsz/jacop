@@ -891,7 +891,7 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     LinearForm f = l.linearForm();
-    if (f.vars().length != 1 || Math.abs(f.weights()[0]) != 1) {
+    if (f == null || f.vars().length != 1 || Math.abs(f.weights()[0]) != 1) {
       return 0;
     }
     int i = idOf(f.vars()[0]);
