@@ -113,6 +113,24 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /** Prototype scheduling statistics: consistency calls, calls that pruned, calls that failed. */
+  public long schedCalls, schedPrunes, schedFails;
+
+  /** Prototype: exponential average of whether a call pruned (1) or not (0). */
+  public double schedYield = 0.5d;
+
+  /** Prototype: conflict activity (failures, and in LCG explanations in conflicts), decayed. */
+  public double schedActivity;
+
+  /** Prototype: in the store's list of bumped constraints. */
+  public boolean schedBumped;
+
+  /** Prototype: the fixpoint (consistency call of the store) in which the constraint last ran. */
+  public long schedEpoch = -1;
+
+  /** Prototype: whether the last run in that fixpoint pruned or failed. */
+  public boolean schedLastPruned;
+
   /** How many constraints this one counts as in the static degree of each of its variables. */
   private int degreeWeight = 1;
 

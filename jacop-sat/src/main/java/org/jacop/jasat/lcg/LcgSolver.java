@@ -661,6 +661,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   // per constraint class: reasons, generic reasons and atoms in them, then the same for failures
   private void count(Constraint c, boolean own, int atoms, int at) {
+    if (at == 0 && LCG_BUMP) {
+      store.bumpSchedActivity(c);
+    }
     long[] counts =
         explanationCounts.computeIfAbsent(
             c == null ? "none" : c.getClass().getSimpleName(), k -> new long[6]);
@@ -693,7 +696,12 @@ public final class LcgSolver implements ExternalPropagator {
    * its own explanation, and the negated solver literal extra unless 0. Returns a false literal of
    * the clause, whose reason is the clause.
    */
+  private static final boolean LCG_BUMP = Boolean.getBoolean("jacop.prop.lcgbump");
+
   private int conflict(EntryList atoms, int extra) {
+    if (LCG_BUMP) {
+      store.decaySchedActivity();
+    }
     numPending = 0;
     failed = true;
     boolean[] seen = new boolean[trail.size()];

@@ -112,6 +112,23 @@ public final class ConstraintQueue {
   }
 
   /**
+   * Removes and returns the last constraint of the queue (prototype LIFO order).
+   *
+   * @return the last constraint.
+   */
+  public Constraint pollLast() {
+    if (size == 0) {
+      throw new NoSuchElementException("Empty constraint queue");
+    }
+    int at = (head + size - 1) & (elements.length - 1);
+    Constraint c = elements[at];
+    elements[at] = null;
+    size--;
+    c.setQueueMembership(store, c.queueMembership(store) & ~bit);
+    return c;
+  }
+
+  /**
    * Checks whether the queue is empty.
    *
    * @return true if no constraint is waiting in the queue.

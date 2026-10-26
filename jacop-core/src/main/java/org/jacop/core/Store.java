@@ -210,6 +210,119 @@ public class Store {
   /** It stores current queue, which is being evaluated. */
   public int currentQueue;
 
+  // ---- prototype scheduling options (system properties), see PROTOTYPE notes in the report ----
+  static final boolean SCHED_LIFO = "lifo".equals(System.getProperty("jacop.prop.order", "fifo"));
+  static final int SCHED_BATCH = Integer.getInteger("jacop.prop.batch", 99);
+  static final String SCHED_ADAPT = System.getProperty("jacop.prop.adapt", "none");
+  static final boolean ADAPT_YIELD = SCHED_ADAPT.contains("yield");
+  static final boolean ADAPT_ACT = SCHED_ADAPT.contains("act");
+  static final int SUB = (ADAPT_YIELD || ADAPT_ACT) ? 3 : 1;
+  static final double YIELD_LOW = Double.parseDouble(System.getProperty("jacop.prop.ylow", "0.02"));
+  static final double YIELD_HIGH = Double.parseDouble(System.getProperty("jacop.prop.yhigh", "0.3"));
+  static final double YIELD_ALPHA = Double.parseDouble(System.getProperty("jacop.prop.yalpha", "0.05"));
+  static final int YIELD_MIN_CALLS = Integer.getInteger("jacop.prop.ymin", 32);
+  static final double ACT_DECAY = Double.parseDouble(System.getProperty("jacop.prop.adecay", "0.95"));
+  static final double ACT_HOT = Double.parseDouble(System.getProperty("jacop.prop.ahot", "0.3"));
+  static final int ADAPT_FROM = Integer.getInteger("jacop.prop.adaptFrom", 0);
+  static final boolean SCHED_STATS = Boolean.getBoolean("jacop.prop.stats");
+  static final boolean SCHED_TRACK = SCHED_STATS || SUB > 1;
+
+  /** Internal slot (cost class * SUB + sub-slot) of the lowest non-empty queue. */
+  int currentSlot;
+
+  int nSlots;
+
+  /** Number of domain changes reported so far, to see whether a consistency call pruned. */
+  public long domainChanges;
+
+  double schedActInc = 1.0d;
+
+  long schedEpochNow;
+
+  static final long[][] QSTAT = new long[32][8];
+  static final java.util.Map<String, long[]> CSTAT = new java.util.HashMap<>();
+  static boolean afterExpensivePrune;
+
+  static {
+    if (SCHED_STATS) {
+      Runtime.getRuntime().addShutdownHook(new Thread(Store::printSchedStats));
+    }
+  }
+
+  static void printSchedStats() {
+    StringBuilder b = new StringBuilder();
+    long[] tot = new long[8];
+    for (int q = 0; q < 32; q++) {
+      long[] r = QSTAT[q];
+      if (r[0] == 0 || q == 31) continue;
+      b.append(String.format("%%%%%%mzn-stat: schedQ%d=calls:%d,prunes:%d,fails:%d,ms:%d,idleMs:%d,rerunCalls:%d,rerunPrunes:%d,repeats:%d%n",
+          q, r[0], r[1], r[2], r[3] / 1_000_000, r[4] / 1_000_000, r[5], r[6], r[7]));
+      for (int k = 0; k < 8; k++) tot[k] += r[k];
+    }
+    b.append(String.format("%%%%%%mzn-stat: schedAll=calls:%d,prunes:%d,fails:%d,ms:%d,idleMs:%d,rerunCalls:%d,rerunPrunes:%d,repeats:%d,repeatIdle:%d,repeatIdleMs:%d%n",
+        tot[0], tot[1], tot[2], tot[3] / 1_000_000, tot[4] / 1_000_000, tot[5], tot[6], tot[7], QSTAT[31][0], QSTAT[31][1] / 1_000_000));
+    CSTAT.entrySet().stream()
+        .sorted((x, y) -> Long.compare(y.getValue()[3], x.getValue()[3]))
+        .limit(12)
+        .forEach(e -> { long[] r = e.getValue();
+          b.append(String.format("%%%%%%mzn-stat: schedC_%s=q:%d,calls:%d,prunes:%d,fails:%d,ms:%d,idleMs:%d%n",
+              e.getKey(), r[5], r[0], r[1], r[2], r[3] / 1_000_000, r[4] / 1_000_000)); });
+    System.out.print(b);
+    System.out.flush();
+  }
+
+  private void enqueue(Constraint c, int s) {
+    if (SUB > 1 && (c.queueMembership(this) & (7 << (s - s % SUB))) != 0) {
+      return;
+    }
+    changed[s].add(c);
+  }
+
+  /** Slot of a constraint in the internal queues. */
+  private int slot(Constraint c, int queueIndex) {
+    if (SUB == 1) {
+      return queueIndex;
+    }
+    return queueIndex * SUB + (queueIndex >= ADAPT_FROM ? sub(c) : 1);
+  }
+
+  private int sub(Constraint c) {
+    if (ADAPT_ACT && c.schedActivity >= ACT_HOT * schedActInc) {
+      return 0;
+    }
+    if (ADAPT_YIELD && c.schedCalls >= YIELD_MIN_CALLS) {
+      if (c.schedYield < YIELD_LOW) {
+        return 2;
+      }
+      if (!ADAPT_ACT && c.schedYield > YIELD_HIGH) {
+        return 0;
+      }
+    }
+    return 1;
+  }
+
+  /**
+   * Prototype: bumps the conflict activity of a constraint (failure, or a reason in a conflict).
+   *
+   * @param c the constraint
+   */
+  public void bumpSchedActivity(Constraint c) {
+    if (c == null) return;
+    c.schedActivity += schedActInc;
+    if (c.schedActivity > 1e100) {
+      for (Constraint x : bumped) x.schedActivity *= 1e-100;
+      schedActInc *= 1e-100;
+    }
+    if (!c.schedBumped) { c.schedBumped = true; bumped.add(c); }
+  }
+
+  private final java.util.ArrayList<Constraint> bumped = new java.util.ArrayList<>();
+
+  /** Prototype: one conflict happened, activities decay. */
+  public void decaySchedActivity() {
+    schedActInc /= ACT_DECAY;
+  }
+
   /** It specifies long description of the store. */
   public String description;
 
@@ -361,9 +474,10 @@ public class Store {
 
     vars = new Var[size];
 
-    changed = new ConstraintQueue[queueNo];
+    nSlots = queueNo * SUB;
+    changed = new ConstraintQueue[nSlots];
 
-    for (int i = 0; i < queueNo; i++) {
+    for (int i = 0; i < nSlots; i++) {
       changed[i] = new ConstraintQueue(this, i);
     }
 
@@ -496,11 +610,12 @@ public class Store {
 
     propagationHasOccurred = true;
 
-    if (c.getQueueIndex() < currentQueue) {
-      currentQueue = c.getQueueIndex();
+    int s = slot(c, c.getQueueIndex());
+    if (s < currentSlot) {
+      currentSlot = s;
     }
 
-    changed[c.getQueueIndex()].add(c);
+    enqueue(c, s);
   }
 
   /**
@@ -514,11 +629,12 @@ public class Store {
    */
   public void addChanged(Constraint c, int queueIndex) {
 
-    if (queueIndex < currentQueue) {
-      currentQueue = queueIndex;
+    int s = queueIndex * SUB + (SUB > 1 ? 1 : 0);
+    if (s < currentSlot) {
+      currentSlot = s;
     }
 
-    changed[queueIndex].add(c);
+    enqueue(c, s);
   }
 
   /**
@@ -534,6 +650,7 @@ public class Store {
   public void addChanged(Var v, int pruningEvent, int info) {
 
     propagationHasOccurred = true;
+    domainChanges++;
 
     if (variableActivityManagement) {
       variablesPrunned.add(v);
@@ -641,10 +758,11 @@ public class Store {
     if (c != currentConstraint) {
       // addChanged(c) without setting propagationHasOccurred, which addChanged(Var...) did
       int queueIndex = c.getQueueIndex();
-      if (queueIndex < currentQueue) {
-        currentQueue = queueIndex;
+      int s = slot(c, queueIndex);
+      if (s < currentSlot) {
+        currentSlot = s;
       }
-      changed[queueIndex].add(c);
+      enqueue(c, s);
     }
   }
 
@@ -688,9 +806,10 @@ public class Store {
    */
   public void clearChanged() {
 
-    while (currentQueue < queueNo) {
-      changed[currentQueue++].clear();
+    while (currentSlot < nSlots) {
+      changed[currentSlot++].clear();
     }
+    currentQueue = queueNo;
   }
 
   private void handleConsistencyFailure() {
@@ -707,6 +826,12 @@ public class Store {
         variablesPrunned.clear();
       }
     }
+    if (SUB > 1 && currentConstraint != null) {
+      currentConstraint.schedFails++;
+      bumpSchedActivity(currentConstraint);
+      decaySchedActivity();
+    }
+    afterExpensivePrune = false;
     recentlyFailedConstraint = currentConstraint;
     currentConstraint = null;
     isLastConsistencyFailure = true;
@@ -779,26 +904,48 @@ public class Store {
 
     try {
 
-      while (currentQueue < queueNo) {
-        while (!changed[currentQueue].isEmpty()) {
-          if (consistencyDeadline > 0 && consistencyDeadlinePassed()) {
-            // no constraint failed, so none is blamed for this failure
-            currentConstraint = null;
-            throw failException;
+      int forced = -1;
+      schedEpochNow++;
+      while (true) {
+        int slotNow;
+        if (forced >= 0) {
+          slotNow = forced;
+        } else {
+          while (currentSlot < nSlots && changed[currentSlot].isEmpty()) {
+            currentSlot++;
           }
-          currentConstraint = getFirstChanged();
-          if (currentConstraint.firstRunAt() < 0) {
-            startFirstRun(currentConstraint);
+          if (currentSlot >= nSlots) {
+            break;
           }
-          numberConsistencyCalls++;
-          currentConstraint.consistency(this);
-          if (variableActivityManagement) {
-            updateActivities(currentConstraint);
-            variablesPrunned.clear();
-          }
+          slotNow = currentSlot;
         }
-        currentQueue++;
+        if (consistencyDeadline > 0 && consistencyDeadlinePassed()) {
+          // no constraint failed, so none is blamed for this failure
+          currentConstraint = null;
+          throw failException;
+        }
+        currentQueue = slotNow / SUB;
+        currentConstraint =
+            SCHED_LIFO ? changed[slotNow].pollLast() : changed[slotNow].poll();
+        if (currentConstraint.firstRunAt() < 0) {
+          startFirstRun(currentConstraint);
+        }
+        numberConsistencyCalls++;
+        if (SCHED_TRACK) {
+          runTracked(currentConstraint, currentQueue);
+        } else {
+          currentConstraint.consistency(this);
+        }
+        if (variableActivityManagement) {
+          updateActivities(currentConstraint);
+          variablesPrunned.clear();
+        }
+        forced =
+            (currentQueue >= SCHED_BATCH && slotNow > currentSlot && !changed[slotNow].isEmpty())
+                ? slotNow
+                : -1;
       }
+      currentQueue = queueNo;
 
     } catch (FailException _) {
       handleConsistencyFailure();
@@ -807,6 +954,65 @@ public class Store {
 
     currentConstraint = null;
     return true;
+  }
+
+  private void runTracked(Constraint c, int q) {
+    long before = domainChanges;
+    long t0 = SCHED_STATS ? System.nanoTime() : 0;
+    boolean failed = true;
+    try {
+      c.consistency(this);
+      failed = false;
+    } finally {
+      boolean pruned = domainChanges != before;
+      c.schedCalls++;
+      if (pruned) {
+        c.schedPrunes++;
+      }
+      c.schedYield += YIELD_ALPHA * ((pruned || failed ? 1.0d : 0.0d) - c.schedYield);
+      if (SCHED_STATS) {
+        long dt = System.nanoTime() - t0;
+        long[] r = QSTAT[q];
+        r[0]++;
+        if (failed) {
+          r[2]++;
+        } else if (pruned) {
+          r[1]++;
+        } else {
+          r[4] += dt;
+        }
+        r[3] += dt;
+        if (q <= 1 && afterExpensivePrune) {
+          r[5]++;
+          if (pruned || failed) {
+            r[6]++;
+          }
+        }
+        if (q >= 2) {
+          afterExpensivePrune = pruned && !failed;
+        }
+        if (c.schedEpoch == schedEpochNow) {
+          // a repeated run of this constraint within one fixpoint
+          r[7]++;
+          if (!pruned && !failed) {
+            QSTAT[31][0]++;
+            QSTAT[31][1] += dt;
+          }
+        }
+        c.schedEpoch = schedEpochNow;
+        long[] cs = CSTAT.computeIfAbsent(c.getClass().getSimpleName(), k -> new long[8]);
+        cs[0]++;
+        if (failed) {
+          cs[2]++;
+        } else if (pruned) {
+          cs[1]++;
+        } else {
+          cs[4] += dt;
+        }
+        cs[3] += dt;
+        cs[5] = q;
+      }
+    }
   }
 
   /**
@@ -893,7 +1099,7 @@ public class Store {
    */
   public Constraint getFirstChanged() {
 
-    return changed[currentQueue].poll();
+    return SCHED_LIFO ? changed[currentSlot].pollLast() : changed[currentSlot].poll();
   }
 
   /**
@@ -1349,9 +1555,10 @@ public class Store {
     // Remove level is called so we clear flag isLastConsistencyFailure.
     isLastConsistencyFailure = false;
 
-    while (currentQueue < queueNo) {
-      changed[currentQueue++].clear();
+    while (currentSlot < nSlots) {
+      changed[currentSlot++].clear();
     }
+    currentQueue = queueNo;
 
     while (firstRunsSize > 0 && firstRuns[firstRunsSize - 1].firstRunAt() >= level) {
       firstRuns[--firstRunsSize].setFirstRunAt(Constraint.RUN_UNDONE);
