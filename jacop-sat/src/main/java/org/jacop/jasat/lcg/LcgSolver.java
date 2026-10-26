@@ -732,7 +732,7 @@ public final class LcgSolver implements ExternalPropagator {
       // the explanations, stronger than propagation at the root, prove the model unsatisfiable:
       // the empty clause follows, and so does any clause, here one false literal; the solver
       // backjumps to the root on it and then takes the empty clause
-      int any = extra != 0 ? extra : trueAtom();
+      int any = extra == 0 ? trueAtom() : extra;
       if (any == 0) {
         throw new IllegalStateException(
             "the constraints failed on the root domains: " + store.recentlyFailedConstraint);

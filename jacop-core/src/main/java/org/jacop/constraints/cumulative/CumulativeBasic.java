@@ -293,8 +293,8 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       return y == limit && kind == AtomicTrail.GE && explainLimit(trail, entry, out);
     }
     TaskView own = taskNormal[j];
-    int d = dmin(trail, entry, own);
-    int r = rmin(trail, entry, own);
+    int d = dmin(entry, own);
+    int r = rmin(entry, own);
     if (d <= 0 || r <= 0) {
       return false;
     }
@@ -387,7 +387,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     int room = limitMax;
     for (TaskView task : taskNormal) {
       int from = lst(task);
-      int to = est(task) + dmin(trail, position, task);
+      int to = est(task) + dmin(position, task);
       for (int t = from; t < to; t++) {
         if (overloaded(trail, position, -1, t, room, null)) {
           overloaded(trail, position, -1, t, room, out);
@@ -438,7 +438,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     for (int i = 0; i < taskNormal.length; i++) {
       TaskView task = taskNormal[i];
       if (i != skip && covers(trail, position, task, t)) {
-        load += rmin(trail, position, task);
+        load += rmin(position, task);
       }
     }
     if (load <= room || out == null) {
@@ -450,16 +450,14 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     }
     Arrays.sort(
         order,
-        (a, b) ->
-            Integer.compare(
-                rmin(trail, position, taskNormal[b]), rmin(trail, position, taskNormal[a])));
+        (a, b) -> Integer.compare(rmin(position, taskNormal[b]), rmin(position, taskNormal[a])));
     trail.addUpperBound(limit, position, out);
     long sum = 0;
     for (int i : order) {
       TaskView task = taskNormal[i];
       if (i != skip && covers(trail, position, task, t)) {
         addTaskReason(trail, position, task, out);
-        sum += rmin(trail, position, task);
+        sum += rmin(position, task);
         if (sum > room) {
           break;
         }
@@ -488,13 +486,13 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       int est = est(task);
       int lst = lst(task);
       from[nf++] = est;
-      int d = dmin(trail, position, task);
+      int d = dmin(position, task);
       to[nt++] = est + d;
       to[nt++] = lst + d;
     }
     if (j >= 0) {
       from[nf++] = u;
-      to[nt++] = u + dmin(trail, position, taskNormal[j]);
+      to[nt++] = u + dmin(position, taskNormal[j]);
     }
     int[] best = null;
     long bestExcess = 0;
@@ -520,8 +518,8 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     long need = 0;
     for (int i = 0; i < taskNormal.length; i++) {
       TaskView task = taskNormal[i];
-      int d = dmin(trail, position, task);
-      long r = rmin(trail, position, task);
+      int d = dmin(position, task);
+      long r = rmin(position, task);
       if (i == j) {
         need += r * overlap(u, d, a, b);
       } else {
@@ -550,7 +548,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       long load = 0;
       for (TaskView other : taskNormal) {
         if (covers(trail, entry, other, t)) {
-          load += rmin(trail, entry, other);
+          load += rmin(entry, other);
         }
       }
       if (load > bestLoad) {
@@ -571,7 +569,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     }
     if (bestLoad > trail.minBefore(limit, entry)) {
       for (TaskView task : taskNormal) {
-        if (covers(trail, entry, task, best) && rmin(trail, entry, task) > 0) {
+        if (covers(trail, entry, task, best) && rmin(entry, task) > 0) {
           addTaskReason(trail, entry, task, out);
         }
       }
@@ -590,10 +588,10 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       if (i == j) {
         continue;
       }
-      int d = dmin(trail, position, task);
+      int d = dmin(position, task);
       int est = est(task);
       int lst = lst(task);
-      if (rmin(trail, position, task) > 0
+      if (rmin(position, task) > 0
           && Math.min(overlap(est, d, window[0], window[1]), overlap(lst, d, window[0], window[1]))
               > 0) {
         addTaskReason(trail, position, task, out);
@@ -602,16 +600,16 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
   }
 
   private boolean covers(AtomicTrail trail, int position, TaskView task, int t) {
-    return lst(task) <= t && t < est(task) + dmin(trail, position, task);
+    return lst(task) <= t && t < est(task) + dmin(position, task);
   }
 
   // the smallest duration and resource use of a task just before a trail position
-  private int dmin(AtomicTrail trail, int position, TaskView task) {
+  private int dmin(int position, TaskView task) {
     assert position == snapshotPosition : "bounds read at another position than the snapshot";
     return snapshotDur[slot(task)];
   }
 
-  private int rmin(AtomicTrail trail, int position, TaskView task) {
+  private int rmin(int position, TaskView task) {
     assert position == snapshotPosition : "bounds read at another position than the snapshot";
     return snapshotRes[slot(task)];
   }

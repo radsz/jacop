@@ -1338,13 +1338,13 @@ class FlatzincFrontEndTest {
       for (int k = 0; k < 12; k++) {
         holes.append(k == 0 ? "" : ", ").append("p[%d]".formatted(i * 12 + k + 1));
       }
-      model.append("constraint bool_clause([%s], []);\n".formatted(holes));
+      model.append("constraint bool_clause([%s], []);%n".formatted(holes));
     }
     for (int k = 0; k < 12; k++) {
       for (int i = 0; i < 13; i++) {
         for (int j = i + 1; j < 13; j++) {
           model.append(
-              "constraint bool_clause([], [p[%d], p[%d]]);\n"
+              "constraint bool_clause([], [p[%d], p[%d]]);%n"
                   .formatted(i * 12 + k + 1, j * 12 + k + 1));
         }
       }

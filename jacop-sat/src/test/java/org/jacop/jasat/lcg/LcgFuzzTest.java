@@ -268,7 +268,6 @@ class LcgFuzzTest {
       return rnd.nextInt(5) - 1;
     }
 
-    /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
     /** An automaton of three states over values -1 to 3 on 3 or 4 of the variables. */
     private Regular regular() {
       FsmState[] state = {new FsmState(), new FsmState(), new FsmState()};
@@ -297,6 +296,7 @@ class LcgFuzzTest {
       return new ExtensionalSupportMdd(pick(x, 3), tuples);
     }
 
+    /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
     private HybridTable hybridTable() {
       IntVar[] v = pick(x, 2 + rnd.nextInt(2));
       Restriction[][] tuples = new Restriction[2 + rnd.nextInt(6)][v.length];

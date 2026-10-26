@@ -172,7 +172,7 @@ final class MulExplanation {
     if ((roles & 1) != 0) {
       return unsupportedProduct(w, out);
     }
-    return (roles & 2) != 0 ? unsupportedFactor(w, y, out) : unsupportedFactor(w, x, out);
+    return unsupportedFactor(w, (roles & 2) == 0 ? x : y, out);
   }
 
   // z = w: for each value a of x, y = w / a is gone
