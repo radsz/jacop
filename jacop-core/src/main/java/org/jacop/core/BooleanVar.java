@@ -144,7 +144,9 @@ public class BooleanVar extends IntVar {
       return;
     }
 
+    int before = originalDegreeBefore(constraint);
     domain.putModelConstraint(store.level, this, constraint, IntDomain.GROUND);
+    weighDegree(constraint, before);
 
     store.recordBooleanChange(this);
   }
@@ -175,7 +177,9 @@ public class BooleanVar extends IntVar {
     }
 
     if (i == -1) {
+      int before = originalDegreeBefore(constraint);
       domain.removeModelConstraint(store.level, this, constraint);
+      weighDegree(constraint, before);
     }
 
     store.recordBooleanChange(this);
