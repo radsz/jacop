@@ -31,6 +31,7 @@
 package org.jacop.constraints.cumulative;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -277,6 +278,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     if (!explainable()) {
       return false;
     }
+    snapshot(trail, entry);
     IntVar y = trail.variable(entry);
     int j = -1;
     for (int i = 0; i < taskNormal.length; i++) {
@@ -298,7 +300,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     }
     trail.addLowerBound(own.dur, entry, out);
     trail.addLowerBound(own.res, entry, out);
-    int room = trail.maxBefore(limit, entry) - r;
+    int room = limitMax - r;
     int v = trail.value(entry);
     if (kind == AtomicTrail.NE) {
       for (int t = v; t < v + d; t++) {
@@ -381,10 +383,11 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       return false;
     }
     int position = trail.size();
-    int room = trail.maxBefore(limit, position);
+    snapshot(trail, position);
+    int room = limitMax;
     for (TaskView task : taskNormal) {
-      int from = trail.maxBefore(task.start, position);
-      int to = trail.minBefore(task.start, position) + dmin(trail, position, task);
+      int from = lst(task);
+      int to = est(task) + dmin(trail, position, task);
       for (int t = from; t < to; t++) {
         if (overloaded(trail, position, -1, t, room, null)) {
           overloaded(trail, position, -1, t, room, out);
@@ -399,6 +402,20 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     }
     return false;
   }
+
+  /** The most windows one explanation weighs before it leaves the atom to the generic reason. */
+  private static final int WINDOW_BUDGET = 1 << 16;
+
+  // the bounds of the tasks and the limit's maximum just before the position being explained
+  private TaskView[] snapshotTasks;
+  private IdentityHashMap<TaskView, Integer> taskSlot;
+  private int[] snapshotEst;
+  private int[] snapshotLst;
+  private int[] snapshotDur;
+  private int[] snapshotRes;
+  private int limitMax;
+  private int snapshotPosition = -1;
+  private int windowBudget;
 
   // the explanations hold for the relation of every task present, using the smallest durations
   // and resource uses and the largest limit; CumulativeOptional and other subclasses with another
@@ -468,8 +485,8 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
         continue;
       }
       TaskView task = taskNormal[i];
-      int est = trail.minBefore(task.start, position);
-      int lst = trail.maxBefore(task.start, position);
+      int est = est(task);
+      int lst = lst(task);
       from[nf++] = est;
       int d = dmin(trail, position, task);
       to[nt++] = est + d;
@@ -484,6 +501,9 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     for (int f = 0; f < nf; f++) {
       for (int t = 0; t < nt; t++) {
         if (to[t] > from[f]) {
+          if (--windowBudget < 0) {
+            return null;
+          }
           long excess = windowExcess(trail, position, j, u, from[f], to[t]);
           if (excess > bestExcess) {
             bestExcess = excess;
@@ -505,12 +525,12 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       if (i == j) {
         need += r * overlap(u, d, a, b);
       } else {
-        int est = trail.minBefore(task.start, position);
-        int lst = trail.maxBefore(task.start, position);
+        int est = est(task);
+        int lst = lst(task);
         need += r * Math.min(overlap(est, d, a, b), overlap(lst, d, a, b));
       }
     }
-    return need - (long) trail.maxBefore(limit, position) * (b - a);
+    return need - (long) limitMax * (b - a);
   }
 
   private static int overlap(int start, int d, int a, int b) {
@@ -526,7 +546,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     int best = Integer.MIN_VALUE;
     long bestLoad = -1;
     for (TaskView task : taskNormal) {
-      int t = trail.maxBefore(task.start, entry);
+      int t = lst(task);
       long load = 0;
       for (TaskView other : taskNormal) {
         if (covers(trail, entry, other, t)) {
@@ -571,8 +591,8 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
         continue;
       }
       int d = dmin(trail, position, task);
-      int est = trail.minBefore(task.start, position);
-      int lst = trail.maxBefore(task.start, position);
+      int est = est(task);
+      int lst = lst(task);
       if (rmin(trail, position, task) > 0
           && Math.min(overlap(est, d, window[0], window[1]), overlap(lst, d, window[0], window[1]))
               > 0) {
@@ -581,18 +601,62 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     }
   }
 
-  private static boolean covers(AtomicTrail trail, int position, TaskView task, int t) {
-    return trail.maxBefore(task.start, position) <= t
-        && t < trail.minBefore(task.start, position) + dmin(trail, position, task);
+  private boolean covers(AtomicTrail trail, int position, TaskView task, int t) {
+    return lst(task) <= t && t < est(task) + dmin(trail, position, task);
   }
 
   // the smallest duration and resource use of a task just before a trail position
-  private static int dmin(AtomicTrail trail, int position, TaskView task) {
-    return trail.minBefore(task.dur, position);
+  private int dmin(AtomicTrail trail, int position, TaskView task) {
+    assert position == snapshotPosition : "bounds read at another position than the snapshot";
+    return snapshotDur[slot(task)];
   }
 
-  private static int rmin(AtomicTrail trail, int position, TaskView task) {
-    return trail.minBefore(task.res, position);
+  private int rmin(AtomicTrail trail, int position, TaskView task) {
+    assert position == snapshotPosition : "bounds read at another position than the snapshot";
+    return snapshotRes[slot(task)];
+  }
+
+  private int est(TaskView task) {
+    return snapshotEst[slot(task)];
+  }
+
+  private int lst(TaskView task) {
+    return snapshotLst[slot(task)];
+  }
+
+  private int slot(TaskView task) {
+    return taskSlot.get(task);
+  }
+
+  /**
+   * Reads the bounds of every task and the limit's maximum just before a trail position, once per
+   * explanation, since each read walks the variable's entries; and sets the work an explanation may
+   * spend on windows.
+   */
+  private void snapshot(AtomicTrail trail, int position) {
+    int n = taskNormal.length;
+    if (taskSlot == null) {
+      // the propagators reorder taskNormal, so the slots follow a copy of their own
+      snapshotTasks = taskNormal.clone();
+      taskSlot = new IdentityHashMap<>();
+      for (int i = 0; i < n; i++) {
+        taskSlot.put(snapshotTasks[i], i);
+      }
+      snapshotEst = new int[n];
+      snapshotLst = new int[n];
+      snapshotDur = new int[n];
+      snapshotRes = new int[n];
+    }
+    for (int i = 0; i < n; i++) {
+      TaskView task = snapshotTasks[i];
+      snapshotEst[i] = trail.minBefore(task.start, position);
+      snapshotLst[i] = trail.maxBefore(task.start, position);
+      snapshotDur[i] = trail.minBefore(task.dur, position);
+      snapshotRes[i] = trail.minBefore(task.res, position);
+    }
+    limitMax = trail.maxBefore(limit, position);
+    snapshotPosition = position;
+    windowBudget = WINDOW_BUDGET;
   }
 
   /** Adds the bounds of a task's start and the lower bounds of its duration and resource use. */
