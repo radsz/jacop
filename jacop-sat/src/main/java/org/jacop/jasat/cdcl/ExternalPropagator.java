@@ -84,6 +84,19 @@ public interface ExternalPropagator {
   default void notifyLearntLiteral(int lit) {}
 
   /**
+   * Shortens a clause just learnt by conflict analysis by removing literals that imply another
+   * literal of the clause, an implication only the propagator knows (semantic minimisation). The
+   * first literal, the one the clause asserts, stays first and is never removed.
+   *
+   * @param clause the literals, in DIMACS form; the kept ones are moved to the front in order
+   * @param size the number of literals
+   * @return the number of literals kept
+   */
+  default int minimizeLearnt(int[] clause, int size) {
+    return size;
+  }
+
+  /**
    * Checks a complete assignment.
    *
    * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}

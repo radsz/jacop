@@ -93,6 +93,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] litVar = new int[16];
   private byte[] litKind = new byte[16];
   private int[] litValue = new int[16];
+  // semantic minimisation: learnt literals sorted by variable, and those removed
+  private long[] minimizeKeys = new long[16];
+  private boolean[] minimizeRemoved = new boolean[16];
 
   // clauses linking new literals, added through externalClause
   private final ArrayDeque<int[]> structural = new ArrayDeque<>();
@@ -150,6 +153,8 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean activityBranching =
       !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
+  // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
+  private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
   private double[] activity;
   private final VarHeap heap = new VarHeap();
   private double activityInc = 1;
@@ -560,6 +565,79 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
     }
+  }
+
+  /**
+   * Semantic minimisation (Feydy, Schutt and Stuckey 2013): a learnt literal whose set of values of
+   * its variable is inside the set of another learnt literal on the same variable implies that
+   * literal, so the clause holds without it; for example {@code [x <= 2]} next to {@code [x <= 4]},
+   * or {@code [x = 3]} next to {@code [x != 5]}.
+   */
+  @Override
+  public int minimizeLearnt(int[] clause, int size) {
+    if (!semantic) {
+      return size;
+    }
+    if (minimizeKeys.length < size) {
+      minimizeKeys = new long[2 * size];
+      minimizeRemoved = new boolean[2 * size];
+    }
+    for (int k = 0; k < size; k++) {
+      minimizeKeys[k] = (long) litVar[Math.abs(clause[k])] << 32 | k;
+      minimizeRemoved[k] = false;
+    }
+    Arrays.sort(minimizeKeys, 0, size);
+    int removed = 0;
+    for (int from = 0, to; from < size; from = to) {
+      long var = minimizeKeys[from] >>> 32;
+      to = from + 1;
+      while (to < size && minimizeKeys[to] >>> 32 == var) {
+        to++;
+      }
+      for (int a = from; a < to; a++) {
+        int i = (int) minimizeKeys[a];
+        if (i == 0) {
+          continue; // the asserting literal stays
+        }
+        for (int b = from; b < to; b++) {
+          int j = (int) minimizeKeys[b];
+          if (j != i && !minimizeRemoved[j] && implies(clause[i], clause[j])) {
+            minimizeRemoved[i] = true;
+            removed++;
+            break;
+          }
+        }
+      }
+    }
+    if (removed == 0) {
+      return size;
+    }
+    int kept = 0;
+    for (int k = 0; k < size; k++) {
+      if (!minimizeRemoved[k]) {
+        clause[kept++] = clause[k];
+      }
+    }
+    return kept;
+  }
+
+  // whether literal a implies literal b, both on the same variable, by their sets of values
+  private boolean implies(int a, int b) {
+    int va = Math.abs(a);
+    int vb = Math.abs(b);
+    boolean aEq = litKind[va] == EQ_KIND;
+    boolean bEq = litKind[vb] == EQ_KIND;
+    if (aEq && a < 0) {
+      return false; // x != v implies no other atom's literal on x
+    }
+    long aLo = a > 0 ? litValue[va] : Long.MIN_VALUE;
+    long aHi = aEq || a < 0 ? litValue[va] - (aEq ? 0L : 1L) : Long.MAX_VALUE;
+    if (bEq && b < 0) {
+      return litValue[vb] < aLo || litValue[vb] > aHi;
+    }
+    long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
+    long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
+    return bLo <= aLo && aHi <= bHi;
   }
 
   @Override

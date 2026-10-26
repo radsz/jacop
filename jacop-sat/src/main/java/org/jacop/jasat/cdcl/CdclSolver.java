@@ -150,6 +150,7 @@ public final class CdclSolver {
   private int conflictLit0;
   private int conflictLit1;
   private int[] learnt = new int[16];
+  private int[] dimacsLearnt = new int[16];
   private int learntSize;
   private int[] stack = new int[16];
   private int[] toClear = new int[16];
@@ -270,6 +271,9 @@ public final class CdclSolver {
 
   /** Statistics: literals of the learnt clauses, after minimisation. */
   public long learntLiterals;
+
+  /** Statistics: learnt literals the external propagator removed as implied by others. */
+  public long semanticallyRemoved;
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -1106,6 +1110,9 @@ public final class CdclSolver {
     if (shrink && learntSize > 2) {
       shrinkLearnt();
     }
+    if (notifying && learntSize > 1) {
+      minimizeExternally();
+    }
 
     for (int i = 0; i < toClearSize; i++) {
       seen[toClear[i]] = 0;
@@ -1131,6 +1138,24 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return level[learnt[1] >> 1];
+  }
+
+  /** Lets the external propagator remove learnt literals that imply others it knows about. */
+  private void minimizeExternally() {
+    if (dimacsLearnt.length < learntSize) {
+      dimacsLearnt = new int[learnt.length];
+    }
+    for (int i = 0; i < learntSize; i++) {
+      dimacsLearnt[i] = toDimacs(learnt[i]);
+    }
+    int kept = external.minimizeLearnt(dimacsLearnt, learntSize);
+    if (kept < learntSize) {
+      semanticallyRemoved += learntSize - kept;
+      for (int i = 0; i < kept; i++) {
+        learnt[i] = toLit(dimacsLearnt[i]);
+      }
+      learntSize = kept;
+    }
   }
 
   /**
