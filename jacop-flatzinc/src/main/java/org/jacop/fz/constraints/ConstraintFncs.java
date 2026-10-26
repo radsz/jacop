@@ -528,6 +528,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_softgcc_var(n);
   }
 
+  /** Handles the jacop_stocking_cost FlatZinc constraint. */
+  public void jacop_stocking_cost(SimpleNode n) {
+    gc.gen_jacop_stocking_cost(n);
+  }
+
   /** Handles the jacop_alldistinct FlatZinc constraint. */
   public void jacop_alldistinct(SimpleNode n) {
     gc.gen_jacop_alldistinct(n);
