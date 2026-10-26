@@ -102,7 +102,23 @@ public class CardinalityDetector implements ParserTreeConstants {
   private final List<ASTConstElem> linears = new ArrayList<>();
 
   // a * count(x, v) + sum(c[i] * y[i]) rel rhs
-  private record Count(int v, int a, IntVar[] y, int[] c, String rel, int rhs) {
+  private static final class Count {
+    final int v;
+    final int a;
+    final IntVar[] y;
+    final int[] c;
+    final String rel;
+    final int rhs;
+
+    Count(int v, int a, IntVar[] y, int[] c, String rel, int rhs) {
+      this.v = v;
+      this.a = a;
+      this.y = y;
+      this.c = c;
+      this.rel = rel;
+      this.rhs = rhs;
+    }
+
     // an equation with a counter variable, rather than fixed bounds on the count
     boolean variable() {
       return rel.equals("==") && y.length == 1 && !y[0].singleton();
