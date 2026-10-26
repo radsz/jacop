@@ -868,11 +868,51 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
-    } else if (c.singleton()) {
-      support.pose(new CountBounds(xs, y, c.value(), c.value()));
     } else {
-      support.pose(new Count(xs, c, y));
+      counts
+          .computeIfAbsent(List.of(x), k -> new ArrayList<>())
+          .add(new PendingCount(y, c, xs, support.constraintPriority));
     }
+  }
+
+  /** A jacop_count constraint waiting for {@link #poseCounts()}. */
+  private record PendingCount(int value, IntVar counter, List<IntVar> list, int priority) {}
+
+  /** The jacop_count constraints of the model, by the list they count over. */
+  private final Map<List<IntVar>, List<PendingCount>> counts = new LinkedHashMap<>();
+
+  /**
+   * Poses the jacop_count constraints collected by gen_jacop_count. The counts of different values
+   * over the same list become one CountValues, as in magicseq with its n counts over one list: one
+   * propagator scans the list once for all values, where n Count constraints are each queued on
+   * every change of a list variable and each scan the list.
+   */
+  void poseCounts() {
+    int priority = support.constraintPriority;
+    for (Map.Entry<List<IntVar>, List<PendingCount>> e : counts.entrySet()) {
+      List<PendingCount> group = e.getValue();
+      if (group.size() == 1) {
+        PendingCount pc = group.get(0);
+        support.constraintPriority = pc.priority();
+        IntVar c = pc.counter();
+        if (c.singleton()) {
+          support.pose(new CountBounds(pc.list(), pc.value(), c.value(), c.value()));
+        } else {
+          support.pose(new Count(pc.list(), c, pc.value()));
+        }
+      } else {
+        support.constraintPriority = -1;
+        int[] values = new int[group.size()];
+        IntVar[] counters = new IntVar[group.size()];
+        for (int i = 0; i < values.length; i++) {
+          values[i] = group.get(i).value();
+          counters[i] = group.get(i).counter();
+        }
+        poseCountValues(e.getKey().toArray(new IntVar[0]), values, counters);
+      }
+    }
+    support.constraintPriority = priority;
+    counts.clear();
   }
 
   void gen_jacop_count_reif(SimpleNode node) {
@@ -911,7 +951,14 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-    // a repeated cover value is counted once and its counters are made equal
+    poseCountValues(x, values, counters);
+  }
+
+  /**
+   * Poses CountValues, or CountValuesBounds when every counter is fixed. A repeated value is
+   * counted once and its counters are made equal.
+   */
+  private void poseCountValues(IntVar[] x, int[] values, IntVar[] counters) {
     Map<Integer, Integer> firstPosition = new LinkedHashMap<>();
     for (int i = 0; i < values.length; i++) {
       Integer first = firstPosition.putIfAbsent(values[i], i);
