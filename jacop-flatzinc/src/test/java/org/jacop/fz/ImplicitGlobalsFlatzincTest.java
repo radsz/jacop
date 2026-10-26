@@ -338,6 +338,10 @@ class ImplicitGlobalsFlatzincTest {
 
   // n-queens with the rows and both diagonals written as pairwise disequalities
   private static String queens(int n) {
+    return queens(n, "solve satisfy;\n");
+  }
+
+  private static String queens(int n, String solve) {
     StringBuilder fzn = new StringBuilder();
     for (int i = 0; i < n; i++) {
       fzn.append("var 1..").append(n).append(": q").append(i).append(";\n");
@@ -368,7 +372,7 @@ class ImplicitGlobalsFlatzincTest {
             .append(");\n");
       }
     }
-    fzn.append("solve satisfy;\n");
+    fzn.append(solve);
     return fzn.toString();
   }
 
@@ -376,7 +380,26 @@ class ImplicitGlobalsFlatzincTest {
   void queensGetRowAndDiagonalAlldifferents() throws IOException {
     String out = run(queens(8), "-a", "-debug");
     assertEquals(3, out.split("% alldifferent on 8 variables", -1).length - 1, "three cliques");
+    assertTrue(out.contains(" 84 disequalities replaced"), out);
     assertEquals(92, solutions(out).size());
+  }
+
+  // most_constrained breaks ties by the number of constraints on a variable, so replacing the
+  // disequalities would change the search (eyedrop_optimize2: 0.5 s became 7 s)
+  @Test
+  void disequalitiesAreKeptWhenTheSearchCountsConstraints() throws IOException {
+    for (String heuristic : List.of("most_constrained", "occurrence")) {
+      String solve = "solve :: int_search(q," + heuristic + ",indomain_min,complete) satisfy;\n";
+      String out = run(queens(8, solve), "-a", "-debug");
+      assertEquals(3, out.split("% alldifferent on 8 variables", -1).length - 1, heuristic);
+      assertTrue(out.contains(" 0 disequalities replaced"), out);
+      assertEquals(92, solutions(out).size(), heuristic);
+    }
+    String out =
+        run(
+            queens(8, "solve :: int_search(q,first_fail,indomain_min,complete) satisfy;\n"),
+            "-debug");
+    assertTrue(out.contains(" 84 disequalities replaced"), out);
   }
 
   @Test
