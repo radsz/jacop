@@ -1109,6 +1109,69 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
+  void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
+    // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
+    // comparisons with the constant first (int_eq_imp(c, x, b), int_lt_imp(c, x, b), ...) set b
+    // when the comparison held or removed x = c when b was false, which loses solutions.
+    // Every comparison, argument order, Boolean (false, true, free) and domain is checked
+    // against enumeration.
+    String[] ops = {"eq", "ne", "lt", "le"};
+    int c = 2;
+    int[][] domains = {{0, 3}, {2, 2}, {0, 1}, {3, 5}, {1, 2}, {2, 3}};
+    for (String op : ops) {
+      for (String kind : new String[] {"reif", "imp"}) {
+        for (boolean constantFirst : new boolean[] {false, true}) {
+          for (String b : new String[] {"false", "true", "free"}) {
+            for (int[] d : domains) {
+              String args = constantFirst ? c + ",x" : "x," + c;
+              String fzn =
+                  "var "
+                      + d[0]
+                      + ".."
+                      + d[1]
+                      + ": x:: output_var;\n"
+                      + ("free".equals(b)
+                          ? "var bool: b:: output_var;\n"
+                          : "var bool: b = " + b + ";\n")
+                      + "constraint int_"
+                      + op
+                      + "_"
+                      + kind
+                      + "("
+                      + args
+                      + ",b);\nsolve satisfy;\n";
+              Set<String> expected = new TreeSet<>();
+              for (int x = d[0]; x <= d[1]; x++) {
+                int l = constantFirst ? c : x;
+                int r = constantFirst ? x : c;
+                boolean holds =
+                    switch (op) {
+                      case "eq" -> l == r;
+                      case "ne" -> l != r;
+                      case "lt" -> l < r;
+                      default -> l <= r;
+                    };
+                for (boolean bv : new boolean[] {false, true}) {
+                  if (!"free".equals(b) && bv != "true".equals(b)) {
+                    continue;
+                  }
+                  if ("reif".equals(kind) ? holds == bv : !bv || holds) {
+                    expected.add(
+                        "free".equals(b) ? "b = " + bv + "; x = " + x + ";" : "x = " + x + ";");
+                  }
+                }
+              }
+              Set<String> actual = solveAll(fzn);
+              actual.remove("=====UNSATISFIABLE=====");
+              assertEquals(expected, actual, fzn);
+            }
+          }
+        }
+      }
+    }
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
