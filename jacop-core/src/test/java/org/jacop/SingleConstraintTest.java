@@ -180,6 +180,7 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
@@ -7635,5 +7636,18 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     return x;
+  }
+
+  /** LinearForm compares, hashes and prints its arrays by content, not by identity. */
+  @Test
+  void linearFormComparesArraysByContent() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    LinearForm a = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    LinearForm b = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+    assertThat(a).isNotEqualTo(a.negated());
+    assertThat(a.toString()).contains("weights=[1, -2]");
   }
 }

@@ -30,6 +30,7 @@
 
 package org.jacop.lcg;
 
+import java.util.Arrays;
 import org.jacop.core.IntVar;
 
 /**
@@ -210,5 +211,33 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
         trail.addLowerBound(vars[i], position, out);
       }
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof LinearForm f
+        && c == f.c
+        && relation == f.relation
+        && Arrays.equals(vars, f.vars)
+        && Arrays.equals(weights, f.weights);
+  }
+
+  @Override
+  public int hashCode() {
+    return 31 * (31 * (31 * Arrays.hashCode(vars) + Arrays.hashCode(weights)) + Long.hashCode(c))
+        + relation;
+  }
+
+  @Override
+  public String toString() {
+    return "LinearForm[vars="
+        + Arrays.toString(vars)
+        + ", weights="
+        + Arrays.toString(weights)
+        + ", c="
+        + c
+        + ", relation="
+        + relation
+        + "]";
   }
 }
