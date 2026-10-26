@@ -204,6 +204,8 @@ public class CircuitCostDetector implements ParserTreeConstants {
       return;
     }
     CircuitCost cc = new CircuitCost(c.x, costs, cost, c.offset);
+    // redundant, so degree-based variable selections see the degrees of the model
+    cc.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + cc);
     }

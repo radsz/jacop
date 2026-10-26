@@ -51,6 +51,18 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.increasingSum=false turns this off. On number
    partitioning it cuts failures up to 13x.
 
+7. Constraints have a degree weight, Constraint.setDegreeWeight(w): the
+   number of constraints each counts as in the static degree of its
+   variables, Var.sizeConstraintsOriginal(), which MostConstrainedStatic
+   reads (FlatZinc most_constrained, occurrence, impact and
+   smallest_most_constrained). It is 1 by default; Var.adjustDegree(n)
+   credits a variable with constraints a reformulation removed. The
+   redundant constraints that the FlatZinc front end adds (disjunctive
+   cliques, CircuitCost, IncreasingSum) have weight 0, so they no longer
+   change the variable order of these searches, and a store derived by
+   presolve (org.jacop.presolve.Derivation) keeps the static degrees of
+   its parent.
+
 Version 4.11
 =============
 
