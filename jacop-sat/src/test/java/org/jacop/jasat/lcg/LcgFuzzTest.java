@@ -75,6 +75,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
@@ -289,7 +290,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(64)) {
+      return switch (rnd.nextInt(65)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -386,6 +387,12 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
+        case 63 ->
+            new LinearIntDom(
+                p,
+                new int[] {1 + rnd.nextInt(2), -1, 2},
+                new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
+                value() + 2);
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {

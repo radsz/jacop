@@ -1067,9 +1067,15 @@ public class LinearInt extends PrimitiveConstraint
 
   // the relation over the variables left after folding, for entailment and negation
   private LinearForm form() {
-    if (getClass() != LinearInt.class) {
-      return null;
-    }
+    return getClass() == LinearInt.class ? lcgForm() : null;
+  }
+
+  /**
+   * Returns the relation over the variables left after folding the fixed ones into b.
+   *
+   * @return the linear form
+   */
+  LinearForm lcgForm() {
     IntVar[] vars = Arrays.copyOf(x, l);
     long[] weights = Arrays.copyOf(a, l);
     return switch (relationType) {
@@ -1114,7 +1120,7 @@ public class LinearInt extends PrimitiveConstraint
   }
 
   // the bounds of the variables fixed when the constraint was created and folded into b
-  private void addFolded(AtomicTrail trail, int position, EntryList out) {
+  void addFolded(AtomicTrail trail, int position, EntryList out) {
     for (Var v : arguments()) {
       IntVar z = (IntVar) v;
       boolean folded = true;

@@ -107,6 +107,94 @@ public final class LinearExplanation {
   }
 
   /**
+   * Adds to {@code out} the reason of a bound entry as {@link #explain} does, but only when that
+   * reason implies it: the bound the other variables' bounds give, with the holes of the entry's
+   * variable recorded before it, must reach the entry's bound. A propagator stronger than bounds
+   * reasoning uses it.
+   *
+   * @param trail the trail
+   * @param entry a bound entry of one of the variables
+   * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
+   * @param lessOrEqual whether the relation contains {@code sum <= c}
+   * @param greaterOrEqual whether the relation contains {@code sum >= c}
+   * @param out where the reason entries are added
+   * @return false when there is no such reason, or it does not imply the entry
+   */
+  public static boolean explainChecked(
+      AtomicTrail trail,
+      int entry,
+      IntVar[] vars,
+      long[] weights,
+      long c,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      EntryList out) {
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int own = -1;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y && weights[i] != 0) {
+        if (own >= 0) {
+          return false;
+        }
+        own = i;
+      }
+    }
+    if (own < 0) {
+      return false;
+    }
+    long weight = weights[own];
+    boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
+    if (upperSide ? !lessOrEqual : !greaterOrEqual) {
+      return false;
+    }
+    // weight * y <= rest on the upper side, >= rest on the lower side
+    long rest = c;
+    for (int i = 0; i < vars.length; i++) {
+      if (i == own || weights[i] == 0) {
+        continue;
+      }
+      boolean low = upperSide == weights[i] > 0;
+      rest -=
+          weights[i] * (low ? trail.minBefore(vars[i], entry) : trail.maxBefore(vars[i], entry));
+    }
+    // the implied bound of y: an upper bound when kind is LE, a lower bound when GE
+    long bound =
+        kind == AtomicTrail.LE ? Math.floorDiv(rest, weight) : -Math.floorDiv(-rest, weight);
+    long a = trail.value(entry);
+    int mark = out.size();
+    if (kind == AtomicTrail.LE ? bound > a : bound < a) {
+      if (Math.abs(bound - a) > 4096) {
+        return false;
+      }
+      for (long u = Math.min(a, bound); u <= Math.max(a, bound); u++) {
+        if (u != a
+            && (kind == AtomicTrail.LE ? u > a : u < a)
+            && !trail.excludedBefore(y, (int) u, entry, out)) {
+          out.truncate(mark);
+          return false;
+        }
+      }
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (i == own || weights[i] == 0) {
+        continue;
+      }
+      if (upperSide == weights[i] > 0) {
+        trail.addLowerBound(vars[i], entry, out);
+      } else {
+        trail.addUpperBound(vars[i], entry, out);
+      }
+    }
+    return true;
+  }
+
+  /**
    * Adds to {@code out} the reason of a failure: the bounds that make the smallest sum exceed c, or
    * the largest one fall below it, now.
    *
