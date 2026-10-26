@@ -62,9 +62,10 @@ import org.jacop.fz.SimpleNode;
  * clique is kept when it has at least {@link #MIN_CLIQUE_SIZE} variables and at least half of its
  * pairs are not in a clique found before. The detection runs before the constraints are posted, and
  * the disequalities inside the cliques are not posted: the all-different constraint removes the
- * value of a fixed variable from the others, as they do, and also finds Hall intervals. They are
- * kept when the search breaks ties by the number of constraints on a variable (most_constrained,
- * occurrence, impact), so that the search is the one of the model.
+ * value of a fixed variable from the others, as they do, and also finds Hall intervals. The
+ * all-different constraints have degree weight 0, and each variable is credited with the
+ * disequalities on it that are not posted, so the static degrees that variable selections such as
+ * most_constrained read are those of the model.
  *
  * <p>Setting the system property {@code org.jacop.fz.alldifferent} to false turns the detection
  * off.
@@ -81,19 +82,11 @@ public class AlldifferentDetector implements ParserTreeConstants {
   static final long WORK_LIMIT = 20_000_000L;
 
   // the disequalities are kept when the system property org.jacop.fz.alldifferent is redundant
-  private static final boolean REDUNDANT =
+  // the disequalities are kept as well
+  private final boolean redundant =
       "redundant".equalsIgnoreCase(System.getProperty("org.jacop.fz.alldifferent"));
 
-  // variable selections that count the constraints of a variable (MostConstrainedStatic), which
-  // replacing the disequalities would change: eyedrop_optimize2 with most_constrained took 100
-  // times more nodes
-  private static final Set<String> DEGREE_SEARCH =
-      Set.of("most_constrained", "smallest_most_constrained", "occurrence", "impact");
-
   private final Support support;
-
-  // the disequalities are kept as well
-  private boolean redundant;
 
   private final Map<IntVar, Integer> id = new IdentityHashMap<>();
 
@@ -143,7 +136,6 @@ public class AlldifferentDetector implements ParserTreeConstants {
    */
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
-    redundant = REDUNDANT || degreeSearch(astTree);
     Support.forEachConstraint(astTree, this::collect);
     if (nodes.size() < MIN_CLIQUE_SIZE) {
       return;
@@ -164,31 +156,6 @@ public class AlldifferentDetector implements ParserTreeConstants {
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }
-  }
-
-  // true if the solve item names a variable selection that counts constraints
-  private static boolean degreeSearch(SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTMODELEND && namesDegreeSearch(node)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static boolean namesDegreeSearch(SimpleNode node) {
-    if (node instanceof ASTScalarFlatExpr e
-        && e.getType() == 2
-        && DEGREE_SEARCH.contains(e.getIdent())) {
-      return true;
-    }
-    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
-      if (namesDegreeSearch((SimpleNode) node.jjtGetChild(i))) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private void collect(ASTConstElem node) {
@@ -337,7 +304,13 @@ public class AlldifferentDetector implements ParserTreeConstants {
     covered.addAll(edges);
     if (!redundant) {
       for (Edge e : edges) {
-        replaced.addAll(sources.getOrDefault(e, List.of()));
+        for (SimpleNode source : sources.getOrDefault(e, List.of())) {
+          if (replaced.add(source)) {
+            // the static degree counts the disequality, which is not posted
+            nodes.get(e.i()).adjustDegree(1);
+            nodes.get(e.j()).adjustDegree(1);
+          }
+        }
       }
     }
     return true;
@@ -362,12 +335,12 @@ public class AlldifferentDetector implements ParserTreeConstants {
         x[k] = v;
       } else {
         x[k] = new IntVar(support.store, v.min() + o, v.max() + o);
-        support.delayedConstraints.add(new XplusCeqZ(v, o, x[k]));
+        support.delayedConstraints.add(new XplusCeqZ(v, o, x[k]).setDegreeWeight(0));
       }
     }
     if (support.options.debug()) {
       FzConsole.println("% alldifferent on " + clique.length + " variables");
     }
-    support.delayedConstraints.add(new Alldiff(x));
+    support.delayedConstraints.add(new Alldiff(x).setDegreeWeight(0));
   }
 }
