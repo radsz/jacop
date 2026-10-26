@@ -52,21 +52,7 @@ class DepthFirstSearchTimeOutTest {
     store.impose(new XneqY(x[0], x[1]));
     store.impose(new XneqY(y[0], y[1]));
 
-    DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
-    DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
-    master.setPrintInfo(false);
-    child.setPrintInfo(false);
-    child.setSelectChoicePoint(new SimpleSelect<>(y, null, new IndomainMin<>()));
-    child.setTimeOutMilliseconds(-1);
-    master.addChildSearch(child);
-    int level = store.level;
-
-    boolean result = master.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
-
-    assertThat(result).isFalse();
-    assertThat(child.timeOutOccured).isTrue();
-    assertThat(master.timeOutOccured).isTrue();
-    assertThat(store.level).isEqualTo(level);
+    assertMasterTimesOutWithChild(store, x, y, 0, -1);
   }
 
   @Test
@@ -89,18 +75,25 @@ class DepthFirstSearchTimeOutTest {
     all[y.length] = x;
     store.impose(new LinearInt(all, weights, "==", 25));
 
+    assertMasterTimesOutWithChild(store, new IntVar[] {x}, y, 200, 200);
+  }
+
+  /** Labels x with a master search and y with its child search, which times out. */
+  private static void assertMasterTimesOutWithChild(
+      Store store, IntVar[] x, IntVar[] y, long masterTimeOut, long childTimeOut) {
     DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
     DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
     master.setPrintInfo(false);
     child.setPrintInfo(false);
     child.setSelectChoicePoint(new SimpleSelect<>(y, null, new IndomainMin<>()));
-    master.setTimeOutMilliseconds(200);
-    child.setTimeOutMilliseconds(200);
+    if (masterTimeOut != 0) {
+      master.setTimeOutMilliseconds(masterTimeOut);
+    }
+    child.setTimeOutMilliseconds(childTimeOut);
     master.addChildSearch(child);
     int level = store.level;
 
-    boolean result =
-        master.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    boolean result = master.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
 
     assertThat(result).isFalse();
     assertThat(child.timeOutOccured).isTrue();

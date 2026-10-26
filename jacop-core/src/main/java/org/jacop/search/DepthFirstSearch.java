@@ -495,6 +495,23 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     store.setConsistencyDeadline(previous);
   }
 
+  /** Sets up the labeling and runs it, with the store stopping propagation at the time-out. */
+  private boolean labelWithinTimeOut(Store store, SelectChoicePoint<T> select) {
+    long previousDeadline = enterConsistencyDeadline(store);
+    try {
+      boolean result = setupLabeling(store, select);
+      if (result) {
+        result = label(0);
+        if (printInfo) {
+          log.info("Labeling has finished with return value of {}", result);
+        }
+      }
+      return result;
+    } finally {
+      exitConsistencyDeadline(store, previousDeadline);
+    }
+  }
+
   /** Marks timeout as occurred and notifies listener. */
   private void markTimeOutOccurred() {
     timeOutOccured = true;
@@ -997,20 +1014,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    long previousDeadline = enterConsistencyDeadline(store);
-    boolean result;
-    try {
-      result = setupLabeling(store, select);
-
-      if (result) {
-        result = label(0);
-        if (printInfo) {
-          log.info("Labeling has finished with return value of {}", result);
-        }
-      }
-    } finally {
-      exitConsistencyDeadline(store, previousDeadline);
-    }
+    boolean result = labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
@@ -1067,20 +1071,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    long previousDeadline = enterConsistencyDeadline(store);
-    boolean result;
-    try {
-      result = setupLabeling(store, select);
-
-      if (result) {
-        result = label(0);
-        if (printInfo) {
-          log.info("Labeling has finished with return value of {}", result);
-        }
-      }
-    } finally {
-      exitConsistencyDeadline(store, previousDeadline);
-    }
+    boolean result = labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
