@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraints X #\= C.
@@ -41,7 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XneqC extends AbstractXcompC {
+public class XneqC extends AbstractXcompC implements LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -89,5 +91,12 @@ public class XneqC extends AbstractXcompC {
   @Override
   public String toString() {
     return id() + " : XneqC(" + x + ", " + c + " )";
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    return getClass() == XneqC.class
+        ? new LinearForm(new IntVar[] {x}, new long[] {1}, c, LinearForm.NE)
+        : null;
   }
 }

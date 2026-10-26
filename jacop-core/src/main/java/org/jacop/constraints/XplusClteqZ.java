@@ -37,6 +37,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraints X + C{@literal <=} Z.
@@ -46,7 +48,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusClteqZ extends AbstractConstraintXandCandZ implements Copyable<XplusClteqZ> {
+public class XplusClteqZ extends AbstractConstraintXandCandZ
+    implements Copyable<XplusClteqZ>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -161,5 +164,12 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ implements Copyable
   @Override
   public XplusClteqZ copy(VarMap map) {
     return new XplusClteqZ(map.get(x), c, map.get(z));
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    return getClass() == XplusClteqZ.class && x != z
+        ? new LinearForm(new IntVar[] {x, z}, new long[] {1, -1}, -(long) c, LinearForm.LE)
+        : null;
   }
 }

@@ -43,6 +43,11 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
 
 /**
  * LinearIntDom constraint implements the weighted summation over several variables.
@@ -497,5 +502,58 @@ public class LinearIntDom extends LinearInt {
     copy.numberId = idNumber.incrementAndGet();
     copy.queueIndex = 4;
     return copy;
+  }
+
+  /**
+   * Explains a bound by the bounds of the other variables when they imply it, and otherwise, as for
+   * a value without support, by the domains of the other variables; under {@code !=} by the other
+   * variables being fixed.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != LinearIntDom.class) {
+      return false;
+    }
+    LinearForm f = lcgForm();
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    if (f.relation() == LinearForm.NE) {
+      if (!f.explain(trail, entry, out)) {
+        return false;
+      }
+    } else if (!LinearExplanation.explainChecked(
+        trail,
+        entry,
+        f.vars(),
+        f.weights(),
+        f.c(),
+        f.relation() != LinearForm.GE,
+        f.relation() != LinearForm.LE,
+        out)) {
+      for (Var v : arguments()) {
+        if (v != y) {
+          trail.atomsBefore((IntVar) v, entry, out);
+        }
+      }
+      if (kind == AtomicTrail.GE) {
+        trail.addLowerBound(y, entry, out);
+        trail.addSkippedHoles(entry, Integer.MIN_VALUE, out);
+      } else if (kind == AtomicTrail.LE) {
+        trail.addUpperBound(y, entry, out);
+        trail.addSkippedHoles(entry, Integer.MAX_VALUE, out);
+      }
+      return true;
+    }
+    addFolded(trail, entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != LinearIntDom.class || !lcgForm().explainFailure(trail, out)) {
+      return false;
+    }
+    addFolded(trail, trail.size(), out);
+    return true;
   }
 }

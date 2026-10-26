@@ -31,7 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +44,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * SumInt constraint implements the summation over several variables.
@@ -56,7 +61,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class SumInt extends AbstractSum implements Copyable<SumInt> {
+public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -67,6 +72,10 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
   long sumXmin;
 
   long sumXmax;
+
+  // a variable occurs twice (in the list, or in the list and as the sum): pruning one occurrence
+  // changes the bounds of the other, so the sums are recomputed after each pruning
+  private final boolean aliased;
 
   /**
    * Constructs a SumInt constraint with the specified relation.
@@ -84,6 +93,11 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
     numberId = idNumber.incrementAndGet();
 
     this.I = new long[l];
+
+    Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+    distinct.add(sum);
+    distinct.addAll(Arrays.asList(list));
+    this.aliased = distinct.size() < l + 1;
 
     if (l <= 2) {
       queueIndex = 0;
@@ -249,6 +263,9 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
     } else {
       sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
     }
+    if (aliased) {
+      computeInit();
+    }
     long sumBound = isLtEq ? sum.max() : sum.min();
     for (int i = 0; i < l; i++) {
       pruneVariableForDirection(i, isLtEq, b, sumBound);
@@ -264,6 +281,10 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
       long min = x[i].min();
       long max = min + I[i];
       if (pruneMax(x[i], sumBound - sumXmin + min - b)) {
+        if (aliased) {
+          computeInit();
+          return;
+        }
         long newMax = x[i].max();
         sumXmax -= max - newMax;
         I[i] = newMax - min;
@@ -272,6 +293,10 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
       long max = x[i].max();
       long min = max - I[i];
       if (pruneMin(x[i], sumBound - sumXmax + max + b)) {
+        if (aliased) {
+          computeInit();
+          return;
+        }
         long newMin = x[i].min();
         sumXmin += newMin - min;
         I[i] = max - newMin;
@@ -283,6 +308,9 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
 
     if (sumXmin == sumXmax) {
       sum.domain.inComplement(store.level, sum, long2int(sumXmin));
+      if (aliased) {
+        computeInit();
+      }
     }
     store.propagationHasOccurred = false;
 
@@ -294,6 +322,10 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
       max = min + I[i];
 
       if (pruneNe(x[i], sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
+        if (aliased) {
+          computeInit();
+          continue;
+        }
         long newMin = x[i].min();
         long newMax = x[i].max();
         sumXmin += newMin - min;
@@ -455,5 +487,10 @@ public class SumInt extends AbstractSum implements Copyable<SumInt> {
   @Override
   public SumInt copy(VarMap map) {
     return new SumInt(map.get(x), rel2String(), map.get(sum));
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    return getClass() == SumInt.class ? sumForm() : null;
   }
 }

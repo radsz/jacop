@@ -36,6 +36,9 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.util.QueueForward;
 
 /**
@@ -45,7 +48,7 @@ import org.jacop.util.QueueForward;
  * @version 5.0
  */
 public class IfThenElse extends PrimitiveConstraint
-    implements UsesQueueVariable, Copyable<IfThenElse> {
+    implements UsesQueueVariable, Copyable<IfThenElse>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   public final QueueForward<PrimitiveConstraint> queueForward;
@@ -236,5 +239,99 @@ public class IfThenElse extends PrimitiveConstraint
   @Override
   public boolean canCopy() {
     return Copyable.canCopyAll(condC, thenC, elseC);
+  }
+
+  // the explanations of the three constraints, when all check their reasons
+  private Explainable[] lcgParts() {
+    if (getClass() != IfThenElse.class
+        || !(condC instanceof Explainable c && c.checksReasons())
+        || !(thenC instanceof Explainable t && t.checksReasons())
+        || !(elseC instanceof Explainable e && e.checksReasons())) {
+      return null;
+    }
+    return new Explainable[] {c, t, e};
+  }
+
+  // a part explains the entry only when the entry's variable is one of its own
+  private static boolean explains(
+      PrimitiveConstraint part, Explainable e, AtomicTrail trail, int entry, EntryList out) {
+    return part.arguments().contains(trail.variable(entry)) && e.explain(trail, entry, out);
+  }
+
+  /**
+   * Explains an atom by the way it can follow: the condition entailed and the then part, the
+   * condition disentailed and the else part, or a part disentailed and the others. The parts check
+   * their reasons, so a way that does not imply the atom is not taken.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    Explainable[] p = lcgParts();
+    if (p == null) {
+      return false;
+    }
+    int mark = out.size();
+    if (p[0].explainEntailment(trail, entry, true, out)
+        && explains(thenC, p[1], trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (p[0].explainEntailment(trail, entry, false, out)
+        && explains(elseC, p[2], trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (p[1].explainEntailment(trail, entry, false, out)) {
+      int then = out.size();
+      if (condC.arguments().contains(trail.variable(entry))
+          && p[0].explainNegated(trail, entry, out)) {
+        return true;
+      }
+      out.truncate(then);
+      if (explains(elseC, p[2], trail, entry, out)) {
+        return true;
+      }
+    }
+    out.truncate(mark);
+    if (p[2].explainEntailment(trail, entry, false, out)) {
+      int then = out.size();
+      if (explains(condC, p[0], trail, entry, out)) {
+        return true;
+      }
+      out.truncate(then);
+      if (explains(thenC, p[1], trail, entry, out)) {
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    Explainable[] p = lcgParts();
+    if (p == null) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    // the condition decided and its part failing or disentailed
+    for (int side = 0; side < 2; side++) {
+      Explainable part = p[1 + side];
+      if (p[0].explainEntailment(trail, now, side == 0, out)) {
+        int then = out.size();
+        if (part.explainFailure(trail, out) || part.explainEntailment(trail, now, false, out)) {
+          return true;
+        }
+        out.truncate(then);
+      }
+      out.truncate(mark);
+    }
+    // both parts disentailed
+    if (p[1].explainEntailment(trail, now, false, out)
+        && p[2].explainEntailment(trail, now, false, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
   }
 }

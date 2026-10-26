@@ -182,6 +182,7 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
@@ -2429,6 +2430,53 @@ class SingleConstraintTest extends TestHelper {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1, 2}, "==", 0))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void sumIntWithARepeatedVariableCountsMatchBruteForce() {
+    // a variable repeated in the list, or also the sum: pruning one occurrence changes the others
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(47);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        v[i] = randomVar(store, "v" + i, -3, 4, random);
+      }
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k);
+      String rel = relations[random.nextInt(relations.length)];
+      int expected =
+          bruteForce(
+                  v,
+                  a -> {
+                    long total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    long s = a[sumIndex];
+                    return switch (rel) {
+                      case "==" -> total == s;
+                      case "<=" -> total <= s;
+                      case "<" -> total < s;
+                      case ">" -> total > s;
+                      case ">=" -> total >= s;
+                      default -> total != s;
+                    };
+                  })
+              .size();
+
+      store.impose(new SumInt(list, rel, v[sumIndex]));
+      assertThat(countSolutions(store, v, random))
+          .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
+          .isEqualTo(expected);
+    }
   }
 
   @Test
@@ -7789,5 +7837,18 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     return x;
+  }
+
+  /** LinearForm compares, hashes and prints its arrays by content, not by identity. */
+  @Test
+  void linearFormComparesArraysByContent() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    LinearForm a = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    LinearForm b = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+    assertThat(a).isNotEqualTo(a.negated());
+    assertThat(a.toString()).contains("weights=[1, -2]");
   }
 }

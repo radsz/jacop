@@ -63,4 +63,56 @@ public interface Explainable {
   default boolean explainFailure(AtomicTrail trail, EntryList out) {
     return false;
   }
+
+  /**
+   * Adds to {@code out} the reason why this constraint was entailed, or disentailed, just before a
+   * trail position: entries whose atoms make every assignment of its variables satisfy it (or
+   * violate it). A reification uses it to explain the value of its Boolean variable.
+   *
+   * @param trail the trail
+   * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)
+   * @param entailed true for entailment, false for disentailment
+   * @param out where the reason entries are added
+   * @return false when this constraint has no such reason
+   */
+  default boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason of an atom that the negation of this constraint propagated, as a
+   * reification does when its Boolean variable is false.
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom
+   * @param out where the reason entries are added
+   * @return false when this constraint has no such reason
+   */
+  default boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of the negation of this constraint.
+   *
+   * @param trail the trail
+   * @param out where the reason entries are added
+   * @return false when this constraint has no such reason
+   */
+  default boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return false;
+  }
+
+  /**
+   * Tells whether {@link #explain}, {@link #explainNegated}, {@link #explainEntailment} and the
+   * failure explanations check that their reasons imply what they explain, so that they may be
+   * asked about an atom this constraint may not have propagated, as a disjunction of constraints
+   * does.
+   *
+   * @return true when the reasons are checked
+   */
+  default boolean checksReasons() {
+    return false;
+  }
 }
