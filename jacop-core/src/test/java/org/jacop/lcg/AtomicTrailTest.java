@@ -44,10 +44,13 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -142,6 +145,25 @@ class AtomicTrailTest {
         s -> {
           IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
           return new Model(new XneqY(v[0], v[1]), t -> t[0] != t[1], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), new BooleanVar(s, "b")};
+          return new Model(
+              new Reified(new XlteqY(v[0], v[1]), (BooleanVar) v[2]),
+              t -> (t[0] <= t[1]) == (t[2] == 1),
+              v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            new BooleanVar(s, "a"),
+            new BooleanVar(s, "b"),
+            new BooleanVar(s, "c"),
+            newVar(s, "x", rnd)
+          };
+          int[] w = {1, 2, 1, -1};
+          return new Model(new LinearInt(v, w, "==", 0), t -> t[0] + 2 * t[1] + t[2] == t[3], v);
         });
     m.add(
         s -> {
