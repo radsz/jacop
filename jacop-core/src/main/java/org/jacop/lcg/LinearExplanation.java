@@ -249,16 +249,20 @@ public final class LinearExplanation {
   /**
    * Adds to {@code out} the reason of an entry made by {@code sum w[i] * x[i] != c}: the other
    * occurrences fixed, which forbid one value of the entry's variable, and for a bound entry the
-   * bound before it and the holes it skipped.
+   * bound before it and the values it skipped. The reason is checked: the forbidden value must be
+   * the one the entry removes, or the values a bound entry skips must be it or out already.
    *
    * @param trail the trail
    * @param entry an entry of one of the variables
    * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
    * @param out where the reason entries are added
-   * @return false when an other occurrence was not fixed before the entry
+   * @return false when an other occurrence was not fixed before the entry, or the entry does not
+   *     follow
    */
   public static boolean explainNotEqual(
-      AtomicTrail trail, int entry, IntVar[] vars, EntryList out) {
+      AtomicTrail trail, int entry, IntVar[] vars, long[] weights, long c, EntryList out) {
     IntVar y = trail.variable(entry);
     int own = -1;
     for (int i = 0; i < vars.length; i++) {
@@ -267,33 +271,71 @@ public final class LinearExplanation {
         break;
       }
     }
-    if (own < 0 || !fixedBefore(trail, vars, own, entry)) {
+    if (own < 0 || weights[own] == 0 || !fixedBefore(trail, vars, own, entry)) {
       return false;
     }
-    addFixed(trail, vars, own, entry, out);
-    int kind = trail.kind(entry);
-    if (kind == AtomicTrail.GE) {
-      trail.addLowerBound(y, entry, out);
-      trail.addSkippedHoles(entry, Integer.MIN_VALUE, out);
-    } else if (kind == AtomicTrail.LE) {
-      trail.addUpperBound(y, entry, out);
-      trail.addSkippedHoles(entry, Integer.MAX_VALUE, out);
+    long rest = c;
+    for (int i = 0; i < vars.length; i++) {
+      if (i != own) {
+        rest -= weights[i] * trail.minBefore(vars[i], entry);
+      }
     }
+    if (rest % weights[own] != 0) {
+      return false;
+    }
+    long forbidden = rest / weights[own];
+    int kind = trail.kind(entry);
+    long a = trail.value(entry);
+    int mark = out.size();
+    if (kind == AtomicTrail.NE) {
+      if (a != forbidden) {
+        return false;
+      }
+    } else {
+      boolean ge = kind == AtomicTrail.GE;
+      long from = ge ? trail.minBefore(y, entry) : a + 1;
+      long to = ge ? a - 1 : trail.maxBefore(y, entry);
+      if (to - from > 4096) {
+        return false;
+      }
+      for (long u = from; u <= to; u++) {
+        if (u != forbidden && !trail.excludedBefore(y, (int) u, entry, out)) {
+          out.truncate(mark);
+          return false;
+        }
+      }
+      if (ge) {
+        trail.addLowerBound(y, entry, out);
+      } else {
+        trail.addUpperBound(y, entry, out);
+      }
+    }
+    addFixed(trail, vars, own, entry, out);
     return true;
   }
 
   /**
    * Adds to {@code out} the reason of a failure of {@code sum w[i] * x[i] != c}: every variable
-   * fixed now.
+   * fixed now, to values that sum to c.
    *
    * @param trail the trail
    * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
    * @param out where the reason entries are added
-   * @return false when a variable is not fixed
+   * @return false when a variable is not fixed, or the sum is not c
    */
-  public static boolean explainNotEqualFailure(AtomicTrail trail, IntVar[] vars, EntryList out) {
+  public static boolean explainNotEqualFailure(
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
     int now = trail.size();
     if (!fixedBefore(trail, vars, -1, now)) {
+      return false;
+    }
+    long sum = 0;
+    for (int i = 0; i < vars.length; i++) {
+      sum += weights[i] * trail.minBefore(vars[i], now);
+    }
+    if (sum != c) {
       return false;
     }
     addFixed(trail, vars, -1, now, out);

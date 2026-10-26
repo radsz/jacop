@@ -203,4 +203,9 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
     LinearForm f = equality();
     return f != null && f.negated().explainFailure(trail, out);
   }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
 }

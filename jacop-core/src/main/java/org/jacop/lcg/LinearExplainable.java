@@ -77,4 +77,9 @@ public interface LinearExplainable extends Explainable {
     LinearForm f = linearForm();
     return f != null && f.negated().explainFailure(trail, out);
   }
+
+  @Override
+  default boolean checksReasons() {
+    return true;
+  }
 }

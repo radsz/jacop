@@ -50,7 +50,6 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
-import org.jacop.lcg.LinearExplanation;
 import org.jacop.lcg.LinearForm;
 
 /**
@@ -986,59 +985,10 @@ public class LinearInt extends PrimitiveConstraint
     if (getClass() != LinearInt.class) {
       return false;
     }
-    if (relationType == NE) {
-      if (LinearExplanation.explainNotEqual(trail, entry, Arrays.copyOf(x, l), out)) {
-        addFolded(trail, entry, out);
-        return true;
-      }
+    if (!lcgForm().explain(trail, entry, out)) {
       return false;
     }
-    int kind = trail.kind(entry);
-    if (kind == AtomicTrail.NE) {
-      return false;
-    }
-    IntVar y = trail.variable(entry);
-    long weight = 0;
-    for (int i = 0; i < l; i++) {
-      if (x[i] == y) {
-        weight = a[i];
-      }
-    }
-    if (weight == 0) {
-      return false;
-    }
-    // the side of the relation the bound comes from: sum <= b, or sum >= b
-    boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
-    boolean has =
-        upperSide
-            ? relationType == EQ || relationType == LE || relationType == LT
-            : relationType == EQ || relationType == GE || relationType == GT;
-    if (!has) {
-      return false;
-    }
-    for (Var v : arguments()) {
-      IntVar z = (IntVar) v;
-      if (z == y) {
-        continue;
-      }
-      long w = 0;
-      for (int i = 0; i < l; i++) {
-        if (x[i] == z) {
-          w = a[i];
-        }
-      }
-      if (w == 0) {
-        // folded into b as a constant when the constraint was created
-        trail.addLowerBound(z, entry, out);
-        trail.addUpperBound(z, entry, out);
-      } else if (upperSide == w > 0) {
-        trail.addLowerBound(z, entry, out);
-      } else {
-        trail.addUpperBound(z, entry, out);
-      }
-    }
-    trail.addSkippedHoles(
-        entry, kind == AtomicTrail.LE ? Integer.MAX_VALUE : Integer.MIN_VALUE, out);
+    addFolded(trail, entry, out);
     return true;
   }
 
@@ -1047,18 +997,7 @@ public class LinearInt extends PrimitiveConstraint
     if (getClass() != LinearInt.class) {
       return false;
     }
-    IntVar[] vars = Arrays.copyOf(x, l);
-    boolean explained =
-        relationType == NE
-            ? LinearExplanation.explainNotEqualFailure(trail, vars, out)
-            : LinearExplanation.explainFailure(
-                trail,
-                vars,
-                Arrays.copyOf(a, l),
-                relationType == LT ? b - 1 : relationType == GT ? b + 1 : b,
-                relationType == EQ || relationType == LE || relationType == LT,
-                relationType == EQ || relationType == GE || relationType == GT,
-                out);
+    boolean explained = lcgForm().explainFailure(trail, out);
     if (explained) {
       addFolded(trail, trail.size(), out);
     }
@@ -1086,6 +1025,11 @@ public class LinearInt extends PrimitiveConstraint
       case GT -> new LinearForm(vars, weights, b + 1, LinearForm.GE);
       default -> new LinearForm(vars, weights, b, LinearForm.NE);
     };
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
   }
 
   @Override

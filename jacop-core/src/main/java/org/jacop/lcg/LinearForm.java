@@ -83,7 +83,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
    */
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     return relation == NE
-        ? LinearExplanation.explainNotEqual(trail, entry, vars, out)
+        ? LinearExplanation.explainNotEqual(trail, entry, vars, weights, c, out)
         : LinearExplanation.explainChecked(
             trail, entry, vars, weights, c, relation != GE, relation != LE, out);
   }
@@ -97,7 +97,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
    */
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return relation == NE
-        ? LinearExplanation.explainNotEqualFailure(trail, vars, out)
+        ? LinearExplanation.explainNotEqualFailure(trail, vars, weights, c, out)
         : LinearExplanation.explainFailure(
             trail, vars, weights, c, relation != GE, relation != LE, out);
   }

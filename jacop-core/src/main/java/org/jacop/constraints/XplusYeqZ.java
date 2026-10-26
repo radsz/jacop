@@ -206,8 +206,8 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
       return false;
     }
     return ShiftExplanation.explainSum(trail, entry, x, y, z, out)
-        || LinearExplanation.explain(
-            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, true, true, out);
+        || LinearExplanation.explainChecked(
+            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
   }
 
   @Override
@@ -250,5 +250,10 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
   public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
     LinearForm f = equality();
     return f != null && f.negated().explainFailure(trail, out);
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
   }
 }

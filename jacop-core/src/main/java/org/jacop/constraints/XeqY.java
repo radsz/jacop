@@ -179,4 +179,9 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Exp
     LinearForm f = equality();
     return f != null && f.negated().explainFailure(trail, out);
   }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
 }

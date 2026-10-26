@@ -103,4 +103,16 @@ public interface Explainable {
   default boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
     return false;
   }
+
+  /**
+   * Tells whether {@link #explain}, {@link #explainNegated}, {@link #explainEntailment} and the
+   * failure explanations check that their reasons imply what they explain, so that they may be
+   * asked about an atom this constraint may not have propagated, as a disjunction of constraints
+   * does.
+   *
+   * @return true when the reasons are checked
+   */
+  default boolean checksReasons() {
+    return false;
+  }
 }

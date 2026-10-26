@@ -174,4 +174,10 @@ public class Not extends PrimitiveConstraint
     Explainable e = nested();
     return e != null && e.explainFailure(trail, out);
   }
+
+  @Override
+  public boolean checksReasons() {
+    Explainable e = nested();
+    return e != null && e.checksReasons();
+  }
 }
