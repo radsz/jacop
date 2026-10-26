@@ -117,15 +117,22 @@ public abstract class FloatDomain extends Domain {
    * singleton() in FloatingInterval, as single values.
    */
   static boolean intervalPrint;
+
+  /** The default precision format for floating point print-out: no rounding. */
+  public static final double DEFAULT_FORMAT = Double.MAX_VALUE;
+
+  /** The default precision for floating point operations. */
+  public static final double DEFAULT_PRECISION = 1e-11;
+
   /*
    * It specifies the precision format for floating point print-out
    */
-  static double format = Double.MAX_VALUE;
+  static double format = DEFAULT_FORMAT;
   /*
    * It specifies the precision for floating point operations, among others
    * decide when two numbers are equal and when a interval is singleton.
    */
-  static double precision = 1e-11;
+  static double precision = DEFAULT_PRECISION;
 
   /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
