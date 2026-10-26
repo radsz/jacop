@@ -729,11 +729,25 @@ public final class LcgSolver implements ExternalPropagator {
     }
     clause = Arrays.stream(clause).distinct().toArray();
     if (clause.length == 0) {
-      throw new IllegalStateException(
-          "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
+      // the explanations, stronger than propagation at the root, prove the model unsatisfiable:
+      // the empty clause follows, and so does any clause, here one false literal; the solver
+      // backjumps to the root on it and then takes the empty clause
+      int any = extra != 0 ? extra : trueAtom();
+      if (any == 0) {
+        throw new IllegalStateException(
+            "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
+      }
+      structural.add(new int[0]);
+      clause = new int[] {-any};
     }
     pushedReason = clause;
     return clause[0];
+  }
+
+  // a literal the solver has true, or 0 when it has assigned nothing
+  private int trueAtom() {
+    int n = sat.trailSize();
+    return n == 0 ? 0 : sat.trailLiteral(n - 1);
   }
 
   private void apply(int lit) {

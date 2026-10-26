@@ -45,6 +45,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
@@ -52,11 +53,14 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
+import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -71,8 +75,13 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -870,6 +879,52 @@ class LcgSolverTest {
       }
     }
     assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  /**
+   * x3 * x2 = x0 leaves only x2 = x3 = -1 and x2 = x3 = 2, which alldistinct rules out, though root
+   * propagation does not see it (LCG fuzz seed 228750). The explanations of a conflict found in
+   * search held on the root domains, so the conflict clause was empty, and the solver threw instead
+   * of answering UNSAT.
+   */
+  @Test
+  void conflictTrueOnTheRootDomainsProvesUnsatisfiable() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    x0.domain.unionAdapt(3, 4);
+    IntVar x1 = new IntVar(store, "x1", -1, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 0);
+    x2.domain.unionAdapt(2, 2);
+    IntVar x3 = new IntVar(store, "x3", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 1);
+    x4.domain.unionAdapt(3, 3);
+    IntVar x5 = new IntVar(store, "x5", 1, 2);
+    BooleanVar b0 = new BooleanVar(store, "b0");
+    BooleanVar b1 = new BooleanVar(store, "b1");
+    BooleanVar b2 = new BooleanVar(store, "b2");
+    store.impose(new XmulYeqZ(x3, x2, x0));
+    store.impose(
+        new Xor(new LinearInt(new IntVar[] {x4, x5, x3}, new int[] {1, 2, -1}, "<=", 4), b2));
+    store.impose(new AtLeast(new IntVar[] {x2, x1}, 1, 0));
+    store.impose(new Member(new IntVar[] {x3, x2, x4}, x0));
+    store.impose(new XorBool(new IntVar[] {b0, b2}, b0));
+    store.impose(new Alldistinct(new IntVar[] {x2, x1, x3}));
+    IntVar[] vars = {x0, x1, x2, x3, x4, x5, b0, b1, b2};
+    List<SelectChoicePoint<IntVar>> annotations = new ArrayList<>();
+    annotations.add(null);
+    annotations.add(new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    annotations.add(new SimpleSelect<>(vars, new SmallestDomain<>(), new IndomainMax<>()));
+    annotations.add(new SimpleSelect<>(vars, null, new IndomainMiddle<>()));
+    annotations.add(new SplitSelect<>(vars, null, new IndomainMiddle<>()));
+    for (SelectChoicePoint<IntVar> annotation : annotations) {
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.sat().setExternalReasonKeep(1);
+      if (annotation != null) {
+        solver.setAnnotation(annotation, false);
+      }
+      assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    }
   }
 
   /** The literal map against a TreeMap, under random insertions and lookups. */
