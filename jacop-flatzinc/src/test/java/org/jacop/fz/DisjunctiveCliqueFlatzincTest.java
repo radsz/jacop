@@ -347,6 +347,139 @@ class DisjunctiveCliqueFlatzincTest {
     assertTrue(detected > trials / 10, "detected " + detected);
   }
 
+  /**
+   * A machine with sequence-dependent setup times: s[j] >= s[i] + d[i] + t[i][j] \/ s[i] >= s[j] +
+   * d[j] + t[j][i] for every pair, as disjunctions in the encodings above or as one {@code
+   * jacop_disjunctive_setup}, with some durations variable.
+   */
+  private static Model setupModel(Random random, boolean predicate) {
+    int n = 3 + random.nextInt(3);
+    int horizon = 5 + random.nextInt(5);
+    int families = 1 + random.nextInt(3);
+    int[] dur = new int[n];
+    int[] family = new int[n];
+    List<Integer> varDur = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      dur[i] = 1 + random.nextInt(2);
+      family[i] = random.nextInt(families);
+      if (predicate && random.nextInt(4) == 0) {
+        varDur.add(i);
+      }
+    }
+    int[][] t = new int[families][families];
+    for (int a = 0; a < families; a++) {
+      for (int b = 0; b < families; b++) {
+        t[a][b] = a == b ? 0 : random.nextInt(4);
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..").append(horizon).append(": s").append(i).append(";\n");
+    }
+    for (int i : varDur) {
+      fzn.append("var 1..2: d").append(i).append(":: output_var;\n");
+    }
+    StringBuilder ss = new StringBuilder();
+    StringBuilder ds = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      ss.append(i == 0 ? "" : ",").append('s').append(i);
+      ds.append(i == 0 ? "" : ",").append(varDur.contains(i) ? "d" + i : String.valueOf(dur[i]));
+    }
+    fzn.append("array [1..")
+        .append(n)
+        .append("] of var int: s:: output_array([1..")
+        .append(n)
+        .append("]) = [")
+        .append(ss)
+        .append("];\n");
+    int[] vdIndex = varDurIndex(n, varDur);
+    List<Predicate<int[]>> checks = new ArrayList<>();
+    StringBuilder constraints = new StringBuilder();
+    if (predicate) {
+      StringBuilder fs = new StringBuilder();
+      StringBuilder ts = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        fs.append(i == 0 ? "" : ",").append(family[i]);
+      }
+      for (int a = 0; a < families; a++) {
+        for (int b = 0; b < families; b++) {
+          ts.append(a + b == 0 ? "" : ",").append(t[a][b]);
+        }
+      }
+      constraints
+          .append("constraint jacop_disjunctive_setup([")
+          .append(ss)
+          .append("],[")
+          .append(ds)
+          .append("],[")
+          .append(fs)
+          .append("],[")
+          .append(ts)
+          .append("]);\n");
+    }
+    int[] bools = {0};
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        int fi = i;
+        int fj = j;
+        int a1 = t[family[i]][family[j]];
+        int a2 = t[family[j]][family[i]];
+        checks.add(
+            v -> {
+              int di = vdIndex[fi] >= 0 ? v[vdIndex[fi]] : dur[fi];
+              int dj = vdIndex[fj] >= 0 ? v[vdIndex[fj]] : dur[fj];
+              return v[fj] >= v[fi] + di + a1 || v[fi] >= v[fj] + dj + a2;
+            });
+        if (predicate) {
+          continue;
+        }
+        String b1 = "b" + bools[0]++;
+        String b2 = "b" + bools[0]++;
+        fzn.append("var bool: ").append(b1).append(";\nvar bool: ").append(b2).append(";\n");
+        constraints.append(literal(random, i, j, dur[i] + a1, b1, random.nextBoolean()));
+        constraints.append(literal(random, j, i, dur[j] + a2, b2, random.nextBoolean()));
+        constraints
+            .append("constraint bool_clause([")
+            .append(b1)
+            .append(',')
+            .append(b2)
+            .append("],[]);\n");
+      }
+    }
+    fzn.append(constraints);
+    fzn.append("solve satisfy;\n");
+    Set<String> expected = new TreeSet<>();
+    enumerate(0, new int[n + varDur.size()], n, horizon, checks, varDur, expected);
+    return new Model(fzn.toString(), expected);
+  }
+
+  @Test
+  void detectedTransitionTimesKeepAllSolutions() throws IOException {
+    Random random = new Random(13);
+    int detected = 0;
+    int trials = Integer.getInteger("disjunctiveCliques.trials", 400) / 2;
+    for (int trial = 0; trial < trials; trial++) {
+      Model model = setupModel(random, false);
+      String out = run(model.fzn(), "-a", "-debug");
+      if (out.contains("with transition times")) {
+        detected++;
+      }
+      assertEquals(model.bruteForce(), solutions(out), "trial " + trial + "\n" + model.fzn());
+    }
+    assertTrue(detected > trials / 4, "detected " + detected);
+  }
+
+  @Test
+  void disjunctiveSetupKeepsAllSolutions() throws IOException {
+    Random random = new Random(17);
+    int trials = Integer.getInteger("disjunctiveCliques.trials", 400) / 2;
+    for (int trial = 0; trial < trials; trial++) {
+      Model model = setupModel(random, true);
+      String out = run(model.fzn(), "-a");
+      assertEquals(model.bruteForce(), solutions(out), "trial " + trial + "\n" + model.fzn());
+    }
+  }
+
   // the 3n problem of Sidorov et al. (CP 2025): every pair of the 3n tasks conflicts on one of
   // three cumulatives, so the clique of all tasks fails at once although each cumulative alone
   // is satisfiable

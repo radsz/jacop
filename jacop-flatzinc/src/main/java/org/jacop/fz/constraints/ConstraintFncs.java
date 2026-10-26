@@ -986,6 +986,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_disjunctive_optional(n);
   }
 
+  /** Handles the jacop_disjunctive_setup FlatZinc constraint. */
+  public void jacop_disjunctive_setup(SimpleNode n) {
+    gc.gen_jacop_disjunctive_setup(n);
+  }
+
   /** Handles the jacop_disjunctive_strict_optional FlatZinc constraint. */
   public void jacop_disjunctive_strict_optional(SimpleNode n) {
     gc.gen_jacop_disjunctive_strict_optional(n);
