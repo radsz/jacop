@@ -513,6 +513,8 @@ class CdclSolverTest {
       if (run % 2 == 0) {
         s.setReduceBase(10);
       }
+      // reasons above this size are temporary: deleted on backtracking, moved by compaction
+      s.setExternalReasonKeep(run % 3 == 0 ? Integer.MAX_VALUE : 2 + run % 3);
       List<int[]> theory = new ArrayList<>();
       for (int[] c : f) {
         if (rnd.nextInt(2) == 0) {

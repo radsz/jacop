@@ -146,6 +146,7 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
+    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 2));
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
     }
