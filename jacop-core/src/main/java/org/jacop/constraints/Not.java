@@ -36,6 +36,9 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.util.QueueForward;
 
 /**
@@ -44,7 +47,8 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Not extends PrimitiveConstraint implements UsesQueueVariable, Copyable<Not> {
+public class Not extends PrimitiveConstraint
+    implements UsesQueueVariable, Copyable<Not>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -133,5 +137,47 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable, Copya
   @Override
   public boolean canCopy() {
     return Copyable.canCopy(c);
+  }
+
+  // the nested constraint's explanations
+  private Explainable nested() {
+    return getClass() == Not.class && c instanceof Explainable e ? e : null;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    Explainable e = nested();
+    return e != null && e.explainNegated(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    Explainable e = nested();
+    return e != null && e.explainNegatedFailure(trail, out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    Explainable e = nested();
+    return e != null && e.explainEntailment(trail, position, !entailed, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    Explainable e = nested();
+    return e != null && e.explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    Explainable e = nested();
+    return e != null && e.explainFailure(trail, out);
+  }
+
+  @Override
+  public boolean checksReasons() {
+    Explainable e = nested();
+    return e != null && e.checksReasons();
   }
 }

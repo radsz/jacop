@@ -52,6 +52,8 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
@@ -60,7 +62,9 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -69,10 +73,14 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
@@ -83,6 +91,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
@@ -90,6 +99,8 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
@@ -100,6 +111,8 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -109,13 +122,19 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -277,7 +296,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(52)) {
+      return switch (rnd.nextInt(65)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -346,6 +365,40 @@ class LcgFuzzTest {
           store.impose(new XeqY(xs[0], p[0]));
           yield new Assignment(xs, ds, 0, 0);
         }
+        case 51 -> new SumInt(q, relation(), one());
+        case 52 -> new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one());
+        case 53 -> {
+          String rel = new String[] {"==", "<=", ">="}[rnd.nextInt(3)];
+          int[] w = {2, -1, 1};
+          yield rnd.nextBoolean()
+              ? new LinearBool(pick(b, 3), w, rel, one())
+              : new LinearBool(pick(b, 3), w, rel, rnd.nextInt(3) - 1);
+        }
+        case 54 ->
+            new ElementIntegerFast(
+                one(), new int[] {value(), value(), value(), value()}, one(), -rnd.nextInt(2));
+        case 55 -> rnd.nextBoolean() ? new XgteqY(p[0], p[1]) : new XgtY(p[0], p[1]);
+        case 56 -> new XplusClteqZ(p[0], value(), p[1]);
+        case 57 -> primitive(0);
+        case 58 -> new ElementVariableFast(one(), q, one(), -rnd.nextInt(2));
+        case 59 ->
+            rnd.nextBoolean() ? new MaxSimple(p[0], p[1], one()) : new MinSimple(p[0], p[1], one());
+        case 60 -> {
+          int v = value();
+          IntVar[] bs = pick(b, 3);
+          int[] values = {v, v + 1, v + 3};
+          yield rnd.nextBoolean()
+              ? new ChannelReif(one(), bs, values)
+              : new ChannelImply(one(), bs, values);
+        }
+        case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
+        case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
+        case 63 ->
+            new LinearIntDom(
+                p,
+                new int[] {1 + rnd.nextInt(2), -1, 2},
+                new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
+                value() + 2);
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
@@ -363,6 +416,10 @@ class LcgFuzzTest {
               }
             };
       };
+    }
+
+    private String relation() {
+      return new String[] {"==", "<=", "<", ">", ">=", "!="}[rnd.nextInt(6)];
     }
 
     private IntVar constant(int c) {
@@ -437,6 +494,8 @@ class LcgFuzzTest {
     int sat = 0;
     int unsat = 0;
     long checked = 0;
+    long lowerBoundRuns = 0;
+    long lowerBoundRaised = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected = reference(new Model(seed));
@@ -449,8 +508,11 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        annotate(solver, model, seed);
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
         checked += solver.checker().checked;
+        lowerBoundRuns += solver.lowerBoundRuns;
+        lowerBoundRaised += solver.lowerBoundRaised;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -480,8 +542,9 @@ class LcgFuzzTest {
     }
     if (RUNS >= 1000) {
       System.out.printf(
-          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked%n",
-          RUNS, sat, unsat, checked);
+          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
+              + " %d lower-bound runs (%d raised the bound)%n",
+          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised);
       statistics.forEach(
           (k, v) ->
               System.out.printf(
@@ -491,6 +554,39 @@ class LcgFuzzTest {
     assertThat(sat).isPositive();
     assertThat(unsat).isPositive();
     assertThat(checked).isPositive();
+  }
+
+  /**
+   * Gives one run in three objective lower-bound search, and three runs in four a search annotation
+   * on the decision variables, as fixed search (with or without restarts) or free search, branching
+   * on values or splitting domains.
+   */
+  private static void annotate(LcgSolver solver, Model model, long seed) {
+    Random random = new Random(seed * 31 + 7);
+    if (random.nextInt(3) == 0) {
+      // short runs, so that the tiny models reach the lower-bound runs
+      solver.setLowerBoundSearch(0.25 + random.nextDouble(), 1 + random.nextInt(3));
+    }
+    int kind = (int) (seed / 3 % 4);
+    if (kind == 0) {
+      return;
+    }
+    IntVar[] vars = model.decisionVars();
+    if (vars.length == 0) {
+      return;
+    }
+    // IndomainMiddle does not take the bound domains of BooleanVars
+    boolean bounds =
+        Arrays.stream(vars).anyMatch(x -> x.dom().domainId() == IntDomain.BOUND_DOMAIN_ID);
+    SelectChoicePoint<IntVar> select =
+        switch (random.nextInt(bounds ? 2 : 4)) {
+          case 0 -> new SimpleSelect<>(vars, null, new IndomainMin<>());
+          case 1 -> new SimpleSelect<>(vars, new SmallestDomain<>(), new IndomainMax<>());
+          case 2 -> new SimpleSelect<>(vars, null, new IndomainMiddle<>());
+          default -> new SplitSelect<>(vars, null, new IndomainMiddle<>());
+        };
+    solver.setAnnotation(select, kind == 3);
+    solver.sat().setRestarts(kind != 1);
   }
 
   private static long[] add(long[] a, long[] b) {

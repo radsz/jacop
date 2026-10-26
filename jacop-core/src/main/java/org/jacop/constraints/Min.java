@@ -37,6 +37,10 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.MaxExplanation;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum varable from all FD
@@ -45,7 +49,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Min extends AbstractMinMax implements Copyable<Min> {
+public class Min extends AbstractMinMax implements Copyable<Min>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -167,5 +171,15 @@ public class Min extends AbstractMinMax implements Copyable<Min> {
   @Override
   public Min copy(VarMap map) {
     return new Min(map.get(list), map.get(min));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == Min.class && MaxExplanation.explain(trail, entry, list, min, false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == Min.class && MaxExplanation.explainFailure(trail, list, min, false, out);
   }
 }

@@ -168,6 +168,10 @@ public class Constraints implements ParserTreeConstants {
     if (!store.consistency()) {
       throw Store.failException;
     }
+
+    if (!support.probeDiffnKHandles()) {
+      throw Store.failException;
+    }
   }
 
   void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {

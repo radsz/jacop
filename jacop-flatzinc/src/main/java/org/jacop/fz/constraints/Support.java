@@ -44,7 +44,10 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XneqC;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -65,6 +68,10 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.fz.Tables;
 import org.jacop.fz.VariablesParameters;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.ReifiedExplanation;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -96,6 +103,7 @@ public class Support implements ParserTreeConstants {
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
@@ -736,6 +744,16 @@ public class Support implements ParserTreeConstants {
     imply.pose();
   }
 
+  /**
+   * Finds presence handles of the non-strict k-dimensional diffn constraints by probing; the store
+   * must be at a fixpoint.
+   *
+   * @return false if probing proved the model inconsistent.
+   */
+  public boolean probeDiffnKHandles() {
+    return nonStrictDiffnK.isEmpty() || new DiffnKHandleProbing(store).probe(nonStrictDiffnK);
+  }
+
   void poseAlldistinctConstraints() {
     // the same array can be collected twice, e.g. from circuit and from all_different
     Set<List<IntVar>> posted = new HashSet<>();
@@ -940,7 +958,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = c, reified with b or implied by b. */
-  final class FzXeqC extends Constraint implements Copyable<FzXeqC> {
+  final class FzXeqC extends Constraint implements Copyable<FzXeqC>, Explainable {
 
     final IntVar x;
     final int c;
@@ -976,6 +994,26 @@ public class Support implements ParserTreeConstants {
       return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
     }
 
+    // the reified constraint, for its explanations
+    private XeqC lcgNested;
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      return x != b && ReifiedExplanation.explain(trail, entry, b, nested(), isReified, out);
+    }
+
+    @Override
+    public boolean explainFailure(AtomicTrail trail, EntryList out) {
+      return x != b && ReifiedExplanation.explainFailure(trail, b, nested(), isReified, out);
+    }
+
+    private XeqC nested() {
+      if (lcgNested == null) {
+        lcgNested = new XeqC(x, c);
+      }
+      return lcgNested;
+    }
+
     @Override
     public FzXeqC copy(VarMap map) {
       return new FzXeqC(map.get(x), c, map.get(b), isReified);
@@ -995,7 +1033,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x != c, reified with b or implied by b. */
-  final class FzXneqC extends Constraint implements Copyable<FzXneqC> {
+  final class FzXneqC extends Constraint implements Copyable<FzXneqC>, Explainable {
 
     final IntVar x;
     final int c;
@@ -1031,6 +1069,26 @@ public class Support implements ParserTreeConstants {
       return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
     }
 
+    // the reified constraint, for its explanations
+    private XneqC lcgNested;
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      return x != b && ReifiedExplanation.explain(trail, entry, b, nested(), isReified, out);
+    }
+
+    @Override
+    public boolean explainFailure(AtomicTrail trail, EntryList out) {
+      return x != b && ReifiedExplanation.explainFailure(trail, b, nested(), isReified, out);
+    }
+
+    private XneqC nested() {
+      if (lcgNested == null) {
+        lcgNested = new XneqC(x, c);
+      }
+      return lcgNested;
+    }
+
     @Override
     public FzXneqC copy(VarMap map) {
       return new FzXneqC(map.get(x), c, map.get(b), isReified);
@@ -1050,7 +1108,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = y, reified with b or implied by b. */
-  final class FzXeqY extends Constraint implements Copyable<FzXeqY> {
+  final class FzXeqY extends Constraint implements Copyable<FzXeqY>, Explainable {
 
     final IntVar x;
     final IntVar y;
@@ -1084,6 +1142,32 @@ public class Support implements ParserTreeConstants {
     @Override
     public String id() {
       return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
+    }
+
+    // the reified constraint, for its explanations
+    private XeqY lcgNested;
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      return x != b
+          && y != b
+          && x != y
+          && ReifiedExplanation.explain(trail, entry, b, nested(), isReified, out);
+    }
+
+    @Override
+    public boolean explainFailure(AtomicTrail trail, EntryList out) {
+      return x != b
+          && y != b
+          && x != y
+          && ReifiedExplanation.explainFailure(trail, b, nested(), isReified, out);
+    }
+
+    private XeqY nested() {
+      if (lcgNested == null) {
+        lcgNested = new XeqY(x, y);
+      }
+      return lcgNested;
     }
 
     @Override

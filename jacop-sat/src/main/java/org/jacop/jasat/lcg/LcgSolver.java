@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -46,9 +47,13 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
+import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.search.SelectChoicePoint;
 
 /**
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
@@ -132,8 +137,47 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: failures of the constraints turned into conflict clauses. */
   public long constraintConflicts;
 
-  /** Statistics: decisions made on unfixed variables when every literal was assigned. */
+  /**
+   * Statistics: decisions made on integer variables, by activity or when every literal was
+   * assigned.
+   */
   public long searchDecisions;
+
+  /** Statistics: decisions taken from the model's search annotation. */
+  public long annotationDecisions;
+
+  // branching on integer variables by activity: bumped for the literals of learnt clauses
+  private final boolean activityBranching =
+      !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
+  private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
+  private double[] activity;
+  private final VarHeap heap = new VarHeap();
+  private double activityInc = 1;
+  private long activityConflicts;
+  // variables taken off the heap because they were fixed, with the decision level at the time
+  private int[] popped = new int[16];
+  private int[] poppedLevel = new int[16];
+  private int numPopped;
+  // the values of the last solution, preferred in decisions
+  private int[] phase;
+
+  // the model's search annotation: used in every run, or in every other run when free
+  private SelectChoicePoint<? extends Var> annotation;
+  private boolean freeSearch;
+  private boolean annotationRun;
+
+  private double lowerBoundShare;
+  private long lowerBoundBudget;
+
+  /** Statistics: runs of objective lower-bound search. */
+  public long lowerBoundRuns;
+
+  /** Statistics: lower-bound runs that raised the lower bound. */
+  public long lowerBoundRaised;
+
+  // the variable minimised by branch and bound, or -1
+  private int objective = -1;
+  private int[] best;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -169,12 +213,17 @@ public final class LcgSolver implements ExternalPropagator {
     root = new IntDomain[n];
     ge = new LiteralMap[n];
     eq = new LiteralMap[n];
+    activity = new double[n];
+    heap.grow(n, activity);
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
       root[i] = x.dom().cloneLight();
       ge[i] = new LiteralMap();
       eq[i] = new LiteralMap();
+      if (!root[i].singleton()) {
+        heap.insert(i);
+      }
     }
     sat.connect(this);
   }
@@ -279,18 +328,23 @@ public final class LcgSolver implements ExternalPropagator {
    * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
+    return solve(new int[0]);
+  }
+
+  private int solve(int... assumed) {
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
     solution = null;
-    int result = sat.solve();
+    int result = sat.solve(assumed);
     // the solver leaves its last assignment without notifying; the store goes back to the root
     notifyBacktrack(0);
     return result;
   }
 
   /**
-   * Minimises a variable: solves, then requires a smaller value than the solution's, until no
+   * Minimises a variable by branch and bound inside one search: at each solution the solver gets
+   * the clause that the objective is smaller and backjumps, keeping its learnt clauses, until no
    * solution is left. {@link #value} then gives the best solution found.
    *
    * @param objective the variable to minimise
@@ -298,25 +352,88 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
-    int i = trail.id(objective);
-    int[] best = null;
-    while (true) {
-      int result = solve();
-      if (result != CdclSolver.SAT) {
-        solution = best;
-        if (result == CdclSolver.UNSAT) {
-          return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
-        }
-        return CdclSolver.UNKNOWN;
-      }
-      best = solution;
-      solutions++;
-      int v = best[i];
-      if (v <= root[i].min()) {
-        return CdclSolver.SAT;
-      }
-      sat.addClause(-geLit(i, v)); // objective <= v - 1
+    this.objective = trail.id(objective);
+    best = null;
+    int result;
+    try {
+      result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+    } finally {
+      this.objective = -1;
+      sat.setConflictLimit(Long.MAX_VALUE);
     }
+    solution = best;
+    if (result == CdclSolver.UNKNOWN) {
+      return CdclSolver.UNKNOWN;
+    }
+    // SAT when the solution has the smallest value of the objective, UNSAT when none is better
+    return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+  }
+
+  /**
+   * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
+   * after a number of conflicts, and each is followed by a run under the assumption that the
+   * objective is at its lower bound, with a share of those conflicts. When that run proves the
+   * assumption impossible, the lower bound goes up by a clause; when it finds a solution, the
+   * solution is optimal. The budget of conflicts grows by half at each round.
+   */
+  private int minimizeWithLowerBoundSearch() {
+    long budget = lowerBoundBudget;
+    while (true) {
+      long limit = sat.conflicts + budget;
+      sat.setConflictLimit(limit);
+      int result = solve();
+      if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
+        return result; // done, or stopped by the deadline
+      }
+      int lb = vars[objective].min(); // after solve the domains are those of level 0
+      if (best != null && lb < best[objective]) {
+        int lit = -geLit(objective, lb + 1); // objective <= lb
+        limit = sat.conflicts + (long) (budget * lowerBoundShare);
+        sat.setConflictLimit(limit);
+        lowerBoundRuns++;
+        result = solve(lit);
+        if (result == CdclSolver.SAT) {
+          return result; // a solution at the smallest value of the objective
+        }
+        if (result == CdclSolver.UNSAT) {
+          if (sat.failedAssumptions().length == 0) {
+            return result; // no better solution at all
+          }
+          sat.addClause(-lit); // objective >= lb + 1
+          lowerBoundRaised++;
+        } else if (sat.conflicts < limit) {
+          return result;
+        }
+      }
+      budget += budget / 2;
+    }
+  }
+
+  /**
+   * Turns on objective lower-bound search in {@link #minimize}: runs of branch and bound alternate
+   * with runs that assume the objective at its lower bound, which take the given share of the
+   * conflicts of the runs before them.
+   *
+   * @param share the conflicts of a lower-bound run per conflict of branch and bound; 0 for none
+   * @param firstRun the conflicts of the first run of branch and bound, growing by half each round
+   */
+  public void setLowerBoundSearch(double share, long firstRun) {
+    lowerBoundShare = share;
+    lowerBoundBudget = Math.max(1, firstRun);
+  }
+
+  /**
+   * Sets the model's search annotation as the branching. Under fixed search every run follows it;
+   * under free search the runs alternate between it and the activity of the variables, starting
+   * with it. When it has fixed all its variables, the activity completes the assignment.
+   *
+   * @param select the annotation's variable and value selection, or null for none
+   * @param free true for free search
+   */
+  public void setAnnotation(SelectChoicePoint<? extends Var> select, boolean free) {
+    annotation = select;
+    freeSearch = free;
+    annotationRun = select != null;
   }
 
   /**
@@ -401,6 +518,9 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyLearntLiteral(int lit) {
     int dimacsVar = Math.abs(lit);
+    if (activityBranching) {
+      bump(litVar[dimacsVar]);
+    }
     if (dimacsVar < atomUse.length && atomUse[dimacsVar] == 1) {
       atomUse[dimacsVar] = 2;
       atomLiteralsLearnt++;
@@ -426,9 +546,20 @@ public final class LcgSolver implements ExternalPropagator {
       store.removeLevel(store.level);
       store.setLevel(store.level - 1);
     }
+    // a variable fixed at the decision level it was taken off at, or below, may be free again
+    while (numPopped > 0 && poppedLevel[numPopped - 1] > level) {
+      heap.insert(popped[--numPopped]);
+    }
     numPending = 0;
     failed = false;
     pushed = Math.min(pushed, trail.size());
+  }
+
+  @Override
+  public void notifyRestart() {
+    if (annotation != null && freeSearch) {
+      annotationRun = !annotationRun;
+    }
   }
 
   @Override
@@ -651,11 +782,25 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * When every literal is assigned, branches on {@code [x <= min]} of the unfixed variable with the
-   * smallest domain; otherwise leaves the decision to the solver.
+   * Decides on the model's annotation in its runs while it has unfixed variables; otherwise, with
+   * activity branching, on the most active unfixed variable: its value in the last solution when
+   * still possible, else the lower half of its domain (the system property {@code jacop.lcg.value}
+   * = {@code min} or {@code max} picks its smallest or largest value instead). Without activity
+   * branching, leaves the decision to the solver's VSIDS until every literal is assigned, then
+   * branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
    */
   @Override
   public int decide() {
+    if (annotationRun) {
+      int lit = annotationDecision();
+      if (lit != 0) {
+        annotationDecisions++;
+        return lit;
+      }
+    }
+    if (activityBranching) {
+      return activityDecision();
+    }
     if (sat.trailSize() < sat.numVars() || !structural.isEmpty()) {
       return 0;
     }
@@ -674,6 +819,104 @@ public final class LcgSolver implements ExternalPropagator {
     return -geLit(best, vars[best].min() + 1);
   }
 
+  private int activityDecision() {
+    while (!heap.isEmpty() && vars[heap.max()].singleton()) {
+      if (numPopped == popped.length) {
+        popped = Arrays.copyOf(popped, 2 * numPopped);
+        poppedLevel = Arrays.copyOf(poppedLevel, 2 * numPopped);
+      }
+      popped[numPopped] = heap.removeMax();
+      poppedLevel[numPopped++] = sat.decisionLevel();
+    }
+    if (heap.isEmpty()) {
+      return 0;
+    }
+    int i = heap.max();
+    IntVar x = vars[i];
+    searchDecisions++;
+    if (phase != null && x.domain.contains(phase[i])) {
+      return eqVar(i, phase[i]);
+    }
+    return switch (valueChoice) {
+      case "max" -> geLit(i, x.max());
+      case "split" -> -geLit(i, x.min() + (x.max() - x.min()) / 2 + 1);
+      default -> -geLit(i, x.min() + 1);
+    };
+  }
+
+  private void bump(int i) {
+    if (sat.conflicts != activityConflicts) {
+      activityConflicts = sat.conflicts;
+      activityInc /= 0.95;
+    }
+    if ((activity[i] += activityInc) > 1e100) {
+      for (int k = 0; k < activity.length; k++) {
+        activity[k] *= 1e-100;
+      }
+      activityInc *= 1e-100;
+    }
+    heap.increased(i);
+  }
+
+  /**
+   * The annotation's next decision as a literal, or 0 when it has fixed all its variables or
+   * chooses something that is not an atom of the store's integer variables.
+   */
+  private int annotationDecision() {
+    Var v = annotation.getChoiceVariable(0);
+    if (v != null) {
+      int i = idOf(v);
+      if (i < 0) {
+        return 0;
+      }
+      int value = annotation.getChoiceValue();
+      return vars[i].domain.contains(value) ? eqVar(i, value) : 0;
+    }
+    PrimitiveConstraint c = annotation.getChoiceConstraint(0);
+    if (!(c instanceof LinearExplainable l)) {
+      return 0;
+    }
+    LinearForm f = l.linearForm();
+    if (f.vars().length != 1 || Math.abs(f.weights()[0]) != 1) {
+      return 0;
+    }
+    int i = idOf(f.vars()[0]);
+    if (i < 0) {
+      return 0;
+    }
+    long w = f.weights()[0];
+    long bound = w * f.c(); // the relation on x itself, with LE and GE swapped for -x
+    int relation = f.relation();
+    if (w < 0 && relation == LinearForm.LE) {
+      relation = LinearForm.GE;
+    } else if (w < 0 && relation == LinearForm.GE) {
+      relation = LinearForm.LE;
+    }
+    IntDomain d = vars[i].domain;
+    if (bound < d.min() || bound > d.max()) {
+      return 0;
+    }
+    int b = (int) bound;
+    return switch (relation) {
+      case LinearForm.LE -> b < d.max() ? -geLit(i, b + 1) : 0;
+      case LinearForm.GE -> b > d.min() ? geLit(i, b) : 0;
+      case LinearForm.EQ -> d.contains(b) ? eqVar(i, b) : 0;
+      default -> d.contains(b) ? -eqVar(i, b) : 0;
+    };
+  }
+
+  private int idOf(Var v) {
+    if (!(v instanceof IntVar x) || x.singleton()) {
+      return -1;
+    }
+    int i = trail.id(x);
+    return i >= 0 && i < vars.length && vars[i] == x ? i : -1;
+  }
+
+  /**
+   * Records a solution. When minimising, it then rejects the model with the clause that the
+   * objective is smaller, unless the objective is at its smallest value.
+   */
   @Override
   public boolean checkModel(int[] model) {
     solution = new int[vars.length];
@@ -688,6 +931,19 @@ public final class LcgSolver implements ExternalPropagator {
     if (onSolution != null) {
       onSolution.run();
     }
-    return true;
+    if (objective < 0) {
+      return true;
+    }
+    best = solution;
+    phase = solution;
+    solutions++;
+    int v = solution[objective];
+    if (v <= root[objective].min()) {
+      return true;
+    }
+    // the literal first, so that its linking clauses come before the bound
+    int lit = geLit(objective, v);
+    structural.add(new int[] {-lit}); // objective <= v - 1
+    return false;
   }
 }

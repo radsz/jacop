@@ -50,6 +50,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * LinearInt constraint implements the weighted summation over several variables .
@@ -975,57 +976,105 @@ public class LinearInt extends PrimitiveConstraint
 
   /**
    * Explains a bound this constraint propagated by the bounds of the other variables that bound the
-   * sum on the side the bound comes from, and the holes the new bound skipped. Holes, {@code !=}
-   * relations and the domain-consistent subclass use the generic reason.
+   * sum on the side the bound comes from, and the holes the new bound skipped; under {@code !=} by
+   * the other variables being fixed. Holes and the domain-consistent subclass use the generic
+   * reason.
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    int kind = trail.kind(entry);
-    if (getClass() != LinearInt.class || kind == AtomicTrail.NE || relationType == NE) {
+    if (getClass() != LinearInt.class) {
       return false;
     }
-    IntVar y = trail.variable(entry);
-    long weight = 0;
-    for (int i = 0; i < l; i++) {
-      if (x[i] == y) {
-        weight = a[i];
-      }
-    }
-    if (weight == 0) {
+    if (!lcgForm().explain(trail, entry, out)) {
       return false;
     }
-    // the side of the relation the bound comes from: sum <= b, or sum >= b
-    boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
-    boolean has =
-        upperSide
-            ? relationType == EQ || relationType == LE || relationType == LT
-            : relationType == EQ || relationType == GE || relationType == GT;
-    if (!has) {
+    addFolded(trail, entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != LinearInt.class) {
       return false;
     }
+    boolean explained = lcgForm().explainFailure(trail, out);
+    if (explained) {
+      addFolded(trail, trail.size(), out);
+    }
+    return explained;
+  }
+
+  // the relation over the variables left after folding, for entailment and negation
+  private LinearForm form() {
+    return getClass() == LinearInt.class ? lcgForm() : null;
+  }
+
+  /**
+   * Returns the relation over the variables left after folding the fixed ones into b.
+   *
+   * @return the linear form
+   */
+  LinearForm lcgForm() {
+    IntVar[] vars = Arrays.copyOf(x, l);
+    long[] weights = Arrays.copyOf(a, l);
+    return switch (relationType) {
+      case EQ -> new LinearForm(vars, weights, b, LinearForm.EQ);
+      case LE -> new LinearForm(vars, weights, b, LinearForm.LE);
+      case LT -> new LinearForm(vars, weights, b - 1, LinearForm.LE);
+      case GE -> new LinearForm(vars, weights, b, LinearForm.GE);
+      case GT -> new LinearForm(vars, weights, b + 1, LinearForm.GE);
+      default -> new LinearForm(vars, weights, b, LinearForm.NE);
+    };
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = form();
+    if (f != null && (entailed ? f : f.negated()).explainEntailed(trail, position, out)) {
+      addFolded(trail, position, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explain(trail, entry, out)) {
+      addFolded(trail, entry, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explainFailure(trail, out)) {
+      addFolded(trail, trail.size(), out);
+      return true;
+    }
+    return false;
+  }
+
+  // the bounds of the variables fixed when the constraint was created and folded into b
+  void addFolded(AtomicTrail trail, int position, EntryList out) {
     for (Var v : arguments()) {
       IntVar z = (IntVar) v;
-      if (z == y) {
-        continue;
+      boolean folded = true;
+      for (int i = 0; i < l && folded; i++) {
+        folded = x[i] != z;
       }
-      long w = 0;
-      for (int i = 0; i < l; i++) {
-        if (x[i] == z) {
-          w = a[i];
-        }
-      }
-      if (w == 0) {
-        // folded into b as a constant when the constraint was created
-        trail.addLowerBound(z, entry, out);
-        trail.addUpperBound(z, entry, out);
-      } else if (upperSide == w > 0) {
-        trail.addLowerBound(z, entry, out);
-      } else {
-        trail.addUpperBound(z, entry, out);
+      if (folded) {
+        trail.addLowerBound(z, position, out);
+        trail.addUpperBound(z, position, out);
       }
     }
-    trail.addSkippedHoles(
-        entry, kind == AtomicTrail.LE ? Integer.MAX_VALUE : Integer.MIN_VALUE, out);
-    return true;
   }
 }

@@ -37,6 +37,10 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.MaxExplanation;
 
 /**
  * MaxSimple constraint implements the Maximum/2 constraint. It provides the maximum variable from
@@ -47,7 +51,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class MaxSimple extends Constraint implements SatisfiedPresent, Copyable<MaxSimple> {
+public class MaxSimple extends Constraint
+    implements SatisfiedPresent, Copyable<MaxSimple>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -134,5 +139,21 @@ public class MaxSimple extends Constraint implements SatisfiedPresent, Copyable<
   @Override
   public MaxSimple copy(VarMap map) {
     return new MaxSimple(map.get(x1), map.get(x2), map.get(max));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == MaxSimple.class
+        && x1 != max
+        && x2 != max
+        && MaxExplanation.explain(trail, entry, new IntVar[] {x1, x2}, max, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == MaxSimple.class
+        && x1 != max
+        && x2 != max
+        && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, max, true, out);
   }
 }

@@ -36,6 +36,11 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + C #= Z.
@@ -43,7 +48,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusCeqZ extends AbstractConstraintXandCandZ implements Copyable<XplusCeqZ> {
+public class XplusCeqZ extends AbstractConstraintXandCandZ
+    implements Copyable<XplusCeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -88,10 +94,10 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ implements Copyable<X
     }
 
     // after the two shifts z equals x shifted by c, a fixpoint unless x only keeps its bounds
-    x.domain.inShift(store.level, x, z.domain, -c);
-    z.domain.inShift(store.level, z, x.domain, c);
+    x.domain.inShiftFast(store.level, x, z.domain, -c);
+    z.domain.inShiftFast(store.level, z, x.domain, c);
     if (x.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      x.domain.inShift(store.level, x, z.domain, -c);
+      x.domain.inShiftFast(store.level, x, z.domain, -c);
     }
   }
 
@@ -147,5 +153,59 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ implements Copyable<X
   @Override
   public XplusCeqZ copy(VarMap map) {
     return new XplusCeqZ(map.get(x), c, map.get(z));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XplusCeqZ.class || x == z) {
+      return false;
+    }
+    return trail.variable(entry) == z
+        ? ShiftExplanation.explain(trail, entry, z, x, c, out)
+        : ShiftExplanation.explain(trail, entry, x, z, -(long) c, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XplusCeqZ.class
+        && x != z
+        && ShiftExplanation.explainFailure(trail, z, x, c, out);
+  }
+
+  // the equality as a linear form, for entailment and negation
+  private LinearForm equality() {
+    return getClass() == XplusCeqZ.class && x != z
+        ? new LinearForm(new IntVar[] {x, z}, new long[] {1, -1}, -(long) c, LinearForm.EQ)
+        : null;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = equality();
+    if (f == null) {
+      return false;
+    }
+    if (entailed) {
+      return f.explainEntailed(trail, position, out);
+    }
+    return ShiftExplanation.disjointBefore(trail, position, z, x, c, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explainFailure(trail, out);
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
   }
 }

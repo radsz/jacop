@@ -38,6 +38,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraint X * C #= Z.
@@ -47,7 +49,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulCeqZ extends AbstractConstraintXandCandZ implements Copyable<XmulCeqZ> {
+public class XmulCeqZ extends AbstractConstraintXandCandZ
+    implements Copyable<XmulCeqZ>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -150,5 +153,12 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ implements Copyable<Xm
   @Override
   public XmulCeqZ copy(VarMap map) {
     return new XmulCeqZ(map.get(x), c, map.get(z));
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    return getClass() == XmulCeqZ.class && x != z
+        ? new LinearForm(new IntVar[] {x, z}, new long[] {c, -1}, 0, LinearForm.EQ)
+        : null;
   }
 }

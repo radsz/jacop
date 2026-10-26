@@ -42,6 +42,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ElementExplanation;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * ElementIntegerFast constraint defines a relation list[index - indexOffset] = value. This version
@@ -57,7 +61,7 @@ import org.jacop.core.ValueEnumeration;
  * @version 5.0
  */
 public class ElementIntegerFast extends AbstractElement
-    implements SatisfiedPresent, Copyable<ElementIntegerFast> {
+    implements SatisfiedPresent, Copyable<ElementIntegerFast>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -282,5 +286,19 @@ public class ElementIntegerFast extends AbstractElement
   @Override
   public ElementIntegerFast copy(VarMap map) {
     return new ElementIntegerFast(map.get(index), list, map.get(value), indexOffset);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == ElementIntegerFast.class
+        && index != value
+        && ElementExplanation.explain(trail, entry, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == ElementIntegerFast.class
+        && index != value
+        && ElementExplanation.explainFailure(trail, index, list, value, indexOffset, out);
   }
 }

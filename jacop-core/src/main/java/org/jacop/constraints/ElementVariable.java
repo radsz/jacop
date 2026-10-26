@@ -49,6 +49,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ElementVariableExplanation;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * ElementVariable constraint defines a relation list[index - indexOffset] = value.
@@ -63,7 +67,11 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ElementVariable extends AbstractElement
-    implements UsesQueueVariable, SatisfiedPresent, Stateful, Copyable<ElementVariable> {
+    implements UsesQueueVariable,
+        SatisfiedPresent,
+        Stateful,
+        Copyable<ElementVariable>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -388,5 +396,17 @@ public class ElementVariable extends AbstractElement
   @Override
   public ElementVariable copy(VarMap map) {
     return new ElementVariable(map.get(index), map.get(list), map.get(value), indexOffset);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == ElementVariable.class
+        && ElementVariableExplanation.explain(trail, entry, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == ElementVariable.class
+        && ElementVariableExplanation.explainFailure(trail, index, list, value, indexOffset, out);
   }
 }

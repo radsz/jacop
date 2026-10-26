@@ -30,10 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Abstract base class for SumInt and SumBool constraints. Provides shared relation constants,
@@ -260,5 +262,33 @@ public abstract class AbstractSum extends PrimitiveConstraint {
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  // the relation as a linear form for lazy clause generation, built once
+  private LinearForm lcgForm;
+
+  /**
+   * Returns this sum as a linear form: the variables and the sum, weighted 1 and -1.
+   *
+   * @return the linear form
+   */
+  protected LinearForm sumForm() {
+    if (lcgForm == null) {
+      IntVar[] vars = Arrays.copyOf(x, l + 1);
+      vars[l] = sum;
+      long[] weights = new long[l + 1];
+      Arrays.fill(weights, 1);
+      weights[l] = -1;
+      lcgForm =
+          switch (relationType) {
+            case EQ -> new LinearForm(vars, weights, 0, LinearForm.EQ);
+            case LE -> new LinearForm(vars, weights, 0, LinearForm.LE);
+            case LT -> new LinearForm(vars, weights, -1, LinearForm.LE);
+            case GE -> new LinearForm(vars, weights, 0, LinearForm.GE);
+            case GT -> new LinearForm(vars, weights, 1, LinearForm.GE);
+            default -> new LinearForm(vars, weights, 0, LinearForm.NE);
+          };
+    }
+    return lcgForm;
   }
 }

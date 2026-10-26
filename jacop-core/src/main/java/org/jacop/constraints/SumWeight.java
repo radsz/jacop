@@ -47,6 +47,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
 
 /**
  * SumWeight constraint implements the weighted summation over several variables. It provides the
@@ -58,7 +62,11 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class SumWeight extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<SumWeight> {
+    implements UsesQueueVariable,
+        SatisfiedPresent,
+        RemoveLevelLate,
+        Copyable<SumWeight>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -448,5 +456,35 @@ public class SumWeight extends Constraint
   @Override
   public SumWeight copy(VarMap map) {
     return new SumWeight(this, map);
+  }
+
+  // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
+  private IntVar[] lcgVars;
+  private long[] lcgWeights;
+
+  private void lcgModel() {
+    if (lcgVars != null) {
+      return;
+    }
+    lcgVars = list;
+    lcgWeights = weights;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != SumWeight.class) {
+      return false;
+    }
+    lcgModel();
+    return LinearExplanation.explain(trail, entry, lcgVars, lcgWeights, true, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != SumWeight.class) {
+      return false;
+    }
+    lcgModel();
+    return LinearExplanation.explainFailure(trail, lcgVars, lcgWeights, equalTo, true, true, out);
   }
 }
