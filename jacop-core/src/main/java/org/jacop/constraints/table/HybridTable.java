@@ -741,7 +741,7 @@ public class HybridTable extends Constraint
     if (pruning) {
       return;
     }
-    int p = TrailedTupleSet.column(v, positionByIndex, indexOffset, varMap);
+    int p = TrailedTupleSet.column(v, x, positionByIndex, indexOffset, varMap);
     if (p >= 0 && !queued[p]) {
       queued[p] = true;
       queue[queueSize++] = p;

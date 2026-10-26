@@ -40,9 +40,9 @@ import org.jacop.constraints.Constraint;
  *
  * <p>Unlike the other domains, which install a new domain object the first time a variable changes
  * at a search level, this domain is changed in place and keeps its own trail. The first change at a
- * level saves the bounds, the size, the stamp and the constraint lists; a word of the bit set is
- * saved the first time it changes at a level. Bounds are kept in fields and never touch the bit
- * set, so bits outside the bounds may be stale and every query is limited to the bounds.
+ * level saves the bounds, the size and the stamp; the constraint lists and a word of the bit set
+ * are saved the first time they change at a level. Bounds are kept in fields and never touch the
+ * bit set, so bits outside the bounds may be stale and every query is limited to the bounds.
  * Backtracking pops the trail entries of the removed levels.
  *
  * <p>A value enumeration works on a snapshot taken when it is created, as an enumeration of a
@@ -58,6 +58,8 @@ public class LazyBitSetDomain extends IntDomain {
   public static final int MAX_SPAN = 1 << 16;
 
   private static final int LEVEL_ENTRY = -1;
+
+  private static final int CONSTRAINTS_ENTRY = -2;
 
   private static final int INT_FIELDS = 6;
 
@@ -92,18 +94,25 @@ public class LazyBitSetDomain extends IntDomain {
 
   private int cachedVersion;
 
+  /** The level at which the constraint lists were last saved, at most stamp. */
+  private int constraintsStamp;
+
   private int trailSize;
 
   /**
-   * Per entry: kind (LEVEL_ENTRY or a word index), level, and for a level entry the old min, max,
-   * size and stamp, for a word entry the old word stamp.
+   * Per entry: kind (LEVEL_ENTRY, CONSTRAINTS_ENTRY or a word index), level, and for a level entry
+   * the old min, max, size and stamp, for a constraints entry the old constraints stamp, for a word
+   * entry the old word stamp.
    */
   private int[] trailInts = new int[INT_FIELDS * 4];
 
-  /** Per entry: the old word, or for a level entry whether bits were null and search data. */
+  /**
+   * Per entry: the old word, for a level entry whether bits were null, for a constraints entry the
+   * search data.
+   */
   private long[] trailLongs = new long[4];
 
-  /** Per level entry: old model constraints, old model constraint counts, old search list. */
+  /** Per constraints entry: old model constraints, old model constraint counts, old search list. */
   private Object[] trailObjects = new Object[OBJECT_FIELDS * 4];
 
   /**
@@ -280,7 +289,8 @@ public class LazyBitSetDomain extends IntDomain {
 
   /**
    * Saves the state before the first change at storeLevel, as the other domains do by creating a
-   * new domain object, and records the variable in the store's trail.
+   * new domain object, and records the variable in the store's trail. The constraint lists, which
+   * rarely change during search, are saved apart by {@link #saveConstraints(int, Var)}.
    */
   private void saveLevel(int storeLevel, Var v) {
     if (stamp >= storeLevel) {
@@ -294,23 +304,37 @@ public class LazyBitSetDomain extends IntDomain {
     trailInts[i + 3] = max;
     trailInts[i + 4] = size;
     trailInts[i + 5] = stamp;
+    trailLongs[trailSize] = bits == null ? 1L : 0L;
+    trailSize++;
+    stamp = storeLevel;
+    v.getStore().recordChange(v);
+  }
+
+  /** Saves the constraint lists before their first change at storeLevel. */
+  private void saveConstraints(int storeLevel, Var v) {
+    saveLevel(storeLevel, v);
+    if (constraintsStamp >= storeLevel) {
+      return;
+    }
+    ensureTrailCapacity();
+    int i = trailSize * INT_FIELDS;
+    trailInts[i] = CONSTRAINTS_ENTRY;
+    trailInts[i + 1] = storeLevel;
+    trailInts[i + 2] = constraintsStamp;
     trailLongs[trailSize] =
-        ((long) searchConstraintsToEvaluate << 2)
-            | (searchConstraintsCloned ? 2L : 0L)
-            | (bits == null ? 1L : 0L);
+        ((long) searchConstraintsToEvaluate << 1) | (searchConstraintsCloned ? 1L : 0L);
     int o = trailSize * OBJECT_FIELDS;
     trailObjects[o] = modelConstraints;
     trailObjects[o + 1] = modelConstraintsToEvaluate;
     trailObjects[o + 2] = searchConstraints;
     trailSize++;
-    stamp = storeLevel;
+    constraintsStamp = storeLevel;
     // the saved state shares the constraint arrays, so they are copied before they grow
     ownedModelConstraints = null;
     ownedModelConstraintTables = null;
     ownedModelConstraintTableSizes = null;
     // a domain object created for a new level does not own the search constraint list
     searchConstraintsCloned = false;
-    v.getStore().recordChange(v);
   }
 
   @Override
@@ -330,13 +354,15 @@ public class LazyBitSetDomain extends IntDomain {
         max = trailInts[i + 3];
         size = trailInts[i + 4];
         stamp = trailInts[i + 5];
-        long flags = trailLongs[trailSize];
-        if ((flags & 1L) != 0) {
+        if (trailLongs[trailSize] != 0) {
           bits = null;
           wordStamp = null;
         }
-        searchConstraintsCloned = (flags & 2L) != 0;
-        searchConstraintsToEvaluate = (int) (flags >>> 2);
+      } else if (kind == CONSTRAINTS_ENTRY) {
+        constraintsStamp = trailInts[i + 2];
+        long flags = trailLongs[trailSize];
+        searchConstraintsCloned = (flags & 1L) != 0;
+        searchConstraintsToEvaluate = (int) (flags >>> 1);
         int o = trailSize * OBJECT_FIELDS;
         modelConstraints = (Constraint[][]) trailObjects[o];
         modelConstraintsToEvaluate = (int[]) trailObjects[o + 1];
@@ -673,6 +699,14 @@ public class LazyBitSetDomain extends IntDomain {
 
   /** It keeps only the values x of this domain for which x - shift is in other. */
   private void keepOnly(int storeLevel, Var v, IntDomain other, int shift) {
+    // two domains without holes meet in an interval (an element or an equality whose variables
+    // only lost bounds), which needs no walk over their words
+    if (size == max - min + 1
+        && !other.isEmpty()
+        && other.getSize() == (long) other.max() - other.min() + 1) {
+      in(storeLevel, v, other.min() + shift, other.max() + shift);
+      return;
+    }
     int lo = Math.max(min, other.min() + shift);
     int hi = Math.min(max, other.max() + shift);
     if (lo > hi) {
@@ -694,8 +728,10 @@ public class LazyBitSetDomain extends IntDomain {
       min = newMin;
       max = newMax;
     }
-    // values strictly between the new bounds that other does not have
+    // values strictly between the new bounds that other does not have; there are none when other
+    // has no hole, which its size tells without walking the words of the bounds
     if (newMax - newMin > 1
+        && other.getSize() != (long) other.max() - other.min() + 1
         && (bits != null || hasHole(other, newMin + 1 - shift, newMax - 1 - shift))) {
       removeMissing(storeLevel, v, other, shift);
     }
@@ -787,21 +823,22 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public void putModelConstraint(int storeLevel, Var v, Constraint c, int pruningEvent) {
-    saveLevel(storeLevel, v);
+    saveConstraints(storeLevel, v);
     super.putModelConstraint(storeLevel, v, c, pruningEvent);
   }
 
   @Override
   public void removeModelConstraint(int storeLevel, Var v, Constraint c) {
-    saveLevel(storeLevel, v);
+    saveConstraints(storeLevel, v);
     super.removeModelConstraint(storeLevel, v, c);
   }
 
   @Override
   public void putSearchConstraint(int storeLevel, Var v, Constraint c) {
     if (!searchConstraints.contains(c)) {
-      if (stamp < storeLevel) {
-        saveLevel(storeLevel, v);
+      boolean newLevel = stamp < storeLevel;
+      saveConstraints(storeLevel, v);
+      if (newLevel) {
         // as a domain object created for a new level, take a copy of the active constraints
         searchConstraints =
             new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
@@ -813,13 +850,13 @@ public class LazyBitSetDomain extends IntDomain {
 
   @Override
   public void removeSearchConstraint(int storeLevel, Var v, Constraint c) {
-    saveLevel(storeLevel, v);
+    saveConstraints(storeLevel, v);
     super.removeSearchConstraint(storeLevel, v, c);
   }
 
   @Override
   public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint c) {
-    saveLevel(storeLevel, v);
+    saveConstraints(storeLevel, v);
     super.removeSearchConstraint(storeLevel, v, position, c);
   }
 
@@ -1125,7 +1162,9 @@ public class LazyBitSetDomain extends IntDomain {
     long[] old = bits.clone();
     for (int e = trailSize - 1; e > entry; e--) {
       int word = trailInts[e * INT_FIELDS];
-      old[word] = trailLongs[e];
+      if (word >= 0) {
+        old[word] = trailLongs[e];
+      }
     }
     return old;
   }

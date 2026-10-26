@@ -260,7 +260,7 @@ public abstract class CompactGroundTable extends Constraint implements UsesQueue
    * @return the column.
    */
   int column(Var v) {
-    return TrailedTupleSet.column(v, positionByIndex, indexOffset, varMap);
+    return TrailedTupleSet.column(v, x, positionByIndex, indexOffset, varMap);
   }
 
   @Override
