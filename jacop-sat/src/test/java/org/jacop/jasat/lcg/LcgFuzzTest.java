@@ -119,6 +119,8 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
@@ -258,6 +260,30 @@ class LcgFuzzTest {
       return rnd.nextInt(5) - 1;
     }
 
+    /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
+    private HybridTable hybridTable() {
+      IntVar[] v = pick(x, 2 + rnd.nextInt(2));
+      Restriction[][] tuples = new Restriction[2 + rnd.nextInt(6)][v.length];
+      for (Restriction[] tuple : tuples) {
+        for (int i = 0; i < v.length; i++) {
+          tuple[i] =
+              switch (rnd.nextInt(10)) {
+                case 0 -> Restriction.any();
+                case 1 -> Restriction.ne(value());
+                case 2 -> Restriction.le(value());
+                case 3 -> Restriction.ge(value());
+                case 4 -> Restriction.in(value(), value(), value());
+                case 5 -> Restriction.notIn(value(), value());
+                case 6 ->
+                    Restriction.column(
+                        Restriction.Relation.LE, (i + 1) % v.length, rnd.nextInt(3) - 1);
+                default -> Restriction.eq(value());
+              };
+        }
+      }
+      return new HybridTable(v, tuples, rnd.nextBoolean());
+    }
+
     private IntVar[] chain(String name, int k, int min, int max) {
       IntVar[] y = new IntVar[k];
       for (int i = 0; i < k; i++) {
@@ -296,7 +322,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(65)) {
+      return switch (rnd.nextInt(66)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -393,6 +419,7 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
+        case 64 -> hybridTable();
         case 63 ->
             new LinearIntDom(
                 p,

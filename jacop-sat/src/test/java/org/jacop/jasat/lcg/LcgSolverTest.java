@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -55,6 +56,8 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -218,6 +221,133 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+  }
+
+  /**
+   * Random hybrid tables with unary restrictions against brute force; the table explains its
+   * prunings itself.
+   */
+  @Test
+  void hybridTablesAgreeWithBruteForce() {
+    Random rnd = new Random(17);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 3 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("HybridTable");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "hybrid tables: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */
+  private static Relation tableRelation(IntVar[] x, Random rnd) {
+    int arity = 2 + rnd.nextInt(2);
+    int[] col = new int[arity];
+    for (int k = 0; k < arity; k++) {
+      col[k] = pick(rnd, x.length, Arrays.copyOf(col, k));
+    }
+    int rows = 2 + rnd.nextInt(6);
+    Restriction[][] tuples = new Restriction[rows][arity];
+    List<List<IntPredicate>> accepts = new ArrayList<>();
+    for (int r = 0; r < rows; r++) {
+      List<IntPredicate> row = new ArrayList<>();
+      for (int k = 0; k < arity; k++) {
+        int v = rnd.nextInt(6) - 1;
+        int w = rnd.nextInt(6) - 1;
+        // mostly constants, so that the tables prune
+        switch (rnd.nextInt(14)) {
+          case 0 -> {
+            tuples[r][k] = Restriction.any();
+            row.add(u -> true);
+          }
+          case 1 -> {
+            tuples[r][k] = Restriction.ne(v);
+            row.add(u -> u != v);
+          }
+          case 2 -> {
+            tuples[r][k] = Restriction.le(v);
+            row.add(u -> u <= v);
+          }
+          case 3 -> {
+            tuples[r][k] = Restriction.ge(v);
+            row.add(u -> u >= v);
+          }
+          case 4 -> {
+            tuples[r][k] = Restriction.in(v, w);
+            row.add(u -> u == v || u == w);
+          }
+          case 5 -> {
+            tuples[r][k] = Restriction.notIn(v, w);
+            row.add(u -> u != v && u != w);
+          }
+          default -> {
+            tuples[r][k] = Restriction.eq(v);
+            row.add(u -> u == v);
+          }
+        }
+      }
+      accepts.add(row);
+    }
+    IntVar[] vars = new IntVar[arity];
+    for (int k = 0; k < arity; k++) {
+      vars[k] = x[col[k]];
+    }
+    return new Relation(
+        new HybridTable(vars, tuples),
+        t -> {
+          for (List<IntPredicate> row : accepts) {
+            boolean all = true;
+            for (int k = 0; k < arity && all; k++) {
+              all = row.get(k).test(t[col[k]]);
+            }
+            if (all) {
+              return true;
+            }
+          }
+          return false;
+        });
   }
 
   private static Relation booleanRelation(IntVar[] x, int ints, Random rnd) {
