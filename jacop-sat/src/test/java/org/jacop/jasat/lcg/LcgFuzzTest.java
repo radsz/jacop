@@ -178,7 +178,7 @@ class LcgFuzzTest {
     }
 
     private IntVar intVar(String name, int min, int max) {
-      IntVar v = new IntVar(store, name, min, max);
+      IntVar v = new IntVar(store, name + "_" + vars.size(), min, max); // names may repeat
       vars.add(v);
       return v;
     }
