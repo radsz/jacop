@@ -40,6 +40,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * SumBool constraint implements the summation over several 0/1 variables.
@@ -52,7 +55,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class SumBool extends AbstractSum implements Copyable<SumBool> {
+public class SumBool extends AbstractSum implements Copyable<SumBool>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -281,5 +284,15 @@ public class SumBool extends AbstractSum implements Copyable<SumBool> {
   @Override
   public SumBool copy(VarMap map) {
     return new SumBool(map.get(x), rel2String(), map.get(sum));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == SumBool.class && explainSum(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == SumBool.class && explainSumFailure(trail, out);
   }
 }

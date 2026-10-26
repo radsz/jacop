@@ -47,7 +47,6 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
-import org.jacop.lcg.LinearExplanation;
 
 /**
  * SumInt constraint implements the summation over several variables.
@@ -491,56 +490,13 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, Explainable
     return new SumInt(map.get(x), rel2String(), map.get(sum));
   }
 
-  // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
-  private IntVar[] lcgVars;
-  private long[] lcgWeights;
-
-  private void lcgModel() {
-    if (lcgVars != null) {
-      return;
-    }
-    lcgVars = Arrays.copyOf(x, l + 1);
-    lcgVars[l] = sum;
-    lcgWeights = new long[l + 1];
-    Arrays.fill(lcgWeights, 1);
-    lcgWeights[l] = -1;
-  }
-
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    if (getClass() != SumInt.class) {
-      return false;
-    }
-    lcgModel();
-    if (relationType == NE) {
-      return LinearExplanation.explainNotEqual(trail, entry, lcgVars, out);
-    }
-    return LinearExplanation.explain(
-        trail,
-        entry,
-        lcgVars,
-        lcgWeights,
-        relationType == EQ || relationType == LE || relationType == LT,
-        relationType == EQ || relationType == GE || relationType == GT,
-        out);
+    return getClass() == SumInt.class && explainSum(trail, entry, out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    if (getClass() != SumInt.class) {
-      return false;
-    }
-    lcgModel();
-    if (relationType == NE) {
-      return LinearExplanation.explainNotEqualFailure(trail, lcgVars, out);
-    }
-    return LinearExplanation.explainFailure(
-        trail,
-        lcgVars,
-        lcgWeights,
-        relationType == LT ? -1 : relationType == GT ? 1 : 0,
-        relationType == EQ || relationType == LE || relationType == LT,
-        relationType == EQ || relationType == GE || relationType == GT,
-        out);
+    return getClass() == SumInt.class && explainSumFailure(trail, out);
   }
 }

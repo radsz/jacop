@@ -93,6 +93,8 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
@@ -103,6 +105,7 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -280,7 +283,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(56)) {
+      return switch (rnd.nextInt(59)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -361,6 +364,9 @@ class LcgFuzzTest {
         case 54 ->
             new ElementIntegerFast(
                 one(), new int[] {value(), value(), value(), value()}, one(), -rnd.nextInt(2));
+        case 55 -> rnd.nextBoolean() ? new XgteqY(p[0], p[1]) : new XgtY(p[0], p[1]);
+        case 56 -> new XplusClteqZ(p[0], value(), p[1]);
+        case 57 -> primitive(0);
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {

@@ -36,6 +36,11 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + Y = Z.
@@ -45,7 +50,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusYeqZ extends AbstractConstraintXandYandZ implements Copyable<XplusYeqZ> {
+public class XplusYeqZ extends AbstractConstraintXandYandZ
+    implements Copyable<XplusYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -191,5 +197,25 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ implements Copyable<X
   @Override
   public XplusYeqZ copy(VarMap map) {
     return new XplusYeqZ(map.get(x), map.get(y), map.get(z));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
+      return false;
+    }
+    return ShiftExplanation.explainSum(trail, entry, x, y, z, out)
+        || LinearExplanation.explain(
+            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, true, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
+      return false;
+    }
+    return ShiftExplanation.explainSumFailure(trail, x, y, z, out)
+        || LinearExplanation.explainFailure(
+            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
   }
 }

@@ -38,6 +38,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
 
 /**
  * Constraint X * C #= Z.
@@ -47,7 +51,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulCeqZ extends AbstractConstraintXandCandZ implements Copyable<XmulCeqZ> {
+public class XmulCeqZ extends AbstractConstraintXandCandZ
+    implements Copyable<XmulCeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -150,5 +155,21 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ implements Copyable<Xm
   @Override
   public XmulCeqZ copy(VarMap map) {
     return new XmulCeqZ(map.get(x), c, map.get(z));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == XmulCeqZ.class
+        && x != z
+        && LinearExplanation.explain(
+            trail, entry, new IntVar[] {x, z}, new long[] {c, -1}, true, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XmulCeqZ.class
+        && x != z
+        && LinearExplanation.explainFailure(
+            trail, new IntVar[] {x, z}, new long[] {c, -1}, 0, true, true, out);
   }
 }

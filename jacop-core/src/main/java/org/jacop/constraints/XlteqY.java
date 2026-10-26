@@ -35,6 +35,10 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
 
 /**
  * Constraint X {@literal <=} Y.
@@ -42,7 +46,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XlteqY extends AbstractXcompY implements Copyable<XlteqY> {
+public class XlteqY extends AbstractXcompY implements Copyable<XlteqY>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -107,5 +111,19 @@ public class XlteqY extends AbstractXcompY implements Copyable<XlteqY> {
   @Override
   public XlteqY copy(VarMap map) {
     return new XlteqY(map.get(x), map.get(y));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == XlteqY.class
+        && LinearExplanation.explain(
+            trail, entry, new IntVar[] {x, y}, new long[] {1, -1}, true, false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XlteqY.class
+        && LinearExplanation.explainFailure(
+            trail, new IntVar[] {x, y}, new long[] {1, -1}, 0, true, false, out);
   }
 }

@@ -36,6 +36,10 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + C #= Z.
@@ -43,7 +47,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusCeqZ extends AbstractConstraintXandCandZ implements Copyable<XplusCeqZ> {
+public class XplusCeqZ extends AbstractConstraintXandCandZ
+    implements Copyable<XplusCeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -147,5 +152,22 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ implements Copyable<X
   @Override
   public XplusCeqZ copy(VarMap map) {
     return new XplusCeqZ(map.get(x), c, map.get(z));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XplusCeqZ.class || x == z) {
+      return false;
+    }
+    return trail.variable(entry) == z
+        ? ShiftExplanation.explain(trail, entry, z, x, c, out)
+        : ShiftExplanation.explain(trail, entry, x, z, -(long) c, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XplusCeqZ.class
+        && x != z
+        && ShiftExplanation.explainFailure(trail, z, x, c, out);
   }
 }

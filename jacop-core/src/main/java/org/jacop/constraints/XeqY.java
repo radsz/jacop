@@ -36,6 +36,10 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraints X #= Y.
@@ -45,7 +49,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY> {
+public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -124,5 +128,22 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY> {
   @Override
   public XeqY copy(VarMap map) {
     return new XeqY(map.get(x), map.get(y));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XeqY.class || x == y) {
+      return false;
+    }
+    return trail.variable(entry) == y
+        ? ShiftExplanation.explain(trail, entry, y, x, 0, out)
+        : ShiftExplanation.explain(trail, entry, x, y, -(long) 0, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XeqY.class
+        && x != y
+        && ShiftExplanation.explainFailure(trail, y, x, 0, out);
   }
 }
