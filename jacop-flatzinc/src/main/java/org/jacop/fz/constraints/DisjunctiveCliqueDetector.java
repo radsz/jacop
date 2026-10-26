@@ -63,7 +63,8 @@ import org.jacop.presolve.DisjunctiveCliques;
  * <p>The tasks of a disjunction are the start variables with the distances of the disjunction as
  * durations. A cumulative whose tasks are all pairwise disjoint is already a unary resource, so its
  * pairs need no clique. All constraints of the model are still posted as usual, so the unary
- * resources only add pruning.
+ * resources only add pruning; they have degree weight 0, so they do not change the static degrees
+ * that variable selections such as most_constrained read.
  *
  * <p>Setting the system property {@code org.jacop.fz.disjunctiveCliques} to false turns the
  * detection off.
@@ -272,6 +273,8 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         r[k] = one;
       }
       CumulativeUnary unary = new CumulativeUnary(s, d, r, one, true);
+      // redundant, so degree-based variable selections see the degrees of the model
+      unary.setDegreeWeight(0);
       if (support.options.debug()) {
         FzConsole.println("% redundant unary resource on " + clique.length + " tasks");
       }

@@ -171,6 +171,42 @@ class PresolveTest {
     assertThat(derivation.get(w).max()).isEqualTo(8);
   }
 
+  // a derived variable keeps the static degree of its parent, which degree-based selections read
+  @Test
+  void derivedVariablesKeepTheStaticDegreeOfTheParent() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar z = new IntVar(store, "z", 0, 9);
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new XltY(x, y));
+    store.impose(new XplusYeqZ(y, z, w));
+    store.impose(new Alldifferent(new IntVar[] {y, z, w}).setDegreeWeight(2));
+    store.impose(new XltY(z, w).setDegreeWeight(0));
+    y.adjustDegree(4);
+    // at the fixpoint the store may have detached x < y already
+    assertThat(store.consistency()).isTrue();
+    int[] parent = {
+      y.sizeConstraintsOriginal(), z.sizeConstraintsOriginal(), w.sizeConstraintsOriginal()
+    };
+    assertThat(parent[0]).isBetween(7, 8);
+    assertThat(parent[1]).isEqualTo(3);
+    assertThat(parent[2]).isEqualTo(3);
+
+    Derivation derivation = Presolver.of(store).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    // x < y is entailed and not copied
+    assertThat(derivation.statistics().childConstraints()).isEqualTo(3);
+    assertThat(
+            new int[] {
+              derivation.get(y).sizeConstraintsOriginal(),
+              derivation.get(z).sizeConstraintsOriginal(),
+              derivation.get(w).sizeConstraintsOriginal()
+            })
+        .containsExactly(parent);
+  }
+
   @Test
   void aConstraintThatCannotBeCopiedKeepsTheLiveStore() {
     Store store = new Store();

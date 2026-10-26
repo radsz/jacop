@@ -263,6 +263,13 @@ public final class Derivation implements VarMap {
       }
       child.impose(copy);
     }
+    // degree-based variable selections choose in the child as in the parent, whose static degrees
+    // also count the constraints entailed or dropped since
+    for (Map.Entry<Var, Var> e : copies.entrySet()) {
+      e.getValue()
+          .adjustDegree(
+              e.getKey().sizeConstraintsOriginal() - e.getValue().sizeConstraintsOriginal());
+    }
 
     statistics =
         new Statistics(

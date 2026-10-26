@@ -85,6 +85,8 @@ public final class CdclSolver {
   private static final int DELETED = 2;
   private static final int USED = 4;
   private static final int VIVIFIED = 32;
+  private static final int TEMPORARY =
+      64; // an external reason, deleted when its variable is unassigned
   private static final int TIER_SHIFT = 3;
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
@@ -228,6 +230,7 @@ public final class CdclSolver {
 
   // --- external propagator (see ExternalPropagator)
   private ExternalPropagator external;
+  private int externalReasonKeep = 2;
   private boolean[] observed = new boolean[0];
   // the trail prefix whose observed assignments the propagator has seen
   private int notified;
@@ -538,6 +541,18 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets the size up to which an external propagator's reasons are kept as learnt clauses once
+   * conflict analysis has asked for them (2 by default: binary reasons are kept). Larger reasons
+   * are temporary: they live while their literal stays assigned, unwatched, and are deleted when it
+   * is unassigned.
+   *
+   * @param size the largest reason kept, at least 2
+   */
+  public void setExternalReasonKeep(int size) {
+    externalReasonKeep = Math.max(2, size);
+  }
+
+  /**
    * Turns all-UIP shrinking of learnt clauses on or off (on by default).
    *
    * @param on whether to shrink
@@ -714,6 +729,12 @@ public final class CdclSolver {
       }
       vals[lit] = 0;
       vals[lit ^ 1] = 0;
+      int r = reason[v];
+      if (r >= 0 && (mem[r + META] & TEMPORARY) != 0) {
+        mem[r + META] |= DELETED;
+        wasted += HEADER + mem[r + SIZE];
+        reason[v] = NO_REASON;
+      }
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
     }
@@ -978,7 +999,8 @@ public final class CdclSolver {
 
   /**
    * Returns the reason of an assigned variable, first asking the external propagator for it when
-   * the variable was implied by it: the clause is then kept as a learnt one.
+   * the variable was implied by it: the clause is then kept as a learnt one up to {@link
+   * #setExternalReasonKeep} literals, and is temporary beyond.
    */
   private int reasonRef(int v) {
     int r = reason[v];
@@ -1018,10 +1040,13 @@ public final class CdclSolver {
       if (n == 2) {
         addLearntBinary(c[0], c[1]);
         r = -2 - c[1];
-      } else {
+      } else if (n <= externalReasonKeep) {
         r = allocate(c, n, true, n);
         learnts = push(learnts, numLearnts++, r);
         attach(r);
+      } else {
+        r = allocate(c, n, false, n);
+        mem[r + META] |= TEMPORARY;
       }
     }
     reason[v] = r;
@@ -1086,6 +1111,11 @@ public final class CdclSolver {
     }
     seen[learnt[0] >> 1] = 0;
     learntLiterals += learntSize;
+    if (notifying) {
+      for (int i = 0; i < learntSize; i++) {
+        external.notifyLearntLiteral(toDimacs(learnt[i]));
+      }
+    }
 
     if (learntSize == 1) {
       return 0;
@@ -1842,6 +1872,9 @@ public final class CdclSolver {
         }
         backtrack(btLevel);
         learnClause();
+        if (wasted > (1 << 20) && wasted > memSize / 2) {
+          purge(); // temporary external reasons freed by the backtrack
+        }
         varInc /= varDecay;
         claInc /= CLA_DECAY;
         if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
@@ -1905,9 +1938,9 @@ public final class CdclSolver {
           }
           return SAT;
         }
-        if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
-          return UNKNOWN;
-        }
+      }
+      if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+        return UNKNOWN;
       }
       newDecisionLevel();
       assign(next, NO_REASON);

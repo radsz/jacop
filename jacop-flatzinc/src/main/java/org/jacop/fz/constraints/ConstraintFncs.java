@@ -573,6 +573,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_diff2_strict(n);
   }
 
+  /** Handles the jacop_diffn_k FlatZinc constraint. */
+  public void jacop_diffn_k(SimpleNode n) {
+    gc.gen_jacop_diffn_k(n);
+  }
+
   /** Handles the jacop_diff2 FlatZinc constraint. */
   public void jacop_diff2(SimpleNode n) {
     gc.gen_jacop_diff2(n);

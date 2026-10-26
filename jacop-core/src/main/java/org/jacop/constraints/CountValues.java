@@ -68,15 +68,10 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
   }
 
   /**
-   * It constructs a CountValues constraint with a given variable for the number of variables equal
-   * to no counted value, so that a copy keeps the counterpart of the original's variable.
-   *
-   * @param list variables which equality to values is counted.
-   * @param counter number of variables equal to a value.
-   * @param values values that are counted, without repetitions
-   * @param counterRest the number of variables equal to no counted value, or null to create it.
+   * It constructs a CountValues constraint with the given variable for the number of variables not
+   * equal to any value, or a new one when it is null.
    */
-  private CountValues(IntVar[] list, IntVar[] counter, int[] values, IntVar counterRest) {
+  private CountValues(IntVar[] list, IntVar[] counter, int[] values, IntVar rest) {
 
     super(idNumber, list, values);
 
@@ -95,18 +90,19 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
     }
 
     this.counter = Arrays.copyOf(counter, counter.length);
-    if (counterRest != null) {
-      this.counterRest = counterRest;
-    } else {
-      Store store = counter.length > 0 ? counter[0].getStore() : list[0].getStore();
-      this.counterRest = new IntVar(store, 0, n);
-    }
+    Store store = counter.length > 0 ? counter[0].getStore() : list[0].getStore();
+    this.counterRest = rest != null ? rest : new IntVar(store, 0, n);
 
     extendedCounter = new IntVar[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
     extendedCounter[counter.length] = this.counterRest;
 
-    setScope(Stream.concat(Arrays.stream(this.list), Arrays.stream(counter)));
+    // counterRest is in the scope: the constraint prunes with its domain, so an explanation made of
+    // the constraint's arguments must cover it
+    setScope(
+        Stream.concat(
+            Stream.concat(Arrays.stream(this.list), Arrays.stream(counter)),
+            Stream.of(this.counterRest)));
   }
 
   /**

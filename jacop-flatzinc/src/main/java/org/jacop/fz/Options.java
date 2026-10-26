@@ -53,10 +53,15 @@ public class Options {
   boolean verbose;
   boolean statistics;
   boolean freeSearch;
+  boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
   final Map<String, String> freeConfig = new HashMap<>();
   boolean restartGiven;
   int timeOut;
+
+  /** The time the options were read; the time-out counts from it. */
+  private final long startTime = System.currentTimeMillis();
+
   int numberSolutions = -1;
   boolean interval;
   boolean precisionDefined;
@@ -65,6 +70,7 @@ public class Options {
   boolean boundConsistency;
   boolean runSearch = true;
   boolean useSat;
+  boolean lcg;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -85,7 +91,7 @@ public class Options {
     if (args.length == 0) {
       IO.println("fz2jacop: no model file specified");
       IO.println("fz2jacop: use --help for more information.");
-      System.exit(0);
+      System.exit(1);
     } else if (args.length == 1) {
       parseSingleArg(args[0]);
     } else {
@@ -116,6 +122,8 @@ public class Options {
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
+            --default-search <value> search for a model without search annotation; one of
+                "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
                 scale=<failures>, base=<growth of geometric restarts>,
@@ -128,6 +136,8 @@ public class Options {
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
+            --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
+                the SAT core); search annotations are ignored.
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -164,7 +174,9 @@ public class Options {
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
+      case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
+      case "--lcg" -> i = handleLcg(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -225,6 +237,16 @@ public class Options {
     return i + 1;
   }
 
+  private int handleDefaultSearch(String[] args, int i) {
+    String search = args[++i];
+    switch (search) {
+      case "free" -> freeSearchWithoutAnnotation = true;
+      case "input" -> freeSearchWithoutAnnotation = false;
+      default -> System.err.println("%% Default search " + search + " not known; ignored");
+    }
+    return i + 1;
+  }
+
   private int handleFreeConfig(String[] args, int i) {
     for (String setting : args[++i].split(",")) {
       String[] kv = setting.split("=", 2);
@@ -239,6 +261,11 @@ public class Options {
 
   private int handleSat(int i) {
     useSat = true;
+    return i + 1;
+  }
+
+  private int handleLcg(int i) {
+    lcg = true;
     return i + 1;
   }
 
@@ -376,7 +403,7 @@ public class Options {
       file = new FileInputStream(fileName);
     } catch (FileNotFoundException _) {
       IO.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
-      System.exit(0);
+      System.exit(1);
     }
 
     return file;
@@ -425,6 +452,28 @@ public class Options {
    */
   public int getTimeOut() {
     return timeOut;
+  }
+
+  /**
+   * It returns the part of the time-out that is left. The time-out covers the whole run, building
+   * the model included, so it counts from the time the options were read.
+   *
+   * @return the time left in milliseconds, at least 1; 0 if no time-out was set.
+   */
+  public int getRemainingTimeOut() {
+    if (timeOut <= 0) {
+      return 0;
+    }
+    return (int) Math.max(1, timeOut - (System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   * It checks whether the time-out has passed.
+   *
+   * @return true if a time-out was set and it has passed.
+   */
+  public boolean timeOutPassed() {
+    return timeOut > 0 && System.currentTimeMillis() - startTime > timeOut;
   }
 
   /**
@@ -487,12 +536,22 @@ public class Options {
   }
 
   /**
-   * It defines whether sat is used.
+   * It defines whether Boolean constraints are translated to clauses: for the SAT solver (-sat) or
+   * for the LCG solver (--lcg).
    *
    * @return true sat is used, false otherwise
    */
   public boolean useSat() {
-    return useSat;
+    return useSat || lcg;
+  }
+
+  /**
+   * It defines whether the model is solved with lazy clause generation.
+   *
+   * @return true when --lcg was given
+   */
+  public boolean lcg() {
+    return lcg;
   }
 
   /** Sat is used. */
@@ -516,6 +575,16 @@ public class Options {
    */
   public boolean freeSearch() {
     return freeSearch;
+  }
+
+  /**
+   * It defines whether a model without search annotation is solved with free search, as with -f
+   * (default), or by labelling its variables in input order (--default-search input).
+   *
+   * @return true if a model without search annotation is solved with free search
+   */
+  public boolean freeSearchWithoutAnnotation() {
+    return freeSearchWithoutAnnotation;
   }
 
   /**

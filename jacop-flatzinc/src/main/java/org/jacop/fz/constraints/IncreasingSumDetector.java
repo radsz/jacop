@@ -227,6 +227,8 @@ public class IncreasingSumDetector implements ParserTreeConstants {
       return;
     }
     IncreasingSum is = new IncreasingSum(x, total, strict);
+    // redundant, so degree-based variable selections see the degrees of the model
+    is.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + is);
     }
@@ -259,7 +261,7 @@ public class IncreasingSumDetector implements ParserTreeConstants {
         return null;
       }
       IntVar t = new IntVar(support.store, (int) min, (int) max);
-      support.delayedConstraints.add(new XplusCeqZ(s, (int) shift, t));
+      support.delayedConstraints.add(new XplusCeqZ(s, (int) shift, t).setDegreeWeight(0));
       return t;
     }
     // sum of x = sign * c, sum of x <= c for sign 1, or sum of x >= -c for sign -1

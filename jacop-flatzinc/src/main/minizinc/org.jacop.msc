@@ -20,6 +20,7 @@
         ["--precision", "precision for floating operations; overrides precision definition in search annotation.", "float", "1e-11"],
         ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
         ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
+        ["--lcg", "solve with lazy clause generation (integer and Boolean models).", "bool", "false"],
         ["--decay", "decay factor for accumulated failure count (afc) and activity-based variable selection heuristic", "float", "0.99"],
         ["--step", "distance step for cost function for floating-point optimization (0 means 'minimal distance')", "float", "0"],
         ["--restart", "Restart search type", "opt:none:constant:linear:luby:geometric", "none"],
@@ -27,6 +28,7 @@
         ["--restart-scale", "Scale factor for restart search", "int", "250"],
         ["--restart-limit", "limits number of restarts in restart search.", "int", "0"],
         ["--free-engine", "engine for free search (-f)", "opt:new:legacy", "new"],
+        ["--default-search", "search for a model without search annotation: free (as with -f) or input (input order, splitting domains)", "opt:free:input", "free"],
         ["--free-config", "settings of the new free search engine as key=value,...; see fzn-jacop -h", "string", ""],
         ["-debug", "print the constraints as imposed in JaCoP and the search used.", "bool", "false"]
     ]

@@ -100,6 +100,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -841,6 +842,27 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.pose(
         Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+  }
+
+  void gen_jacop_diffn_k(SimpleNode node) {
+    IntVar[] posn = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] size = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    boolean strict = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)) != 0;
+
+    int n = posn.length / k;
+    IntVar[][] origin = new IntVar[n][k];
+    IntVar[][] length = new IntVar[n][k];
+    for (int i = 0; i < n; i++) {
+      System.arraycopy(posn, k * i, origin[i], 0, k);
+      System.arraycopy(size, k * i, length[i], 0, k);
+    }
+
+    DiffnK c = new DiffnK(origin, length, strict);
+    support.pose(c);
+    if (!strict) {
+      support.nonStrictDiffnK.add(c);
+    }
   }
 
   void gen_jacop_count(SimpleNode node) {

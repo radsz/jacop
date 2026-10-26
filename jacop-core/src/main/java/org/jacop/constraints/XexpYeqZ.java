@@ -108,6 +108,11 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
   @Override
   public void consistency(Store store) {
 
+    if (y.singleton() && y.value() > 0 && ((y.value() & 1) == 1 || x.min() >= 0)) {
+      monotoneConsistency(store, y.value());
+      return;
+    }
+
     do {
 
       store.propagationHasOccurred = false;
@@ -122,6 +127,119 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
       y.domain.in(store.level, y, yDom);
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Domain consistency for a fixed exponent n &gt; 0 where x^n is strictly increasing on the domain
+   * of x (n odd, or x non-negative). The bounds are narrowed first, which is all most calls need,
+   * then one ordered pass over x keeps the values whose power is in z and, when z has other values,
+   * sets z to those powers. Unlike the general case, nothing is allocated when no value is removed.
+   */
+  private void monotoneConsistency(Store store, int n) {
+
+    do {
+      store.propagationHasOccurred = false;
+
+      // x^n is increasing, so the bounds of z follow from those of x
+      z.domain.in(store.level, z, long2int(power(x.min(), n)), long2int(power(x.max(), n)));
+
+      // the smallest r with r^n >= z.min() and the largest r with r^n <= z.max(); there is none
+      // when z holds no n-th power
+      long xMin = floorRoot(z.min() - 1L, n) + 1;
+      long xMax = floorRoot(z.max(), n);
+      if (xMin > xMax) {
+        throw Store.failException;
+      }
+      x.domain.in(store.level, x, long2int(xMin), long2int(xMax));
+
+    } while (store.propagationHasOccurred);
+
+    if (x.singleton()) {
+      return; // z is the singleton x^n
+    }
+
+    // after the bounds step x.min()^n == z.min() and x.max()^n == z.max(), and every power of a
+    // value of x lies within the int range of z
+    IntDomain xd = x.domain;
+    IntDomain zd = z.domain;
+    int xMax = xd.max();
+    IntervalDomain xDom = null;
+    int supported = 0;
+    for (int v = xd.min(); ; v = xd.nextValue(v)) {
+      if (zd.contains((int) power(v, n))) {
+        supported++;
+        if (xDom != null) {
+          xDom.unionAdapt(v, v);
+        }
+      } else if (xDom == null) {
+        // first unsupported value: copy the supported values below it
+        xDom = new IntervalDomain();
+        for (int u = xd.min(); u < v; u = xd.nextValue(u)) {
+          xDom.unionAdapt(u, u);
+        }
+      }
+      if (v == xMax) {
+        break;
+      }
+    }
+
+    if (xDom != null) {
+      if (xDom.isEmpty()) {
+        throw Store.failException;
+      }
+      x.domain.in(store.level, x, xDom);
+    }
+
+    if (z.domain.domainId() != IntDomain.BOUND_DOMAIN_ID && z.getSize() != supported) {
+      // z has values that are not powers of x; the supported powers are all in z
+      IntervalDomain zDom = new IntervalDomain(supported + 1);
+      for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int p = (int) power(e.nextElement(), n);
+        zDom.unionAdapt(p, p);
+      }
+      z.domain.in(store.level, z, zDom);
+    }
+  }
+
+  /** v^n for n &gt; 0, saturated to a value outside the int range when it does not fit. */
+  private static long power(long v, int n) {
+    if (v == 0 || v == 1) {
+      return v;
+    }
+    if (v == -1) {
+      return (n & 1) == 0 ? 1 : -1;
+    }
+    long r = 1;
+    for (int i = 0; i < n; i++) {
+      r *= v;
+      if (r > Integer.MAX_VALUE || r < Integer.MIN_VALUE) {
+        // |v| >= 2, so the remaining factors only move r further out
+        return v > 0 || (n & 1) == 0 ? Long.MAX_VALUE / 2 : Long.MIN_VALUE / 2;
+      }
+    }
+    return r;
+  }
+
+  /**
+   * The largest r with r^n &lt;= w, for n &gt; 0 where r^n is strictly increasing on the candidate
+   * values: n odd, or w and r non-negative (r = -1 when w &lt; 0 and n is even).
+   */
+  private static long floorRoot(long w, int n) {
+    if (n == 1) {
+      return w;
+    }
+    if (w < 0 && (n & 1) == 0) {
+      return -1;
+    }
+    double estimate = Math.pow(Math.abs((double) w), 1.0 / n);
+    long r = (long) Math.floor(w < 0 ? -estimate : estimate);
+    while (power(r + 1, n) <= w) {
+      r++;
+    }
+    while (power(r, n) > w) {
+      r--;
+    }
+    return r;
   }
 
   @Override
