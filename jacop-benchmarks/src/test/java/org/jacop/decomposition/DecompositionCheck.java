@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jacop.decomposition.FznModel.Constraint;
+import org.jacop.decomposition.FznModel.Expr;
 import org.jacop.decomposition.FznModel.Ident;
 import org.jacop.decomposition.FznModel.Item;
 import org.jacop.decomposition.FznModel.ItemKind;
@@ -431,6 +432,19 @@ class DecompositionCheck {
       verdict = "PARTIAL";
       SolverRun reference = referenceRun(problem, model, options, baseline);
       note = "first " + Math.min(reference.solutions, r.solutions) + " solutions agree";
+      if (r.solutions < CROSS_CHECKS && reference.solutions > r.solutions) {
+        // the decomposed search is too slow to compare enough solutions: fix the first reference
+        // solutions in the decomposed model instead, which must accept each of them
+        String rejected =
+            acceptsFirst(
+                problem, model, Set.copyOf(indices), builder, baseline, options, reference);
+        if (rejected == null) {
+          note += ", decomposed accepts the first reference solutions";
+        } else {
+          verdict = "DIFF";
+          note = "decomposed rejects reference solution " + oneLine(rejected);
+        }
+      }
     }
     if ("DIFF".equals(verdict) || "ERROR".equals(verdict)) {
       note =
@@ -454,6 +468,83 @@ class DecompositionCheck {
     count(verdict);
     System.out.println(
         "  " + problem + " " + name + " x" + indices.size() + ": " + verdict + " " + note);
+  }
+
+  private static final int CROSS_CHECKS = 3;
+
+  /**
+   * Fixes the output variables of the first solutions of a run in a model; returns the first
+   * solution that the model does not accept, or null when it accepts all of them.
+   */
+  private String acceptsFirst(
+      String problem,
+      FznModel model,
+      Set<Integer> replaced,
+      FznBuilder builder,
+      Baseline baseline,
+      List<String> options,
+      SolverRun run)
+      throws IOException {
+    int checked = 0;
+    for (String solution : run.distinct.keySet()) {
+      if (checked++ >= CROSS_CHECKS) {
+        break;
+      }
+      String text = countModel(model, replaced, builder, baseline.objective);
+      int solve = text.lastIndexOf("\nsolve") + 1;
+      StringBuilder fixes = new StringBuilder();
+      for (String f : fix(model, solution)) {
+        fixes.append("constraint ").append(f).append(";\n");
+      }
+      Path file = write(problem, "fix", text.substring(0, solve) + fixes + text.substring(solve));
+      SolverRun r = SolverRun.run(file, options, false, 1, timeoutMillis);
+      Files.deleteIfExists(file);
+      if (r.status == SolverRun.Status.COMPLETE && r.solutions == 0) {
+        return solution;
+      }
+    }
+    return null;
+  }
+
+  /** Constraints that fix the integer and Boolean output variables to a printed solution. */
+  static List<String> fix(FznModel model, String solution) {
+    List<String> result = new ArrayList<>();
+    for (String line : solution.split("\n")) {
+      int eq = line.indexOf('=');
+      FznModel.Decl d = eq < 0 ? null : model.decls.get(line.substring(0, eq).strip());
+      if (d == null || d.type == FznModel.BaseType.FLOAT || d.type == FznModel.BaseType.SET) {
+        continue;
+      }
+      String value = line.substring(eq + 1).strip();
+      value = value.endsWith(";") ? value.substring(0, value.length() - 1) : value;
+      Expr parsed = new FznModel.Lexer(value).expr();
+      List<Expr> vars;
+      List<Expr> values;
+      if (d.isArray) {
+        if (!(parsed instanceof FznModel.Call(String fn, List<Expr> args))
+            || !(args.getLast() instanceof FznModel.ArrayLit(List<Expr> elements))) {
+          continue;
+        }
+        vars = model.elements(new Ident(d.name));
+        values = elements;
+      } else {
+        vars = List.of(new Ident(d.name));
+        values = List.of(parsed);
+      }
+      for (int i = 0; i < Math.min(vars.size(), values.size()); i++) {
+        if (model.constant(vars.get(i)) == null) {
+          String builtin = model.isBool(vars.get(i)) ? "bool_eq" : "int_eq";
+          result.add(
+              builtin
+                  + "("
+                  + FznModel.render(vars.get(i))
+                  + ","
+                  + FznModel.render(values.get(i))
+                  + ")");
+        }
+      }
+    }
+    return result;
   }
 
   /**
