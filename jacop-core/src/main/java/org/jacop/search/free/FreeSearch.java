@@ -600,7 +600,8 @@ public final class FreeSearch {
       return true;
     }
     if ((failLimit > 0 && failures >= failLimit)
-        || ((nodes & 0xff) == 0 && System.currentTimeMillis() > deadline)) {
+        // the clock is read at every node: one node can take seconds when propagation is costly
+        || System.currentTimeMillis() > deadline) {
       limitReached = true;
       return true;
     }

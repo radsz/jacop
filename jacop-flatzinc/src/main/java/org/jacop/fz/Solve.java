@@ -295,6 +295,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountOne(ASTSolveItem node) {
+    if (options.freeSearchWithoutAnnotation() && !options.complementarySearch()) {
+      // nothing to follow: the model is solved as with -f
+      options.freeSearch = true;
+    }
     ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(0);
     solveKind = getKind(kind.getKind());
     run_single_search(solveKind, kind, null);

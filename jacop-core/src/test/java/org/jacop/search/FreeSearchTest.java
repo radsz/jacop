@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -582,6 +583,43 @@ class FreeSearchTest {
         assertTrue(status == Status.OPTIMAL || status == Status.UNSATISFIABLE);
       }
     }
+  }
+
+  @Test
+  void timeLimitStopsASearchWithSlowNodes() {
+    // pigeonhole: 8 variables, 7 values, pairwise different; thousands of nodes to prove it
+    Store store = new Store();
+    IntVar[] x = new IntVar[8];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, 0, x.length - 2);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    IndomainMin<IntVar> min = new IndomainMin<>();
+    // each node takes 20 ms, as with a costly propagation
+    Indomain<IntVar> slow =
+        v -> {
+          try {
+            Thread.sleep(20);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+          return min.indomain(v);
+        };
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(x, null, slow))
+            .timeLimit(Duration.ofMillis(100))
+            .build();
+    long start = System.currentTimeMillis();
+    Status status = search.solve();
+    long elapsed = System.currentTimeMillis() - start;
+    assertTrue(search.limitReached());
+    assertEquals(Status.UNKNOWN, status);
+    // a check every 256 nodes would only stop after more than a second
+    assertTrue(elapsed < 1000, "stopped after " + elapsed + " ms");
   }
 
   @Test

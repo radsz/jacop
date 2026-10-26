@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -231,6 +232,51 @@ class FlatzincFrontEndTest {
 
     assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(nested));
     assertEquals(List.of("x = 1;", "x = 2;"), solveAllInOrder(top));
+  }
+
+  @Test
+  void modelWithoutSearchAnnotationIsSolvedAsWithFreeSearch() throws IOException {
+    // Without annotation the variables were labelled in input order with domain splitting, which
+    // found no solution of queens n = 50 in 60 s; free search (-f) finds one in under a second.
+    String model = queens(12, "");
+    String free = searchStatistics(run(model, "-s", "-f")[0]);
+
+    assertEquals(free, searchStatistics(run(model, "-s")[0]));
+    assertNotEquals(free, searchStatistics(run(model, "-s", "--default-search", "input")[0]));
+    // an annotation is still followed
+    String annotated = queens(12, ":: int_search(q,input_order,indomain_min,complete)");
+    assertEquals(
+        searchStatistics(run(annotated, "-s", "--default-search", "input")[0]),
+        searchStatistics(run(annotated, "-s")[0]));
+  }
+
+  /** FlatZinc of n queens on q, with the given search annotation. */
+  private static String queens(int n, String annotation) {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      fzn.append("var 1..%d: q%d;%n".formatted(n, i));
+    }
+    fzn.append("array [1..%d] of var int: q:: output_array([1..%d]) = [".formatted(n, n));
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('q').append(i);
+    }
+    fzn.append("];\n");
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        fzn.append("constraint int_ne(q%d,q%d);%n".formatted(i, j));
+        fzn.append("constraint int_lin_ne([1,-1],[q%d,q%d],%d);%n".formatted(i, j, j - i));
+        fzn.append("constraint int_lin_ne([1,-1],[q%d,q%d],%d);%n".formatted(i, j, i - j));
+      }
+    }
+    fzn.append("solve %s satisfy;%n".formatted(annotation));
+    return fzn.toString();
+  }
+
+  /** The search statistics of a run with -s, without the times. */
+  private static String searchStatistics(String out) {
+    return out.lines()
+        .filter(l -> l.startsWith("%%%mzn-stat: ") && !l.contains("Time=") && !l.contains("time="))
+        .collect(Collectors.joining("\n"));
   }
 
   @Test
