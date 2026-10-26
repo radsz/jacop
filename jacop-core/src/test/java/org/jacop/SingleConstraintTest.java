@@ -2430,6 +2430,53 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void sumIntWithARepeatedVariableCountsMatchBruteForce() {
+    // a variable repeated in the list, or also the sum: pruning one occurrence changes the others
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(47);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        v[i] = randomVar(store, "v" + i, -3, 4, random);
+      }
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k);
+      String rel = relations[random.nextInt(relations.length)];
+      int expected =
+          bruteForce(
+                  v,
+                  a -> {
+                    long total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    long s = a[sumIndex];
+                    return switch (rel) {
+                      case "==" -> total == s;
+                      case "<=" -> total <= s;
+                      case "<" -> total < s;
+                      case ">" -> total > s;
+                      case ">=" -> total >= s;
+                      default -> total != s;
+                    };
+                  })
+              .size();
+
+      store.impose(new SumInt(list, rel, v[sumIndex]));
+      assertThat(countSolutions(store, v, random))
+          .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
   void testXplusCneqZCountsMatchBruteForce() {
 
     Random random = new Random(43);
