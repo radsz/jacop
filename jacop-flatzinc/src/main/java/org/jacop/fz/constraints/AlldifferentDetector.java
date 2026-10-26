@@ -218,7 +218,10 @@ public class AlldifferentDetector implements ParserTreeConstants {
       degree[i] = degree(i);
       order[i] = i;
     }
-    Arrays.sort(order, (p, q) -> degree[q] != degree[p] ? degree[q] - degree[p] : p - q);
+    Arrays.sort(
+        order,
+        (p, q) ->
+            degree[q] != degree[p] ? Integer.compare(degree[q], degree[p]) : Integer.compare(p, q));
     int[] rank = new int[n];
     for (int r = 0; r < n; r++) {
       rank[order[r]] = r;
@@ -234,7 +237,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
           candidates.add(new int[] {e.getKey(), d});
         }
       }
-      candidates.sort((p, q) -> rank[p[0]] - rank[q[0]]);
+      candidates.sort((p, q) -> Integer.compare(rank[p[0]], rank[q[0]]));
       for (int[] first : candidates) {
         if (work >= WORK_LIMIT) {
           break;
