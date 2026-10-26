@@ -36,6 +36,7 @@ import org.jacop.core.Store;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.IncreasingSumDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.satwrapper.SatTranslation;
 
@@ -129,6 +130,10 @@ public class Constraints implements ParserTreeConstants {
 
     if (DisjunctiveCliqueDetector.enabled()) {
       new DisjunctiveCliqueDetector(support).detect(astTree);
+    }
+
+    if (IncreasingSumDetector.enabled()) {
+      new IncreasingSumDetector(support).detect(astTree);
     }
 
     support.poseDelayedConstraints();
