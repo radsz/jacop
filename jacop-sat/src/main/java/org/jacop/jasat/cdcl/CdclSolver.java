@@ -1910,9 +1910,9 @@ public final class CdclSolver {
           }
           return SAT;
         }
-        if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
-          return UNKNOWN;
-        }
+      }
+      if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+        return UNKNOWN;
       }
       newDecisionLevel();
       assign(next, NO_REASON);
