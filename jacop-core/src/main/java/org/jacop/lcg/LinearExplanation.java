@@ -1,0 +1,169 @@
+/*
+ * LinearExplanation.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.lcg;
+
+import java.util.IdentityHashMap;
+import org.jacop.core.IntVar;
+
+/**
+ * Explanations of a linear relation {@code sum w[i] * x[i] <= c}, {@code >= c} or both, over
+ * distinct variables, from the bounds of the other variables: the reasoning of bounds propagation.
+ * Sums, weighted sums and pseudo-Boolean constraints share it.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public final class LinearExplanation {
+
+  private LinearExplanation() {}
+
+  /**
+   * Tells whether no variable occurs twice; the explanations need distinct variables.
+   *
+   * @param vars the variables
+   * @return true when they are distinct
+   */
+  public static boolean distinct(IntVar[] vars) {
+    IdentityHashMap<IntVar, Boolean> seen = new IdentityHashMap<>();
+    for (IntVar v : vars) {
+      if (seen.put(v, Boolean.TRUE) != null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a bound entry: the bounds of the other variables that, with
+   * the side of the relation the bound comes from, imply it.
+   *
+   * @param trail the trail
+   * @param entry a bound entry of one of the variables
+   * @param vars the variables, distinct
+   * @param weights their weights
+   * @param lessOrEqual whether the relation contains {@code sum <= c}
+   * @param greaterOrEqual whether the relation contains {@code sum >= c}
+   * @param out where the reason entries are added
+   * @return false when there is no such reason (a {@code !=} entry, or a side the relation lacks)
+   */
+  public static boolean explain(
+      AtomicTrail trail,
+      int entry,
+      IntVar[] vars,
+      long[] weights,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      EntryList out) {
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    long weight = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y) {
+        weight = weights[i];
+      }
+    }
+    if (weight == 0) {
+      return false;
+    }
+    // the side of the relation the bound comes from: sum <= c, or sum >= c
+    boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
+    if (upperSide ? !lessOrEqual : !greaterOrEqual) {
+      return false;
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y || weights[i] == 0) {
+        continue;
+      }
+      if (upperSide == weights[i] > 0) {
+        trail.addLowerBound(vars[i], entry, out);
+      } else {
+        trail.addUpperBound(vars[i], entry, out);
+      }
+    }
+    trail.addSkippedHoles(
+        entry, kind == AtomicTrail.LE ? Integer.MAX_VALUE : Integer.MIN_VALUE, out);
+    return true;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure: the bounds that make the smallest sum exceed c, or
+   * the largest one fall below it, now.
+   *
+   * @param trail the trail
+   * @param vars the variables, distinct
+   * @param weights their weights
+   * @param c the right-hand side
+   * @param lessOrEqual whether the relation contains {@code sum <= c}
+   * @param greaterOrEqual whether the relation contains {@code sum >= c}
+   * @param out where the reason entries are added
+   * @return false when the bounds violate neither side
+   */
+  public static boolean explainFailure(
+      AtomicTrail trail,
+      IntVar[] vars,
+      long[] weights,
+      long c,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      EntryList out) {
+    int now = trail.size();
+    long smallest = 0;
+    long largest = 0;
+    for (int i = 0; i < vars.length; i++) {
+      long lo = weights[i] * trail.minBefore(vars[i], now);
+      long hi = weights[i] * trail.maxBefore(vars[i], now);
+      smallest += Math.min(lo, hi);
+      largest += Math.max(lo, hi);
+    }
+    boolean upperSide;
+    if (lessOrEqual && smallest > c) {
+      upperSide = true;
+    } else if (greaterOrEqual && largest < c) {
+      upperSide = false;
+    } else {
+      return false;
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (weights[i] == 0) {
+        continue;
+      }
+      if (upperSide == weights[i] > 0) {
+        trail.addLowerBound(vars[i], now, out);
+      } else {
+        trail.addUpperBound(vars[i], now, out);
+      }
+    }
+    return true;
+  }
+}

@@ -69,6 +69,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
@@ -83,6 +84,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
@@ -277,7 +279,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(52)) {
+      return switch (rnd.nextInt(55)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -346,6 +348,15 @@ class LcgFuzzTest {
           store.impose(new XeqY(xs[0], p[0]));
           yield new Assignment(xs, ds, 0, 0);
         }
+        case 51 -> new SumInt(q, relation(), one());
+        case 52 -> new SumInt(new IntVar[] {q[0], q[0], q[1]}, relation(), one());
+        case 53 -> {
+          String rel = new String[] {"==", "<=", ">="}[rnd.nextInt(3)];
+          int[] w = {2, -1, 1};
+          yield rnd.nextBoolean()
+              ? new LinearBool(pick(b, 3), w, rel, one())
+              : new LinearBool(pick(b, 3), w, rel, rnd.nextInt(3) - 1);
+        }
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
@@ -363,6 +374,10 @@ class LcgFuzzTest {
               }
             };
       };
+    }
+
+    private String relation() {
+      return new String[] {"==", "<=", "<", ">", ">=", "!="}[rnd.nextInt(6)];
     }
 
     private IntVar constant(int c) {

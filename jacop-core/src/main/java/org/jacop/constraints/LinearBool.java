@@ -45,6 +45,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TrailedInts;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
 
 /**
  * Linear constraint over 0/1 variables: w[0]*x[0] + ... + w[n-1]*x[n-1] rel z, where rel is one of
@@ -80,7 +84,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class LinearBool extends Constraint implements SatisfiedPresent, Copyable<LinearBool> {
+public class LinearBool extends Constraint
+    implements SatisfiedPresent, Copyable<LinearBool>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -606,5 +611,52 @@ public class LinearBool extends Constraint implements SatisfiedPresent, Copyable
   @Override
   public LinearBool copy(VarMap map) {
     return new LinearBool(this, map);
+  }
+
+  // the relation as sum vars[i] * weights[i] <= or >= c for lazy clause generation, built once
+  private IntVar[] lcgVars;
+  private long[] lcgWeights;
+  private boolean lcgDistinct;
+
+  private void lcgModel() {
+    if (lcgVars != null) {
+      return;
+    }
+    int n = x.length;
+    lcgVars = z == null ? x : Arrays.copyOf(x, n + 1);
+    lcgWeights = z == null ? w : Arrays.copyOf(w, n + 1);
+    if (z != null) {
+      lcgVars[n] = z;
+      lcgWeights[n] = -1;
+    }
+    lcgDistinct = LinearExplanation.distinct(lcgVars);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != LinearBool.class) {
+      return false;
+    }
+    lcgModel();
+    return lcgDistinct
+        && LinearExplanation.explain(
+            trail, entry, lcgVars, lcgWeights, relationType != GE, relationType != LE, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != LinearBool.class) {
+      return false;
+    }
+    lcgModel();
+    return lcgDistinct
+        && LinearExplanation.explainFailure(
+            trail,
+            lcgVars,
+            lcgWeights,
+            z == null ? c : 0,
+            relationType != GE,
+            relationType != LE,
+            out);
   }
 }
