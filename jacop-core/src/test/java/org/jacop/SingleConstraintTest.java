@@ -6833,6 +6833,88 @@ class SingleConstraintTest extends TestHelper {
     assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
   }
 
+  @Test
+  void xexpYeqZFixedExponentIsDomainConsistent() {
+    // a fixed exponent n > 0 with x^n increasing on x (n odd, or x >= 0) has its own propagator;
+    // at every fixpoint x and z must hold exactly the values that occur in solutions
+    Random random = new Random(7);
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(5);
+      int xLo = random.nextBoolean() ? 0 : -8;
+      IntVar x = randomVar(store, "x", xLo, 8, random);
+      IntVar y = new IntVar(store, "y", n, n);
+      int zRange = random.nextInt(3) == 0 ? 40 : 700;
+      IntVar z = randomVar(store, "z", -zRange, zRange, random);
+      IntVar[] vars = {x, y, z};
+      List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+
+      store.impose(new XexpYeqZ(x, y, z));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as("instance %d", instance).isEqualTo(!expected.isEmpty());
+      if (consistent && ((n & 1) == 1 || xLo >= 0)) {
+        assertThat(valuesOf(x))
+            .as("x, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[0]).distinct().sorted().toArray());
+        assertThat(valuesOf(z))
+            .as("z, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[2]).distinct().sorted().toArray());
+      }
+      if (consistent) {
+        assertThat(countSolutions(store, vars, random))
+            .as("instance %d", instance)
+            .isEqualTo(expected.size());
+      }
+    }
+  }
+
+  @Test
+  void xexpYeqZFixedExponentNearIntLimits() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2000);
+    IntVar y = new IntVar(store, "y", 3, 3);
+    IntVar z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    long r = x.max();
+    assertThat(r * r * r).isLessThanOrEqualTo(IntDomain.MAX_INT);
+    assertThat((r + 1) * (r + 1) * (r + 1)).isGreaterThan(IntDomain.MAX_INT);
+    assertThat(z.max()).isEqualTo((int) (r * r * r));
+    assertThat(z.getSize()).isEqualTo(x.getSize());
+
+    store = new Store();
+    x = new IntVar(store, "x", -2000, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", -1000000, 1000000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-100..100}");
+    assertThat(z.getSize()).isEqualTo(201);
+    assertThat(z.min()).isEqualTo(-1000000);
+
+    store = new Store();
+    x = new IntVar(store, "x", 813, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 0, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    // z holds no cube between the cubes of the bounds of x
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 12, 12);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 40, 40);
+    z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static int countLinearSolutions(
       IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
     if (i == vars.length) {
