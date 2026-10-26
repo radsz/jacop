@@ -53,6 +53,7 @@ public class Options {
   boolean verbose;
   boolean statistics;
   boolean freeSearch;
+  boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
   final Map<String, String> freeConfig = new HashMap<>();
   boolean restartGiven;
@@ -117,6 +118,8 @@ public class Options {
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
+            --default-search <value> search for a model without search annotation; one of
+                "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
                 scale=<failures>, base=<growth of geometric restarts>,
@@ -167,6 +170,7 @@ public class Options {
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
+      case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -225,6 +229,16 @@ public class Options {
       case "legacy" -> newFreeSearchEngine = false;
       case "new" -> newFreeSearchEngine = true;
       default -> System.err.println("%% Free search engine " + engine + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handleDefaultSearch(String[] args, int i) {
+    String search = args[++i];
+    switch (search) {
+      case "free" -> freeSearchWithoutAnnotation = true;
+      case "input" -> freeSearchWithoutAnnotation = false;
+      default -> System.err.println("%% Default search " + search + " not known; ignored");
     }
     return i + 1;
   }
@@ -535,6 +549,16 @@ public class Options {
    */
   public boolean freeSearch() {
     return freeSearch;
+  }
+
+  /**
+   * It defines whether a model without search annotation is solved with free search, as with -f
+   * (default), or by labelling its variables in input order (--default-search input).
+   *
+   * @return true if a model without search annotation is solved with free search
+   */
+  public boolean freeSearchWithoutAnnotation() {
+    return freeSearchWithoutAnnotation;
   }
 
   /**

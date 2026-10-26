@@ -51,7 +51,16 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.increasingSum=false turns this off. On number
    partitioning it cuts failures up to 13x.
 
-7. The set order constraints AleB and AltB (MiniZinc set_le and set_lt,
+7. A FlatZinc model without search annotation is solved with free search,
+   as with -f (dom/wdeg, restarts, nogoods), instead of labelling its
+   variables in input order with domain splitting. On 78 such models
+   (MiniZinc benchmarks and the regression set, 60 s) it answers 65
+   instead of 54: queens n = 50 to 400 within 8 s instead of no solution,
+   and jobshop la09, orb02 and orb10 proved. --default-search input
+   restores the input order search. FreeSearch now reads the clock at
+   every node, so a time limit holds when nodes are slow.
+
+8. The set order constraints AleB and AltB (MiniZinc set_le and set_lt,
    sets compared as sorted lists of elements) are bounds consistent: an
    element stays undecided in a set only when the constraint has a
    solution with it and one without it, and the cardinalities are narrowed
