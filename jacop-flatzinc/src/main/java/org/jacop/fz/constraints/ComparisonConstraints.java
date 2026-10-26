@@ -607,6 +607,9 @@ class ComparisonConstraints implements ParserTreeConstants {
       return null;
     }
     if (v3.max() == 0) {
+      if (isReified) {
+        v1.domain.inValue(store.level, v1, i2);
+      }
       return null;
     }
     if (v3.min() == 1) {

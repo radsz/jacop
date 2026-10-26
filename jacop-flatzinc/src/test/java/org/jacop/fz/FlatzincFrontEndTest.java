@@ -1102,6 +1102,105 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("=====UNKNOWN====="), out);
   }
 
+  @Test
+  void reifiedAndHalfReifiedComparisonsMatchBruteForce() throws IOException {
+    // The front end settles int_<op>_reif and int_<op>_imp itself when b or the comparison is
+    // already known. int_ne_reif(x, c, false) dropped x = c, and the constant-first int_<op>_imp
+    // set b to true when the comparison was entailed and removed c from x when b was false.
+    String[] ops = {"eq", "ne", "lt", "le", "gt", "ge"};
+    String[] domains = {"3..4", "3..3"};
+    String[] bs = {"b", "true", "false"};
+    for (String op : ops) {
+      for (String kind : new String[] {"reif", "imp"}) {
+        if (kind.equals("reif") && (op.equals("gt") || op.equals("ge"))) {
+          continue; // not FlatZinc built-ins
+        }
+        for (String b : bs) {
+          for (String dx : domains) {
+            for (int c = 2; c <= 5; c++) {
+              checkComparison(op, kind, "x", Integer.toString(c), b, dx, null);
+              checkComparison(op, kind, Integer.toString(c), "x", b, dx, null);
+            }
+            for (String dy : domains) {
+              checkComparison(op, kind, "x", "y", b, dx, dy);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void checkComparison(
+      String op, String kind, String left, String right, String b, String dx, String dy)
+      throws IOException {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("var ").append(dx).append(": x:: output_var;\n");
+    if (dy != null) {
+      fzn.append("var ").append(dy).append(": y:: output_var;\n");
+    }
+    if (b.equals("b")) {
+      fzn.append("var bool: b:: output_var;\n");
+    }
+    fzn.append("constraint int_")
+        .append(op)
+        .append('_')
+        .append(kind)
+        .append('(')
+        .append(left)
+        .append(',')
+        .append(right)
+        .append(',')
+        .append(b)
+        .append(");\nsolve satisfy;\n");
+
+    Set<String> expected = new TreeSet<>();
+    int[] xs = range(dx);
+    int[] ys = dy == null ? new int[] {0} : range(dy);
+    for (int x : xs) {
+      for (int y : ys) {
+        for (int bv = 0; bv <= 1; bv++) {
+          boolean bValue = bv == 1;
+          if (!b.equals("b") && (bv == 1) != b.equals("true")) {
+            continue;
+          }
+          int l = left.equals("x") ? x : Integer.parseInt(left);
+          int r = right.equals("x") ? x : right.equals("y") ? y : Integer.parseInt(right);
+          boolean holds =
+              switch (op) {
+                case "eq" -> l == r;
+                case "ne" -> l != r;
+                case "lt" -> l < r;
+                case "le" -> l <= r;
+                case "gt" -> l > r;
+                default -> l >= r;
+              };
+          if (kind.equals("reif") ? holds == bValue : !bValue || holds) {
+            List<String> lines = new java.util.ArrayList<>();
+            if (b.equals("b")) {
+              lines.add("b = " + bValue + ";");
+            }
+            lines.add("x = " + x + ";");
+            if (dy != null) {
+              lines.add("y = " + y + ";");
+            }
+            expected.add(String.join(" ", new TreeSet<>(lines)));
+          }
+        }
+      }
+    }
+
+    Set<String> actual = solveAll(fzn.toString());
+    actual.removeIf(s -> s.contains("UNSATISFIABLE"));
+    assertEquals(expected, actual, fzn.toString());
+  }
+
+  private static int[] range(String domain) {
+    String[] bounds = domain.split("\\.\\.");
+    return java.util.stream.IntStream.rangeClosed(
+            Integer.parseInt(bounds[0]), Integer.parseInt(bounds[1]))
+        .toArray();
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

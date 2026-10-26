@@ -51,6 +51,13 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.increasingSum=false turns this off. On number
    partitioning it cuts failures up to 13x.
 
+7. Bug fixes in the FlatZinc translation of reified comparisons.
+   int_ne_reif(x, c, b) with b fixed to false at translation ignored
+   x = c, so JaCoP accepted wrong solutions; on MiniZinc fillomino this
+   also made the search up to 2000x larger. The constant-first
+   int_<op>_imp(c, x, b) set b to true when the comparison held and
+   removed c from x when b was false, which lost solutions.
+
 Version 4.11
 =============
 
