@@ -51,6 +51,14 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.increasingSum=false turns this off. On number
    partitioning it cuts failures up to 13x.
 
+7. The set order constraints AleB and AltB (MiniZinc set_le and set_lt,
+   sets compared as sorted lists of elements) are bounds consistent: an
+   element stays undecided in a set only when the constraint has a
+   solution with it and one without it, and the cardinalities are narrowed
+   to those of the solutions. Before, they only removed the elements of b
+   below min(lub(a)) and checked fixed sets. On steiner-triples from the
+   MiniZinc benchmarks the search tree shrinks up to 4x.
+
 Version 4.11
 =============
 
