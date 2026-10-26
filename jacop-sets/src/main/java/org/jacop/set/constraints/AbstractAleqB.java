@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
@@ -162,6 +163,47 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
   }
 
   /**
+   * The transitions of the automaton on an element that a can take with the values in bits canA and
+   * b with those in canB (bit 0 = absent, bit 1 = present), for canA and canB from 1 to 3: q | x <<
+   * 2 | y << 3 | next state << 4.
+   */
+  private static final int[][][] TRANSITIONS = new int[4][4][];
+
+  static {
+    for (int canA = 1; canA < 4; canA++) {
+      for (int canB = 1; canB < 4; canB++) {
+        int[] t = new int[16];
+        int k = 0;
+        for (int q = 0; q < 4; q++) {
+          for (int x = 0; x < 2; x++) {
+            for (int y = 0; y < 2; y++) {
+              int r = next(q, x, y);
+              if ((canA >> x & 1) != 0 && (canB >> y & 1) != 0 && r >= 0) {
+                t[k++] = q | x << 2 | y << 3 | r << 4;
+              }
+            }
+          }
+        }
+        TRANSITIONS[canA][canB] = Arrays.copyOf(t, k);
+      }
+    }
+  }
+
+  /**
+   * Removes an element from the lub of s or adds it to the glb when only one value is supported.
+   */
+  private static void decide(Store store, SetVar s, int element, int supported, int possible) {
+    if (supported == possible) {
+      return;
+    }
+    if (supported == 1) {
+      s.domain.inLubComplement(store.level, s, element);
+    } else {
+      s.domain.inGlb(store.level, s, element);
+    }
+  }
+
+  /**
    * The counts after reading an element: shifts the bits of mask (bit ka * nb + kb for ka elements
    * counted in a and kb in b) by dx counted elements of a and dy of b. A count that would go above
    * its maximum is dropped.
@@ -270,25 +312,15 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
       forward[EQUAL] = 1L;
       for (int i = first; i < n; i++) {
         int from = (i - first) * 4;
-        int to = from + 4;
         // an undecided element put in the set is counted
         int addA = countA && canA[i] == 3 ? 1 : 0;
         int addB = countB && canB[i] == 3 ? 1 : 0;
-        for (int q = 0; q < 4; q++) {
-          long m = forward[from + q];
-          if (m == 0) {
-            continue;
-          }
-          for (int x = 0; x < 2; x++) {
-            if ((canA[i] >> x & 1) == 0) {
-              continue;
-            }
-            for (int y = 0; y < 2; y++) {
-              int r = next(q, x, y);
-              if ((canB[i] >> y & 1) != 0 && r >= 0) {
-                forward[to + r] |= shift(m, x * addA, y * addB, nb, belowMaxB, full);
-              }
-            }
+        for (int t : TRANSITIONS[canA[i]][canB[i]]) {
+          long m = forward[from + (t & 3)];
+          if (m != 0) {
+            int dx = (t >> 2 & 1) * addA;
+            int dy = (t >> 3 & 1) * addB;
+            forward[from + 4 + (t >> 4)] |= shift(m, dx, dy, nb, belowMaxB, full);
           }
         }
       }
@@ -307,30 +339,18 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
       int[] supB = new int[n];
       for (int i = n - 1; i >= first; i--) {
         int from = (i - first) * 4;
-        int to = from + 4;
         int addA = countA && canA[i] == 3 ? 1 : 0;
         int addB = countB && canB[i] == 3 ? 1 : 0;
-        for (int q = 0; q < 4; q++) {
-          long m = forward[from + q];
-          if (m == 0) {
-            continue;
-          }
-          for (int x = 0; x < 2; x++) {
-            if ((canA[i] >> x & 1) == 0) {
-              continue;
-            }
-            for (int y = 0; y < 2; y++) {
-              int r = next(q, x, y);
-              if ((canB[i] >> y & 1) == 0 || r < 0) {
-                continue;
-              }
-              long support = m & unshift(backward[to + r], x * addA, y * addB, nb, belowMaxB);
-              if (support != 0) {
-                backward[from + q] |= support;
-                supA[i] |= 1 << x;
-                supB[i] |= 1 << y;
-              }
-            }
+        for (int t : TRANSITIONS[canA[i]][canB[i]]) {
+          int x = t >> 2 & 1;
+          int y = t >> 3 & 1;
+          long support =
+              forward[from + (t & 3)]
+                  & unshift(backward[from + 4 + (t >> 4)], x * addA, y * addB, nb, belowMaxB);
+          if (support != 0) {
+            backward[from + (t & 3)] |= support;
+            supA[i] |= 1 << x;
+            supB[i] |= 1 << y;
           }
         }
       }
@@ -340,20 +360,8 @@ public abstract class AbstractAleqB extends PrimitiveConstraint {
       }
 
       for (int i = first; i < n; i++) {
-        if (supA[i] != canA[i]) {
-          if (supA[i] == 1) {
-            a.domain.inLubComplement(store.level, a, element[i]);
-          } else {
-            a.domain.inGlb(store.level, a, element[i]);
-          }
-        }
-        if (supB[i] != canB[i]) {
-          if (supB[i] == 1) {
-            b.domain.inLubComplement(store.level, b, element[i]);
-          } else {
-            b.domain.inGlb(store.level, b, element[i]);
-          }
-        }
+        decide(store, a, element[i], supA[i], canA[i]);
+        decide(store, b, element[i], supB[i], canB[i]);
       }
 
       if (countA || countB) {
