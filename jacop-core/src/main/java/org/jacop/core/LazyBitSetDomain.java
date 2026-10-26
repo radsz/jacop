@@ -454,6 +454,7 @@ public class LazyBitSetDomain extends IntDomain {
     if (min == max) {
       throw failException;
     }
+    ((IntVar) v).removingValue(complement);
     int oldMin = min;
     int oldMax = max;
     saveLevel(storeLevel, v);

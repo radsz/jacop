@@ -394,6 +394,18 @@ public class IntVar extends Var {
   }
 
   /**
+   * Tells the store's domain change recorder, if any, that a value is about to be removed on its
+   * own; see {@link DomainChangeRecorder#removingValue}.
+   *
+   * @param value the value
+   */
+  public void removingValue(int value) {
+    if (store.domainChangeRecorder != null) {
+      store.domainChangeRecorder.removingValue(this, value);
+    }
+  }
+
+  /**
    * It informs the variable that its variable has changed according to the specified event.
    *
    * @param event the type of the change (GROUND, BOUND, ANY).

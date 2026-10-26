@@ -40,7 +40,6 @@ import org.jacop.core.DomainChangeRecorder;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
@@ -82,8 +81,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int size;
 
   // per variable (by id): the domain the entries so far describe, as its bounds and, when it has
-  // holes, a copy; and the last entry
-  private IntDomain[] shadow = new IntDomain[0];
+  // holes, its runs; and the last entry
+  private int[][] runs = new int[0][]; // the runs (first, last) of a domain with holes
+  private int[] numRuns = new int[0]; // values in runs[i]: twice the runs, or 0 without holes
+  private int[] shadowSize = new int[0];
+  private IntVar removing; // the variable and value of the last removingValue call
+  private int removingValue;
   private int[] shadowMin = new int[0];
   private int[] shadowMax = new int[0];
   private IntDomain[] root = new IntDomain[0]; // the domain when recording started
@@ -138,10 +141,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   private int slot(IntVar x) {
     int i = id(x);
-    if (i >= shadow.length) {
-      int n = Math.max(i + 1, 2 * shadow.length);
-      int old = shadow.length;
-      shadow = Arrays.copyOf(shadow, n);
+    if (i >= numRuns.length) {
+      int n = Math.max(i + 1, 2 * numRuns.length);
+      int old = numRuns.length;
+      runs = Arrays.copyOf(runs, n);
+      numRuns = Arrays.copyOf(numRuns, n);
+      shadowSize = Arrays.copyOf(shadowSize, n);
       shadowMin = Arrays.copyOf(shadowMin, n);
       shadowMax = Arrays.copyOf(shadowMax, n);
       root = Arrays.copyOf(root, n);
@@ -155,13 +160,39 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return i;
   }
 
-  // copies a domain into the shadow; one without holes is kept as its bounds only
+  // copies a domain into the shadow: its bounds, and its runs when it has holes
   private void setShadow(int i, IntDomain d) {
     int min = d.min();
     int max = d.max();
     shadowMin[i] = min;
     shadowMax[i] = max;
-    shadow[i] = d.getSize() == (long) max - min + 1 ? null : d.cloneLight();
+    shadowSize[i] = d.getSize();
+    if (d.getSize() == (long) max - min + 1) {
+      numRuns[i] = 0;
+      return;
+    }
+    int[] r = runs[i] == null ? new int[16] : runs[i];
+    int n = 0;
+    for (int v = min; ; ) {
+      int end = d.runEnd(v);
+      if (n + 2 > r.length) {
+        r = Arrays.copyOf(r, 2 * r.length);
+      }
+      r[n++] = v;
+      r[n++] = end;
+      if (end >= max) {
+        break;
+      }
+      v = d.nextValue(end);
+    }
+    runs[i] = r;
+    numRuns[i] = n;
+  }
+
+  @Override
+  public void removingValue(IntVar x, int value) {
+    removing = x;
+    removingValue = value;
   }
 
   @Override
@@ -170,6 +201,17 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     IntDomain now = x.dom();
     int min = now.min();
     int max = now.max();
+    if (x == removing) {
+      removing = null;
+      if (min == shadowMin[i]
+          && max == shadowMax[i]
+          && now.getSize() == shadowSize[i] - 1
+          && !now.contains(removingValue)
+          && removeFromShadow(i, removingValue)) {
+        add(x, i, NE, removingValue);
+        return;
+      }
+    }
     if (min > shadowMin[i]) {
       add(x, i, GE, min);
     }
@@ -177,27 +219,99 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       add(x, i, LE, max);
     }
     if (now.getSize() < (long) max - min + 1) {
-      IntDomain before = shadow[i];
-      if (before == null) {
-        // every value of [min, max] was in the domain: each hole is new
-        for (int v = min; v < max; ) {
-          int next = now.nextValue(v);
-          for (int u = v + 1; u < next; u++) {
-            add(x, i, NE, u);
-          }
-          v = next;
-        }
+      int n = numRuns[i];
+      if (n == 0) {
+        // every value of [min, max] was in the domain
+        addHoles(x, i, now, min, max);
       } else {
-        IntDomain inside = before.intersect(min, max);
-        if (inside.getSize() > now.getSize()) {
-          IntDomain removed = inside.subtract(now);
-          for (ValueEnumeration e = removed.valueEnumeration(); e.hasMoreElements(); ) {
-            add(x, i, NE, e.nextElement());
-          }
+        int[] r = runs[i];
+        int k = 0;
+        while (r[k + 1] < min) {
+          k += 2;
+        }
+        for (; k < n && r[k] <= max; k += 2) {
+          addHoles(x, i, now, Math.max(r[k], min), Math.min(r[k + 1], max));
         }
       }
     }
     setShadow(i, now);
+  }
+
+  /**
+   * Removes an inner value from a shadow without rebuilding it; false when the value is not in the
+   * shadow. The bounds stay.
+   */
+  private boolean removeFromShadow(int i, int v) {
+    if (v <= shadowMin[i] || v >= shadowMax[i]) {
+      return false;
+    }
+    int n = numRuns[i];
+    int[] r = runs[i];
+    int k;
+    if (n == 0) {
+      if (r == null) {
+        r = new int[16];
+        runs[i] = r;
+      }
+      r[0] = shadowMin[i];
+      r[1] = shadowMax[i];
+      n = 2;
+      k = 0;
+    } else {
+      int lo = 0;
+      int hi = n / 2 - 1; // the run containing v, by binary search over first values
+      while (lo < hi) {
+        int mid = (lo + hi + 1) >>> 1;
+        if (r[2 * mid] <= v) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      k = 2 * lo;
+      if (v < r[k] || v > r[k + 1]) {
+        return false;
+      }
+    }
+    if (r[k] == v && r[k + 1] == v) {
+      System.arraycopy(r, k + 2, r, k, n - k - 2);
+      n -= 2;
+    } else if (r[k] == v) {
+      r[k] = v + 1;
+    } else if (r[k + 1] == v) {
+      r[k + 1] = v - 1;
+    } else {
+      if (n + 2 > r.length) {
+        r = Arrays.copyOf(r, 2 * r.length);
+        runs[i] = r;
+      }
+      System.arraycopy(r, k + 2, r, k + 4, n - k - 2);
+      r[k + 2] = v + 1;
+      r[k + 3] = r[k + 1];
+      r[k + 1] = v - 1;
+      n += 2;
+    }
+    numRuns[i] = n;
+    shadowSize[i]--;
+    return true;
+  }
+
+  // adds an entry for each value of [lo, hi], all in the domain before, that is not in it now
+  private void addHoles(IntVar x, int i, IntDomain now, int lo, int hi) {
+    if (now.contains(lo, hi)) {
+      return;
+    }
+    for (int u = lo; u <= hi; ) {
+      if (now.contains(u)) {
+        u = now.runEnd(u) + 1;
+      } else {
+        int next = now.nextValue(u);
+        int end = next > u ? Math.min(next - 1, hi) : hi;
+        for (; u <= end; u++) {
+          add(x, i, NE, u);
+        }
+      }
+    }
   }
 
   private void add(IntVar x, int i, int k, int v) {
@@ -227,7 +341,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       IntVar x = entryVar[size];
       int i = id(x);
       last[i] = previous[size];
-      setShadow(i, x.dom());
+      if (last[i] < 0 || level[last[i]] < removedLevel) {
+        setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
+      }
       entryVar[size] = null;
       reason[size] = null;
     }

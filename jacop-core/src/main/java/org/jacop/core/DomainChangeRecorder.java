@@ -47,4 +47,14 @@ public interface DomainChangeRecorder {
    * @param event the pruning event of the change
    */
   void domainChanged(IntVar x, int event);
+
+  /**
+   * A value of a variable is about to be removed on its own; a call of {@link #domainChanged}
+   * follows unless the removal fails. Domains with many holes report it so that the removed value
+   * need not be searched for; the default ignores it.
+   *
+   * @param x the variable
+   * @param value the value
+   */
+  default void removingValue(IntVar x, int value) {}
 }
