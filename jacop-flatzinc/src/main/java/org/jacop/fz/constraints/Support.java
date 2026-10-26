@@ -38,11 +38,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqC;
@@ -56,6 +58,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTAnnExpr;
 import org.jacop.fz.ASTAnnotation;
+import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTIntFlatExpr;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ASTSetLiteral;
@@ -100,6 +103,7 @@ public class Support implements ParserTreeConstants {
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
@@ -699,6 +703,26 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Calls the action on every constraint of a parsed model, in the order of the model.
+   *
+   * @param astTree the root of the parsed model.
+   * @param action what is done with each constraint.
+   */
+  static void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTCONSTRAINTITEMS) {
+        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          if (item.getId() == JJTCONSTELEM) {
+            action.accept((ASTConstElem) item);
+          }
+        }
+      }
+    }
+  }
+
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
     // generate channeling constraints for aliases
@@ -718,6 +742,16 @@ public class Support implements ParserTreeConstants {
     reif.pose();
     // generate channeling constraints instead of implied constraints
     imply.pose();
+  }
+
+  /**
+   * Finds presence handles of the non-strict k-dimensional diffn constraints by probing; the store
+   * must be at a fixpoint.
+   *
+   * @return false if probing proved the model inconsistent.
+   */
+  public boolean probeDiffnKHandles() {
+    return nonStrictDiffnK.isEmpty() || new DiffnKHandleProbing(store).probe(nonStrictDiffnK);
   }
 
   void poseAlldistinctConstraints() {

@@ -48,12 +48,14 @@ import org.jacop.core.FailException;
 public class Fz2jacop {
 
   /**
-   * Calls the main method with the provided arguments.
+   * Parses and solves the model like the command line does, without exiting the JVM.
    *
    * @param args the command line arguments
+   * @return the exit status: 0 when the model was solved (or shown unsatisfiable), 1 when it was
+   *     rejected or solving failed with an error
    */
-  public void callMain(String[] args) {
-    main(args);
+  public int callMain(String[] args) {
+    return run(args);
   }
 
   /**
@@ -63,6 +65,15 @@ public class Fz2jacop {
    *     as options for problem solving.
    */
   void main(String[] args) {
+    int status = run(args);
+    // a model JaCoP cannot read or solve must not look like a successful run to MiniZinc or a
+    // script, which go by the exit status
+    if (status != 0) {
+      System.exit(status);
+    }
+  }
+
+  private int run(String[] args) {
 
     Options opt = new Options(args);
 
@@ -72,14 +83,16 @@ public class Fz2jacop {
 
     // the model file is closed when solving ends, also after an error (an open file cannot be
     // deleted on Windows)
+    int status = 1;
     try (FileInputStream file = opt.getFile()) {
-      solve(opt, file);
+      status = solve(opt, file);
     } catch (IOException e) {
       log.error("Failed to close {}", opt.getFileName(), e);
     }
+    return status;
   }
 
-  private void solve(Options opt, FileInputStream file) {
+  private int solve(Options opt, FileInputStream file) {
 
     Parser parser = new Parser(file);
     parser.setOptions(opt);
@@ -89,10 +102,13 @@ public class Fz2jacop {
       Runtime.getRuntime().addShutdownHook(t);
     }
 
+    int status = 1;
     try {
       parser.model();
+      status = 0;
     } catch (FailException _) {
       handleFailException(opt, parser);
+      status = 0;
     } catch (ArithmeticException e) {
       handleArithmeticException(e);
     } catch (IllegalArgumentException e) {
@@ -107,12 +123,18 @@ public class Fz2jacop {
       IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
     } catch (TrivialSolution _) {
       Runtime.getRuntime().removeShutdownHook(t);
+      status = 0;
+    } catch (ModelTimeOut _) {
+      IO.println("=====UNKNOWN=====");
+      IO.println("%% =====TIME-OUT=====");
+      status = 0;
     }
 
     if (opt.getStatistics()) {
       Runtime.getRuntime().removeShutdownHook(t);
       printStatisticsTime(parser);
     }
+    return status;
   }
 
   private void handleFailException(Options opt, Parser parser) {

@@ -115,6 +115,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It specifies that the time-out has occured. */
   public boolean timeOutOccured;
 
+  /**
+   * It specifies that a child search stopped at its time-out (or other exit limit), so this search
+   * stops as well instead of exploring further and reporting an incomplete search as complete.
+   */
+  private boolean childSearchTimedOut;
+
   /** It specifies the id of the search. */
   public String searchId;
 
@@ -293,6 +299,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   private boolean setupLabeling(Store store, SelectChoicePoint<T> select) {
     this.store = store;
+    childSearchTimedOut = false;
 
     if (store.raiseLevelBeforeConsistency) {
       store.raiseLevelBeforeConsistency = false;
@@ -462,6 +469,49 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut);
   }
 
+  /**
+   * Makes the store stop propagation at the time-out of this search, so that one long propagation
+   * cannot overrun it.
+   *
+   * @return the deadline of the store before this search, to be restored when it ends
+   */
+  private long enterConsistencyDeadline(Store store) {
+    long previous = store.getConsistencyDeadline();
+    if (timeOutCheck && (previous == 0 || timeOut < previous)) {
+      store.setConsistencyDeadline(timeOut);
+    }
+    return previous;
+  }
+
+  private void exitConsistencyDeadline(Store store, long previous) {
+    if (store.getConsistencyDeadline() == previous) {
+      // the deadline belongs to an enclosing search
+      return;
+    }
+    // a propagation cut by the deadline is not a failure, so the search was not complete
+    if (store.isConsistencyDeadlinePassed() && !timeOutOccured) {
+      markTimeOutOccurred();
+    }
+    store.setConsistencyDeadline(previous);
+  }
+
+  /** Sets up the labeling and runs it, with the store stopping propagation at the time-out. */
+  private boolean labelWithinTimeOut(Store store, SelectChoicePoint<T> select) {
+    long previousDeadline = enterConsistencyDeadline(store);
+    try {
+      boolean result = setupLabeling(store, select);
+      if (result) {
+        result = label(0);
+        if (printInfo) {
+          log.info("Labeling has finished with return value of {}", result);
+        }
+      }
+      return result;
+    } finally {
+      exitConsistencyDeadline(store, previousDeadline);
+    }
+  }
+
   /** Marks timeout as occurred and notifies listener. */
   private void markTimeOutOccurred() {
     timeOutOccured = true;
@@ -601,6 +651,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       int currentChildSolutionNo =
           childSearches[currentChildSearch].getSolutionListener().solutionsNo();
       childResult = childSearches[currentChildSearch].labeling();
+      if (childSearches[currentChildSearch] instanceof DepthFirstSearch<?> child
+          && child.timeOutOccured) {
+        // the child search was cut short, so the subtree below this node is not exhausted
+        childSearchTimedOut = true;
+        if (!timeOutOccured) {
+          markTimeOutOccurred();
+        }
+        break;
+      }
       if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
           > currentChildSolutionNo) {
         childFoundSolution = true;
@@ -786,7 +845,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
 
-    if (!checkExitConditions()) {
+    if (childSearchTimedOut || !checkExitConditions()) {
       return false;
     }
     if (!applyOptimizationCostRestriction()) {
@@ -877,6 +936,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public boolean labeling() {
 
     boolean raisedLevel = false;
+    childSearchTimedOut = false;
 
     if (store.raiseLevelBeforeConsistency) {
       store.raiseLevelBeforeConsistency = false;
@@ -954,14 +1014,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = setupLabeling(store, select);
-
-    if (result) {
-      result = label(0);
-      if (printInfo) {
-        log.info("Labeling has finished with return value of {}", result);
-      }
-    }
+    boolean result = labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
@@ -1018,14 +1071,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = setupLabeling(store, select);
-
-    if (result) {
-      result = label(0);
-      if (printInfo) {
-        log.info("Labeling has finished with return value of {}", result);
-      }
-    }
+    boolean result = labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {

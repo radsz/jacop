@@ -290,19 +290,33 @@ final class TrailedTupleSet {
     return minIndex;
   }
 
+  /** Up to this many columns a variable is looked up by a scan rather than in the map. */
+  private static final int SCAN_COLUMNS = 16;
+
   /**
    * It gives the column of a variable, or -1 if the variable is not a column.
    *
    * @param v the variable.
+   * @param x the variables of the columns.
    * @param positionByIndex the columns by store index, or null.
    * @param indexOffset the smallest store index of the columns.
    * @param varMap the columns of the variables.
    * @return the column.
    */
-  static int column(Var v, int[] positionByIndex, int indexOffset, Map<IntVar, Integer> varMap) {
+  static int column(
+      Var v, IntVar[] x, int[] positionByIndex, int indexOffset, Map<IntVar, Integer> varMap) {
     if (positionByIndex != null) {
       int k = v.storeIndex - indexOffset;
       return k >= 0 && k < positionByIndex.length ? positionByIndex[k] : -1;
+    }
+    // it runs on every change of a column, where a few comparisons are cheaper than hashing
+    if (x.length <= SCAN_COLUMNS) {
+      for (int i = 0; i < x.length; i++) {
+        if (x[i] == v) {
+          return i;
+        }
+      }
+      return -1;
     }
     Integer position = varMap.get(v);
     return position == null ? -1 : position;

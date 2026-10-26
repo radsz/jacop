@@ -81,6 +81,7 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -113,6 +114,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnDecomposed;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.graph.BoundedPath;
 import org.jacop.constraints.graph.Path;
@@ -230,6 +232,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Increasing", monotonic(true)),
         Arguments.of("Decreasing", monotonic(false)),
         Arguments.of(
+            "IncreasingSum",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
+        Arguments.of(
             "ValuePrecede",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuePrecede),
         Arguments.of(
@@ -282,6 +287,15 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DiffnStrict", rectangles("DiffnStrict")),
         Arguments.of("Nooverlap", rectangles("Nooverlap")),
         Arguments.of("DiffnDecomposed", rectangles("DiffnDecomposed")),
+        Arguments.of("DiffnK1", boxes(1, true, false)),
+        Arguments.of("DiffnK1NonStrict", boxes(1, false, false)),
+        Arguments.of("DiffnK2", boxes(2, true, false)),
+        Arguments.of("DiffnK2NonStrict", boxes(2, false, false)),
+        Arguments.of("DiffnK3", boxes(3, true, false)),
+        Arguments.of("DiffnK3NonStrict", boxes(3, false, false)),
+        Arguments.of("DiffnK4NonStrict", boxes(4, false, false)),
+        Arguments.of("DiffnK3Shared", boxes(3, true, true)),
+        Arguments.of("DiffnK3NonStrictShared", boxes(3, false, true)),
         Arguments.of("Diff2", rectangles("Diff2")),
         Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")),
         Arguments.of("Disjoint", rectangles("Disjoint")),
@@ -1402,6 +1416,42 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  // x[0..n-1] ordered and summing to the last variable, which may also occur in x
+  private static Instance increasingSum(Random random) {
+    int n = 1 + random.nextInt(4);
+    boolean strict = random.nextBoolean();
+    boolean repeated = n > 1 && random.nextInt(5) == 0;
+    int[][] domains = new int[n + 1][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = domain(random, -1, 4);
+    }
+    domains[n] = domain(random, -2, 4 * n + 2);
+    return new Instance(
+        domains,
+        (store, v) -> {
+          IntVar[] x = Arrays.copyOf(v, n);
+          if (repeated) {
+            x[n - 1] = x[0];
+          }
+          store.impose(new IncreasingSum(x, v[n], strict));
+        },
+        t -> {
+          int[] x = Arrays.copyOf(t, n);
+          if (repeated) {
+            x[n - 1] = x[0];
+          }
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            if (i > 0 && (strict ? x[i] <= x[i - 1] : x[i] < x[i - 1])) {
+              return false;
+            }
+            total += x[i];
+          }
+          return total == t[n];
+        },
+        "strict=" + strict + " repeated=" + repeated);
+  }
+
   private static Instance valuePrecede(Random random) {
     int n = 1 + random.nextInt(5);
     int s = random.nextInt(3);
@@ -1831,6 +1881,99 @@ class GlobalConstraintBruteForceTest {
             return true;
           },
           "pairs=" + pairs);
+    };
+  }
+
+  /**
+   * DiffnK over 1-3 boxes in k dimensions, origins in 0..2 and lengths in 0..2 (with holes),
+   * checked against the MiniZinc diffn_k (strict) or diffn_nonstrict_k pair condition. Random
+   * variables are fixed until the instance has at most 20,000 assignments. With shared variables,
+   * some origins and lengths are the same variable; then every box of a non-strict instance has one
+   * length variable for all its dimensions, so its lengths are zero together and that variable is
+   * its presence handle.
+   */
+  private static Function<Random, Instance> boxes(int k, boolean strict, boolean shared) {
+    return random -> {
+      int n = 1 + random.nextInt(3);
+      int[][] domains = new int[2 * n * k][];
+      // variable of origin (i, d) is 2k i + d, of length (i, d) is 2k i + k + d
+      int[] originOf = new int[n * k];
+      int[] lengthOf = new int[n * k];
+      for (int i = 0; i < n; i++) {
+        for (int d = 0; d < k; d++) {
+          originOf[i * k + d] = 2 * k * i + d;
+          lengthOf[i * k + d] = 2 * k * i + k + d;
+          domains[2 * k * i + d] = domain(random, 0, 2);
+          domains[2 * k * i + k + d] = domain(random, 0, 2);
+        }
+      }
+      if (shared) {
+        for (int c = 0; c < n * k; c++) {
+          if (random.nextInt(4) == 0) {
+            originOf[c] = originOf[random.nextInt(n * k)];
+          }
+          if (strict && random.nextInt(4) == 0) {
+            lengthOf[c] = random.nextBoolean() ? lengthOf[random.nextInt(n * k)] : originOf[c];
+          } else if (!strict) {
+            lengthOf[c] = lengthOf[c - c % k];
+          }
+        }
+      }
+      long size = 1;
+      for (int[] domain : domains) {
+        size *= domain.length;
+      }
+      while (size > 20_000) {
+        int v = random.nextInt(domains.length);
+        if (domains[v].length > 1) {
+          size /= domains[v].length;
+          domains[v] = new int[] {domains[v][random.nextInt(domains[v].length)]};
+        }
+      }
+      boolean handles = shared && !strict;
+      return new Instance(
+          domains,
+          (store, x) -> {
+            IntVar[][] origin = new IntVar[n][k];
+            IntVar[][] length = new IntVar[n][k];
+            IntVar[] handle = handles ? new IntVar[n] : null;
+            for (int i = 0; i < n; i++) {
+              for (int d = 0; d < k; d++) {
+                origin[i][d] = x[originOf[i * k + d]];
+                length[i][d] = x[lengthOf[i * k + d]];
+              }
+              if (handles) {
+                handle[i] = length[i][0];
+              }
+            }
+            store.impose(new DiffnK(origin, length, strict, handle));
+          },
+          x -> {
+            for (int i = 0; i < n; i++) {
+              for (int j = i + 1; j < n; j++) {
+                boolean apart = false;
+                for (int d = 0; d < k && !apart; d++) {
+                  int oi = x[originOf[i * k + d]];
+                  int li = x[lengthOf[i * k + d]];
+                  int oj = x[originOf[j * k + d]];
+                  int lj = x[lengthOf[j * k + d]];
+                  apart = oi + li <= oj || oj + lj <= oi || !strict && (li == 0 || lj == 0);
+                }
+                if (!apart) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          },
+          "k="
+              + k
+              + " strict="
+              + strict
+              + " origins="
+              + Arrays.toString(originOf)
+              + " lengths="
+              + Arrays.toString(lengthOf));
     };
   }
 

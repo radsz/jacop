@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -58,6 +59,9 @@ import org.junit.jupiter.api.io.TempDir;
 class FlatzincFrontEndTest {
 
   @TempDir Path tmp;
+
+  /** The exit status of the last {@link #run} call. */
+  private int lastStatus;
 
   @Test
   void boolEqReifWithConstantNextToChanneledIntEqReif() throws IOException {
@@ -234,6 +238,51 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void modelWithoutSearchAnnotationIsSolvedAsWithFreeSearch() throws IOException {
+    // Without annotation the variables were labelled in input order with domain splitting, which
+    // found no solution of queens n = 50 in 60 s; free search (-f) finds one in under a second.
+    String model = queens(12, "");
+    String free = searchStatistics(run(model, "-s", "-f")[0]);
+
+    assertEquals(free, searchStatistics(run(model, "-s")[0]));
+    assertNotEquals(free, searchStatistics(run(model, "-s", "--default-search", "input")[0]));
+    // an annotation is still followed
+    String annotated = queens(12, ":: int_search(q,input_order,indomain_min,complete)");
+    assertEquals(
+        searchStatistics(run(annotated, "-s", "--default-search", "input")[0]),
+        searchStatistics(run(annotated, "-s")[0]));
+  }
+
+  /** FlatZinc of n queens on q, with the given search annotation. */
+  private static String queens(int n, String annotation) {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      fzn.append("var 1..%d: q%d;%n".formatted(n, i));
+    }
+    fzn.append("array [1..%d] of var int: q:: output_array([1..%d]) = [".formatted(n, n));
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('q').append(i);
+    }
+    fzn.append("];\n");
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        fzn.append("constraint int_ne(q%d,q%d);%n".formatted(i, j));
+        fzn.append("constraint int_lin_ne([1,-1],[q%d,q%d],%d);%n".formatted(i, j, j - i));
+        fzn.append("constraint int_lin_ne([1,-1],[q%d,q%d],%d);%n".formatted(i, j, i - j));
+      }
+    }
+    fzn.append("solve %s satisfy;%n".formatted(annotation));
+    return fzn.toString();
+  }
+
+  /** The search statistics of a run with -s, without the times. */
+  private static String searchStatistics(String out) {
+    return out.lines()
+        .filter(l -> l.startsWith("%%%mzn-stat: ") && !l.contains("Time=") && !l.contains("time="))
+        .collect(Collectors.joining("\n"));
+  }
+
+  @Test
   void defaultSearchReachesValuesOfUnboundedVariables() throws IOException {
     // MiniZinc test tuple_if_then_else: x and y are unbounded and only x = 3 has a support. The
     // default search tried x = min, x != min one value after another, nesting one choice per
@@ -398,6 +447,66 @@ class FlatzincFrontEndTest {
         "%% Error: Different size declaration and initialization of int array;"
             + " compilation aborted.",
         out[1].strip());
+    assertEquals(1, lastStatus, "a rejected model must not exit with status 0");
+  }
+
+  @Test
+  void integerLiteralBeyond32BitsIsRejectedWithErrorStatus() throws IOException {
+    // hakank's hardy_1729 and others: the bare NumberFormatException message was printed and
+    // Fz2jacop exited with status 0, so scripts took the run for a success.
+    String fzn =
+        """
+        var 1..10: x :: output_var;
+        constraint int_le(x, 10000000000);
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("integer literal 10000000000 at line 2"), out[1]);
+    assertTrue(out[1].contains("outside the 32-bit integer range"), out[1]);
+    assertEquals(1, lastStatus);
+
+    run("var 1..10: x :: output_var;\nconstraint int_le(x, 1000000);\nsolve satisfy;\n");
+    assertEquals(0, lastStatus);
+  }
+
+  @Test
+  void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
+    // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
+    // assignment of the other variables timed out below its only node. The annotated search had no
+    // node left to see the time-out, so =====UNSATISFIABLE===== was printed.
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ys = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 0; i < 24; i++) {
+      fzn.append("var 0..1: y").append(i).append(";\n");
+      ys.append("y").append(i).append(',');
+      weights.append("2,");
+    }
+    fzn.append("var 0..0: x :: output_var;\n")
+        .append("constraint int_lin_eq([")
+        .append(weights)
+        .append("2],[")
+        .append(ys)
+        .append("x],25);\n")
+        .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
+
+    String out = run(fzn.toString(), "-t", "300")[0];
+    assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
+  @Test
+  void timeOutCountsFromTheStartOfTheRun() throws InterruptedException {
+    // find_missing_number_1000_380 spent minutes building the model; the time-out counted from the
+    // start of the search only, so -t did not stop it.
+    Options opt = new Options(new String[] {"-t", "50", "model.fzn"});
+    assertTrue(!opt.timeOutPassed());
+    Thread.sleep(100);
+    assertTrue(opt.timeOutPassed());
+    assertEquals(1, opt.getRemainingTimeOut());
+    assertEquals(0, new Options(new String[] {"-s", "model.fzn"}).getRemainingTimeOut());
   }
 
   @Test
@@ -1096,10 +1205,80 @@ class FlatzincFrontEndTest {
         .append(hint)
         .append("]),int_search(x,input_order,indomain_min,complete)]) satisfy;\n");
 
-    String out =
-        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
-            0];
-    assertTrue(out.contains("=====UNKNOWN====="), out);
+    // the disequalities would become an all-different, which proves at once that the pigeons do
+    // not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(fzn.toString(), "-t", "500"))[
+              0];
+      assertTrue(out.contains("=====UNKNOWN====="), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
+  }
+
+  @Test
+  void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
+    // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
+    // comparisons with the constant first (int_eq_imp(c, x, b), int_lt_imp(c, x, b), ...) set b
+    // when the comparison held or removed x = c when b was false, which loses solutions.
+    // Every comparison, argument order, Boolean (false, true, free) and domain is checked
+    // against enumeration.
+    String[] ops = {"eq", "ne", "lt", "le"};
+    int c = 2;
+    int[][] domains = {{0, 3}, {2, 2}, {0, 1}, {3, 5}, {1, 2}, {2, 3}};
+    for (String op : ops) {
+      for (String kind : new String[] {"reif", "imp"}) {
+        for (boolean constantFirst : new boolean[] {false, true}) {
+          for (String b : new String[] {"false", "true", "free"}) {
+            for (int[] d : domains) {
+              String args = constantFirst ? c + ",x" : "x," + c;
+              String fzn =
+                  "var "
+                      + d[0]
+                      + ".."
+                      + d[1]
+                      + ": x:: output_var;\n"
+                      + ("free".equals(b)
+                          ? "var bool: b:: output_var;\n"
+                          : "var bool: b = " + b + ";\n")
+                      + "constraint int_"
+                      + op
+                      + "_"
+                      + kind
+                      + "("
+                      + args
+                      + ",b);\nsolve satisfy;\n";
+              Set<String> expected = new TreeSet<>();
+              for (int x = d[0]; x <= d[1]; x++) {
+                int l = constantFirst ? c : x;
+                int r = constantFirst ? x : c;
+                boolean holds =
+                    switch (op) {
+                      case "eq" -> l == r;
+                      case "ne" -> l != r;
+                      case "lt" -> l < r;
+                      default -> l <= r;
+                    };
+                for (boolean bv : new boolean[] {false, true}) {
+                  if (!"free".equals(b) && bv != "true".equals(b)) {
+                    continue;
+                  }
+                  if ("reif".equals(kind) ? holds == bv : !bv || holds) {
+                    expected.add(
+                        "free".equals(b) ? "b = " + bv + "; x = " + x + ";" : "x = " + x + ";");
+                  }
+                }
+              }
+              Set<String> actual = solveAll(fzn);
+              actual.remove("=====UNSATISFIABLE=====");
+              assertEquals(expected, actual, fzn);
+            }
+          }
+        }
+      }
+    }
   }
 
   @Test
@@ -1190,7 +1369,7 @@ class FlatzincFrontEndTest {
         PrintStream captureErr = new PrintStream(err, true, StandardCharsets.UTF_8)) {
       System.setOut(captureOut);
       System.setErr(captureErr);
-      new Fz2jacop().callMain(args);
+      lastStatus = new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
       System.setErr(originalErr);

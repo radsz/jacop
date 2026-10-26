@@ -94,10 +94,10 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
     }
 
     // after the two shifts z equals x shifted by c, a fixpoint unless x only keeps its bounds
-    x.domain.inShift(store.level, x, z.domain, -c);
-    z.domain.inShift(store.level, z, x.domain, c);
+    x.domain.inShiftFast(store.level, x, z.domain, -c);
+    z.domain.inShiftFast(store.level, z, x.domain, c);
     if (x.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      x.domain.inShift(store.level, x, z.domain, -c);
+      x.domain.inShiftFast(store.level, x, z.domain, -c);
     }
   }
 

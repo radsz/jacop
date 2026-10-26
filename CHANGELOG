@@ -42,6 +42,44 @@ Version 5.0 (unreleased)
    shops with 150 and 200 jobs reach better makespans. max_edge_find_size
    now applies to Cumulative only.
 
+6. New constraint IncreasingSum(x, s, strict): x is increasing (strictly
+   or not) and s is its sum, bounds consistent in linear time per call
+   (Petit, Regin and Beldiceanu, CP 2011). The FlatZinc front end posts it
+   as a redundant constraint on an int_lin_eq or int_lin_le with unit
+   coefficients whose variables are ordered by increasing/decreasing or by
+   chains of x[i] <= x[i+1] from symmetry breaking;
+   -Dorg.jacop.fz.increasingSum=false turns this off. On number
+   partitioning it cuts failures up to 13x.
+
+7. Constraints have a degree weight, Constraint.setDegreeWeight(w): the
+   number of constraints each counts as in the static degree of its
+   variables, Var.sizeConstraintsOriginal(), which MostConstrainedStatic
+   reads (FlatZinc most_constrained, occurrence, impact and
+   smallest_most_constrained). It is 1 by default; Var.adjustDegree(n)
+   credits a variable with constraints a reformulation removed. The
+   redundant constraints that the FlatZinc front end adds (disjunctive
+   cliques, CircuitCost, IncreasingSum) have weight 0, so they no longer
+   change the variable order of these searches, and a store derived by
+   presolve (org.jacop.presolve.Derivation) keeps the static degrees of
+   its parent.
+
+8. A FlatZinc model without search annotation is solved with free search,
+   as with -f (dom/wdeg, restarts, nogoods), instead of labelling its
+   variables in input order with domain splitting. On 78 such models
+   (MiniZinc benchmarks and the regression set, 60 s) it answers 65
+   instead of 54: queens n = 50 to 400 within 8 s instead of no solution,
+   and jobshop la09, orb02 and orb10 proved. --default-search input
+   restores the input order search. FreeSearch now reads the clock at
+   every node, so a time limit holds when nodes are slow.
+
+9. The set order constraints AleB and AltB (MiniZinc set_le and set_lt,
+   sets compared as sorted lists of elements) are bounds consistent: an
+   element stays undecided in a set only when the constraint has a
+   solution with it and one without it, and the cardinalities are narrowed
+   to those of the solutions. Before, they only removed the elements of b
+   below min(lub(a)) and checked fixed sets. On steiner-triples from the
+   MiniZinc benchmarks the search tree shrinks up to 4x.
+
 Version 4.11
 =============
 

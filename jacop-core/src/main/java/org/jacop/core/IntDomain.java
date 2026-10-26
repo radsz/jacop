@@ -1183,6 +1183,21 @@ public abstract class IntDomain extends Domain {
   public abstract void inComplement(int storeLevel, Var v, int min, int max);
 
   /**
+   * It updates the domain so it does not contain the values of the supplied domain, with one change
+   * of the variable instead of one per interval.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param complement the values which are removed from the domain.
+   */
+  public void inComplement(int storeLevel, Var v, IntDomain complement) {
+    if (complement.isEmpty() || !isIntersecting(complement)) {
+      return;
+    }
+    in(storeLevel, v, subtract(complement));
+  }
+
+  /**
    * It returns number of intervals required to represent this domain.
    *
    * @return the number of intervals in the domain.
@@ -1207,6 +1222,26 @@ public abstract class IntDomain extends Domain {
    * @param shift the shift which is used to shift the domain supplied as argument.
    */
   public abstract void inShift(int storeLevel, Var v, IntDomain domain, int shift);
+
+  /**
+   * It does {@link #inShift(int, Var, IntDomain, int)}. A domain without holes shifts to one
+   * interval, which needs neither a walk over the domain nor a new domain when nothing changes (x +
+   * y = z with a fixed x shifts such domains on every call).
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param domain the domain according to which the domain is updated.
+   * @param shift the shift which is used to shift the domain supplied as argument.
+   */
+  public final void inShiftFast(int storeLevel, Var v, IntDomain domain, int shift) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID
+        ? ((IntervalDomain) domain).size == 1
+        : !domain.isEmpty() && domain.getSize() == (long) domain.max() - domain.min() + 1) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+    } else {
+      inShift(storeLevel, v, domain, shift);
+    }
+  }
 
   /**
    * It returns the left most element of the given interval.
