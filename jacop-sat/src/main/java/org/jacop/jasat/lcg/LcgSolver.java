@@ -166,6 +166,15 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean freeSearch;
   private boolean annotationRun;
 
+  private double lowerBoundShare;
+  private long lowerBoundBudget;
+
+  /** Statistics: runs of objective lower-bound search. */
+  public long lowerBoundRuns;
+
+  /** Statistics: lower-bound runs that raised the lower bound. */
+  public long lowerBoundRaised;
+
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
@@ -319,11 +328,15 @@ public final class LcgSolver implements ExternalPropagator {
    * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
+    return solve(new int[0]);
+  }
+
+  private int solve(int... assumed) {
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
     solution = null;
-    int result = sat.solve();
+    int result = sat.solve(assumed);
     // the solver leaves its last assignment without notifying; the store goes back to the root
     notifyBacktrack(0);
     return result;
@@ -343,9 +356,10 @@ public final class LcgSolver implements ExternalPropagator {
     best = null;
     int result;
     try {
-      result = solve();
+      result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
     } finally {
       this.objective = -1;
+      sat.setConflictLimit(Long.MAX_VALUE);
     }
     solution = best;
     if (result == CdclSolver.UNKNOWN) {
@@ -353,6 +367,59 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // SAT when the solution has the smallest value of the objective, UNSAT when none is better
     return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+  }
+
+  /**
+   * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
+   * after a number of conflicts, and each is followed by a run under the assumption that the
+   * objective is at its lower bound, with a share of those conflicts. When that run proves the
+   * assumption impossible, the lower bound goes up by a clause; when it finds a solution, the
+   * solution is optimal. The budget of conflicts grows by half at each round.
+   */
+  private int minimizeWithLowerBoundSearch() {
+    long budget = lowerBoundBudget;
+    while (true) {
+      long limit = sat.conflicts + budget;
+      sat.setConflictLimit(limit);
+      int result = solve();
+      if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
+        return result; // done, or stopped by the deadline
+      }
+      int lb = vars[objective].min(); // after solve the domains are those of level 0
+      if (best != null && lb < best[objective]) {
+        int lit = -geLit(objective, lb + 1); // objective <= lb
+        limit = sat.conflicts + (long) (budget * lowerBoundShare);
+        sat.setConflictLimit(limit);
+        lowerBoundRuns++;
+        result = solve(lit);
+        if (result == CdclSolver.SAT) {
+          return result; // a solution at the smallest value of the objective
+        }
+        if (result == CdclSolver.UNSAT) {
+          if (sat.failedAssumptions().length == 0) {
+            return result; // no better solution at all
+          }
+          sat.addClause(-lit); // objective >= lb + 1
+          lowerBoundRaised++;
+        } else if (sat.conflicts < limit) {
+          return result;
+        }
+      }
+      budget += budget / 2;
+    }
+  }
+
+  /**
+   * Turns on objective lower-bound search in {@link #minimize}: runs of branch and bound alternate
+   * with runs that assume the objective at its lower bound, which take the given share of the
+   * conflicts of the runs before them.
+   *
+   * @param share the conflicts of a lower-bound run per conflict of branch and bound; 0 for none
+   * @param firstRun the conflicts of the first run of branch and bound, growing by half each round
+   */
+  public void setLowerBoundSearch(double share, long firstRun) {
+    lowerBoundShare = share;
+    lowerBoundBudget = Math.max(1, firstRun);
   }
 
   /**

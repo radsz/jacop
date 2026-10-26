@@ -493,6 +493,8 @@ class LcgFuzzTest {
     int sat = 0;
     int unsat = 0;
     long checked = 0;
+    long lowerBoundRuns = 0;
+    long lowerBoundRaised = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected = reference(new Model(seed));
@@ -508,6 +510,8 @@ class LcgFuzzTest {
         annotate(solver, model, seed);
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
         checked += solver.checker().checked;
+        lowerBoundRuns += solver.lowerBoundRuns;
+        lowerBoundRaised += solver.lowerBoundRaised;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -537,8 +541,9 @@ class LcgFuzzTest {
     }
     if (RUNS >= 1000) {
       System.out.printf(
-          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked%n",
-          RUNS, sat, unsat, checked);
+          "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
+              + " %d lower-bound runs (%d raised the bound)%n",
+          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised);
       statistics.forEach(
           (k, v) ->
               System.out.printf(
@@ -551,11 +556,16 @@ class LcgFuzzTest {
   }
 
   /**
-   * Gives three runs in four a search annotation on the decision variables, as fixed search (with
-   * or without restarts) or free search, branching on values or splitting domains.
+   * Gives one run in three objective lower-bound search, and three runs in four a search annotation
+   * on the decision variables, as fixed search (with or without restarts) or free search, branching
+   * on values or splitting domains.
    */
   private static void annotate(LcgSolver solver, Model model, long seed) {
     Random random = new Random(seed * 31 + 7);
+    if (random.nextInt(3) == 0) {
+      // short runs, so that the tiny models reach the lower-bound runs
+      solver.setLowerBoundSearch(0.25 + random.nextDouble(), 1 + random.nextInt(3));
+    }
     int kind = (int) (seed / 3 % 4);
     if (kind == 0) {
       return;

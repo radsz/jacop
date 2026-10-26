@@ -440,12 +440,19 @@ class LcgSolverTest {
     }
   }
 
-  /** Random small scheduling problems minimising the makespan, against JaCoP's search. */
+  /**
+   * Random small scheduling problems minimising the makespan, against JaCoP's search: LCG with its
+   * default search, with objective lower-bound search, and following the start-time annotation as
+   * fixed search and as free search.
+   */
   @Test
   void makespanAgreesWithSearch() {
     Random rnd = new Random(9);
     long atomLiterals = 0;
     long atomLiteralsLearnt = 0;
+    long lowerBoundRuns = 0;
+    long lowerBoundRaised = 0;
+    long annotationDecisions = 0;
     for (int instance = 0; instance < 150; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
@@ -462,8 +469,8 @@ class LcgSolverTest {
         int a = rnd.nextInt(n - 1);
         prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
       }
-      int[] optimum = new int[2];
-      for (int mode = 0; mode < 2; mode++) {
+      int[] optimum = new int[5];
+      for (int mode = 0; mode < 5; mode++) {
         Store store = new Store();
         IntVar[] s = new IntVar[n];
         IntVar[] ends = new IntVar[n];
@@ -493,16 +500,30 @@ class LcgSolverTest {
         } else {
           LcgSolver solver = new LcgSolver(store);
           solver.setChecking(true);
+          if (mode == 2 || mode == 4) {
+            solver.setLowerBoundSearch(1, 1);
+          }
+          if (mode >= 3) {
+            solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), mode == 4);
+            solver.sat().setRestarts(mode == 4);
+          }
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
-          optimum[1] = solver.value(makespan);
+          optimum[mode] = solver.value(makespan);
           assertThat(solver.atomLiteralsLearnt).isLessThanOrEqualTo(solver.atomLiterals);
           atomLiterals += solver.atomLiterals;
           atomLiteralsLearnt += solver.atomLiteralsLearnt;
+          lowerBoundRuns += solver.lowerBoundRuns;
+          lowerBoundRaised += solver.lowerBoundRaised;
+          annotationDecisions += solver.annotationDecisions;
         }
       }
-      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+      for (int mode = 1; mode < 5; mode++) {
+        assertThat(optimum[mode]).as("instance %d, mode %d", instance, mode).isEqualTo(optimum[0]);
+      }
     }
     // the learnt clauses use some of the atoms pushed, not all
     assertThat(atomLiteralsLearnt).isPositive().isLessThan(atomLiterals);
+    assertThat(lowerBoundRaised).isPositive().isLessThan(lowerBoundRuns);
+    assertThat(annotationDecisions).isPositive();
   }
 }
