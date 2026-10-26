@@ -42,6 +42,7 @@ import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
@@ -337,7 +338,10 @@ class LcgFuzzTest {
         case 9 -> new Alldistinct(q);
         case 10 -> new Alldifferent(q);
         case 11 -> new Alldiff(q);
-        case 12 -> new AlldifferentExcept(q, new IntervalDomain(0, 0));
+        case 12 ->
+            rnd.nextBoolean()
+                ? new AlldifferentExcept(q, new IntervalDomain(0, 0))
+                : new AlldifferentExceptZero(q);
         case 13 -> new Max(q, one());
         case 14 -> new Min(q, one());
         case 15 -> new ArgMin(q, intVar("i", 1, q.length));

@@ -150,6 +150,12 @@ public class AlldifferentExcept extends Alldifferent
   }
 
   @Override
+  IntDomain explainedExceptions() {
+    Class<?> type = getClass();
+    return type == AlldifferentExcept.class || type == AlldifferentExceptZero.class ? s : null;
+  }
+
+  @Override
   public AlldifferentExcept copy(VarMap map) {
     return new AlldifferentExcept(map.get(list), s);
   }

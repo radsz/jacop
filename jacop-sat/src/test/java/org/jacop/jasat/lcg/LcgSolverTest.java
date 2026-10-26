@@ -40,6 +40,10 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
@@ -61,6 +65,7 @@ import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
@@ -371,6 +376,99 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(generic);
+  }
+
+  @Test
+  void allDifferentAgreesWithBruteForce() {
+    Random rnd = new Random(29);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        IntVar[] q = new IntVar[3 + rnd.nextInt(n - 2)];
+        int[] at = new int[q.length];
+        for (int k = 0; k < q.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+          q[k] = x[at[k]];
+        }
+        int kind = rnd.nextInt(5);
+        Constraint constraint =
+            switch (kind) {
+              case 0 -> new Alldifferent(q);
+              case 1 -> new Alldiff(q);
+              case 2 -> new Alldistinct(q);
+              case 3 -> new AlldifferentExcept(q, new IntervalDomain(0, 1));
+              default -> new AlldifferentExceptZero(q);
+            };
+        int shared = kind == 3 ? 1 : kind == 4 ? 0 : Integer.MIN_VALUE;
+        relations.add(
+            new Relation(
+                constraint,
+                t -> {
+                  for (int k = 0; k < at.length; k++) {
+                    for (int m = k + 1; m < at.length; m++) {
+                      int v = t[at[k]];
+                      boolean exception = v == shared || kind == 3 && v == 0;
+                      if (v == t[at[m]] && !exception) {
+                        return false;
+                      }
+                    }
+                  }
+                  return true;
+                }));
+      }
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name :
+          new String[] {
+            "Alldifferent", "Alldiff", "Alldistinct", "AlldifferentExcept", "AlldifferentExceptZero"
+          }) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "all different: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
   }
 
   /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */
