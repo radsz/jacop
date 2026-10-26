@@ -45,6 +45,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Lex;
@@ -202,6 +203,31 @@ class PresolveTest {
     assertThat(Copyable.canCopy(new XltY(x, y) {})).isFalse();
     assertThat(Copyable.canCopy(new Not(new XltY(x, y)))).isTrue();
     assertThat(Copyable.canCopy(new Not(new XltY(x, y) {}))).isFalse();
+  }
+
+  @Test
+  void countValuesCopyKeepsTheCounterpartOfItsOwnVariable() {
+    // CountValues counts the variables taking no counted value in a variable it creates; its copy
+    // created another one, so the counterpart of the original's variable was left unconstrained
+    // and labelling it gave solutions the parent rejected
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar c = new IntVar(store, "c", 0, 2);
+    store.impose(new CountValues(x, new IntVar[] {c}, new int[] {0}));
+    IntVar[] all =
+        Arrays.stream(store.vars, 0, store.size()).map(IntVar.class::cast).toArray(IntVar[]::new);
+    Derivation derivation = Presolver.of(store).checking(true).presolve();
+    int[] solutions = {0};
+    search(
+        derivation.child(),
+        derivation.counterparts(all),
+        0,
+        () -> {
+          if (derivation.returnSolution()) {
+            solutions[0]++;
+          }
+        });
+    assertThat(solutions[0]).isEqualTo(9);
   }
 
   @Test
