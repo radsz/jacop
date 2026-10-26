@@ -195,6 +195,7 @@ setup to run configuration. -->
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
+                                <implicitGlobals.trials>150</implicitGlobals.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -237,6 +238,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -319,6 +321,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -400,6 +403,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
@@ -480,6 +484,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
