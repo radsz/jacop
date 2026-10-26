@@ -52,6 +52,8 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
@@ -109,6 +111,7 @@ import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -286,7 +289,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(61)) {
+      return switch (rnd.nextInt(64)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -373,6 +376,16 @@ class LcgFuzzTest {
         case 58 -> new ElementVariableFast(one(), q, one(), -rnd.nextInt(2));
         case 59 ->
             rnd.nextBoolean() ? new MaxSimple(p[0], p[1], one()) : new MinSimple(p[0], p[1], one());
+        case 60 -> {
+          int v = value();
+          IntVar[] bs = pick(b, 3);
+          int[] values = {v, v + 1, v + 3};
+          yield rnd.nextBoolean()
+              ? new ChannelReif(one(), bs, values)
+              : new ChannelImply(one(), bs, values);
+        }
+        case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
+        case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {

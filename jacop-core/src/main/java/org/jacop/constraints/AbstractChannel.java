@@ -41,8 +41,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
-abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
+abstract class AbstractChannel extends Constraint implements SatisfiedPresent, Explainable {
 
   final IntVar x;
   final int n;
@@ -265,6 +268,149 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
     if (x.singleton()) {
       propagateWhenXisSingleton(store, start);
     }
+    return true;
+  }
+
+  // values walked for one reason before giving up on it
+  private static final int LCG_MAX_VALUES = 4096;
+
+  // whether b = 0 also forces x != value (ChannelReif), not only b = 1 forcing x = value
+  private boolean lcgReified() {
+    return getClass() == ChannelReif.class;
+  }
+
+  private boolean lcgExplained() {
+    if (getClass() != ChannelReif.class && getClass() != ChannelImply.class) {
+      return false;
+    }
+    for (Item it : item) {
+      if (it.b() == x) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Explains an atom of x by the 0/1 variables fixed before it, and a 0/1 variable by the domain of
+   * x.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (!lcgExplained()) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int a = trail.value(entry);
+    if (y == x) {
+      // x = v for an item whose b was 1
+      for (Item it : item) {
+        int v = it.value();
+        boolean implied =
+            kind == AtomicTrail.GE ? v >= a : kind == AtomicTrail.LE ? v <= a : v != a;
+        if (implied && trail.minBefore(it.b(), entry) >= 1) {
+          trail.addLowerBound(it.b(), entry, out);
+          return true;
+        }
+      }
+      // every removed value is out of x already or has its b at 0
+      switch (kind) {
+        case AtomicTrail.NE -> {
+          return offByB(trail, entry, a, out);
+        }
+        case AtomicTrail.GE -> {
+          trail.addLowerBound(x, entry, out);
+          return valuesOff(trail, entry, trail.minBefore(x, entry), a - 1L, out);
+        }
+        default -> {
+          trail.addUpperBound(x, entry, out);
+          return valuesOff(trail, entry, a + 1L, trail.maxBefore(x, entry), out);
+        }
+      }
+    }
+    boolean one = kind == AtomicTrail.GE || kind == AtomicTrail.NE && a == 0;
+    int lo = trail.minBefore(x, entry);
+    boolean fixed = lo == trail.maxBefore(x, entry);
+    for (Item it : item) {
+      if (it.b() != y) {
+        continue;
+      }
+      if (one) {
+        if (fixed && lo == it.value()) {
+          trail.addLowerBound(x, entry, out);
+          trail.addUpperBound(x, entry, out);
+          return true;
+        }
+      } else if (trail.excludedBefore(x, it.value(), entry, out)) {
+        return true;
+      }
+    }
+    if (!one && fixed) {
+      // x is fixed to a value whose own b is another variable
+      trail.addLowerBound(x, entry, out);
+      trail.addUpperBound(x, entry, out);
+      return valueMap.get(lo) != y;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (!lcgExplained()) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    for (Item it : item) {
+      if (trail.minBefore(it.b(), now) >= 1) {
+        if (trail.excludedBefore(x, it.value(), now, out)) {
+          trail.addLowerBound(it.b(), now, out);
+          return true;
+        }
+        for (Item other : item) {
+          if (other.b() != it.b()
+              && other.value() != it.value()
+              && trail.minBefore(other.b(), now) >= 1) {
+            trail.addLowerBound(it.b(), now, out);
+            trail.addLowerBound(other.b(), now, out);
+            return true;
+          }
+        }
+      }
+    }
+    out.truncate(mark);
+    int lo = trail.minBefore(x, now);
+    if (valuesOff(trail, now, lo, trail.maxBefore(x, now), out)) {
+      trail.addLowerBound(x, now, out);
+      trail.addUpperBound(x, now, out);
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // the values from..to of x are out of x before the position, or have their b at 0
+  private boolean valuesOff(AtomicTrail trail, int position, long from, long to, EntryList out) {
+    if (to - from >= LCG_MAX_VALUES) {
+      return false;
+    }
+    for (long u = from; u <= to; u++) {
+      if (!trail.excludedBefore(x, (int) u, position, out)
+          && !offByB(trail, position, (int) u, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // ChannelReif: value v's b was 0 before the position
+  private boolean offByB(AtomicTrail trail, int position, int v, EntryList out) {
+    IntVar b = valueMap.get(v);
+    if (!lcgReified() || b == null || trail.maxBefore(b, position) > 0) {
+      return false;
+    }
+    trail.addUpperBound(b, position, out);
     return true;
   }
 
