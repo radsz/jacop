@@ -447,6 +447,8 @@ class LcgFuzzTest {
       try {
         LcgSolver solver = new LcgSolver(model.store);
         solver.setChecking(true);
+        // reasons of up to 1 to 3 literals stay as clauses
+        solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
         checked += solver.checker().checked;
         IntVar[] vars = model.decisionVars();
