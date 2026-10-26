@@ -245,6 +245,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
@@ -330,6 +331,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
@@ -413,6 +415,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

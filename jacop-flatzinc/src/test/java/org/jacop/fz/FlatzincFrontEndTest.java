@@ -60,6 +60,9 @@ class FlatzincFrontEndTest {
 
   @TempDir Path tmp;
 
+  /** The exit status of the last {@link #run} call. */
+  private int lastStatus;
+
   @Test
   void boolEqReifWithConstantNextToChanneledIntEqReif() throws IOException {
     // x has two int_eq_reif with constants on its 0/1 view, which are collected into one
@@ -444,6 +447,66 @@ class FlatzincFrontEndTest {
         "%% Error: Different size declaration and initialization of int array;"
             + " compilation aborted.",
         out[1].strip());
+    assertEquals(1, lastStatus, "a rejected model must not exit with status 0");
+  }
+
+  @Test
+  void integerLiteralBeyond32BitsIsRejectedWithErrorStatus() throws IOException {
+    // hakank's hardy_1729 and others: the bare NumberFormatException message was printed and
+    // Fz2jacop exited with status 0, so scripts took the run for a success.
+    String fzn =
+        """
+        var 1..10: x :: output_var;
+        constraint int_le(x, 10000000000);
+        solve satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("integer literal 10000000000 at line 2"), out[1]);
+    assertTrue(out[1].contains("outside the 32-bit integer range"), out[1]);
+    assertEquals(1, lastStatus);
+
+    run("var 1..10: x :: output_var;\nconstraint int_le(x, 1000000);\nsolve satisfy;\n");
+    assertEquals(0, lastStatus);
+  }
+
+  @Test
+  void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
+    // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
+    // assignment of the other variables timed out below its only node. The annotated search had no
+    // node left to see the time-out, so =====UNSATISFIABLE===== was printed.
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ys = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 0; i < 24; i++) {
+      fzn.append("var 0..1: y").append(i).append(";\n");
+      ys.append("y").append(i).append(',');
+      weights.append("2,");
+    }
+    fzn.append("var 0..0: x :: output_var;\n")
+        .append("constraint int_lin_eq([")
+        .append(weights)
+        .append("2],[")
+        .append(ys)
+        .append("x],25);\n")
+        .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
+
+    String out = run(fzn.toString(), "-t", "300")[0];
+    assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
+  @Test
+  void timeOutCountsFromTheStartOfTheRun() throws InterruptedException {
+    // find_missing_number_1000_380 spent minutes building the model; the time-out counted from the
+    // start of the search only, so -t did not stop it.
+    Options opt = new Options(new String[] {"-t", "50", "model.fzn"});
+    assertTrue(!opt.timeOutPassed());
+    Thread.sleep(100);
+    assertTrue(opt.timeOutPassed());
+    assertEquals(1, opt.getRemainingTimeOut());
+    assertEquals(0, new Options(new String[] {"-s", "model.fzn"}).getRemainingTimeOut());
   }
 
   @Test
@@ -1306,7 +1369,7 @@ class FlatzincFrontEndTest {
         PrintStream captureErr = new PrintStream(err, true, StandardCharsets.UTF_8)) {
       System.setOut(captureOut);
       System.setErr(captureErr);
-      new Fz2jacop().callMain(args);
+      lastStatus = new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
       System.setErr(originalErr);

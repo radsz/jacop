@@ -133,6 +133,9 @@ public class Constraints implements ParserTreeConstants {
 
         int k = node.jjtGetNumChildren();
         for (int j = 0; j < k; j++) {
+          if (support.options.timeOutPassed()) {
+            throw new ModelTimeOut();
+          }
           SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
           if (!replaced.contains(snode.jjtGetChild(0))) {
             generateConstraint(snode);
