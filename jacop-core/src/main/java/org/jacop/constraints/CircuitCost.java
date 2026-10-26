@@ -412,7 +412,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
    * duals are kept between calls and are not trailed: each call restores dual feasibility for the
    * arcs that came back on backtracking and augments only the rows that lost their arc.
    */
-  private static final class Assignment {
+  static final class Assignment {
 
     private static final long INF = Long.MAX_VALUE / 4;
 
