@@ -36,6 +36,12 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + Y = Z.
@@ -45,7 +51,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusYeqZ extends AbstractConstraintXandYandZ implements Copyable<XplusYeqZ> {
+public class XplusYeqZ extends AbstractConstraintXandYandZ
+    implements Copyable<XplusYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -191,5 +198,62 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ implements Copyable<X
   @Override
   public XplusYeqZ copy(VarMap map) {
     return new XplusYeqZ(map.get(x), map.get(y), map.get(z));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
+      return false;
+    }
+    return ShiftExplanation.explainSum(trail, entry, x, y, z, out)
+        || LinearExplanation.explainChecked(
+            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
+      return false;
+    }
+    return ShiftExplanation.explainSumFailure(trail, x, y, z, out)
+        || LinearExplanation.explainFailure(
+            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+  }
+
+  // the equality as a linear form, for entailment and negation
+  private LinearForm equality() {
+    return getClass() == XplusYeqZ.class && x != y && x != z && y != z
+        ? new LinearForm(new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, LinearForm.EQ)
+        : null;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = equality();
+    if (f == null) {
+      return false;
+    }
+    if (entailed) {
+      return f.explainEntailed(trail, position, out);
+    }
+    return f.negated().explainEntailed(trail, position, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = equality();
+    return f != null && f.negated().explainFailure(trail, out);
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
   }
 }

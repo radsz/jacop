@@ -325,14 +325,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
 
-    if (options.freeSearch()) {
-      if (!nsi.isEmpty()) {
-        annotatedSearch = new SearchItem<>(store, dictionary);
-        annotatedSearch.setSearchType(SEQ_SEARCH);
-        for (SearchItem<T> se : nsi) {
-          annotatedSearch.addSearch(se);
-        }
+    if ((options.freeSearch() || options.lcg()) && !nsi.isEmpty()) {
+      annotatedSearch = new SearchItem<>(store, dictionary);
+      annotatedSearch.setSearchType(SEQ_SEARCH);
+      for (SearchItem<T> se : nsi) {
+        annotatedSearch.addSearch(se);
       }
+    }
+    if (options.freeSearch()) {
       ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
       solveKind = getKind(kind.getKind());
       run_single_search(solveKind, kind, null);
@@ -783,6 +783,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.addClause(clause[0], clause[1]);
     }
     lcg.onSolution(this::printSolution);
+    // under free search the runs alternate with the annotation, as in executeFreeSearch
+    boolean free = options.freeSearch();
+    SelectChoicePoint<? extends Var> annotated =
+        free && "none".equals(options.freeConfig("interleave", "restart"))
+            ? null
+            : annotationSelect(annotatedSearch);
+    lcg.setAnnotation(annotated, free);
+    if (free) {
+      // objective lower-bound search: conflicts of its runs per conflict of branch and bound
+      lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
+    }
+    if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
+      // the annotation is followed down each branch, as without learning
+      lcg.sat().setRestarts(false);
+    }
     if (options.getTimeOut() > 0) {
       lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
     }
@@ -796,6 +811,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getStatistics()) {
       printStatisticsOutput(
           (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
+      if (numberSolutions > 0 && costVariable instanceof IntVar cost) {
+        // the cost variable is the negated objective under maximisation
+        int value = lcg.value(cost);
+        IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
+      }
       printLcgExplanationStatistics();
     }
   }
@@ -845,6 +865,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(reasons == 0 ? 0 : (double) generic / reasons)
             + "\n%%%mzn-stat: lcgAvgExplanation="
             + nf.format(reasons == 0 ? 0 : (double) atoms / reasons)
+            + "\n%%%mzn-stat: lcgRestarts="
+            + lcg.sat().restarts
+            + "\n%%%mzn-stat: lcgAnnotationDecisions="
+            + lcg.annotationDecisions
+            + "\n%%%mzn-stat: lcgSearchDecisions="
+            + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat-end\n"

@@ -36,6 +36,8 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Constraint X {@literal <=} C.
@@ -43,7 +45,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XlteqC extends AbstractXcompC implements Copyable<XlteqC> {
+public class XlteqC extends AbstractXcompC implements Copyable<XlteqC>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -99,5 +101,12 @@ public class XlteqC extends AbstractXcompC implements Copyable<XlteqC> {
   @Override
   public XlteqC copy(VarMap map) {
     return new XlteqC(map.get(x), c);
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    return getClass() == XlteqC.class
+        ? new LinearForm(new IntVar[] {x}, new long[] {1}, c, LinearForm.LE)
+        : null;
   }
 }

@@ -37,6 +37,10 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.MaxExplanation;
 
 /**
  * MinSimple constraint implements the minimum/2 constraint. It provides the minimum variable from
@@ -47,7 +51,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class MinSimple extends Constraint implements SatisfiedPresent, Copyable<MinSimple> {
+public class MinSimple extends Constraint
+    implements SatisfiedPresent, Copyable<MinSimple>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -137,5 +142,21 @@ public class MinSimple extends Constraint implements SatisfiedPresent, Copyable<
   @Override
   public MinSimple copy(VarMap map) {
     return new MinSimple(map.get(x1), map.get(x2), map.get(min));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == MinSimple.class
+        && x1 != min
+        && x2 != min
+        && MaxExplanation.explain(trail, entry, new IntVar[] {x1, x2}, min, false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == MinSimple.class
+        && x1 != min
+        && x2 != min
+        && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, min, false, out);
   }
 }

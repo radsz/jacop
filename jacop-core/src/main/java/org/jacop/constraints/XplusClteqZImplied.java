@@ -36,6 +36,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.ReifiedExplanation;
 
 /**
  * Constraint b =&gt; X + C{@literal <=} Z, where b is a 0/1 variable (half reification).
@@ -47,7 +51,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class XplusClteqZImplied extends PrimitiveConstraint
-    implements Copyable<XplusClteqZImplied> {
+    implements Copyable<XplusClteqZImplied>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -179,5 +183,33 @@ public class XplusClteqZImplied extends PrimitiveConstraint
   @Override
   public XplusClteqZImplied copy(VarMap map) {
     return new XplusClteqZImplied(map.get(b), map.get(x), c, map.get(z));
+  }
+
+  // the implied inequality, for its explanations
+  private XplusClteqZ lcgNested;
+
+  private XplusClteqZ nested() {
+    if (lcgNested == null) {
+      lcgNested = new XplusClteqZ(x, c, z);
+    }
+    return lcgNested;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == XplusClteqZImplied.class
+        && x != z
+        && b != x
+        && b != z
+        && ReifiedExplanation.explain(trail, entry, b, nested(), false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == XplusClteqZImplied.class
+        && x != z
+        && b != x
+        && b != z
+        && ReifiedExplanation.explainFailure(trail, b, nested(), false, out);
   }
 }
