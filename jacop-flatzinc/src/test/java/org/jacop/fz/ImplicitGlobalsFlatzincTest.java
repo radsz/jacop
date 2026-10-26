@@ -34,11 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,29 +108,7 @@ class ImplicitGlobalsFlatzincTest {
       StringBuilder vars = new StringBuilder();
       for (int i : xs) {
         String key = i + "_" + v;
-        String lit =
-            literals.computeIfAbsent(
-                key,
-                k -> {
-                  fzn.append("var bool: b")
-                      .append(k)
-                      .append(";\nvar 0..1: i")
-                      .append(k)
-                      .append(";\n");
-                  constraints
-                      .append("constraint int_eq_reif(x")
-                      .append(i)
-                      .append(',')
-                      .append(v)
-                      .append(",b")
-                      .append(k)
-                      .append(");\nconstraint bool2int(b")
-                      .append(k)
-                      .append(",i")
-                      .append(k)
-                      .append(");\n");
-                  return "i" + k;
-                });
+        String lit = literals.computeIfAbsent(key, k -> literal(fzn, constraints, "x" + i, v, k));
         coefs.append(coefs.isEmpty() ? "" : ",").append(a);
         vars.append(vars.isEmpty() ? "" : ",").append(lit);
       }
@@ -218,6 +192,25 @@ class ImplicitGlobalsFlatzincTest {
     int[] s = new int[n + m];
     enumerate(0, s, n, maxValue, maxCounter, checks, expected);
     return new Model(fzn.toString(), expected);
+  }
+
+  // b <-> x = v and its 0/1 integer i, named by the key; returns the integer's name
+  private static String literal(
+      StringBuilder decls, StringBuilder constraints, String x, int v, String key) {
+    decls.append("var bool: b").append(key).append(";\nvar 0..1: i").append(key).append(";\n");
+    constraints
+        .append("constraint int_eq_reif(")
+        .append(x)
+        .append(',')
+        .append(v)
+        .append(",b")
+        .append(key)
+        .append(");\nconstraint bool2int(b")
+        .append(key)
+        .append(",i")
+        .append(key)
+        .append(");\n");
+    return "i" + key;
   }
 
   // x[i] - x[j] != d
@@ -319,19 +312,7 @@ class ImplicitGlobalsFlatzincTest {
       StringBuilder vars = new StringBuilder("s" + v);
       for (int i = 0; i < n; i++) {
         String k = i + "_" + v;
-        fzn.append("var bool: b").append(k).append(";\nvar 0..1: i").append(k).append(";\n");
-        constraints
-            .append("constraint int_eq_reif(s")
-            .append(i)
-            .append(',')
-            .append(v)
-            .append(",b")
-            .append(k)
-            .append(");\nconstraint bool2int(b")
-            .append(k)
-            .append(",i")
-            .append(k)
-            .append(");\n");
+        literal(fzn, constraints, "s" + i, v, k);
         coefs.append(",-1");
         vars.append(",i").append(k);
       }
@@ -415,34 +396,10 @@ class ImplicitGlobalsFlatzincTest {
   }
 
   private String run(String model, String... options) throws IOException {
-    Path fzn = tmp.resolve("model.fzn");
-    Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    PrintStream originalOut = System.out;
-    String[] args = Arrays.copyOf(options, options.length + 1);
-    args[options.length] = fzn.toString();
-    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
-      System.setOut(capture);
-      new Fz2jacop().callMain(args);
-    } finally {
-      System.setOut(originalOut);
-    }
-    return buffer.toString(StandardCharsets.UTF_8);
+    return FlatzincTestRunner.run(tmp, model, options);
   }
 
   private static Set<String> solutions(String out) {
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(out.split("----------"))
-        .map(
-            s ->
-                String.join(
-                    " ",
-                    new TreeSet<>(
-                        Arrays.stream(s.strip().split("\\R"))
-                            .filter(l -> !l.isBlank() && !l.startsWith("%"))
-                            .toList())))
-        .filter(s -> !s.isEmpty() && !s.startsWith("==========") && !s.contains("UNSATISFIABLE"))
-        .forEach(solutions::add);
-    return solutions;
+    return FlatzincTestRunner.solutions(out);
   }
 }

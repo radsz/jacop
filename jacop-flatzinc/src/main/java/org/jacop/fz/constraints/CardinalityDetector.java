@@ -146,17 +146,7 @@ public class CardinalityDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    Support.forEachConstraint(astTree, this::collect);
     if (literals.isEmpty()) {
       return;
     }
@@ -206,14 +196,14 @@ public class CardinalityDetector implements ParserTreeConstants {
     int rhs = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     // the value and coefficient shared by most literals
-    Map<Long, Integer> frequency = new HashMap<>();
+    Map<Long, int[]> frequency = new HashMap<>();
     long best = 0;
     int bestFrequency = 0;
     for (int i = 0; i < vs.length; i++) {
       Literal l = literals.get(vs[i]);
       if (l != null) {
         long key = ((long) l.v << 32) | (a[i] & 0xffffffffL);
-        int f = frequency.merge(key, 1, Integer::sum);
+        int f = ++frequency.computeIfAbsent(key, k -> new int[1])[0];
         if (f > bestFrequency) {
           bestFrequency = f;
           best = key;

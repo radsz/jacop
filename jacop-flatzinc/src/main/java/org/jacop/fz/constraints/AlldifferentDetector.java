@@ -132,17 +132,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
    */
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    Support.forEachConstraint(astTree, this::collect);
     if (nodes.size() < MIN_CLIQUE_SIZE) {
       return;
     }
@@ -305,7 +295,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
     covered.addAll(edges);
     if (!REDUNDANT) {
       for (Edge e : edges) {
-        replaced.addAll(sources.get(e));
+        replaced.addAll(sources.getOrDefault(e, List.of()));
       }
     }
     return true;
