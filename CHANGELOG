@@ -42,6 +42,23 @@ Version 5.0 (unreleased)
    shops with 150 and 200 jobs reach better makespans. max_edge_find_size
    now applies to Cumulative only.
 
+6. New constraint IncreasingSum(x, s, strict): x is increasing (strictly
+   or not) and s is its sum, bounds consistent in linear time per call
+   (Petit, Regin and Beldiceanu, CP 2011). The FlatZinc front end posts it
+   as a redundant constraint on an int_lin_eq or int_lin_le with unit
+   coefficients whose variables are ordered by increasing/decreasing or by
+   chains of x[i] <= x[i+1] from symmetry breaking;
+   -Dorg.jacop.fz.increasingSum=false turns this off. On number
+   partitioning it cuts failures up to 13x.
+
+7. The set order constraints AleB and AltB (MiniZinc set_le and set_lt,
+   sets compared as sorted lists of elements) are bounds consistent: an
+   element stays undecided in a set only when the constraint has a
+   solution with it and one without it, and the cardinalities are narrowed
+   to those of the solutions. Before, they only removed the elements of b
+   below min(lub(a)) and checked fixed sets. On steiner-triples from the
+   MiniZinc benchmarks the search tree shrinks up to 4x.
+
 Version 4.11
 =============
 

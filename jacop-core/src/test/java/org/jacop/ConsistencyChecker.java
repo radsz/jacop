@@ -63,6 +63,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -1167,6 +1168,22 @@ class ConsistencyChecker {
                       IntStream.range(1, t.length)
                           .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i]),
                   x);
+            }),
+        new Case(
+            "IncreasingSum",
+            Level.BOUNDS_Z,
+            (s, r) -> {
+              boolean strict = r.nextBoolean();
+              int n = 2 + r.nextInt(3);
+              IntVar[] x = vars(s, "x", n, 0, 4, r);
+              IntVar sum = var(s, "s", 0, 4 * n, r);
+              return new Model(
+                  new IncreasingSum(x, sum, strict),
+                  t ->
+                      IntStream.range(1, n)
+                              .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i])
+                          && IntStream.range(0, n).map(i -> t[i]).sum() == t[n],
+                  concat(x, new IntVar[] {sum}));
             }),
         new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
         new Case("SortPermutation", Level.BOUNDS_Z, (s, r) -> sort(s, r, true)),
