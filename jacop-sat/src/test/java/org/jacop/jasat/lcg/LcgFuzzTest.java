@@ -443,7 +443,10 @@ class LcgFuzzTest {
               default -> {
                 IntVar[] o = pick(x, 3);
                 IntVar[] o2 = pick(x, 3);
-                yield new Diffn(o, o2, constants(3, 1, 2), constants(3, 1, 2));
+                yield rnd.nextBoolean()
+                    ? new Diffn(o, o2, constants(3, 1, 2), constants(3, 1, 2))
+                    // sizes as variables, possibly zero
+                    : new Diffn(o, o2, chain("w", 3, 0, 2), chain("h", 3, 0, 2), rnd.nextBoolean());
               }
             };
       };

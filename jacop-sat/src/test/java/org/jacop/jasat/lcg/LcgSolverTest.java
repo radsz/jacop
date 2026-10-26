@@ -56,6 +56,7 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
@@ -276,6 +277,97 @@ class LcgSolverTest {
     System.out.printf(
         "hybrid tables: %d sat, %d unsat, %d own and %d generic explanations%n",
         sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  @Test
+  void diffnAgreesWithBruteForce() {
+    Random rnd = new Random(23);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4;
+      // per rectangle its x and y origins, then its widths and heights
+      IntVar[] x = new IntVar[4 * n];
+      int side = 1 + rnd.nextInt(3);
+      for (int i = 0; i < 2 * n; i++) {
+        x[i] = new IntVar(store, "o" + i, 0, side);
+        if (rnd.nextInt(4) == 0) {
+          x[i].domain.subtractAdapt(rnd.nextInt(side + 1));
+        }
+      }
+      for (int i = 2 * n; i < 4 * n; i++) {
+        int c = 1 + rnd.nextInt(3);
+        x[i] = rnd.nextInt(3) == 0 ? new IntVar(store, "l" + i, 1, 3) : new IntVar(store, c, c);
+      }
+      IntVar[] ox = new IntVar[n];
+      IntVar[] oy = new IntVar[n];
+      IntVar[] lx = new IntVar[n];
+      IntVar[] ly = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        ox[i] = x[2 * i];
+        oy[i] = x[2 * i + 1];
+        lx[i] = x[2 * n + 2 * i];
+        ly[i] = x[2 * n + 2 * i + 1];
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Diffn(ox, oy, lx, ly, rnd.nextBoolean()),
+              t -> {
+                for (int i = 0; i < n; i++) {
+                  for (int j = i + 1; j < n; j++) {
+                    boolean apartX =
+                        t[2 * i] + t[2 * n + 2 * i] <= t[2 * j]
+                            || t[2 * j] + t[2 * n + 2 * j] <= t[2 * i];
+                    boolean apartY =
+                        t[2 * i + 1] + t[2 * n + 2 * i + 1] <= t[2 * j + 1]
+                            || t[2 * j + 1] + t[2 * n + 2 * j + 1] <= t[2 * i + 1];
+                    if (!apartX && !apartY) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(Arrays.copyOf(x, 2 * n), rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Diffn");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "diffn: %d sat, %d unsat, %d own and %d generic explanations%n", sat, unsat, own, generic);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(generic);
