@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
+import org.jacop.floats.core.FloatDomain;
 
 /**
  * An executable to parse and execute the flatzinc file.
@@ -74,6 +75,12 @@ public class Fz2jacop {
   }
 
   private int run(String[] args) {
+
+    // The float settings are static: a model solved earlier in the same JVM (its float_search
+    // precision, or --precision, --format, --step) must not change this one.
+    FloatDomain.setPrecision(FloatDomain.DEFAULT_PRECISION);
+    FloatDomain.setFormat(FloatDomain.DEFAULT_FORMAT);
+    FloatDomain.setStep(0.0d);
 
     Options opt = new Options(args);
 

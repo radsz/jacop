@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.jacop.floats.core.FloatDomain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -83,6 +84,30 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
+  }
+
+  @Test
+  void floatSettingsOfAnEarlierRunDoNotCarryOver() throws IOException {
+    // FloatDomain keeps precision and print format in static fields. The FlatZinc tests run many
+    // models in one JVM, and a float_search precision or --format of one model changed the output
+    // of the next (upTo5min/arbitrage_loops5 printed other digits after a float_search model).
+    String first =
+        """
+        var 0.0..10.0: y:: output_var;
+        constraint float_lin_eq([3.0],[y],1.0);
+        solve :: float_search([y],0.5,input_order,indomain_split,complete) satisfy;
+        """;
+    String second =
+        """
+        var 0.0..2.0: x:: output_var;
+        constraint float_times(x,x,2.0);
+        solve satisfy;
+        """;
+
+    assertTrue(run(first, "--format", "0.01")[0].contains("y = 0.33;"));
+    String out = run(second)[0];
+    assertTrue(out.contains("x = 1.4142135623730951;"), out);
+    assertEquals(FloatDomain.DEFAULT_PRECISION, FloatDomain.precision());
   }
 
   @Test
