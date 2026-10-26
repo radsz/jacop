@@ -875,6 +875,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="
             + lcg.sat().semanticallyRemoved
+            + "\n%%%mzn-stat: lcgSemanticUips="
+            + lcg.sat().semanticUips
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }

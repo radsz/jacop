@@ -161,6 +161,8 @@ public final class LcgSolver implements ExternalPropagator {
   private long backtrackConflicts;
   // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
   private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
+  // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
+  private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
   private double[] activity;
   private final VarHeap heap = new VarHeap();
   private double activityInc = 1;
@@ -649,6 +651,74 @@ public final class LcgSolver implements ExternalPropagator {
     long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
     long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
     return bLo <= aLo && aHi <= bHi;
+  }
+
+  @Override
+  public int integerVariable(int var) {
+    return semanticUip && var < litVar.length ? litVar[var] : -1;
+  }
+
+  /**
+   * The atom equal to a conjunction of true atoms of one variable, when one exists: the values they
+   * leave form one interval, after the {@code x != v} atoms at its ends, that touches a root bound
+   * ({@code [x >= v]} or {@code [x <= v]}) or holds one value ({@code [x = v]}).
+   */
+  @Override
+  public int semanticUip(int[] lits, int size) {
+    int i = litVar[Math.abs(lits[0])];
+    long lo = Long.MIN_VALUE;
+    long hi = Long.MAX_VALUE;
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      long v = litValue[d];
+      if (litKind[d] == GE_KIND) {
+        if (lits[k] > 0) {
+          lo = Math.max(lo, v);
+        } else {
+          hi = Math.min(hi, v - 1);
+        }
+      } else if (lits[k] > 0) {
+        lo = Math.max(lo, v);
+        hi = Math.min(hi, v);
+      }
+    }
+    for (boolean moved = true; moved; ) {
+      moved = false;
+      for (int k = 0; k < size; k++) {
+        int d = Math.abs(lits[k]);
+        if (litKind[d] == EQ_KIND && lits[k] < 0 && (litValue[d] == lo || litValue[d] == hi)) {
+          lo += litValue[d] == lo ? 1 : 0;
+          hi -= litValue[d] == hi ? 1 : 0;
+          moved = true;
+        }
+      }
+    }
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      if (litKind[d] == EQ_KIND && lits[k] < 0 && lo < litValue[d] && litValue[d] < hi) {
+        return 0; // a hole inside the interval
+      }
+    }
+    int min = root[i].min();
+    int max = root[i].max();
+    if (lo > hi || lo <= min && hi >= max) {
+      return 0;
+    }
+    int d = LiteralMap.NONE;
+    if (lo == hi) {
+      d = eq[i].get((int) lo);
+    }
+    if (d == LiteralMap.NONE && hi >= max) {
+      return orZero(ge[i].get((int) lo), 1);
+    }
+    if (d == LiteralMap.NONE && lo <= min) {
+      return orZero(ge[i].get((int) hi + 1), -1);
+    }
+    return orZero(d, 1);
+  }
+
+  private static int orZero(int d, int sign) {
+    return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
   @Override

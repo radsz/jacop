@@ -97,6 +97,29 @@ public interface ExternalPropagator {
   }
 
   /**
+   * The integer variable whose atom a solver variable is, for semantic UIPs.
+   *
+   * @param var the solver variable, from 1
+   * @return a non-negative index shared by the atoms of one integer variable, or -1 for none
+   */
+  default int integerVariable(int var) {
+    return -1;
+  }
+
+  /**
+   * Names a literal equivalent to the conjunction of true atoms of one integer variable, all set at
+   * the conflict level, so that conflict analysis can stop there: a learnt clause with that
+   * literal's negation in place of theirs is still implied, and asserting.
+   *
+   * @param lits the true literals, in DIMACS form, all of one {@link #integerVariable}
+   * @param size the number of literals
+   * @return a literal equivalent to their conjunction, or 0 for none
+   */
+  default int semanticUip(int[] lits, int size) {
+    return 0;
+  }
+
+  /**
    * Checks a complete assignment.
    *
    * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}

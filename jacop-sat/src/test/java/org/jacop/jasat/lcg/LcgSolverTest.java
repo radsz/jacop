@@ -953,7 +953,7 @@ class LcgSolverTest {
   /**
    * Random small scheduling problems minimising the makespan, against JaCoP's search: LCG with its
    * default search, with objective lower-bound search, and following the start-time annotation as
-   * fixed search and as free search.
+   * fixed search and as free search. Conflict analysis stops at semantic UIPs on some of them.
    */
   @Test
   void makespanAgreesWithSearch() {
@@ -963,6 +963,7 @@ class LcgSolverTest {
     long lowerBoundRuns = 0;
     long lowerBoundRaised = 0;
     long annotationDecisions = 0;
+    long semanticUips = 0;
     for (int instance = 0; instance < 150; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
@@ -1025,6 +1026,7 @@ class LcgSolverTest {
           lowerBoundRuns += solver.lowerBoundRuns;
           lowerBoundRaised += solver.lowerBoundRaised;
           annotationDecisions += solver.annotationDecisions;
+          semanticUips += solver.sat().semanticUips;
         }
       }
       for (int mode = 1; mode < 5; mode++) {
@@ -1035,5 +1037,7 @@ class LcgSolverTest {
     assertThat(atomLiteralsLearnt).isPositive().isLessThan(atomLiterals);
     assertThat(lowerBoundRaised).isPositive().isLessThan(lowerBoundRuns);
     assertThat(annotationDecisions).isPositive();
+    // conflict analysis stops at some semantic UIPs, and the optima above still agree
+    assertThat(semanticUips).isPositive();
   }
 }
