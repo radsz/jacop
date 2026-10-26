@@ -90,8 +90,8 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
-import org.jacop.constraints.SumBool;
 import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
@@ -386,11 +386,13 @@ class LcgFuzzTest {
           yield rnd.nextBoolean() ? new Circuit(next) : new Subcircuit(next);
         }
         case 50 -> {
-          IntVar[] xs = chain("a", 3, 0, 2);
-          IntVar[] ds = chain("d", 3, 0, 2);
+          // indexes from 0 or 1, domains a little wider than the indexes, possibly one list twice
+          int shift = rnd.nextInt(2);
+          IntVar[] xs = chain("a", 3, shift - 1, shift + 2);
+          IntVar[] ds = rnd.nextInt(4) == 0 ? xs : chain("d", 3, shift, shift + 3);
           posted.add("link " + xs[0].id() + " = " + p[0].id());
           store.impose(new XeqY(xs[0], p[0]));
-          yield new Assignment(xs, ds, 0, 0);
+          yield new Assignment(xs, ds, shift, shift);
         }
         case 51 -> rnd.nextBoolean() ? new SumInt(q, relation(), one()) : new Sum(q, one());
         case 52 ->

@@ -48,6 +48,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Assignment constraint implements facility to improve channeling constraints between dual
@@ -58,7 +61,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class Assignment extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Assignment> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Assignment>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -352,6 +355,113 @@ public class Assignment extends Constraint
     result.append(shiftX).append(", ").append(shiftD).append(")");
 
     return result.toString();
+  }
+
+  /**
+   * Explains an atom of a variable of xs or ds: each value it removes was out of the variable's
+   * domain, is not an index of the other list, or the other list's variable at that index had
+   * already lost this variable's index.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != Assignment.class) {
+      return false;
+    }
+    IntVar v = trail.variable(entry);
+    int a = trail.value(entry);
+    IntDomain root = trail.rootDomain(v);
+    int lo;
+    int hi;
+    switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> {
+        lo = root.min();
+        hi = a - 1;
+      }
+      case AtomicTrail.LE -> {
+        lo = a + 1;
+        hi = root.max();
+      }
+      default -> {
+        lo = a;
+        hi = a;
+      }
+    }
+    int mark = out.size();
+    Integer position = xs.get(v);
+    if (position != null
+        && removedSupported(trail, entry, v, position - shiftX, true, lo, hi, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    position = ds.get(v);
+    if (position != null
+        && removedSupported(trail, entry, v, position - shiftD, false, lo, hi, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /** Explains a failure: some variable of xs or ds has every value removed as for an atom. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != Assignment.class) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    for (int k = 0; k < 2 * x.length; k++) {
+      boolean fromX = k < x.length;
+      IntVar v = fromX ? x[k] : d[k - x.length];
+      int index = fromX ? k : k - x.length;
+      IntDomain root = trail.rootDomain(v);
+      if (removedSupported(trail, now, v, index, fromX, root.min(), root.max(), out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  /**
+   * Whether every value of v's root domain in [lo, hi] was removed before the position from v, in
+   * its role at index of xs (fromX) or ds, or is ruled out by the other list; the entries that
+   * removed them go to out.
+   */
+  private boolean removedSupported(
+      AtomicTrail trail,
+      int position,
+      IntVar v,
+      int index,
+      boolean fromX,
+      int lo,
+      int hi,
+      EntryList out) {
+    int shiftOther = fromX ? shiftD : shiftX;
+    int channel = index + (fromX ? shiftX : shiftD);
+    IntVar[] other = fromX ? d : x;
+    // values outside the other list's indexes are ruled out by the constraint alone
+    lo = Math.max(lo, shiftOther);
+    hi = Math.min(hi, other.length - 1 + shiftOther);
+    int min = trail.minBefore(v, position);
+    if (lo < min) {
+      trail.addLowerBound(v, position, out);
+      lo = min;
+    }
+    int max = trail.maxBefore(v, position);
+    if (hi > max) {
+      trail.addUpperBound(v, position, out);
+      hi = max;
+    }
+    IntDomain root = trail.rootDomain(v);
+    for (int w = lo; w <= hi; w++) {
+      if (root.contains(w)
+          && !trail.excludedBefore(v, w, position, out)
+          && !trail.excludedBefore(other[w - shiftOther], channel, position, out)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
