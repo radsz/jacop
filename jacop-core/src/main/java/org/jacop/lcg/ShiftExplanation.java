@@ -82,21 +82,37 @@ public final class ShiftExplanation {
    */
   public static boolean explainFailure(
       AtomicTrail trail, IntVar target, IntVar source, long k, EntryList out) {
-    int now = trail.size();
-    long lo = Math.max(trail.minBefore(target, now), trail.minBefore(source, now) + k);
-    long hi = Math.min(trail.maxBefore(target, now), trail.maxBefore(source, now) + k);
+    return disjointBefore(trail, trail.size(), target, source, k, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason why no value of {@code target} equals a value of {@code source}
+   * plus {@code k} just before a trail position.
+   *
+   * @param trail the trail
+   * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)
+   * @param target one variable
+   * @param source the other variable
+   * @param k the shift
+   * @param out where the reason entries are added
+   * @return false when some value is in both domains then
+   */
+  public static boolean disjointBefore(
+      AtomicTrail trail, int position, IntVar target, IntVar source, long k, EntryList out) {
+    long lo = Math.max(trail.minBefore(target, position), trail.minBefore(source, position) + k);
+    long hi = Math.min(trail.maxBefore(target, position), trail.maxBefore(source, position) + k);
     if (hi - lo >= MAX_VALUES) {
       return false;
     }
     for (long u = lo; u <= hi; u++) {
-      if (!excluded(trail, now, target, source, k, u, out)) {
+      if (!excluded(trail, position, target, source, k, u, out)) {
         return false;
       }
     }
-    trail.addLowerBound(target, now, out);
-    trail.addUpperBound(target, now, out);
-    trail.addLowerBound(source, now, out);
-    trail.addUpperBound(source, now, out);
+    trail.addLowerBound(target, position, out);
+    trail.addUpperBound(target, position, out);
+    trail.addLowerBound(source, position, out);
+    trail.addUpperBound(source, position, out);
     return true;
   }
 

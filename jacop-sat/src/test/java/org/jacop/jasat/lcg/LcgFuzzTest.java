@@ -62,6 +62,7 @@ import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -283,7 +284,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(59)) {
+      return switch (rnd.nextInt(60)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -367,6 +368,7 @@ class LcgFuzzTest {
         case 55 -> rnd.nextBoolean() ? new XgteqY(p[0], p[1]) : new XgtY(p[0], p[1]);
         case 56 -> new XplusClteqZ(p[0], value(), p[1]);
         case 57 -> primitive(0);
+        case 58 -> new ElementVariableFast(one(), q, one(), -rnd.nextInt(2));
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
