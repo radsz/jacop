@@ -81,8 +81,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int[] previous = new int[256]; // the variable's previous entry, or -1
   private int size;
 
-  // per variable (by id): the domain the entries so far describe, and the last entry
+  // per variable (by id): the domain the entries so far describe, as its bounds and, when it has
+  // holes, a copy; and the last entry
   private IntDomain[] shadow = new IntDomain[0];
+  private int[] shadowMin = new int[0];
+  private int[] shadowMax = new int[0];
   private IntDomain[] root = new IntDomain[0]; // the domain when recording started
   private int[] last = new int[0];
 
@@ -139,38 +142,62 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       int n = Math.max(i + 1, 2 * shadow.length);
       int old = shadow.length;
       shadow = Arrays.copyOf(shadow, n);
+      shadowMin = Arrays.copyOf(shadowMin, n);
+      shadowMax = Arrays.copyOf(shadowMax, n);
       root = Arrays.copyOf(root, n);
       last = Arrays.copyOf(last, n);
       Arrays.fill(last, old, n, -1);
     }
-    if (shadow[i] == null) {
-      shadow[i] = x.dom().cloneLight();
-      root[i] = shadow[i];
+    if (root[i] == null) {
+      root[i] = x.dom().cloneLight();
+      setShadow(i, root[i]);
     }
     return i;
+  }
+
+  // copies a domain into the shadow; one without holes is kept as its bounds only
+  private void setShadow(int i, IntDomain d) {
+    int min = d.min();
+    int max = d.max();
+    shadowMin[i] = min;
+    shadowMax[i] = max;
+    shadow[i] = d.getSize() == (long) max - min + 1 ? null : d.cloneLight();
   }
 
   @Override
   public void domainChanged(IntVar x, int event) {
     int i = slot(x);
-    IntDomain before = shadow[i];
     IntDomain now = x.dom();
     int min = now.min();
     int max = now.max();
-    if (min > before.min()) {
+    if (min > shadowMin[i]) {
       add(x, i, GE, min);
     }
-    if (max < before.max()) {
+    if (max < shadowMax[i]) {
       add(x, i, LE, max);
     }
-    IntDomain inside = before.intersect(min, max);
-    if (inside.getSize() > now.getSize()) {
-      IntDomain removed = inside.subtract(now);
-      for (ValueEnumeration e = removed.valueEnumeration(); e.hasMoreElements(); ) {
-        add(x, i, NE, e.nextElement());
+    if (now.getSize() < (long) max - min + 1) {
+      IntDomain before = shadow[i];
+      if (before == null) {
+        // every value of [min, max] was in the domain: each hole is new
+        for (int v = min; v < max; ) {
+          int next = now.nextValue(v);
+          for (int u = v + 1; u < next; u++) {
+            add(x, i, NE, u);
+          }
+          v = next;
+        }
+      } else {
+        IntDomain inside = before.intersect(min, max);
+        if (inside.getSize() > now.getSize()) {
+          IntDomain removed = inside.subtract(now);
+          for (ValueEnumeration e = removed.valueEnumeration(); e.hasMoreElements(); ) {
+            add(x, i, NE, e.nextElement());
+          }
+        }
       }
     }
-    shadow[i] = now.cloneLight();
+    setShadow(i, now);
   }
 
   private void add(IntVar x, int i, int k, int v) {
@@ -200,7 +227,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       IntVar x = entryVar[size];
       int i = id(x);
       last[i] = previous[size];
-      shadow[i] = x.dom().cloneLight();
+      setShadow(i, x.dom());
       entryVar[size] = null;
       reason[size] = null;
     }
