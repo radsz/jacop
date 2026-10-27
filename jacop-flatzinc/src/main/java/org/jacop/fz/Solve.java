@@ -151,6 +151,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
   int lcgStatus;
+  // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
+  // LcgSolver is between two runs and holds no solution
+  int lcgLastCost;
   // the search annotation of the model, interleaved with free search
   SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
@@ -943,9 +946,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getStatistics()) {
       printStatisticsOutput(
           (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
-      if (numberSolutions > 0 && costVariable instanceof IntVar cost) {
+      if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
-        int value = lcg.value(cost);
+        int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
       }
       printLcgExplanationStatistics();
@@ -1018,12 +1021,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && (costVar == null || costVar instanceof IntVar);
   }
 
+  // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
+  private int flushEvery;
+
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and geometric restarts (100 failures, growing by 1.5) with nogoods
-   * learned at each restart.
+   * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
+   * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
+   * 1.05, starts that sequence again after each solution and forgets the dom/wdeg weights every 32
+   * restarts.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
@@ -1031,18 +1039,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
     boolean restartOnSolution = "1".equals(options.freeConfig("restart-on-solution", "1"));
     boolean nogoods = "1".equals(options.freeConfig("nogoods", "1"));
+    // Optimisation restarts often, as Choco does: geometric(10 failures, growing by 1.05), the
+    // sequence started again after each solution, and the dom/wdeg weights forgotten every 32
+    // restarts. Satisfaction keeps long runs, which puzzles and proofs of unsatisfiability need.
+    boolean optimisation = costVar != null;
     Calculator restarts = restartCalculator;
     if (!options.restartGiven()) {
-      int scale = Integer.parseInt(options.freeConfig("scale", "100"));
+      int scale = Integer.parseInt(options.freeConfig("scale", optimisation ? "10" : "100"));
       restarts =
           switch (options.freeConfig("restarts", "geometric")) {
             case "luby" -> new LubyCalculator(scale);
             case "geometric" ->
                 new GeometricCalculator(
-                    Double.parseDouble(options.freeConfig("base", "1.5")), scale);
+                    Double.parseDouble(options.freeConfig("base", optimisation ? "1.05" : "1.5")),
+                    scale);
             default -> null;
           };
     }
+    boolean resetRestarts =
+        "1".equals(options.freeConfig("restart-reset", optimisation ? "1" : "0"));
+    flushEvery = Integer.parseInt(options.freeConfig("flush", optimisation ? "32" : "0"));
 
     List<SearchMonitor> monitors = new ArrayList<>();
     List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
@@ -1095,6 +1111,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         FreeSearch.builder(store, free)
             .restarts(restarts)
             .restartOnSolution(restartOnSolution)
+            .resetRestartsOnSolution(resetRestarts)
             .nogoodsFromRestarts(nogoods)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
@@ -1168,6 +1185,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if ("first".equals(options.freeConfig("impact-until", "first"))) {
         boundImpact.untilFirstSolution();
       }
+      boundImpact.everyRestarts(Integer.parseInt(options.freeConfig("impact-every", "0")));
       monitors.add(boundImpact);
       values = boundImpact;
     }
@@ -1190,7 +1208,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             case "chs" -> DomWdeg.Weighting.CHS;
             default -> DomWdeg.Weighting.WDEG;
           };
-      DomWdeg domWdeg = new DomWdeg(vars, values, weighting);
+      DomWdeg domWdeg = new DomWdeg(vars, values, weighting).flushEvery(flushEvery);
       monitors.add(domWdeg);
       SelectChoicePoint<IntVar> select = domWdeg;
       if (lastConflict > 0) {
@@ -2374,6 +2392,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
+    if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
+      lcgLastCost = cost.value();
+    }
 
     if (presolve != null) {
       presolve.returnSolution();

@@ -176,14 +176,87 @@ public final class ImposeGroundingHarness {
     for (int trial = 0; trial < trials && failures.size() < MAX_REPORTED; trial++) {
       Case c = generator.apply(random);
       checkCase(name + " trial " + trial, c, random, failures);
-      if (c.primitive() != null) {
-        for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
-          checkCase(name + " trial " + trial + " " + wrapper, wrap(c, wrapper), random, failures);
-        }
-        checkSatisfied(name + " trial " + trial, c, random, failures);
+      checkWrapped(name + " trial " + trial, c, random, failures);
+      Case aliased = alias(c, random);
+      if (aliased != null && !rejected(aliased)) {
+        String label = name + " trial " + trial + " aliased";
+        checkCase(label, aliased, random, failures);
+        checkWrapped(label, aliased, random, failures);
       }
     }
     return failures;
+  }
+
+  /** Whether the constraint rejects the case's variables at impose (repeated variables). */
+  private static boolean rejected(Case c) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[c.domains().length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, domain(c.domains()[i]));
+    }
+    try {
+      c.impose().accept(store, x);
+      return false;
+    } catch (IllegalArgumentException e) {
+      return true;
+    } catch (RuntimeException e) {
+      // the grounding plans report it
+      return false;
+    }
+  }
+
+  private static void checkWrapped(String label, Case c, Random random, List<String> failures) {
+    if (c.primitive() != null) {
+      for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
+        checkCase(label + " " + wrapper, wrap(c, wrapper), random, failures);
+      }
+      checkSatisfied(label, c, random, failures);
+    }
+  }
+
+  /**
+   * The case with two of its positions given the same variable, or null when it has fewer than two
+   * variables or the two domains share no value. The aliased case has one variable fewer: position
+   * {@code j} of the original reads the variable of position {@code i}, whose domain is the
+   * intersection of both.
+   */
+  static Case alias(Case c, Random random) {
+    int n = c.domains().length;
+    if (n < 2) {
+      return null;
+    }
+    int i = random.nextInt(n);
+    int k = random.nextInt(n - 1);
+    int j = k >= i ? k + 1 : k;
+    int[] shared =
+        Arrays.stream(c.domains()[i])
+            .filter(v -> Arrays.stream(c.domains()[j]).anyMatch(w -> w == v))
+            .toArray();
+    if (shared.length == 0) {
+      return null;
+    }
+    // position p of the original reads variable map[p] of the aliased case
+    int[] map = new int[n];
+    int[][] domains = new int[n - 1][];
+    for (int p = 0, q = 0; p < n; p++) {
+      if (p == j) {
+        continue;
+      }
+      map[p] = q;
+      domains[q++] = p == i ? shared : c.domains()[p];
+    }
+    map[j] = map[i];
+    Function<IntVar[], IntVar[]> expand =
+        x -> Arrays.stream(map).mapToObj(p -> x[p]).toArray(IntVar[]::new);
+    Predicate<int[]> semantics =
+        t -> c.semantics().test(Arrays.stream(map).map(p -> t[p]).toArray());
+    String description = c.description() + " (x" + j + " is x" + i + " of the original)";
+    Function<IntVar[], PrimitiveConstraint> build = c.primitive();
+    if (build != null) {
+      return Case.primitive(domains, x -> build.apply(expand.apply(x)), semantics, description);
+    }
+    return Case.of(
+        domains, (store, x) -> c.impose().accept(store, expand.apply(x)), semantics, description);
   }
 
   /** The case under a wrapper; the extra 0/1 variable (if any) is the last one. */

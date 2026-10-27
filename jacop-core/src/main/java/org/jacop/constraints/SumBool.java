@@ -32,7 +32,10 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +61,10 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  // the sum is also in the list, or a variable occurs twice in it: pruning one occurrence changes
+  // the bounds the other was pruned with, so pruning repeats until nothing changes
+  private final boolean aliased;
+
   /**
    * Constructs a SumBool constraint over an array of 0/1 variables.
    *
@@ -78,6 +85,11 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
     checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
 
     numberId = idNumber.incrementAndGet();
+
+    Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+    distinct.add(sum);
+    distinct.addAll(Arrays.asList(x));
+    this.aliased = distinct.size() < l + 1;
 
     if (l <= 2) {
       queueIndex = 0;
@@ -111,6 +123,17 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
   }
 
   private void prune(byte rel) {
+    if (!aliased) {
+      pruneOnce(rel);
+      return;
+    }
+    do {
+      store.propagationHasOccurred = false;
+      pruneOnce(rel);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void pruneOnce(byte rel) {
     int min = sumMin();
     int max = sumMax();
 
