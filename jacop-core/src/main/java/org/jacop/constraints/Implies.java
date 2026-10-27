@@ -93,10 +93,14 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
     if (v != b
         && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))
         && isSimpleNestedConstraintOver(v)) {
-      // consistency() needs c.notSatisfied() before b is fixed and c.consistency() after, and c's
-      // own consistency event covers both. c.satisfied() only removes the constraint early, so it
-      // does not need c's events for satisfaction, which can be ANY where c's are GROUND (XneqY).
-      return Math.max(IntDomain.GROUND, c.getConsistencyPruningEvent(v));
+      // consistency() needs c.notSatisfied() before b is fixed, decided on c's nested event for
+      // its negation, and c.consistency() after, on c's own consistency event; c's own event alone
+      // can be GROUND where deciding c.notSatisfied() needs BOUND (x >= 6 fails once x <= 5).
+      // c.satisfied() only removes the constraint early, so it does not need c's events for
+      // satisfaction, which can be ANY where c's are GROUND (XneqY).
+      return Math.max(
+          IntDomain.GROUND,
+          Math.max(c.getConsistencyPruningEvent(v), c.getNestedPruningEvent(v, false)));
     }
     return super.getConsistencyPruningEvent(v);
   }
