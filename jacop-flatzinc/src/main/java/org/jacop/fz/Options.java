@@ -77,7 +77,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
-  boolean presolveImplied = true;
+  boolean presolveImplied;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -151,7 +151,7 @@ public class Options {
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
-                all-different constraints (sum bounds); "on" (default) or "off"
+                all-different constraints (sum bounds); "off" (default) or "on"
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -621,7 +621,7 @@ public class Options {
   /**
    * It defines whether presolve posts implied constraints (--presolve-implied).
    *
-   * @return true by default
+   * @return false by default
    */
   public boolean presolveImplied() {
     return presolveImplied;

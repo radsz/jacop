@@ -242,7 +242,7 @@ class PresolveTest {
     assertThat(implied.get(0).toString()).endsWith(">=, 3 )");
     assertThat(implied.get(1).toString()).endsWith("<=, 24 )");
 
-    Derivation derivation = Presolver.of(store).presolve();
+    Derivation derivation = Presolver.of(store).implied(true).presolve();
     assertThat(derivation.implied()).isEqualTo(2);
   }
 
@@ -257,7 +257,7 @@ class PresolveTest {
     // a second all-different on the same variables adds nothing
     store.impose(new Alldiff(x));
 
-    Derivation derivation = Presolver.of(store).presolve();
+    Derivation derivation = Presolver.of(store).implied(true).presolve();
 
     assertThat(derivation.implied()).isEqualTo(1);
     assertThat(ImpliedConstraints.of(List.of(new Alldistinct(x))))
@@ -287,7 +287,9 @@ class PresolveTest {
                 new Alldistinct(pair)));
 
     assertThat(implied).isEmpty();
-    assertThat(Presolver.of(store).implied(false).presolve().implied()).isZero();
+    // the rule is off by default
+    store.impose(new Alldiff(x));
+    assertThat(Presolver.of(store).presolve().implied()).isZero();
   }
 
   @Test
@@ -331,7 +333,8 @@ class PresolveTest {
       Store store = vars.store();
       IntVar[] decisions = decisions(vars);
       Set<List<Integer>> found = new HashSet<>();
-      Derivation derivation = Presolver.of(store).keep(decisions).checking(true).presolve();
+      Derivation derivation =
+          Presolver.of(store).keep(decisions).checking(true).implied(true).presolve();
       if (derivation.outcome() != Derivation.Outcome.INFEASIBLE) {
         implied += derivation.implied();
         search(
