@@ -200,10 +200,11 @@ public class Diffn extends Nooverlap {
   }
 
   private void areaCheck() {
+    startPass(AREA_PASS);
     for (int k = 0; k < rectangle.length; k++) {
       Rectangle r = rectangle[k];
       BitSet o = overlapping[k].value();
-      if (o.cardinality() == 0) {
+      if (o.cardinality() == 0 || !mustExamine(AREA_PASS, k, o)) {
         continue;
       }
       int commonArea = 0;
@@ -261,11 +262,12 @@ public class Diffn extends Nooverlap {
 
   private void profile() {
 
+    startPass(PROFILE_PASS);
     for (int i = 0; i < rectangle.length; i++) {
       Rectangle r = rectangle[i];
       BitSet o = overlapping[i].value();
 
-      if (o.cardinality() > 0) {
+      if (o.cardinality() > 0 && mustExamine(PROFILE_PASS, i, o)) {
         sweepPruning(r, o, 0);
         sweepPruning(r, o, 1);
       }
