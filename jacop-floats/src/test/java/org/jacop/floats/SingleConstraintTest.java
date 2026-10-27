@@ -628,6 +628,20 @@ class SingleConstraintTest {
   }
 
   @Test
+  void testEquationSystemRejectsAFunctionDefinedTwice() {
+    // f = x - y and f = x * y define f twice; Derivative ended the whole JVM with System.exit(0)
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1, 1);
+    FloatVar y = new FloatVar(store, "y", -1, 1);
+    FloatVar f = new FloatVar(store, "f", -1, 1);
+    store.impose(new LinearFloat(new FloatVar[] {x, y, f}, new double[] {1, -1, -1}, "==", 0));
+    store.impose(new PmulQeqR(x, y, f));
+    assertThatThrownBy(
+            () -> new EquationSystem(store, new FloatVar[] {f, f}, new FloatVar[] {x, y}))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void testEquationSystemRejectsNonSquareSystem() {
     Store store = new Store();
     FloatVar x0 = new FloatVar(store, "x0", -1, 1);
