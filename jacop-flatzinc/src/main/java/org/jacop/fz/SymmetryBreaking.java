@@ -125,7 +125,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       return new Spec(args, new int[0][]);
     }
 
-    static Spec bags(int[]... bags) {
+    static Spec grouped(int[]... bags) {
       return new Spec(new int[0], bags);
     }
   }
@@ -162,11 +162,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       SPECS.put(s, Spec.sym(0, 1));
     }
     for (String s : new String[] {"int_lin_eq", "int_lin_le", "int_lin_ne", "bool_lin_eq"}) {
-      SPECS.put(s, Spec.bags(new int[] {0, 1}));
-      SPECS.put(s + "_reif", Spec.bags(new int[] {0, 1}));
-      SPECS.put(s + "_imp", Spec.bags(new int[] {0, 1}));
+      SPECS.put(s, Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + "_reif", Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + "_imp", Spec.grouped(new int[] {0, 1}));
     }
-    SPECS.put("bool_lin_le", Spec.bags(new int[] {0, 1}));
+    SPECS.put("bool_lin_le", Spec.grouped(new int[] {0, 1}));
     for (String s :
         new String[] {
           "array_bool_and",
@@ -200,21 +200,21 @@ final class SymmetryBreaking implements ParserTreeConstants {
           "jacop_member_bool_reif",
           "jacop_count_values"
         }) {
-      SPECS.put(s, Spec.bags(new int[] {0}));
+      SPECS.put(s, Spec.grouped(new int[] {0}));
     }
     for (String s :
         new String[] {
           "array_int_maximum", "array_int_minimum", "jacop_nvalue", "jacop_maximum", "jacop_minimum"
         }) {
-      SPECS.put(s, Spec.bags(new int[] {1}));
+      SPECS.put(s, Spec.grouped(new int[] {1}));
     }
-    SPECS.put("bool_clause", Spec.bags(new int[] {0}, new int[] {1}));
-    SPECS.put("bool_clause_reif", Spec.bags(new int[] {0}, new int[] {1}));
-    SPECS.put("bool_clause_imp", Spec.bags(new int[] {0}, new int[] {1}));
-    SPECS.put("jacop_cumulative", Spec.bags(new int[] {0, 1, 2}));
-    SPECS.put("jacop_diff2_strict", Spec.bags(new int[] {0, 1, 2, 3}));
-    SPECS.put("jacop_bin_packing", Spec.bags(new int[] {0, 2}));
-    SPECS.put("jacop_bin_packing_capacity", Spec.bags(new int[] {0, 2}));
+    SPECS.put("bool_clause", Spec.grouped(new int[] {0}, new int[] {1}));
+    SPECS.put("bool_clause_reif", Spec.grouped(new int[] {0}, new int[] {1}));
+    SPECS.put("bool_clause_imp", Spec.grouped(new int[] {0}, new int[] {1}));
+    SPECS.put("jacop_cumulative", Spec.grouped(new int[] {0, 1, 2}));
+    SPECS.put("jacop_diff2_strict", Spec.grouped(new int[] {0, 1, 2, 3}));
+    SPECS.put("jacop_bin_packing", Spec.grouped(new int[] {0, 2}));
+    SPECS.put("jacop_bin_packing_capacity", Spec.grouped(new int[] {0, 2}));
   }
 
   private final Store store;
@@ -578,11 +578,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
     add(b, a);
   }
 
-  private void add(int a, int b) {
-    if (degree[a] == adjacency[a].length) {
-      adjacency[a] = Arrays.copyOf(adjacency[a], 2 * degree[a]);
+  private void add(int from, int to) {
+    if (degree[from] == adjacency[from].length) {
+      adjacency[from] = Arrays.copyOf(adjacency[from], 2 * degree[from]);
     }
-    adjacency[a][degree[a]++] = b;
+    adjacency[from][degree[from]++] = to;
   }
 
   private boolean isArrayName(SimpleNode arg) {

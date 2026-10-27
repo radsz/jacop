@@ -294,7 +294,8 @@ public final class GraphAutomorphisms {
     refine();
 
     // the first path, through the cells of interesting vertices first
-    List<int[]> levels = new ArrayList<>(); // {mark, target cell, target size, chosen, cells}
+    // each level holds the trail mark, the target cell, its size, the vertex chosen and the cells
+    List<int[]> levels = new ArrayList<>();
     List<Long> traces = new ArrayList<>();
     int first = 0;
     int nextInteresting = 0;
@@ -355,9 +356,9 @@ public final class GraphAutomorphisms {
       int[] level = levels.get(k);
       undo(level[0]);
       int chosen = level[3];
-      int[] candidates = cellElements(level[1]);
-      Arrays.sort(candidates);
-      for (int w : candidates) {
+      int[] targets = cellElements(level[1]);
+      Arrays.sort(targets);
+      for (int w : targets) {
         if (w == chosen || find(orbit, w) == find(orbit, chosen)) {
           continue;
         }
@@ -664,14 +665,14 @@ public final class GraphAutomorphisms {
     if (b > c) {
       pieces++;
       largestSize = b - c;
-      h = mix(mix(h, 0), b - c);
+      h = mix(mix(h, 0), (long) b - c);
     }
     int start = b;
     for (int k = from; k < to; k++) {
       if (k + 1 == to || countOf(sortBuffer[k + 1]) != countOf(sortBuffer[k])) {
         int pEnd = b + k + 1 - from;
         pieces++;
-        h = mix(mix(h, countOf(sortBuffer[k])), pEnd - start);
+        h = mix(mix(h, countOf(sortBuffer[k])), (long) pEnd - start);
         if (pEnd - start > largestSize) {
           largestSize = pEnd - start;
           largest = start;
@@ -709,8 +710,9 @@ public final class GraphAutomorphisms {
   private void place(int p, int v) {
     if (logging) {
       if (logSize == logPos.length) {
-        logPos = Arrays.copyOf(logPos, 2 * logSize);
-        logOld = Arrays.copyOf(logOld, 2 * logSize);
+        int size = Math.max(64, 2 * logSize);
+        logPos = Arrays.copyOf(logPos, size);
+        logOld = Arrays.copyOf(logOld, size);
       }
       logPos[logSize] = p;
       logOld[logSize++] = elems[p];
@@ -729,7 +731,7 @@ public final class GraphAutomorphisms {
 
   private void push(int cell, int piece) {
     if (trailSize + 2 > trail.length) {
-      trail = Arrays.copyOf(trail, 2 * trail.length);
+      trail = Arrays.copyOf(trail, Math.max(64, 2 * trail.length));
     }
     trail[trailSize++] = cell;
     trail[trailSize++] = piece;
