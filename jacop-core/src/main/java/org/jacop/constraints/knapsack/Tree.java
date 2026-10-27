@@ -34,7 +34,6 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 
 /**
@@ -43,7 +42,6 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 5.0
  */
-@Slf4j
 public class Tree {
 
   /** It specifies the root of the tree. */

@@ -34,7 +34,6 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -45,7 +44,6 @@ import org.jacop.constraints.netflow.simplex.Node;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 public class Assert {
 
   private static final String BALANCE_EQUALS = ", balance = ";

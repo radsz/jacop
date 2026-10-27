@@ -2797,12 +2797,6 @@ public class FloatIntervalDomain extends FloatDomain {
     return false;
   }
 
-  /** It specifies if domain is a finite domain of numeric values (integers). */
-  @Override
-  public boolean isNumeric() {
-    return true;
-  }
-
   /** It returns the left most element of the given interval. */
   @Override
   public double leftElement(int intervalNo) {

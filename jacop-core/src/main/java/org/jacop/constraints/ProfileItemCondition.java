@@ -51,11 +51,6 @@ class ProfileItemCondition extends ProfileItem {
     rectangles.add(rect);
   }
 
-  ProfileItemCondition(int a, int b, int val, LinkedList<int[]> rects) {
-    super(a, b, val);
-    rectangles.addAll(rects);
-  }
-
   void addRect(int[] r) {
     rectangles.add(r);
   }

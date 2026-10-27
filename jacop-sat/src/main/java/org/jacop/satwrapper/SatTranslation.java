@@ -527,22 +527,4 @@ public class SatTranslation {
   public long numberClauses() {
     return numberClauses;
   }
-
-  /**
-   * Converts a clause to its string representation.
-   *
-   * @param clause the clause as an array of literals
-   * @return string representation of the clause
-   */
-  String clauseToString(int[] clause) {
-
-    StringBuilder buffer = new StringBuilder();
-
-    for (int j : clause) {
-      buffer.append(j).append(" ");
-    }
-
-    buffer.append("\n");
-    return buffer.toString();
-  }
 }

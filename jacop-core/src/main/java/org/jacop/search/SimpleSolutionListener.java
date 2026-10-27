@@ -90,7 +90,6 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public SolutionListener<T>[] childrenSolutionListeners;
 
   protected int noSolutions;
-  boolean alwaysUpdateToMostRecentSolution = true;
   boolean recordSolutions;
 
   /**

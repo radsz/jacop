@@ -118,7 +118,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   int creditValue;
   int bbsValue;
 
-  ComparatorsVar<T> selVars;
   ComparatorVariable<IntVar> tieBreakingInt;
   ComparatorVariable<SetVar> tieBreakingSet;
   ComparatorVariable<FloatVar> tieBreakingFloat;
@@ -1068,37 +1067,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
     } else {
       throw new IllegalArgumentException("Wrong parameter " + node);
-    }
-  }
-
-  /**
-   * Retrieves an integer array from a parse tree node.
-   *
-   * @param node the parse tree node
-   * @return the integer array
-   */
-  int[] getIntArray(SimpleNode node) {
-
-    if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_VECTOR)) {
-      int count = node.jjtGetNumChildren();
-      int[] aa = new int[count];
-      for (int i = 0; i < count; i++) {
-        SimpleNode n = (SimpleNode) node.jjtGetChild(i).jjtGetChild(0);
-        ASTScalarFlatExpr child = (ASTScalarFlatExpr) n.jjtGetChild(0);
-        int el = getInt(child);
-        aa[i] = el;
-      }
-      return aa;
-    } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
-      SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
-      if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
-        return dictionary.getIntArray(((ASTScalarFlatExpr) n).getIdent());
-      } else {
-        throw new IllegalArgumentException(
-            "Wrong parameters in integer array; compilation aborted.");
-      }
-    } else {
-      throw new IllegalArgumentException("Wrong parameters integer array; compilation aborted.");
     }
   }
 

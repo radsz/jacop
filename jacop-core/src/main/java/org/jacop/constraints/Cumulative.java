@@ -78,15 +78,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   /** It specifies the limit of the profile of cumulative use of resources. */
   private IntVar limit;
 
-  /** It specifies/stores start variables for each corresponding task. */
-  private IntVar[] starts;
-
-  /** It specifies/stores duration variables for each corresponding task. */
-  private IntVar[] durations;
-
-  /** It specifies/stores resource variable for each corresponding task. */
-  private IntVar[] resources;
-
   /** It specifies if the edge finding algorithm should be used. */
   protected boolean doEdgeFinding;
 
@@ -154,9 +145,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     this.numberId = idNumber.incrementAndGet();
 
     this.ts = new Task[starts.length];
-    this.starts = Arrays.copyOf(starts, starts.length);
-    this.durations = Arrays.copyOf(durations, durations.length);
-    this.resources = Arrays.copyOf(resources, resources.length);
 
     for (int i = 0; i < starts.length; i++) {
       ts[i] = new Task(starts[i], durations[i], resources[i]);
@@ -344,38 +332,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       }
     }
     return beforeS;
-  }
-
-  boolean between(Task l, List<Task> tasks) {
-    int completionS = IntDomain.MIN_INT;
-    int startS = IntDomain.MAX_INT;
-    long a = 0;
-    long larea;
-    boolean betweenS = true;
-
-    if (!tasks.isEmpty()) {
-      if (debugEnabled) {
-        log.debug("Checking if {} can be between tasks in {}", l, tasks);
-      }
-      for (Task t : tasks) {
-        completionS = Math.max(completionS, t.lct());
-        startS = Math.min(startS, t.est());
-        a += minOverlap(t, startS, completionS);
-      }
-      larea = minOverlap(l, startS, completionS);
-
-      betweenS = (long) (completionS - startS) * limit.max() >= a + larea;
-      if (debugEnabled) {
-        log.debug(
-            "s(S')= {},  c(S')= {},  a(Sp)= {}, l_area= {},  betweenS= {}",
-            startS,
-            completionS,
-            a,
-            larea,
-            betweenS);
-      }
-    }
-    return betweenS;
   }
 
   @Override
@@ -859,10 +815,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
-  }
-
-  Task[] getTasks() {
-    return ts;
   }
 
   private boolean intervalOverlap(int min1, int max1, int min2, int max2) {

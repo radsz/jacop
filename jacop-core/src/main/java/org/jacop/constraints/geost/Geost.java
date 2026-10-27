@@ -131,8 +131,6 @@ public class Geost extends Constraint
 
   static final boolean DEBUG_MAIN = DEBUG_ALL;
 
-  static final boolean DEBUG_SUBSETS = DEBUG_ALL;
-
   static final boolean DEBUG_DOUBLE_LAYER = DEBUG_ALL;
 
   static final boolean DEBUG_SHAPE_SKIP = DEBUG_ALL;

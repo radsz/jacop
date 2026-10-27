@@ -65,15 +65,6 @@ public class MutableDomainValue implements MutableVarValue {
     return val;
   }
 
-  /**
-   * It returns the previous mutable variable value in the backtracking chain.
-   *
-   * @return the previous mutable domain value.
-   */
-  public MutableVarValue previous() {
-    return previousMutableDomainVariableValue;
-  }
-
   public void setPrevious(MutableVarValue nn) {
     previousMutableDomainVariableValue = (MutableDomainValue) nn;
   }

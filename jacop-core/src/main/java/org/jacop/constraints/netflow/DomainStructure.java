@@ -35,7 +35,6 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Collections;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -51,7 +50,6 @@ import org.jacop.core.Var;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 public class DomainStructure implements VarHandler {
 
   final IntVar variable;

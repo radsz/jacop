@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -60,7 +59,6 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class LinearIntDom extends LinearInt {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -310,10 +308,6 @@ public class LinearIntDom extends LinearInt {
 
   void findSupportPositive(int index, long partialSum) {
     findSupport(true, index, partialSum);
-  }
-
-  void findSupportNegative(int index, long partialSum) {
-    findSupport(false, index, partialSum);
   }
 
   private void storeAssignmentsToSupport() {

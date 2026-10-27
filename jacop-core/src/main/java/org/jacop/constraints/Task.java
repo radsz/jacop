@@ -42,18 +42,8 @@ import org.jacop.core.IntervalDomain;
  */
 record Task(IntVar start, IntVar dur, IntVar res) {
 
-  long areaMax() {
-    return (long) dur.max() * res.max();
-  }
-
   long areaMin() {
     return (long) dur.min() * res.min();
-  }
-
-  IntDomain compl() {
-    IntDomain sDom = start.dom();
-    IntDomain dDom = dur.dom();
-    return new IntervalDomain(sDom.min() + dDom.min(), sDom.max() + dDom.max());
   }
 
   IntDomain completion() {

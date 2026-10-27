@@ -30,11 +30,6 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-
 abstract class Tree {
 
   // binary tree structure; number of nodes
@@ -88,14 +83,6 @@ abstract class Tree {
     return i % 2 != 0;
   }
 
-  boolean isRight(int i) {
-    return !isLeft(i);
-  }
-
-  int leafIndex(int i) {
-    return i - (treeSize - n);
-  }
-
   boolean notExist(int i) {
     return i < 0 || i >= treeSize;
   }
@@ -110,51 +97,6 @@ abstract class Tree {
     } else {
       return x + y;
     }
-  }
-
-  int plus(int x, int y) {
-    if (x == Integer.MIN_VALUE) {
-      return Integer.MIN_VALUE;
-    } else {
-      return x + y;
-    }
-  }
-
-  public void printTree(String name) {
-
-    try (PrintStream out =
-        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
-      out.print(toGraph(name));
-    } catch (IOException _) {
-      throw new IllegalStateException("IO exception; ignored");
-    }
-  }
-
-  public String toGraph(String name) {
-
-    StringBuilder result = new StringBuilder();
-
-    result.append("digraph ").append(treeName()).append(name);
-    result.append(" {");
-    result.append("graph [  fontsize = 12,");
-    result.append("size = \"5,5\" ];\n");
-
-    for (int i = 0; i < treeSize; i++) {
-      result
-          .append(NODE_PREFIX)
-          .append(i)
-          .append(" [shape = box, label = \"")
-          .append(getNodeString(i))
-          .append("\"]\n");
-    }
-
-    result.append(treeToGraph(root()));
-
-    result.append("label =\"\n\n").append(treeName()).append(name).append("\n\"");
-
-    result.append("}");
-
-    return result.toString();
   }
 
   StringBuffer treeToGraph(int i) {

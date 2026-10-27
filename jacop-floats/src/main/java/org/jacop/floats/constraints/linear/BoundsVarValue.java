@@ -70,10 +70,6 @@ class BoundsVarValue implements MutableVarValue {
     return Val;
   }
 
-  public MutableVarValue previous() {
-    return previousBoundsVarValue;
-  }
-
   public void setPrevious(MutableVarValue n) {
     previousBoundsVarValue = (BoundsVarValue) n;
   }
