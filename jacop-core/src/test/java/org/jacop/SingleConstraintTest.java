@@ -126,6 +126,7 @@ import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -2476,6 +2477,69 @@ class SingleConstraintTest extends TestHelper {
       store.impose(new SumInt(list, rel, v[sumIndex]));
       assertThat(countSolutions(store, v, random))
           .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void sumBoolWithARepeatedVariableCountsMatchBruteForce() {
+    // the sum also in the list, or a list variable repeated: x0 + x1 > x1 with x0 = 0 pruned x1 to
+    // 0 through the sum and kept the stale bound of the list, so it accepted 0 + 0 > 0
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(53);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k + 1];
+      for (int i = 0; i < k; i++) {
+        v[i] = new IntVar(store, "v" + i, 0, 1);
+      }
+      v[k] = randomVar(store, "s", -1, 4, random);
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k + 1);
+      String rel = relations[random.nextInt(relations.length)];
+      boolean reified = random.nextBoolean();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] all = Arrays.copyOf(v, k + 2);
+      all[k + 1] = b;
+      int expected =
+          bruteForce(
+                  all,
+                  a -> {
+                    int total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    int s = a[sumIndex];
+                    boolean holds =
+                        switch (rel) {
+                          case "==" -> total == s;
+                          case "<=" -> total <= s;
+                          case "<" -> total < s;
+                          case ">" -> total > s;
+                          case ">=" -> total >= s;
+                          default -> total != s;
+                        };
+                    return reified ? holds == (a[k + 1] == 1) : holds && a[k + 1] == 0;
+                  })
+              .size();
+
+      SumBool c = new SumBool(list, rel, v[sumIndex]);
+      if (reified) {
+        store.impose(new Reified(c, b));
+      } else {
+        store.impose(c);
+        store.impose(new XeqC(b, 0));
+      }
+      assertThat(countSolutions(store, all, random))
+          .as(
+              "trial %d: sum %s %s %s reified %b",
+              trial, Arrays.toString(list), rel, v[sumIndex], reified)
           .isEqualTo(expected);
     }
   }
