@@ -152,8 +152,10 @@ public final class AtMostOnes {
   private boolean[] isFalse;
   private int falseCount;
 
-  private final List<int[]> added = new ArrayList<>();
-  private final List<Boolean> addedExactlyOne = new ArrayList<>();
+  /** A constraint to add over sorted literals: at most one of them, or exactly one. */
+  private record Addition(int[] lits, boolean exactlyOne) {}
+
+  private final List<Addition> added = new ArrayList<>();
   private int[][] addedOf;
   private int[] addedOfSize;
 
@@ -190,8 +192,8 @@ public final class AtMostOnes {
     r.statistics =
         new Statistics(
             r.cliques.size(),
-            (int) r.addedExactlyOne.stream().filter(b -> !b).count(),
-            (int) r.addedExactlyOne.stream().filter(b -> b).count(),
+            (int) r.added.stream().filter(a -> !a.exactlyOne()).count(),
+            (int) r.added.stream().filter(Addition::exactlyOne).count(),
             r.dropped.size(),
             r.falseCount);
     return r;
@@ -236,8 +238,8 @@ public final class AtMostOnes {
         }
       }
     } else {
-      for (int i = 0; i < r.added.size(); i++) {
-        impose.accept(r.constraint(r.added.get(i), r.addedExactlyOne.get(i)));
+      for (Addition a : r.added) {
+        impose.accept(r.constraint(a.lits(), a.exactlyOne()));
       }
       for (Constraint c : r.dropped) {
         remove.accept(c);
@@ -331,7 +333,7 @@ public final class AtMostOnes {
     long base = 0;
     boolean rest = false;
     for (IntVar v : order) {
-      long w = sign * merged.get(v)[0];
+      long w = Math.multiplyExact(sign, merged.get(v)[0]);
       if (w == 0) {
         continue;
       }
@@ -342,7 +344,7 @@ public final class AtMostOnes {
         }
         // a positive weight counts when the variable is 1, a negative one when it is 0
         lit[n] = w > 0 ? 2 * id : 2 * id + 1;
-        cost[n] = Math.abs(w);
+        cost[n] = w > 0 ? w : Math.negateExact(w);
         if (w < 0) {
           base = Math.addExact(base, w);
         }
@@ -363,7 +365,7 @@ public final class AtMostOnes {
     Arrays.sort(byCost, (i, j) -> Long.compare(cost[j], cost[i]));
     Part atMostOne = null;
     int k = 0;
-    while (k + 1 < n && cost[byCost[k]] + cost[byCost[k + 1]] > slack) {
+    while (k + 1 < n && Math.addExact(cost[byCost[k]], cost[byCost[k + 1]]) > slack) {
       k++;
     }
     if (k > 0) {
@@ -565,8 +567,7 @@ public final class AtMostOnes {
 
   private void add(int[] lits, boolean exactlyOne) {
     int index = added.size();
-    added.add(lits);
-    addedExactlyOne.add(exactlyOne);
+    added.add(new Addition(lits, exactlyOne));
     for (int l : lits) {
       addedOf[l] = push(addedOf[l], addedOfSize[l]++, index);
     }
@@ -574,17 +575,16 @@ public final class AtMostOnes {
 
   private void removeLastAdded() {
     int index = added.size() - 1;
-    for (int l : added.remove(index)) {
+    for (int l : added.remove(index).lits()) {
       addedOfSize[l]--;
     }
-    addedExactlyOne.remove(index);
   }
 
   /** An at-most-one is implied by an added constraint that contains its literals. */
   private boolean impliedAtMostOne(int[] lits) {
     int first = lits[0];
     for (int m = 0; m < addedOfSize[first]; m++) {
-      int[] a = added.get(addedOf[first][m]);
+      int[] a = added.get(addedOf[first][m]).lits();
       boolean all = true;
       for (int l : lits) {
         if (Arrays.binarySearch(a, l) < 0) {
@@ -604,9 +604,9 @@ public final class AtMostOnes {
     for (int l : lits) {
       for (int m = 0; m < addedOfSize[l]; m++) {
         int index = addedOf[l][m];
-        if (addedExactlyOne.get(index)) {
+        if (added.get(index).exactlyOne()) {
           boolean all = true;
-          for (int u : added.get(index)) {
+          for (int u : added.get(index).lits()) {
             if (Arrays.binarySearch(lits, u) < 0) {
               all = false;
               break;
