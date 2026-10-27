@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.presolve.Derivation;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -78,6 +79,7 @@ public class Options {
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean symmetry = true;
+  int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -155,6 +157,8 @@ public class Options {
             --symmetry <value> with presolve, break the variable symmetries of the model with
                 lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
                 problem asks for more than one solution (-a, -n).
+            --presolve-rounds <value> the most rounds of presolve rules, each followed by
+                propagation, before presolve stops short of a fixpoint (default 10).
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -196,6 +200,7 @@ public class Options {
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
+      case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -302,6 +307,16 @@ public class Options {
       case "on" -> symmetry = true;
       case "off" -> symmetry = false;
       default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRounds(String[] args, int i) {
+    int rounds = Integer.parseInt(args[++i]);
+    if (rounds >= 1) {
+      presolveRounds = rounds;
+    } else {
+      System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
     return i + 1;
   }
@@ -629,6 +644,15 @@ public class Options {
    */
   public boolean symmetry() {
     return symmetry;
+  }
+
+  /**
+   * It defines the most rounds of presolve rules (--presolve-rounds).
+   *
+   * @return the most rounds, {@link Derivation#DEFAULT_ROUNDS} by default
+   */
+  public int presolveRounds() {
+    return presolveRounds;
   }
 
   /** Sat is used. */
