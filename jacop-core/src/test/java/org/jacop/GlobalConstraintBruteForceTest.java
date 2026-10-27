@@ -118,6 +118,7 @@ import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.DiffnK;
@@ -254,6 +255,9 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
         Arguments.of("Deviation", balance(false)),
         Arguments.of("Spread", balance(true)),
+        Arguments.of(
+            "EnergyPrecedence",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::energyPrecedence),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
@@ -1730,6 +1734,77 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // n tasks (starts, durations, heights) on a resource of capacity limit, an extra time point, and
+  // random precedences to >= from + lag over the starts and the extra point
+  private static Instance energyPrecedence(Random random) {
+    int n = 2 + random.nextInt(2);
+    int points = n + 1;
+    int arcs = 1 + random.nextInt(4);
+    int[] from = new int[arcs];
+    int[] to = new int[arcs];
+    int[] lag = new int[arcs];
+    for (int k = 0; k < arcs; k++) {
+      from[k] = random.nextInt(points);
+      // most precedences end at the extra point, so that it has several predecessors
+      to[k] = random.nextInt(3) == 0 ? random.nextInt(points) : n;
+      if (to[k] == from[k]) {
+        to[k] = (from[k] + 1) % points;
+      }
+      lag[k] = random.nextInt(5) - 1;
+    }
+    List<int[]> domains = new ArrayList<>();
+    domains.addAll(Arrays.asList(domains(random, n, 0, 4))); // starts
+    domains.add(domain(random, 0, 8)); // extra point
+    domains.addAll(Arrays.asList(domains(random, n, 0, 3))); // durations
+    domains.addAll(Arrays.asList(domains(random, n, 0, 2))); // heights
+    domains.add(domain(random, 0, 3)); // limit
+    return new Instance(
+        domains.toArray(int[][]::new),
+        (store, x) -> {
+          IntVar[] p = Arrays.copyOfRange(x, 0, points);
+          IntVar[] f = new IntVar[arcs];
+          IntVar[] t = new IntVar[arcs];
+          for (int k = 0; k < arcs; k++) {
+            f[k] = p[from[k]];
+            t[k] = p[to[k]];
+          }
+          store.impose(
+              new EnergyPrecedence(
+                  Arrays.copyOfRange(x, 0, n),
+                  Arrays.copyOfRange(x, points, points + n),
+                  Arrays.copyOfRange(x, points + n, points + 2 * n),
+                  x[points + 2 * n],
+                  f,
+                  t,
+                  lag));
+        },
+        v -> {
+          for (int k = 0; k < arcs; k++) {
+            if (v[to[k]] < v[from[k]] + lag[k]) {
+              return false;
+            }
+          }
+          for (int time = 0; time <= 8; time++) {
+            int load = 0;
+            for (int i = 0; i < n; i++) {
+              if (v[i] <= time && time < v[i] + v[points + i]) {
+                load += v[points + n + i];
+              }
+            }
+            if (load > v[points + 2 * n]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "from="
+            + Arrays.toString(from)
+            + " to="
+            + Arrays.toString(to)
+            + " lag="
+            + Arrays.toString(lag));
   }
 
   // production periods x[0..n-1] before their due dates, at most c per period, cost at most the

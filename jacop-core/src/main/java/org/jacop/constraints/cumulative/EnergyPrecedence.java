@@ -1,0 +1,506 @@
+/*
+ * EnergyPrecedence.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.cumulative;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * Energy precedence reasoning on a cumulative resource whose tasks are ordered by precedences,
+ * following Laborie, "Algorithms for propagating resource constraints in AI planning and
+ * scheduling: existing approaches and new results", Artificial Intelligence 143 (2003).
+ *
+ * <p>The constraint holds when the tasks (starts, durations, heights) never use more than the limit
+ * at any time and every precedence {@code to >= from + lag} holds. The precedences may involve
+ * variables that are not task starts, for example a makespan. A task i precedes a time point v when
+ * the longest path of precedences from the start of i to v is at least the duration of i, so that i
+ * ends by v. If a set of tasks precedes v, all their energy has to be spent between the earliest
+ * start of the set and v:
+ *
+ * <pre>
+ *   v &gt;= min start(set) + ceil(energy(set) / limit)
+ * </pre>
+ *
+ * The rule is applied with the best set, made of the predecessors of v that start at or after some
+ * time t, in O(n) per time point after one sort. Symmetrically, the latest value of a time point
+ * that every task of a set has to follow is bounded by the latest end of the set minus its energy
+ * divided by the limit. Edge finding and time-tabling do not see this when the time windows of the
+ * tasks are wide, since they do not know the precedences.
+ *
+ * <p>The constraint only adds pruning to a model with the cumulative and the precedences. It checks
+ * both once the tasks are fixed, so it is a correct constraint on its own.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class EnergyPrecedence extends Constraint
+    implements SatisfiedPresent, Copyable<EnergyPrecedence> {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** The largest number of (time point, task) pairs the precedence closure may hold. */
+  public static final long MAX_CLOSURE = 4_000_000L;
+
+  private static final int NONE = Integer.MIN_VALUE;
+
+  final IntVar[] starts;
+  final IntVar[] durations;
+  final IntVar[] heights;
+  final IntVar limit;
+  final IntVar[] from;
+  final IntVar[] to;
+  final int[] lag;
+
+  private final int n;
+
+  // time points: the distinct variables of starts, from and to
+  private final IntVar[] points;
+  private final int[] pointOfTask;
+
+  // longest path of precedences from the start of task i to point v, NONE when there is none
+  private final int[][] after;
+  // longest path from point u to the start of task k, NONE when there is none
+  private final int[][] before;
+  // the points that some task can precede, and the points that some task can follow
+  private final int[] forwardTargets;
+  private final int[] backwardTargets;
+  // false when the precedences are contradictory (a cycle of positive length)
+  private final boolean feasible;
+
+  // tasks with energy sorted by decreasing earliest start and by increasing latest end
+  private final long[] keys;
+  private final int[] byStart;
+  private final int[] byEnd;
+  private int active;
+  // the bounds the sort used: a pass may tighten them, and the sets must stay those of the sort
+  private final long[] est;
+  private final long[] lct;
+
+  /**
+   * It creates energy precedence reasoning on a cumulative resource.
+   *
+   * @param starts the start times of the tasks.
+   * @param durations the durations of the tasks.
+   * @param heights the resource use of the tasks.
+   * @param limit the capacity of the resource.
+   * @param from the first variable of each precedence.
+   * @param to the second variable of each precedence.
+   * @param lag the distances, {@code to[k] >= from[k] + lag[k]}.
+   */
+  public EnergyPrecedence(
+      IntVar[] starts,
+      IntVar[] durations,
+      IntVar[] heights,
+      IntVar limit,
+      IntVar[] from,
+      IntVar[] to,
+      int[] lag) {
+
+    checkInputForNullness(
+        new String[] {"starts", "durations", "heights", "from", "to"},
+        new Object[][] {starts, durations, heights, from, to});
+    checkInputForNullness("limit", new Object[] {limit});
+    if (durations.length != starts.length || heights.length != starts.length) {
+      throw new IllegalArgumentException(
+          "EnergyPrecedence needs one duration and one height per task.");
+    }
+    if (lag == null || from.length != to.length || lag.length != from.length) {
+      throw new IllegalArgumentException(
+          "EnergyPrecedence needs two variables and one lag per precedence.");
+    }
+    for (int i = 0; i < starts.length; i++) {
+      if (durations[i].min() < 0 || heights[i].min() < 0) {
+        throw new IllegalArgumentException(
+            "EnergyPrecedence needs durations and heights of at least 0.");
+      }
+    }
+
+    this.numberId = idNumber.incrementAndGet();
+    this.starts = Arrays.copyOf(starts, starts.length);
+    this.durations = Arrays.copyOf(durations, durations.length);
+    this.heights = Arrays.copyOf(heights, heights.length);
+    this.limit = limit;
+    this.from = Arrays.copyOf(from, from.length);
+    this.to = Arrays.copyOf(to, to.length);
+    this.lag = Arrays.copyOf(lag, lag.length);
+    this.n = starts.length;
+
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    List<IntVar> pointList = new ArrayList<>();
+    for (IntVar[] vs : new IntVar[][] {starts, from, to}) {
+      for (IntVar v : vs) {
+        index.computeIfAbsent(
+            v,
+            k -> {
+              pointList.add(k);
+              return pointList.size() - 1;
+            });
+      }
+    }
+    this.points = pointList.toArray(new IntVar[0]);
+    int m = points.length;
+    this.pointOfTask = new int[n];
+    for (int i = 0; i < n; i++) {
+      pointOfTask[i] = index.get(starts[i]);
+    }
+
+    int arcs = from.length;
+    int[] arcFrom = new int[arcs];
+    int[] arcTo = new int[arcs];
+    for (int k = 0; k < arcs; k++) {
+      arcFrom[k] = index.get(from[k]);
+      arcTo[k] = index.get(to[k]);
+    }
+
+    this.after = new int[n][];
+    this.before = new int[m][];
+    boolean ok = true;
+    if ((long) n * m <= MAX_CLOSURE && (long) n * m * Math.max(1, arcs) <= 50 * MAX_CLOSURE) {
+      int[][] out = adjacency(m, arcFrom, arcTo);
+      int[][] in = adjacency(m, arcTo, arcFrom);
+      int[] dist = new int[m];
+      for (int i = 0; i < n && ok; i++) {
+        ok = longestPaths(pointOfTask[i], out, arcFrom, arcTo, true, dist);
+        after[i] = Arrays.copyOf(dist, m);
+      }
+      int[][] distTo = new int[n][];
+      for (int i = 0; i < n && ok; i++) {
+        ok = longestPaths(pointOfTask[i], in, arcFrom, arcTo, false, dist);
+        distTo[i] = Arrays.copyOf(dist, m);
+      }
+      for (int u = 0; u < m && ok; u++) {
+        before[u] = new int[n];
+        for (int i = 0; i < n; i++) {
+          before[u][i] = distTo[i][u];
+        }
+      }
+    }
+    this.feasible = ok;
+
+    List<Integer> fw = new ArrayList<>();
+    List<Integer> bw = new ArrayList<>();
+    if (ok && n > 0 && after[0] != null) {
+      for (int v = 0; v < m; v++) {
+        int preds = 0;
+        int succs = 0;
+        for (int i = 0; i < n; i++) {
+          if (pointOfTask[i] != v && after[i][v] != NONE && after[i][v] >= durations[i].min()) {
+            preds++;
+          }
+          if (pointOfTask[i] != v && before[v][i] != NONE && before[v][i] >= 0) {
+            succs++;
+          }
+        }
+        // a single task gives no more than the precedence itself
+        if (preds >= 2) {
+          fw.add(v);
+        }
+        if (succs >= 2) {
+          bw.add(v);
+        }
+      }
+    }
+    this.forwardTargets = fw.stream().mapToInt(Integer::intValue).toArray();
+    this.backwardTargets = bw.stream().mapToInt(Integer::intValue).toArray();
+
+    this.keys = new long[n];
+    this.byStart = new int[n];
+    this.byEnd = new int[n];
+    this.est = new long[n];
+    this.lct = new long[n];
+
+    this.queueIndex = 2;
+
+    setScope(
+        Stream.of(starts, durations, heights, new IntVar[] {limit}, from, to)
+            .flatMap(Arrays::stream));
+  }
+
+  /**
+   * It tells if the precedences give the rule something to work on: some time point has at least
+   * two tasks before it or after it.
+   *
+   * @return true if the constraint can prune.
+   */
+  public boolean propagates() {
+    return !feasible || forwardTargets.length > 0 || backwardTargets.length > 0;
+  }
+
+  private static int[][] adjacency(int m, int[] tail, int[] head) {
+    int[] count = new int[m];
+    for (int t : tail) {
+      count[t]++;
+    }
+    int[][] adj = new int[m][];
+    for (int u = 0; u < m; u++) {
+      adj[u] = new int[count[u]];
+    }
+    Arrays.fill(count, 0);
+    for (int k = 0; k < tail.length; k++) {
+      adj[tail[k]][count[tail[k]]++] = k;
+    }
+    return adj;
+  }
+
+  // longest paths from (or, backwards, to) the source by the queue-based Bellman-Ford; false on a
+  // cycle of positive length, found as a longest path with as many arcs as points
+  private boolean longestPaths(
+      int source, int[][] adj, int[] arcFrom, int[] arcTo, boolean forward, int[] dist) {
+    int m = dist.length;
+    Arrays.fill(dist, NONE);
+    dist[source] = 0;
+    int[] arcsOnPath = new int[m];
+    boolean[] queued = new boolean[m];
+    ArrayDeque<Integer> queue = new ArrayDeque<>();
+    queue.add(source);
+    queued[source] = true;
+    while (!queue.isEmpty()) {
+      int u = queue.poll();
+      queued[u] = false;
+      for (int k : adj[u]) {
+        int w = forward ? arcTo[k] : arcFrom[k];
+        long d = (long) dist[u] + lag[k];
+        if (d > dist[w] && d < IntDomain.MAX_INT) {
+          dist[w] = (int) d;
+          arcsOnPath[w] = arcsOnPath[u] + 1;
+          if (arcsOnPath[w] >= m) {
+            return false;
+          }
+          if (!queued[w]) {
+            queue.add(w);
+            queued[w] = true;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (!feasible) {
+      throw Store.failException;
+    }
+    long capacity = limit.max();
+    if (capacity <= 0 || (forwardTargets.length == 0 && backwardTargets.length == 0)) {
+      if (grounded()) {
+        check();
+      }
+      return;
+    }
+
+    do {
+      store.propagationHasOccurred = false;
+      sortTasks();
+      for (int v : forwardTargets) {
+        forward(store, v, capacity);
+      }
+      for (int u : backwardTargets) {
+        backward(store, u, capacity);
+      }
+    } while (store.propagationHasOccurred);
+
+    if (grounded()) {
+      check();
+    }
+  }
+
+  private static long energy(IntVar d, IntVar r) {
+    return (long) d.min() * r.min();
+  }
+
+  private void sortTasks() {
+    active = 0;
+    for (int i = 0; i < n; i++) {
+      if (durations[i].min() > 0 && heights[i].min() > 0) {
+        est[i] = starts[i].min();
+        lct[i] = (long) starts[i].max() + durations[i].max();
+        keys[active++] = (est[i] << 32) | i;
+      }
+    }
+    Arrays.sort(keys, 0, active);
+    for (int k = 0; k < active; k++) {
+      byStart[active - 1 - k] = (int) keys[k];
+    }
+    for (int k = 0; k < active; k++) {
+      int i = byStart[k];
+      keys[k] = (lct[i] << 32) | i;
+    }
+    Arrays.sort(keys, 0, active);
+    for (int k = 0; k < active; k++) {
+      byEnd[k] = (int) keys[k];
+    }
+  }
+
+  // v >= t + ceil(energy of the predecessors of v starting at or after t / capacity) + the
+  // smallest lag from the end of one of them to v
+  private void forward(Store store, int v, long capacity) {
+    IntVar x = points[v];
+    long bound = Long.MIN_VALUE;
+    long sum = 0;
+    long gap = Long.MAX_VALUE;
+    for (int k = 0; k < active; k++) {
+      int i = byStart[k];
+      int d = after[i][v];
+      if (d == NONE || pointOfTask[i] == v || d < durations[i].max()) {
+        continue;
+      }
+      sum += energy(durations[i], heights[i]);
+      gap = Math.min(gap, (long) d - durations[i].max());
+      long b = est[i] + (sum + capacity - 1) / capacity + gap;
+      if (b > bound) {
+        bound = b;
+      }
+    }
+    if (bound > x.min()) {
+      if (bound > IntDomain.MAX_INT) {
+        throw Store.failException;
+      }
+      x.domain.inMin(store.level, x, (int) bound);
+    }
+  }
+
+  // u <= t - ceil(energy of the tasks following u that end by t / capacity) - the lag to them
+  private void backward(Store store, int u, long capacity) {
+    IntVar x = points[u];
+    long bound = Long.MAX_VALUE;
+    long sum = 0;
+    int gap = Integer.MAX_VALUE;
+    for (int k = 0; k < active; k++) {
+      int i = byEnd[k];
+      int d = before[u][i];
+      if (d == NONE || pointOfTask[i] == u || d < 0) {
+        continue;
+      }
+      sum += energy(durations[i], heights[i]);
+      gap = Math.min(gap, d);
+      long b = lct[i] - (sum + capacity - 1) / capacity - gap;
+      if (b < bound) {
+        bound = b;
+      }
+    }
+    if (bound < x.max()) {
+      if (bound < IntDomain.MIN_INT) {
+        throw Store.failException;
+      }
+      x.domain.inMax(store.level, x, (int) bound);
+    }
+  }
+
+  private void check() {
+    if (!holds()) {
+      throw Store.failException;
+    }
+  }
+
+  // the precedences and the capacity hold for the fixed values
+  private boolean holds() {
+    for (int k = 0; k < from.length; k++) {
+      if ((long) to[k].value() < (long) from[k].value() + lag[k]) {
+        return false;
+      }
+    }
+    long[] events = new long[2 * n];
+    int e = 0;
+    for (int i = 0; i < n; i++) {
+      if (durations[i].value() > 0 && heights[i].value() > 0) {
+        // ends sort before starts at the same time
+        events[e++] = ((long) starts[i].value() << 32) | (1L << 31) | i;
+        events[e++] = ((long) (starts[i].value() + durations[i].value()) << 32) | i;
+      }
+    }
+    Arrays.sort(events, 0, e);
+    long load = 0;
+    for (int k = 0; k < e; k++) {
+      int i = (int) (events[k] & 0x7fffffffL);
+      if ((events[k] & (1L << 31)) != 0) {
+        load += heights[i].value();
+        if (load > limit.value()) {
+          return false;
+        }
+      } else {
+        load -= heights[i].value();
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && holds();
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder result = new StringBuilder(id());
+    result.append(" : EnergyPrecedence(").append(Arrays.toString(starts));
+    result.append(", ").append(Arrays.toString(durations));
+    result.append(", ").append(Arrays.toString(heights));
+    result.append(", ").append(limit);
+    result.append(", [");
+    for (int k = 0; k < from.length; k++) {
+      result.append(k > 0 ? ", " : "").append(from[k].id()).append(" + ").append(lag[k]);
+      result.append(" <= ").append(to[k].id());
+    }
+    return result.append("])").toString();
+  }
+
+  @Override
+  public EnergyPrecedence copy(VarMap map) {
+    return new EnergyPrecedence(
+        map.get(starts),
+        map.get(durations),
+        map.get(heights),
+        map.get(limit),
+        map.get(from),
+        map.get(to),
+        lag);
+  }
+}

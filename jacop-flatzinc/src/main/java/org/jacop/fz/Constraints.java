@@ -41,6 +41,7 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.EnergyPrecedenceDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
@@ -169,6 +170,10 @@ public class Constraints implements ParserTreeConstants {
 
     if (DisjunctiveCliqueDetector.enabled()) {
       new DisjunctiveCliqueDetector(support).detect(astTree);
+    }
+
+    if (EnergyPrecedenceDetector.enabled()) {
+      new EnergyPrecedenceDetector(support).detect(astTree);
     }
 
     if (CardinalityDetector.enabled()) {
