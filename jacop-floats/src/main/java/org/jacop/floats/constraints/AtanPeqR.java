@@ -78,7 +78,14 @@ public class AtanPeqR extends TanPeqR {
       double qMax =
           p.max() >= FloatDomain.PI / 2 ? FloatDomain.MAX_FLOAT : FloatDomain.up(Math.tan(p.max()));
       q.domain.in(store.level, q, qMin, qMax);
-    } while (store.propagationHasOccurred);
+      // with p and q the same variable, atan(x) = x shrinks the bounds towards 0 by about x^3 per
+      // pass, so the loop would not reach a fixpoint in any reasonable time; search splits instead
+    } while (store.propagationHasOccurred && p != q);
+
+    // the store does not run the constraint again for its own pruning, so check a value it left
+    if (p == q && p.singleton() && !satisfied()) {
+      throw Store.failException;
+    }
   }
 
   @Override

@@ -34,9 +34,13 @@ package org.jacop.floats;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.offset;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.DoubleUnaryOperator;
+import java.util.function.Function;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Implies;
@@ -62,7 +66,10 @@ import org.jacop.floats.constraints.PdivQeqR;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.constraints.PgtC;
+import org.jacop.floats.constraints.PgtQ;
+import org.jacop.floats.constraints.PgteqQ;
 import org.jacop.floats.constraints.PltC;
+import org.jacop.floats.constraints.PltQ;
 import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -563,6 +570,61 @@ class SingleConstraintTest {
     // ln(0) = -infinity passed the precision test
     assertThat(groundInverse(ExpPeqR::new, 1, 0)).isFalse();
     assertThat(groundInverse(LnPeqR::new, 0, 0.25)).isFalse();
+  }
+
+  @Test
+  void testTrigonometricWithTheSameVariableOnBothSides() {
+    // sin(x) = x shrank the bounds of x towards 0 by about x^3 per pass and looped for hours
+    for (BiFunction<FloatVar, FloatVar, Constraint> f :
+        List.<BiFunction<FloatVar, FloatVar, Constraint>>of(
+            SinPeqR::new, AsinPeqR::new, AtanPeqR::new)) {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", -1, 1);
+      Constraint c = f.apply(x, x);
+      store.impose(c);
+      assertTimeoutPreemptively(Duration.ofSeconds(10), () -> store.consistency(), c::toString);
+      assertThat(x.min()).as("%s", c).isLessThanOrEqualTo(0);
+      assertThat(x.max()).as("%s", c).isGreaterThanOrEqualTo(0);
+    }
+  }
+
+  @Test
+  void testRelationsOfAVariableWithItselfAcceptNoWrongPoint() {
+    // one pass of x < x on {-0.5, 0, 0.5} left x = 0 and was not run again, so grounding x to 0
+    // changed nothing and the point was accepted; sin(x) = x now stops after one pass, and must
+    // still reject the point x = -0.5 that pass leaves
+    double[] three = {-0.5, 0, 0.5};
+    checkNoPointAccepted(x -> new PltQ(x, x), three);
+    checkNoPointAccepted(x -> new PgtQ(x, x), three);
+    checkNoPointAccepted(x -> new Not(new PlteqQ(x, x)), three);
+    checkNoPointAccepted(x -> new Not(new PgteqQ(x, x)), three);
+    checkNoPointAccepted(x -> new SinPeqR(x, x), new double[] {-1.25, -0.75, -0.5, 1.25, 1.5});
+    checkNoPointAccepted(x -> new AsinPeqR(x, x), new double[] {-1.5, -1, -0.5, 0.25, 1.5});
+    checkNoPointAccepted(x -> new AtanPeqR(x, x), new double[] {-1.75, -1.5, -1, -0.5, 1.75});
+  }
+
+  private static void checkNoPointAccepted(Function<FloatVar, Constraint> f, double[] points) {
+    for (double v : points) {
+      Store store = new Store();
+      FloatIntervalDomain d = new FloatIntervalDomain();
+      for (double w : points) {
+        d.unionAdapt(w, w);
+      }
+      FloatVar x = new FloatVar(store, "x", d);
+      Constraint c = f.apply(x);
+      store.impose(c);
+      boolean accepted = store.consistency();
+      if (accepted) {
+        store.setLevel(1);
+        try {
+          x.domain.in(1, x, v, v);
+          accepted = store.consistency();
+        } catch (FailException e) {
+          accepted = false;
+        }
+      }
+      assertThat(accepted).as("%s at %s", c, v).isFalse();
+    }
   }
 
   @Test
