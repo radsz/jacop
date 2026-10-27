@@ -95,8 +95,8 @@ public final class CdclSolver {
   private static final int TIER_CORE = 0;
   private static final int TIER_MID = 1;
   private static final int TIER_LOCAL = 2;
-  private static final int CORE_LBD = 2;
-  private static final int MID_LBD = 6;
+  private int coreLbd = 2;
+  private int midLbd = 6;
 
   // --- variables and assignment
   private int numVars;
@@ -631,7 +631,7 @@ public final class CdclSolver {
     }
     int ref = memSize;
     mem[ref + SIZE] = size;
-    int tier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : TIER_LOCAL;
+    int tier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
         (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
@@ -939,7 +939,7 @@ public final class CdclSolver {
     if (tier != TIER_CORE) {
       int lbd = computeLbd(mem, ref + HEADER, mem[ref + SIZE]);
       if (lbd < lbdOf(meta)) {
-        int newTier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : tier;
+        int newTier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : tier;
         meta = (meta & ((1 << LBD_SHIFT) - 1) & ~TIER_MASK) | (newTier << TIER_SHIFT);
         meta |= lbd << LBD_SHIFT;
       }
@@ -2836,6 +2836,18 @@ public final class CdclSolver {
     learnts = push(learnts, numLearnts++, copy);
     attach(copy);
     return true;
+  }
+
+  /**
+   * Sets the LBD limits of the learnt clause tiers: clauses up to {@code core} are kept for good,
+   * those up to {@code mid} survive a reduction while they are used (2 and 6 by default).
+   *
+   * @param core the largest LBD of the core tier
+   * @param mid the largest LBD of the middle tier, at least {@code core}
+   */
+  public void setTierLimits(int core, int mid) {
+    coreLbd = core;
+    midLbd = Math.max(core, mid);
   }
 
   /** Reduces the learnt clauses after this many conflicts and then more often, for tests. */
