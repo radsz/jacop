@@ -52,6 +52,8 @@ include "soft_all_different_int.mzn";
 include "soft_global_cardinality_int.mzn";
 include "GCC.mzn";
 include "channel.mzn";
+include "inter_distance.mzn";
+include "multi_inter_distance.mzn";
 
 %% ===== JaCoP graph constraints =====
 opt bool: use_jacop_graph_constraints;

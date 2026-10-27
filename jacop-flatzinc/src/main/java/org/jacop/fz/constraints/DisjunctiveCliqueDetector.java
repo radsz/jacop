@@ -35,6 +35,8 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
@@ -272,13 +274,33 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
                     cliques.minDuration(t), v -> new IntVar(support.store, v, v));
         r[k] = one;
       }
-      CumulativeUnary unary = new CumulativeUnary(s, d, r, one, true);
+      // tasks of one fixed length are an inter-distance, whose propagator is bounds consistent
+      int length = equalLength(d);
+      Constraint unary =
+          length > 1 && !"false".equals(GlobalConstraints.interDistanceMode())
+              ? new InterDistance(s, length)
+              : new CumulativeUnary(s, d, r, one, true);
       // redundant, so degree-based variable selections see the degrees of the model
       unary.setDegreeWeight(0);
       if (support.options.debug()) {
-        FzConsole.println("% redundant unary resource on " + clique.length + " tasks");
+        FzConsole.println(
+            "% redundant "
+                + (unary instanceof InterDistance ? "inter-distance" : "unary resource")
+                + " on "
+                + clique.length
+                + " tasks");
       }
       support.delayedConstraints.add(unary);
     }
+  }
+
+  /** The common fixed length of the tasks, or 0 if they differ or one is not fixed. */
+  private static int equalLength(IntVar[] d) {
+    for (IntVar v : d) {
+      if (!v.singleton() || v.value() != d[0].value()) {
+        return 0;
+      }
+    }
+    return d[0].value();
   }
 }
