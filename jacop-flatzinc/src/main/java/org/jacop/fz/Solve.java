@@ -67,6 +67,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Presolver;
+import org.jacop.presolve.Probing;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -306,11 +307,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void presolve() {
     long start = timer.getCpuTime();
-    Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    Presolver presolver =
+        Presolver.of(store)
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .probing(options.probe(), options.probeBudget());
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, time);
+      printPresolveStatistics(d, presolver.probed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -354,7 +358,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, long time) {
+  private void printPresolveStatistics(Derivation d, Probing.Result probed, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -368,6 +372,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    if (probed != null) {
+      s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
+      s.append("%%%mzn-stat: probeProbes=").append(probed.probes()).append('\n');
+      s.append("%%%mzn-stat: probeFailed=").append(probed.failed()).append('\n');
+      s.append("%%%mzn-stat: probeNarrowed=").append(probed.narrowed()).append('\n');
+      s.append("%%%mzn-stat: probeValuesRemoved=").append(probed.removed()).append('\n');
+      s.append("%%%mzn-stat: probePasses=").append(probed.passes()).append('\n');
+      s.append("%%%mzn-stat: probeExhausted=").append(probed.exhausted()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

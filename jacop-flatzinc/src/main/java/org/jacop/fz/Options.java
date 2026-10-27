@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.presolve.Probing;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -77,6 +78,10 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  Probing.Mode probe =
+      Objects.requireNonNullElse(
+          probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
+  long probeBudget = 1000;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -149,6 +154,10 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-probe <value> with --presolve, probe the root before deriving; one of
+                "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
+                variables), "sac" (as "shave", and every value of small domains)
+            --presolve-probe-budget <ms> time probing may take (default 1000)
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -189,6 +198,8 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-probe" -> i = handleProbe(args, i);
+      case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -286,6 +297,31 @@ public class Options {
     if (mode != null) {
       presolve = mode;
     }
+    return i + 1;
+  }
+
+  private int handleProbe(String[] args, int i) {
+    Probing.Mode mode = probeMode(args[++i]);
+    if (mode != null) {
+      probe = mode;
+    }
+    return i + 1;
+  }
+
+  private static Probing.Mode probeMode(String mode) {
+    return switch (mode) {
+      case "off" -> Probing.Mode.OFF;
+      case "shave" -> Probing.Mode.SHAVE;
+      case "sac" -> Probing.Mode.SAC;
+      default -> {
+        System.err.println("%% Probing mode " + mode + " not known; ignored");
+        yield null;
+      }
+    };
+  }
+
+  private int handleProbeBudget(String[] args, int i) {
+    probeBudget = Long.parseLong(args[++i]);
     return i + 1;
   }
 
@@ -603,6 +639,24 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines what presolve probes at the root (--presolve-probe).
+   *
+   * @return the probing mode, OFF by default
+   */
+  public Probing.Mode probe() {
+    return probe;
+  }
+
+  /**
+   * It defines the time root probing may take (--presolve-probe-budget).
+   *
+   * @return the budget in milliseconds, 1000 by default
+   */
+  public long probeBudget() {
+    return probeBudget;
   }
 
   /** Sat is used. */

@@ -109,6 +109,7 @@ public final class Derivation implements VarMap {
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final boolean infeasible;
 
   private Outcome outcome;
   private int level;
@@ -125,6 +126,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.infeasible = builder.infeasible;
   }
 
   /**
@@ -144,6 +146,7 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private boolean infeasible;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -188,6 +191,17 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Records that the parent is known to be infeasible at its level, for example from probing, so
+     * the derivation ends with {@link Outcome#INFEASIBLE}.
+     *
+     * @return this builder.
+     */
+    Builder infeasible() {
+      this.infeasible = true;
+      return this;
+    }
+
+    /**
      * Derives the child.
      *
      * @return the derivation; see {@link Derivation#outcome()}.
@@ -206,7 +220,7 @@ public final class Derivation implements VarMap {
     }
     // The parent has to be at a fixpoint, so every constraint has had its first consistency call
     // at this level or below. Propagating may itself raise the level, so the level is read after.
-    if (!parent.consistency()) {
+    if (infeasible || !parent.consistency()) {
       outcome = Outcome.INFEASIBLE;
       return;
     }

@@ -57,9 +57,14 @@ import org.jacop.core.Var;
 public final class Presolver {
 
   private final Derivation.Builder builder;
+  private final Store store;
   private boolean checking;
+  private Probing.Mode probing = Probing.Mode.OFF;
+  private long probingBudget = 1000;
+  private Probing.Result probed;
 
   private Presolver(Store store) {
+    this.store = store;
     this.builder = Derivation.of(store);
   }
 
@@ -98,11 +103,39 @@ public final class Presolver {
   }
 
   /**
+   * Probes the store at its level before deriving; see {@link Probing}. Off by default.
+   *
+   * @param mode what probing tries.
+   * @param budgetMillis the time probing may take, in milliseconds.
+   * @return this presolver.
+   */
+  public Presolver probing(Probing.Mode mode, long budgetMillis) {
+    this.probing = mode;
+    this.probingBudget = budgetMillis;
+    return this;
+  }
+
+  /**
+   * Returns what probing did.
+   *
+   * @return the result, or null if probing is off or {@link #presolve()} has not run.
+   */
+  public Probing.Result probed() {
+    return probed;
+  }
+
+  /**
    * Presolves.
    *
    * @return the derivation, whose child is the store to search.
    */
   public Derivation presolve() {
+    if (probing != Probing.Mode.OFF) {
+      probed = Probing.of(store).mode(probing).budget(probingBudget).probe();
+      if (!probed.feasible()) {
+        return builder.infeasible().derive();
+      }
+    }
     return builder
         .retention(checking ? Derivation.Retention.KEPT : Derivation.Retention.RELEASED)
         .derive();
