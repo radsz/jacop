@@ -293,6 +293,24 @@ class StdDecompositionsTest {
             "jacop_disjunctive_strict_optional(" + s + ",[1,0,2]," + o + ")"));
 
     d = new StringBuilder();
+    x = vars(d, "x", 3, "0..3");
+    String counts = vars(d, "c", 3, "0..3");
+    models.add(model("gcc", d.toString(), "jacop_gcc(" + x + "," + counts + ",0)"));
+    d = new StringBuilder();
+    x = vars(d, "x", 4, "0..3");
+    models.add(model("gcc_magic", d.toString(), "jacop_gcc(" + x + "," + x + ",0)"));
+
+    d = new StringBuilder();
+    x = vars(d, "x", 3, "1..3");
+    models.add(
+        model(
+            "mdd",
+            d.toString(),
+            "jacop_mdd("
+                + x
+                + ",[1,2,2,3],[1,1,2,3,3,4],[{1},{2,3},{1,2},{3},{1},{1,3}],[2,3,4,4,4,0])"));
+
+    d = new StringBuilder();
     String sets = vars(d, "t", 3, "set of 1..3");
     b = vars(d, "b", 3, "bool");
     models.add(

@@ -29,7 +29,7 @@ mvn -Pmin -pl jacop-benchmarks test -Dtest=DecompositionCheck -Dsurefire.rerunFa
 | `decomp.constraints` | all | comma-separated constraint names, e.g. `jacop_cumulative,jacop_regular` |
 | `decomp.problems` | all | regular expression on problem names |
 | `decomp.maxProblems` | no limit | stop after this many problems were worked on |
-| `decomp.retry` | none | verdicts to check again, e.g. `DIFF,ERROR` |
+| `decomp.retry` | none | verdicts to check again, e.g. `DIFF,ERROR`; `EMPTY` re-checks `PARTIAL` results that compared no solution |
 | `decomp.threads` | 1 | problems checked in parallel |
 | `decomp.out` | `target/decomposition-check` | decomposed models of differences |
 
@@ -90,3 +90,7 @@ decomposition. Globals that a standard decomposition calls (such as `count` insi
 `all_different` inside `circuit`, or `minimum` inside `subcircuit`) are decomposed as well, so a
 decomposed model uses built-ins only. `StdDecompositionsTest` (in the build) checks every
 decomposition against JaCoP's constraint on a small model.
+
+Globals without a decomposition yet (reported as `NO_DECOMPOSITION`): `jacop_geost`,
+`jacop_geost_bb` and the graph constraints (`jacop_wst`, `jacop_tree`, `jacop_steiner`,
+`jacop_path`, `jacop_dpath`, `jacop_dreachable`, `jacop_connected`).

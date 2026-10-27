@@ -163,6 +163,8 @@ final class StdDecompositions {
     DECOMPOSERS.put("jacop_partition_set", StdDecompositions::partitionSet);
     DECOMPOSERS.put("jacop_if_then_else_set", StdDecompositions::ifThenElseSet);
     DECOMPOSERS.put("jacop_int_set_channel", StdDecompositions::intSetChannel);
+    DECOMPOSERS.put("jacop_gcc", StdDecompositions::gcc);
+    DECOMPOSERS.put("jacop_mdd", StdDecompositions::mdd);
   }
 
   private StdDecompositions() {}
@@ -1076,6 +1078,108 @@ final class StdDecompositions {
         or.add(before(b, s.get(j), d.get(j), s.get(i)));
         b.clause(or, List.of(occurs.get(i), occurs.get(j)));
       }
+    }
+  }
+
+  /**
+   * GCC(x, c) from JaCoP's library: fzn_global_cardinality_closed with cover = index..index +
+   * length(c) - 1.
+   */
+  static void gcc(FznBuilder b, List<Expr> a) {
+    List<Term> x = b.array(a.get(0));
+    List<Term> counts = b.array(a.get(1));
+    long index = b.intArg(a.get(2));
+    SetLit cover = SetLit.range(index, index + counts.size() - 1);
+    for (Term xi : x) {
+      b.in(xi, cover);
+    }
+    for (int i = 0; i < counts.size(); i++) {
+      Term c = countValue(b, x, FznBuilder.constant(index + i));
+      b.linear(new long[] {1, -1}, List.of(c, counts.get(i)), "eq", 0);
+    }
+    long[] ones = new long[counts.size()];
+    Arrays.fill(ones, 1);
+    b.linear(ones, counts, "le", x.size());
+  }
+
+  /**
+   * fzn_mdd: a Boolean per node (bn, node 0 is the true node) and per edge (be), with the clauses
+   * T1, T23, T4, P1, P2, P3 and exactly one node per level (P4).
+   */
+  static void mdd(FznBuilder b, List<Expr> a) {
+    List<Term> x = b.array(a.get(0));
+    long[] level = b.intArray(a.get(1));
+    long[] from = b.intArray(a.get(2));
+    List<Expr> labelExprs = b.model.elements(a.get(3));
+    long[] to = b.intArray(a.get(4));
+    int nodes = level.length;
+    int edges = from.length;
+    SetLit[] label = new SetLit[edges];
+    for (int e = 0; e < edges; e++) {
+      label[e] = b.model.set(labelExprs.get(e));
+    }
+    List<Term> bn = new ArrayList<>();
+    bn.add(FznBuilder.TRUE);
+    bn.add(FznBuilder.TRUE);
+    for (int n = 2; n <= nodes; n++) {
+      bn.add(b.newBool());
+    }
+    List<Term> be = new ArrayList<>();
+    List<Term> inLabel = new ArrayList<>();
+    for (int e = 0; e < edges; e++) {
+      be.add(b.newBool());
+      inLabel.add(b.inReif(x.get((int) level[(int) from[e] - 1] - 1), label[e]));
+    }
+    for (int n = 1; n <= nodes; n++) {
+      List<Term> out = new ArrayList<>();
+      for (int e = 0; e < edges; e++) {
+        if (from[e] == n) {
+          out.add(be.get(e));
+        }
+      }
+      b.clause(out, List.of(bn.get(n)));
+    }
+    for (int e = 0; e < edges; e++) {
+      b.clause(List.of(bn.get((int) from[e])), List.of(be.get(e)));
+      b.clause(List.of(bn.get((int) to[e])), List.of(be.get(e)));
+      b.clause(List.of(inLabel.get(e)), List.of(be.get(e)));
+      b.clause(List.of(be.get(e)), List.of(bn.get((int) from[e]), inLabel.get(e)));
+    }
+    for (int n = 0; n <= nodes; n++) {
+      if (n == 1) {
+        continue;
+      }
+      List<Term> in = new ArrayList<>();
+      for (int e = 0; e < edges; e++) {
+        if (to[e] == n) {
+          in.add(be.get(e));
+        }
+      }
+      b.clause(in, n == 0 ? List.of() : List.of(bn.get(n)));
+    }
+    for (int i = 1; i <= x.size(); i++) {
+      Term xi = x.get(i - 1);
+      if (!b.bounded(xi)) {
+        throw new UnsupportedOperationException("mdd on an unbounded variable");
+      }
+      for (long d = b.lb(xi); d <= b.ub(xi); d++) {
+        List<Term> support = new ArrayList<>();
+        for (int e = 0; e < edges; e++) {
+          if (level[(int) from[e] - 1] == i && label[e].contains(d)) {
+            support.add(be.get(e));
+          }
+        }
+        b.clause(support, List.of(b.eqReif(xi, FznBuilder.constant(d))));
+      }
+      List<Term> atLevel = new ArrayList<>();
+      for (int n = 1; n <= nodes; n++) {
+        if (level[n - 1] == i) {
+          atLevel.add(b.bool2int(bn.get(n)));
+        }
+      }
+      long[] ones = new long[atLevel.size()];
+      Arrays.fill(ones, 1);
+      b.linear(ones, atLevel, "eq", 1);
     }
   }
 
