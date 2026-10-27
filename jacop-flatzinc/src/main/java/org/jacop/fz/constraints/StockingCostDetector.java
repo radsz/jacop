@@ -152,7 +152,7 @@ public class StockingCostDetector implements ParserTreeConstants {
     IntVar[] x = support.getVarArray(child(node, 0));
     int[] cover = support.getIntArray(child(node, 1));
     int[] ub = support.getIntArray(child(node, 3));
-    if (x == null || cover == null || ub == null || cover.length == 0) {
+    if (cover == null || ub == null || cover.length == 0 || ub.length != cover.length) {
       return;
     }
     IntervalDomain values = new IntervalDomain();

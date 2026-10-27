@@ -1462,7 +1462,8 @@ class GlobalConstraintBruteForceTest {
       int n = 1 + random.nextInt(5);
       int capacity = 1 + random.nextInt(2);
       int[] due = randomInts(random, n, 1, 6);
-      int[] h = itemDependent ? randomInts(random, n, 0, 3) : null;
+      // the unit cost constructor is checked against costs of 1
+      int[] h = itemDependent ? randomInts(random, n, 0, 3) : randomInts(random, n, 1, 1);
       int[][] domains =
           append(domains(random, n, 0, 6), domain(random, 0, 3 * n * (itemDependent ? 3 : 1)));
       return new Instance(
@@ -1487,7 +1488,7 @@ class GlobalConstraintBruteForceTest {
               if (same > capacity) {
                 return false;
               }
-              total += (h == null ? 1 : h[i]) * (due[i] - t[i]);
+              total += h[i] * (due[i] - t[i]);
             }
             return total <= t[n];
           },
