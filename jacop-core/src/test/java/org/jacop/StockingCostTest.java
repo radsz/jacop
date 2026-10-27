@@ -142,8 +142,46 @@ class StockingCostTest {
   /**
    * A random state: orders with domains (some fixed), due dates, costs, capacity and cost bounds.
    */
-  private record Instance(
-      int[][] domains, int[] due, int[] h, int capacity, int costMin, int costMax) {
+  private static final class Instance {
+    private final int[][] domains;
+    private final int[] due;
+    private final int[] h;
+    private final int capacity;
+    private final int costMin;
+    private final int costMax;
+
+    Instance(int[][] domains, int[] due, int[] h, int capacity, int costMin, int costMax) {
+      this.domains = domains;
+      this.due = due;
+      this.h = h;
+      this.capacity = capacity;
+      this.costMin = costMin;
+      this.costMax = costMax;
+    }
+
+    int[][] domains() {
+      return domains;
+    }
+
+    int[] due() {
+      return due;
+    }
+
+    int[] h() {
+      return h;
+    }
+
+    int capacity() {
+      return capacity;
+    }
+
+    int costMin() {
+      return costMin;
+    }
+
+    int costMax() {
+      return costMax;
+    }
 
     static Instance random(Random random, boolean itemDependent) {
       int n = 1 + random.nextInt(4);
