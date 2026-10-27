@@ -132,10 +132,10 @@ public class StockingCost extends Constraint implements SatisfiedPresent, Copyab
    */
   public StockingCost(IntVar[] x, int[] due, int[] h, IntVar cost, int capacity) {
 
-    checkInputForNullness(new String[] {"x", "cost"}, new Object[][] {x, {cost}});
-    if (due == null || h == null || due.length != x.length || h.length != x.length) {
+    if (x == null || due == null || h == null || due.length != x.length || h.length != x.length) {
       throw new IllegalArgumentException("StockingCost needs one due date and one cost per order.");
     }
+    checkInputForNullness(new String[] {"x", "cost"}, x, new Object[] {cost});
     if (capacity < 1) {
       throw new IllegalArgumentException("StockingCost needs a capacity of at least 1.");
     }
