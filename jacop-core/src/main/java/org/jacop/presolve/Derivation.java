@@ -31,6 +31,7 @@
 package org.jacop.presolve;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -69,6 +70,9 @@ import org.jacop.core.Var;
  */
 public final class Derivation implements VarMap {
 
+  /** The most rounds of presolve rules by default. */
+  public static final int DEFAULT_ROUNDS = 10;
+
   /** What happens to the parent's constraints. */
   public enum Retention {
     /** The parent keeps its constraints and checks every returned solution. */
@@ -95,7 +99,8 @@ public final class Derivation implements VarMap {
    * @param childVariables variables of the child store.
    * @param childConstraints constraints copied into the child.
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
-   * @param dropped constraints not copied because the presolve rules found them entailed.
+   * @param dropped constraints not copied because the presolve rules found them entailed or a rule
+   *     removed them.
    */
   public record Statistics(
       int parentVariables,
@@ -105,14 +110,12 @@ public final class Derivation implements VarMap {
       int fixed,
       int dropped) {}
 
-  // rounds of the at-most-one rule
-  private static final int AT_MOST_ONE_ROUNDS = 10;
-
   private final Store parent;
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
-  private final boolean atMostOnes;
+  private final List<Rule> ruleList;
+  private final int maxRounds;
 
   private Outcome outcome;
   private int level;
@@ -122,15 +125,17 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
-  private AtMostOnes.Statistics atMostOnesStatistics;
   private boolean solutionWritten;
+  private int rounds;
+  private final Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
 
   private Derivation(Builder builder) {
     this.parent = builder.parent;
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
-    this.atMostOnes = builder.atMostOnes;
+    this.ruleList = List.copyOf(builder.ruleList);
+    this.maxRounds = builder.maxRounds;
   }
 
   /**
@@ -150,8 +155,8 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
-    private boolean atMostOnes =
-        Boolean.parseBoolean(System.getProperty("jacop.presolve.atMostOnes", "true"));
+    private final List<Rule> ruleList = new ArrayList<>();
+    private int maxRounds = DEFAULT_ROUNDS;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -196,14 +201,29 @@ public final class Derivation implements VarMap {
     }
 
     /**
-     * Switches the at-most-one rule ({@link AtMostOnes}) on or off; it runs only with the rules on.
-     * On by default, unless the system property {@code jacop.presolve.atMostOnes} is false.
+     * Adds a presolve rule; the rules run in the order added, in rounds alternated with propagation
+     * of the parent until a fixpoint, see {@link Rule}.
      *
-     * @param on true to apply the rule.
+     * @param rule the rule.
      * @return this builder.
      */
-    public Builder atMostOnes(boolean on) {
-      this.atMostOnes = on;
+    public Builder rule(Rule rule) {
+      ruleList.add(rule);
+      return this;
+    }
+
+    /**
+     * Sets the most rounds of rules; the default is {@value Derivation#DEFAULT_ROUNDS}. The rounds
+     * stop earlier at a fixpoint, when a round of rules and propagation changes nothing.
+     *
+     * @param max the most rounds, at least 1.
+     * @return this builder.
+     */
+    public Builder rounds(int max) {
+      if (max < 1) {
+        throw new IllegalArgumentException("At least one round is needed; " + max + " given");
+      }
+      this.maxRounds = max;
       return this;
     }
 
@@ -231,34 +251,29 @@ public final class Derivation implements VarMap {
       return;
     }
     level = parent.level;
+    try {
+      if (rules && !ruleList.isEmpty() && !applyRules()) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+    } catch (FailException e) {
+      outcome = Outcome.INFEASIBLE;
+      return;
+    }
     variables = allVariables();
     collected = collectConstraints();
-    int parentConstraints = collected.size();
 
     if (!copyable()) {
       live();
       return;
     }
 
-    Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (rules && atMostOnes) {
-      if (!runAtMostOnes(removed)) {
-        outcome = Outcome.INFEASIBLE;
-        return;
-      }
-      // propagation may have imposed new constraints
-      if (!copyable()) {
-        live();
-        return;
-      }
-    }
-
     List<Constraint> carried = new ArrayList<>();
     int dropped = 0;
     for (Constraint c : collected) {
-      if (rules && entailed(c)) {
+      if (rules && (removed.contains(c) || entailed(c))) {
         dropped++;
-      } else if (!removed.contains(c)) {
+      } else {
         carried.add(c);
       }
     }
@@ -307,7 +322,7 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(), parentConstraints, copies.size(), carried.size(), fixed, dropped);
+            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -326,42 +341,100 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * Runs the at-most-one rule in rounds, each followed by propagation in the parent, until a round
-   * changes nothing. The rule narrows domains and imposes its constraints in the parent at its
-   * level, so they are collected and copied like the others; the constraints it replaces are left
-   * out of the child.
+   * Runs the rules in rounds, each followed by propagation of the parent, until a round changes
+   * nothing or the budget of rounds is spent.
    *
-   * @param removed receives the constraints to leave out of the child.
-   * @return false if the parent is infeasible.
+   * @return false if the parent is inconsistent.
    */
-  private boolean runAtMostOnes(Set<Constraint> removed) {
-    AtMostOnes.Statistics total = new AtMostOnes.Statistics(0, 0, 0, 0, 0);
-    try {
-      for (int round = 0; round < AT_MOST_ONE_ROUNDS; round++) {
+  private boolean applyRules() {
+    Context context = new Context();
+    while (rounds < maxRounds) {
+      rounds++;
+      List<Var> before = allVariables();
+      double[] sizes = sizes(before);
+      int edits = context.edits;
+      for (Rule rule : ruleList) {
+        context.snapshot = null;
+        rule.apply(context);
+      }
+      if (!parent.consistency()) {
+        return false;
+      }
+      // propagating may raise the level, as before the rules
+      level = parent.level;
+      if (context.edits == edits
+          && allVariables().size() == before.size()
+          && Arrays.equals(sizes, sizes(before))) {
+        break;
+      }
+    }
+    return true;
+  }
+
+  /** The domain sizes of the variables, in order, to tell whether a round changed a domain. */
+  private static double[] sizes(List<Var> vars) {
+    double[] sizes = new double[vars.size()];
+    for (int i = 0; i < sizes.length; i++) {
+      sizes[i] = vars.get(i).getSizeFloat();
+    }
+    return sizes;
+  }
+
+  /** The view of the derivation that the rules get. */
+  private final class Context implements Rule.Context {
+
+    private int edits;
+    private List<Constraint> snapshot;
+
+    @Override
+    public Store store() {
+      return parent;
+    }
+
+    @Override
+    public int level() {
+      return level;
+    }
+
+    @Override
+    public int round() {
+      return rounds;
+    }
+
+    @Override
+    public List<Constraint> constraints() {
+      if (snapshot == null) {
+        variables = allVariables();
         List<Constraint> live = new ArrayList<>();
-        for (Constraint c : collected) {
-          if (!entailed(c) && !removed.contains(c)) {
+        for (Constraint c : collectConstraints()) {
+          if (!removed.contains(c)) {
             live.add(c);
           }
         }
-        AtMostOnes.Statistics s =
-            AtMostOnes.apply(parent, parent.level, live, parent::impose, removed::add);
-        total = total.plus(s);
-        if (!parent.consistency()) {
-          return false;
-        }
-        collected = collectConstraints();
-        if (!s.changed()) {
-          break;
-        }
+        snapshot = Collections.unmodifiableList(live);
       }
-    } catch (FailException e) {
-      return false;
-    } finally {
-      atMostOnesStatistics = total;
-      level = parent.level;
+      return snapshot;
     }
-    return true;
+
+    @Override
+    public void impose(Constraint c) {
+      parent.impose(c);
+      snapshot = null;
+      edits++;
+    }
+
+    @Override
+    public void remove(Constraint c) {
+      if (removed.add(c)) {
+        snapshot = null;
+        edits++;
+      }
+    }
+
+    @Override
+    public boolean removed(Constraint c) {
+      return removed.contains(c);
+    }
   }
 
   private void keep(Var v) {
@@ -504,21 +577,30 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * Returns what the at-most-one rule did.
-   *
-   * @return the statistics, or null if the rule did not run.
-   */
-  public AtMostOnes.Statistics atMostOnes() {
-    return atMostOnesStatistics;
-  }
-
-  /**
    * Returns the parent's level at which the child was derived.
    *
    * @return the level.
    */
   public int level() {
     return level;
+  }
+
+  /**
+   * Returns the presolve rules of this derivation, in the order they run.
+   *
+   * @return the rules.
+   */
+  public List<Rule> rules() {
+    return Collections.unmodifiableList(ruleList);
+  }
+
+  /**
+   * Returns the rounds of presolve rules run, 0 when there are no rules.
+   *
+   * @return the rounds.
+   */
+  public int rounds() {
+    return rounds;
   }
 
   /**
@@ -663,6 +745,7 @@ public final class Derivation implements VarMap {
     shown.put("outcome", outcome);
     shown.put("level", level);
     shown.put("retention", retention);
+    shown.put("rounds", rounds);
     shown.put("statistics", statistics);
     return "Derivation" + shown;
   }

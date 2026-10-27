@@ -125,8 +125,8 @@ class AtMostOnesTest {
               s.impose(new AndBoolVector(new IntVar[] {b[2], b[3]}, new IntVar(s, 0, 0)));
             });
     Derivation d = derive(m);
-    assertThat(d.atMostOnes().cliques()).isEqualTo(1);
-    assertThat(d.atMostOnes().replaced()).isEqualTo(6);
+    assertThat(amo(d).cliques()).isEqualTo(1);
+    assertThat(amo(d).replaced()).isEqualTo(6);
     assertThat(d.statistics().childConstraints()).isEqualTo(1);
     // at most one of the four Booleans, and the two integers free
     assertThat(solutionsThrough(m, d)).hasSize(5 * 4 * 4);
@@ -148,8 +148,8 @@ class AtMostOnesTest {
               s.impose(new OrBoolSimple(b[0], b[1], new IntVar(s, 1, 1)));
             });
     Derivation d = derive(m);
-    assertThat(d.atMostOnes().fixed()).isEqualTo(1);
-    assertThat(d.atMostOnes().exactlyOnes()).isEqualTo(1);
+    assertThat(amo(d).fixed()).isEqualTo(1);
+    assertThat(amo(d).exactlyOnes()).isEqualTo(1);
     assertThat(m.b()[2].singleton(0)).isTrue();
     assertThat(solutionsThrough(m, d)).hasSize(2 * 4 * 4);
   }
@@ -165,7 +165,7 @@ class AtMostOnesTest {
               v.store().impose(new XlteqY(v.b()[0], v.b()[1]));
             });
     Derivation d = derive(m);
-    assertThat(d.atMostOnes().fixed()).isEqualTo(1);
+    assertThat(amo(d).fixed()).isEqualTo(1);
     assertThat(m.b()[0].singleton(0)).isTrue();
   }
 
@@ -191,8 +191,8 @@ class AtMostOnesTest {
     Model m = model(4, impose);
     Derivation d = derive(m);
     // the clique {b0, b1, b2} replaces the two clauses; the linear constraint stays
-    assertThat(d.atMostOnes().cliques()).isEqualTo(1);
-    assertThat(d.atMostOnes().replaced()).isEqualTo(2);
+    assertThat(amo(d).cliques()).isEqualTo(1);
+    assertThat(amo(d).replaced()).isEqualTo(2);
     assertThat(d.statistics().childConstraints()).isEqualTo(2);
     assertThat(solutionsThrough(m, d)).isEqualTo(solutionsDirectly(model(4, impose)));
   }
@@ -242,7 +242,7 @@ class AtMostOnesTest {
       Set<List<Integer>> found =
           d.outcome() == Derivation.Outcome.INFEASIBLE ? Set.of() : solutionsThrough(m, d);
       assertThat(found).as("trial %d", trial).isEqualTo(expected);
-      if (d.atMostOnes() != null && d.atMostOnes().changed()) {
+      if (amo(d).changed()) {
         changed++;
       }
     }
@@ -332,6 +332,15 @@ class AtMostOnesTest {
       }
     }
     return result;
+  }
+
+  private static AtMostOnes.Statistics amo(Derivation d) {
+    for (Rule rule : d.rules()) {
+      if (rule instanceof AtMostOneRule r) {
+        return r.statistics();
+      }
+    }
+    return new AtMostOnes.Statistics(0, 0, 0, 0, 0);
   }
 
   private static IntVar[] all(Model m) {

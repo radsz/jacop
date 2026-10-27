@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.presolve.Derivation;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -77,6 +78,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -151,6 +153,8 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-rounds <value> the most rounds of presolve rules, each followed by
+                propagation, before presolve stops short of a fixpoint (default 10).
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -191,6 +195,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -287,6 +292,16 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRounds(String[] args, int i) {
+    int rounds = Integer.parseInt(args[++i]);
+    if (rounds >= 1) {
+      presolveRounds = rounds;
+    } else {
+      System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
     return i + 1;
   }
@@ -605,6 +620,15 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines the most rounds of presolve rules (--presolve-rounds).
+   *
+   * @return the most rounds, {@link Derivation#DEFAULT_ROUNDS} by default
+   */
+  public int presolveRounds() {
+    return presolveRounds;
   }
 
   /** Sat is used. */
