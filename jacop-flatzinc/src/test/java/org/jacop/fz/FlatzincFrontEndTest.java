@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.jacop.floats.core.FloatDomain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -83,6 +84,30 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
+  }
+
+  @Test
+  void floatSettingsOfAnEarlierRunDoNotCarryOver() throws IOException {
+    // FloatDomain keeps precision and print format in static fields. The FlatZinc tests run many
+    // models in one JVM, and a float_search precision or --format of one model changed the output
+    // of the next (upTo5min/arbitrage_loops5 printed other digits after a float_search model).
+    String first =
+        """
+        var 0.0..10.0: y:: output_var;
+        constraint float_lin_eq([3.0],[y],1.0);
+        solve :: float_search([y],0.5,input_order,indomain_split,complete) satisfy;
+        """;
+    String second =
+        """
+        var 0.0..2.0: x:: output_var;
+        constraint float_times(x,x,2.0);
+        solve satisfy;
+        """;
+
+    assertTrue(run(first, "--format", "0.01")[0].contains("y = 0.33;"));
+    String out = run(second)[0];
+    assertTrue(out.contains("x = 1.4142135623730951;"), out);
+    assertEquals(FloatDomain.DEFAULT_PRECISION, FloatDomain.precision());
   }
 
   @Test
@@ -1326,19 +1351,40 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgTimeOutIsNotReportedComplete() throws IOException {
-    // 13 pigeons in 12 holes is far beyond 100 ms of LCG; an interrupted LCG search printed
-    // ========== or =====UNSATISFIABLE===== on the sequence-search path.
+    // 13 pigeons in 12 holes, as clauses, is far beyond 100 ms of LCG: resolution proofs of the
+    // pigeonhole principle are exponential, and no global constraint is detected in clauses (the
+    // disequalities of the first version became an alldifferent, whose Hall set explanations
+    // prove it at once); an interrupted LCG search printed ========== or =====UNSATISFIABLE=====
+    // on the sequence-search path.
     StringBuilder model =
-        new StringBuilder("array [1..13] of var 1..12: p :: output_array([1..13]);\n");
-    for (int i = 1; i <= 13; i++) {
-      for (int j = i + 1; j <= 13; j++) {
-        model.append("constraint int_ne(p[%d], p[%d]);\n".formatted(i, j));
+        new StringBuilder("array [1..156] of var bool: p :: output_array([1..13, 1..12]);\n");
+    for (int i = 0; i < 13; i++) {
+      StringBuilder holes = new StringBuilder();
+      for (int k = 0; k < 12; k++) {
+        holes.append(k == 0 ? "" : ", ").append("p[%d]".formatted(i * 12 + k + 1));
+      }
+      model.append("constraint bool_clause([%s], []);\n".formatted(holes));
+    }
+    for (int k = 0; k < 12; k++) {
+      for (int i = 0; i < 13; i++) {
+        for (int j = i + 1; j < 13; j++) {
+          model.append(
+              "constraint bool_clause([], [p[%d], p[%d]]);\n"
+                  .formatted(i * 12 + k + 1, j * 12 + k + 1));
+        }
       }
     }
     model.append("solve satisfy;\n");
-    String out = run(model.toString(), "--lcg", "-t", "100")[0];
-    assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
-    assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    // the disequalities would become an all-different, with which LCG may prove at once that the
+    // pigeons do not fit
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      String out = run(model.toString(), "--lcg", "-t", "100")[0];
+      assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
+      assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
   }
 
   @Test

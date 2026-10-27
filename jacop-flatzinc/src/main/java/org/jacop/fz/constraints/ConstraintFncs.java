@@ -588,6 +588,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_list_diff2(n);
   }
 
+  /** Poses the jacop_count constraints collected while the model was read. */
+  public void poseCounts() {
+    gc.poseCounts();
+  }
+
   /** Handles the jacop_count FlatZinc constraint. */
   public void jacop_count(SimpleNode n) {
     gc.gen_jacop_count(n);

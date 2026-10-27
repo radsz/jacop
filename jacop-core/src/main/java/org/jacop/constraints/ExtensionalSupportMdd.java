@@ -316,6 +316,11 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
   }
 
   @Override
+  protected boolean explainedByPaths() {
+    return getClass() == ExtensionalSupportMdd.class;
+  }
+
+  @Override
   public String toString() {
 
     StringBuilder result = new StringBuilder(id());

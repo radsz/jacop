@@ -38,30 +38,53 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
+import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -218,6 +241,447 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+  }
+
+  /**
+   * Random hybrid tables with unary restrictions against brute force; the table explains its
+   * prunings itself.
+   */
+  @Test
+  void hybridTablesAgreeWithBruteForce() {
+    Random rnd = new Random(17);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 3 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("HybridTable");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "hybrid tables: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  @Test
+  void diffnAgreesWithBruteForce() {
+    Random rnd = new Random(23);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4;
+      // per rectangle its x and y origins, then its widths and heights
+      IntVar[] x = new IntVar[4 * n];
+      int side = 1 + rnd.nextInt(3);
+      for (int i = 0; i < 2 * n; i++) {
+        x[i] = new IntVar(store, "o" + i, 0, side);
+        if (rnd.nextInt(4) == 0) {
+          x[i].domain.subtractAdapt(rnd.nextInt(side + 1));
+        }
+      }
+      for (int i = 2 * n; i < 4 * n; i++) {
+        int c = 1 + rnd.nextInt(3);
+        x[i] = rnd.nextInt(3) == 0 ? new IntVar(store, "l" + i, 1, 3) : new IntVar(store, c, c);
+      }
+      IntVar[] ox = new IntVar[n];
+      IntVar[] oy = new IntVar[n];
+      IntVar[] lx = new IntVar[n];
+      IntVar[] ly = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        ox[i] = x[2 * i];
+        oy[i] = x[2 * i + 1];
+        lx[i] = x[2 * n + 2 * i];
+        ly[i] = x[2 * n + 2 * i + 1];
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Diffn(ox, oy, lx, ly, rnd.nextBoolean()),
+              t -> {
+                for (int i = 0; i < n; i++) {
+                  for (int j = i + 1; j < n; j++) {
+                    boolean apartX =
+                        t[2 * i] + t[2 * n + 2 * i] <= t[2 * j]
+                            || t[2 * j] + t[2 * n + 2 * j] <= t[2 * i];
+                    boolean apartY =
+                        t[2 * i + 1] + t[2 * n + 2 * i + 1] <= t[2 * j + 1]
+                            || t[2 * j + 1] + t[2 * n + 2 * j + 1] <= t[2 * i + 1];
+                    if (!apartX && !apartY) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(Arrays.copyOf(x, 2 * n), rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Diffn");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "diffn: %d sat, %d unsat, %d own and %d generic explanations%n", sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  @Test
+  void allDifferentAgreesWithBruteForce() {
+    Random rnd = new Random(29);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        IntVar[] q = new IntVar[3 + rnd.nextInt(n - 2)];
+        int[] at = new int[q.length];
+        for (int k = 0; k < q.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+          q[k] = x[at[k]];
+        }
+        int kind = rnd.nextInt(5);
+        Constraint constraint =
+            switch (kind) {
+              case 0 -> new Alldifferent(q);
+              case 1 -> new Alldiff(q);
+              case 2 -> new Alldistinct(q);
+              case 3 -> new AlldifferentExcept(q, new IntervalDomain(0, 1));
+              default -> new AlldifferentExceptZero(q);
+            };
+        int shared = kind == 3 ? 1 : kind == 4 ? 0 : Integer.MIN_VALUE;
+        relations.add(
+            new Relation(
+                constraint,
+                t -> {
+                  for (int k = 0; k < at.length; k++) {
+                    for (int m = k + 1; m < at.length; m++) {
+                      int v = t[at[k]];
+                      boolean exception = v == shared || kind == 3 && v == 0;
+                      if (v == t[at[m]] && !exception) {
+                        return false;
+                      }
+                    }
+                  }
+                  return true;
+                }));
+      }
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name :
+          new String[] {
+            "Alldifferent", "Alldiff", "Alldistinct", "AlldifferentExcept", "AlldifferentExceptZero"
+          }) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "all different: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
+  }
+
+  @Test
+  void layeredGraphsAgreeWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(rnd.nextBoolean() ? regularRelation(x, rnd) : mddRelation(x, rnd));
+      }
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"Regular", "ExtensionalSupportMdd"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "layered graphs: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(300);
+  }
+
+  /** An automaton of three states, its transitions on small ranges, over 3 or 4 variables. */
+  private static Relation regularRelation(IntVar[] x, Random rnd) {
+    int[] at = new int[3 + rnd.nextInt(2)];
+    for (int k = 0; k < at.length; k++) {
+      at[k] = pick(rnd, x.length, Arrays.copyOf(at, k));
+    }
+    int states = 3;
+    // next[s][v + 1] is the state after reading v in state s, or -1
+    int[][] next = new int[states][7];
+    boolean[] accepting = new boolean[states];
+    FsmState[] state = new FsmState[states];
+    Fsm fsm = new Fsm();
+    for (int s = 0; s < states; s++) {
+      state[s] = new FsmState();
+      fsm.allStates.add(state[s]);
+      Arrays.fill(next[s], -1);
+    }
+    fsm.initState = state[0];
+    for (int s = 0; s < states; s++) {
+      accepting[s] = rnd.nextInt(3) > 0;
+      if (accepting[s]) {
+        fsm.finalStates.add(state[s]);
+      }
+      for (int v = -1; v <= 5; v++) {
+        if (rnd.nextInt(3) > 0) {
+          int t = rnd.nextInt(states);
+          next[s][v + 1] = t;
+          state[s].addTransition(new FsmTransition(new IntervalDomain(v, v), state[t]));
+        }
+      }
+    }
+    IntVar[] vars = new IntVar[at.length];
+    for (int k = 0; k < at.length; k++) {
+      vars[k] = x[at[k]];
+    }
+    return new Relation(
+        new Regular(fsm, vars),
+        t -> {
+          int s = 0;
+          for (int k : at) {
+            s = next[s][t[k] + 1];
+            if (s < 0) {
+              return false;
+            }
+          }
+          return accepting[s];
+        });
+  }
+
+  /** A table of random tuples on 3 variables, as a decision diagram. */
+  private static Relation mddRelation(IntVar[] x, Random rnd) {
+    int[] at = {pick(rnd, x.length), 0, 0};
+    at[1] = pick(rnd, x.length, at[0]);
+    at[2] = pick(rnd, x.length, at[0], at[1]);
+    int[][] tuples = new int[4 + rnd.nextInt(12)][3];
+    for (int[] t : tuples) {
+      for (int k = 0; k < 3; k++) {
+        t[k] = rnd.nextInt(6) - 1;
+      }
+    }
+    return new Relation(
+        new ExtensionalSupportMdd(new IntVar[] {x[at[0]], x[at[1]], x[at[2]]}, tuples),
+        t -> {
+          for (int[] tuple : tuples) {
+            if (tuple[0] == t[at[0]] && tuple[1] == t[at[1]] && tuple[2] == t[at[2]]) {
+              return true;
+            }
+          }
+          return false;
+        });
+  }
+
+  /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */
+  private static Relation tableRelation(IntVar[] x, Random rnd) {
+    int arity = 2 + rnd.nextInt(2);
+    int[] col = new int[arity];
+    for (int k = 0; k < arity; k++) {
+      col[k] = pick(rnd, x.length, Arrays.copyOf(col, k));
+    }
+    int rows = 2 + rnd.nextInt(6);
+    Restriction[][] tuples = new Restriction[rows][arity];
+    List<List<IntPredicate>> accepts = new ArrayList<>();
+    for (int r = 0; r < rows; r++) {
+      List<IntPredicate> row = new ArrayList<>();
+      for (int k = 0; k < arity; k++) {
+        int v = rnd.nextInt(6) - 1;
+        int w = rnd.nextInt(6) - 1;
+        // mostly constants, so that the tables prune
+        switch (rnd.nextInt(14)) {
+          case 0 -> {
+            tuples[r][k] = Restriction.any();
+            row.add(u -> true);
+          }
+          case 1 -> {
+            tuples[r][k] = Restriction.ne(v);
+            row.add(u -> u != v);
+          }
+          case 2 -> {
+            tuples[r][k] = Restriction.le(v);
+            row.add(u -> u <= v);
+          }
+          case 3 -> {
+            tuples[r][k] = Restriction.ge(v);
+            row.add(u -> u >= v);
+          }
+          case 4 -> {
+            tuples[r][k] = Restriction.in(v, w);
+            row.add(u -> u == v || u == w);
+          }
+          case 5 -> {
+            tuples[r][k] = Restriction.notIn(v, w);
+            row.add(u -> u != v && u != w);
+          }
+          default -> {
+            tuples[r][k] = Restriction.eq(v);
+            row.add(u -> u == v);
+          }
+        }
+      }
+      accepts.add(row);
+    }
+    IntVar[] vars = new IntVar[arity];
+    for (int k = 0; k < arity; k++) {
+      vars[k] = x[col[k]];
+    }
+    return new Relation(
+        new HybridTable(vars, tuples),
+        t -> {
+          for (List<IntPredicate> row : accepts) {
+            boolean all = true;
+            for (int k = 0; k < arity && all; k++) {
+              all = row.get(k).test(t[col[k]]);
+            }
+            if (all) {
+              return true;
+            }
+          }
+          return false;
+        });
   }
 
   private static Relation booleanRelation(IntVar[] x, int ints, Random rnd) {
@@ -415,6 +879,52 @@ class LcgSolverTest {
       }
     }
     assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  /**
+   * x3 * x2 = x0 leaves only x2 = x3 = -1 and x2 = x3 = 2, which alldistinct rules out, though root
+   * propagation does not see it (LCG fuzz seed 228750). The explanations of a conflict found in
+   * search held on the root domains, so the conflict clause was empty, and the solver threw instead
+   * of answering UNSAT.
+   */
+  @Test
+  void conflictTrueOnTheRootDomainsProvesUnsatisfiable() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    x0.domain.unionAdapt(3, 4);
+    IntVar x1 = new IntVar(store, "x1", -1, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 0);
+    x2.domain.unionAdapt(2, 2);
+    IntVar x3 = new IntVar(store, "x3", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 1);
+    x4.domain.unionAdapt(3, 3);
+    IntVar x5 = new IntVar(store, "x5", 1, 2);
+    BooleanVar b0 = new BooleanVar(store, "b0");
+    BooleanVar b1 = new BooleanVar(store, "b1");
+    BooleanVar b2 = new BooleanVar(store, "b2");
+    store.impose(new XmulYeqZ(x3, x2, x0));
+    store.impose(
+        new Xor(new LinearInt(new IntVar[] {x4, x5, x3}, new int[] {1, 2, -1}, "<=", 4), b2));
+    store.impose(new AtLeast(new IntVar[] {x2, x1}, 1, 0));
+    store.impose(new Member(new IntVar[] {x3, x2, x4}, x0));
+    store.impose(new XorBool(new IntVar[] {b0, b2}, b0));
+    store.impose(new Alldistinct(new IntVar[] {x2, x1, x3}));
+    IntVar[] vars = {x0, x1, x2, x3, x4, x5, b0, b1, b2};
+    List<SelectChoicePoint<IntVar>> annotations = new ArrayList<>();
+    annotations.add(null);
+    annotations.add(new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    annotations.add(new SimpleSelect<>(vars, new SmallestDomain<>(), new IndomainMax<>()));
+    annotations.add(new SimpleSelect<>(vars, null, new IndomainMiddle<>()));
+    annotations.add(new SplitSelect<>(vars, null, new IndomainMiddle<>()));
+    for (SelectChoicePoint<IntVar> annotation : annotations) {
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.sat().setExternalReasonKeep(1);
+      if (annotation != null) {
+        solver.setAnnotation(annotation, false);
+      }
+      assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    }
   }
 
   /** The literal map against a TreeMap, under random insertions and lookups. */

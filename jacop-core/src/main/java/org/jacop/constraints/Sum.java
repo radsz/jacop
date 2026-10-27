@@ -42,6 +42,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.LinearExplainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Sum constraint implements the summation over several Variable's . It provides the sum from all
@@ -52,7 +54,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum> {
+public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -72,6 +74,8 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum> {
 
   /** True if the sum variable is also one of the summed variables. */
   private final boolean sumInList;
+
+  private LinearForm lcgForm;
 
   /**
    * It constructs sum constraint which sums all variables and makes it equal to variable sum.
@@ -258,6 +262,22 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum> {
     Var result = AbstractSum.computeGuideVariable(list, guideValueOut);
     guideValue = guideValueOut[0];
     return result;
+  }
+
+  @Override
+  public LinearForm linearForm() {
+    if (getClass() != Sum.class) {
+      return null;
+    }
+    if (lcgForm == null) {
+      IntVar[] vars = Arrays.copyOf(list, list.length + 1);
+      vars[list.length] = sum;
+      long[] weights = new long[vars.length];
+      Arrays.fill(weights, 1);
+      weights[list.length] = -1;
+      lcgForm = new LinearForm(vars, weights, 0, LinearForm.EQ);
+    }
+    return lcgForm;
   }
 
   @Override

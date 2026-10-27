@@ -293,6 +293,8 @@ public class CardinalityDetector implements ParserTreeConstants {
           counts == null ? new IntVar(support.store, 0, n) : counter(counts, n, used);
     }
     GCC gcc = new GCC(g.x, counter, min);
+    // redundant, so degree-based variable selections see the degrees of the model
+    gcc.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println(
           "% redundant GCC on " + n + " variables, " + byValue.size() + " counted values");
@@ -330,7 +332,8 @@ public class CardinalityDetector implements ParserTreeConstants {
       w[0] = k.a;
       System.arraycopy(k.y, 0, list, 1, k.y.length);
       System.arraycopy(k.c, 0, w, 1, k.c.length);
-      support.delayedConstraints.add(new LinearInt(list, w, k.rel, k.rhs));
+      // redundant, like the GCC
+      support.delayedConstraints.add(new LinearInt(list, w, k.rel, k.rhs).setDegreeWeight(0));
     }
     return counter;
   }
