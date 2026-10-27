@@ -150,6 +150,23 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void searchAnnotationsAcceptConstants() throws IOException {
+    // MiniZinc's -O3 and above fix variables before writing the FlatZinc, so a search annotation
+    // can list Boolean constants; they were rejected with "Wrong parameter"
+    String fzn =
+        """
+        var bool: b:: output_var;
+        var 0..1: x:: output_var;
+        constraint bool2int(b, x);
+        solve :: seq_search([bool_search([true, b, false], input_order, indomain_min, complete),\
+         int_search([3, x], input_order, indomain_min, complete)]) satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertTrue(out[0].contains("b = false;") && out[0].contains("x = 0;"), out[0] + out[1]);
+  }
+
+  @Test
   void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
     // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
     // reported as an error instead of unsatisfiable
