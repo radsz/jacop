@@ -89,6 +89,19 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
+11. New constraints InterDistance(x, p), |x[i] - x[j]| >= p for all pairs,
+    bounds consistent in O(n^2) (Quimper, Lopez-Ortiz and Pesant, AAAI
+    2006), and MultiInterDistance(x, m, p), at most m values in every
+    window of p, bounds consistent (Ouellet and Quimper, IJCAI 2011). The
+    mznlib has inter_distance and multi_inter_distance for them. The
+    FlatZinc front end posts a cumulative with fixed equal durations p >= 2
+    and fixed equal resource use as MultiInterDistance with m = limit div
+    use (InterDistance for m = 1), and adds InterDistance to a disjunctive
+    clique of equal fixed lengths; -Dorg.jacop.fz.interDistance=add keeps
+    the cumulative too and =false turns this off. On 90 runway instances
+    with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
+    answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
+
 Version 4.11
 =============
 
