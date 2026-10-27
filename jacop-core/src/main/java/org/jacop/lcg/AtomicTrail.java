@@ -547,6 +547,54 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns the earliest entry whose atom gives {@code x >= v} just before a trail position: the
+   * weakest {@code >=} atom recorded for x that implies the bound, so a reason built on it is as
+   * general and as early as it can be with the atoms on the trail.
+   *
+   * @param x the variable
+   * @param v the bound
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, -1 when the initial domain gives the bound, or {@link Integer#MAX_VALUE}
+   *     when x could be below v then
+   */
+  public int earliestLowerBound(IntVar x, long v, int position) {
+    return earliest(x, v, position, GE);
+  }
+
+  /**
+   * Returns the earliest entry whose atom gives {@code x <= v} just before a trail position: the
+   * weakest {@code <=} atom recorded for x that implies the bound.
+   *
+   * @param x the variable
+   * @param v the bound
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, -1 when the initial domain gives the bound, or {@link Integer#MAX_VALUE}
+   *     when x could be above v then
+   */
+  public int earliestUpperBound(IntVar x, long v, int position) {
+    return earliest(x, v, position, LE);
+  }
+
+  // the bounds of one kind only tighten along a variable's chain
+  private int earliest(IntVar x, long v, int position, int k) {
+    IntDomain d = root[slot(x)];
+    if (k == GE ? d.min() >= v : d.max() <= v) {
+      return -1;
+    }
+    int found = Integer.MAX_VALUE;
+    for (int e = latest(x, position, k); e >= 0; e = previous[e]) {
+      if (kind[e] != k) {
+        continue;
+      }
+      if (k == GE ? value[e] < v : value[e] > v) {
+        break;
+      }
+      found = e;
+    }
+    return found;
+  }
+
+  /**
    * Tells whether a value was out of a variable's domain just before a trail position, and if so
    * adds to {@code out} the entry that removed it (none when the value was never in the domain
    * recording started from).

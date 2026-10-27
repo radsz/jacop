@@ -147,16 +147,12 @@ public class MinSimple extends Constraint
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     return getClass() == MinSimple.class
-        && x1 != min
-        && x2 != min
         && MaxExplanation.explain(trail, entry, new IntVar[] {x1, x2}, min, false, out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == MinSimple.class
-        && x1 != min
-        && x2 != min
         && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, min, false, out);
   }
 }
