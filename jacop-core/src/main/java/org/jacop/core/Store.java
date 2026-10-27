@@ -290,15 +290,7 @@ public class Store {
     if (ADAPT_ACT && c.schedActivity >= ACT_HOT * schedActInc) {
       return 0;
     }
-    if (ADAPT_YIELD && c.schedCalls >= YIELD_MIN_CALLS) {
-      if (c.schedYield < YIELD_LOW) {
-        return 2;
-      }
-      if (!ADAPT_ACT && c.schedYield > YIELD_HIGH) {
-        return 0;
-      }
-    }
-    return 1;
+    return ADAPT_YIELD ? c.schedSub : 1;
   }
 
   /**
@@ -812,7 +804,24 @@ public class Store {
     currentQueue = queueNo;
   }
 
+  static final long FAIL_LIMIT = Long.getLong("jacop.prop.failLimit", 0L);
+  static long failCount;
+  static long failFingerprint;
+  static long firstConsistencyNanos;
+
   private void handleConsistencyFailure() {
+    if (FAIL_LIMIT > 0) {
+      failCount++;
+      failFingerprint = failFingerprint * 31 + level;
+      if (failCount == FAIL_LIMIT) {
+        System.out.println("%%%mzn-stat: limitFailures=" + failCount);
+        System.out.println("%%%mzn-stat: limitFingerprint=" + failFingerprint);
+        System.out.println("%%%mzn-stat: limitTime=" + (System.nanoTime() - firstConsistencyNanos) / 1e9);
+        System.out.println("%%%mzn-stat: limitPropagations=" + numberConsistencyCalls);
+        System.out.flush();
+        System.exit(0);
+      }
+    }
     if (currentConstraint != null) {
       currentConstraint.cleanAfterFailure();
       if (variableWeightManagement) {
@@ -827,6 +836,9 @@ public class Store {
       }
     }
     if (SUB > 1 && currentConstraint != null) {
+      if (!SCHED_STATS) {
+        learnYield(currentConstraint, true);
+      }
       currentConstraint.schedFails++;
       bumpSchedActivity(currentConstraint);
       decaySchedActivity();
@@ -906,6 +918,9 @@ public class Store {
 
       int forced = -1;
       schedEpochNow++;
+      if (firstConsistencyNanos == 0) {
+        firstConsistencyNanos = System.nanoTime();
+      }
       while (true) {
         int slotNow;
         if (forced >= 0) {
@@ -931,8 +946,12 @@ public class Store {
           startFirstRun(currentConstraint);
         }
         numberConsistencyCalls++;
-        if (SCHED_TRACK) {
+        if (SCHED_STATS) {
           runTracked(currentConstraint, currentQueue);
+        } else if (SUB > 1) {
+          long before = domainChanges;
+          currentConstraint.consistency(this);
+          learnYield(currentConstraint, domainChanges != before);
         } else {
           currentConstraint.consistency(this);
         }
@@ -955,6 +974,19 @@ public class Store {
     currentConstraint = null;
     return true;
   }
+
+  /** Lean yield update: fixed point average with weight 1/16, sub-slot decided here. */
+  private void learnYield(Constraint c, boolean pruned) {
+    int y = c.schedYieldFx;
+    y += ((pruned ? 65536 : 0) - y) >> 4;
+    c.schedYieldFx = y;
+    if (++c.schedCalls >= YIELD_MIN_CALLS) {
+      c.schedSub = y < YIELD_LOW_FX ? 2 : (!ADAPT_ACT && y > YIELD_HIGH_FX ? 0 : 1);
+    }
+  }
+
+  static final int YIELD_LOW_FX = (int) (YIELD_LOW * 65536);
+  static final int YIELD_HIGH_FX = (int) (YIELD_HIGH * 65536);
 
   private void runTracked(Constraint c, int q) {
     long before = domainChanges;

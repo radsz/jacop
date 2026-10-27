@@ -119,6 +119,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** Prototype: exponential average of whether a call pruned (1) or not (0). */
   public double schedYield = 0.5d;
 
+  /** Prototype: lean yield average in 16.16 fixed point, and the sub-slot it gives. */
+  public int schedYieldFx = 32768, schedSub = 1;
+
   /** Prototype: conflict activity (failures, and in LCG explanations in conflicts), decayed. */
   public double schedActivity;
 
