@@ -53,6 +53,7 @@ include "soft_global_cardinality_int.mzn";
 include "GCC.mzn";
 include "channel.mzn";
 include "disjunctive_setup.mzn";
+include "deviation.mzn";
 
 %% ===== JaCoP graph constraints =====
 opt bool: use_jacop_graph_constraints;

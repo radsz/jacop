@@ -89,6 +89,43 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
+11. WeightedSpanningTree (MiniZinc weighted_spanning_tree, d_weighted_
+    spanning_tree, dwst) has a cost bound for directed graphs too: the new
+    ArborescenceBound computes Edmonds' minimum arborescence containing the
+    selected edges, with a virtual root for an unknown root, and removes
+    edges and root values whose reduced cost (Houndji, Schaus, Hounkonnou
+    and Wolsey, CPAIOR 2017) exceeds the cost's upper bound. On degree-
+    constrained minimum arborescences with 12 to 60 nodes (60 s) JaCoP
+    proved 2 of 16 optima before and proves all 16 now, each within 0.7 s
+    of search and 2,600 nodes; Gecode 6.4.0 proves 1 and OR-Tools CP-SAT
+    9.15 proves 9.
+
+12. New constraint IncreasingNValue(x, count): x is non-decreasing and
+    takes count distinct values, domain consistent in time linear in the
+    total size of the domains of x (Beldiceanu, Hermenier, Lorca and
+    Petit, CPAIOR 2010). The FlatZinc front end posts it instead of Values
+    for a jacop_nvalue (MiniZinc nvalue) whose variables are ordered, by
+    the same order detection as IncreasingSum (now in IncreasingDetector);
+    -Dorg.jacop.fz.increasingNValue=false turns this off. On generated
+    slot-assignment models (symmetric tasks, minimise the slots used),
+    four of fifteen instances that took 12 s, 40 s or more than 60 s are
+    solved in under a second.
+
+13. New balancing constraints Deviation(x, s, d) and Spread(x, s, d):
+    sum(x) = s and d = sum(i)(abs(n * x[i] - s)), or the sum of
+    (n * x[i] - s)^2, with general forms over abs(a * x[i] - b) and
+    (a * x[i] - b)^2. They are bounds consistent on x for d >= cost and
+    raise d.min to the least cost of an assignment with sum s (Schaus,
+    Deville, Dupont and Regin, CP 2007; Schaus and Regin, EJCO 2014).
+    The FlatZinc front end posts them as redundant constraints on a sum of
+    int_abs or squared terms over variables whose sum an int_lin_eq fixes,
+    as sum(p)(abs(n * load[p] - total)) with sum(load) = total compiles;
+    -Dorg.jacop.fz.balance=false turns this off. JaCoP's MiniZinc library
+    adds the predicates deviation and spread. On 28 balanced academic
+    curriculum instances with a deviation or spread objective JaCoP proves
+    52 of the 54 optima in under 3 s each; without the new constraints it
+    proves none in 20 s.
+
 Version 4.11
 =============
 
