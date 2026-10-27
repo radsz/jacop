@@ -30,6 +30,7 @@
 
 package org.jacop.lcg;
 
+import java.util.Arrays;
 import org.jacop.core.IntVar;
 
 /**
@@ -154,7 +155,10 @@ public final class LinearExplanation {
         }
       }
     }
-    addOtherBounds(trail, entry, vars, weights, own, upperSide, out);
+    // the value next to the bound reached, which the other bounds must keep out
+    long beyond = (kind == AtomicTrail.LE ? Math.max(bound, a) + 1 : Math.min(bound, a) - 1);
+    long slack = upperSide ? weight * beyond - 1 - rest : rest - 1 - weight * beyond;
+    addLiftedBounds(trail, entry, vars, weights, own, upperSide, slack, out);
     return true;
   }
 
@@ -196,16 +200,8 @@ public final class LinearExplanation {
     } else {
       return false;
     }
-    for (int i = 0; i < vars.length; i++) {
-      if (weights[i] == 0) {
-        continue;
-      }
-      if (upperSide == weights[i] > 0) {
-        trail.addLowerBound(vars[i], now, out);
-      } else {
-        trail.addUpperBound(vars[i], now, out);
-      }
-    }
+    long slack = upperSide ? smallest - c - 1 : c - 1 - largest;
+    addLiftedBounds(trail, now, vars, weights, -1, upperSide, slack, out);
     return true;
   }
 
@@ -339,6 +335,57 @@ public final class LinearExplanation {
       }
     }
     return own;
+  }
+
+  /**
+   * Adds the bounds of the occurrences other than {@code skip} that bound one side of the relation,
+   * each weakened to the earliest trail entry the slack allows, largest weights first (lifting, as
+   * in Ohrimenko, Stuckey and Codish 2009): {@code slack} is how far the sum of their contributions
+   * may move against the side before the reason no longer implies the propagation.
+   */
+  private static void addLiftedBounds(
+      AtomicTrail trail,
+      int position,
+      IntVar[] vars,
+      long[] weights,
+      int skip,
+      boolean upperSide,
+      long slack,
+      EntryList out) {
+    long[] keys = null;
+    int n = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (i == skip || weights[i] == 0) {
+        continue;
+      }
+      long w = Math.abs(weights[i]);
+      if (w > slack) {
+        if (upperSide == weights[i] > 0) {
+          trail.addLowerBound(vars[i], position, out);
+        } else {
+          trail.addUpperBound(vars[i], position, out);
+        }
+        continue;
+      }
+      if (keys == null) {
+        keys = new long[vars.length];
+      }
+      keys[n++] = Math.min(w, Integer.MAX_VALUE) << 32 | i;
+    }
+    if (n == 0) {
+      return;
+    }
+    Arrays.sort(keys, 0, n);
+    for (int k = n - 1; k >= 0; k--) {
+      int i = (int) keys[k];
+      long w = Math.abs(weights[i]);
+      boolean lower = upperSide == weights[i] > 0;
+      int now = lower ? trail.minBefore(vars[i], position) : trail.maxBefore(vars[i], position);
+      long room = slack / w;
+      int used =
+          trail.addBoundReaching(vars[i], position, lower, lower ? now - room : now + room, out);
+      slack -= w * Math.abs((long) now - used);
+    }
   }
 
   // the bounds of the other occurrences that bound the side of the relation the entry comes from

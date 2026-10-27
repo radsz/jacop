@@ -523,6 +523,38 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Adds to {@code out} the earliest entry of a variable's bound before trail position {@code
+   * position} that still reaches {@code limit} (a lower bound of at least it, or an upper bound of
+   * at most it), unless the initial bound already does: the weakest atom on the trail that serves.
+   * Explanations weaken bounds this way where the propagation leaves slack (lifting).
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param lower whether it is the lower bound, else the upper bound
+   * @param limit the weakest bound that serves; the bound just before the position reaches it
+   * @param out where the entry is added
+   * @return the bound added, or the initial bound
+   */
+  public int addBoundReaching(IntVar x, int position, boolean lower, long limit, EntryList out) {
+    int k = lower ? GE : LE;
+    int rootBound = lower ? root[slot(x)].min() : root[slot(x)].max();
+    int e = latest(x, position, k);
+    if (e < 0 || (lower ? rootBound >= limit : rootBound <= limit)) {
+      return rootBound;
+    }
+    for (int f = previous[e]; f >= 0; f = previous[f]) {
+      if (kind[f] == k) {
+        if (lower ? value[f] < limit : value[f] > limit) {
+          break;
+        }
+        e = f;
+      }
+    }
+    out.add(e);
+    return value[e];
+  }
+
+  /**
    * Returns a variable's minimum just before a trail position.
    *
    * @param x the variable
