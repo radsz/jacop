@@ -54,7 +54,8 @@ import org.jacop.core.Store;
  * reached, so v is supported when the interval of counts of whole sequences through x[i] = v meets
  * the domain of count. This is domain consistency in time linear in the total size of the domains
  * of x. When the domains together hold more than {@link #VALUE_LIMIT} values, only the order and
- * the bounds 1..n of count are propagated until they shrink.
+ * the bounds 1..n of count are propagated until they shrink. A variable occurring twice is filtered
+ * at each occurrence, up to a fixpoint, which is not domain consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -76,6 +77,9 @@ public class IncreasingNValue extends Constraint
   private final int[][] preMin;
   private final int[][] preMax;
   private final int[] size;
+
+  // true when a variable occurs twice among x and count
+  private final boolean repeated;
 
   // best counts over the values of a neighbour above (or below) a position
   private int[] bestMin = new int[0];
@@ -109,6 +113,7 @@ public class IncreasingNValue extends Constraint
     this.preMin = new int[n][];
     this.preMax = new int[n][];
     this.size = new int[n];
+    this.repeated = Stream.concat(Arrays.stream(x), Stream.of(count)).distinct().count() < n + 1;
 
     this.queueIndex = 1;
 
@@ -117,6 +122,19 @@ public class IncreasingNValue extends Constraint
 
   @Override
   public void consistency(Store store) {
+    if (!repeated) {
+      filter(store);
+      return;
+    }
+    // a variable at two places (or also the count) is filtered at each place separately, and the
+    // pruning at one place must be seen at the other
+    do {
+      store.propagationHasOccurred = false;
+      filter(store);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void filter(Store store) {
 
     count.domain.in(store.level, count, 1, n);
 

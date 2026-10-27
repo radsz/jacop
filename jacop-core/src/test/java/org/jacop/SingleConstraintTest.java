@@ -4658,6 +4658,21 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void increasingNValueWithCountInsideX() {
+    // x = [c, y1, y2, y3] with c also the count; the pruning of c as the count was not seen again
+    // at x[0], so propagation fixed x = [1, 4, 4, 4] with one distinct value counted as 1
+    Store store = new Store();
+    IntVar c = new IntVar(store, "c", -1, 5);
+    c.domain.inComplement(store.level, c, 2);
+    IntVar y1 = new IntVar(store, "y1", 2, 4);
+    IntVar y2 = new IntVar(store, "y2", -1, 4);
+    y2.domain.in(store.level, y2, new IntervalDomain(-1, -1).union(2).union(4));
+    IntVar y3 = new IntVar(store, "y3", -1, 4);
+    store.impose(new IncreasingNValue(new IntVar[] {c, y1, y2, y3}, c));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
   void disjointConditionalProfileCountsOverlappingPairOnce() {
     // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
     // of which rectangles a profile segment holds and counted both, removing y2 = 0
