@@ -42,6 +42,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AbsExplanation;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Constraints |X| #= Y.
@@ -52,7 +56,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 @Slf4j
-public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY> {
+public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -358,5 +362,32 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
   @Override
   public AbsXeqY copy(VarMap map) {
     return new AbsXeqY(map.get(x), map.get(y), domainConsistent);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == AbsXeqY.class && AbsExplanation.explain(trail, entry, x, y, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == AbsXeqY.class && AbsExplanation.explainFailure(trail, x, y, out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    if (getClass() != AbsXeqY.class) {
+      return false;
+    }
+    return entailed
+        ? AbsExplanation.entailedBefore(trail, position, x, y, out)
+        : AbsExplanation.disjointBefore(trail, position, x, y, out);
+  }
+
+  // every reason is checked value by value, so a reason that does not hold is refused
+  @Override
+  public boolean checksReasons() {
+    return true;
   }
 }

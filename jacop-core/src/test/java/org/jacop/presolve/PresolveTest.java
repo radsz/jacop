@@ -49,6 +49,7 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Not;
@@ -62,10 +63,21 @@ import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
 import org.jacop.search.DepthFirstSearch;
@@ -264,6 +276,181 @@ class PresolveTest {
           }
         });
     assertThat(solutions[0]).isEqualTo(9);
+  }
+
+  @Test
+  void networkFlowsHaveTheSameSolutionsThroughPresolve() {
+    Random random = new Random(20261027);
+    int derived = 0;
+    for (int trial = 0; trial < TRIALS / 2; trial++) {
+      Model model = randomNetwork(random);
+      Set<List<Integer>> expected = solveDirectly(model);
+      boolean checking = trial % 2 == 0;
+      Result result = solveThroughPresolve(model, checking, -1, 0, random.nextInt());
+      assertThat(result.outcome()).as("trial %d", trial).isNotEqualTo(Derivation.Outcome.LIVE);
+      assertThat(result.solutions())
+          .as("trial %d, checking %b", trial, checking)
+          .isEqualTo(expected);
+      if (result.outcome() == Derivation.Outcome.DERIVED && !expected.isEmpty()) {
+        derived++;
+      }
+    }
+    assertThat(derived).isGreaterThan(TRIALS / 8);
+  }
+
+  /**
+   * A random network over the variables of a model: arcs with fixed or variable weights and
+   * capacities given by flow variables, or the value graph of two variables (domain structures),
+   * with the last variable as the cost.
+   */
+  private static Model randomNetwork(Random random) {
+    // m flows, then m weights, then the cost
+    int m = 3 + random.nextInt(3);
+    int n = 2 * m + 1;
+    int[][] domains = new int[n][];
+    for (int i = 0; i < 2 * m; i++) {
+      domains[i] = new int[] {random.nextInt(2), 1 + random.nextInt(3)};
+    }
+    domains[n - 1] = new int[] {random.nextInt(4), 4 + random.nextInt(12)};
+    long seed = random.nextLong();
+    return new Model(
+        domains,
+        0,
+        vars -> {
+          Random r = new Random(seed);
+          IntVar[] x = vars.x();
+          NetworkBuilder net = new NetworkBuilder(x[n - 1]);
+          if (r.nextBoolean()) {
+            IntDomain[] values = {new IntervalDomain(0, 0), new IntervalDomain(1, 2)};
+            Node[][] graph = net.valueGraph(new IntVar[] {x[0], x[1]}, values);
+            Node sink = net.addNode("sink", -2);
+            for (Node value : graph[1]) {
+              net.addArc(value, sink, r.nextInt(3), x[2]);
+            }
+          } else {
+            Node[] nodes = new Node[2 + r.nextInt(3)];
+            int[] balance = new int[nodes.length];
+            int[][] arcs = new int[m][];
+            for (int i = 0; i < m; i++) {
+              int from = r.nextInt(nodes.length);
+              arcs[i] = new int[] {from, (from + 1 + r.nextInt(nodes.length - 1)) % nodes.length};
+              // balances from a random flow, so most networks are feasible
+              int flow = domains[i][0] + r.nextInt(domains[i][1] - domains[i][0] + 1);
+              balance[arcs[i][0]] += flow;
+              balance[arcs[i][1]] -= flow;
+            }
+            for (int i = 0; i < nodes.length; i++) {
+              nodes[i] = net.addNode("n" + i, balance[i]);
+            }
+            for (int i = 0; i < m; i++) {
+              if (r.nextInt(3) == 0) {
+                net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], x[m + i], x[i]);
+              } else {
+                net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], r.nextInt(3), x[i]);
+              }
+            }
+          }
+          vars.store().impose(net.build());
+        });
+  }
+
+  @Test
+  void geostPlacementsHaveTheSameSolutionsThroughPresolve() {
+    Random random = new Random(20261028);
+    int derived = 0;
+    for (int trial = 0; trial < TRIALS / 4; trial++) {
+      Model model = randomPlacement(random);
+      Set<List<Integer>> expected = solveDirectly(model);
+      boolean checking = trial % 2 == 0;
+      Result result = solveThroughPresolve(model, checking, -1, 0, random.nextInt());
+      assertThat(result.outcome()).as("trial %d", trial).isNotEqualTo(Derivation.Outcome.LIVE);
+      assertThat(result.solutions())
+          .as("trial %d, checking %b", trial, checking)
+          .isEqualTo(expected);
+      if (result.outcome() == Derivation.Outcome.DERIVED && !expected.isEmpty()) {
+        derived++;
+      }
+    }
+    assertThat(derived).isGreaterThan(TRIALS / 16);
+  }
+
+  /**
+   * Two or three objects placed in two dimensions by Geost, each with a variable shape among two
+   * random rectangles, apart from each other and sometimes inside an area.
+   */
+  private static Model randomPlacement(Random random) {
+    int objects = 2 + random.nextInt(2);
+    // x, y and shape of each object
+    int[][] domains = new int[3 * objects][];
+    for (int i = 0; i < objects; i++) {
+      domains[3 * i] = new int[] {0, 1 + random.nextInt(3)};
+      domains[3 * i + 1] = new int[] {0, random.nextInt(3)};
+      domains[3 * i + 2] = new int[] {0, random.nextInt(2)};
+    }
+    long seed = random.nextLong();
+    return new Model(
+        domains,
+        0,
+        vars -> {
+          Random r = new Random(seed);
+          Store store = vars.store();
+          IntVar[] x = vars.x();
+          List<Shape> shapes =
+              List.of(
+                  new Shape(0, new int[] {0, 0}, new int[] {1 + r.nextInt(2), 1 + r.nextInt(2)}),
+                  new Shape(1, new int[] {0, 0}, new int[] {1 + r.nextInt(2), 1 + r.nextInt(2)}));
+          List<GeostObject> placed = new ArrayList<>();
+          for (int i = 0; i < objects; i++) {
+            placed.add(
+                new GeostObject(
+                    i,
+                    new IntVar[] {x[3 * i], x[3 * i + 1]},
+                    x[3 * i + 2],
+                    new IntVar(store, 0, 0),
+                    new IntVar(store, 1, 1),
+                    new IntVar(store, 1, 1)));
+          }
+          List<ExternalConstraint> constraints = new ArrayList<>();
+          constraints.add(new NonOverlapping(placed, new int[] {0, 1}));
+          if (r.nextBoolean()) {
+            constraints.add(
+                new InArea(new Dbox(new int[] {0, 0}, new int[] {3 + r.nextInt(3), 2}), null));
+          }
+          store.impose(new Geost(placed, constraints, shapes));
+        });
+  }
+
+  @Test
+  void aConstraintThatOnlyWatchesValuesIsCopied() {
+    // a long 0-1 linear constraint in watched mode is not in its variables' constraint lists, so
+    // the derivation did not see it and the child had every assignment as a solution
+    for (boolean checking : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] b = new IntVar[4];
+      for (int i = 0; i < b.length; i++) {
+        b[i] = new BooleanVar(store, "b" + i);
+      }
+      LinearBool atLeastThree = new LinearBool(b, new int[] {1, 1, 1, 1}, ">=", 3);
+      atLeastThree.setWatchMinLength(0);
+      store.impose(atLeastThree);
+      assertThat(atLeastThree.isWatched()).isTrue();
+
+      Derivation derivation = Presolver.of(store).checking(checking).presolve();
+
+      assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+      assertThat(derivation.statistics().childConstraints()).isEqualTo(1);
+      int[] solutions = {0};
+      search(
+          derivation.child(),
+          derivation.counterparts(b),
+          0,
+          () -> {
+            if (derivation.returnSolution()) {
+              solutions[0]++;
+            }
+          });
+      assertThat(solutions[0]).as("checking %b", checking).isEqualTo(5);
+    }
   }
 
   @Test

@@ -139,6 +139,24 @@ Version 5.0 (unreleased)
     lot sizing part of the 46 CSPLib prob058 instances it proves 39 optima
     in 60 s instead of 19.
 
+15. New constraint UnaryTransition(s, d, family, transitions[, optional]):
+    a unary resource with sequence-dependent transition (setup) times
+    between families of tasks, also with optional tasks (Dejemeppe, Van
+    Cauwelaert and Schaus, CP 2015; Van Cauwelaert, Dejemeppe and Schaus,
+    J. Scheduling 2020). Overload, detectable precedences, not-last and
+    edge finding run on Theta-Lambda trees whose completion times count a
+    lower bound of the transitions among the families of their tasks, plus
+    a pairwise rule. MiniZinc predicate disjunctive_setup in the JaCoP
+    library (also over var opt int starts); the FlatZinc front end posts it
+    instead of CumulativeUnary on a disjunctive clique whose disjunctions
+    carry transition times. It explains its own propagation for lazy
+    clause generation (--lcg): bounds, absent optional tasks and failures
+    by pairs, cuts of tasks that must precede, not-first/not-last and
+    edge-finding sets, found again from the bounds before the atom. On 38
+    job shops and single machines with setups (60 s, --lcg) they raise
+    the optima proved from 0-5 to 8-12, depending on the model and the
+    search; before, the generic reason explained 83 to 86 % of the reasons.
+
 Version 4.11
 =============
 

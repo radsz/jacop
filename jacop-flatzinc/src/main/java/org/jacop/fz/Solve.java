@@ -47,10 +47,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -63,6 +65,8 @@ import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -74,6 +78,7 @@ import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
+import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
@@ -94,6 +99,7 @@ import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
@@ -111,13 +117,19 @@ import org.jacop.set.search.IndomainSetMin;
 public class Solve<T extends Var> implements ParserTreeConstants {
 
   static final String P = System.getProperty("fz_system_timer");
-  final Store store;
+  // the store searched: the loaded store, or the store derived from it by presolve
+  Store store;
   final boolean debug = false;
   final boolean printSearchInfo = false;
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
+  // the variables search uses, in the searched store
   Tables dictionary;
+  // the variables output prints, in the loaded store
+  Tables output;
+  // the derivation of the searched store, or null when the loaded store is searched
+  Derivation presolve;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -252,6 +264,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
+    options = opt;
+    dictionary = table;
+    output = table;
+    if (opt.presolve() != Options.Presolve.OFF) {
+      presolve();
+    }
+
     if (opt.debug()) {
       failStatistics = new FailConstraintsStatistics(store);
     }
@@ -264,13 +283,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Runtime runtime = Runtime.getRuntime();
     long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
 
-    dictionary = table;
-
     if (opt.debug()) {
-      printSearchModelDebugInfo(table, modelMem);
+      printSearchModelDebugInfo(dictionary, modelMem);
     }
 
-    options = opt;
     solveKind = -1;
 
     int count = node.jjtGetNumChildren();
@@ -284,6 +300,80 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
+  }
+
+  /**
+   * Derives the store to search from the loaded store. Search, annotations and the objective use
+   * the derived store's variables through a mapped copy of the tables; each solution is written
+   * back into the loaded variables, which the output prints.
+   */
+  private void presolve() {
+    long start = timer.getCpuTime();
+    Derivation d =
+        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    long time = timer.getCpuTime() - start;
+    if (options.getStatistics()) {
+      printPresolveStatistics(d, time);
+    }
+    switch (d.outcome()) {
+      case INFEASIBLE -> throw Store.failException;
+      case LIVE -> {
+        // a constraint that cannot be copied: the loaded store is searched
+      }
+      case DERIVED -> {
+        VarMap map = completeMap(d);
+        for (IntVar[][] clause : sat.collectedClauses()) {
+          clause[0] = map.get(clause[0]);
+          clause[1] = map.get(clause[1]);
+        }
+        dictionary = dictionary.mapTo(map);
+        store = d.child();
+        presolve = d;
+      }
+    }
+  }
+
+  /**
+   * The derivation's map, completed with a constant in the derived store for every variable fixed
+   * by presolve, so annotations and output arrays that name such a variable stay valid.
+   */
+  private static VarMap completeMap(Derivation d) {
+    Map<Var, Var> fixed = new IdentityHashMap<>();
+    return new VarMap() {
+      @Override
+      public Store target() {
+        return d.child();
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V extends Var> V get(V v) {
+        if (v == null) {
+          return null;
+        }
+        V copy = d.get(v);
+        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> x.copyTo(d.child()));
+      }
+    };
+  }
+
+  private void printPresolveStatistics(Derivation d, long time) {
+    StringBuilder s = new StringBuilder();
+    s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
+    s.append("%%%mzn-stat: presolveOutcome=")
+        .append(d.outcome().name().toLowerCase(Locale.ROOT))
+        .append('\n');
+    Derivation.Statistics st = d.statistics();
+    if (st != null) {
+      s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAfter=").append(st.childVariables()).append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsBefore=")
+          .append(st.parentConstraints())
+          .append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    s.append("%%%mzn-stat-end");
+    IO.println(s.toString());
   }
 
   private void printSearchModelDebugInfo(Tables table, long modelMem) {
@@ -376,7 +466,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Options opt, ASTSolveKind kind, int solveKind, SearchItem<T> si, SimpleNode node) {
     String searchType = si.type();
     if (opt.freeSearch()) {
-      run_single_search(solveKind, kind, null);
+      boolean onRestartRestarts =
+          dictionary.onRestart != null && searchType != null && searchType.startsWith("restart_");
+      run_single_search(solveKind, kind, onRestartRestarts ? si : null);
       return;
     }
     if (INT_SEARCH.equals(searchType)
@@ -429,7 +521,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "restart_linear".equals(s.searchType)
         || "restart_geometric".equals(s.searchType)
         || "restart_luby".equals(s.searchType)) {
-      if (!options.freeSearch()) {
+      // on_restart needs the restarts of the annotation, also in free search
+      if (!options.freeSearch() || dictionary.onRestart != null) {
         restartCalculator = s.restartCalculator;
       }
       return true;
@@ -722,6 +815,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     try {
+      if (dictionary.onRestart != null) {
+        if (!startOnRestart()) {
+          return false;
+        }
+        if (restartCalculator != null) {
+          // the runs of the restart search are where on_restart fixes its variables
+          return executeRestartSearch(label, select, costVar, solveType);
+        }
+      }
       if (useLcg(costVar)) {
         return executeLcgSearch(costVar);
       }
@@ -735,6 +837,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } catch (NumberSolutionsReached _) {
       return numberSolutions > 0;
     }
+  }
+
+  /**
+   * Prepares MiniZinc's on_restart built-ins before the search. Without restarts there is a single
+   * run, so their variables are fixed for good, as in the first run of a restart search.
+   *
+   * @return false if fixing them fails.
+   */
+  private boolean startOnRestart() {
+    OnRestart onRestart = dictionary.onRestart;
+    onRestart.impose(store);
+    if (restartCalculator != null) {
+      return true;
+    }
+    try {
+      onRestart.restart(store, RestartHook.START);
+    } catch (FailException _) {
+      store.clearChanged();
+      return false;
+    }
+    return store.consistency();
   }
 
   private boolean useLcg(Var costVar) {
@@ -1158,6 +1281,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (relaxVars != null) {
       rs.setRelaxAndReconstruct(relaxVars, probability);
     }
+    if (dictionary.onRestart != null) {
+      rs.setRestartHook(dictionary.onRestart);
+    }
     return rs.labeling();
   }
 
@@ -1236,7 +1362,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%% =====INTERRUPTED=====");
       return;
     }
-    if (isComplete) {
+    if (isComplete && relaxedSearchComplete()) {
       IO.println("=====UNSATISFIABLE=====");
       writeUnsatToOutputFile();
       return;
@@ -1280,9 +1406,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  /** Relax and reconstruct is complete only when its restart search explored everything. */
+  /**
+   * Relax and reconstruct and on_restart are complete only when their restart search explored
+   * everything.
+   */
   private boolean relaxedSearchComplete() {
-    return relaxVars == null || rs == null || rs.complete();
+    return relaxVars == null && dictionary.onRestart == null || rs == null || rs.complete();
   }
 
   private boolean isSearchComplete() {
@@ -1456,12 +1585,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (intSearchVariables.length != 0) {
       // add search containing int variables to be sure that they get a value
-      SelectChoicePoint<IntVar> intSelect =
-          options.freeSearch() || options.complementarySearch()
-              ? new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>())
-              // x <= middle keeps the order of the solutions of x = min, but needs only a
-              // logarithmic number of nested choices to reach a value of a large domain
-              : new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
+      SelectChoicePoint<IntVar> intSelect;
+      if (options.freeSearch() || options.complementarySearch()) {
+        intSelect =
+            new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>());
+      } else {
+        // x <= middle keeps the order of the solutions of x = min, but needs only a
+        // logarithmic number of nested choices to reach a value of a large domain
+        SplitSelect<IntVar> split =
+            new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
+        // After the search of the annotation, last conflict backtracks straight to the decision
+        // of the annotation that left no value for a variable, as Choco's complementary search
+        // does. A model without annotation keeps the plain split search.
+        intSelect = label != null ? new LastConflictSelect<>(split, new IndomainMiddle<>()) : split;
+      }
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) intSelect;
@@ -2235,12 +2372,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = cost.value();
     }
 
-    if (!dictionary.outputVariables.isEmpty()) {
+    if (presolve != null) {
+      presolve.returnSolution();
+    }
+
+    if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
     }
 
-    for (int i = 0; i < dictionary.outputArray.size(); i++) {
-      printBuffer.append(dictionary.outputArray.get(i)).append("\n");
+    for (int i = 0; i < output.outputArray.size(); i++) {
+      printBuffer.append(output.outputArray.get(i)).append("\n");
     }
 
     if (options.getVerbose()) {
@@ -2262,8 +2403,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void appendOutputVariablesToBuffer(StringBuffer printBuffer) {
-    for (int i = 0; i < dictionary.outputVariables.size(); i++) {
-      appendVariableOutput(printBuffer, dictionary.outputVariables.get(i));
+    for (int i = 0; i < output.outputVariables.size(); i++) {
+      appendVariableOutput(printBuffer, output.outputVariables.get(i));
     }
   }
 

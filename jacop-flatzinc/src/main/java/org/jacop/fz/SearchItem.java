@@ -1030,13 +1030,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @return the integer variable
    */
   IntVar getVariable(ASTScalarFlatExpr node) {
-    if (node.getType() == 0) { // int
-      return dictionary.getConstant(
-          node.getInt()); // new IntVar(store, node.getInt(), node.getInt());
+    if (node.getType() == 0 || node.getType() == 1) { // int or bool constant
+      return dictionary.getConstant(node.getInt());
     } else if (node.getType() == 2) { // ident
       return dictionary.getVariable(node.getIdent());
     } else if (node.getType() == 3) { // array access
-      if (node.getInt() > dictionary.getVariableArray(node.getIdent()).length
+      if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length
           || node.getInt() < 0) {
         throw new IllegalArgumentException(
             "Index out of bound for " + node.getIdent() + "[" + node.getInt() + "]");

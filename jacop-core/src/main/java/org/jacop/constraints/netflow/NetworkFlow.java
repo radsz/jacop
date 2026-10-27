@@ -44,9 +44,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.netflow.simplex.Arc;
@@ -65,7 +67,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class NetworkFlow extends Constraint
-    implements UsesQueueVariable, Stateful, RemoveLevelLate {
+    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<NetworkFlow> {
 
   /** Instance counter. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -96,12 +98,130 @@ public class NetworkFlow extends Constraint
   /** Pairs of a variable of the caller and the copy the network uses for one of its roles. */
   private final List<IntVar[]> copies = new ArrayList<>();
 
+  /** The network as given to the constructor, or null if it has handlers a copy cannot rebuild. */
+  private final Definition definition;
+
+  /**
+   * The network as built, before any propagation changes the nodes and arcs: nodes by name and
+   * balance, arcs by the positions of their nodes, cost, capacities and variables, and the handlers
+   * by the positions of their arcs.
+   */
+  private record Definition(
+      String[] names,
+      int[] balances,
+      int[][] arcs,
+      IntVar[] flows,
+      IntVar[] weights,
+      Object[] handlers,
+      IntVar costVariable) {
+
+    /** A handler of the variable of a domain structure. */
+    record Structure(
+        IntVar variable, IntDomain[] domains, int[] arcs, DomainStructure.Behavior behavior) {}
+
+    static Definition of(
+        List<Node> nodes, List<Arc> arcs, List<VarHandler> handlers, IntVar costVariable) {
+      Map<Node, Integer> nodeIndex = new IdentityHashMap<>();
+      String[] names = new String[nodes.size()];
+      int[] balances = new int[nodes.size()];
+      for (int i = 0; i < names.length; i++) {
+        Node node = nodes.get(i);
+        nodeIndex.put(node, i);
+        names[i] = node.name;
+        balances[i] = node.initialBalance;
+      }
+      Map<Arc, Integer> arcIndex = new IdentityHashMap<>();
+      int[][] arcData = new int[arcs.size()][];
+      IntVar[] flows = new IntVar[arcs.size()];
+      IntVar[] weights = new IntVar[arcs.size()];
+      for (int i = 0; i < arcData.length; i++) {
+        Arc arc = arcs.get(i);
+        Integer tail = nodeIndex.get(arc.tail());
+        Integer head = nodeIndex.get(arc.head);
+        if (tail == null || head == null || !arc.forward) {
+          return null;
+        }
+        arcIndex.put(arc, i);
+        int lower = arc.companion == null ? 0 : arc.companion.flowOffset;
+        arcData[i] = new int[] {tail, head, arc.cost, lower, lower + arc.capacity};
+        if (arc.companion != null) {
+          flows[i] = arc.companion.xVar;
+          weights[i] = arc.companion.wVar;
+        }
+      }
+      Object[] handlerData = new Object[handlers.size()];
+      for (int i = 0; i < handlerData.length; i++) {
+        VarHandler handler = handlers.get(i);
+        if (handler instanceof ArcCompanion companion && arcIndex.containsKey(companion.arc)) {
+          handlerData[i] = arcIndex.get(companion.arc);
+        } else if (handler instanceof DomainStructure structure
+            && structure.getClass() == DomainStructure.class) {
+          int[] structureArcs = new int[structure.arcs.length];
+          for (int k = 0; k < structureArcs.length; k++) {
+            Integer index = arcIndex.get(structure.arcs[k]);
+            if (index == null) {
+              return null;
+            }
+            structureArcs[k] = index;
+          }
+          handlerData[i] =
+              new Structure(
+                  structure.variable, structure.domains.clone(), structureArcs, structure.behavior);
+        } else {
+          return null;
+        }
+      }
+      return new Definition(names, balances, arcData, flows, weights, handlerData, costVariable);
+    }
+
+    NetworkBuilder build(VarMap map) {
+      NetworkBuilder builder =
+          new NetworkBuilder(costVariable == null ? null : map.get(costVariable));
+      Node[] nodes = new Node[names.length];
+      for (int i = 0; i < nodes.length; i++) {
+        nodes[i] = builder.addNode(names[i], balances[i]);
+      }
+      Arc[] built = new Arc[arcs.length];
+      for (int i = 0; i < built.length; i++) {
+        int[] a = arcs[i];
+        IntVar weight = weights[i] == null ? null : map.get(weights[i]);
+        // the cost of an arc with a weight variable is the variable's minimum, as in the builder
+        int cost = weight == null ? a[2] : weight.min();
+        built[i] = new Arc(nodes[a[0]], nodes[a[1]], cost, a[3], a[4]);
+        builder.arcList.add(built[i]);
+        if (flows[i] != null || weights[i] != null) {
+          if (built[i].companion == null) {
+            built[i].companion = new ArcCompanion(built[i], 0);
+          }
+          built[i].companion.xVar = flows[i] == null ? null : map.get(flows[i]);
+          built[i].companion.wVar = weight;
+        }
+      }
+      for (Object handler : handlers) {
+        if (handler instanceof Structure st) {
+          Arc[] structureArcs = new Arc[st.arcs().length];
+          for (int k = 0; k < structureArcs.length; k++) {
+            structureArcs[k] = built[st.arcs()[k]];
+          }
+          builder.handlerList.add(
+              new DomainStructure(
+                  map.get(st.variable()), st.domains(), structureArcs, st.behavior()));
+        } else {
+          builder.handlerList.add(built[(Integer) handler].companion);
+        }
+      }
+      return builder;
+    }
+  }
+
   /* Initialization */
 
   // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
   private NetworkFlow(
       List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar cost) {
 
+    // the network of the caller, before separateRoles gives variables in two roles a copy
+    this.definition = Definition.of(nodes, arcs, flowVariables, cost);
     this.network = new Pruning(nodes, arcs, statistics);
     this.map = Var.createEmptyPositioning();
     this.queue = new HashSet<>();
@@ -195,6 +315,19 @@ public class NetworkFlow extends Constraint
   public NetworkFlow(NetworkBuilder builder) {
 
     this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
+  }
+
+  @Override
+  public NetworkFlow copy(VarMap map) {
+    if (definition == null) {
+      throw new UnsupportedOperationException("This network has handlers a copy cannot rebuild");
+    }
+    return new NetworkFlow(definition.build(map));
+  }
+
+  @Override
+  public boolean canCopy() {
+    return definition != null;
   }
 
   @Override

@@ -195,11 +195,13 @@ setup to run configuration. -->
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
+                                <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
+                                <diffn.skipping.trials>150</diffn.skipping.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -207,6 +209,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -232,6 +235,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -258,8 +262,10 @@ setup to run configuration. -->
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
+                                <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
@@ -300,6 +306,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -325,6 +332,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -353,8 +361,10 @@ setup to run configuration. -->
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
+                                <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -393,6 +403,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -418,6 +429,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -446,8 +458,10 @@ setup to run configuration. -->
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
+                                <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -486,6 +500,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -511,6 +526,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -953,6 +969,7 @@ setup to run configuration. -->
                         <include>**/SatWrapperTest.java</include>
                         <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
+                        <include>**/FloatDomainOperationsTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>

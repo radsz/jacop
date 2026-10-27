@@ -200,10 +200,11 @@ public class Diffn extends Nooverlap {
   }
 
   private void areaCheck() {
+    startPass(AREA_PASS);
     for (int k = 0; k < rectangle.length; k++) {
       Rectangle r = rectangle[k];
       BitSet o = overlapping[k].value();
-      if (o.cardinality() == 0) {
+      if (o.cardinality() == 0 || !mustExamine(AREA_PASS, k, o)) {
         continue;
       }
       int commonArea = 0;
@@ -261,11 +262,12 @@ public class Diffn extends Nooverlap {
 
   private void profile() {
 
+    startPass(PROFILE_PASS);
     for (int i = 0; i < rectangle.length; i++) {
       Rectangle r = rectangle[i];
       BitSet o = overlapping[i].value();
 
-      if (o.cardinality() > 0) {
+      if (o.cardinality() > 0 && mustExamine(PROFILE_PASS, i, o)) {
         sweepPruning(r, o, 0);
         sweepPruning(r, o, 1);
       }
@@ -359,18 +361,21 @@ public class Diffn extends Nooverlap {
       int oMin = rr.lst(otherDim);
       int oMax = rr.ect(otherDim);
       boolean withinR = rr.est(otherDim) >= r.est(otherDim) && rr.lct(otherDim) <= r.lct(otherDim);
-      int val = withinR ? lMin : 0;
-      if (oMin < oMax) {
+      if (withinR) {
+        Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
+        es[j++] = new Event(PROFILE_ADD, rr, min, lMin, block);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
+        // only rectangles within r in the other dimension widen the limit of the profile
+        minLimit = Math.min(rr.est(otherDim), minLimit);
+        maxLimit = Math.max(rr.lct(otherDim), maxLimit);
+        mandatoryExists = true;
+      } else if (oMin < oMax) {
+        // a rectangle reaching outside r adds no height, only its compulsory part as a block
         Interval block = new Interval(oMin, oMax);
-        es[j++] = new Event(PROFILE_ADD, rr, min, val, block);
-        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -val, block);
-      } else {
-        es[j++] = new Event(PROFILE_ADD, rr, min, val, null);
-        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -val, null);
+        es[j++] = new Event(PROFILE_ADD, rr, min, 0, block);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, 0, block);
+        mandatoryExists = true;
       }
-      minLimit = Math.min(rr.est(otherDim), minLimit);
-      maxLimit = Math.max(rr.lct(otherDim), maxLimit);
-      mandatoryExists = true;
     }
     if (!mandatoryExists) {
       return null;

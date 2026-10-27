@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.offset;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.DoubleUnaryOperator;
@@ -83,6 +84,9 @@ import org.jacop.floats.constraints.TanPeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.ConsistencyListener;
+import org.jacop.search.DepthFirstSearch;
 import org.junit.jupiter.api.Test;
 
 /** Tests of single float constraints. */
@@ -652,6 +656,57 @@ class SingleConstraintTest {
     // one equation in two variables threw ArrayIndexOutOfBoundsException in impose
     assertThatThrownBy(() -> new EquationSystem(store, new FloatVar[] {f}, new FloatVar[] {x0, x1}))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /**
+   * With a minimization step, every node explored after a solution of cost c must already have the
+   * cost bounded by c - step, as in JaCoP 4.10; a bound of the float just below c explores many
+   * more nodes for the same solutions.
+   */
+  @Test
+  void minimizationWithStepBoundsTheCostByTheStep() {
+    double step = 0.5;
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-3);
+    FloatDomain.setStep(step);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", 0.0, 10.0);
+      FloatVar y = new FloatVar(store, "y", 0.0, 100.0);
+      store.impose(new PmulQeqR(x, x, y));
+      store.impose(new PgtC(y, 2.0));
+
+      DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+      SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+      select.leftFirst = false;
+      search.setPrintInfo(false);
+      search.getSolutionListener().recordSolutions(false);
+      List<String> violations = new ArrayList<>();
+      search.setConsistencyListener(
+          new ConsistencyListener() {
+            @Override
+            public boolean executeAfterConsistency(boolean consistent) {
+              double best = search.getCostValueFloat();
+              if (consistent && best < Double.MAX_VALUE && x.max() > best - step) {
+                violations.add("x=" + x.dom() + " best=" + best);
+              }
+              return consistent;
+            }
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener[] children) {}
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener child) {}
+          });
+
+      assertThat(search.labeling(store, select, x)).isTrue();
+      assertThat(search.getSolutionListener().solutionsNo()).isGreaterThan(1);
+      assertThat(violations).isEmpty();
+    } finally {
+      FloatDomain.setStep(0.0);
+      FloatDomain.setPrecision(precision);
+    }
   }
 
   /** Ground p and check that r = f(p) is pruned to f(p) within the float precision. */
