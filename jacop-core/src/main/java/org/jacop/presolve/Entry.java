@@ -60,4 +60,11 @@ public sealed interface Entry {
    * child has no counterpart; postsolve leaves its domain as it is, so it can take any value.
    */
   record Free() implements Entry {}
+
+  /**
+   * The variable occurred in one or two constraints that, together with the domains, leave it a
+   * value for every assignment of the other variables, so it was removed with its defining
+   * constraint (presolve rule 8); postsolve computes its value from the others.
+   */
+  record Eliminated() implements Entry {}
 }

@@ -66,6 +66,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Entry;
 import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -265,7 +266,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolve();
+      presolve(node);
     }
 
     if (opt.debug()) {
@@ -304,10 +305,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
    */
-  private void presolve() {
+  private void presolve(SimpleNode solveItem) {
     long start = timer.getCpuTime();
     Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+        Presolver.of(store)
+            .keep(keptVariables(solveItem))
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -331,8 +335,84 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * The variables presolve must keep: the output variables, the variables named by the solve item
+   * (the objective and the search annotations), and those the front end uses outside the
+   * constraints (collected clauses, aliases, on_restart). The others may be eliminated.
+   */
+  private Var[] keptVariables(SimpleNode solveItem) {
+    Set<Var> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    kept.addAll(output.outputVariables);
+    for (OutputArrayAnnotation a : output.outputArray) {
+      Collections.addAll(kept, a.getArray());
+    }
+    keepNamed(solveItem, kept);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      Collections.addAll(kept, clause[0]);
+      Collections.addAll(kept, clause[1]);
+    }
+    output.aliasTable.forEach(
+        (k, v) -> {
+          kept.add(k);
+          kept.add(v);
+        });
+    OnRestart r = output.onRestart;
+    if (r != null) {
+      for (List<? extends Var> vars :
+          List.of(
+              r.status,
+              r.solIn,
+              r.solOut,
+              r.solFloatIn,
+              r.solFloatOut,
+              r.lastValIn,
+              r.lastValOut,
+              r.lastValFloatIn,
+              r.lastValFloatOut,
+              r.uniformOut,
+              r.uniformFloatOut,
+              r.completeMarkers)) {
+        kept.addAll(vars);
+      }
+    }
+    kept.remove(null);
+    return kept.toArray(new Var[0]);
+  }
+
+  /** Adds the variables and arrays of variables named anywhere in a node. */
+  private void keepNamed(Node node, Set<Var> kept) {
+    String ident =
+        switch (node) {
+          case ASTScalarFlatExpr e -> e.getIdent();
+          case ASTVariableExpr e -> e.getIdent();
+          case ASTSolveExpr e -> e.getIdent();
+          case ASTAnnExpr e -> e.getIdent();
+          default -> null;
+        };
+    if (ident != null) {
+      Tables t = output;
+      for (Map<String, ? extends Var> m :
+          List.of(t.variableTable, t.variableFloatTable, t.setVariableTable)) {
+        if (m.get(ident) != null) {
+          kept.add(m.get(ident));
+        }
+      }
+      for (Map<String, ? extends Var[]> m :
+          List.of(t.variableArrayTable, t.variableFloatArrayTable, t.setVariableArrayTable)) {
+        if (m.get(ident) != null) {
+          Collections.addAll(kept, m.get(ident));
+        }
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      keepNamed(node.jjtGetChild(i), kept);
+    }
+  }
+
+  /**
    * The derivation's map, completed with a constant in the derived store for every variable fixed
-   * by presolve, so annotations and output arrays that name such a variable stay valid.
+   * or eliminated by presolve, so annotations and output arrays that name such a variable stay
+   * valid. An eliminated variable becomes a constant too, so search does not branch on it;
+   * postsolve gives it its value.
    */
   private static VarMap completeMap(Derivation d) {
     Map<Var, Var> fixed = new IdentityHashMap<>();
@@ -349,9 +429,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           return null;
         }
         V copy = d.get(v);
-        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> x.copyTo(d.child()));
+        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> constant(d, x));
       }
     };
+  }
+
+  private static Var constant(Derivation d, Var v) {
+    Var copy = v.copyTo(d.child());
+    if (d.entry(v) instanceof Entry.Eliminated && copy instanceof IntVar c) {
+      c.domain.in(d.child().level, c, c.min(), c.min());
+    }
+    return copy;
   }
 
   private void printPresolveStatistics(Derivation d, long time) {
@@ -368,6 +456,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveEliminated=").append(d.eliminated()).append('\n');
+      s.append("%%%mzn-stat: presolveSubstituted=").append(d.substitutions()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

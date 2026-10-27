@@ -119,6 +119,9 @@ public final class Derivation implements VarMap {
   private List<Constraint> collected = List.of();
   private Statistics statistics;
   private boolean solutionWritten;
+  private Reconstruction reconstruction;
+  private int eliminated;
+  private int substitutions;
 
   private Derivation(Builder builder) {
     this.parent = builder.parent;
@@ -162,7 +165,9 @@ public final class Derivation implements VarMap {
 
     /**
      * Sets the variables that must keep a counterpart in the child even if no constraint uses them,
-     * for example output variables. By default every variable that is not fixed is kept.
+     * for example output variables. By default every variable that is not fixed is kept. Once the
+     * kept variables are given, the others can also be eliminated with the constraint that defines
+     * them (rule 8), and postsolve computes their values.
      *
      * @param vars the variables.
      * @return this builder.
@@ -229,6 +234,18 @@ public final class Derivation implements VarMap {
       }
     }
 
+    // rule 8 needs to know which variables must be kept
+    if (rules && frozen != null) {
+      VariableElimination elimination = new VariableElimination(frozen);
+      carried = elimination.apply(carried);
+      for (Var v : elimination.eliminated()) {
+        entries.put(v, new Entry.Eliminated());
+      }
+      eliminated = elimination.eliminated().size();
+      substitutions = elimination.substitutions();
+      reconstruction = elimination.reconstruction();
+    }
+
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(c.arguments());
@@ -238,6 +255,10 @@ public final class Derivation implements VarMap {
     int fixed = 0;
     try {
       for (Var v : variables) {
+        if (entries.containsKey(v)) {
+          // eliminated
+          continue;
+        }
         if (used.contains(v) || !rules) {
           keep(v);
         } else if (v.singleton()) {
@@ -353,6 +374,9 @@ public final class Derivation implements VarMap {
     child = parent;
     entries.clear();
     copies.clear();
+    reconstruction = null;
+    eliminated = 0;
+    substitutions = 0;
     statistics =
         new Statistics(
             variables.size(), collected.size(), variables.size(), collected.size(), 0, 0);
@@ -449,6 +473,24 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns the number of variables eliminated with their defining constraint (rule 8).
+   *
+   * @return the number of eliminated variables.
+   */
+  public int eliminated() {
+    return eliminated;
+  }
+
+  /**
+   * Returns the number of constraints into which rule 8 substituted an eliminated variable.
+   *
+   * @return the number of substituted constraints.
+   */
+  public int substitutions() {
+    return substitutions;
+  }
+
+  /**
    * Returns what the derivation did with a parent variable.
    *
    * @param v a variable of the parent.
@@ -474,7 +516,8 @@ public final class Derivation implements VarMap {
    * Returns the child's counterpart of a parent variable.
    *
    * @param v a variable of the parent.
-   * @return the counterpart, or null if the child has none (the variable is fixed or free).
+   * @return the counterpart, or null if the child has none (the variable is fixed, free or
+   *     eliminated).
    */
   @Override
   @SuppressWarnings("unchecked")
@@ -533,7 +576,8 @@ public final class Derivation implements VarMap {
               Var v = e.getKey();
               v.dom().in(parent.level, v, e.getValue().dom());
             }
-            accepted[0] = parent.consistency();
+            accepted[0] =
+                (reconstruction == null || reconstruction.apply(parent)) && parent.consistency();
           } catch (FailException f) {
             accepted[0] = false;
           }
