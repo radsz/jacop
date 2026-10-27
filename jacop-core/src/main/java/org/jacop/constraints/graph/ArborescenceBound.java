@@ -48,11 +48,13 @@ import org.jacop.core.Var;
  * cost sum.
  *
  * <p>The bound is Edmonds' minimum arborescence, computed with its linear programming dual. A
- * virtual node with a zero-weight edge to every node in the domain of the root stands for the
- * unknown root, so one computation serves all roots. The dual gives a reduced cost {@code rc(e) >=
- * 0} for every edge and any arborescence {@code x} costs at least {@code lower + sum(rc(e), e in
- * x)}. Following Houndji, Schaus, Hounkonnou and Wolsey (A new filtering algorithm for the minimum
- * weighted arborescence constraint, CPAIOR 2017) this filters
+ * virtual node with an edge to every node in the domain of the root stands for the unknown root, so
+ * one computation serves all roots. The virtual edges weigh more than any set of graph edges, so
+ * the minimum arborescence uses exactly one of them when one root can reach all nodes, and the
+ * bound is the minimum over the possible roots rather than over forests. The dual gives a reduced
+ * cost {@code rc(e) >= 0} for every edge and any arborescence {@code x} costs at least {@code lower
+ * + sum(rc(e), e in x)}. Following Houndji, Schaus, Hounkonnou and Wolsey (A new filtering
+ * algorithm for the minimum weighted arborescence constraint, CPAIOR 2017) this filters
  *
  * <ul>
  *   <li>an edge i-&gt;j with {@code lower + rc(i, j) > max(cost)}; when j lies above i in the
@@ -90,6 +92,8 @@ public class ArborescenceBound extends Constraint
   private final int[] head;
   private final boolean[] candidate;
   private final long[] reduced;
+  // the weight of the virtual edges
+  private final long virtualWeight;
 
   // components of Edmonds' contraction: 0..n are the nodes (n is the virtual root), the rest are
   // contracted cycles
@@ -164,6 +168,11 @@ public class ArborescenceBound extends Constraint
     }
     candidate = new boolean[m + n];
     reduced = new long[m + n];
+    long total = 0;
+    for (int w : weights) {
+      total += Math.abs((long) w);
+    }
+    virtualWeight = total + 1;
 
     int components = 2 * (n + 1);
     find = new int[components];
@@ -280,7 +289,7 @@ public class ArborescenceBound extends Constraint
    * Edmonds' algorithm in its dual form: every component without an entering edge takes its
    * cheapest entering edge and that weight is subtracted from all edges entering it; cycles of
    * chosen edges are contracted until none is left. It sets the reduced costs and inEdge and
-   * returns the weight of the minimum arborescence.
+   * returns the weight of the minimum arborescence without its virtual edge.
    */
   private long minimumArborescence() {
     int components = n + 1;
@@ -292,7 +301,7 @@ public class ArborescenceBound extends Constraint
       chosen[c] = -1;
     }
     for (int e = 0; e < m + n; e++) {
-      reduced[e] = e < m ? weights[e] : 0;
+      reduced[e] = e < m ? weights[e] : virtualWeight;
     }
     long lower = 0;
     boolean contracted = true;
@@ -394,7 +403,7 @@ public class ArborescenceBound extends Constraint
         stack[size++] = child;
       }
     }
-    return lower;
+    return lower - virtualWeight;
   }
 
   // depth and parent of every node in the minimum arborescence
