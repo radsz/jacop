@@ -157,6 +157,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -7895,5 +7896,40 @@ class SingleConstraintTest extends TestHelper {
     assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
     assertThat(a).isNotEqualTo(a.negated());
     assertThat(a.toString()).contains("weights=[1, -2]");
+  }
+
+  // Rectangle 2 overlaps rectangle 0 in x at every position and always covers y = 2, so rectangle 0
+  // (at least 2 high) cannot start at y 1 or 2. Rectangle 3 reaches outside rectangle 0 in y; it
+  // must not widen the limit of
+  // the sweep profile, or the pruning is lost.
+  @Test
+  void diffnSweepLimitIgnoresRectanglesOutsideInOtherDimension() {
+    Store store = new Store();
+    IntVar y0 = new IntVar(store, "y0", 0, 3);
+    IntVar[][] rectangles = {
+      {new IntVar(store, 4, 4), y0, new IntVar(store, 3, 3), new IntVar(store, 2, 3)},
+      {
+        new IntVar(store, 4, 6),
+        new IntVar(store, 3, 6),
+        new IntVar(store, 1, 1),
+        new IntVar(store, 3, 3)
+      },
+      {
+        new IntVar(store, 4, 5),
+        new IntVar(store, 0, 2),
+        new IntVar(store, 1, 2),
+        new IntVar(store, 3, 3)
+      },
+      {
+        new IntVar(store, 3, 3),
+        new IntVar(store, 4, 6),
+        new IntVar(store, 3, 3),
+        new IntVar(store, 3, 4)
+      }
+    };
+    store.impose(new Diffn(rectangles, false));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(y0.dom().toString()).isEqualTo("{0, 3}");
   }
 }
