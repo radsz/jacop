@@ -157,6 +157,22 @@ Version 5.0 (unreleased)
     the optima proved from 0-5 to 8-12, depending on the model and the
     search; before, the generic reason explained 83 to 86 % of the reasons.
 
+16. Presolve breaks variable symmetries (--presolve on|check, unless
+    --symmetry off). The FlatZinc model becomes a coloured graph (Puget,
+    CP 2005): variables coloured by domain, constraints by name and
+    constants, argument positions by place, with the arguments whose order
+    does not matter (linear terms, all_different, bool_clause, cumulative
+    tasks, bin packing items, the two sides of int_eq, ...) given one
+    colour. New org.jacop.presolve.GraphAutomorphisms finds generators of
+    its automorphism group by individualization and refinement (as nauty,
+    saucy and bliss), with the variables as the base in lex-leader order,
+    within at most 1 s (-Dorg.jacop.fz.symmetryTime, in ms) and a
+    twentieth of the time left. Each generator g posts X <=lex g(X).
+    The objective variable is fixed by every symmetry, so optima are kept;
+    solutions are lost, so it is off when a satisfaction problem asks for
+    more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
+    holes needs 2,392 failures instead of 764,943.
+
 Version 4.11
 =============
 

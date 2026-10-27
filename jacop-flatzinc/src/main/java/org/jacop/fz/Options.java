@@ -77,6 +77,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean symmetry = true;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -149,6 +150,9 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --symmetry <value> with presolve, break the variable symmetries of the model with
+                lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -189,6 +193,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--symmetry" -> i = handleSymmetry(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -285,6 +290,16 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private int handleSymmetry(String[] args, int i) {
+    String mode = args[++i];
+    switch (mode) {
+      case "on" -> symmetry = true;
+      case "off" -> symmetry = false;
+      default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
     }
     return i + 1;
   }
@@ -603,6 +618,15 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   *
+   * @return true by default
+   */
+  public boolean symmetry() {
+    return symmetry;
   }
 
   /** Sat is used. */
