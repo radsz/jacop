@@ -133,11 +133,13 @@ public class Options {
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
-                scale=<failures>, base=<growth of geometric restarts>,
+                scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),
                 impact=<n> (bound-impact values for optimisation, on domains up to n values; 0 = off),
-                impact-until=first|always,
+                impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
+                restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
+                flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
