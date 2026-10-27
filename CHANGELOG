@@ -89,6 +89,19 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
+11. New constraint StockingCost(x, d, h, H, c) for lot sizing (Houndji,
+    Schaus, Wolsey and Deville, CP 2014 and Constraints 2019): order i is
+    produced in period x[i] <= d[i], at most c orders per period, and
+    sum h[i] * (d[i] - x[i]) <= H. It bounds H by the greedy optimum of
+    the relaxation without the lower bounds of x and raises the minima of
+    x that the maximum of H allows (bounds consistent on the relaxation
+    for equal costs). MiniZinc predicate stocking_cost in the JaCoP
+    library; the FlatZinc front end also posts it as a redundant
+    constraint on an alldifferent (or gcc) with a cost sum over the same
+    variables; -Dorg.jacop.fz.stockingCost=false turns this off. On the
+    lot sizing part of the 46 CSPLib prob058 instances it proves 39 optima
+    in 60 s instead of 19.
+
 Version 4.11
 =============
 
