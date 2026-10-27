@@ -67,6 +67,7 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -99,6 +100,8 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -235,6 +238,10 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "IncreasingSum",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
+        Arguments.of("Deviation", balance(false)),
+        Arguments.of("Spread", balance(true)),
+        Arguments.of("StockingCost", stockingCost(false)),
+        Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -1517,6 +1524,96 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
+  // last
+  private static Function<Random, Instance> stockingCost(boolean itemDependent) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int capacity = 1 + random.nextInt(2);
+      int[] due = randomInts(random, n, 1, 6);
+      // the unit cost constructor is checked against costs of 1
+      int[] h = itemDependent ? randomInts(random, n, 0, 3) : randomInts(random, n, 1, 1);
+      int[][] domains =
+          append(domains(random, n, 0, 6), domain(random, 0, 3 * n * (itemDependent ? 3 : 1)));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            store.impose(
+                itemDependent
+                    ? new StockingCost(x, due, h, v[n], capacity)
+                    : new StockingCost(x, due, v[n], capacity));
+          },
+          t -> {
+            int total = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[i] > due[i]) {
+                return false;
+              }
+              int same = 0;
+              for (int j = 0; j < n; j++) {
+                same += t[j] == t[i] ? 1 : 0;
+              }
+              if (same > capacity) {
+                return false;
+              }
+              total += h[i] * (due[i] - t[i]);
+            }
+            return total <= t[n];
+          },
+          "due=" + Arrays.toString(due) + " h=" + Arrays.toString(h) + " c=" + capacity);
+    };
+  }
+
+  /**
+   * Deviation (sum of |a * x[i] - b|) or Spread (sum of (a * x[i] - b)^2) with sum of x = s; half
+   * of the instances use a = n and b = s, the others random a and b.
+   */
+  private static Function<Random, Instance> balance(boolean squares) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      boolean repeated = n > 1 && random.nextInt(6) == 0;
+      int[][] domains = new int[n + 1][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, -1, 4);
+      }
+      int s = -1 + random.nextInt(4 * n + 2);
+      boolean mean = random.nextBoolean();
+      int a = mean ? n : 1 + random.nextInt(3);
+      int b = mean ? s : -3 + random.nextInt(12);
+      int start = random.nextInt(squares ? 40 : 12);
+      domains[n] = domain(random, start, start + (squares ? 30 : 20));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            if (squares) {
+              store.impose(mean ? new Spread(x, s, v[n]) : new Spread(x, a, b, s, v[n]));
+            } else {
+              store.impose(mean ? new Deviation(x, s, v[n]) : new Deviation(x, a, b, s, v[n]));
+            }
+          },
+          t -> {
+            int[] x = Arrays.copyOf(t, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            long total = 0;
+            long cost = 0;
+            for (int i = 0; i < n; i++) {
+              total += x[i];
+              long e = (long) a * x[i] - b;
+              cost += squares ? e * e : Math.abs(e);
+            }
+            return total == s && cost == t[n];
+          },
+          "s=" + s + " a=" + a + " b=" + b + " repeated=" + repeated);
+    };
   }
 
   // x[0..n-1] non-decreasing with as many distinct values as the last variable, which may also

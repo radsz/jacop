@@ -111,6 +111,34 @@ Version 5.0 (unreleased)
     four of fifteen instances that took 12 s, 40 s or more than 60 s are
     solved in under a second.
 
+13. New balancing constraints Deviation(x, s, d) and Spread(x, s, d):
+    sum(x) = s and d = sum(i)(abs(n * x[i] - s)), or the sum of
+    (n * x[i] - s)^2, with general forms over abs(a * x[i] - b) and
+    (a * x[i] - b)^2. They are bounds consistent on x for d >= cost and
+    raise d.min to the least cost of an assignment with sum s (Schaus,
+    Deville, Dupont and Regin, CP 2007; Schaus and Regin, EJCO 2014).
+    The FlatZinc front end posts them as redundant constraints on a sum of
+    int_abs or squared terms over variables whose sum an int_lin_eq fixes,
+    as sum(p)(abs(n * load[p] - total)) with sum(load) = total compiles;
+    -Dorg.jacop.fz.balance=false turns this off. JaCoP's MiniZinc library
+    adds the predicates deviation and spread. On 28 balanced academic
+    curriculum instances with a deviation or spread objective JaCoP proves
+    52 of the 54 optima in under 3 s each; without the new constraints it
+    proves none in 20 s.
+
+14. New constraint StockingCost(x, d, h, H, c) for lot sizing (Houndji,
+    Schaus, Wolsey and Deville, CP 2014 and Constraints 2019): order i is
+    produced in period x[i] <= d[i], at most c orders per period, and
+    sum h[i] * (d[i] - x[i]) <= H. It bounds H by the greedy optimum of
+    the relaxation without the lower bounds of x and raises the minima of
+    x that the maximum of H allows (bounds consistent on the relaxation
+    for equal costs). MiniZinc predicate stocking_cost in the JaCoP
+    library; the FlatZinc front end also posts it as a redundant
+    constraint on an alldifferent (or gcc) with a cost sum over the same
+    variables; -Dorg.jacop.fz.stockingCost=false turns this off. On the
+    lot sizing part of the 46 CSPLib prob058 instances it proves 39 optima
+    in 60 s instead of 19.
+
 Version 4.11
 =============
 
