@@ -730,15 +730,16 @@ public class Support implements ParserTreeConstants {
     // variables that are output variables
     aliasConstraints();
 
+    // cost_regular constraints over the same word and automaton are filtered together;
+    // org.jacop.fz.multiCostRegular=false keeps them apart, =lagrangian adds the relaxation
     String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
     if (!"false".equalsIgnoreCase(multiCost)) {
-      // cost_regular constraints over the same word and automaton are filtered together
       List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
       if (merged != delayedConstraints) {
         delayedConstraints.clear();
         for (Constraint c : merged) {
-          if (c instanceof MultiCostRegular m && "nolagrangian".equalsIgnoreCase(multiCost)) {
-            m.setLagrangian(false);
+          if (c instanceof MultiCostRegular m && "lagrangian".equalsIgnoreCase(multiCost)) {
+            m.setLagrangian(true);
           }
           delayedConstraints.add(c);
         }

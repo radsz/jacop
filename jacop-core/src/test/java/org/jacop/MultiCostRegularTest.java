@@ -41,6 +41,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -492,6 +495,38 @@ class MultiCostRegularTest {
       assertTrue(store.consistency());
       assertThat(zeros.min()).as("lagrangian %s", lagrangian).isEqualTo(lagrangian ? 3 : 0);
     }
+  }
+
+  /** Cost regular constraints over the same word and automaton are merged, the others kept. */
+  @Test
+  void mergeGroupsCostRegularsOverTheSameWordAndAutomaton() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+    }
+    IntVar[] c = new IntVar[4];
+    for (int k = 0; k < c.length; k++) {
+      c[k] = new IntVar(store, "c" + k, 0, 3);
+    }
+    int[][] delta = {{0, 0}};
+    Constraint other = new XneqY(x[0], y[0]);
+    List<Constraint> constraints =
+        List.of(
+            new CostRegular(x, delta, 0, 0, new int[] {0}, new int[][] {{0, 1}}, c[0]),
+            other,
+            new CostRegular(y, delta, 0, 0, new int[] {0}, new int[][] {{0, 1}}, c[1]),
+            new CostRegular(
+                x.clone(), new int[][] {{0, 0}}, 0, 0, new int[] {0}, new int[][] {{1, 0}}, c[2]),
+            new CostRegular(x, delta, 1, 0, new int[] {0}, new int[][] {{1, 0}}, c[3]));
+    List<Constraint> merged = MultiCostRegular.merge(constraints);
+    assertThat(merged).hasSize(4);
+    assertThat(merged.get(0)).isInstanceOf(MultiCostRegular.class);
+    assertThat(((MultiCostRegular) merged.get(0)).cost).containsExactly(c[0], c[2]);
+    assertThat(merged.subList(1, 4)).containsExactly(other, constraints.get(2), constraints.get(4));
+    assertThat(MultiCostRegular.merge(List.of(other))).containsExactly(other);
   }
 
   @Test

@@ -63,21 +63,26 @@ import org.jacop.core.Var;
  * Each consistency call first does, for every resource at once, the filtering of {@link
  * CostRegular}: shortest and longest paths from the source and to the sink, removal of the edges
  * through which every path is too expensive or too cheap for some resource, and the bounds of every
- * cost set to its shortest and longest path. This is what the separate constraints reach.
+ * cost set to its shortest and longest path. This is already stronger than separate constraints: an
+ * edge removed for one resource is gone for the paths of all the others, while each separate
+ * constraint keeps it in its own graph as long as its value stays in the domain.
  *
- * <p>It then reasons on the resources together, which separate constraints cannot: a path can be
- * within the bounds of every resource taken alone and still violate two of them at once. Finding a
- * path within all bounds is a resource constrained shortest path problem, NP-hard, so as in the
- * paper the side resources are relaxed in a Lagrangian way. To bound resource k from below, the
- * graph is weighted with c_k + sum over r != k of (lambda_r - mu_r) c_r, where lambda_r and mu_r
- * are nonnegative multipliers of the upper and the lower bound of resource r. For every path P
- * within all bounds, c_k(P) is at least its weight plus the constant sum of (mu_r min(cost[r]) -
- * lambda_r max(cost[r])), so the shortest weighted path bounds cost[k] from below and an edge whose
- * shortest weighted path is above max(cost[k]) is removed. The upper bound of cost[k] is the same
- * with c_k negated. The multipliers are improved by a few subgradient steps with the Polyak step
- * towards max(cost[k]) + 1 and are kept between calls, so the search usually starts close to good
- * multipliers. A resource whose bounds every path satisfies is left out of the relaxation, so the
- * relaxation runs only when some pair of resources can conflict.
+ * <p>Optionally ({@link #setLagrangian(boolean)}, off by default) it also reasons on the resources
+ * together as the paper does: a path can be within the bounds of every resource taken alone and
+ * still violate two of them at once. Finding a path within all bounds is a resource constrained
+ * shortest path problem, NP-hard, so as in the paper the side resources are relaxed in a Lagrangian
+ * way. To bound resource k from below, the graph is weighted with c_k + sum over r != k of
+ * (lambda_r - mu_r) c_r, where lambda_r and mu_r are nonnegative multipliers of the upper and the
+ * lower bound of resource r. For every path P within all bounds, c_k(P) is at least its weight plus
+ * the constant sum of (mu_r min(cost[r]) - lambda_r max(cost[r])), so the shortest weighted path
+ * bounds cost[k] from below and an edge whose shortest weighted path is above max(cost[k]) is
+ * removed. The upper bound of cost[k] is the same with c_k negated. The multipliers are improved by
+ * a few subgradient steps with the Polyak step towards max(cost[k]) + 1 and are kept between calls,
+ * so the search usually starts close to good multipliers. A resource whose bounds every path
+ * satisfies is left out of the relaxation, so the relaxation runs only when some pair of resources
+ * can conflict. On nurse rostering models the relaxation removed few more edges, cut the search by
+ * a few percent and made a node up to ten times as expensive, hence it is not used unless asked
+ * for.
  *
  * <p>The alive edges of each layer are kept at the front of their part of an edge permutation, a
  * sparse set whose size is trailed, so backtracking restores a layer in constant time.
@@ -127,7 +132,7 @@ public class MultiCostRegular extends Constraint
   private final int resources;
 
   /** Whether the Lagrangian relaxation of the side resources is used. */
-  private boolean lagrangian = true;
+  private boolean lagrangian;
 
   private Map<IntVar, Integer> mapping;
 
@@ -430,8 +435,8 @@ public class MultiCostRegular extends Constraint
   }
 
   /**
-   * It switches the Lagrangian relaxation of the side resources on or off. Without it the
-   * constraint prunes as one {@link CostRegular} per resource, on a single graph.
+   * It switches the Lagrangian relaxation of the side resources on or off (off by default). Without
+   * it the constraint prunes as one {@link CostRegular} per resource on a single shared graph.
    *
    * @param lagrangian true to reason on the resources together.
    * @return this constraint.
@@ -1034,6 +1039,11 @@ public class MultiCostRegular extends Constraint
         constant += low[r] * cost[r].min() - up[r] * cost[r].max();
       }
 
+      boolean weighted = false;
+      for (int r = 0; r < rs; r++) {
+        weighted |= up[r] != 0 || low[r] != 0;
+      }
+
       // weights and the shortest weighted paths from the source
       f[0] = 0;
       for (int level = 0; level < levels; level++) {
@@ -1073,38 +1083,41 @@ public class MultiCostRegular extends Constraint
         throw Store.failException;
       }
 
-      // the shortest weighted paths to the sink and the edges they make too expensive
-      Arrays.fill(b, levelNodeStart[levels], levelNodeStart[levels + 1], 0);
-      double limit = objectiveMax - constant + tolerance(objectiveMax);
-      for (int level = levels - 1; level >= 0; level--) {
-        Arrays.fill(b, levelNodeStart[level], levelNodeStart[level + 1], Double.MAX_VALUE);
-        int start = edgeStart[level];
-        int end = start + alive[level];
-        int i = start;
-        while (i < end) {
-          int e = order[i];
-          double to = b[edgeTarget[e]];
-          double from = f[edgeSource[e]];
-          if (to == Double.MAX_VALUE || from == Double.MAX_VALUE) {
-            // left for the next pass of the paths of the resources
+      // the shortest weighted paths to the sink and the edges they make too expensive; without
+      // multipliers these are the edges the paths of resource k already removed
+      if (weighted) {
+        Arrays.fill(b, levelNodeStart[levels], levelNodeStart[levels + 1], 0);
+        double limit = objectiveMax - constant + tolerance(objectiveMax);
+        for (int level = levels - 1; level >= 0; level--) {
+          Arrays.fill(b, levelNodeStart[level], levelNodeStart[level + 1], Double.MAX_VALUE);
+          int start = edgeStart[level];
+          int end = start + alive[level];
+          int i = start;
+          while (i < end) {
+            int e = order[i];
+            double to = b[edgeTarget[e]];
+            double from = f[edgeSource[e]];
+            if (to == Double.MAX_VALUE || from == Double.MAX_VALUE) {
+              // left for the next pass of the paths of the resources
+              i++;
+              continue;
+            }
+            if (from + w[e] + to > limit) {
+              swap(i, --end);
+              changed = true;
+              continue;
+            }
+            if (w[e] + to < b[edgeSource[e]]) {
+              b[edgeSource[e]] = w[e] + to;
+            }
             i++;
-            continue;
           }
-          if (from + w[e] + to > limit) {
-            swap(i, --end);
-            changed = true;
-            continue;
+          if (end == start) {
+            throw Store.failException;
           }
-          if (w[e] + to < b[edgeSource[e]]) {
-            b[edgeSource[e]] = w[e] + to;
+          if (end - start != alive[level]) {
+            setAlive(level, end - start);
           }
-          i++;
-        }
-        if (end == start) {
-          throw Store.failException;
-        }
-        if (end - start != alive[level]) {
-          setAlive(level, end - start);
         }
       }
 
