@@ -385,10 +385,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (OutputArrayAnnotation a : dictionary.outputArray) {
       Collections.addAll(result, a.getArray());
     }
-    result.addAll(dictionary.defaultSearchVariables);
-    for (Var[] a : dictionary.defaultSearchArrays) {
-      Collections.addAll(result, a);
-    }
     ArrayDeque<SimpleNode> todo = new ArrayDeque<>();
     todo.add(node);
     while (!todo.isEmpty()) {

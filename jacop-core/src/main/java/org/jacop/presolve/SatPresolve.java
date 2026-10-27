@@ -94,8 +94,8 @@ final class SatPresolve {
   /** Longest clause that is used to subsume others. */
   private static final int MAX_SUBSUMING = 100;
 
-  /** Longest resolvent variable elimination may add. */
-  private static final int MAX_RESOLVENT = 24;
+  /** Longest resolvent variable elimination may add (CaDiCaL's elimclslim). */
+  private static final int MAX_RESOLVENT = 100;
 
   /** A variable with more occurrences of both of its literals is not eliminated. */
   private static final int MAX_OCCURRENCES = 16;
