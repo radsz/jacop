@@ -782,25 +782,33 @@ public class Support implements ParserTreeConstants {
 
   /**
    * Posts an {@link OverlappingAlldiff} next to each pair of all_different constraints that share
-   * at least {@link #OVERLAP_MIN_SHARED} variables, each with a variable of its own, and that have
-   * at most {@link #OVERLAP_MAX_VARIABLES} variables together. The system property {@code
-   * org.jacop.fz.overlappingAlldiff} set to false turns it off.
+   * at least {@link #OVERLAP_MIN_SHARED} variables and at least half of the variables of each, each
+   * with a variable of its own, and that have at most {@link #OVERLAP_MAX_VARIABLES} variables
+   * together. Pairs sharing less, such as the rows and blocks of a sudoku, gain little pruning for
+   * the cost of the propagator. The system property {@code org.jacop.fz.overlappingAlldiff} set to
+   * false turns it off.
    */
   void poseOverlappingAlldiffs() {
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff", "false"))
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
         || alldifferentLists.size() < 2) {
       return;
     }
+    // fixed variables (often one constant object shared by many lists) are left out: the
+    // all_different constraints remove their values, so the rest is all different on its own
+    List<IntVar[]> lists = new ArrayList<>();
+    for (IntVar[] v : alldifferentLists) {
+      lists.add(Arrays.stream(v).filter(x -> !x.singleton()).toArray(IntVar[]::new));
+    }
     Map<IntVar, List<Integer>> occurs = new IdentityHashMap<>();
-    for (int i = 0; i < alldifferentLists.size(); i++) {
-      for (IntVar v : alldifferentLists.get(i)) {
+    for (int i = 0; i < lists.size(); i++) {
+      for (IntVar v : lists.get(i)) {
         occurs.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
       }
     }
     int posted = 0;
-    for (int i = 0; i < alldifferentLists.size() && posted < OVERLAP_MAX_PAIRS; i++) {
-      IntVar[] s = alldifferentLists.get(i);
-      int[] shared = new int[alldifferentLists.size()];
+    for (int i = 0; i < lists.size() && posted < OVERLAP_MAX_PAIRS; i++) {
+      IntVar[] s = lists.get(i);
+      int[] shared = new int[lists.size()];
       for (IntVar v : s) {
         for (int j : occurs.get(v)) {
           if (j > i) {
@@ -809,10 +817,11 @@ public class Support implements ParserTreeConstants {
         }
       }
       for (int j = i + 1; j < shared.length && posted < OVERLAP_MAX_PAIRS; j++) {
-        IntVar[] t = alldifferentLists.get(j);
+        IntVar[] t = lists.get(j);
         if (shared[j] >= OVERLAP_MIN_SHARED
             && shared[j] < s.length
             && shared[j] < t.length
+            && 2 * shared[j] >= Math.max(s.length, t.length)
             && s.length + t.length - shared[j] <= OVERLAP_MAX_VARIABLES) {
           OverlappingAlldiff c = new OverlappingAlldiff(s, t);
           store.impose(c);

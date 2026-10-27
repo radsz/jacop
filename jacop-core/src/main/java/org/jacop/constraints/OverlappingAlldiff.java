@@ -67,10 +67,15 @@ import org.jacop.core.Store;
  * stronger than bounds consistency on the two alldifferents apart: for x in 1..2, w1, w2, w3 in
  * 1..4 and z in 3..4, alldifferent([x, w1, w2, w3]) and alldifferent([w1, w2, w3, z]) each have
  * solutions, but x and z cannot share a value, so the five variables would need five of the four
- * values, and the conjunction fails at once. The intervals are bounded by the distinct bounds of
- * the variables, m of them, and a pass costs O(m<sup>3</sup>), so it is meant for small groups of
- * values such as the rows, columns and blocks of puzzles; it is used next to, not instead of, the
- * alldifferent propagators.
+ * values, and the conjunction fails at once.
+ *
+ * <p>The intervals are bounded by the distinct bounds of the variables, m of them. The counts of
+ * the bounds are already closed under additivity, so only a tightening by the coupling is closed
+ * again, in O(m<sup>2</sup>), and a call costs O(m<sup>2</sup>) for each tightening. The constraint
+ * runs in the last queue, after the alldifferent propagators. It pays off when the shared variables
+ * are a large part of both constraints; for the rows and blocks of a sudoku, which share k of
+ * k<sup>2</sup> cells, it is far slower per node than it saves. It is meant to be posted next to,
+ * not instead of, the two alldifferent constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -226,13 +231,14 @@ public class OverlappingAlldiff extends Constraint
   private void count(int g) {
     int[] in = inside[g];
     int[] me = meets[g];
-    int[] d = dist[g];
     for (int a = 0; a < m; a++) {
       Arrays.fill(in, a * size, a * size + m, 0);
     }
     // in[a * size + c] first counts the variables with lo = a and hi = c
     int total = first[g + 1] - first[g];
-    int[] left = me; // left[c] = variables with hi <= c, right[a] (stored at size + a) lo >= a
+    // me is scratch space here: me[c] counts the variables with hi <= c, me[size + a] those with
+    // lo >= a
+    int[] left = me;
     Arrays.fill(left, 0, 2 * size, 0);
     for (int i = first[g]; i < first[g + 1]; i++) {
       in[lo[i] * size + hi[i]]++;
@@ -246,12 +252,13 @@ public class OverlappingAlldiff extends Constraint
       left[size + a] += left[size + a + 1];
     }
     // meets(a, c) = total - (hi <= a) - (lo >= c), kept in d before left is overwritten
+    int[] d = dist[g];
     for (int a = 0; a < m; a++) {
       for (int c = a + 1; c < m; c++) {
         d[a * size + c] = total - left[a] - left[size + c];
       }
     }
-    // inside(a, c) = sum of the counts with a <= lo and hi <= c, by rows from the right
+    // inside(a, c) = sum of the counts with a <= lo and hi <= c, from the last row up
     for (int a = m - 1; a >= 0; a--) {
       for (int c = a + 1; c < m; c++) {
         int v = in[a * size + c] + in[a * size + c - 1];

@@ -17,6 +17,8 @@ K4P2GracefulGraph/K4P2GracefulGraph
 K4P2GracefulGraph2/K4P2GracefulGraph2
 M12/M12
 OandX/OandX
+overlapping_alldiff/patho_6
+overlapping_alldiff/rand3_4_17_12_7
 QCP/qcp-10-67-0
 QCP/qcp-10-67-0_ext
 QCP/qcp-10-67-1_ext

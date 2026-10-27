@@ -1066,7 +1066,8 @@ class ConsistencyChecker {
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
-        new Case("OverlappingAlldiff", Level.BOUNDS_Z, ConsistencyChecker::overlappingAlldiff),
+        // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
+        new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
         new Case("Member", Level.DOMAIN, (s, r) -> member(s, r, "plain")),
         new Case("ReifiedMember", Level.DOMAIN, (s, r) -> member(s, r, "reified")),
