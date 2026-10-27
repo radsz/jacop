@@ -31,9 +31,11 @@ package org.jacop.fz;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -44,8 +46,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.geost.Geost;
-import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -61,8 +61,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Presolve on the models of the MiniZinc library hooks: every constraint FlatZinc posts for them
- * can be copied, except those of {@link #LIVE}, and searching the derived store gives the solutions
- * of the original store.
+ * can be copied, and searching the derived store gives the solutions of the original store.
  */
 class PresolveFlatzincTest {
 
@@ -70,9 +69,6 @@ class PresolveFlatzincTest {
 
   /** The number of solutions compared. */
   private static final int LIMIT = 1000;
-
-  /** Constraints that have no copy yet, so their models keep the live store. */
-  private static final Set<Class<?>> LIVE = Set.of(Geost.class, NetworkFlow.class);
 
   static Stream<String> models() throws IOException {
     try (Stream<Path> files = Files.list(Path.of(DIR))) {
@@ -99,15 +95,11 @@ class PresolveFlatzincTest {
 
     Store store = load(model);
     IntVar[] vars = intVars(store);
-    boolean live = constraints(store).stream().anyMatch(c -> LIVE.contains(c.getClass()));
-    constraints(store).stream()
-        .filter(c -> !LIVE.contains(c.getClass()))
+    constraints(store)
         .forEach(c -> assertThat(Copyable.canCopy(c)).as("%s in %s", c, model).isTrue());
 
     Derivation derivation = Derivation.of(store).retention(Derivation.Retention.KEPT).derive();
-    if (!live) {
-      assertThat(derivation.outcome()).as(model).isNotEqualTo(Derivation.Outcome.LIVE);
-    }
+    assertThat(derivation.outcome()).as(model).isNotEqualTo(Derivation.Outcome.LIVE);
     if (originalVars == null || vars == null) {
       // a model with set or float variables: only its derivation is checked
       return;
@@ -139,6 +131,40 @@ class PresolveFlatzincTest {
       }
     }
     assertThat(found).as(model).isEqualTo(expected);
+  }
+
+  /**
+   * The front end prints the same with presolve in checking mode as without it: the same solutions
+   * in the same order, and checking mode verifies each of them against the loaded model.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameWithPresolve(String model) {
+    assertThat(solve(model, "check")).as(model).isEqualTo(solve(model, "off"));
+  }
+
+  /** Solves a model with the front end, as from the command line, and returns what it prints. */
+  private static String solve(String model, String presolve) {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = System.out;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop()
+          .callMain(
+              new String[] {
+                "-a",
+                "-n",
+                String.valueOf(LIMIT),
+                "--default-search",
+                "input",
+                "--presolve",
+                presolve,
+                DIR + model
+              });
+    } finally {
+      System.setOut(out);
+    }
+    return buffer.toString(StandardCharsets.UTF_8);
   }
 
   private static Store load(String model) {

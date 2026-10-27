@@ -34,6 +34,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
@@ -71,6 +72,11 @@ public class Options {
   boolean runSearch = true;
   boolean useSat;
   boolean lcg;
+  // the default can be changed by the system property jacop.presolve, for example to run the
+  // FlatZinc test suites with presolve
+  Presolve presolve =
+      Objects.requireNonNullElse(
+          presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -141,6 +147,8 @@ public class Options {
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
                 alternated per restart with branching on the most active variables.
+            --presolve <value> presolve the model before search; one of "off" (default), "on",
+                "check" (as "on", and every solution is checked against the loaded model)
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -180,6 +188,7 @@ public class Options {
       case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
+      case "--presolve" -> i = handlePresolve(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -270,6 +279,26 @@ public class Options {
   private int handleLcg(int i) {
     lcg = true;
     return i + 1;
+  }
+
+  private int handlePresolve(String[] args, int i) {
+    Presolve mode = presolveMode(args[++i]);
+    if (mode != null) {
+      presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private static Presolve presolveMode(String mode) {
+    return switch (mode) {
+      case "off" -> Presolve.OFF;
+      case "on" -> Presolve.ON;
+      case "check" -> Presolve.CHECK;
+      default -> {
+        System.err.println("%% Presolve mode " + mode + " not known; ignored");
+        yield null;
+      }
+    };
   }
 
   private int handleNumSolutions(String[] args, int i) {
@@ -555,6 +584,25 @@ public class Options {
    */
   public boolean lcg() {
     return lcg;
+  }
+
+  /** Whether the model is presolved before search, and how. */
+  public enum Presolve {
+    /** The model is searched in the store it was loaded into. */
+    OFF,
+    /** Search runs on a store derived by presolve; the loaded store only receives solutions. */
+    ON,
+    /** As ON, but the loaded store keeps its constraints and checks every solution. */
+    CHECK
+  }
+
+  /**
+   * It defines whether the model is presolved before search (--presolve).
+   *
+   * @return the presolve mode, OFF by default
+   */
+  public Presolve presolve() {
+    return presolve;
   }
 
   /** Sat is used. */
