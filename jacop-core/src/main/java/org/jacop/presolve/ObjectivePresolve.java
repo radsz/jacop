@@ -70,7 +70,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public final class ObjectivePresolve {
+public final class ObjectivePresolve implements Rule {
 
   /** Largest number of terms an expanded objective may have. */
   static final int MAX_TERMS = 100_000;
@@ -113,6 +113,7 @@ public final class ObjectivePresolve {
 
   private int expanded;
   private int shifted;
+  private LinearInt imposed;
 
   /**
    * Starts an objective presolve.
@@ -185,6 +186,31 @@ public final class ObjectivePresolve {
    */
   public int shifted() {
     return shifted;
+  }
+
+  /**
+   * As a presolve rule, imposes the equation of {@link #reformulate()} once, in the first round in
+   * which there is one; the domains narrowed by earlier rounds can complete a value encoding.
+   *
+   * @param context the derivation in progress.
+   */
+  @Override
+  public void apply(Context context) {
+    if (imposed == null) {
+      imposed = reformulate();
+      if (imposed != null) {
+        context.impose(imposed);
+      }
+    }
+  }
+
+  /**
+   * Returns the equation imposed by {@link #apply(Context)}.
+   *
+   * @return the equation, or null if the rule imposed none.
+   */
+  public LinearInt imposed() {
+    return imposed;
   }
 
   /**

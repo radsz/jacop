@@ -50,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -272,8 +271,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolveObjective(node);
-      presolve();
+      presolve(objectiveRule(node));
     }
 
     if (opt.debug()) {
@@ -308,20 +306,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Objective presolve: imposes the objective, expanded through its defining equations and shifted
-   * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
-   * copies it into the derived store. See {@link ObjectivePresolve}.
+   * The objective presolve rule: the objective, expanded through its defining equations and shifted
+   * by the exactly-one sets of the model, as a redundant equation. See {@link ObjectivePresolve}.
    *
    * @param node the solve item.
+   * @return the rule, or null for a satisfaction problem, an objective that is not an integer
+   *     variable, or when the rule is off.
    */
-  private void presolveObjective(ASTSolveItem node) {
+  private ObjectivePresolve objectiveRule(ASTSolveItem node) {
     if (!ObjectiveDetector.enabled()
         || !(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
-      return;
+      return null;
     }
     int k = getKind(kind.getKind());
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
-      return;
+      return null;
     }
     IntVar objective =
         switch (expr.getType()) {
@@ -332,45 +331,44 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           }
           default -> null;
         };
-    if (objective == null || objective.singleton() || !store.consistency()) {
-      return;
+    if (objective == null || objective.singleton()) {
+      return null;
     }
     SimpleNode root = node;
     while (root.jjtGetParent() != null) {
       root = (SimpleNode) root.jjtGetParent();
     }
-    long start = timer.getCpuTime();
-    ObjectivePresolve presolve =
-        new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
-    LinearInt equation = presolve.reformulate();
-    if (equation != null) {
-      store.impose(equation);
-    }
-    if (options.getStatistics()) {
-      IO.println(
-          "%%%mzn-stat: presolveObjectiveTime="
-              + (timer.getCpuTime() - start) / 1_000_000_000.0
-              + "\n%%%mzn-stat: presolveObjectiveExpanded="
-              + (equation == null ? 0 : presolve.expanded())
-              + "\n%%%mzn-stat: presolveObjectiveShifted="
-              + (equation == null ? 0 : presolve.shifted()));
-    }
+    return new ObjectiveDetector(new Support(store, dictionary, sat))
+        .collect(root, objective, k == 1);
   }
 
   /**
    * Derives the store to search from the loaded store. Search, annotations and the objective use
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
+   *
+   * @param objective the objective presolve rule, or null.
    */
-  private void presolve() {
+  private void presolve(ObjectivePresolve objective) {
     long start = timer.getCpuTime();
-    Derivation d =
+    Presolver presolver =
         Presolver.of(store)
             .checking(options.presolve() == Options.Presolve.CHECK)
-            .rounds(options.presolveRounds())
-            .presolve();
+            .rounds(options.presolveRounds());
+    if (objective != null) {
+      presolver.rule(objective);
+    }
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
+      if (objective != null) {
+        boolean imposed = objective.imposed() != null;
+        IO.println(
+            "%%%mzn-stat: presolveObjectiveExpanded="
+                + (imposed ? objective.expanded() : 0)
+                + "\n%%%mzn-stat: presolveObjectiveShifted="
+                + (imposed ? objective.shifted() : 0));
+      }
       printPresolveStatistics(d, time);
     }
     switch (d.outcome()) {
