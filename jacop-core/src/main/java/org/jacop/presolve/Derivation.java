@@ -96,6 +96,8 @@ public final class Derivation implements VarMap {
    * @param childConstraints constraints copied into the child.
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
    * @param dropped constraints not copied because the presolve rules found them entailed.
+   * @param orderLiterals reified comparisons of a variable with a constant that became items of an
+   *     order channel ({@link OrderLiterals}).
    */
   public record Statistics(
       int parentVariables,
@@ -103,12 +105,14 @@ public final class Derivation implements VarMap {
       int childVariables,
       int childConstraints,
       int fixed,
-      int dropped) {}
+      int dropped,
+      int orderLiterals) {}
 
   private final Store parent;
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final boolean orderLiterals;
 
   private Outcome outcome;
   private int level;
@@ -125,6 +129,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.orderLiterals = builder.orderLiterals;
   }
 
   /**
@@ -144,6 +149,9 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    // switchable on its own, for example to measure the rule
+    private boolean orderLiterals =
+        Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"));
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -188,6 +196,19 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Switches the order literal rule on or off: the reified comparisons of one variable with
+     * constants become one order channel. On by default, unless the system property {@code
+     * jacop.presolve.orderLiterals} is false; the rules switch takes precedence.
+     *
+     * @param on true to apply the rule.
+     * @return this builder.
+     */
+    public Builder orderLiterals(boolean on) {
+      this.orderLiterals = on;
+      return this;
+    }
+
+    /**
      * Derives the child.
      *
      * @return the derivation; see {@link Derivation#outcome()}.
@@ -228,6 +249,7 @@ public final class Derivation implements VarMap {
         carried.add(c);
       }
     }
+    final int orderLiteralItems = rules && orderLiterals ? OrderLiterals.apply(carried) : 0;
 
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
@@ -273,7 +295,13 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
+            variables.size(),
+            collected.size(),
+            copies.size(),
+            carried.size(),
+            fixed,
+            dropped,
+            orderLiteralItems);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -355,7 +383,7 @@ public final class Derivation implements VarMap {
     copies.clear();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0);
+            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0);
   }
 
   /**

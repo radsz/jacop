@@ -59,6 +59,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -188,6 +189,9 @@ class GlobalConstraintBruteForceTest {
             "AllEqual", (Function<Random, Instance>) GlobalConstraintBruteForceTest::allEqual),
         Arguments.of("GCC", (Function<Random, Instance>) GlobalConstraintBruteForceTest::gcc),
         Arguments.of("Among", (Function<Random, Instance>) GlobalConstraintBruteForceTest::among),
+        Arguments.of(
+            "ChannelOrder",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::channelOrder),
         Arguments.of("Count", (Function<Random, Instance>) GlobalConstraintBruteForceTest::count),
         Arguments.of(
             "CountBounds",
@@ -917,6 +921,46 @@ class GlobalConstraintBruteForceTest {
             store.impose(new Among(Arrays.copyOfRange(x, 0, n), new IntervalDomain(lo, hi), x[n])),
         x -> IntStream.range(0, n).filter(i -> x[i] >= lo && x[i] <= hi).count() == x[n],
         "set=" + lo + ".." + hi);
+  }
+
+  /**
+   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold, and
+   * thresholds may lie outside the domain of x.
+   */
+  private static Instance channelOrder(Random random) {
+    int m = 1 + random.nextInt(4);
+    int n = 1 + random.nextInt(6);
+    int[] which = new int[n];
+    int[] t = new int[n];
+    boolean[] atMost = new boolean[n];
+    for (int i = 0; i < n; i++) {
+      which[i] = 1 + random.nextInt(m);
+      t[i] = random.nextInt(8) - 1;
+      atMost[i] = random.nextBoolean();
+    }
+    return new Instance(
+        append(new int[][] {domain(random, 0, 5)}, domains(random, m, 0, 1)),
+        (store, x) -> {
+          IntVar[] b = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            b[i] = x[which[i]];
+          }
+          store.impose(new ChannelOrder(x[0], b, t, atMost));
+        },
+        x -> {
+          for (int i = 0; i < n; i++) {
+            if ((x[which[i]] == 1) != ((x[0] <= t[i]) == atMost[i])) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "b="
+            + Arrays.toString(which)
+            + " t="
+            + Arrays.toString(t)
+            + " atMost="
+            + Arrays.toString(atMost));
   }
 
   private static Instance count(Random random) {

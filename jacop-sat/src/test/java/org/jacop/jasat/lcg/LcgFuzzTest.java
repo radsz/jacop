@@ -54,6 +54,7 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
@@ -385,7 +386,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(69)) {
+      return switch (rnd.nextInt(70)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -522,6 +523,19 @@ class LcgFuzzTest {
         case 65 -> regular();
         case 66 -> mdd();
         case 67 -> unaryTransition();
+        case 68 -> {
+          // order literals, which may share a 0/1 variable
+          int n = 2 + rnd.nextInt(3);
+          IntVar[] bs = new IntVar[n];
+          int[] t = new int[n];
+          boolean[] atMost = new boolean[n];
+          for (int i = 0; i < n; i++) {
+            bs[i] = bool();
+            t[i] = value();
+            atMost[i] = rnd.nextBoolean();
+          }
+          yield new ChannelOrder(one(), bs, t, atMost);
+        }
         case 63 ->
             new LinearIntDom(
                 p,

@@ -368,6 +368,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveOrderLiterals=").append(st.orderLiterals()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

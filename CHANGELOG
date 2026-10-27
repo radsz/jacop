@@ -157,6 +157,16 @@ Version 5.0 (unreleased)
     the optima proved from 0-5 to 8-12, depending on the model and the
     search; before, the generic reason explained 83 to 86 % of the reasons.
 
+16. New constraint ChannelOrder(x, b, t, atMost): b[i] <=> x <= t[i] (or
+    x > t[i]), the order counterpart of ChannelReif, with one propagator
+    for all thresholds of x and explanations for lazy clause generation.
+    Presolve (--presolve on|check) replaces the reified comparisons of one
+    variable with constants (int_le_reif, int_lt_reif, int_ge_reif,
+    int_gt_reif) by one ChannelOrder; -Djacop.presolve.orderLiterals=false
+    turns this off and -s prints presolveOrderLiterals. On the 42 presolve
+    dev-tier instances with such reifications (60 s) search is the same and
+    solve time is 14 % lower (9 % with --lcg).
+
 Version 4.11
 =============
 
