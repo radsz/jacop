@@ -1617,6 +1617,8 @@ public class FloatIntervalDomain extends FloatDomain {
       currentDomain2 = intervalDomain.intervals[i2];
     }
 
+    // a step that ends the loop advances the position in i1Ref only
+    i1 = i1Ref[0];
     while (i1 < size) {
       result.unionAdapt(intervals[i1]);
       i1++;

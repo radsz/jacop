@@ -207,6 +207,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -300,6 +301,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -393,6 +395,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -486,6 +489,7 @@ setup to run configuration. -->
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
+                                <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
@@ -953,6 +957,7 @@ setup to run configuration. -->
                         <include>**/SatWrapperTest.java</include>
                         <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
+                        <include>**/FloatDomainOperationsTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
