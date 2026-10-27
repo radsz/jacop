@@ -48,6 +48,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -728,6 +729,21 @@ public class Support implements ParserTreeConstants {
     // generate channeling constraints for aliases
     // variables that are output variables
     aliasConstraints();
+
+    String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
+    if (!"false".equalsIgnoreCase(multiCost)) {
+      // cost_regular constraints over the same word and automaton are filtered together
+      List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
+      if (merged != delayedConstraints) {
+        delayedConstraints.clear();
+        for (Constraint c : merged) {
+          if (c instanceof MultiCostRegular m && "nolagrangian".equalsIgnoreCase(multiCost)) {
+            m.setLagrangian(false);
+          }
+          delayedConstraints.add(c);
+        }
+      }
+    }
 
     for (Constraint c : delayedConstraints) {
       store.impose(c);
