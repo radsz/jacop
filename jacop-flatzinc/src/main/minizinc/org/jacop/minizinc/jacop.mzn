@@ -54,6 +54,7 @@ include "GCC.mzn";
 include "channel.mzn";
 include "subcircuit_cost.mzn";
 include "weighted_subcircuits.mzn";
+include "deviation.mzn";
 
 %% ===== JaCoP graph constraints =====
 opt bool: use_jacop_graph_constraints;

@@ -46,8 +46,9 @@ import org.jacop.core.Var;
  * their weights. In a directed graph the tree is rooted at {@code root} with every edge pointing
  * away from it.
  *
- * <p>It is decomposed into {@link Tree} on all nodes, the cost sum and, for an undirected graph,
- * {@link SpanningTreeBound} (minimum spanning tree bound and edge filtering).
+ * <p>It is decomposed into {@link Tree} on all nodes, the cost sum and a cost bound with edge
+ * filtering: {@link SpanningTreeBound} (minimum spanning tree) for an undirected graph and {@link
+ * ArborescenceBound} (minimum arborescence) for a directed one.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -121,7 +122,9 @@ public class WeightedSpanningTree extends DecomposedConstraint<Constraint> {
     List<Constraint> result = new ArrayList<>(tree.decompose(store));
     auxiliary.addAll(tree.auxiliaryVariables());
     result.add(new LinearInt(es, weights, "==", cost));
-    if (!directed) {
+    if (directed) {
+      result.add(new ArborescenceBound(n, from, to, weights, root, es, cost, base));
+    } else {
       result.add(new SpanningTreeBound(n, from, to, weights, es, cost, base));
     }
     return result;

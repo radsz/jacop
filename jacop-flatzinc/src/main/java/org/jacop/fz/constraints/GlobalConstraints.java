@@ -62,6 +62,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -82,6 +83,8 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
@@ -612,6 +615,18 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
 
     support.parameterListForAlldistincts.add(v);
+  }
+
+  // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning
+  void gen_jacop_stocking_cost(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] due = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] h = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int capacity = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    if (x.length > 0) {
+      support.pose(new StockingCost(x, due, h, cost, capacity));
+    }
   }
 
   void gen_jacop_alldifferent_except_0(SimpleNode node) {
@@ -1829,6 +1844,17 @@ class GlobalConstraints implements ParserTreeConstants {
     DecomposedConstraint<Constraint> c =
         Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
+  }
+
+  void gen_jacop_balance(SimpleNode node, boolean squares) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int a = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int b = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    IntVar d = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
+
+    // repeated variables and constants are treated as independent, which stays correct
+    support.pose(squares ? new Spread(x, a, b, s, d) : new Deviation(x, a, b, s, d));
   }
 
   void gen_jacop_stretch(SimpleNode node) {
