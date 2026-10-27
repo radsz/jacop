@@ -82,6 +82,7 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
@@ -239,6 +240,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Deviation", balance(false)),
         Arguments.of("Spread", balance(true)),
         Arguments.of(
+            "IncreasingNValue",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
+        Arguments.of(
             "ValuePrecede",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuePrecede),
         Arguments.of(
@@ -314,6 +318,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DPath", graph("Path", true)),
         Arguments.of("WeightedSpanningTree", weightedGraph("WeightedSpanningTree", false)),
         Arguments.of("DWeightedSpanningTree", weightedGraph("WeightedSpanningTree", true)),
+        Arguments.of(
+            "DWeightedSpanningTreeDense",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
         Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
@@ -1289,6 +1296,66 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  /**
+   * A directed weighted spanning tree on a denser multigraph than {@link #weightedGraph}: 2 to 5
+   * nodes, 3 to 8 edges, weights in -1..6 and a narrow cost window, so that the minimum
+   * arborescence bound and its reduced-cost filtering decide often. Variables: es, the root, then
+   * the cost.
+   */
+  private static Instance denseArborescence(Random random) {
+    int n = 2 + random.nextInt(4);
+    int m = 3 + random.nextInt(6);
+    int base = random.nextInt(2);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(8) - 1;
+    }
+    int[][] domains = new int[m + 2][];
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(8);
+      domains[e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    domains[m] = domain(random, base, base + n - 1);
+    int lo = random.nextInt(4 * n) - 2;
+    domains[m + 1] = domain(random, lo, lo + 2 + random.nextInt(10));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.imposeDecomposition(
+                new WeightedSpanningTree(
+                    n,
+                    fromNumber,
+                    toNumber,
+                    w,
+                    x[m],
+                    Arrays.copyOfRange(x, 0, m),
+                    x[m + 1],
+                    base,
+                    true)),
+        x -> {
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += x[e] * w[e];
+          }
+          int[] ns = new int[n];
+          Arrays.fill(ns, 1);
+          return sum == x[m + 1]
+              && GraphSemantics.dtree(from, to, ns, Arrays.copyOfRange(x, 0, m), x[m] - base);
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w));
+  }
+
   private static Instance stretch(Random random) {
     int n = 2 + random.nextInt(4);
     int[] values = {1, 2};
@@ -1503,6 +1570,44 @@ class GlobalConstraintBruteForceTest {
           },
           "s=" + s + " a=" + a + " b=" + b + " repeated=" + repeated);
     };
+  }
+
+  // x[0..n-1] non-decreasing with as many distinct values as the last variable, which may also
+  // occur in x at position repeated
+  private static Instance increasingNValue(Random random) {
+    int n = 1 + random.nextInt(5);
+    int repeated = random.nextInt(5) == 0 ? random.nextInt(n) : -1;
+    int[][] domains = new int[n + 1][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = domain(random, -1, 4);
+    }
+    domains[n] = domain(random, -1, n + 1);
+    return new Instance(
+        domains,
+        (store, v) -> {
+          IntVar[] x = Arrays.copyOf(v, n);
+          if (repeated >= 0) {
+            x[repeated] = v[n];
+          }
+          store.impose(new IncreasingNValue(x, v[n]));
+        },
+        t -> {
+          int[] x = Arrays.copyOf(t, n);
+          if (repeated >= 0) {
+            x[repeated] = t[n];
+          }
+          int distinct = 1;
+          for (int i = 1; i < n; i++) {
+            if (x[i] < x[i - 1]) {
+              return false;
+            }
+            if (x[i] > x[i - 1]) {
+              distinct++;
+            }
+          }
+          return distinct == t[n];
+        },
+        "repeated=" + repeated);
   }
 
   private static Instance valuePrecede(Random random) {
