@@ -268,7 +268,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node);
-      if (opt.useSat() && !opt.lcg()) {
+      if (sat.collecting() && !opt.lcg()) {
         postClausesToSat();
       }
     }
@@ -317,7 +317,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .eliminate(searchedVariables(node))
             .keepAllSolutions(
                 satisfy(node) && (options.getAll() || options.getNumberSolutions() > 1));
-    if (options.useSat()) {
+    if (sat.collecting()) {
       // the clauses for the SAT solver of -sat or --lcg, kept outside the store
       presolver.clauses(sat.collectedClauses());
     }
