@@ -41,7 +41,11 @@ import java.util.Set;
 import java.util.function.Consumer;
 import org.jacop.api.Copyable;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -217,6 +221,132 @@ class PresolveTest {
               derivation.get(w).sizeConstraintsOriginal()
             })
         .containsExactly(parent);
+  }
+
+  @Test
+  void allDifferentImpliesTheSumOfTheSmallestAndLargestValues() {
+    Store store = new Store();
+    // values 0..2 and 5..9: the three smallest sum to 3, the three largest to 24
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar z = new IntVar(store, "z", 0, 9);
+    for (IntVar v : new IntVar[] {x, y, z}) {
+      v.domain.in(0, v, new IntervalDomain(0, 2).union(5, 9));
+    }
+    store.impose(new Alldiff(new IntVar[] {x, y, z}));
+
+    List<Constraint> implied = ImpliedConstraints.of(List.of(new Alldiff(new IntVar[] {x, y, z})));
+
+    assertThat(implied).hasSize(2);
+    assertThat(implied).allMatch(c -> c instanceof LinearInt);
+    assertThat(implied.get(0).toString()).endsWith(">=, 3 )");
+    assertThat(implied.get(1).toString()).endsWith("<=, 24 )");
+
+    Derivation derivation = Presolver.of(store).presolve();
+    assertThat(derivation.implied()).isEqualTo(2);
+  }
+
+  @Test
+  void aPermutationImpliesAConstantSum() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 4);
+    }
+    store.impose(new Alldistinct(x));
+    // a second all-different on the same variables adds nothing
+    store.impose(new Alldiff(x));
+
+    Derivation derivation = Presolver.of(store).presolve();
+
+    assertThat(derivation.implied()).isEqualTo(1);
+    assertThat(ImpliedConstraints.of(List.of(new Alldistinct(x))))
+        .singleElement()
+        .satisfies(c -> assertThat(c.toString()).endsWith("==, 10 )"));
+  }
+
+  @Test
+  void noSumIsImpliedWhenTheBoundsAlreadyGiveItOrTheConstraintIsRelaxed() {
+    Store store = new Store();
+    // disjoint domains: the sums of minima and maxima are already the bounds
+    IntVar[] disjoint = {
+      new IntVar(store, "a", 0, 1), new IntVar(store, "b", 2, 3), new IntVar(store, "c", 4, 5)
+    };
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar[] pair = {new IntVar(store, "p", 0, 5), new IntVar(store, "q", 0, 5)};
+
+    List<Constraint> implied =
+        ImpliedConstraints.of(
+            List.of(
+                new Alldiff(disjoint),
+                new AlldifferentExceptZero(x),
+                new AlldifferentExcept(x, new IntervalDomain(1, 1)),
+                new Alldistinct(pair)));
+
+    assertThat(implied).isEmpty();
+    assertThat(Presolver.of(store).implied(false).presolve().implied()).isZero();
+  }
+
+  @Test
+  void randomAllDifferentModelsHaveTheSameSolutionsWithImpliedSums() {
+    Random random = new Random(20261027);
+    int implied = 0;
+    for (int trial = 0; trial < TRIALS / 2; trial++) {
+      int n = 3 + random.nextInt(3);
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        int min = random.nextInt(3) - 1;
+        domains[i] = new int[] {min, min + 2 + random.nextInt(4)};
+      }
+      long seed = random.nextLong();
+      Model model =
+          new Model(
+              domains,
+              0,
+              vars -> {
+                Random r = new Random(seed);
+                IntVar[] x = vars.x();
+                Store s = vars.store();
+                // holes, so the union is not an interval
+                for (IntVar v : x) {
+                  if (r.nextBoolean()) {
+                    int hole = v.min() + 1 + r.nextInt(Math.max(1, v.max() - v.min() - 1));
+                    v.domain.inComplement(0, v, hole);
+                  }
+                }
+                IntVar[] scope = distinct(r, x, 3 + r.nextInt(n - 2));
+                s.impose(
+                    switch (r.nextInt(3)) {
+                      case 0 -> new Alldiff(scope);
+                      case 1 -> new Alldistinct(scope);
+                      default -> new Alldifferent(scope);
+                    });
+                s.impose(randomConstraint(r, vars));
+              });
+      Set<List<Integer>> expected = solveDirectly(model);
+      Model.Vars vars = model.build();
+      Store store = vars.store();
+      IntVar[] decisions = decisions(vars);
+      Set<List<Integer>> found = new HashSet<>();
+      Derivation derivation = Presolver.of(store).keep(decisions).checking(true).presolve();
+      if (derivation.outcome() != Derivation.Outcome.INFEASIBLE) {
+        implied += derivation.implied();
+        search(
+            derivation.child(),
+            derivation.counterparts(decisions),
+            trial,
+            () -> {
+              if (derivation.returnSolution()) {
+                found.add(values(decisions));
+              }
+            });
+      }
+      assertThat(found).as("trial %d", trial).isEqualTo(expected);
+    }
+    assertThat(implied).isGreaterThan(TRIALS / 8);
   }
 
   @Test

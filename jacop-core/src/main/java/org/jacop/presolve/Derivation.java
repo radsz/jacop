@@ -109,6 +109,7 @@ public final class Derivation implements VarMap {
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final boolean impliedRule;
 
   private Outcome outcome;
   private int level;
@@ -118,6 +119,7 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
+  private int implied;
   private boolean solutionWritten;
 
   private Derivation(Builder builder) {
@@ -125,6 +127,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.impliedRule = builder.implied;
   }
 
   /**
@@ -144,6 +147,7 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private boolean implied = true;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -184,6 +188,18 @@ public final class Derivation implements VarMap {
      */
     public Builder rules(boolean on) {
       this.rules = on;
+      return this;
+    }
+
+    /**
+     * Switches the rule that posts constraints implied by the model ({@link ImpliedConstraints}) on
+     * or off. On by default; it applies only while the presolve rules are on.
+     *
+     * @param on true to post implied constraints.
+     * @return this builder.
+     */
+    public Builder implied(boolean on) {
+      this.implied = on;
       return this;
     }
 
@@ -255,6 +271,7 @@ public final class Derivation implements VarMap {
       return;
     }
 
+    List<Constraint> childConstraints = new ArrayList<>(carried.size());
     for (Constraint c : carried) {
       Constraint copy = ((Copyable<?>) c).copy(this);
       if (copy.getClass() != c.getClass()) {
@@ -262,6 +279,13 @@ public final class Derivation implements VarMap {
             c.getClass().getName() + " was copied as " + copy.getClass().getName());
       }
       child.impose(copy);
+      childConstraints.add(copy);
+    }
+    if (rules && impliedRule) {
+      for (Constraint c : ImpliedConstraints.of(childConstraints)) {
+        child.impose(c);
+        implied++;
+      }
     }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
     // also count the constraints entailed or dropped since
@@ -446,6 +470,16 @@ public final class Derivation implements VarMap {
    */
   public Statistics statistics() {
     return statistics;
+  }
+
+  /**
+   * Returns the number of implied constraints the derivation added to the child ({@link
+   * ImpliedConstraints}); they are not counted in {@link Statistics#childConstraints()}.
+   *
+   * @return the number of implied constraints.
+   */
+  public int implied() {
+    return implied;
   }
 
   /**

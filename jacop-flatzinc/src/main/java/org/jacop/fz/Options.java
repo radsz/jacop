@@ -77,6 +77,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean presolveImplied = true;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -149,6 +150,8 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-implied <value> with presolve, post the constraints implied by
+                all-different constraints (sum bounds); "on" (default) or "off"
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -189,6 +192,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -285,6 +289,15 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveImplied(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> presolveImplied = true;
+      case "off" -> presolveImplied = false;
+      default -> System.err.println("%% Presolve-implied mode " + args[i] + " not known; ignored");
     }
     return i + 1;
   }
@@ -603,6 +616,15 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines whether presolve posts implied constraints (--presolve-implied).
+   *
+   * @return true by default
+   */
+  public boolean presolveImplied() {
+    return presolveImplied;
   }
 
   /** Sat is used. */

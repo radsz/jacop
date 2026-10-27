@@ -98,6 +98,18 @@ public final class Presolver {
   }
 
   /**
+   * Switches the rule that posts implied constraints on or off; see {@link
+   * Derivation.Builder#implied(boolean)}.
+   *
+   * @param on true to post implied constraints.
+   * @return this presolver.
+   */
+  public Presolver implied(boolean on) {
+    builder.implied(on);
+    return this;
+  }
+
+  /**
    * Presolves.
    *
    * @return the derivation, whose child is the store to search.
