@@ -99,10 +99,10 @@ Version 5.0 (unreleased)
     int_abs or squared terms over variables whose sum an int_lin_eq fixes,
     as sum(p)(abs(n * load[p] - total)) with sum(load) = total compiles;
     -Dorg.jacop.fz.balance=false turns this off. JaCoP's MiniZinc library
-    adds the predicates deviation and spread. On the balanced academic
-    curriculum problem with a deviation objective the CSPLib instances are
-    proved optimal in under a second, where the decomposition does not
-    reach the optimum in 60 s.
+    adds the predicates deviation and spread. On 28 balanced academic
+    curriculum instances with a deviation or spread objective JaCoP proves
+    52 of the 54 optima in under 3 s each; without the new constraints it
+    proves none in 20 s.
 
 Version 4.11
 =============
