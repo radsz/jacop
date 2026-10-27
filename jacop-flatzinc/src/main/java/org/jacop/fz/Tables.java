@@ -84,6 +84,8 @@ public class Tables {
   int numberBoolVariables;
   int numberFloatVariables;
   int numberSetVariables;
+  // MiniZinc on_restart built-ins of the model, or null
+  OnRestart onRestart;
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -98,6 +100,18 @@ public class Tables {
    */
   public Tables(Store s) {
     this.store = s;
+  }
+
+  /**
+   * Returns the on_restart built-ins of the model, created at the first call.
+   *
+   * @return the on_restart built-ins.
+   */
+  public OnRestart onRestart() {
+    if (onRestart == null) {
+      onRestart = new OnRestart();
+    }
+    return onRestart;
   }
 
   /**

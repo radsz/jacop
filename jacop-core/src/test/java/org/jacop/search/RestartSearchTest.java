@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XltY;
@@ -50,6 +51,7 @@ import org.jacop.search.restart.CustomReport;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
 import org.junit.jupiter.api.Test;
 
@@ -518,5 +520,97 @@ class RestartSearchTest {
       checked += reference.restarts() > 0 ? 1 : 0;
     }
     assertTrue(checked > 20, "too few instances restarted: " + checked);
+  }
+
+  /** A hook that runs a scripted action at each run and records the statuses it is given. */
+  private static final class ScriptedHook implements RestartHook {
+    final List<Integer> statuses = new ArrayList<>();
+    final List<Consumer<Store>> script;
+    final int completeAfter;
+    int solutions;
+
+    ScriptedHook(int completeAfter, List<Consumer<Store>> script) {
+      this.completeAfter = completeAfter;
+      this.script = script;
+    }
+
+    @Override
+    public void restart(Store store, int status) {
+      int run = statuses.size();
+      statuses.add(status);
+      if (run < script.size()) {
+        script.get(run).accept(store);
+      }
+    }
+
+    @Override
+    public void solution() {
+      solutions++;
+    }
+
+    @Override
+    public boolean completeMarked() {
+      return statuses.size() >= completeAfter;
+    }
+  }
+
+  @Test
+  void restartHookSeesStatusOfTheLastRunAndRestrictsRuns() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    ScriptedHook hook =
+        new ScriptedHook(
+            Integer.MAX_VALUE,
+            List.of(
+                // first run: only x = 9 is allowed, a solution
+                s -> x.domain.in(s.level, x, 9, 9),
+                // the bound x < 9 removes 9, so the hook fails before the search
+                s -> x.domain.in(s.level, x, 9, 9)));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMax<>());
+    RestartSearch<IntVar> rs =
+        new RestartSearch<>(store, search, select, new ConstantCalculator(100), x);
+    rs.setRestartHook(hook);
+
+    assertTrue(rs.labeling());
+    // a run that explores its whole tree under the hook proves nothing; the third run finds the
+    // optimum and the bound x < 0 then fails at the root
+    assertEquals(List.of(RestartHook.START, RestartHook.SAT, RestartHook.UNSAT), hook.statuses);
+    assertEquals(0, rs.getIntCost());
+    assertEquals(10, hook.solutions);
+    assertTrue(rs.complete());
+  }
+
+  @Test
+  void restartHookKeepsStartUntilTheFirstSolutionAndCanEndTheSearch() {
+    // three pairwise different 0/1 variables: no solution, and runs of one failure never prove it
+    Store store = new Store();
+    IntVar[] v = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      v[i] = new IntVar(store, "v" + i, 0, 1);
+    }
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        store.impose(new XneqY(v[i], v[j]));
+      }
+    }
+    ScriptedHook hook = new ScriptedHook(4, List.of());
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    RestartSearch<IntVar> rs =
+        new RestartSearch<>(
+            store,
+            search,
+            new SimpleSelect<>(v, null, new IndomainMin<>()),
+            new ConstantCalculator(1),
+            v[0]);
+    rs.setRestartHook(hook);
+
+    assertFalse(rs.labeling());
+    assertEquals(List.of(1, 1, 1, 1), hook.statuses);
+    assertTrue(rs.complete());
+    assertFalse(rs.restartsLimitReached());
   }
 }

@@ -37,6 +37,7 @@ public final class ConstraintFncs {
   final ElementConstraints ec;
   final GlobalConstraints gc;
   final GraphConstraints graph;
+  final RestartConstraints rc;
   final SetConstraints sc;
   final FloatComparisonConstraints fcc;
   final FloatLinearConstraints flc;
@@ -60,6 +61,7 @@ public final class ConstraintFncs {
     flc = new FloatLinearConstraints(support);
     foc = new FloatOperationConstraints(support);
     graph = new GraphConstraints(support);
+    rc = new RestartConstraints(support);
   }
 
   // Boolean constraints
@@ -1420,5 +1422,56 @@ public final class ConstraintFncs {
   /** Handles the jacop_dwst FlatZinc constraint. */
   public void jacop_dwst(SimpleNode n) {
     graph.gen_jacop_dwst(n);
+  }
+
+  // MiniZinc on_restart built-ins
+  /** Handles the jacop_on_restart_status FlatZinc constraint. */
+  public void jacop_on_restart_status(SimpleNode n) {
+    rc.gen_jacop_on_restart_status(n);
+  }
+
+  /** Handles the jacop_on_restart_complete FlatZinc constraint. */
+  public void jacop_on_restart_complete(SimpleNode n) {
+    rc.gen_jacop_on_restart_complete(n);
+  }
+
+  /** Handles the jacop_on_restart_sol_int FlatZinc constraint. */
+  public void jacop_on_restart_sol_int(SimpleNode n) {
+    rc.gen_jacop_on_restart_sol_int(n);
+  }
+
+  /** Handles the jacop_on_restart_sol_float FlatZinc constraint. */
+  public void jacop_on_restart_sol_float(SimpleNode n) {
+    rc.gen_jacop_on_restart_sol_float(n);
+  }
+
+  /** Handles the jacop_on_restart_last_val_int FlatZinc constraint. */
+  public void jacop_on_restart_last_val_int(SimpleNode n) {
+    rc.gen_jacop_on_restart_last_val_int(n);
+  }
+
+  /** Handles the jacop_on_restart_last_val_float FlatZinc constraint. */
+  public void jacop_on_restart_last_val_float(SimpleNode n) {
+    rc.gen_jacop_on_restart_last_val_float(n);
+  }
+
+  /** Handles the jacop_on_restart_uniform_int FlatZinc constraint. */
+  public void jacop_on_restart_uniform_int(SimpleNode n) {
+    rc.gen_jacop_on_restart_uniform_int(n);
+  }
+
+  /** Handles the jacop_on_restart_uniform_float FlatZinc constraint. */
+  public void jacop_on_restart_uniform_float(SimpleNode n) {
+    rc.gen_jacop_on_restart_uniform_float(n);
+  }
+
+  /** Handles the jacop_on_restart_sol_bool FlatZinc constraint. */
+  public void jacop_on_restart_sol_bool(SimpleNode n) {
+    rc.gen_jacop_on_restart_sol_int(n);
+  }
+
+  /** Handles the jacop_on_restart_last_val_bool FlatZinc constraint. */
+  public void jacop_on_restart_last_val_bool(SimpleNode n) {
+    rc.gen_jacop_on_restart_last_val_int(n);
   }
 }

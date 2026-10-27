@@ -260,6 +260,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
@@ -355,6 +356,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -448,6 +450,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>

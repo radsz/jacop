@@ -51,6 +51,7 @@ import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -94,6 +95,7 @@ import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
@@ -373,7 +375,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Options opt, ASTSolveKind kind, int solveKind, SearchItem<T> si, SimpleNode node) {
     String searchType = si.type();
     if (opt.freeSearch()) {
-      run_single_search(solveKind, kind, null);
+      boolean onRestartRestarts =
+          dictionary.onRestart != null && searchType != null && searchType.startsWith("restart_");
+      run_single_search(solveKind, kind, onRestartRestarts ? si : null);
       return;
     }
     if (INT_SEARCH.equals(searchType)
@@ -426,7 +430,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "restart_linear".equals(s.searchType)
         || "restart_geometric".equals(s.searchType)
         || "restart_luby".equals(s.searchType)) {
-      if (!options.freeSearch()) {
+      // on_restart needs the restarts of the annotation, also in free search
+      if (!options.freeSearch() || dictionary.onRestart != null) {
         restartCalculator = s.restartCalculator;
       }
       return true;
@@ -719,6 +724,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     try {
+      if (dictionary.onRestart != null) {
+        if (!startOnRestart()) {
+          return false;
+        }
+        if (restartCalculator != null) {
+          // the runs of the restart search are where on_restart fixes its variables
+          return executeRestartSearch(label, select, costVar, solveType);
+        }
+      }
       if (useLcg(costVar)) {
         return executeLcgSearch(costVar);
       }
@@ -732,6 +746,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } catch (NumberSolutionsReached _) {
       return numberSolutions > 0;
     }
+  }
+
+  /**
+   * Prepares MiniZinc's on_restart built-ins before the search. Without restarts there is a single
+   * run, so their variables are fixed for good, as in the first run of a restart search.
+   *
+   * @return false if fixing them fails.
+   */
+  private boolean startOnRestart() {
+    OnRestart onRestart = dictionary.onRestart;
+    onRestart.impose(store);
+    if (restartCalculator != null) {
+      return true;
+    }
+    try {
+      onRestart.restart(store, RestartHook.START);
+    } catch (FailException _) {
+      store.clearChanged();
+      return false;
+    }
+    return store.consistency();
   }
 
   private boolean useLcg(Var costVar) {
@@ -1155,6 +1190,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (relaxVars != null) {
       rs.setRelaxAndReconstruct(relaxVars, probability);
     }
+    if (dictionary.onRestart != null) {
+      rs.setRestartHook(dictionary.onRestart);
+    }
     return rs.labeling();
   }
 
@@ -1233,7 +1271,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%% =====INTERRUPTED=====");
       return;
     }
-    if (isComplete) {
+    if (isComplete && relaxedSearchComplete()) {
       IO.println("=====UNSATISFIABLE=====");
       writeUnsatToOutputFile();
       return;
@@ -1277,9 +1315,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  /** Relax and reconstruct is complete only when its restart search explored everything. */
+  /**
+   * Relax and reconstruct and on_restart are complete only when their restart search explored
+   * everything.
+   */
   private boolean relaxedSearchComplete() {
-    return relaxVars == null || rs == null || rs.complete();
+    return relaxVars == null && dictionary.onRestart == null || rs == null || rs.complete();
   }
 
   private boolean isSearchComplete() {
